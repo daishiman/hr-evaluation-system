@@ -10,7 +10,7 @@ import { signIn } from "@/lib/auth-client";
  * （ログインはやり直しがきく操作なので、慣習どおり Enter を受ける）。
  * 日本語入力の変換確定 Enter では送信しない。
  */
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
   const pwRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState("");
@@ -35,7 +35,7 @@ export function LoginForm() {
       setError("メールアドレスかパスワードが違います。もう一度お試しください。");
       return;
     }
-    router.replace("/");
+    router.replace(next ?? "/");
     router.refresh();
   }
 
