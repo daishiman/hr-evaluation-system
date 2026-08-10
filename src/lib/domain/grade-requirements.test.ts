@@ -30,7 +30,7 @@ describe("等級要件の構造（支援・運営 × 0〜10項目）", () => {
     expect(activeOf(beginner, "operation")).toHaveLength(5);
   });
 
-  it("支援が0件でも成立する（Manager Ⅱ の実データ）", () => {
+  it("支援が0件でも成立する（本番に登録済みの Manager Ⅱ の等級要件と同じ形）", () => {
     expect(activeOf(managerII, "support")).toHaveLength(0);
     expect(denominatorOf(managerII)).toBe(5);
   });
