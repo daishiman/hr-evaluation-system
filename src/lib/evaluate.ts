@@ -184,9 +184,10 @@ export async function buildEvaluationsForCycle(
       const scored: ScoredItem[] = [];
       const evalId = existing?.id ?? newId("ev");
 
-      /* 等級要件達成率。分母は「半期の目標設定上限数」であってアンケートの設問数ではない
-         （元スプレッドシートの計算式どおり）。上限を超えて達成した場合は100%で頭打ちにする。 */
-      const requirementRate = gradeRequirementRate(reqAchieved, grade.targetCap);
+      /* 等級要件達成率。分母は「このアンケートで実際に出題した等級要件の項目数」。
+         出題数は等級・会社・アンケートの版で変わるため、判定した時点の分子・分母を
+         evaluations に保存し、あとで設問を増減させても確定済みの評価が動かないようにする。 */
+      const requirementRate = gradeRequirementRate(reqAchieved, reqTotal);
 
       items.forEach((si, idx) => {
         const m = kpiItems.find((k) => k.id === si.kpiItemId);
@@ -220,7 +221,9 @@ export async function buildEvaluationsForCycle(
             rank: null,
             points: 0,
             maxPoints: si.weight,
-            rationale: "計算に必要な回答が不足しているため、実績値を出せませんでした（判定外）。回答を確認してください。",
+            rationale: si.isFixedSlot
+              ? "このアンケートに等級要件の設問が1件も含まれていないため、達成率を出せませんでした（判定外）。アンケートに等級要件を追加してください。"
+              : "計算に必要な回答が不足しているため、実績値を出せませんでした（判定外）。回答を確認してください。",
             calcNote: m.formula,
             isProvisional: m.isProvisional,
             displayOrder: idx + 1,

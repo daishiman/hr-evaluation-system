@@ -203,22 +203,49 @@ describe("judgeOverall — 昇給と昇格の判定", () => {
 
 /* 現行GAS（移行元）の実際の出力と突き合わせて固定したふるまい。
    一次資料は data/_gas-internal-json.md（回答一覧「評価結果」シートの内部JSON）。 */
-describe("gradeRequirementRate — 等級要件達成率", () => {
-  it("分母は半期の目標設定上限数（設問数ではない）", () => {
-    // 元スプレッドシートの例: 半期上限5件中3件達成＝60%
-    expect(gradeRequirementRate(3, 5)).toBe(60);
+describe("gradeRequirementRate — 等級要件達成率（2026-08-10 決定の第3案）", () => {
+  it("分母は実際に出題した等級要件の項目数（半期の目標設定上限数ではない）", () => {
+    // 27項目中18項目達成 → 66.7%（評価詳細画面に出す表記そのもの）
+    expect(gradeRequirementRate(18, 27)).toBe(66.7);
+    // 現行GASの実績: 等級３Chief 17件達成。旧仕様は上限5件が分母で100%だったが、
+    // 出題20項目が分母になり85%になる。
+    expect(gradeRequirementRate(17, 20)).toBe(85);
   });
 
-  it("上限より多く達成しても100%で頭打ちになる", () => {
-    // 現行GASの実績: 等級３Chief 17件達成／上限5件 → 100%
-    expect(gradeRequirementRate(17, 5)).toBe(100);
-    // 等級１Beginner 9件達成／上限5件 → 100%
-    expect(gradeRequirementRate(9, 5)).toBe(100);
+  it("全項目達成のときだけ100%になる（上限方式のように全員100%にならない）", () => {
+    expect(gradeRequirementRate(20, 20)).toBe(100);
+    expect(gradeRequirementRate(19, 20)).toBe(95);
   });
 
-  it("達成0件なら0%、上限が0でも落ちない", () => {
-    expect(gradeRequirementRate(0, 5)).toBe(0);
-    expect(gradeRequirementRate(2, 0)).toBe(100);
+  it("未回答は分母に残り未達として数える（回答を空にして達成率を上げられない）", () => {
+    // 15項目出題・8項目○・7項目未回答 → 53.3%
+    expect(gradeRequirementRate(8, 15)).toBe(53.3);
+  });
+
+  it("達成0件なら0%", () => {
+    expect(gradeRequirementRate(0, 15)).toBe(0);
+  });
+
+  it("等級要件が1件も出題されていなければ判定外（0%にしない）", () => {
+    expect(gradeRequirementRate(0, 0)).toBeNull();
+    expect(gradeRequirementRate(2, 0)).toBeNull();
+  });
+
+  /* 第3案にしてもランク基準（100%以上=A 〜 40%未満=E）が使い物になるかの検証。
+     実データ48件の達成率がA〜Eすべてに散り、Aも到達可能であることを固定する。
+     ここが崩れたら基準の初期値を見直す合図。 */
+  it("実データの達成率がA〜Eすべてに散り、Aも到達できる", () => {
+    // 本番相当データの「達成数／出題数」実績（48件のうち各ランクの代表例）
+    const samples: [number, number][] = [
+      [15, 15], [20, 20], [5, 5],   // 100% → A
+      [17, 20], [12, 15], [4, 5],   // 85% / 80% / 80% → B
+      [14, 20], [11, 15], [3, 5],   // 70% / 73.3% / 60% → C
+      [7, 15], [5, 10], [4, 10],    // 46.7% / 50% / 40% → D
+      [3, 10],                      // 30% → E
+    ];
+    const ranks = samples.map(([a, n]) => judgeRank(gradeRequirementRate(a, n)!, requirementRate, "higher").rank);
+    expect(new Set(ranks)).toEqual(new Set(["A", "B", "C", "D", "E"]));
+    expect(ranks.filter((r) => r === "A").length).toBe(3);
   });
 });
 

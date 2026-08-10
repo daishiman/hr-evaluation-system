@@ -107,17 +107,20 @@ export function scoreFromRank(rank: Rank, weight: number, ratios: RankRatio[]): 
 /**
  * 等級要件達成率を出す。
  *
- * 元スプレッドシートの計算式:
- *   100% = 半期での自身の等級要件達成数 ÷ 半期の目標設定上限数
- *   （例: 半期上限5件中3件達成＝60% → Cランク）
+ *   達成率 ＝ 達成した数（○の数） ÷ その等級のアンケートで実際に出題した等級要件の項目数 × 100
  *
- * 分母は**等級ごとの目標設定上限数**であって、アンケートの設問数ではない。
- * 上限より多く達成することがあるため（現行GASの実績で 17件／上限5件 の例がある）、
- * 100% で頭打ちにする。頭打ちにしないと 340% のような値がランク基準表からはみ出す。
+ * 分母は「半期の目標設定上限数」ではなく **判定時点で実際に出題した項目数**（2026-08-10 決定）。
+ * 上限を分母にすると上限超えの達成が続いて全員100%になり、この項目が飾りになるため。
+ *
+ * 未回答の項目も分母に含める（＝未達として数える）。回答を空にすると分母が減って
+ * 達成率が上がる、という抜け道を作らないため。この扱いは評価詳細画面に明示している。
+ *
+ * 出題が0件だった場合は達成率を出さない（判定外）。0件を0%とすると
+ * 「アンケートに等級要件が無かった」ことが「全部未達だった」に化けてしまう。
  */
-export function gradeRequirementRate(achieved: number, targetCap: number): number {
-  const cap = Math.max(1, targetCap);
-  const rate = (achieved / cap) * 100;
+export function gradeRequirementRate(achieved: number, asked: number): number | null {
+  if (asked <= 0) return null;
+  const rate = (achieved / asked) * 100;
   return Math.round(Math.min(100, rate) * 10) / 10;
 }
 

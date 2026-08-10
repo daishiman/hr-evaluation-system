@@ -729,8 +729,8 @@ export async function buildSeed() {
             formAnswers.push(rest);
           });
 
-          // 等級要件達成率＝達成数÷半期の目標設定上限数（100%で頭打ち）。src/lib/domain/scoring.ts と同じ決まり。
-          const reqRate = Math.round(Math.min(100, (reqAchieved / Math.max(1, gradeDef.targetCap)) * 100) * 10) / 10;
+          // 等級要件達成率＝達成数÷このアンケートで出題した等級要件の項目数。src/lib/domain/scoring.ts と同じ決まり。
+          const reqRate = reqTotal <= 0 ? null : Math.round(Math.min(100, (reqAchieved / reqTotal) * 100) * 10) / 10;
 
           let total = 0, maxTotal = 0;
           const itemRows = [];
