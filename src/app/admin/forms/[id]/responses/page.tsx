@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { CopyReminder } from "@/components/CopyReminder";
 import { requireRole } from "@/lib/session";
 import { getForm, listResponseStatus } from "@/lib/queries";
 import { CsvImport } from "@/components/CsvImport";
@@ -34,6 +36,9 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
   if (!form) notFound();
 
   const rows = await listResponseStatus(companyId, form.id);
+  // 催促の文面にはそのまま開けるURLを入れる（相対パスだと貼り付け先で開けないため）
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? ""}`;
   const active = rows.filter((r) => r.isActive);
   const submitted = active.filter((r) => r.status === "submitted");
   const drafting = active.filter((r) => r.status === "draft");
@@ -83,6 +88,13 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
             {missing.length}人がまだ回答していません（{missing.slice(0, 5).map((r) => r.name).join("、")}
             {missing.length > 5 ? " ほか" : ""}）。回答画面のURLは <code className="text-[11px]">/f/{form.publicToken}</code> です。
           </ReasonNote>
+          <div className="mt-3">
+            <CopyReminder
+              names={missing.map((r) => r.name)}
+              url={`${origin}/f/${form.publicToken}`}
+              deadline={form.closesAt}
+            />
+          </div>
         </div>
       )}
 
