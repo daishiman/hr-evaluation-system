@@ -69,7 +69,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
       {forms.length === 0 ? (
         <EmptyState title="アンケートがまだありません" body="上のボタンで等級ごとの下書きを作ってください。" />
       ) : (
-        <div className="grid gap-4">
+        <div className="stack">
           {forms.map((f) => (
             <Card key={f.id} className="card-pad">
               <div className="flex flex-wrap items-start justify-between gap-3">

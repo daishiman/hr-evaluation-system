@@ -262,7 +262,7 @@ export function PromotionRequirementEditor({
   };
 
   return (
-    <div className="grid gap-4">
+    <div className="stack">
       <p className="footnote m-0">
         いま編集しているのは <b>{gradeName}</b> の昇格要件です。ここでの変更は次に作るアンケートから反映され、
         すでに作成・公開したアンケートと確定済みの評価は変わりません。

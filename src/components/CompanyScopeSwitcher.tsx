@@ -8,6 +8,10 @@ import { useRouter } from "next/navigation";
  *
  * どの会社を見ているかを常に見える位置に出す（見間違えたまま他社の設定を触らないため）。
  * 切り替えると、社員・評価サイクル・制度マスタなど会社ごとの画面がすべてその会社に変わる。
+ *
+ * 置き場所はサイドバーの上部。以前はヘッダーに置いて横幅1024px未満では隠していたため、
+ * スマートフォンでは会社を切り替えられなかった。サイドバーは狭い画面では引き出しとして
+ * 開けるので、どの画面幅でも切り替えられる。
  */
 export function CompanyScopeSwitcher({
   companies,
@@ -22,10 +26,10 @@ export function CompanyScopeSwitcher({
   if (companies.length === 0) return null;
 
   return (
-    <label className="hidden items-center gap-1 text-[12px] text-[var(--ink-muted)] lg:flex">
+    <label className="grid gap-1 text-[12px] text-[var(--ink-muted)]">
       操作する会社
       <select
-        className="input h-8 py-0 text-[12px]"
+        className="input h-8 w-full py-0 text-[12px]"
         value={currentId ?? ""}
         disabled={busy}
         onChange={async (e) => {

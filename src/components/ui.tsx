@@ -83,9 +83,13 @@ export function Card({ className, children }: { className?: string; children: Re
   return <div className={clsx("card", className)}>{children}</div>;
 }
 
+/**
+ * 画面の見出し。
+ * 下の余白はこの箱だけで付ける（見出しと説明文の両方に margin を付けると二重に空く）。
+ */
 export function PageTitle({ title, lede, actions }: { title: string; lede?: string; actions?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <div className="page-head">
       <div className="min-w-0">
         <h1 className="page-title">{title}</h1>
         {lede && <p className="page-lede">{lede}</p>}
@@ -95,9 +99,10 @@ export function PageTitle({ title, lede, actions }: { title: string; lede?: stri
   );
 }
 
+/** セクションの見出し。上下の余白は .section-head に集約している。 */
 export function SectionHeading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
-    <div className="mb-2 flex items-baseline justify-between gap-3">
+    <div className="section-head">
       <h2 className="section-heading">{children}</h2>
       {aside}
     </div>

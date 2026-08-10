@@ -177,7 +177,7 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
           {myReqs.length === 0 ? (
             <ReasonNote>この等級の要件が登録されていません。</ReasonNote>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="card-grid">
               {[
                 { key: "support", title: "支援について" },
                 { key: "operation", title: "運営について" },

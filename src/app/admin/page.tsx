@@ -115,13 +115,13 @@ export default async function AdminHome() {
       )}
 
       <SectionHeading>会社の状況</SectionHeading>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="card-grid card-grid-3">
         <Card className="card-pad">
           <p className="m-0 text-[12px] text-[var(--ink-muted)]">登録されている社員</p>
           <p className="m-0">
             <Num value={members.length} display unit="人" />
           </p>
-          <p className="footnote m-0 mt-1">
+          <p className="footnote card-foot m-0">
             <Link href="/admin/members" className="text-[var(--brand-deep)]">社員を管理する</Link>
           </p>
         </Card>
@@ -130,7 +130,7 @@ export default async function AdminHome() {
           <p className="m-0">
             <Num value={grades.length} display unit="段階" />
           </p>
-          <p className="footnote m-0 mt-1">
+          <p className="footnote card-foot m-0">
             <Link href="/admin/masters" className="text-[var(--brand-deep)]">制度マスタを開く</Link>
           </p>
         </Card>
@@ -139,7 +139,7 @@ export default async function AdminHome() {
           <p className="m-0">
             <Num value={totalWeight} display unit={`点 / ${scheme?.totalPoints ?? 100}点`} />
           </p>
-          <p className="footnote m-0 mt-1">
+          <p className="footnote card-foot m-0">
             <Link href="/admin/scheme" className="text-[var(--brand-deep)]">8項目と配点を見る</Link>
           </p>
         </Card>

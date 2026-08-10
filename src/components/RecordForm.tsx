@@ -129,7 +129,7 @@ export function RecordForm({
           e.preventDefault();
           void submit();
         }}
-        className="grid gap-3 md:grid-cols-2"
+        className="field-grid"
       >
         {fields.map((f) => (
           <label key={f.name} className={f.type === "textarea" ? "md:col-span-2" : undefined}>

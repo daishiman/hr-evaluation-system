@@ -195,7 +195,7 @@ export async function EvaluationDetail({
             そのため上の項目数と達成率の割合が一致していません。確定済みの評価は作り直しません。
           </ReasonNote>
         )}
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="card-grid mt-4">
           {[
             { title: "支援について", rows: supportReqs },
             { title: "運営について", rows: operationReqs },

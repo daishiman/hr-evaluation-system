@@ -231,7 +231,7 @@ export function GradeRequirementEditor({
   };
 
   return (
-    <div className="grid gap-4">
+    <div className="stack">
       <Card className="card-pad">
         <p className="m-0 text-[13px]">
           いま編集しているのは <b>{gradeName}</b> の等級要件です。
@@ -286,7 +286,7 @@ export function GradeRequirementEditor({
           </Button>
         </div>
         {preview && (
-          <div className="mt-3 grid gap-4">
+          <div className="stack mt-3">
             {denominator === 0 ? (
               <p className="footnote m-0">
                 いまは1項目も登録されていないため、次に作るアンケートに等級要件の設問は出ません。その場合、達成率は「判定外」になります。
