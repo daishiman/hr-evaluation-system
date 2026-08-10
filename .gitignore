@@ -1,0 +1,34 @@
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === エディタ ===
+.vscode/
+.idea/
+*.swp
+
+# === 認証情報 ===
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# === 依存関係 / ビルド成果物 ===
+node_modules/
+__pycache__/
+.venv/
+venv/
+dist/
+build/
+*.log
+
+# === 人事評価の実データ（個人情報・評価内容）===
+# 実データはデータベース側で管理するため、リポジトリでは一切追跡しない。
+# data/ の「中身」を無視する（data/ と書くと配下を走査せず、下の否定が効かなくなる）
+data/*
+
+# サンプルデータ（テスト用・表示確認用の匿名化データ）のみ追跡する
+!data/sample/
