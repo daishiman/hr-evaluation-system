@@ -80,6 +80,8 @@ export const users = sqliteTable(
     department: text("department"),
     hiredAt: text("hired_at"),
     profileNote: text("profile_note"),
+    /** 発行時の仮パスワードのまま使っている状態。true の間は変更をお願いし続ける */
+    mustChangePassword: integer("must_change_password", { mode: "boolean" }).notNull().default(false),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
 
     createdAt: createdAt(),
@@ -332,6 +334,35 @@ export const kpiRankCriteria = sqliteTable(
     updatedAt: updatedAt(),
   },
   (t) => [uniqueIndex("uq_krc_item_rank").on(t.kpiItemId, t.rank)],
+);
+
+/**
+ * 元の配点表（「KPI基準定義_配点」シート）の写し。参考値としてだけ使う。
+ *
+ * 元の制度は「等級ごとに、項目ごとの点数が決まっている」表を持っていた。
+ * いまの仕組みは会社ごとに8項目を選び直せるため、選び直すと元の点数が分からなくなる。
+ * そこで表をそのまま保管しておき、評価セットの画面で「元はこの点数でした」と出せるようにする。
+ * この表は計算には一切使わない（計算に使うのは scheme_items / scheme_rank_ratios）。
+ */
+export const kpiReferencePoints = sqliteTable(
+  "kpi_reference_points",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    kpiItemId: text("kpi_item_id").notNull().references(() => kpiItems.id, { onDelete: "cascade" }),
+    /** 配点表の等級区分（grades.point_group と同じ値）。AMⅠ/Ⅱ、MgrⅠ/Ⅱは同じ列 */
+    pointGroup: text("point_group").notNull(),
+    /** A | B | C | D | E */
+    rank: text("rank").notNull(),
+    /** そのランクを取ったときの点数。元の表で「-」（対象外）だった組み合わせは行を作らない */
+    points: real("points").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("uq_krp_item_group_rank").on(t.kpiItemId, t.pointGroup, t.rank),
+    index("idx_krp_company").on(t.companyId),
+  ],
 );
 
 /** KPI設問（分子・分母などの実数を聞く設問。q1_1 など） */

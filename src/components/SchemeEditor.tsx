@@ -4,6 +4,12 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
 import { suggestWeights, validateScheme } from "@/lib/domain/scheme";
+import {
+  formatByRank,
+  indexReferencePoints,
+  referenceFor,
+  type ReferencePointRow,
+} from "@/lib/domain/reference-points";
 
 export interface KpiOption {
   id: string;
@@ -37,6 +43,8 @@ export function SchemeEditor({
   kpiItems,
   initial,
   raiseRequiresAllA,
+  pointGroups,
+  reference,
 }: {
   schemeId: string;
   totalPoints: number;
@@ -44,6 +52,10 @@ export function SchemeEditor({
   kpiItems: KpiOption[];
   initial: { kpiItemId: string; categoryId: string | null; weight: number; isFixedSlot: boolean }[];
   raiseRequiresAllA: boolean;
+  /** 元の配点表の等級区分（Beginner / Regular / Chief / AM / Manager） */
+  pointGroups: string[];
+  /** 元の配点表の写し。参考値としてだけ使い、計算には使わない */
+  reference: ReferencePointRow[];
 }) {
   const router = useRouter();
   const fixedItem = kpiItems.find((k) => k.isFixedSlot) ?? null;
@@ -60,6 +72,7 @@ export function SchemeEditor({
     ),
   );
   const [allA, setAllA] = useState(raiseRequiresAllA);
+  const [refGroup, setRefGroup] = useState(pointGroups[0] ?? "");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +99,49 @@ export function SchemeEditor({
     categoryIds: categories.map((c) => c.id),
     categoryNameOf: (id) => categories.find((c) => c.id === id)?.name ?? id,
   });
+
+  const refIndex = useMemo(() => indexReferencePoints(reference), [reference]);
+  const refOf = (kpiItemId: string | undefined) =>
+    kpiItemId && refGroup ? referenceFor(refIndex, kpiItemId, refGroup) : null;
+
+  /** 選んでいる項目すべてに、元の配点を入れる（対象外だった項目はそのまま） */
+  const loadReference = () => {
+    const fixedRef = refOf(fixedItem?.id);
+    if (fixedRef) setFixedWeight(Math.round(fixedRef.maxPoints));
+    setPicked((prev) =>
+      Object.fromEntries(
+        categories.map((c) => {
+          const r = refOf(prev[c.id]?.kpiItemId);
+          return [c.id, r ? { ...prev[c.id], weight: Math.round(r.maxPoints) } : prev[c.id]];
+        }),
+      ),
+    );
+    setMessage(null);
+  };
+
+
+  /** 元の配点の参考表示。参考値であることが分かる言い方に統一する */
+  const ReferenceHint = ({ kpiItemId, onApply }: { kpiItemId?: string; onApply: (points: number) => void }) => {
+    if (pointGroups.length === 0) return null;
+    const r = refOf(kpiItemId);
+    if (!r) {
+      return (
+        <p className="footnote m-0 mt-2">
+          元の配点表では、この項目は「{refGroup}」の対象外でした（参考にできる点数がありません）。
+        </p>
+      );
+    }
+    return (
+      <p className="footnote m-0 mt-2 flex flex-wrap items-center gap-2">
+        <Badge tone="done">参考</Badge>
+        元の配点表（{refGroup}）では <Num value={r.maxPoints} unit="点" />
+        <span className="text-[var(--ink-muted)]">（{formatByRank(r)}）</span>
+        <button type="button" className="btn btn-tertiary" onClick={() => onApply(Math.round(r.maxPoints))}>
+          この点数を入れる
+        </button>
+      </p>
+    );
+  };
 
   const evenOut = () => {
     const w = suggestWeights(categories.length + 1, totalPoints);
@@ -146,6 +202,36 @@ export function SchemeEditor({
       {error && <ReasonNote>{error}</ReasonNote>}
       {message && <p className="m-0 mt-3 text-[13px] text-[var(--brand-deep)]">{message}</p>}
 
+      {pointGroups.length > 0 && (
+        <Card className="card-pad mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="section-heading m-0">移行前の配点を参考にする</p>
+              <p className="footnote m-0">
+                移行前は等級ごとに配点が決まっていました。その点数を参考として表示します。読み込むまで配点は変わりません。
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-2 text-[12px]">
+                等級
+                <select
+                  className="input h-9 w-36 py-0 text-[13px]"
+                  value={refGroup}
+                  onChange={(e) => setRefGroup(e.target.value)}
+                >
+                  {pointGroups.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button onClick={loadReference}>選んだ項目にまとめて入れる</Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {fixedItem && (
         <Card className="card-pad mt-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -166,6 +252,7 @@ export function SchemeEditor({
               <span className="unit">点</span>
             </label>
           </div>
+          <ReferenceHint kpiItemId={fixedItem.id} onApply={(p) => setFixedWeight(p)} />
         </Card>
       )}
 
@@ -227,6 +314,10 @@ export function SchemeEditor({
               ))}
             </div>
             {chosen?.intent && <p className="footnote m-0 mt-2">ねらい：{chosen.intent}</p>}
+            <ReferenceHint
+              kpiItemId={cur?.kpiItemId}
+              onApply={(p) => setPicked((prev) => ({ ...prev, [c.id]: { ...prev[c.id], weight: p } }))}
+            />
           </Card>
         );
       })}

@@ -56,3 +56,6 @@ backup.sql
 
 # misc
 *.tsbuildinfo
+
+drizzle/.add-user.sql
+drizzle/.reference-points.sql

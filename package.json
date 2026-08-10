@@ -18,7 +18,9 @@
     "db:migrate:remote": "wrangler d1 migrations apply hr-evaluation-db --remote",
     "db:seed:local": "node scripts/seed.mjs --local",
     "db:seed:remote": "node scripts/seed.mjs --remote",
-    "db:backup": "wrangler d1 export hr-evaluation-db --remote --output=backup.sql"
+    "db:backup": "wrangler d1 export hr-evaluation-db --remote --output=backup.sql",
+    "user:add": "node scripts/add-user.mjs",
+    "db:seed:reference": "node scripts/seed-reference-points.mjs"
   },
   "dependencies": {
     "better-auth": "^1.6.26",

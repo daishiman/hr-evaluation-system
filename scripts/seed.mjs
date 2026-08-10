@@ -16,7 +16,7 @@ const TABLES = [
   "evaluation_gates", "evaluation_requirements", "evaluation_behaviors", "evaluation_items", "evaluations",
   "form_answers", "form_responses", "form_questions", "forms", "evaluation_cycles",
   "scheme_rank_ratios", "scheme_items", "evaluation_schemes",
-  "kpi_questions", "kpi_rank_criteria", "kpi_items", "kpi_categories",
+  "kpi_questions", "kpi_reference_points", "kpi_rank_criteria", "kpi_items", "kpi_categories",
   "promotion_thresholds", "behavior_levels", "behavior_guidelines",
   "promotion_requirements", "grade_requirements",
   "sessions", "accounts", "verifications", "users", "grades", "offices", "companies",

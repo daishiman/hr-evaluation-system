@@ -20,6 +20,9 @@ const behaviors = read("behavior-guidelines.json");
 /* ───────────────── 7カテゴリ（等級要件達成率を除く32項目の分類） ─────────────────
  * 「各社がカテゴリごとに1項目ずつ選ぶ」ための分類。経営課題の領域で切っている。
  */
+/** 移行前の配点表の列（等級区分ごとに配点が違う）。 */
+const POINT_GROUPS = ["Beginner", "Regular", "Chief", "AM", "Manager"];
+
 export const CATEGORIES = [
   { code: "sales", name: "売上・収益", description: "売上と利益を予算どおり確保できたかを測る領域", items: [6, 9, 12, 24] },
   { code: "occupancy", name: "稼働・利用者獲得", description: "定員に対する稼働と、新しい利用者の獲得を測る領域", items: [5, 10, 14, 30, 33] },
@@ -226,6 +229,7 @@ export async function buildSeed() {
   const kpiCategories = [];
   const kpiItems = [];
   const kpiRankCriteria = [];
+  const kpiReferencePointRows = [];
   const kpiQuestionRows = [];
   const schemes = [];
   const schemeItems = [];
@@ -386,6 +390,23 @@ export async function buildSeed() {
         is_provisional: r.__filled ? 1 : 0,
         provisional_note: r.__filled ? "元スプレッドシートにEランクの行が無かったため、D（90%以上95%未満）の下に接続する形で補完しました。" : null,
         created_at: NOW, updated_at: MASTER_AT,
+      });
+    });
+
+    /* 移行前の配点表（参考値。評価の計算には使わず、配点の入力補助としてのみ画面に出す） */
+    POINT_GROUPS.forEach((g) => {
+      kpiPoints.forEach((p) => {
+        const raw = (p[g] ?? "").toString().trim();
+        // 「-」はその等級で対象外だった項目。空欄と同じく行を作らない
+        if (raw === "" || raw === "-") return;
+        const points = Number(raw);
+        if (!Number.isFinite(points)) return;
+        const no = Number(p["項目No"]);
+        kpiReferencePointRows.push({
+          id: `krp_kpi_${co.key}_${no}_${g}_${p["ランク"]}`, company_id: cid,
+          kpi_item_id: `kpi_${co.key}_${no}`, point_group: g, rank: p["ランク"], points,
+          created_at: NOW, updated_at: MASTER_AT,
+        });
       });
     });
 
@@ -805,6 +826,7 @@ export async function buildSeed() {
   sql.push(...insert("kpi_categories", kpiCategories));
   sql.push(...insert("kpi_items", kpiItems));
   sql.push(...insert("kpi_rank_criteria", kpiRankCriteria));
+  sql.push(...insert("kpi_reference_points", kpiReferencePointRows));
   sql.push(...insert("kpi_questions", kpiQuestionRows));
   sql.push(...insert("evaluation_schemes", schemes));
   sql.push(...insert("scheme_items", schemeItems));
@@ -836,6 +858,7 @@ export async function buildSeed() {
       等級要件: gradeRequirements.length, 昇格要件: promotionRequirements.length,
       行動指針: behaviorGuidelines.length, 行動指針の段階: behaviorLevels.length,
       KPI項目: kpiItems.length, ランク基準: kpiRankCriteria.length, KPI設問: kpiQuestionRows.length,
+      元の配点: kpiReferencePointRows.length,
       評価セット: schemes.length, 選択項目: schemeItems.length,
       サイクル: cycles.length, フォーム: forms.length, フォーム設問: formQuestions.length,
       回答: formResponses.length, 回答明細: formAnswers.length,

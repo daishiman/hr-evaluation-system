@@ -1,5 +1,12 @@
 import { requireRole } from "@/lib/session";
-import { getActiveScheme, listKpiCategories, listKpiItems, listSchemeItems } from "@/lib/queries";
+import {
+  getActiveScheme,
+  listGrades,
+  listKpiCategories,
+  listKpiItems,
+  listReferencePoints,
+  listSchemeItems,
+} from "@/lib/queries";
 import { EmptyState, PageTitle, ReasonNote } from "@/components/ui";
 import { SchemeEditor } from "@/components/SchemeEditor";
 
@@ -14,11 +21,17 @@ export default async function AdminSchemePage() {
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  const [scheme, categories, kpiItems] = await Promise.all([
+  const [scheme, categories, kpiItems, grades, reference] = await Promise.all([
     getActiveScheme(companyId),
     listKpiCategories(companyId),
     listKpiItems(companyId),
+    listGrades(companyId),
+    listReferencePoints(companyId),
   ]);
+
+  // 元の配点表は「等級区分」ごとの列だった（AMⅠ/Ⅱ、MgrⅠ/Ⅱは同じ列）。等級の並び順のまま重複を除く
+  const pointGroups: string[] = [];
+  for (const g of grades) if (!pointGroups.includes(g.pointGroup)) pointGroups.push(g.pointGroup);
 
   if (!scheme) {
     return (
@@ -61,6 +74,8 @@ export default async function AdminSchemePage() {
           isFixedSlot: i.isFixedSlot,
         }))}
         raiseRequiresAllA={scheme.raiseRequiresAllA}
+        pointGroups={pointGroups}
+        reference={reference}
       />
     </>
   );

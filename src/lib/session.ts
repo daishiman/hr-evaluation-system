@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { getAuth } from "@/lib/auth";
@@ -42,6 +42,8 @@ export interface Viewer {
   employeeCode: string | null;
   hiredAt: string | null;
   companyName: string | null;
+  /** 発行時の仮パスワードのまま使っている（変更をお願いし続ける） */
+  mustChangePassword: boolean;
 }
 
 /** ログイン中の利用者。未ログインなら null。 */
@@ -63,6 +65,7 @@ export async function getViewer(): Promise<Viewer | null> {
       department: schema.users.department,
       employeeCode: schema.users.employeeCode,
       hiredAt: schema.users.hiredAt,
+      mustChangePassword: schema.users.mustChangePassword,
       isActive: schema.users.isActive,
       companyName: schema.companies.name,
     })
@@ -75,19 +78,63 @@ export async function getViewer(): Promise<Viewer | null> {
   // 退職・停止したアカウントはセッションが残っていても通さない
   if (!u || !u.isActive) return null;
 
+  const role: Role = (ROLES as readonly string[]).includes(u.role) ? (u.role as Role) : "EMPLOYEE";
+
+  // システム全体管理者は会社に属さないため、いま見ている会社を別に決める（他のロールは自社に固定）
+  let companyId = u.companyId;
+  let companyName = u.companyName ?? null;
+  if (role === "SUPER_ADMIN") {
+    const scoped = await readCompanyScope(db);
+    companyId = scoped?.id ?? null;
+    companyName = scoped?.name ?? null;
+  }
+
   return {
     id: u.id,
     name: u.name,
     email: u.email,
-    role: (ROLES as readonly string[]).includes(u.role) ? (u.role as Role) : "EMPLOYEE",
-    companyId: u.companyId,
+    role,
+    companyId,
     gradeId: u.gradeId,
     managerId: u.managerId,
     department: u.department,
     employeeCode: u.employeeCode,
     hiredAt: u.hiredAt,
-    companyName: u.companyName ?? null,
+    companyName,
+    mustChangePassword: Boolean(u.mustChangePassword),
   };
+}
+
+/** システム全体管理者が「いま見ている会社」を覚えておくクッキーの名前。 */
+export const COMPANY_SCOPE_COOKIE = "hr_company";
+
+/**
+ * システム全体管理者がいま操作対象にしている会社を返す。
+ *
+ * クッキーの値をそのまま信じず、実在して有効な会社かをDBで確かめる。
+ * 選ばれていなければ、会社一覧の先頭を既定にする（何も見えない状態にしない）。
+ */
+async function readCompanyScope(db: Awaited<ReturnType<typeof getDb>>) {
+  const jar = await cookies();
+  const requested = jar.get(COMPANY_SCOPE_COOKIE)?.value ?? null;
+
+  if (requested) {
+    const hit = await db
+      .select({ id: schema.companies.id, name: schema.companies.name })
+      .from(schema.companies)
+      .where(and(eq(schema.companies.id, requested), eq(schema.companies.isActive, true)))
+      .limit(1);
+    if (hit[0]) return hit[0];
+  }
+
+  // 既定はひな形（制度テンプレート）ではなく、実在する会社の先頭
+  const first = await db
+    .select({ id: schema.companies.id, name: schema.companies.name })
+    .from(schema.companies)
+    .where(and(eq(schema.companies.isActive, true), eq(schema.companies.isTemplate, false)))
+    .orderBy(schema.companies.name)
+    .limit(1);
+  return first[0] ?? null;
 }
 
 /** 画面用。未ログインならログイン画面へ送る。 */
@@ -145,7 +192,8 @@ export function homePathFor(role: Role): string {
  * URLに他社のIDを入れられても、ここで自社に強制される。
  */
 export function resolveCompanyId(v: Viewer, requested?: string | null): string | null {
-  if (v.role === "SUPER_ADMIN") return requested ?? null;
+  // システム全体管理者だけが会社を指定できる。指定がなければ、いま選んでいる会社を使う
+  if (v.role === "SUPER_ADMIN") return requested ?? v.companyId;
   return v.companyId;
 }
 
