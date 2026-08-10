@@ -50,6 +50,16 @@ export async function EvaluationDetail({
   const gateFail = gates.filter((g) => !g.achieved);
   // 実績が入力されておらずランクを付けられなかった項目（移行元のGASでいう「判定外」）
   const unrated = items.filter((i) => i.rank === null);
+  /* 2026-08-10 に達成率の分母を「出題した項目数」へ変更した。それ以前に確定した評価は
+     作り直さない（過去評価の不変性）ため、保存済みの達成率と項目数の割合が合わない。
+     食い違うときだけ、その理由を画面に出す。 */
+  const isLegacyRate =
+    head.requirementRate !== null &&
+    head.requirementTotal !== null &&
+    head.requirementTotal > 0 &&
+    head.requirementAchieved !== null &&
+    Math.abs(head.requirementRate - Math.round((head.requirementAchieved / head.requirementTotal) * 1000) / 10) > 0.1;
+
   const supportReqs = requirements.filter((r) => r.category === "support");
   const operationReqs = requirements.filter((r) => r.category === "operation");
 
@@ -169,14 +179,22 @@ export async function EvaluationDetail({
         等級要件（支援・運営）
       </SectionHeading>
       <Card className="card-pad">
-        {/* 達成率の分母は「半期の目標設定上限数」。答えた設問の数ではない（元の計算式どおり）。
-            上限より多く達成することがあるため、バーは上限に対する進み具合を示す。 */}
+        {/* 達成率の分母は「このアンケートで実際に出題した等級要件の項目数」。
+            判定した時点の分子・分母をそのまま保存しているので、あとから設問を
+            増減させてもこの表示は動かない。 */}
         <Bar value={head.requirementRate ?? 0} max={100} label="％（達成率）" />
         <p className="footnote mt-1">
-          <Num value={head.requirementAchieved} unit="件" /> 達成／半期の目標設定上限{" "}
-          <Num value={head.gradeTargetCap} unit="件" />（アンケートの等級要件の設問は{" "}
-          <Num value={head.requirementTotal} unit="件" />）。上限を超えて達成した場合も達成率は100%が上限です。
+          <Num value={head.requirementTotal} unit="項目" /> 中{" "}
+          <Num value={head.requirementAchieved} unit="項目" /> 達成 →{" "}
+          <Num value={head.requirementRate} unit="%" />
+          。分母はこのアンケートで実際に聞いた等級要件の項目数です（未回答の項目も未達として数えます）。
         </p>
+        {isLegacyRate && (
+          <ReasonNote>
+            この評価は、達成率の分母を「半期の目標設定上限数」としていた以前の決まりで確定済みです。
+            そのため上の項目数と達成率の割合が一致していません。確定済みの評価は作り直しません。
+          </ReasonNote>
+        )}
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {[
             { title: "支援について", rows: supportReqs },
