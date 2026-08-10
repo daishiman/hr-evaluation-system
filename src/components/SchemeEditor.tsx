@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { useLazyJson } from "@/components/useLazyJson";
 import { suggestWeights, validateScheme } from "@/lib/domain/scheme";
 import {
   formatByRank,
@@ -45,7 +46,6 @@ export function SchemeEditor({
   raiseRequiresAllA,
   scoringMode,
   pointGroups,
-  reference,
 }: {
   schemeId: string;
   totalPoints: number;
@@ -57,8 +57,6 @@ export function SchemeEditor({
   scoringMode: "ratio" | "absolute";
   /** 元の配点表の等級区分（Beginner / Regular / Chief / AM / Manager） */
   pointGroups: string[];
-  /** 元の配点表の写し。参考値としてだけ使い、計算には使わない */
-  reference: ReferencePointRow[];
 }) {
   const router = useRouter();
   const fixedItem = kpiItems.find((k) => k.isFixedSlot) ?? null;
@@ -104,12 +102,28 @@ export function SchemeEditor({
     categoryNameOf: (id) => categories.find((c) => c.id === id)?.name ?? id,
   });
 
-  const refIndex = useMemo(() => indexReferencePoints(reference), [reference]);
+  /* 元の配点表は 33項目 × 5等級区分 × 5ランクで800件を超える。全部を画面に
+     埋め込むと、参考にしない人にも毎回数十KBを送ることになるため、
+     「参考にする」を押したときに、選んでいる等級区分のぶんだけ読みに行く。 */
+  const [refOn, setRefOn] = useState(false);
+  const refUrl = refGroup ? `/api/reference-points?group=${encodeURIComponent(refGroup)}` : null;
+  const {
+    data: refData,
+    loading: refLoading,
+    error: refError,
+  } = useLazyJson<{ group: string; rows: ReferencePointRow[] }>(refUrl, refOn);
+  /* 等級区分を切り替えた直後は、まだ前の区分の内容が残っている。
+     取り違えて配点を入れてしまわないよう、区分が一致するときだけ使う。 */
+  const refRows = refData && refData.group === refGroup ? refData.rows : null;
+  const refReady = refOn && refRows !== null;
+
+  const refIndex = useMemo(() => indexReferencePoints(refRows ?? []), [refRows]);
   const refOf = (kpiItemId: string | undefined) =>
-    kpiItemId && refGroup ? referenceFor(refIndex, kpiItemId, refGroup) : null;
+    kpiItemId && refGroup && refReady ? referenceFor(refIndex, kpiItemId, refGroup) : null;
 
   /** 選んでいる項目すべてに、元の配点を入れる（対象外だった項目はそのまま） */
   const loadReference = () => {
+    if (!refReady) return; // 読み込めていないうちは何も入れない（0点で埋めてしまわないように）
     const fixedRef = refOf(fixedItem?.id);
     if (fixedRef) setFixedWeight(Math.round(fixedRef.maxPoints));
     setPicked((prev) =>
@@ -127,6 +141,11 @@ export function SchemeEditor({
   /** 元の配点の参考表示。参考値であることが分かる言い方に統一する */
   const ReferenceHint = ({ kpiItemId, onApply }: { kpiItemId?: string; onApply: (points: number) => void }) => {
     if (pointGroups.length === 0) return null;
+    // 「参考にする」を押すまでは何も出さない（そのぶん画面を軽くしている）
+    if (!refOn) return null;
+    if (refLoading || !refReady) {
+      return <p className="footnote m-0 mt-2">元の配点表を読み込んでいます…</p>;
+    }
     const r = refOf(kpiItemId);
     if (!r) {
       return (
@@ -279,9 +298,20 @@ export function SchemeEditor({
                   ))}
                 </select>
               </label>
-              <Button onClick={loadReference}>選んだ項目にまとめて入れる</Button>
+              {!refOn ? (
+                <Button onClick={() => setRefOn(true)}>元の配点を表示する</Button>
+              ) : (
+                <Button onClick={loadReference} disabled={!refReady}>
+                  {refReady ? "選んだ項目にまとめて入れる" : "読み込んでいます…"}
+                </Button>
+              )}
             </div>
           </div>
+          {refError && (
+            <div className="mt-3">
+              <ReasonNote>{refError}</ReasonNote>
+            </div>
+          )}
         </Card>
       )}
 

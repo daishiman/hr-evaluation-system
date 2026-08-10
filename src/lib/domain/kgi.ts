@@ -138,6 +138,98 @@ export function computeBonus(input: BonusInput): BonusResult {
   return { coefficient: m.coefficient, personalPoints, bonusYen, rationale: parts.join("") };
 }
 
+/* ───────────────── 達成率を登録したときの、既存評価への反映 ───────────────── */
+
+/**
+ * どの事業所の評価かを決める。
+ *
+ * 期中に異動した人がいるため、評価に写し取った所属（evaluations.office_id）を最優先にする。
+ * それが空の古い行は、回答時点の所属 → いまの所属 の順で埋める。
+ * どれも空なら「事業所が分からない」ので null を返し、どの達成率も当てない。
+ * ここで「いまの所属」に寄せて当ててしまうと、異動した人に異動先の達成率が
+ * 遡って当たるため、必ずこの順番を守る。
+ */
+export function effectiveOfficeId(row: {
+  evalOfficeId: string | null;
+  responseOfficeId: string | null;
+  userOfficeId: string | null;
+}): string | null {
+  return row.evalOfficeId ?? row.responseOfficeId ?? row.userOfficeId ?? null;
+}
+
+export interface BonusRecalcTarget {
+  evaluationId: string;
+  /** draft（確認中）| finalized（確定済み） */
+  status: string;
+  /** 保存済みのKPI評価点合計。ランク判定はやり直さないのでこの値をそのまま使う */
+  totalScore: number;
+}
+
+export interface BonusRecalcUpdate {
+  evaluationId: string;
+  officeAchievementRate: number;
+  coefficient: number | null;
+  personalPoints: number | null;
+  bonusYen: number | null;
+  rationale: string;
+}
+
+export interface BonusRecalcPlan {
+  /** 書き換える評価（確認中のものだけ） */
+  updates: BonusRecalcUpdate[];
+  /** 確定済みのため据え置いた評価のID */
+  skippedFinalized: string[];
+  /** 係数を引き当てられなかった評価のID（達成率が係数表のどの区分にも入らない） */
+  unmatched: string[];
+}
+
+/**
+ * 達成率を登録・変更したときに、どの評価をどう書き換えるかを決める。
+ *
+ * ■ なぜ「賞与の欄だけ」を計算し直すのか
+ * 達成率が変わっても、KPIのランク判定・得点（totalScore）は1点も動かない。
+ * 賞与は totalScore と係数と1点あたり金額だけで決まる純粋な計算なので、
+ * 評価そのものを作り直す（buildEvaluationsForCycle）必要がない。
+ * 作り直すと、達成率とは関係のない基準の変更（ランク基準の編集など）まで
+ * 一緒に取り込んでしまい、「達成率を入れただけなのに点数が変わった」が起きる。
+ *
+ * ■ なぜ確定済みを書き換えないのか
+ * 確定済みの評価は判定当時の配点・閾値・係数をスナップショットとして持っており、
+ * あとからマスタを変えても動かさない、というのがこのシステム全体の決まり
+ * （過去評価の不変性）。達成率だけ例外にすると、確定して本人に伝えた賞与額が
+ * 後から黙って変わることになるため、ここでも据え置く。
+ * 据え置いた件数は呼び出し側が画面に出して、隠さずに知らせる。
+ */
+export function planBonusRecalc(
+  targets: BonusRecalcTarget[],
+  input: { achievementRate: number; coefficients: KgiCoefficientRow[]; yenPerPoint: number },
+): BonusRecalcPlan {
+  const plan: BonusRecalcPlan = { updates: [], skippedFinalized: [], unmatched: [] };
+
+  for (const t of targets) {
+    if (t.status === "finalized") {
+      plan.skippedFinalized.push(t.evaluationId);
+      continue;
+    }
+    const r = computeBonus({
+      kpiTotalScore: t.totalScore,
+      officeAchievementRate: input.achievementRate,
+      coefficients: input.coefficients,
+      yenPerPoint: input.yenPerPoint,
+    });
+    if (r.coefficient === null) plan.unmatched.push(t.evaluationId);
+    plan.updates.push({
+      evaluationId: t.evaluationId,
+      officeAchievementRate: input.achievementRate,
+      coefficient: r.coefficient,
+      personalPoints: r.personalPoints,
+      bonusYen: r.bonusYen,
+      rationale: r.rationale,
+    });
+  }
+  return plan;
+}
+
 /* ───────────────────────── 共通: 範囲表の検査 ───────────────────────── */
 
 export interface RangeRow {

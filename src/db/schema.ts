@@ -870,6 +870,60 @@ export const kgiCoefficients = sqliteTable(
   (t) => [index("idx_kgi_company").on(t.companyId)],
 );
 
+/**
+ * 事業所KGIの達成率（事業所 × 評価サイクル）。
+ *
+ * 賞与の個人Pt（＝KPI評価点合計 × 達成係数）を出すために要る実績値。
+ * アンケート73問の中にこれを聞く設問は無く、元スプレッドシートでも
+ * 別表から手で持ってきていた値のため、管理画面から人が登録する。
+ *
+ * 登録されていない事業所・サイクルは「行が無い」状態にする。
+ * 0% の行を作って埋めない——0%は「KGIをまったく達成できなかった」という
+ * 別の意味を持ってしまい、賞与額が最小係数で算出されてしまうため。
+ */
+export const officeKgiResults = sqliteTable(
+  "office_kgi_results",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    officeId: text("office_id").notNull().references(() => offices.id, { onDelete: "cascade" }),
+    cycleId: text("cycle_id").notNull().references(() => evaluationCycles.id, { onDelete: "cascade" }),
+    /** 達成率（%）。111.5 のような小数も入る */
+    achievementRate: real("achievement_rate").notNull(),
+    /** 何を根拠にこの数字にしたか（別表の出典など） */
+    note: text("note"),
+    recordedById: text("recorded_by_id").references(() => users.id),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("uq_okr_office_cycle").on(t.officeId, t.cycleId),
+    index("idx_okr_company").on(t.companyId),
+    index("idx_okr_cycle").on(t.cycleId),
+  ],
+);
+
+/**
+ * 達成率の変更履歴。値を変えたら必ず1行残す（昇給額の raise_revisions と同じ作法）。
+ * 賞与額の根拠になる数字なので、「誰がいつ何％から何％に変えたか」を後から説明できるようにする。
+ */
+export const officeKgiRevisions = sqliteTable(
+  "office_kgi_revisions",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    officeId: text("office_id").notNull().references(() => offices.id, { onDelete: "cascade" }),
+    cycleId: text("cycle_id").notNull().references(() => evaluationCycles.id, { onDelete: "cascade" }),
+    /** 変更前の達成率。初回登録では null */
+    beforeRate: real("before_rate"),
+    afterRate: real("after_rate").notNull(),
+    reason: text("reason"),
+    revisedById: text("revised_by_id").references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("idx_okrev_company").on(t.companyId), index("idx_okrev_cycle").on(t.cycleId)],
+);
+
 /* ───────────────────────── 人物メモ ───────────────────────── */
 
 /** 上長・マネージャー・管理者が残す人物ごとの評価メモ（本人には見せない） */
