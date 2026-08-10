@@ -29,6 +29,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   typedRoutes: false,
+  /**
+   * ログインとDBの部品は、ビルド時に画面ごとへ複製されると
+   * サーバー側の実行ファイルが Cloudflare Workers の容量上限を超える。
+   * 外部パッケージとして1つだけ持たせる。
+   */
+  serverExternalPackages: ["better-auth", "@better-auth/core", "@better-auth/utils", "drizzle-orm"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
