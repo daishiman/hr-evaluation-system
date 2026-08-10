@@ -4,6 +4,7 @@ import { getDb, schema as s } from "@/lib/db";
 import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
+import { GRADE_REQUIREMENT_MAX, swapForMove } from "@/lib/domain/grade-requirements";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,14 @@ const bodySchema = z.discriminatedUnion("kind", [
     isActive: z.boolean().optional(),
   }),
   z.object({
+    /** 等級要件の並べ替え（同じ区分の中で1つ上／下と入れ替える） */
+    kind: z.literal("gradeRequirementOrder"),
+    id: z.string().min(1),
+    gradeId: z.string().min(1),
+    category: z.enum(["support", "operation"]),
+    direction: z.enum(["up", "down"]),
+  }),
+  z.object({
     kind: z.literal("promotionRequirement"),
     id: z.string().optional(),
     gradeId: z.string().min(1),
@@ -80,6 +89,14 @@ const bodySchema = z.discriminatedUnion("kind", [
     seq: z.number().int().min(1).max(99).optional(),
     isGate: z.boolean().optional(),
     isActive: z.boolean().optional(),
+  }),
+  z.object({
+    /** 昇格要件の並べ替え（同じ種類の中で1つ上／下と入れ替える） */
+    kind: z.literal("promotionRequirementOrder"),
+    id: z.string().min(1),
+    gradeId: z.string().min(1),
+    reqKind: z.enum(["report", "test"]),
+    direction: z.enum(["up", "down"]),
   }),
   z.object({
     kind: z.literal("rankCriteria"),
@@ -218,12 +235,32 @@ export async function PUT(req: Request) {
       }
       case "gradeRequirement": {
         await ownGrade(body.gradeId);
+        /* 支援・運営はそれぞれ最大10項目まで（制度上の上限）。
+           画面でも追加ボタンを止めているが、直接APIを叩かれても超えないようにここで止める。 */
+        const activeInCategory = async (excludeId?: string) => {
+          const rows = await db
+            .select({ id: s.gradeRequirements.id })
+            .from(s.gradeRequirements)
+            .where(
+              and(
+                eq(s.gradeRequirements.companyId, companyId),
+                eq(s.gradeRequirements.gradeId, body.gradeId),
+                eq(s.gradeRequirements.category, body.category),
+                eq(s.gradeRequirements.isActive, true),
+              ),
+            );
+          return rows.filter((r) => r.id !== excludeId).length;
+        };
+        const label = body.category === "support" ? "支援について" : "運営について";
         if (body.id) {
           await ensure(
             await db.select({ id: s.gradeRequirements.id }).from(s.gradeRequirements)
               .where(and(eq(s.gradeRequirements.id, body.id), eq(s.gradeRequirements.companyId, companyId))).limit(1),
             "等級要件",
           );
+          if (body.isActive === true && (await activeInCategory(body.id)) >= GRADE_REQUIREMENT_MAX) {
+            throw new HttpError(400, `「${label}」は${GRADE_REQUIREMENT_MAX}項目までです。ほかの項目を使わない状態にしてから戻してください。`);
+          }
           await db
             .update(s.gradeRequirements)
             .set({
@@ -234,6 +271,9 @@ export async function PUT(req: Request) {
             })
             .where(eq(s.gradeRequirements.id, body.id));
           return { message: "等級要件を保存しました。" };
+        }
+        if ((await activeInCategory()) >= GRADE_REQUIREMENT_MAX) {
+          throw new HttpError(400, `「${label}」は${GRADE_REQUIREMENT_MAX}項目までです。`);
         }
         const existing = await db
           .select({ seq: s.gradeRequirements.seq })
@@ -249,6 +289,21 @@ export async function PUT(req: Request) {
           isActive: true,
         });
         return { message: "等級要件を追加しました。次に作るアンケートから設問に載ります。" };
+      }
+      case "gradeRequirementOrder": {
+        await ownGrade(body.gradeId);
+        const rows = await db
+          .select()
+          .from(s.gradeRequirements)
+          .where(and(eq(s.gradeRequirements.companyId, companyId), eq(s.gradeRequirements.gradeId, body.gradeId)));
+        const swap = swapForMove(rows, body.category, body.id, body.direction);
+        if (!swap) throw new HttpError(400, "これ以上は動かせません。");
+        // 2件の並び順を入れ替える。片方だけ書き換わると順番が重複するため、まとめて実行する。
+        await db.batch([
+          db.update(s.gradeRequirements).set({ seq: swap[0].seq }).where(eq(s.gradeRequirements.id, swap[0].id)),
+          db.update(s.gradeRequirements).set({ seq: swap[1].seq }).where(eq(s.gradeRequirements.id, swap[1].id)),
+        ] as unknown as Parameters<typeof db.batch>[0]);
+        return { message: "並び順を変更しました。" };
       }
       case "promotionRequirement": {
         await ownGrade(body.gradeId);
@@ -286,7 +341,27 @@ export async function PUT(req: Request) {
           isGate: body.isGate ?? true,
           isActive: true,
         });
-        return { message: "昇格要件を追加しました。" };
+        return { message: "昇格要件を追加しました。次に作るアンケートから設問に載ります。" };
+      }
+      case "promotionRequirementOrder": {
+        await ownGrade(body.gradeId);
+        const rows = await db
+          .select()
+          .from(s.promotionRequirements)
+          .where(and(eq(s.promotionRequirements.companyId, companyId), eq(s.promotionRequirements.gradeId, body.gradeId)));
+        // 並べ替えの決まりは等級要件と同じ。区分の列名だけ違う（category ↔ kind）ので合わせて渡す。
+        const swap = swapForMove(
+          rows.map((r) => ({ id: r.id, category: r.kind, seq: r.seq, text: r.text, isActive: r.isActive })),
+          body.reqKind,
+          body.id,
+          body.direction,
+        );
+        if (!swap) throw new HttpError(400, "これ以上は動かせません。");
+        await db.batch([
+          db.update(s.promotionRequirements).set({ seq: swap[0].seq }).where(eq(s.promotionRequirements.id, swap[0].id)),
+          db.update(s.promotionRequirements).set({ seq: swap[1].seq }).where(eq(s.promotionRequirements.id, swap[1].id)),
+        ] as unknown as Parameters<typeof db.batch>[0]);
+        return { message: "並び順を変更しました。" };
       }
       case "rankCriteria": {
         await ensure(
