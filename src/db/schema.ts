@@ -300,8 +300,18 @@ export const kpiItems = sqliteTable(
     controllability: text("controllability"),
     aRationale: text("a_rationale"),
     remarks: text("remarks"),
-    /** No.1 等級要件達成率だけが true（8項目のうち固定枠1） */
+    /** No.1 等級要件達成率だけが true（どの等級区分でも必ず入る固定枠） */
     isFixedSlot: integer("is_fixed_slot", { mode: "boolean" }).notNull().default(false),
+    /**
+     * 金銭系の項目（単価率・売上達成率・利益率）。Chief 以上でだけ 20点枠に置ける。
+     *
+     * カテゴリでは判別できないため専用の列で持つ。
+     * 同じ sales カテゴリでも No.12 加算取得率は10点枠であり、
+     * 逆に No.4 昇給率は hr カテゴリだが金額を扱う。
+     * 「どの等級区分でこの項目を選べるか」は kpi_reference_points の行の有無が正であり、
+     * この列は「20点枠の候補かどうか」だけを表す。
+     */
+    isMonetary: integer("is_monetary", { mode: "boolean" }).notNull().default(false),
     /** 制度として未確定の項目に立てる「仮」フラグ */
     isProvisional: integer("is_provisional", { mode: "boolean" }).notNull().default(false),
     provisionalNote: text("provisional_note"),
@@ -389,7 +399,54 @@ export const kpiQuestions = sqliteTable(
   (t) => [uniqueIndex("uq_kpiq_company_key").on(t.companyId, t.questionKey)],
 );
 
-/* ───────────────────────── 評価セット（8項目選択＋配点） ───────────────────────── */
+/* ───────────────────────── 評価セット（等級区分別の項目選択＋配点） ───────────────────────── */
+
+/**
+ * 等級区分ごとの「持ち点の型」。評価セットを組むときの制約はすべてここを引く。
+ *
+ * 制度（2026-08-11 確定）:
+ *   - 評価は等級区分を問わず 100点満点。100点で次の等級に昇格する。
+ *   - 「等級要件達成率」(No.1) は全等級で必須の固定枠。配点は等級区分ごとに固定。
+ *   - Chief 以上は金銭系の項目を1つだけ 20点枠として選ぶ。
+ *   - 残りは1項目 10点。
+ *
+ *   等級区分  固定枠  20点枠  10点枠  選ぶ項目数
+ *   Beginner   100      0       0        1
+ *   Regular     80      0       2        3
+ *   Chief       40      1       4        6
+ *   AM          30      1       5        7
+ *   Manager     20      1       6        8
+ *
+ * kpi_reference_points（元の配点表の写し）から導出せず、明示的なマスタとして持つ。
+ * 参考値を計算に使わない、という既存の設計方針を守るため。
+ * ただし正本（data/kpi-points.json）と一致することはテストで保証する。
+ */
+export const gradePointRules = sqliteTable(
+  "grade_point_rules",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    /** grades.point_group と同じ値: Beginner | Regular | Chief | AM | Manager */
+    pointGroup: text("point_group").notNull(),
+    displayOrder: integer("display_order").notNull().default(0),
+    /** 合計（＝満点）。既定 100 */
+    totalPoints: integer("total_points").notNull().default(100),
+    /** 固定枠「等級要件達成率」の配点 */
+    fixedSlotPoints: integer("fixed_slot_points").notNull(),
+    /** 20点枠の配点。20点枠を持たない等級区分では 0 */
+    majorSlotPoints: integer("major_slot_points").notNull().default(0),
+    /** 20点枠の数（0 または 1） */
+    majorSlotCount: integer("major_slot_count").notNull().default(0),
+    /** 10点枠の配点 */
+    minorSlotPoints: integer("minor_slot_points").notNull().default(10),
+    /** 10点枠の数 */
+    minorSlotCount: integer("minor_slot_count").notNull().default(0),
+    note: text("note"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("uq_gpr_company_group").on(t.companyId, t.pointGroup)],
+);
 
 export const evaluationSchemes = sqliteTable(
   "evaluation_schemes",
@@ -404,8 +461,13 @@ export const evaluationSchemes = sqliteTable(
     totalPoints: integer("total_points").notNull().default(100),
     /**
      * ランク→点数の換算方式。制度の意味が変わる論点なので会社ごとに選べる。
-     *  ratio    … 一律割合方式（A=100% / B=80% / C=60% / D=40% / E=0%）※既定・仮
-     *  absolute … 項目別絶対点方式（移行前の配点表 kpi_reference_points をそのまま使う）
+     *  ratio    … 一律割合方式（A=100% / B=80% / C=60% / D=40% / E=0%）
+     *  absolute … 項目別絶対点方式（移行前の配点表 kpi_reference_points をそのまま使う）※廃止
+     *
+     * 2026-08-11 に「等級別配点 × ランク割合」へ一本化したため、
+     * 新しく absolute を選ぶことはできない（API側で拒否する）。
+     * 列を残しているのは、当時 absolute で確定した評価の表示を当時の方式のまま保つため
+     * （evaluations.scoring_mode_snapshot と対になる）。
      */
     scoringMode: text("scoring_mode").notNull().default("ratio"),
     /** 昇給条件: 選んだ項目すべてがAであること */
@@ -417,24 +479,37 @@ export const evaluationSchemes = sqliteTable(
   (t) => [index("idx_scheme_company").on(t.companyId)],
 );
 
-/** 評価セットに選ばれた8項目と配点（合計が totalPoints になること） */
+/**
+ * 評価セットに選ばれた項目と配点。等級区分ごとに1セット持つ。
+ *
+ * 選ぶ項目数と配点は等級区分で変わる（grade_point_rules を参照）。
+ * 合計は等級区分ごとに totalPoints（既定100点）ちょうどになること。
+ */
 export const schemeItems = sqliteTable(
   "scheme_items",
   {
     id: id(),
     companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
     schemeId: text("scheme_id").notNull().references(() => evaluationSchemes.id, { onDelete: "cascade" }),
+    /** 等級区分（grades.point_group と同じ値）。同じ評価セットの中で等級区分ごとに選び直す */
+    pointGroup: text("point_group").notNull(),
     kpiItemId: text("kpi_item_id").notNull().references(() => kpiItems.id),
     categoryId: text("category_id").references(() => kpiCategories.id),
-    /** 配点（満点＝Aのときの点数） */
+    /** 配点（満点＝Aのときの点数）。grade_point_rules からサーバ側で決める */
     weight: integer("weight").notNull(),
     /** 固定枠（等級要件達成率）は差し替え不可 */
     isFixedSlot: integer("is_fixed_slot", { mode: "boolean" }).notNull().default(false),
+    /** 20点枠（金銭系）として選ばれた項目 */
+    isMajorSlot: integer("is_major_slot", { mode: "boolean" }).notNull().default(false),
     displayOrder: integer("display_order").notNull(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex("uq_si_scheme_item").on(t.schemeId, t.kpiItemId), index("idx_si_scheme").on(t.schemeId)],
+  (t) => [
+    uniqueIndex("uq_si_scheme_group_item").on(t.schemeId, t.pointGroup, t.kpiItemId),
+    index("idx_si_scheme").on(t.schemeId),
+    index("idx_si_scheme_group").on(t.schemeId, t.pointGroup),
+  ],
 );
 
 /** ランク→点数の按分率（A=100%, B=…）。会社ごとに変更可能。 */
@@ -562,7 +637,15 @@ export const formResponses = sqliteTable(
   ],
 );
 
-/** 回答の原本。集計側で修正しても、この値は書き換えない。 */
+/**
+ * 回答の原本。集計側で修正しても、この値は書き換えない。
+ *
+ * 「何を聞かれたか」を回答行そのものに写し取る（question_* 列）。
+ * question_id は form_questions への外部キーで ON DELETE cascade のため、
+ * 設問が消えると回答も道連れになる。API側では回答のあるアンケートの設問編集を
+ * 拒否しているが、それはガード1枚でしかない。過去に自分が答えた内容を
+ * 何年後でも同じ文面で読み返せることを、回答行だけで成り立たせる。
+ */
 export const formAnswers = sqliteTable(
   "form_answers",
   {
@@ -573,10 +656,48 @@ export const formAnswers = sqliteTable(
     valueNumber: real("value_number"),
     valueText: text("value_text"),
     valueJson: text("value_json"),
+    /* ── 回答時点の設問スナップショット（過去の回答を当時の文面で読み返すため）── */
+    questionTitle: text("question_title"),
+    questionType: text("question_type"),
+    questionSection: text("question_section"),
+    questionUnit: text("question_unit"),
+    questionOptionsJson: text("question_options_json"),
+    questionDisplayOrder: integer("question_display_order"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [uniqueIndex("uq_fa_response_question").on(t.responseId, t.questionId)],
+);
+
+/**
+ * 回答期限の個別延長。
+ *
+ * アンケートの回答期間（forms.opens_at / closes_at）は全員一律なので、
+ * 産育休・長期出張など個別の事情に対応できない。
+ * 締切を実際に効かせる代わりに、管理者が本人ごとに期限を延ばせるようにする。
+ * 「誰がいつ何日まで延ばしたか」が後から説明できるよう、上書きせず行で残す。
+ */
+export const formDeadlineExtensions = sqliteTable(
+  "form_deadline_extensions",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    formId: text("form_id").notNull().references(() => forms.id, { onDelete: "cascade" }),
+    employeeId: text("employee_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    /** 延長後の期限（YYYY-MM-DD）。この日の終わりまで回答できる */
+    extendedUntil: text("extended_until").notNull(),
+    reason: text("reason"),
+    grantedById: text("granted_by_id").references(() => users.id),
+    /** 取り消した場合に日時を入れる（行は消さない） */
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    revokedById: text("revoked_by_id").references(() => users.id),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("idx_fde_form_employee").on(t.formId, t.employeeId),
+    index("idx_fde_company").on(t.companyId),
+  ],
 );
 
 /* ───────────────────────── 評価結果 ───────────────────────── */
@@ -623,10 +744,22 @@ export const evaluations = sqliteTable(
 
     /** 昇給可否＝選択項目がすべてA */
     raiseEligible: integer("raise_eligible", { mode: "boolean" }).notNull().default(false),
+    /**
+     * 昇給可否の理由（評価者向け・点数を含んでよい）。
+     * 生成はしていたのに保存していなかったため、結論だけが出て理由が誰にも見えなかった。
+     */
+    raiseReason: text("raise_reason"),
+    /** 昇給可否の理由（本人向け・配点と必要点数を含まない） */
+    raiseReasonEmployee: text("raise_reason_employee"),
     /** 昇格可否 */
     promotionEligible: integer("promotion_eligible", { mode: "boolean" }).notNull().default(false),
-    /** 昇格できない理由（必須ゲート未達など）を日本語で保存 */
+    /**
+     * 昇格できない理由（評価者向け）。必須ゲート未達・必要点数への不足などを日本語で保存。
+     * 必要点数が入るため、評価される側にはこの列を返さない。
+     */
     promotionBlockedReason: text("promotion_blocked_reason"),
+    /** 昇格できない理由（本人向け・必要点数と獲得点数を含まない言い換え） */
+    promotionBlockedReasonEmployee: text("promotion_blocked_reason_employee"),
     /** 判定に使った昇格閾値のスナップショット */
     requiredKpiPointsSnapshot: real("required_kpi_points_snapshot"),
     requiredBehaviorPointsSnapshot: real("required_behavior_points_snapshot"),
@@ -678,8 +811,16 @@ export const evaluationItems = sqliteTable(
     thresholdLabel: text("threshold_label"),
     thresholdLower: real("threshold_lower"),
     thresholdUpper: real("threshold_upper"),
-    /** 「なぜこのランクか」を日本語で保存 */
+    /**
+     * 「なぜこのランクか・何点になったか」を日本語で保存（評価者向け）。
+     * 配点と獲得点数が文中に入るため、評価される側にはこの列を返さない。
+     */
     rationale: text("rationale"),
+    /**
+     * 同じ判定を本人向けに言い換えたもの。配点・獲得点数・閾値の数値を含まない。
+     * 「なぜこの評価か」は本人にも説明できる必要があるため、根拠文自体は消さずに2種類作る。
+     */
+    rationaleEmployee: text("rationale_employee"),
     calcNote: text("calc_note"),
     isProvisional: integer("is_provisional", { mode: "boolean" }).notNull().default(false),
     displayOrder: integer("display_order").notNull().default(0),
