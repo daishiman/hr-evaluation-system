@@ -58,7 +58,7 @@ export async function buildEvaluationsForCycle(
     schemes.find((x) => x.id === cycle.schemeId) ?? schemes.find((x) => x.status === "active") ?? schemes[0];
   if (!scheme) return [];
 
-  const [items, ratios, kpiItems, criteria, grades, thresholds, responses, refPoints, kgiRows, raisePolicy] =
+  const [items, ratios, kpiItems, criteria, grades, thresholds, responses, refPoints, kgiRows, raisePolicy, officeKgiRows] =
     await Promise.all([
     db.select().from(s.schemeItems).where(eq(s.schemeItems.schemeId, scheme.id)).orderBy(s.schemeItems.displayOrder),
     db.select().from(s.schemeRankRatios).where(eq(s.schemeRankRatios.schemeId, scheme.id)),
@@ -81,6 +81,11 @@ export async function buildEvaluationsForCycle(
     // 事業所KGI達成係数（個人Pt・賞与額の算出に使う）
     db.select().from(s.kgiCoefficients).where(eq(s.kgiCoefficients.companyId, companyId)),
     db.select().from(s.raisePolicies).where(eq(s.raisePolicies.companyId, companyId)).limit(1),
+    // このサイクルの事業所KGI達成率（/admin/kgi で登録する実績値）
+    db
+      .select()
+      .from(s.officeKgiResults)
+      .where(and(eq(s.officeKgiResults.companyId, companyId), eq(s.officeKgiResults.cycleId, cycleId))),
   ]);
 
   const targets = opts?.employeeIds?.length
@@ -325,11 +330,16 @@ export async function buildEvaluationsForCycle(
       /* ── 賞与（仮）: 個人Pt ＝ KPI評価点合計 × 事業所KGI達成係数 ──
          事業所KGIの達成率は、いまのアンケート73問の中に聞く設問が無い。
          元スプレッドシートでも別表から手で持ってきていた値のため、
-         アンケートに設問キー office_kgi_rate を足した会社だけ値が入る。
-         入っていなければ達成率は null のままにして、賞与額を0円と書かない
-         （0円と表示すると「賞与なしと判定された」に化けるため）。
-         → 事業所ごとに達成率を登録する画面は未実装（docs/product/backlog.md）。 */
-      const officeKgiRate = vars["office_kgi_rate"] ?? null;
+         事業所ごと・サイクルごとに管理画面（/admin/kgi）から登録する。
+
+         どの事業所の達成率を当てるかは、回答時点の所属を優先する（期中の異動があるため）。
+         アンケートに設問キー office_kgi_rate を足した会社は、そちらの回答を優先する
+         （事業所ではなく個人単位で達成率を持ちたい会社への逃げ道として残す）。
+         どちらも無ければ達成率は null のままにして、賞与額を0円と書かない
+         （0円と表示すると「賞与なしと判定された」に化けるため）。 */
+      const officeId = res.officeId ?? user.officeId ?? null;
+      const officeKgiRate =
+        vars["office_kgi_rate"] ?? (officeId ? (officeKgiRows.find((k) => k.officeId === officeId)?.achievementRate ?? null) : null);
 
       /* ── 総合判定 ── */
       const th = thresholds.find((t) => t.fromGradeId === grade.id) ?? null;
@@ -365,6 +375,8 @@ export async function buildEvaluationsForCycle(
         gradeId: grade.id,
         responseId: res.id,
         schemeId: scheme.id,
+        // どの事業所の評価かを写し取る。事業所KGIの達成率を当てる先を後から辿れるようにするため。
+        officeId,
         totalScore: overall.totalScore,
         maxScore: overall.maxScore,
         requirementRate,

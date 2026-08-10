@@ -221,6 +221,62 @@ export async function EvaluationDetail({
         </div>
       </Card>
 
+      {/* 賞与（仮）。評価される側には出さない（個人Ptから KPI評価点合計 が逆算できるため、
+          queries.getEvaluationDetail で null にして返している）。 */}
+      {showsCriteria && (
+        <>
+          <SectionHeading aside={<ProvisionalMark note="配点が未確定のため、金額は仮のものです。" />}>
+            個人Pt と 賞与額（仮）
+          </SectionHeading>
+          <Card className="card-pad">
+            {head.personalPoints === null ? (
+              <ReasonNote
+                action={
+                  <a href="/admin/kgi" className="btn btn-secondary no-print">
+                    達成率を登録する
+                  </a>
+                }
+              >
+                {head.bonusRationale ??
+                  "事業所KGIの達成率が未登録のため、個人Ptと賞与額を算出できません（0円ではありません）。"}
+              </ReasonNote>
+            ) : (
+              <>
+                <div className="hero-number">
+                  <p className="m-0 text-[12px] text-[var(--ink-muted)]">個人Pt</p>
+                  <p className="num-display m-0 text-[28px] leading-tight">
+                    <Num value={head.personalPoints} unit="Pt" display />
+                  </p>
+                  {head.bonusYen !== null && (
+                    <p className="m-0 mt-2 text-[13px]">
+                      賞与額（仮） <Num value={head.bonusYen} unit="円" />
+                    </p>
+                  )}
+                </div>
+                <DefList
+                  rows={[
+                    {
+                      label: "事業所KGI達成率",
+                      value: <Num value={head.officeAchievementRate} unit="%" />,
+                    },
+                    { label: "達成係数", value: <Num value={head.kgiCoefficient} /> },
+                  ]}
+                />
+                {head.bonusRationale && (
+                  <p className="m-0 mt-2 text-[12px] leading-relaxed text-[var(--ink-muted)]">{head.bonusRationale}</p>
+                )}
+                <p className="footnote m-0 mt-2">
+                  {head.status === "finalized"
+                    ? "この評価は確定済みのため、あとから達成率や係数を変えてもこの金額は動きません。"
+                    : "確定前のため、達成率を変えると計算し直されます。"}
+                  金額は配点が未確定のうちは仮の値です。
+                </p>
+              </>
+            )}
+          </Card>
+        </>
+      )}
+
       <SectionHeading>昇格要件（受講後の報告書・テスト）</SectionHeading>
       {gates.length === 0 ? (
         <ReasonNote>この等級には昇格要件が登録されていません。</ReasonNote>

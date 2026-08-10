@@ -26,6 +26,12 @@ const WATCHED = [
   { table: s.kgiCoefficients, label: "達成係数" },
 ];
 
+/* office_kgi_results（事業所KGIの達成率）はここに載せない。
+   達成率を保存した時点で、その事業所・そのサイクルの確認中の評価の
+   個人Pt・賞与額をその場で計算し直しているため（src/lib/kgi-apply.ts）、
+   あとから「集計し直してください」と促す必要がない。
+   ここに足すと、達成率と関係のないサイクルまで再集計が必要と表示されてしまう。 */
+
 export type ChangedMaster = { label: string; updatedAt: Date };
 
 export type StaleCycle = {

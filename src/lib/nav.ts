@@ -37,6 +37,7 @@ const COMPANY_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/cycles", label: "評価期間" },
       { href: "/admin/forms", label: "アンケート" },
+      { href: "/admin/kgi", label: "事業所KGIの達成率" },
       { href: "/manager/cycles", label: "評価を確認・確定する" },
     ],
   },

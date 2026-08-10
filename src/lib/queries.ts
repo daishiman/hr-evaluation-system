@@ -214,6 +214,97 @@ export async function listOffices(companyId: string) {
   return db.select().from(s.offices).where(eq(s.offices.companyId, companyId)).orderBy(asc(s.offices.name));
 }
 
+/**
+ * 事業所KGIの達成率（事業所 × サイクル）。
+ * 行が無い＝未登録。0% と未登録は意味が違うので、行を作って埋めない。
+ */
+export async function listOfficeKgiResults(companyId: string, cycleId?: string) {
+  const db = await getDb();
+  const where = cycleId
+    ? and(eq(s.officeKgiResults.companyId, companyId), eq(s.officeKgiResults.cycleId, cycleId))
+    : eq(s.officeKgiResults.companyId, companyId);
+  return db
+    .select({
+      id: s.officeKgiResults.id,
+      officeId: s.officeKgiResults.officeId,
+      officeName: s.offices.name,
+      cycleId: s.officeKgiResults.cycleId,
+      achievementRate: s.officeKgiResults.achievementRate,
+      note: s.officeKgiResults.note,
+      recordedByName: s.users.name,
+      updatedAt: s.officeKgiResults.updatedAt,
+    })
+    .from(s.officeKgiResults)
+    .leftJoin(s.offices, eq(s.offices.id, s.officeKgiResults.officeId))
+    .leftJoin(s.users, eq(s.users.id, s.officeKgiResults.recordedById))
+    .where(where)
+    .orderBy(asc(s.offices.name));
+}
+
+/** 達成率の変更履歴。賞与額の根拠なので「誰がいつ何％から何％に」を残す。 */
+export async function listOfficeKgiRevisions(companyId: string, cycleId?: string) {
+  const db = await getDb();
+  const where = cycleId
+    ? and(eq(s.officeKgiRevisions.companyId, companyId), eq(s.officeKgiRevisions.cycleId, cycleId))
+    : eq(s.officeKgiRevisions.companyId, companyId);
+  return db
+    .select({
+      id: s.officeKgiRevisions.id,
+      officeId: s.officeKgiRevisions.officeId,
+      officeName: s.offices.name,
+      cycleId: s.officeKgiRevisions.cycleId,
+      cycleName: s.evaluationCycles.name,
+      beforeRate: s.officeKgiRevisions.beforeRate,
+      afterRate: s.officeKgiRevisions.afterRate,
+      reason: s.officeKgiRevisions.reason,
+      revisedByName: s.users.name,
+      createdAt: s.officeKgiRevisions.createdAt,
+    })
+    .from(s.officeKgiRevisions)
+    .leftJoin(s.offices, eq(s.offices.id, s.officeKgiRevisions.officeId))
+    .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.officeKgiRevisions.cycleId))
+    .leftJoin(s.users, eq(s.users.id, s.officeKgiRevisions.revisedById))
+    .where(where)
+    .orderBy(desc(s.officeKgiRevisions.createdAt));
+}
+
+/**
+ * サイクル内の評価を事業所ごとに数える。
+ * 達成率を入れると誰の賞与が算出されるのか（確定済みで据え置かれるのは何件か）を
+ * 登録する前に画面で見せるために使う。
+ */
+export async function countEvaluationsByOffice(companyId: string, cycleId: string) {
+  const db = await getDb();
+  const rows = await db
+    .select({
+      status: s.evaluations.status,
+      personalPoints: s.evaluations.personalPoints,
+      evalOfficeId: s.evaluations.officeId,
+      responseOfficeId: s.formResponses.officeId,
+      userOfficeId: s.users.officeId,
+    })
+    .from(s.evaluations)
+    .leftJoin(s.formResponses, eq(s.formResponses.id, s.evaluations.responseId))
+    .leftJoin(s.users, eq(s.users.id, s.evaluations.employeeId))
+    .where(and(eq(s.evaluations.companyId, companyId), eq(s.evaluations.cycleId, cycleId)));
+
+  const byOffice = new Map<string, { draft: number; finalized: number; withBonus: number }>();
+  let unknownOffice = 0;
+  for (const r of rows) {
+    const officeId = r.evalOfficeId ?? r.responseOfficeId ?? r.userOfficeId ?? null;
+    if (!officeId) {
+      unknownOffice++;
+      continue;
+    }
+    const cur = byOffice.get(officeId) ?? { draft: 0, finalized: 0, withBonus: 0 };
+    if (r.status === "finalized") cur.finalized++;
+    else cur.draft++;
+    if (r.personalPoints !== null) cur.withBonus++;
+    byOffice.set(officeId, cur);
+  }
+  return { byOffice, unknownOffice, total: rows.length };
+}
+
 export async function listKgiCoefficients(companyId: string) {
   const db = await getDb();
   return db
@@ -456,6 +547,13 @@ export async function listEvaluations(companyId: string, opts?: { employeeId?: s
       requirementAchieved: s.evaluations.requirementAchieved,
       requirementTotal: s.evaluations.requirementTotal,
       behaviorTotal: s.evaluations.behaviorTotal,
+      /* 賞与（仮）。確定時の達成率・係数もそのまま持つので、
+         あとから達成率を変えても確定済みの評価はこの値のまま動かない。 */
+      officeAchievementRate: s.evaluations.officeAchievementRate,
+      kgiCoefficient: s.evaluations.kgiCoefficient,
+      personalPoints: s.evaluations.personalPoints,
+      bonusYen: s.evaluations.bonusYen,
+      bonusRationale: s.evaluations.bonusRationale,
       raiseEligible: s.evaluations.raiseEligible,
       promotionEligible: s.evaluations.promotionEligible,
       promotionBlockedReason: s.evaluations.promotionBlockedReason,
@@ -524,6 +622,14 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
       maxScore: full ? head.maxScore : null,
       requiredKpiPointsSnapshot: full ? head.requiredKpiPointsSnapshot : null,
       requiredBehaviorPointsSnapshot: full ? head.requiredBehaviorPointsSnapshot : null,
+      /* 個人Pt・賞与額も評価される側には返さない。
+         個人Pt ＝ KPI評価点合計 × 達成係数 なので、係数（管理画面で誰でも見られる表）と
+         突き合わせると、隠しているはずのKPI評価点合計が逆算できてしまうため。 */
+      officeAchievementRate: full ? head.officeAchievementRate : null,
+      kgiCoefficient: full ? head.kgiCoefficient : null,
+      personalPoints: full ? head.personalPoints : null,
+      bonusYen: full ? head.bonusYen : null,
+      bonusRationale: full ? head.bonusRationale : null,
     },
     items,
     behaviors,

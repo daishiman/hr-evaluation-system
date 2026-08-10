@@ -4,6 +4,9 @@ import {
   checkKgiCoverage,
   checkRangeCoverage,
   computeBonus,
+  effectiveOfficeId,
+  planBonusRecalc,
+  type BonusRecalcTarget,
   type KgiCoefficientRow,
 } from "./kgi";
 
@@ -192,5 +195,73 @@ describe("computeBonus — 元シート Manager例（合計62点）の回帰", (
     });
     expect(r.personalPoints).toBe(62);
     expect(r.bonusYen).toBeNull();
+  });
+});
+
+describe("planBonusRecalc — 達成率を登録したときに既存の評価をどう扱うか", () => {
+  const targets: BonusRecalcTarget[] = [
+    { evaluationId: "ev_draft1", status: "draft", totalScore: 62 },
+    { evaluationId: "ev_draft2", status: "draft", totalScore: 80 },
+    { evaluationId: "ev_final", status: "finalized", totalScore: 62 },
+  ];
+  const input = { achievementRate: 115, coefficients, yenPerPoint: 3200 };
+
+  it("確定済みの評価は書き換えず、据え置いたものとして返す（過去評価の不変性）", () => {
+    const plan = planBonusRecalc(targets, input);
+    expect(plan.skippedFinalized).toEqual(["ev_final"]);
+    expect(plan.updates.map((u) => u.evaluationId)).toEqual(["ev_draft1", "ev_draft2"]);
+  });
+
+  it("確認中の評価には個人Pt・賞与額が入る", () => {
+    const plan = planBonusRecalc(targets, input);
+    const d1 = plan.updates.find((u) => u.evaluationId === "ev_draft1")!;
+    expect(d1.coefficient).toBe(1.2);
+    expect(d1.personalPoints).toBe(74); // 62 × 1.2 = 74.4 → 74
+    expect(d1.bonusYen).toBe(74 * 3200);
+    expect(d1.officeAchievementRate).toBe(115);
+  });
+
+  it("判定根拠が日本語で残り、仮の金額であることが書かれている", () => {
+    const plan = planBonusRecalc(targets, input);
+    const d1 = plan.updates.find((u) => u.evaluationId === "ev_draft1")!;
+    expect(d1.rationale).toContain("111〜120%");
+    expect(d1.rationale).toContain("仮の金額");
+  });
+
+  it("係数表に穴があって当てはまらない達成率は、0円で埋めずに未判定として返す", () => {
+    const holed: KgiCoefficientRow[] = [
+      { label: "100%以上", lowerBound: 100, upperBound: null, coefficient: 1.0, displayOrder: 1 },
+    ];
+    const plan = planBonusRecalc(targets, { achievementRate: 80, coefficients: holed, yenPerPoint: 3200 });
+    expect(plan.unmatched).toEqual(["ev_draft1", "ev_draft2"]);
+    expect(plan.updates.every((u) => u.personalPoints === null && u.bonusYen === null)).toBe(true);
+    // 達成率そのものは記録する（「何％で判定しようとしたか」を残すため）
+    expect(plan.updates.every((u) => u.officeAchievementRate === 80)).toBe(true);
+  });
+
+  it("対象が1件も無ければ何も書き換えない", () => {
+    expect(planBonusRecalc([], input)).toEqual({ updates: [], skippedFinalized: [], unmatched: [] });
+  });
+});
+
+describe("effectiveOfficeId — どの事業所の評価として扱うか", () => {
+  it("評価に写し取った所属を最優先する（期中に異動しても遡らない）", () => {
+    expect(
+      effectiveOfficeId({ evalOfficeId: "of_a", responseOfficeId: "of_b", userOfficeId: "of_c" }),
+    ).toBe("of_a");
+  });
+
+  it("評価に所属が無い古い行は、回答時点の所属で埋める", () => {
+    expect(
+      effectiveOfficeId({ evalOfficeId: null, responseOfficeId: "of_b", userOfficeId: "of_c" }),
+    ).toBe("of_b");
+  });
+
+  it("回答時点の所属も無ければ、いまの所属で埋める", () => {
+    expect(effectiveOfficeId({ evalOfficeId: null, responseOfficeId: null, userOfficeId: "of_c" })).toBe("of_c");
+  });
+
+  it("どこにも所属が無ければ null（どの事業所の達成率も当てない）", () => {
+    expect(effectiveOfficeId({ evalOfficeId: null, responseOfficeId: null, userOfficeId: null })).toBeNull();
   });
 });
