@@ -1,0 +1,85 @@
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { Button, ReasonNote } from "@/components/ui";
+
+/**
+ * サーバーに1回だけ送る操作のボタン。
+ *
+ * 取り消しのきかない操作（確定・締め切り・削除）には confirm を渡し、
+ * 「何が起きるか」をその場に出してから実行する。確認は1回だけにする。
+ */
+export function ActionButton({
+  url,
+  body,
+  label,
+  confirm,
+  variant = "primary",
+  onDoneMessage,
+  children,
+}: {
+  url: string;
+  body: Record<string, unknown>;
+  label: string;
+  /** 実行前に出す確認文。省略すると即実行。 */
+  confirm?: string;
+  variant?: "primary" | "secondary" | "tertiary";
+  onDoneMessage?: string;
+  children?: ReactNode;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = (await res.json()) as { ok: boolean; message?: string };
+      if (!res.ok || !json.ok) {
+        setError(json.message ?? "実行できませんでした。");
+        return;
+      }
+      setResult(onDoneMessage ?? json.message ?? "完了しました。");
+      setAsking(false);
+      router.refresh();
+    } catch {
+      setError("通信できませんでした。時間をおいてもう一度お試しください。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      {error && <ReasonNote>{error}</ReasonNote>}
+      {result && <p className="m-0 mb-2 text-[12px] text-[var(--brand-deep)]">{result}</p>}
+      {asking ? (
+        <div className="rounded-lg border border-[var(--caution-border)] bg-[var(--caution-soft)] p-3">
+          <p className="m-0 text-[13px]">{confirm}</p>
+          <div className="mt-2 flex gap-2">
+            <Button variant={variant} onClick={run} disabled={busy}>
+              {busy ? "実行しています…" : label}
+            </Button>
+            <Button onClick={() => setAsking(false)}>やめる</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant={variant} disabled={busy} onClick={() => (confirm ? setAsking(true) : run())}>
+            {busy ? "実行しています…" : label}
+          </Button>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
