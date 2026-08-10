@@ -12,6 +12,7 @@ import { Button, ReasonNote } from "@/components/ui";
  */
 export function ActionButton({
   url,
+  method = "POST",
   body,
   label,
   confirm,
@@ -20,6 +21,7 @@ export function ActionButton({
   children,
 }: {
   url: string;
+  method?: "POST" | "PUT" | "PATCH";
   body: Record<string, unknown>;
   label: string;
   /** 実行前に出す確認文。省略すると即実行。 */
@@ -39,7 +41,7 @@ export function ActionButton({
     setError(null);
     try {
       const res = await fetch(url, {
-        method: "POST",
+        method,
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
