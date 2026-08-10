@@ -744,3 +744,20 @@ details.disclosure .disclosure-body {
   --color-caution-soft: var(--caution-soft);
   --color-caution-border: var(--caution-border);
 }
+
+/* ============================================================
+   アプリ追加分: 単体で使う入力欄
+   （.field はラベル込みのラッパー。ここは入力欄そのものに当てる）
+   ============================================================ */
+.input {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  padding: 8px 12px;
+  color: var(--ink);
+}
+.input::placeholder { color: color-mix(in srgb, var(--ink-muted) 60%, transparent); }
+.input:disabled { background: var(--subtle); color: var(--ink-muted); }
+.input-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
