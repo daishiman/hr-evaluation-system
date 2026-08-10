@@ -1,3 +1,9 @@
+# === Claude Code ===
+# .claude/skills, agents, commands はチーム共有のためリポジトリで追跡する。
+# 個人設定・ローカル実行時の一時ファイルのみ除外する。
+.claude/settings.local.json
+.claude/*.local.json
+
 # === OS ===
 .DS_Store
 Thumbs.db
