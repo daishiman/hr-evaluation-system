@@ -1,0 +1,114 @@
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import { getDb, schema as s } from "@/lib/db";
+import { apiViewer, HttpError } from "@/lib/session";
+import { handle } from "@/lib/api";
+import { newId } from "@/lib/id";
+
+export const dynamic = "force-dynamic";
+
+const questionSchema = z.object({
+  /** 既存の設問はIDを付けて送る。新規は省略する。 */
+  id: z.string().optional(),
+  section: z.enum(["support", "operation", "training", "test", "behavior", "kpi", "free"]),
+  questionType: z.enum(["yesno", "single", "multi", "number", "text", "scale"]),
+  title: z.string().min(1, "設問文を入力してください").max(300),
+  helpText: z.string().max(300).nullable().optional(),
+  unit: z.string().max(20).nullable().optional(),
+  required: z.boolean(),
+  validationMin: z.number().nullable().optional(),
+  validationMax: z.number().nullable().optional(),
+  options: z.array(z.object({ value: z.string().min(1), label: z.string().min(1), score: z.number().optional() })).optional(),
+  isGate: z.boolean().optional(),
+  // 集計に使う紐づけ（画面では自動で引き継ぎ、手では作らない）
+  gradeRequirementId: z.string().nullable().optional(),
+  promotionRequirementId: z.string().nullable().optional(),
+  behaviorGuidelineId: z.string().nullable().optional(),
+  kpiItemId: z.string().nullable().optional(),
+  kpiQuestionKey: z.string().nullable().optional(),
+});
+
+const bodySchema = z.object({ questions: z.array(questionSchema).max(200) });
+
+/**
+ * アンケートの設問を丸ごと保存する（クリック操作の組み立て画面から呼ぶ）。
+ *
+ * 回答が1件でもあるアンケートは設問を編集できない。
+ * 設問を差し替えると、過去の回答がどの設問への答えか分からなくなるため。
+ * 直したいときは「新しい版を作る」。
+ */
+export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  return handle(async () => {
+    const viewer = await apiViewer("COMPANY_ADMIN");
+    if (!viewer.companyId) throw new HttpError(400, "所属会社が設定されていません。");
+    const companyId = viewer.companyId;
+    const { id: formId } = await ctx.params;
+    const body = bodySchema.parse(await req.json());
+    const db = await getDb();
+
+    const form = (
+      await db
+        .select()
+        .from(s.forms)
+        .where(and(eq(s.forms.id, formId), eq(s.forms.companyId, companyId)))
+        .limit(1)
+    )[0];
+    if (!form) throw new HttpError(404, "アンケートが見つかりませんでした。");
+
+    const responses = await db
+      .select({ id: s.formResponses.id })
+      .from(s.formResponses)
+      .where(eq(s.formResponses.formId, form.id))
+      .limit(1);
+    if (responses.length > 0) {
+      throw new HttpError(
+        400,
+        "このアンケートにはすでに回答があるため、設問を変更できません。内容を変えるときは新しい版を作ってください。",
+      );
+    }
+
+    const q = body.questions;
+    if (q.length === 0) throw new HttpError(400, "設問が1問もありません。1問以上にしてください。");
+    for (const x of q) {
+      if ((x.questionType === "single" || x.questionType === "multi") && (x.options ?? []).length < 2) {
+        throw new HttpError(400, `「${x.title}」の選択肢が足りません。2つ以上にしてください。`);
+      }
+      if (
+        x.validationMin !== null &&
+        x.validationMin !== undefined &&
+        x.validationMax !== null &&
+        x.validationMax !== undefined &&
+        x.validationMax < x.validationMin
+      ) {
+        throw new HttpError(400, `「${x.title}」の入力範囲が逆になっています。`);
+      }
+    }
+
+    await db.delete(s.formQuestions).where(eq(s.formQuestions.formId, form.id));
+    await db.insert(s.formQuestions).values(
+      q.map((x, i) => ({
+        id: x.id ?? newId("fq"),
+        companyId,
+        formId: form.id,
+        section: x.section,
+        questionType: x.questionType,
+        title: x.title.trim(),
+        helpText: x.helpText ?? null,
+        unit: x.unit ?? null,
+        required: x.required,
+        validationMin: x.validationMin ?? null,
+        validationMax: x.validationMax ?? null,
+        optionsJson: x.options && x.options.length > 0 ? JSON.stringify(x.options) : null,
+        displayOrder: i + 1,
+        gradeRequirementId: x.gradeRequirementId ?? null,
+        promotionRequirementId: x.promotionRequirementId ?? null,
+        behaviorGuidelineId: x.behaviorGuidelineId ?? null,
+        kpiItemId: x.kpiItemId ?? null,
+        kpiQuestionKey: x.kpiQuestionKey ?? null,
+        isGate: x.isGate ?? false,
+      })),
+    );
+
+    return { message: `設問を保存しました（${q.length}問）。` };
+  });
+}
