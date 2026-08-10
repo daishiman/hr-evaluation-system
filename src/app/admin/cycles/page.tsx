@@ -88,6 +88,12 @@ export default async function AdminCycles() {
                     <Link href={`/manager/cycles?cycle=${c.id}`} className="btn btn-tertiary">
                       進行状況を見る
                     </Link>
+                    <a href={`/api/export?type=results&cycleId=${c.id}`} className="btn btn-tertiary">
+                      評価結果をCSVに書き出す
+                    </a>
+                    <a href={`/api/export?type=kpi&cycleId=${c.id}`} className="btn btn-tertiary">
+                      KPI明細をCSVに書き出す
+                    </a>
                   </div>
                 </div>
 

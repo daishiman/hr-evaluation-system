@@ -12,6 +12,7 @@ import {
   listRankRatios,
   listSchemeItems,
 } from "@/lib/queries";
+import { detectStaleCycles } from "@/lib/impact";
 import { RecordForm } from "@/components/RecordForm";
 import { Badge, Card, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 
@@ -43,6 +44,8 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
   const items = scheme ? await listSchemeItems(companyId, scheme.id) : [];
   const criteria = items.length > 0 ? await listRankCriteria(companyId, items.map((i) => i.kpiItemId)) : [];
   const ratios = scheme ? await listRankRatios(companyId, scheme.id) : [];
+  // 基準を直した結果、どのサイクルが古いままかをこの画面で知らせる
+  const staleCycles = await detectStaleCycles(companyId);
 
   if (!grade) {
     return (
@@ -64,6 +67,26 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         title="制度マスタ"
         lede="評価に使う数値と要件をここで決めます。変更は以後の評価に反映され、確定済みの評価は判定当時の内容のまま残ります。"
       />
+
+      {staleCycles.length > 0 && (
+        <Card className="card-pad">
+          <p className="m-0 text-[13px] font-bold">基準を変えたあと、集計し直していない評価があります</p>
+          <ul className="m-0 mt-2 list-disc pl-5 text-[13px]">
+            {staleCycles.map((c) => (
+              <li key={c.cycleId}>
+                {c.cycleName}：確認中 {c.recomputable}件が古い基準のままです
+                {c.finalized > 0 && `（確定済み ${c.finalized}件は当時の基準のまま据え置き）`}。
+                <Link href={`/manager/cycles?cycle=${c.cycleId}`} className="ml-1 text-[var(--brand-deep)]">
+                  集計し直す
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="footnote m-0 mt-2">
+            確定済みの評価は、基準を変えても結果が動きません（判定した当時の値を控えてあるためです）。
+          </p>
+        </Card>
+      )}
 
       <SectionHeading>等級を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">

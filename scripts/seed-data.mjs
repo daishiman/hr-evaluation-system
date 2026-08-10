@@ -48,6 +48,13 @@ const num = (v) => {
 };
 const T = (d) => d.getTime();
 const NOW = T(new Date("2026-08-10T09:00:00Z"));
+/**
+ * 判定に使う基準（等級要件・配点・ランク基準など）を整備した日。
+ * 過去の評価より前の日付にしておく。
+ * これらを NOW にすると「基準を直したのに集計し直していない評価がある」と
+ * 最初から警告が出てしまい、本当に直したときに気づけなくなるため（→ src/lib/impact.ts）。
+ */
+const MASTER_AT = T(new Date("2025-01-01T00:00:00Z"));
 
 /** 決まった順番で同じ結果になる簡易乱数（デモデータを毎回同じにするため） */
 function rng(seed) {
@@ -79,19 +86,94 @@ const insert = (table, rows) => {
 
 const COMPANIES = [
   {
+    /**
+     * システム標準テンプレート。
+     * 元スプレッドシートの制度をそのまま持つ「原本」で、利用者・サイクル・回答は持たない。
+     * 新しい会社を作るときは、この会社のマスタを丸ごとコピーしてから会社ごとに書き換える。
+     */
+    key: "template",
+    name: "システム標準テンプレート",
+    isTemplate: true,
+    scheme: { sales: [9, 14], occupancy: [10, 12], compliance: [16, 12], safety: [2, 10], hr: [11, 12], quality: [13, 12], growth: [27, 10] },
+    schemeName: "標準評価セット（テンプレート）",
+    offices: [{ code: "hq", name: "本部" }],
+  },
+  {
+    /** 元スプレッドシートで実際に運用していた給付事業。1社目のテナント。 */
+    key: "kyufu",
+    name: "給付事業（1社目）",
+    isTenantOfRecord: true,
+    scheme: { sales: [9, 14], occupancy: [10, 12], compliance: [16, 12], safety: [2, 10], hr: [11, 12], quality: [13, 12], growth: [27, 10] },
+    schemeName: "2026年度 標準評価セット",
+    offices: [{ code: "hq", name: "本部" }, { code: "office1", name: "第1事業所" }, { code: "office2", name: "第2事業所" }],
+  },
+  {
     key: "sakura",
     name: "さくら福祉会",
     /** この会社が選ぶ7カテゴリの項目（カテゴリごとに1つ）と配点 */
     scheme: { sales: [9, 14], occupancy: [10, 12], compliance: [16, 12], safety: [2, 10], hr: [11, 12], quality: [13, 12], growth: [27, 10] },
     schemeName: "2026年度 標準評価セット",
+    offices: [{ code: "hq", name: "本部" }, { code: "office1", name: "第1事業所" }, { code: "office2", name: "第2事業所" }],
   },
   {
     key: "mirai",
     name: "みらい支援ネット",
     scheme: { sales: [6, 12], occupancy: [5, 12], compliance: [15, 14], safety: [31, 10], hr: [20, 12], quality: [21, 12], growth: [32, 13] },
     schemeName: "2026年度 コンプライアンス重点セット",
+    offices: [{ code: "hq", name: "本部" }, { code: "office1", name: "第1事業所" }, { code: "office2", name: "第2事業所" }],
   },
 ];
+
+/* ───────────────── 昇給ルール（元シート「KPI基準定義_昇給ルール（仮）」より） ───────────────── */
+
+const RAISE_POLICY = {
+  judge_unit: "半期（4月〜9月／10月〜3月）ごとに、選択した8項目すべてのランクで判定する",
+  judge_timing_note: "上期＝9月末時点の実績／下期＝3月末時点の実績",
+  reflect_upper_note: "上期評価 → 11月支給分から反映",
+  reflect_lower_note: "下期評価 → 5月支給分から反映",
+  raise_form: "月額基本給への上乗せ（定額）",
+  target_note: "判定対象の半期を通じて在籍していた者",
+  allow_decrease: 0,
+  chances_per_year: 2,
+  selected_item_count: 8,
+  required_a_count: 8,
+  streak_enabled: 0,
+  streak2_multiplier: 1.5,
+  streak3_multiplier: 2,
+  streak_max_multiplier: 2,
+  rounding_unit: 100,
+  bonus_yen_per_point: 3200,
+  bonus_pool_yen: 930000,
+  note: "元シートでは連続達成の加算は「使わない」設定。賞与は 個人Pt（KPI評価点合計 × 事業所KGI達成係数）× 1点あたり金額 で求める。",
+};
+
+const RAISE_PATTERNS = [
+  ["8項目すべてA", "昇給要件を満たす", "等級別の昇給額を反映する"],
+  ["7項目A・1項目B", "見送り", "昇給なし（据え置き）。面談でBだった項目と次期の改善計画を確認する"],
+  ["A以外がC以下を含む", "見送り", "昇給なし。CまたはD以下の項目については改善計画の提出を求める"],
+  ["Eが1項目でもある", "見送り", "昇給なし。原因の分析と是正を上長と共有する"],
+];
+
+const RAISE_EXCEPTIONS = [
+  ["中途入職者（在籍が半期に満たない）", "その半期は判定対象外。次の半期から対象とする", 1],
+  ["産前産後休業・育児休業・傷病休職を挟んだ者", "在籍月数が半期の半分（3ヶ月）未満なら判定対象外。3ヶ月以上なら通常どおり判定する", 1],
+  ["時短勤務者", "通常どおり判定する。件数で測る項目（ヒヤリ報告・改善提案）は所定労働時間で按分する", 0],
+  ["期中に等級が変わった者", "期末時点の等級で判定する", 0],
+  ["期中に異動した者", "期末時点の所属事業所の実績で判定する。個人実績の項目は異動前後を通算する", 0],
+  ["最低賃金改定・法定の賃金改定", "本ルールとは別枠で反映する。全項目A未達でも法定改定は行う", 0],
+  ["処遇改善加算・特定処遇改善加算の配分", "本ルールとは別枠。加算の配分要件が優先する", 0],
+];
+
+/** 等級ごとの昇給額（月額）と、同じ等級のまま昇給できる回数の上限 */
+const RAISE_BY_GRADE = {
+  beginner: { amount: 3000, max: 6, note: "等級要件達成率のみで評価するため、他等級より判定項目が少ない" },
+  regular: { amount: 4000, max: 8, note: "KPI項目2つ＋等級要件" },
+  chief: { amount: 5000, max: 8, note: "事業所実績への責任が発生する" },
+  am1: { amount: 6000, max: 8, note: "管理者としての実績が加わる" },
+  am2: { amount: 7000, max: 8, note: null },
+  manager1: { amount: 8000, max: 10, note: "事業所全体の経営数値に責任を持つ" },
+  manager2: { amount: 10000, max: 10, note: "法人全体への影響が最も大きい" },
+};
 // 等級要件達成率（固定枠）の配点＝100 − 他7項目の合計
 for (const c of COMPANIES) {
   const rest = Object.values(c.scheme).reduce((s, [, w]) => s + w, 0);
@@ -159,13 +241,18 @@ export async function buildSeed() {
   const evaluationRequirements = [];
   const evaluationGates = [];
   const raiseSettings = [];
+  const raisePolicies = [];
+  const raisePatterns = [];
+  const raiseExceptions = [];
+  const raiseRevisions = [];
+  const offices = [];
   const kgiCoefficients = [];
   const employeeNotes = [];
 
   // システム全体管理者（会社に属さない）
   users.push({
     id: "usr_super", name: "青木 統括", email: "super@hyoka-demo.jp",
-    email_verified: 1, image: null, company_id: null, role: "SUPER_ADMIN", grade_id: null, manager_id: null,
+    email_verified: 1, image: null, company_id: null, role: "SUPER_ADMIN", grade_id: null, office_id: null, manager_id: null,
     employee_code: "SYS-001", department: "システム管理", hired_at: "2015-04-01",
     profile_note: "全会社の評価状況を横断で確認する担当。", is_active: 1, created_at: NOW, updated_at: NOW,
   });
@@ -177,7 +264,21 @@ export async function buildSeed() {
 
   for (const co of COMPANIES) {
     const cid = `cmp_${co.key}`;
-    companies.push({ id: cid, name: co.name, slug: co.key, business_type: "給付事業", is_active: 1, created_at: NOW, updated_at: NOW });
+    companies.push({
+      id: cid, name: co.name, slug: co.key, business_type: "給付事業", is_active: 1,
+      is_template: co.isTemplate ? 1 : 0,
+      template_source_id: co.isTemplate ? null : "cmp_template",
+      created_at: NOW, updated_at: NOW,
+    });
+
+    /* 事業所 */
+    const offId = (code) => `off_${co.key}_${code}`;
+    (co.offices ?? []).forEach((o, i) => {
+      offices.push({
+        id: offId(o.code), company_id: cid, code: o.code, name: o.name, display_order: i + 1,
+        raise_adjust_rate: 1, is_active: 1, created_at: NOW, updated_at: NOW,
+      });
+    });
 
     /* 等級 */
     const gid = (code) => `grd_${co.key}_${code}`;
@@ -194,7 +295,7 @@ export async function buildSeed() {
     gradeReqs.forEach((r, i) => {
       gradeRequirements.push({
         id: `greq_${co.key}_${i}`, company_id: cid, grade_id: gid(r.gradeCode), category: r.category,
-        seq: r.seq, text: r.text, is_active: 1, created_at: NOW, updated_at: NOW,
+        seq: r.seq, text: r.text, is_active: 1, created_at: NOW, updated_at: MASTER_AT,
       });
     });
 
@@ -203,7 +304,7 @@ export async function buildSeed() {
       promotionRequirements.push({
         id: `preq_${co.key}_${i}`, company_id: cid, grade_id: gid(r.gradeCode), kind: r.kind,
         transition_label: r.transitionLabel, seq: r.seq, text: r.text, is_gate: r.isGate,
-        is_active: 1, created_at: NOW, updated_at: NOW,
+        is_active: 1, created_at: NOW, updated_at: MASTER_AT,
       });
     });
 
@@ -217,7 +318,7 @@ export async function buildSeed() {
       b.levels.forEach((lv, j) => {
         behaviorLevels.push({
           id: `blv_${co.key}_${i}_${j}`, company_id: cid, guideline_id: bgId, score: lv.score,
-          label: lv.label, text: lv.text, created_at: NOW,
+          label: lv.label, text: lv.text, created_at: NOW, updated_at: MASTER_AT,
         });
       });
     });
@@ -234,7 +335,7 @@ export async function buildSeed() {
       promotionThresholds.push({
         id: `pth_${co.key}_${i}`, company_id: cid, from_grade_id: gid(t.from), to_grade_id: gid(t.to),
         label: t.label, required_behavior_points: t.behavior, required_kpi_points: 100,
-        is_provisional: 1, created_at: NOW, updated_at: NOW,
+        is_provisional: 1, created_at: NOW, updated_at: MASTER_AT,
       });
     });
 
@@ -262,7 +363,7 @@ export async function buildSeed() {
         is_fixed_slot: no === 1 ? 1 : 0,
         is_provisional: /新規（素案）/.test(m["備考"] ?? "") ? 1 : 0,
         provisional_note: /新規（素案）/.test(m["備考"] ?? "") ? "元スプレッドシートで素案のまま確定していない項目です。" : null,
-        is_active: 1, created_at: NOW, updated_at: NOW,
+        is_active: 1, created_at: NOW, updated_at: MASTER_AT,
       });
     });
 
@@ -284,7 +385,7 @@ export async function buildSeed() {
         boundary_expr: r["境界の判定条件"], meaning: r["ランクの意味"], target_grades: r["対象等級"],
         is_provisional: r.__filled ? 1 : 0,
         provisional_note: r.__filled ? "元スプレッドシートにEランクの行が無かったため、D（90%以上95%未満）の下に接続する形で補完しました。" : null,
-        created_at: NOW, updated_at: NOW,
+        created_at: NOW, updated_at: MASTER_AT,
       });
     });
 
@@ -320,24 +421,46 @@ export async function buildSeed() {
       schemeItems.push({
         id: `si_${co.key}_${ci.no}`, company_id: cid, scheme_id: schemeId, kpi_item_id: `kpi_${co.key}_${ci.no}`,
         category_id: ci.cat ? `cat_${co.key}_${ci.cat}` : null, weight: ci.weight,
-        is_fixed_slot: ci.fixed, display_order: i + 1, created_at: NOW, updated_at: NOW,
+        is_fixed_slot: ci.fixed, display_order: i + 1, created_at: NOW, updated_at: MASTER_AT,
       });
     });
     // ランク→点数の按分（叩き台の初期値。管理画面から変更できる）
     [["A", 1], ["B", 0.8], ["C", 0.6], ["D", 0.4], ["E", 0]].forEach(([rk, ratio]) => {
       schemeRankRatios.push({
         id: `srr_${co.key}_${rk}`, company_id: cid, scheme_id: schemeId, rank: rk, ratio,
+        is_provisional: 1, created_at: NOW, updated_at: MASTER_AT,
+      });
+    });
+
+    /* 昇給ルール本体（元シート「昇給ルール（仮）」【1】【4】【6】） */
+    raisePolicies.push({ id: `rp_${co.key}`, company_id: cid, ...RAISE_POLICY, is_provisional: 1, created_at: NOW, updated_at: NOW });
+
+    /* 判定パターン（同【3】） */
+    RAISE_PATTERNS.forEach((p, i) => {
+      raisePatterns.push({
+        id: `rpat_${co.key}_${i}`, company_id: cid, seq: i + 1,
+        pattern: p[0], judgment: p[1], treatment: p[2], created_at: NOW,
+      });
+    });
+
+    /* 特例・例外 7件（同【7】） */
+    RAISE_EXCEPTIONS.forEach((x, i) => {
+      raiseExceptions.push({
+        id: `rexc_${co.key}_${i}`, company_id: cid, seq: i + 1,
+        case_text: x[0], handling: x[1], excludes_judgement: x[2],
         is_provisional: 1, created_at: NOW, updated_at: NOW,
       });
     });
 
-    /* 昇給額（叩き台。元シート「昇給設定（管理者）」の初期値） */
-    const raiseInit = { beginner: 3000, regular: 4000, chief: 5000, am1: 6000, am2: 7000, manager1: 8000, manager2: 10000 };
-    gradesDef.forEach((g, i) => {
+    /* 昇給額と回数上限（同【2】【5】。実際の値は昇給設定画面から変更する） */
+    gradesDef.forEach((g) => {
+      const rr = RAISE_BY_GRADE[g.code];
       raiseSettings.push({
         id: `rs_${co.key}_${g.code}`, company_id: cid, grade_id: gid(g.code),
-        monthly_amount: raiseInit[g.code], months: 6, annual_amount: raiseInit[g.code] * 6,
-        note: g.code === "beginner" ? "等級要件達成率のみで評価するため、他等級より判定項目が少ない" : null,
+        monthly_amount: rr.amount, months: 6, annual_amount: rr.amount * 6,
+        max_count: rr.max,
+        cap_note: "上限に達した後は、昇格（上位等級への移行）しない限り昇給しない",
+        note: rr.note,
         is_provisional: 1, created_at: NOW, updated_at: NOW,
       });
     });
@@ -350,22 +473,25 @@ export async function buildSeed() {
       kgiCoefficients.push({
         id: `kgi_${co.key}_${i}`, company_id: cid, scope: "事業所", label: k[0],
         lower_bound: k[1], upper_bound: k[2], coefficient: k[3], display_order: i + 1,
-        is_provisional: 1, created_at: NOW,
+        is_provisional: 1, created_at: NOW, updated_at: MASTER_AT,
       });
     });
+
+    // テンプレート会社は制度の原本だけを持ち、人・サイクル・回答は持たない
+    if (co.isTemplate) continue;
 
     /* 利用者（管理者・マネージャー・評価される側） */
     const adminId = `usr_${co.key}_admin`;
     const managerId = `usr_${co.key}_mgr`;
     users.push({
       id: adminId, name: `${co.name} 管理者`, email: `admin@${co.key}.hyoka-demo.jp`, email_verified: 1, image: null,
-      company_id: cid, role: "COMPANY_ADMIN", grade_id: null, manager_id: null, employee_code: "ADM-001",
+      company_id: cid, role: "COMPANY_ADMIN", grade_id: null, office_id: offId("hq"), manager_id: null, employee_code: "ADM-001",
       department: "本部", hired_at: "2017-04-01", profile_note: "制度の設定と評価の確定を担当。", is_active: 1,
       created_at: NOW, updated_at: NOW,
     });
     users.push({
       id: managerId, name: `${co.name} マネージャー`, email: `manager@${co.key}.hyoka-demo.jp`, email_verified: 1, image: null,
-      company_id: cid, role: "MANAGER", grade_id: gid("manager1"), manager_id: adminId, employee_code: "MGR-001",
+      company_id: cid, role: "MANAGER", grade_id: gid("manager1"), office_id: offId("hq"), manager_id: adminId, employee_code: "MGR-001",
       department: "本部", hired_at: "2018-04-01", profile_note: "各事業所の評価状況を確認する立場（変更はできない）。", is_active: 1,
       created_at: NOW, updated_at: NOW,
     });
@@ -383,7 +509,7 @@ export async function buildSeed() {
       empIds.push({ ...e, id: uid });
       users.push({
         id: uid, name: e.name, email: `${e.key}@${co.key}.hyoka-demo.jp`, email_verified: 1, image: null,
-        company_id: cid, role: "EMPLOYEE", grade_id: gid(e.grade), manager_id: managerId,
+        company_id: cid, role: "EMPLOYEE", grade_id: gid(e.grade), office_id: offId(deptToOffice(e.dept)), manager_id: managerId,
         employee_code: `EMP-${e.key.slice(1).padStart(3, "0")}`, department: e.dept, hired_at: e.hired,
         profile_note: null, is_active: 1, created_at: NOW, updated_at: NOW,
       });
@@ -493,7 +619,7 @@ export async function buildSeed() {
           const respId = `res_${co.key}_${cy.key}_${e.key}`;
           formResponses.push({
             id: respId, company_id: cid, form_id: formId, cycle_id: cycleId, employee_id: e.id,
-            grade_id: gid(g.code), status: "submitted",
+            grade_id: gid(g.code), office_id: offId(deptToOffice(e.dept)), import_source: null, status: "submitted",
             submitted_at: T(new Date(`${cy.end}T09:00:00Z`)), respondent_note: null,
             created_at: NOW, updated_at: NOW,
           });
@@ -631,6 +757,7 @@ export async function buildSeed() {
           evaluations.push({
             id: evalId, company_id: cid, cycle_id: cycleId, employee_id: e.id, grade_id: gid(g.code),
             response_id: respId, scheme_id: schemeId,
+            office_id: offId(deptToOffice(e.dept)), computed_at: T(new Date(`${cy.end}T12:00:00Z`)),
             total_score: Math.round(total * 10) / 10, max_score: maxTotal,
             requirement_rate: Math.round((reqAchieved / Math.max(1, reqTotal)) * 1000) / 10,
             requirement_achieved: reqAchieved, requirement_total: reqTotal,
@@ -667,6 +794,7 @@ export async function buildSeed() {
   }
 
   sql.push(...insert("companies", companies));
+  sql.push(...insert("offices", offices));
   sql.push(...insert("users", users));
   sql.push(...insert("accounts", accounts));
   sql.push(...insert("grades", grades));
@@ -693,13 +821,19 @@ export async function buildSeed() {
   sql.push(...insert("evaluation_requirements", evaluationRequirements));
   sql.push(...insert("evaluation_gates", evaluationGates));
   sql.push(...insert("raise_settings", raiseSettings));
+  sql.push(...insert("raise_policies", raisePolicies));
+  sql.push(...insert("raise_patterns", raisePatterns));
+  sql.push(...insert("raise_exceptions", raiseExceptions));
+  sql.push(...insert("raise_revisions", raiseRevisions));
   sql.push(...insert("kgi_coefficients", kgiCoefficients));
   sql.push(...insert("employee_notes", employeeNotes));
 
   return {
     sql,
     counts: {
-      会社: companies.length, 利用者: users.length, 等級: grades.length,
+      会社: companies.length, 事業所: offices.length, 利用者: users.length, 等級: grades.length,
+      昇給ルール: raisePolicies.length, 判定パターン: raisePatterns.length, 昇給の特例: raiseExceptions.length,
+      昇給額: raiseSettings.length,
       等級要件: gradeRequirements.length, 昇格要件: promotionRequirements.length,
       行動指針: behaviorGuidelines.length, 行動指針の段階: behaviorLevels.length,
       KPI項目: kpiItems.length, ランク基準: kpiRankCriteria.length, KPI設問: kpiQuestionRows.length,
@@ -712,6 +846,13 @@ export async function buildSeed() {
 }
 
 /* ───────────────── 補助関数 ───────────────── */
+
+/** 部署名から事業所コードを引く（デモ利用者の所属を事業所マスタに合わせる） */
+function deptToOffice(dept) {
+  if (dept === "第1事業所") return "office1";
+  if (dept === "第2事業所") return "office2";
+  return "hq";
+}
 
 /** 目標ランクを決める。strength が高いほどAが出やすい。1.0 なら必ずA。 */
 function pickTargetRank(r, strength) {

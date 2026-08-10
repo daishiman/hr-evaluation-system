@@ -8,6 +8,27 @@
       "when": 1786352201101,
       "tag": "0000_dapper_falcon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786357461263,
+      "tag": "0001_strange_human_torch",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786359325733,
+      "tag": "0002_common_the_anarchist",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1786360000000,
+      "tag": "0003_kgi_updated_at",
+      "breakpoints": true
     }
   ]
 }

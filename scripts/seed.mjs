@@ -11,14 +11,15 @@ const remote = process.argv.includes("--remote");
 const generateOnly = process.argv.includes("--generate-only");
 
 const TABLES = [
-  "employee_notes", "kgi_coefficients", "raise_settings",
+  "employee_notes", "kgi_coefficients",
+  "raise_revisions", "raise_exceptions", "raise_patterns", "raise_policies", "raise_settings",
   "evaluation_gates", "evaluation_requirements", "evaluation_behaviors", "evaluation_items", "evaluations",
   "form_answers", "form_responses", "form_questions", "forms", "evaluation_cycles",
   "scheme_rank_ratios", "scheme_items", "evaluation_schemes",
   "kpi_questions", "kpi_rank_criteria", "kpi_items", "kpi_categories",
   "promotion_thresholds", "behavior_levels", "behavior_guidelines",
   "promotion_requirements", "grade_requirements",
-  "sessions", "accounts", "verifications", "users", "grades", "companies",
+  "sessions", "accounts", "verifications", "users", "grades", "offices", "companies",
 ];
 
 const { sql, counts } = await buildSeed();

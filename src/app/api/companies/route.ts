@@ -5,6 +5,7 @@ import { getDb, schema as s } from "@/lib/db";
 import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
+import { copyCompanyMasters, findTemplateCompany } from "@/lib/template";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +24,9 @@ const createSchema = z.object({
 
 /**
  * 会社の追加（システム全体管理者のみ）。
- * 会社と同時に、その会社の管理者アカウントを1つ作る。
- * 等級・KPI・配点などの制度は、作った管理者が制度マスタの画面から登録する。
+ * 会社と同時に、その会社の管理者アカウントを1つ作り、
+ * システム標準テンプレートの制度（等級・KPI・ランク基準・配点・昇給ルール）を丸ごと複製する。
+ * 複製後は会社ごとに自由に書き換えられる（テンプレート側は変わらない）。
  */
 export async function POST(req: Request) {
   return handle(async () => {
@@ -38,6 +40,8 @@ export async function POST(req: Request) {
     const dupUser = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.email, email)).limit(1);
     if (dupUser.length > 0) throw new HttpError(400, "このメールアドレスはすでに登録されています。");
 
+    const template = await findTemplateCompany(db);
+
     const companyId = newId("co");
     await db.insert(s.companies).values({
       id: companyId,
@@ -45,7 +49,11 @@ export async function POST(req: Request) {
       slug: body.slug,
       businessType: body.businessType?.trim() || "給付事業",
       isActive: true,
+      templateSourceId: template?.id ?? null,
     });
+
+    // 制度のひな形を複製する（ひな形が無いときは空のまま作り、その旨を返す）
+    const copied = template ? await copyCompanyMasters(db, template.id, companyId) : null;
 
     const userId = crypto.randomUUID();
     await db.insert(s.users).values({
@@ -67,7 +75,12 @@ export async function POST(req: Request) {
 
     return {
       id: companyId,
-      message: `${body.name}を追加し、管理者アカウントを作りました。制度（等級・KPI・配点）は管理者の画面から登録してください。`,
+      copied,
+      message: copied
+        ? `${body.name}を追加し、管理者アカウントを作りました。` +
+          `標準の制度（等級${copied["等級"]}件・KPI項目${copied["KPI項目"]}件・ランク基準${copied["ランク基準"]}件・昇給額${copied["昇給額"]}件ほか）を写してあります。` +
+          `内容は制度マスタの画面からこの会社だけ自由に変更できます。`
+        : `${body.name}を追加し、管理者アカウントを作りました。標準の制度が登録されていないため、制度（等級・KPI・配点）は管理者の画面から登録してください。`,
     };
   });
 }

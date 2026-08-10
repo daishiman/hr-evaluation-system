@@ -11,9 +11,36 @@ const s = schema;
 
 /* ───────────────── 会社・等級 ───────────────── */
 
+/** 実際に運用している会社の一覧（制度のひな形＝システム標準テンプレートは除く）。 */
 export async function listCompanies() {
   const db = await getDb();
-  return db.select().from(s.companies).orderBy(asc(s.companies.name));
+  return db.select().from(s.companies).where(eq(s.companies.isTemplate, false)).orderBy(asc(s.companies.name));
+}
+
+/**
+ * 制度のひな形（システム標準テンプレート）の中身の件数。
+ * 会社を追加したときに、ここに入っている制度がそのまま複製される。
+ */
+export async function getTemplateSummary() {
+  const db = await getDb();
+  const co = (await db.select().from(s.companies).where(eq(s.companies.isTemplate, true)).limit(1))[0];
+  if (!co) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const count = async (table: any): Promise<number> => {
+    const r = await db.select({ n: sql<number>`count(*)` }).from(table).where(eq(table.companyId, co.id));
+    return Number(r[0]?.n ?? 0);
+  };
+  return {
+    company: co,
+    grades: await count(s.grades),
+    gradeRequirements: await count(s.gradeRequirements),
+    promotionRequirements: await count(s.promotionRequirements),
+    kpiItems: await count(s.kpiItems),
+    rankCriteria: await count(s.kpiRankCriteria),
+    kpiQuestions: await count(s.kpiQuestions),
+    raiseSettings: await count(s.raiseSettings),
+    raiseExceptions: await count(s.raiseExceptions),
+  };
 }
 
 export async function getCompany(companyId: string) {
@@ -263,6 +290,47 @@ export async function getResponse(companyId: string, formId: string, employeeId:
   return { ...r[0], answers };
 }
 
+/**
+ * アンケート1本の回答状況。
+ *
+ * 対象等級に在籍している人を全員並べ、提出済み・下書き・未回答を1行ずつ返す。
+ * 「誰がまだ出していないか」を数えなくても分かるようにするため、
+ * 回答が無い人も行として残す（左外部結合）。
+ */
+export async function listResponseStatus(companyId: string, formId: string) {
+  const db = await getDb();
+  const form = (
+    await db
+      .select({ id: s.forms.id, gradeId: s.forms.gradeId })
+      .from(s.forms)
+      .where(and(eq(s.forms.companyId, companyId), eq(s.forms.id, formId)))
+      .limit(1)
+  )[0];
+  if (!form) return [];
+
+  return db
+    .select({
+      employeeId: s.users.id,
+      name: s.users.name,
+      employeeCode: s.users.employeeCode,
+      department: s.users.department,
+      isActive: s.users.isActive,
+      responseId: s.formResponses.id,
+      status: s.formResponses.status,
+      submittedAt: s.formResponses.submittedAt,
+      importSource: s.formResponses.importSource,
+      officeName: s.offices.name,
+    })
+    .from(s.users)
+    .leftJoin(
+      s.formResponses,
+      and(eq(s.formResponses.employeeId, s.users.id), eq(s.formResponses.formId, form.id)),
+    )
+    .leftJoin(s.offices, eq(s.offices.id, s.users.officeId))
+    .where(and(eq(s.users.companyId, companyId), eq(s.users.gradeId, form.gradeId)))
+    .orderBy(asc(s.users.name));
+}
+
 /* ───────────────── 利用者 ───────────────── */
 
 export async function listMembers(companyId: string, opts?: { managerId?: string }) {
@@ -344,6 +412,7 @@ export async function listEvaluations(companyId: string, opts?: { employeeId?: s
       promotionEligible: s.evaluations.promotionEligible,
       promotionBlockedReason: s.evaluations.promotionBlockedReason,
       status: s.evaluations.status,
+      computedAt: s.evaluations.computedAt,
       finalizedAt: s.evaluations.finalizedAt,
       evaluatorComment: s.evaluations.evaluatorComment,
       requiredKpiPointsSnapshot: s.evaluations.requiredKpiPointsSnapshot,

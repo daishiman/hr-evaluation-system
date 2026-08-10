@@ -72,9 +72,14 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
         title={form.title}
         lede={`${form.cycleName ?? ""} ／ 対象：${form.gradeName ?? "—"} ／ 第${form.version}版 ／ ${FORM_STATUS_LABEL[form.status] ?? form.status}`}
         actions={
-          <Link href={`/admin/forms?cycle=${form.cycleId}`} className="btn btn-tertiary">
-            一覧に戻る
-          </Link>
+          <>
+            <Link href={`/admin/forms/${form.id}/responses`} className="btn btn-secondary">
+              回答一覧を見る
+            </Link>
+            <Link href={`/admin/forms?cycle=${form.cycleId}`} className="btn btn-tertiary">
+              一覧に戻る
+            </Link>
+          </>
         }
       />
 
