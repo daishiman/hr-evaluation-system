@@ -4,7 +4,6 @@ import {
   listGrades,
   listKpiCategories,
   listKpiItems,
-  listReferencePoints,
   listSchemeItems,
 } from "@/lib/queries";
 import { EmptyState, PageTitle, ReasonNote } from "@/components/ui";
@@ -21,12 +20,14 @@ export default async function AdminSchemePage() {
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  const [scheme, categories, kpiItems, grades, reference] = await Promise.all([
+  /* 元の配点表（参考値・800件超）はここでは読まない。
+     画面で「元の配点を表示する」を押したときに、選んだ等級区分のぶんだけ
+     /api/reference-points から読む。 */
+  const [scheme, categories, kpiItems, grades] = await Promise.all([
     getActiveScheme(companyId),
     listKpiCategories(companyId),
     listKpiItems(companyId),
     listGrades(companyId),
-    listReferencePoints(companyId),
   ]);
 
   // 元の配点表は「等級区分」ごとの列だった（AMⅠ/Ⅱ、MgrⅠ/Ⅱは同じ列）。等級の並び順のまま重複を除く
@@ -74,8 +75,8 @@ export default async function AdminSchemePage() {
           isFixedSlot: i.isFixedSlot,
         }))}
         raiseRequiresAllA={scheme.raiseRequiresAllA}
+        scoringMode={scheme.scoringMode === "absolute" ? "absolute" : "ratio"}
         pointGroups={pointGroups}
-        reference={reference}
       />
     </>
   );

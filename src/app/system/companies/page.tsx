@@ -68,7 +68,7 @@ export default async function SystemCompanies() {
       {companies.length === 0 ? (
         <EmptyState title="会社がまだありません" body="上のフォームから最初の会社を追加してください。" />
       ) : (
-        <div className="grid gap-4">
+        <div className="stack">
           {companies.map((c) => (
             <Card key={c.id} className="card-pad">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -85,7 +85,7 @@ export default async function SystemCompanies() {
                 </Link>
               </div>
 
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="card-grid mt-3">
                 <RecordForm
                   url="/api/companies"
                   method="PATCH"

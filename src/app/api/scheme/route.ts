@@ -11,6 +11,12 @@ export const dynamic = "force-dynamic";
 const bodySchema = z.object({
   schemeId: z.string().min(1),
   raiseRequiresAllA: z.boolean().optional(),
+  /**
+   * ランク→点数の換算方式。
+   *  ratio    … 一律割合方式（A=100% / B=80% / C=60% / D=40% / E=0%）※既定・仮
+   *  absolute … 項目別絶対点方式（項目ごとに違う点数表 kpi_reference_points を使う）
+   */
+  scoringMode: z.enum(["ratio", "absolute"]).optional(),
   items: z
     .array(
       z.object({
@@ -94,16 +100,38 @@ export async function PUT(req: Request) {
       );
     }
 
-    if (body.raiseRequiresAllA !== undefined) {
+    let extraNote = "";
+    if (body.scoringMode === "absolute") {
+      /* 項目別絶対点方式にするには、その項目の点数表が要る。
+         表が無い項目は一律割合方式で計算されるため、それを黙って起こさず先に伝える。 */
+      const refs = await db
+        .select({ kpiItemId: s.kpiReferencePoints.kpiItemId })
+        .from(s.kpiReferencePoints)
+        .where(eq(s.kpiReferencePoints.companyId, companyId));
+      const haveTable = new Set(refs.map((r) => r.kpiItemId));
+      const missing = body.items.filter((i) => !i.isFixedSlot && !haveTable.has(i.kpiItemId));
+      if (missing.length > 0) {
+        const names = missing
+          .map((i) => kpiItems.find((k) => k.id === i.kpiItemId)?.name ?? i.kpiItemId)
+          .join("・");
+        extraNote = `ただし点数表が未登録の項目（${names}）は、これまでどおり一律割合で計算します。`;
+      }
+    }
+
+    if (body.raiseRequiresAllA !== undefined || body.scoringMode !== undefined) {
       await db
         .update(s.evaluationSchemes)
-        .set({ raiseRequiresAllA: body.raiseRequiresAllA })
+        .set({
+          ...(body.raiseRequiresAllA !== undefined ? { raiseRequiresAllA: body.raiseRequiresAllA } : {}),
+          ...(body.scoringMode !== undefined ? { scoringMode: body.scoringMode } : {}),
+        })
         .where(eq(s.evaluationSchemes.id, scheme.id));
     }
 
     return {
       message:
-        "評価セットを保存しました。確定済みの評価は判定当時の設定のまま残るため、過去の結果は変わりません。",
+        "評価セットを保存しました。確定済みの評価は判定当時の設定のまま残るため、過去の結果は変わりません。" +
+        (extraNote ? ` ${extraNote}` : ""),
     };
   });
 }

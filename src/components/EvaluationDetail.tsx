@@ -50,6 +50,16 @@ export async function EvaluationDetail({
   const gateFail = gates.filter((g) => !g.achieved);
   // 実績が入力されておらずランクを付けられなかった項目（移行元のGASでいう「判定外」）
   const unrated = items.filter((i) => i.rank === null);
+  /* 2026-08-10 に達成率の分母を「出題した項目数」へ変更した。それ以前に確定した評価は
+     作り直さない（過去評価の不変性）ため、保存済みの達成率と項目数の割合が合わない。
+     食い違うときだけ、その理由を画面に出す。 */
+  const isLegacyRate =
+    head.requirementRate !== null &&
+    head.requirementTotal !== null &&
+    head.requirementTotal > 0 &&
+    head.requirementAchieved !== null &&
+    Math.abs(head.requirementRate - Math.round((head.requirementAchieved / head.requirementTotal) * 1000) / 10) > 0.1;
+
   const supportReqs = requirements.filter((r) => r.category === "support");
   const operationReqs = requirements.filter((r) => r.category === "operation");
 
@@ -169,15 +179,23 @@ export async function EvaluationDetail({
         等級要件（支援・運営）
       </SectionHeading>
       <Card className="card-pad">
-        {/* 達成率の分母は「半期の目標設定上限数」。答えた設問の数ではない（元の計算式どおり）。
-            上限より多く達成することがあるため、バーは上限に対する進み具合を示す。 */}
+        {/* 達成率の分母は「このアンケートで実際に出題した等級要件の項目数」。
+            判定した時点の分子・分母をそのまま保存しているので、あとから設問を
+            増減させてもこの表示は動かない。 */}
         <Bar value={head.requirementRate ?? 0} max={100} label="％（達成率）" />
         <p className="footnote mt-1">
-          <Num value={head.requirementAchieved} unit="件" /> 達成／半期の目標設定上限{" "}
-          <Num value={head.gradeTargetCap} unit="件" />（アンケートの等級要件の設問は{" "}
-          <Num value={head.requirementTotal} unit="件" />）。上限を超えて達成した場合も達成率は100%が上限です。
+          <Num value={head.requirementTotal} unit="項目" /> 中{" "}
+          <Num value={head.requirementAchieved} unit="項目" /> 達成 →{" "}
+          <Num value={head.requirementRate} unit="%" />
+          。分母はこのアンケートで実際に聞いた等級要件の項目数です（未回答の項目も未達として数えます）。
         </p>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        {isLegacyRate && (
+          <ReasonNote>
+            この評価は、達成率の分母を「半期の目標設定上限数」としていた以前の決まりで確定済みです。
+            そのため上の項目数と達成率の割合が一致していません。確定済みの評価は作り直しません。
+          </ReasonNote>
+        )}
+        <div className="card-grid mt-4">
           {[
             { title: "支援について", rows: supportReqs },
             { title: "運営について", rows: operationReqs },
@@ -202,6 +220,62 @@ export async function EvaluationDetail({
           ))}
         </div>
       </Card>
+
+      {/* 賞与（仮）。評価される側には出さない（個人Ptから KPI評価点合計 が逆算できるため、
+          queries.getEvaluationDetail で null にして返している）。 */}
+      {showsCriteria && (
+        <>
+          <SectionHeading aside={<ProvisionalMark note="配点が未確定のため、金額は仮のものです。" />}>
+            個人Pt と 賞与額（仮）
+          </SectionHeading>
+          <Card className="card-pad">
+            {head.personalPoints === null ? (
+              <ReasonNote
+                action={
+                  <a href="/admin/kgi" className="btn btn-secondary no-print">
+                    達成率を登録する
+                  </a>
+                }
+              >
+                {head.bonusRationale ??
+                  "事業所KGIの達成率が未登録のため、個人Ptと賞与額を算出できません（0円ではありません）。"}
+              </ReasonNote>
+            ) : (
+              <>
+                <div className="hero-number">
+                  <p className="m-0 text-[12px] text-[var(--ink-muted)]">個人Pt</p>
+                  <p className="num-display m-0 text-[28px] leading-tight">
+                    <Num value={head.personalPoints} unit="Pt" display />
+                  </p>
+                  {head.bonusYen !== null && (
+                    <p className="m-0 mt-2 text-[13px]">
+                      賞与額（仮） <Num value={head.bonusYen} unit="円" />
+                    </p>
+                  )}
+                </div>
+                <DefList
+                  rows={[
+                    {
+                      label: "事業所KGI達成率",
+                      value: <Num value={head.officeAchievementRate} unit="%" />,
+                    },
+                    { label: "達成係数", value: <Num value={head.kgiCoefficient} /> },
+                  ]}
+                />
+                {head.bonusRationale && (
+                  <p className="m-0 mt-2 text-[12px] leading-relaxed text-[var(--ink-muted)]">{head.bonusRationale}</p>
+                )}
+                <p className="footnote m-0 mt-2">
+                  {head.status === "finalized"
+                    ? "この評価は確定済みのため、あとから達成率や係数を変えてもこの金額は動きません。"
+                    : "確定前のため、達成率を変えると計算し直されます。"}
+                  金額は配点が未確定のうちは仮の値です。
+                </p>
+              </>
+            )}
+          </Card>
+        </>
+      )}
 
       <SectionHeading>昇格要件（受講後の報告書・テスト）</SectionHeading>
       {gates.length === 0 ? (

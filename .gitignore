@@ -39,6 +39,11 @@ data/*
 # サンプルデータ（テスト用・表示確認用の匿名化データ）のみ追跡する
 !data/sample/
 
+# 評価基準の正本（閾値・計算式・設問文のみ。個人情報も評価内容も含まない）。
+# authoritative-criteria.test.ts が実行時に読むため、追跡しないとクローン後に
+# テストが落ちる
+!data/_authoritative-kpi-criteria.tsv
+
 # Next.js / OpenNext / Cloudflare
 .next/
 .open-next/

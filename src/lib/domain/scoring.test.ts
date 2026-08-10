@@ -203,22 +203,51 @@ describe("judgeOverall — 昇給と昇格の判定", () => {
 
 /* 現行GAS（移行元）の実際の出力と突き合わせて固定したふるまい。
    一次資料は data/_gas-internal-json.md（回答一覧「評価結果」シートの内部JSON）。 */
-describe("gradeRequirementRate — 等級要件達成率", () => {
-  it("分母は半期の目標設定上限数（設問数ではない）", () => {
-    // 元スプレッドシートの例: 半期上限5件中3件達成＝60%
-    expect(gradeRequirementRate(3, 5)).toBe(60);
+describe("gradeRequirementRate — 等級要件達成率（2026-08-10 決定の第3案）", () => {
+  it("分母は実際に出題した等級要件の項目数（半期の目標設定上限数ではない）", () => {
+    // 27項目中18項目達成 → 66.7%（評価詳細画面に出す表記そのもの）
+    expect(gradeRequirementRate(18, 27)).toBe(66.7);
+    // 現行GASの実績: 等級３Chief 17件達成。旧仕様は上限5件が分母で100%だったが、
+    // 出題20項目が分母になり85%になる。
+    expect(gradeRequirementRate(17, 20)).toBe(85);
   });
 
-  it("上限より多く達成しても100%で頭打ちになる", () => {
-    // 現行GASの実績: 等級３Chief 17件達成／上限5件 → 100%
-    expect(gradeRequirementRate(17, 5)).toBe(100);
-    // 等級１Beginner 9件達成／上限5件 → 100%
-    expect(gradeRequirementRate(9, 5)).toBe(100);
+  it("全項目達成のときだけ100%になる（上限方式のように全員100%にならない）", () => {
+    expect(gradeRequirementRate(20, 20)).toBe(100);
+    expect(gradeRequirementRate(19, 20)).toBe(95);
   });
 
-  it("達成0件なら0%、上限が0でも落ちない", () => {
-    expect(gradeRequirementRate(0, 5)).toBe(0);
-    expect(gradeRequirementRate(2, 0)).toBe(100);
+  it("未回答は分母に残り未達として数える（回答を空にして達成率を上げられない）", () => {
+    // 15項目出題・8項目○・7項目未回答 → 53.3%
+    expect(gradeRequirementRate(8, 15)).toBe(53.3);
+  });
+
+  it("達成0件なら0%", () => {
+    expect(gradeRequirementRate(0, 15)).toBe(0);
+  });
+
+  it("等級要件が1件も出題されていなければ判定外（0%にしない）", () => {
+    expect(gradeRequirementRate(0, 0)).toBeNull();
+    expect(gradeRequirementRate(2, 0)).toBeNull();
+  });
+
+  /* これは **デモ用シードデータ（scripts/seed-data.mjs）に対する回帰テスト** であって、
+     ランク基準（100%以上=A 〜 40%未満=E）が制度として妥当であることの証明ではない。
+     実運用のデータはまだ1件も無く、閾値の妥当性は検証できていない（docs/migration-mapping.md §9-6）。
+     ここが崩れたら「シードか計算式を変えた」合図として気づくためのもの。 */
+  it("シードデータの達成率がA〜Eすべてに散り、Aも到達できる（シードに対する回帰テスト）", () => {
+    // デモ用シードが作った48件から拾った「達成数／出題数」の代表例。
+    // 実運用の実績ではない（実データは1件も無い）。
+    const samples: [number, number][] = [
+      [15, 15], [20, 20], [5, 5],   // 100% → A
+      [17, 20], [12, 15], [4, 5],   // 85% / 80% / 80% → B
+      [14, 20], [11, 15], [3, 5],   // 70% / 73.3% / 60% → C
+      [7, 15], [5, 10], [4, 10],    // 46.7% / 50% / 40% → D
+      [3, 10],                      // 30% → E
+    ];
+    const ranks = samples.map(([a, n]) => judgeRank(gradeRequirementRate(a, n)!, requirementRate, "higher").rank);
+    expect(new Set(ranks)).toEqual(new Set(["A", "B", "C", "D", "E"]));
+    expect(ranks.filter((r) => r === "A").length).toBe(3);
   });
 });
 
@@ -242,5 +271,90 @@ describe("judgeOverall — 実績が入力されていない項目（判定外�
     // 未回答でも配点は分母に残る（現行GASと同じ: 40 / 70点 の考え方）
     expect(res.maxScore).toBe(50);
     expect(res.totalScore).toBe(40);
+  });
+});
+
+/* ─────────── ランク→点数の換算方式（一律割合方式 / 項目別絶対点方式） ─────────── */
+
+import { scoreItem, type AbsolutePointTable, type Rank } from "./scoring";
+
+const ratios = [
+  { rank: "A" as const, ratio: 1.0 },
+  { rank: "B" as const, ratio: 0.8 },
+  { rank: "C" as const, ratio: 0.6 },
+  { rank: "D" as const, ratio: 0.4 },
+  { rank: "E" as const, ratio: 0.0 },
+];
+
+/** 元の配点表（保留シート）の項目1: 100/85/70/55/0 */
+const item1Absolute: AbsolutePointTable = {
+  byRank: [
+    { rank: "A", points: 100 },
+    { rank: "B", points: 85 },
+    { rank: "C", points: 70 },
+    { rank: "D", points: 55 },
+    { rank: "E", points: 0 },
+  ],
+};
+
+/** 元の配点表の項目2: 10/8/7/5/0 */
+const item2Absolute: AbsolutePointTable = {
+  byRank: [
+    { rank: "A", points: 10 },
+    { rank: "B", points: 8 },
+    { rank: "C", points: 7 },
+    { rank: "D", points: 5 },
+    { rank: "E", points: 0 },
+  ],
+};
+
+describe("scoreItem — 一律割合方式（既定・仮）", () => {
+  it("配点 × ランクの割合で点数が決まる", () => {
+    const call = (rank: Rank) => scoreItem({ rank, weight: 20, mode: "ratio", ratios }).points;
+    expect(call("A")).toBe(20);
+    expect(call("B")).toBe(16);
+    expect(call("C")).toBe(12);
+    expect(call("D")).toBe(8);
+    expect(call("E")).toBe(0);
+  });
+
+  it("満点は配点そのもので、どの項目も同じ割合で減る", () => {
+    const r = scoreItem({ rank: "B", weight: 20, mode: "ratio", ratios });
+    expect(r.maxPoints).toBe(20);
+    expect(r.note).toContain("一律割合方式");
+    expect(r.fellBackToRatio).toBe(false);
+  });
+});
+
+describe("scoreItem — 項目別絶対点方式（元の配点表）", () => {
+  it("項目1は 100/85/70/55/0 になる（一律割合の 100/80/60/40/0 とは違う）", () => {
+    const call = (rank: Rank) =>
+      scoreItem({ rank, weight: 100, mode: "absolute", ratios, absolute: item1Absolute }).points;
+    expect(call("A")).toBe(100);
+    expect(call("B")).toBe(85); // 一律割合方式なら80
+    expect(call("C")).toBe(70); // 一律割合方式なら60
+    expect(call("D")).toBe(55); // 一律割合方式なら40
+    expect(call("E")).toBe(0);
+  });
+
+  it("項目2は 10/8/7/5/0 になる（項目ごとに刻みが違う）", () => {
+    const call = (rank: Rank) =>
+      scoreItem({ rank, weight: 10, mode: "absolute", ratios, absolute: item2Absolute }).points;
+    expect(call("A")).toBe(10);
+    expect(call("B")).toBe(8);
+    expect(call("C")).toBe(7); // 一律割合方式なら6
+    expect(call("D")).toBe(5); // 一律割合方式なら4
+  });
+
+  it("満点はその項目のAの点数になる", () => {
+    expect(scoreItem({ rank: "C", weight: 999, mode: "absolute", ratios, absolute: item2Absolute }).maxPoints).toBe(10);
+  });
+
+  it("点数表が無い項目は0点にせず、一律割合方式へ退避してその旨を残す", () => {
+    const r = scoreItem({ rank: "B", weight: 20, mode: "absolute", ratios, absolute: null });
+    expect(r.points).toBe(16);
+    expect(r.maxPoints).toBe(20);
+    expect(r.fellBackToRatio).toBe(true);
+    expect(r.note).toContain("元の配点表がない");
   });
 });

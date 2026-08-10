@@ -58,7 +58,7 @@ export default async function AdminCycles() {
       {cycles.length === 0 ? (
         <EmptyState title="評価期間がまだありません" body="上のフォームから最初の半期を作ってください。" />
       ) : (
-        <div className="grid gap-4">
+        <div className="stack">
           {cycles.map((c) => {
             const my = forms.filter((f) => f.cycleId === c.id);
             const published = my.filter((f) => f.status === "published").length;

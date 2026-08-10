@@ -177,7 +177,7 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
           {myReqs.length === 0 ? (
             <ReasonNote>この等級の要件が登録されていません。</ReasonNote>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="card-grid">
               {[
                 { key: "support", title: "支援について" },
                 { key: "operation", title: "運営について" },
@@ -196,8 +196,9 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
             </div>
           )}
           <p className="footnote mt-2">
-            半期に目標として設定できるのは最大 <Num value={grade.targetCap} unit="件" /> です。
-            等級要件達成率は「達成した件数 ÷ この上限」で計算します。
+            等級要件達成率は「達成した項目数 ÷ この等級のアンケートで聞いた等級要件の項目数」で計算します。
+            未回答の項目は未達として数えます。半期に目標として設定できるのは最大{" "}
+            <Num value={grade.targetCap} unit="件" /> です（達成率の計算には使いません）。
           </p>
 
           <SectionHeading>昇格要件（受講後の報告書・テスト）</SectionHeading>

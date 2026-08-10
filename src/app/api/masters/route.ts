@@ -4,6 +4,8 @@ import { getDb, schema as s } from "@/lib/db";
 import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
+import { GRADE_REQUIREMENT_MAX, swapForMove } from "@/lib/domain/grade-requirements";
+import { checkRangeCoverage } from "@/lib/domain/kgi";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +73,14 @@ const bodySchema = z.discriminatedUnion("kind", [
     isActive: z.boolean().optional(),
   }),
   z.object({
+    /** 等級要件の並べ替え（同じ区分の中で1つ上／下と入れ替える） */
+    kind: z.literal("gradeRequirementOrder"),
+    id: z.string().min(1),
+    gradeId: z.string().min(1),
+    category: z.enum(["support", "operation"]),
+    direction: z.enum(["up", "down"]),
+  }),
+  z.object({
     kind: z.literal("promotionRequirement"),
     id: z.string().optional(),
     gradeId: z.string().min(1),
@@ -80,6 +90,14 @@ const bodySchema = z.discriminatedUnion("kind", [
     seq: z.number().int().min(1).max(99).optional(),
     isGate: z.boolean().optional(),
     isActive: z.boolean().optional(),
+  }),
+  z.object({
+    /** 昇格要件の並べ替え（同じ種類の中で1つ上／下と入れ替える） */
+    kind: z.literal("promotionRequirementOrder"),
+    id: z.string().min(1),
+    gradeId: z.string().min(1),
+    reqKind: z.enum(["report", "test"]),
+    direction: z.enum(["up", "down"]),
   }),
   z.object({
     kind: z.literal("rankCriteria"),
@@ -151,12 +169,25 @@ export async function PUT(req: Request) {
             .limit(1)
         )[0];
         if (!current) throw new HttpError(404, "昇給額が見つかりませんでした。");
+
+        /* 「年間の上昇額」＝ 1回あたりの昇給額 × 年間の昇給機会。
+           元シート（昇給設定）の値がこの定義:
+             Beginner 3,000円 → 6,000円 ／ Regular 4,000円 → 8,000円
+             Chief 5,000円 → 10,000円 ／ Manager Ⅱ 10,000円 → 20,000円
+           月額基本給が1年でいくら上がるか、という意味であって、
+           半期6ヶ月分の支給総額（昇給額×6）ではない。
+           昇給機会の回数は会社ごとに変えられるので raise_policies から取る。 */
+        const policy = (
+          await db.select().from(s.raisePolicies).where(eq(s.raisePolicies.companyId, companyId)).limit(1)
+        )[0];
+        const chancesPerYear = policy?.chancesPerYear ?? 2;
+
         await db
           .update(s.raiseSettings)
           .set({
             monthlyAmount: body.monthlyAmount,
             months: body.months,
-            annualAmount: body.monthlyAmount * body.months,
+            annualAmount: body.monthlyAmount * chancesPerYear,
             ...(body.maxCount !== undefined ? { maxCount: body.maxCount } : {}),
             note: body.note ?? null,
             isProvisional: false,
@@ -218,12 +249,32 @@ export async function PUT(req: Request) {
       }
       case "gradeRequirement": {
         await ownGrade(body.gradeId);
+        /* 支援・運営はそれぞれ最大10項目まで（制度上の上限）。
+           画面でも追加ボタンを止めているが、直接APIを叩かれても超えないようにここで止める。 */
+        const activeInCategory = async (excludeId?: string) => {
+          const rows = await db
+            .select({ id: s.gradeRequirements.id })
+            .from(s.gradeRequirements)
+            .where(
+              and(
+                eq(s.gradeRequirements.companyId, companyId),
+                eq(s.gradeRequirements.gradeId, body.gradeId),
+                eq(s.gradeRequirements.category, body.category),
+                eq(s.gradeRequirements.isActive, true),
+              ),
+            );
+          return rows.filter((r) => r.id !== excludeId).length;
+        };
+        const label = body.category === "support" ? "支援について" : "運営について";
         if (body.id) {
           await ensure(
             await db.select({ id: s.gradeRequirements.id }).from(s.gradeRequirements)
               .where(and(eq(s.gradeRequirements.id, body.id), eq(s.gradeRequirements.companyId, companyId))).limit(1),
             "等級要件",
           );
+          if (body.isActive === true && (await activeInCategory(body.id)) >= GRADE_REQUIREMENT_MAX) {
+            throw new HttpError(400, `「${label}」は${GRADE_REQUIREMENT_MAX}項目までです。ほかの項目を使わない状態にしてから戻してください。`);
+          }
           await db
             .update(s.gradeRequirements)
             .set({
@@ -234,6 +285,9 @@ export async function PUT(req: Request) {
             })
             .where(eq(s.gradeRequirements.id, body.id));
           return { message: "等級要件を保存しました。" };
+        }
+        if ((await activeInCategory()) >= GRADE_REQUIREMENT_MAX) {
+          throw new HttpError(400, `「${label}」は${GRADE_REQUIREMENT_MAX}項目までです。`);
         }
         const existing = await db
           .select({ seq: s.gradeRequirements.seq })
@@ -249,6 +303,21 @@ export async function PUT(req: Request) {
           isActive: true,
         });
         return { message: "等級要件を追加しました。次に作るアンケートから設問に載ります。" };
+      }
+      case "gradeRequirementOrder": {
+        await ownGrade(body.gradeId);
+        const rows = await db
+          .select()
+          .from(s.gradeRequirements)
+          .where(and(eq(s.gradeRequirements.companyId, companyId), eq(s.gradeRequirements.gradeId, body.gradeId)));
+        const swap = swapForMove(rows, body.category, body.id, body.direction);
+        if (!swap) throw new HttpError(400, "これ以上は動かせません。");
+        // 2件の並び順を入れ替える。片方だけ書き換わると順番が重複するため、まとめて実行する。
+        await db.batch([
+          db.update(s.gradeRequirements).set({ seq: swap[0].seq }).where(eq(s.gradeRequirements.id, swap[0].id)),
+          db.update(s.gradeRequirements).set({ seq: swap[1].seq }).where(eq(s.gradeRequirements.id, swap[1].id)),
+        ] as unknown as Parameters<typeof db.batch>[0]);
+        return { message: "並び順を変更しました。" };
       }
       case "promotionRequirement": {
         await ownGrade(body.gradeId);
@@ -286,7 +355,27 @@ export async function PUT(req: Request) {
           isGate: body.isGate ?? true,
           isActive: true,
         });
-        return { message: "昇格要件を追加しました。" };
+        return { message: "昇格要件を追加しました。次に作るアンケートから設問に載ります。" };
+      }
+      case "promotionRequirementOrder": {
+        await ownGrade(body.gradeId);
+        const rows = await db
+          .select()
+          .from(s.promotionRequirements)
+          .where(and(eq(s.promotionRequirements.companyId, companyId), eq(s.promotionRequirements.gradeId, body.gradeId)));
+        // 並べ替えの決まりは等級要件と同じ。区分の列名だけ違う（category ↔ kind）ので合わせて渡す。
+        const swap = swapForMove(
+          rows.map((r) => ({ id: r.id, category: r.kind, seq: r.seq, text: r.text, isActive: r.isActive })),
+          body.reqKind,
+          body.id,
+          body.direction,
+        );
+        if (!swap) throw new HttpError(400, "これ以上は動かせません。");
+        await db.batch([
+          db.update(s.promotionRequirements).set({ seq: swap[0].seq }).where(eq(s.promotionRequirements.id, swap[0].id)),
+          db.update(s.promotionRequirements).set({ seq: swap[1].seq }).where(eq(s.promotionRequirements.id, swap[1].id)),
+        ] as unknown as Parameters<typeof db.batch>[0]);
+        return { message: "並び順を変更しました。" };
       }
       case "rankCriteria": {
         await ensure(
@@ -302,6 +391,33 @@ export async function PUT(req: Request) {
             ...(body.displayLabel !== undefined ? { displayLabel: body.displayLabel } : {}),
           })
           .where(eq(s.kpiRankCriteria.id, body.id));
+
+        /* 保存後に、その項目のA〜Eが数直線を隙間なく・重なりなく覆えているかを見る。
+           1行ずつ直す途中では必ず一時的にずれるため、保存自体は止めない。
+           そのかわり「どこが抜けたか／重なったか」を日本語で返し、直し忘れを防ぐ。 */
+        const target = (
+          await db.select({ kpiItemId: s.kpiRankCriteria.kpiItemId }).from(s.kpiRankCriteria)
+            .where(eq(s.kpiRankCriteria.id, body.id)).limit(1)
+        )[0];
+        const siblings = await db
+          .select()
+          .from(s.kpiRankCriteria)
+          .where(and(eq(s.kpiRankCriteria.companyId, companyId), eq(s.kpiRankCriteria.kpiItemId, target.kpiItemId)));
+        const problems = checkRangeCoverage(
+          siblings
+            .sort((a, b) => a.rank.localeCompare(b.rank))
+            .map((r) => ({ label: `${r.rank}（${r.displayLabel}）`, lowerBound: r.lowerBound, upperBound: r.upperBound })),
+          "実績値",
+        );
+        if (problems.length > 0) {
+          return {
+            message:
+              "ランク基準を保存しました。ただし、この項目の基準に次の問題があります。" +
+              problems.map((p) => p.message).join(" ") +
+              " このままだと、あてはまるランクが決まらない実績値や、2つのランクに同時にあてはまる実績値が出ます。",
+            warnings: problems.map((p) => p.message),
+          };
+        }
         return { message: "ランク基準を保存しました。" };
       }
       case "kgi": {
@@ -318,6 +434,24 @@ export async function PUT(req: Request) {
             isProvisional: false,
           })
           .where(eq(s.kgiCoefficients.id, body.id));
+
+        // 達成係数の表も、達成率の数直線を覆えているかを同じ物差しで見る
+        const rows = await db.select().from(s.kgiCoefficients).where(eq(s.kgiCoefficients.companyId, companyId));
+        const kgiProblems = checkRangeCoverage(
+          rows
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+            .map((r) => ({ label: r.label, lowerBound: r.lowerBound, upperBound: r.upperBound })),
+          "達成率",
+        );
+        if (kgiProblems.length > 0) {
+          return {
+            message:
+              "達成係数を保存しました。ただし次の問題があります。" +
+              kgiProblems.map((p) => p.message).join(" ") +
+              " このままだと、係数が決まらない達成率が出ます。",
+            warnings: kgiProblems.map((p) => p.message),
+          };
+        }
         return { message: "達成係数を保存しました。" };
       }
     }

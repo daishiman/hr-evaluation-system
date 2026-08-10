@@ -414,7 +414,17 @@ export async function buildSeed() {
     kpiQuestions.forEach((qq, i) => {
       const no = Number(qq["項目No"]);
       const roleRaw = qq["計算での役割"] ?? "";
-      const role = roleRaw.includes("分子") ? "numerator" : roleRaw.includes("分母") ? "denominator" : roleRaw.includes("直接") ? "direct" : "identify";
+      /* 「計算での役割」を種別に写す。
+         より限定的な言い回しから先に見ること。
+         "分母から控除"（q19_4）と "配点・分母の自動決定"（c_3）はどちらも
+         「分母」を含むため、単純に includes("分母") から見ると
+         ただの分母として扱われてしまう。 */
+      const role =
+        roleRaw.includes("控除") ? "denominator_subtract" :
+        roleRaw.includes("自動決定") || roleRaw.includes("識別") ? "identify" :
+        roleRaw.includes("分子") ? "numerator" :
+        roleRaw.includes("分母") ? "denominator" :
+        roleRaw.includes("直接") ? "direct" : "identify";
       kpiQuestionRows.push({
         id: `kq_${co.key}_${qq["設問ID"]}`, company_id: cid,
         kpi_item_id: Number.isFinite(no) ? `kpi_${co.key}_${no}` : null,
@@ -478,7 +488,9 @@ export async function buildSeed() {
       const rr = RAISE_BY_GRADE[g.code];
       raiseSettings.push({
         id: `rs_${co.key}_${g.code}`, company_id: cid, grade_id: gid(g.code),
-        monthly_amount: rr.amount, months: 6, annual_amount: rr.amount * 6,
+        // 年間の上昇額 ＝ 1回あたりの昇給額 × 年間の昇給機会（2回）。
+        // 元シート「昇給設定（管理者）」の値がこの定義（3,000円→6,000円 など）。
+        monthly_amount: rr.amount, months: 6, annual_amount: rr.amount * 2,
         max_count: rr.max,
         cap_note: "上限に達した後は、昇格（上位等級への移行）しない限り昇給しない",
         note: rr.note,
@@ -729,8 +741,8 @@ export async function buildSeed() {
             formAnswers.push(rest);
           });
 
-          // 等級要件達成率＝達成数÷半期の目標設定上限数（100%で頭打ち）。src/lib/domain/scoring.ts と同じ決まり。
-          const reqRate = Math.round(Math.min(100, (reqAchieved / Math.max(1, gradeDef.targetCap)) * 100) * 10) / 10;
+          // 等級要件達成率＝達成数÷このアンケートで出題した等級要件の項目数。src/lib/domain/scoring.ts と同じ決まり。
+          const reqRate = reqTotal <= 0 ? null : Math.round(Math.min(100, (reqAchieved / reqTotal) * 100) * 10) / 10;
 
           let total = 0, maxTotal = 0;
           const itemRows = [];

@@ -29,6 +29,22 @@
 
   /* 数字専用フォント(和文フォントで数字を描画しない) */
   --font-num: "Helvetica Neue", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+  /* ------------------------------------------------------------
+     余白と骨格の寸法。
+     画面ごとに mt-3 / mt-4 / gap-2 …と好きな値を書くと揃わなくなるので、
+     使う値をここに集める。画面側では極力この変数か、
+     .card-grid / .stack のような共通クラスを使う。
+     ------------------------------------------------------------ */
+  --space-tight: 8px;    /* 近い要素どうし(ラベルと値・ボタンの並び) */
+  --space-block: 16px;   /* ブロックどうし・グリッドの間隔 */
+  --space-section: 28px; /* セクションの間 */
+  --pad-card: 20px;      /* カードの内側 */
+  --pad-page-x: 20px;    /* 本文の左右 */
+
+  --sidebar-w: 232px;    /* メニューの幅 */
+  --header-h: 56px;
+  --content-max: 1120px; /* 本文の最大幅(これ以上は広げない) */
 }
 
 * { box-sizing: border-box; }
@@ -119,19 +135,157 @@ body {
 }
 
 /* ============================================================
-   アプリシェル (§4)
+   アプリシェル (§4) — 左メニュー + ヘッダー + 本文
    ============================================================ */
+.app-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100dvh;
+}
+/* メニューを閉じているときは、その分だけ本文が広がる */
+html[data-sidebar="collapsed"] .app-layout { grid-template-columns: minmax(0, 1fr); }
+html[data-sidebar="collapsed"] .app-sidebar { display: none; }
+
+.app-body { display: flex; flex-direction: column; min-width: 0; }
+
 .app-header {
   background: #fff;
   border-bottom: 1px solid var(--line);
-  height: 56px;
+  height: var(--header-h);
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  gap: 24px;
+  padding: 0 var(--pad-page-x);
+  gap: var(--space-block);
   position: sticky;
   top: 0;
   z-index: 20;
+}
+/* サイドバーにアプリ名が出ているときは、ヘッダー側の名前は重複するので隠す */
+.app-name-header { display: none; }
+html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-left: 128px; }
+
+/* ---- 左メニュー ---- */
+.app-sidebar {
+  background: #fff;
+  border-right: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+  padding: 0 12px 24px;
+}
+.sidebar-head {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: var(--space-tight);
+  height: var(--header-h);
+  border-bottom: 1px solid var(--line);
+  margin: 0 -12px;
+  padding: 0 12px;
+}
+.sidebar-head .app-name { flex: 1 1 auto; min-width: 0; }
+.sidebar-scope { padding: 0 4px; }
+
+.sidebar-nav { display: grid; gap: var(--space-block); }
+.sidebar-group { display: grid; gap: 2px; }
+.sidebar-group-title {
+  margin: 0 0 2px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  letter-spacing: 0.04em;
+}
+.sidebar-link {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--ink);
+  min-height: 36px;
+  line-height: 1.5;
+}
+.sidebar-link:hover { background: var(--subtle); }
+.sidebar-link[aria-current="page"] {
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  font-weight: 600;
+}
+
+/* 開閉ボタン。アイコンを使わない方針なので、すべて文字のボタンにする */
+.sidebar-close,
+.sidebar-close-sp,
+.sidebar-open-pc,
+.sidebar-open-sp {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-muted);
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 32px;
+}
+.sidebar-close:hover,
+.sidebar-open-pc:hover,
+.sidebar-open-sp:hover { background: var(--subtle); color: var(--ink); }
+
+.sidebar-open-pc {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 30;
+}
+.sidebar-open-sp,
+.sidebar-close-sp { display: none; }
+.sidebar-scrim { display: none; }
+
+/* ---- 狭い画面: メニューは重ねて開く引き出しにする ---- */
+@media (max-width: 1023px) {
+  .app-layout { grid-template-columns: minmax(0, 1fr); }
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: min(280px, 84vw);
+    z-index: 40;
+    box-shadow: 0 8px 32px rgba(22, 25, 29, .18);
+    transform: translateX(-100%);
+    transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .app-sidebar[data-drawer="open"] { transform: translateX(0); }
+  /* 引き出しは開いている間だけ見えればよい。閉じるボタンは引き出し用のものを使う */
+  .sidebar-close { display: none; }
+  .sidebar-close-sp { display: inline-block; }
+  .sidebar-open-pc { display: none; }
+  .sidebar-open-sp { display: inline-block; }
+  .app-name-header { display: inline-block; margin-left: 0; }
+  html[data-sidebar="collapsed"] .app-sidebar { display: flex; }
+  html[data-sidebar="collapsed"] .app-name-header { margin-left: 0; }
+  .sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background: rgba(22, 25, 29, .35);
+    border: none;
+    appearance: none;
+    padding: 0;
+    cursor: pointer;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar { transition: none; }
 }
 /* アプリ名 = ホームに戻るボタン(必須仕様) */
 .app-name {
@@ -155,48 +309,98 @@ body {
   color: var(--ink-muted);
   margin-left: 8px;
 }
-.app-nav { display: flex; gap: 4px; margin-left: auto; }
-.app-nav button {
-  appearance: none;
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: 13px;
-  color: var(--ink-muted);
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
+/* サイドバーでは、会社名をアプリ名の下に置く（横に伸ばして折返させない） */
+.sidebar-head .app-name { line-height: 1.35; }
+.sidebar-head .app-name .app-name-sub {
+  display: block;
+  margin-left: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.app-nav button:hover { background: var(--subtle); color: var(--ink); }
-.app-nav button[aria-current="page"] {
-  color: var(--brand-deep);
-  background: var(--brand-soft);
-  font-weight: 600;
+
+@media (max-width: 639px) {
+  .app-header { padding: 0 12px; }
 }
 
-@media (max-width: 767px) {
-  .app-name .app-name-sub { display: none; }
-  .app-header { padding: 0 12px; gap: 8px; }
-  .app-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* 本文の幅と余白はここだけで決める（画面ごとに上書きしない） */
+.app-main,
+main {
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 24px var(--pad-page-x) 64px;
 }
-
-main { max-width: 1024px; margin: 0 auto; padding: 24px 20px 64px; }
 
 .view[hidden] { display: none; }
 
-.page-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
-.page-lede { font-size: 13px; color: var(--ink-muted); margin: 0 0 20px; }
+/* ------------------------------------------------------------
+   文字の階層（見出し → 本文 → 補助）。この3段だけを使う。
+   ------------------------------------------------------------ */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-block);
+  margin-bottom: var(--space-block);
+}
+.page-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; line-height: 1.5; }
+.page-lede { font-size: 13px; color: var(--ink-muted); margin: 0; line-height: 1.7; }
 
+/* 見出しの前後の余白は、見出しを包むこの箱でだけ付ける（二重に空けない） */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-block);
+  margin: var(--space-section) 0 10px;
+}
+.page-head + .section-head { margin-top: var(--space-tight); }
 .section-heading {
   font-size: 13px;
   font-weight: 700;
-  margin: 28px 0 10px;
+  margin: 0;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-tight);
 }
 .section-heading .count { font-weight: 400; color: var(--ink-muted); font-size: 12px; }
+
+/* ------------------------------------------------------------
+   カードを並べる箱。
+   画面幅で 1 → 2 → 3 列と段階的に増やし、高さは行内で揃える。
+   ------------------------------------------------------------ */
+.card-grid {
+  display: grid;
+  gap: var(--space-block);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 640px) {
+  .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .card-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.card-grid > * { min-width: 0; }
+/* 中身の量が違っても、並んだカードの高さを揃える */
+.card-grid > .card { height: 100%; display: flex; flex-direction: column; }
+/* カードの末尾に置いたリンク・ボタンは下端に寄せる（高さが揃うと位置も揃う） */
+.card-foot { margin-top: auto; padding-top: var(--space-tight); }
+
+/* 縦に積むだけの箱。カードの一覧やブロックの並びはこれを使う。 */
+.stack { display: grid; gap: var(--space-block); }
+.stack-tight { display: grid; gap: var(--space-tight); }
+
+/* 入力欄を2列に並べる箱。画面が狭いときは1列に落ちる。 */
+.field-grid {
+  display: grid;
+  gap: var(--space-block);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 640px) {
+  .field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* ============================================================
    面・カード (§4)
@@ -206,7 +410,7 @@ main { max-width: 1024px; margin: 0 auto; padding: 24px 20px 64px; }
   border: 1px solid var(--line);
   border-radius: 12px;
 }
-.card-pad { padding: 20px; }
+.card-pad { padding: var(--pad-card); }
 
 /* 視覚的主役の面(1画面1箇所): 白→brand-softの微グラデ */
 .card.hero-tint {
@@ -229,8 +433,8 @@ main { max-width: 1024px; margin: 0 auto; padding: 24px 20px 64px; }
   .card-row .row-main { flex-basis: 100%; }
 }
 
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-block); }
+@media (max-width: 639px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
 
 /* 定義リスト */
 .def-list { display: grid; grid-template-columns: 8rem 1fr; row-gap: 8px; font-size: 13px; }
@@ -580,13 +784,14 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
    ============================================================ */
 .kpi-strip {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* 狭い画面では横に3分割せず、読める幅を保ったまま折り返す */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   padding: 14px 0;
-  margin-top: 24px;
+  margin-top: var(--space-section);
 }
-.kpi { text-align: center; padding: 0 8px; }
+.kpi { text-align: center; padding: 8px; }
 .kpi .kpi-label { font-size: 12px; color: var(--ink-muted); }
 .kpi .kpi-value {
   font-size: 22px;
@@ -596,6 +801,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   letter-spacing: -0.02em;
 }
 .kpi + .kpi { border-left: 1px solid var(--line); }
+@media (max-width: 479px) { .kpi + .kpi { border-left: none; border-top: 1px solid var(--line); } }
 
 .todo-row-title { font-size: 13px; font-weight: 600; }
 .todo-row-sub { font-size: 12px; color: var(--ink-muted); }
@@ -775,8 +981,16 @@ details.disclosure .disclosure-body {
 
   /* ヘッダー・ナビ・ボタンなど、紙に不要なものは出さない */
   .app-header,
+  .app-sidebar,
+  .sidebar-open-pc,
+  .sidebar-open-sp,
+  .sidebar-scrim,
   .no-print,
   .btn { display: none !important; }
+
+  /* 紙では段組みをやめて、本文だけを上から流す */
+  .app-layout { display: block !important; }
+  .app-main { max-width: none; padding: 0; }
 
   /* 面の陰影は紙では邪魔になるので罫線だけにする */
   .card,

@@ -29,6 +29,7 @@ export function RecordForm({
   title,
   description,
   resetAfterSubmit,
+  onSaved,
 }: {
   url: string;
   method?: "POST" | "PUT" | "PATCH";
@@ -39,6 +40,8 @@ export function RecordForm({
   title?: string;
   description?: string;
   resetAfterSubmit?: boolean;
+  /** 保存できたときに呼ぶ。開いたときだけ読む画面で、控えを捨てて読み直すために使う */
+  onSaved?: () => void;
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -110,6 +113,7 @@ export function RecordForm({
       }
       setMessage(json.message ?? "保存しました。");
       if (resetAfterSubmit) form.reset();
+      onSaved?.();
       router.refresh();
     } catch {
       setError("通信できませんでした。入力内容はこの画面に残っています。");
@@ -129,7 +133,7 @@ export function RecordForm({
           e.preventDefault();
           void submit();
         }}
-        className="grid gap-3 md:grid-cols-2"
+        className="field-grid"
       >
         {fields.map((f) => (
           <label key={f.name} className={f.type === "textarea" ? "md:col-span-2" : undefined}>
