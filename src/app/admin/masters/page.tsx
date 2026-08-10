@@ -14,7 +14,9 @@ import {
 } from "@/lib/queries";
 import { detectStaleCycles } from "@/lib/impact";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { PromotionRequirementEditor } from "@/components/PromotionRequirementEditor";
+import { GRADE_REQUIREMENT_MAX } from "@/lib/domain/grade-requirements";
+import { Card, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +60,9 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
 
   const th = thresholds.find((t) => t.fromGradeId === grade.id) ?? null;
   const raise = raises.find((r) => r.gradeId === grade.id) ?? null;
-  const myGradeReqs = gradeReqs.filter((r) => r.gradeId === grade.id);
+  const myGradeReqs = gradeReqs.filter((r) => r.gradeId === grade.id && r.isActive);
+  const supportCount = myGradeReqs.filter((r) => r.category === "support").length;
+  const operationCount = myGradeReqs.filter((r) => r.category === "operation").length;
   const myPromoReqs = promoReqs.filter((r) => r.gradeId === grade.id);
 
   return (
@@ -103,7 +107,7 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         method="PUT"
         fixed={{ kind: "grade", id: grade.id }}
         submitLabel="等級の設定を保存する"
-        description="半期に設定できる目標の上限数は、等級要件達成率（達成した件数 ÷ 上限）の分母になります。"
+        description="「半期の目標設定上限数」は目標を何件まで立てられるかの目安です。等級要件達成率の分母には使いません（分母は登録した等級要件の項目数です）。"
         fields={[
           { name: "name", label: "等級の名前", type: "text", required: true, defaultValue: grade.name },
           { name: "targetCap", label: "半期の目標設定上限数", type: "number", required: true, defaultValue: grade.targetCap, unit: "件" },
@@ -173,96 +177,24 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         </p>
       </Card>
 
-      <SectionHeading>等級要件（{myGradeReqs.length}件）</SectionHeading>
-      <Card>
-        {myGradeReqs.length === 0 ? (
-          <div className="card-pad">
-            <p className="footnote m-0">まだ登録されていません。下のフォームから追加してください。</p>
-          </div>
-        ) : (
-          myGradeReqs.map((r) => (
-            <div key={r.id} className="card-row items-start">
-              <div className="row-main">
-                <p className="todo-row-title m-0">{r.text}</p>
-                <p className="todo-row-sub m-0">{r.category === "support" ? "支援について" : "運営について"}</p>
-              </div>
-              {!r.isActive && <Badge tone="closed">使用しない</Badge>}
-            </div>
-          ))
-        )}
+      <SectionHeading>等級要件</SectionHeading>
+      <Card className="card-pad">
+        <p className="m-0 text-[13px]">
+          {grade.name} の等級要件は、<b>支援について {supportCount}項目</b>・<b>運営について {operationCount}項目</b>（合計{" "}
+          <b>{supportCount + operationCount}項目</b>）です。この合計が等級要件達成率の分母になります。
+        </p>
+        <p className="footnote m-0 mt-1">
+          項目の追加・並べ替え・見直しは専用の画面で行います（区分ごとに{GRADE_REQUIREMENT_MAX}項目まで）。
+        </p>
+        <div className="mt-3">
+          <LinkButton variant="secondary" href={`/admin/masters/requirements?grade=${grade.id}`}>
+            等級要件を編集する
+          </LinkButton>
+        </div>
       </Card>
-      <div className="mt-3">
-        <RecordForm
-          url="/api/masters"
-          method="PUT"
-          fixed={{ kind: "gradeRequirement", gradeId: grade.id }}
-          submitLabel="等級要件を追加する"
-          description="追加した項目は、次に作るアンケートから設問として出ます。すでに公開したアンケートは変わりません。"
-          resetAfterSubmit
-          fields={[
-            {
-              name: "category",
-              label: "区分",
-              type: "select",
-              required: true,
-              defaultValue: "support",
-              options: [
-                { value: "support", label: "支援について" },
-                { value: "operation", label: "運営について" },
-              ],
-            },
-            { name: "text", label: "要件の内容", type: "textarea", required: true },
-          ]}
-        />
-      </div>
 
-      <SectionHeading>昇格要件（{myPromoReqs.length}件）</SectionHeading>
-      <Card>
-        {myPromoReqs.length === 0 ? (
-          <div className="card-pad">
-            <p className="footnote m-0">まだ登録されていません。</p>
-          </div>
-        ) : (
-          myPromoReqs.map((r) => (
-            <div key={r.id} className="card-row items-start">
-              <div className="row-main">
-                <p className="todo-row-title m-0">{r.text}</p>
-                <p className="todo-row-sub m-0">
-                  {r.kind === "report" ? "受講して報告書を提出" : "独学してテストに合格"}
-                  {r.transitionLabel ? ` ／ ${r.transitionLabel}` : ""}
-                </p>
-              </div>
-              {r.isGate ? <Badge tone="alert">必須（未提出だと昇格不可）</Badge> : <Badge tone="done">任意</Badge>}
-            </div>
-          ))
-        )}
-      </Card>
-      <div className="mt-3">
-        <RecordForm
-          url="/api/masters"
-          method="PUT"
-          fixed={{ kind: "promotionRequirement", gradeId: grade.id }}
-          submitLabel="昇格要件を追加する"
-          description="「必須」にすると、未達成の場合はどれだけ点数が高くても昇格できません。"
-          resetAfterSubmit
-          fields={[
-            {
-              name: "reqKind",
-              label: "種類",
-              type: "select",
-              required: true,
-              defaultValue: "report",
-              options: [
-                { value: "report", label: "受講して報告書を提出" },
-                { value: "test", label: "独学してテストに合格" },
-              ],
-            },
-            { name: "text", label: "要件の内容", type: "textarea", required: true },
-            { name: "transitionLabel", label: "対象の昇格（例：Beginner → Regular）", type: "text" },
-            { name: "isGate", label: "必須にする", type: "checkbox", defaultValue: true, help: "満たさないと昇格できない要件にする" },
-          ]}
-        />
-      </div>
+      <SectionHeading>昇格要件</SectionHeading>
+      <PromotionRequirementEditor gradeId={grade.id} gradeName={grade.name} rows={myPromoReqs} />
 
       <SectionHeading>KPIのランク基準（会社全体）</SectionHeading>
       {!scheme || items.length === 0 ? (
