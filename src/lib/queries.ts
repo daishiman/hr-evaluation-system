@@ -168,6 +168,52 @@ export async function listRaiseSettings(companyId: string) {
   return db.select().from(s.raiseSettings).where(eq(s.raiseSettings.companyId, companyId));
 }
 
+/** 昇給の判定ルール（半期ごと・8項目すべてA、など）。会社に1件。 */
+export async function getRaisePolicy(companyId: string) {
+  const db = await getDb();
+  return (await db.select().from(s.raisePolicies).where(eq(s.raisePolicies.companyId, companyId)).limit(1))[0] ?? null;
+}
+
+/** ランクの組み合わせごとの判定と扱い（元シートの「昇給ルール（仮）」の表）。 */
+export async function listRaisePatterns(companyId: string) {
+  const db = await getDb();
+  return db.select().from(s.raisePatterns).where(eq(s.raisePatterns.companyId, companyId)).orderBy(asc(s.raisePatterns.seq));
+}
+
+/** 中途入職・産育休・時短などの特例。条件式ではなく行として持ち、画面で読める形にしておく。 */
+export async function listRaiseExceptions(companyId: string) {
+  const db = await getDb();
+  return db.select().from(s.raiseExceptions).where(eq(s.raiseExceptions.companyId, companyId)).orderBy(asc(s.raiseExceptions.seq));
+}
+
+/** 昇給額の改定履歴。金額をいつ・いくらから・いくらに変えたかを残す。 */
+export async function listRaiseRevisions(companyId: string) {
+  const db = await getDb();
+  return db
+    .select({
+      id: s.raiseRevisions.id,
+      gradeId: s.raiseRevisions.gradeId,
+      gradeName: s.grades.name,
+      beforeAmount: s.raiseRevisions.beforeAmount,
+      afterAmount: s.raiseRevisions.afterAmount,
+      effectiveFrom: s.raiseRevisions.effectiveFrom,
+      reason: s.raiseRevisions.reason,
+      revisedByName: s.users.name,
+      createdAt: s.raiseRevisions.createdAt,
+    })
+    .from(s.raiseRevisions)
+    .leftJoin(s.grades, eq(s.grades.id, s.raiseRevisions.gradeId))
+    .leftJoin(s.users, eq(s.users.id, s.raiseRevisions.revisedById))
+    .where(eq(s.raiseRevisions.companyId, companyId))
+    .orderBy(desc(s.raiseRevisions.createdAt));
+}
+
+/** 事業所。昇給額の事業所ごとの調整率をここで持つ。 */
+export async function listOffices(companyId: string) {
+  const db = await getDb();
+  return db.select().from(s.offices).where(eq(s.offices.companyId, companyId)).orderBy(asc(s.offices.name));
+}
+
 export async function listKgiCoefficients(companyId: string) {
   const db = await getDb();
   return db

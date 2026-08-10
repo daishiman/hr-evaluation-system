@@ -140,31 +140,20 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
       )}
 
       <SectionHeading>昇給額</SectionHeading>
-      {!raise ? (
-        <ReasonNote>この等級の昇給額が登録されていません。</ReasonNote>
-      ) : (
-        <>
-          {raise.isProvisional && (
-            <div className="mb-3">
-              <ReasonNote>
-                <ProvisionalMark /> いまの金額は叩き台の初期値です。実際の金額に変えて保存してください。
-              </ReasonNote>
-            </div>
-          )}
-          <RecordForm
-            url="/api/masters"
-            method="PUT"
-            fixed={{ kind: "raise", id: raise.id }}
-            submitLabel="昇給額を保存する"
-            description={`年額は「月額 × 月数」で自動計算します（いまの年額 ${raise.annualAmount.toLocaleString("ja-JP")}円）。`}
-            fields={[
-              { name: "monthlyAmount", label: "月額", type: "number", required: true, defaultValue: raise.monthlyAmount, unit: "円" },
-              { name: "months", label: "支給の月数", type: "number", required: true, defaultValue: raise.months, unit: "ヶ月" },
-              { name: "note", label: "補足", type: "text", defaultValue: raise.note ?? "" },
-            ]}
-          />
-        </>
-      )}
+      <Card className="card-pad">
+        <p className="m-0 text-[13px]">
+          {raise
+            ? `${grade.name}のいまの昇給額は 月額 ${raise.monthlyAmount.toLocaleString("ja-JP")}円 です。`
+            : "この等級の昇給額はまだ登録されていません。"}
+        </p>
+        <p className="footnote m-0 mt-1">
+          金額・回数の上限・事業所ごとの調整率と、変更したときの記録は
+          <Link href={`/admin/raises?grade=${grade.id}`} className="mx-1 text-[var(--brand-deep)]">
+            昇給の設定
+          </Link>
+          でまとめて扱います。
+        </p>
+      </Card>
 
       <SectionHeading>等級要件（{myGradeReqs.length}件）</SectionHeading>
       <Card>

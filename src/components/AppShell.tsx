@@ -29,6 +29,7 @@ const NAV: Record<Viewer["role"], { href: string; label: string }[]> = {
     { href: "/admin/forms", label: "アンケート" },
     { href: "/admin/scheme", label: "評価セット（8項目・配点）" },
     { href: "/admin/masters", label: "制度マスタ" },
+    { href: "/admin/raises", label: "昇給の設定" },
     { href: "/criteria", label: "評価基準を確認する" },
   ],
   SUPER_ADMIN: [
