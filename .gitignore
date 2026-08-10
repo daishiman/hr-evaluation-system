@@ -38,3 +38,21 @@ data/*
 
 # サンプルデータ（テスト用・表示確認用の匿名化データ）のみ追跡する
 !data/sample/
+
+# Next.js / OpenNext / Cloudflare
+.next/
+.open-next/
+.wrangler/
+next-env.d.ts
+cloudflare-env.d.ts
+backup.sql
+
+# secrets
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.local
+
+# misc
+*.tsbuildinfo
