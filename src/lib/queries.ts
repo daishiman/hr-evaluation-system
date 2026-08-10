@@ -547,13 +547,10 @@ export async function listEvaluations(companyId: string, opts?: { employeeId?: s
       requirementAchieved: s.evaluations.requirementAchieved,
       requirementTotal: s.evaluations.requirementTotal,
       behaviorTotal: s.evaluations.behaviorTotal,
-      /* 賞与（仮）。確定時の達成率・係数もそのまま持つので、
-         あとから達成率を変えても確定済みの評価はこの値のまま動かない。 */
-      officeAchievementRate: s.evaluations.officeAchievementRate,
-      kgiCoefficient: s.evaluations.kgiCoefficient,
-      personalPoints: s.evaluations.personalPoints,
-      bonusYen: s.evaluations.bonusYen,
-      bonusRationale: s.evaluations.bonusRationale,
+      /* 個人Pt・賞与額はここでは読まない。この一覧は評価される側の画面
+         （/me・/me/results）でも使っており、個人Pt ÷ 達成係数 で、
+         隠しているKPI評価点合計が逆算できてしまうため。
+         賞与の欄が要るのは評価票1枚の詳細だけ（getEvaluationDetail）。 */
       raiseEligible: s.evaluations.raiseEligible,
       promotionEligible: s.evaluations.promotionEligible,
       promotionBlockedReason: s.evaluations.promotionBlockedReason,
@@ -583,6 +580,22 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
   const db = await getDb();
   const head = (await listEvaluations(companyId)).find((e) => e.id === evaluationId);
   if (!head) return null;
+
+  /* 賞与の欄は評価票1枚を開いたときだけ読む。
+     一覧（listEvaluations）は評価される側の画面でも使うため、そちらには載せない。 */
+  const bonus = (
+    await db
+      .select({
+        officeAchievementRate: s.evaluations.officeAchievementRate,
+        kgiCoefficient: s.evaluations.kgiCoefficient,
+        personalPoints: s.evaluations.personalPoints,
+        bonusYen: s.evaluations.bonusYen,
+        bonusRationale: s.evaluations.bonusRationale,
+      })
+      .from(s.evaluations)
+      .where(and(eq(s.evaluations.companyId, companyId), eq(s.evaluations.id, evaluationId)))
+      .limit(1)
+  )[0] ?? { officeAchievementRate: null, kgiCoefficient: null, personalPoints: null, bonusYen: null, bonusRationale: null };
 
   const rawItems = await db
     .select()
@@ -625,11 +638,11 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
       /* 個人Pt・賞与額も評価される側には返さない。
          個人Pt ＝ KPI評価点合計 × 達成係数 なので、係数（管理画面で誰でも見られる表）と
          突き合わせると、隠しているはずのKPI評価点合計が逆算できてしまうため。 */
-      officeAchievementRate: full ? head.officeAchievementRate : null,
-      kgiCoefficient: full ? head.kgiCoefficient : null,
-      personalPoints: full ? head.personalPoints : null,
-      bonusYen: full ? head.bonusYen : null,
-      bonusRationale: full ? head.bonusRationale : null,
+      officeAchievementRate: full ? bonus.officeAchievementRate : null,
+      kgiCoefficient: full ? bonus.kgiCoefficient : null,
+      personalPoints: full ? bonus.personalPoints : null,
+      bonusYen: full ? bonus.bonusYen : null,
+      bonusRationale: full ? bonus.bonusRationale : null,
     },
     items,
     behaviors,
@@ -639,21 +652,6 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
   };
 }
 
-/**
- * 元の配点表（移行前の「KPI基準定義_配点」シートの写し）。
- *
- * 参考値としてだけ使う。評価の計算には使わない（計算に使うのは scheme_items と scheme_rank_ratios）。
- * 元の表で「その等級では対象外」だった組み合わせは行が無い。
- */
-export async function listReferencePoints(companyId: string) {
-  const db = await getDb();
-  return db
-    .select({
-      kpiItemId: s.kpiReferencePoints.kpiItemId,
-      pointGroup: s.kpiReferencePoints.pointGroup,
-      rank: s.kpiReferencePoints.rank,
-      points: s.kpiReferencePoints.points,
-    })
-    .from(s.kpiReferencePoints)
-    .where(eq(s.kpiReferencePoints.companyId, companyId));
-}
+/* 元の配点表（移行前の「KPI基準定義_配点」シートの写し）は、
+   件数が多く参考値としてしか使わないため、ここではまとめて読まない。
+   選んだ等級区分のぶんだけ src/app/api/reference-points/route.ts で読む。 */

@@ -8,15 +8,14 @@ import {
   listPromotionRequirements,
   listPromotionThresholds,
   listRaiseSettings,
-  listRankCriteria,
-  listRankRatios,
   listSchemeItems,
 } from "@/lib/queries";
 import { detectStaleCycles } from "@/lib/impact";
 import { RecordForm } from "@/components/RecordForm";
 import { PromotionRequirementEditor } from "@/components/PromotionRequirementEditor";
+import { RankCriteriaPanel } from "@/components/RankCriteriaPanel";
 import { GRADE_REQUIREMENT_MAX } from "@/lib/domain/grade-requirements";
-import { Card, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Card, EmptyState, LinkButton, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -43,9 +42,9 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
 
   const sp = await searchParams;
   const grade = grades.find((g) => g.id === sp.grade) ?? grades[0] ?? null;
-  const items = scheme ? await listSchemeItems(companyId, scheme.id) : [];
-  const criteria = items.length > 0 ? await listRankCriteria(companyId, items.map((i) => i.kpiItemId)) : [];
-  const ratios = scheme ? await listRankRatios(companyId, scheme.id) : [];
+  /* ランク基準（8項目 × A〜Eで40件）は折りたたみを開いたときに読む。
+     ここでは「開く価値があるか」を出すための件数だけを数える。 */
+  const schemeItemCount = scheme ? (await listSchemeItems(companyId, scheme.id)).length : 0;
   // 基準を直した結果、どのサイクルが古いままかをこの画面で知らせる
   const staleCycles = await detectStaleCycles(companyId);
 
@@ -197,52 +196,14 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
       <PromotionRequirementEditor gradeId={grade.id} gradeName={grade.name} rows={myPromoReqs} />
 
       <SectionHeading>KPIのランク基準（会社全体）</SectionHeading>
-      {!scheme || items.length === 0 ? (
+      {schemeItemCount === 0 ? (
         <ReasonNote>評価セットが未設定のため、ランク基準を表示できません。</ReasonNote>
       ) : (
         <>
           <p className="footnote">
-            ランクごとの点数の割合：{ratios.map((r) => `${r.rank}=${Math.round(r.ratio * 100)}%`).join("、")}
-            {ratios.some((r) => r.isProvisional) && (
-              <>
-                {" "}
-                <ProvisionalMark note="ランクごとの割合は制度として未確定のため、叩き台の初期値です。" />
-              </>
-            )}
+            A〜Eの線引きは項目ごとに決めます。開いたときに読み込むため、直したいときだけ開いてください。
           </p>
-          <div className="stack">
-            {items.map((i) => {
-              const crits = criteria.filter((c) => c.kpiItemId === i.kpiItemId).sort((a, b) => a.rank.localeCompare(b.rank));
-              return (
-                <Card key={i.id} className="card-pad">
-                  <p className="todo-row-title m-0">
-                    {i.name} <span className="unit">配点 </span>
-                    <Num value={i.weight} unit="点" />
-                  </p>
-                  <p className="todo-row-sub m-0">
-                    単位 {i.unit} ／ {i.direction === "lower" ? "低いほど良い" : "高いほど良い"}
-                    {i.formula ? ` ／ 計算式 ${i.formula}` : ""}
-                  </p>
-                  <div className="mt-3 grid gap-2">
-                    {crits.map((c) => (
-                      <RecordForm
-                        key={c.id}
-                        url="/api/masters"
-                        method="PUT"
-                        fixed={{ kind: "rankCriteria", id: c.id }}
-                        submitLabel={`ランク${c.rank}の基準を保存`}
-                        fields={[
-                          { name: "lowerBound", label: `ランク${c.rank} の下限`, type: "number", defaultValue: c.lowerBound, unit: i.unit },
-                          { name: "upperBound", label: `ランク${c.rank} の上限`, type: "number", defaultValue: c.upperBound, unit: i.unit },
-                          { name: "displayLabel", label: "画面に出す表記", type: "text", defaultValue: c.displayLabel },
-                        ]}
-                      />
-                    ))}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+          <RankCriteriaPanel itemCount={schemeItemCount} />
         </>
       )}
 

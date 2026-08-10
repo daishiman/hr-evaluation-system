@@ -24,7 +24,10 @@ const bodySchema = z.object({
   cycleId: z.string().min(1),
   /* 達成率（%）。1000% は現実的にあり得ないが、桁を1つ間違えた入力（例: 1050）を
      そのまま受けると係数1.5で賞与が跳ね上がるため、上限で止める。 */
-  achievementRate: z.number().min(0).max(1000),
+  achievementRate: z
+    .number({ error: "達成率は数字で入力してください。" })
+    .min(0, { error: "達成率は0%以上で入力してください。" })
+    .max(1000, { error: "達成率が大きすぎます。桁を間違えていないかご確認ください（1000%まで）。" }),
   reason: z.string().max(200).nullable().optional(),
   note: z.string().max(300).nullable().optional(),
 });
