@@ -20,6 +20,9 @@ const behaviors = read("behavior-guidelines.json");
 /* ───────────────── 7カテゴリ（等級要件達成率を除く32項目の分類） ─────────────────
  * 「各社がカテゴリごとに1項目ずつ選ぶ」ための分類。経営課題の領域で切っている。
  */
+/** 移行前の配点表の列（等級区分ごとに配点が違う）。 */
+const POINT_GROUPS = ["Beginner", "Regular", "Chief", "AM", "Manager"];
+
 export const CATEGORIES = [
   { code: "sales", name: "売上・収益", description: "売上と利益を予算どおり確保できたかを測る領域", items: [6, 9, 12, 24] },
   { code: "occupancy", name: "稼働・利用者獲得", description: "定員に対する稼働と、新しい利用者の獲得を測る領域", items: [5, 10, 14, 30, 33] },
@@ -226,6 +229,7 @@ export async function buildSeed() {
   const kpiCategories = [];
   const kpiItems = [];
   const kpiRankCriteria = [];
+  const kpiReferencePointRows = [];
   const kpiQuestionRows = [];
   const schemes = [];
   const schemeItems = [];
@@ -386,6 +390,23 @@ export async function buildSeed() {
         is_provisional: r.__filled ? 1 : 0,
         provisional_note: r.__filled ? "元スプレッドシートにEランクの行が無かったため、D（90%以上95%未満）の下に接続する形で補完しました。" : null,
         created_at: NOW, updated_at: MASTER_AT,
+      });
+    });
+
+    /* 移行前の配点表（参考値。評価の計算には使わず、配点の入力補助としてのみ画面に出す） */
+    POINT_GROUPS.forEach((g) => {
+      kpiPoints.forEach((p) => {
+        const raw = (p[g] ?? "").toString().trim();
+        // 「-」はその等級で対象外だった項目。空欄と同じく行を作らない
+        if (raw === "" || raw === "-") return;
+        const points = Number(raw);
+        if (!Number.isFinite(points)) return;
+        const no = Number(p["項目No"]);
+        kpiReferencePointRows.push({
+          id: `krp_kpi_${co.key}_${no}_${g}_${p["ランク"]}`, company_id: cid,
+          kpi_item_id: `kpi_${co.key}_${no}`, point_group: g, rank: p["ランク"], points,
+          created_at: NOW, updated_at: MASTER_AT,
+        });
       });
     });
 
@@ -631,13 +652,10 @@ export async function buildSeed() {
           const answersByKey = {};
           const answerRows = [];
           let reqAchieved = 0, reqTotal = 0;
-          let goalAchieved = 0, goalTotal = 0;
           let behaviorTotal = 0;
           const gateRows = [];
           const reqRows = [];
           const behRows = [];
-          // 半期に目標として設定できる等級要件の件数（等級ごとの上限）
-          const goalCap = Math.min(gradeDef.targetCap, fq.filter((x) => x.grade_requirement_id).length);
 
           fq.forEach((qrow) => {
             let valNum = null, valText = null;
@@ -646,7 +664,6 @@ export async function buildSeed() {
               valNum = ok; valText = ok ? "はい" : "いいえ";
               if (qrow.grade_requirement_id) {
                 reqTotal++; if (ok) reqAchieved++;
-                if (goalTotal < goalCap) { goalTotal++; if (ok) goalAchieved++; }
                 reqRows.push({ gr: qrow.grade_requirement_id, category: qrow.section, text: qrow.title, achieved: ok });
               }
               if (qrow.is_gate) gateRows.push({ pr: qrow.promotion_requirement_id, kind: qrow.section === "training" ? "report" : "test", text: qrow.title, achieved: ok });
@@ -712,6 +729,9 @@ export async function buildSeed() {
             formAnswers.push(rest);
           });
 
+          // 等級要件達成率＝達成数÷半期の目標設定上限数（100%で頭打ち）。src/lib/domain/scoring.ts と同じ決まり。
+          const reqRate = Math.round(Math.min(100, (reqAchieved / Math.max(1, gradeDef.targetCap)) * 100) * 10) / 10;
+
           let total = 0, maxTotal = 0;
           const itemRows = [];
           chosen.forEach((ci, idx) => {
@@ -720,7 +740,7 @@ export async function buildSeed() {
             const direction = /低いほど|少ないほど|逆転/.test(m["評価方向"] ?? "") ? "lower" : "higher";
             let actual = null;
             if (ci.no === 1) {
-              actual = Math.round((goalAchieved / Math.max(1, goalCap)) * 1000) / 10;
+              actual = reqRate;
             } else {
               actual = evalFormula(m["実績値の計算式（設問IDで表記）"], vars);
             }
@@ -759,7 +779,7 @@ export async function buildSeed() {
             response_id: respId, scheme_id: schemeId,
             office_id: offId(deptToOffice(e.dept)), computed_at: T(new Date(`${cy.end}T12:00:00Z`)),
             total_score: Math.round(total * 10) / 10, max_score: maxTotal,
-            requirement_rate: Math.round((reqAchieved / Math.max(1, reqTotal)) * 1000) / 10,
+            requirement_rate: reqRate,
             requirement_achieved: reqAchieved, requirement_total: reqTotal,
             behavior_total: g.band ? behaviorTotal : null,
             raise_eligible: allA ? 1 : 0,
@@ -806,6 +826,7 @@ export async function buildSeed() {
   sql.push(...insert("kpi_categories", kpiCategories));
   sql.push(...insert("kpi_items", kpiItems));
   sql.push(...insert("kpi_rank_criteria", kpiRankCriteria));
+  sql.push(...insert("kpi_reference_points", kpiReferencePointRows));
   sql.push(...insert("kpi_questions", kpiQuestionRows));
   sql.push(...insert("evaluation_schemes", schemes));
   sql.push(...insert("scheme_items", schemeItems));
@@ -837,6 +858,7 @@ export async function buildSeed() {
       等級要件: gradeRequirements.length, 昇格要件: promotionRequirements.length,
       行動指針: behaviorGuidelines.length, 行動指針の段階: behaviorLevels.length,
       KPI項目: kpiItems.length, ランク基準: kpiRankCriteria.length, KPI設問: kpiQuestionRows.length,
+      元の配点: kpiReferencePointRows.length,
       評価セット: schemes.length, 選択項目: schemeItems.length,
       サイクル: cycles.length, フォーム: forms.length, フォーム設問: formQuestions.length,
       回答: formResponses.length, 回答明細: formAnswers.length,

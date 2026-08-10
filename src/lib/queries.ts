@@ -448,6 +448,8 @@ export async function listEvaluations(companyId: string, opts?: { employeeId?: s
       gradeId: s.evaluations.gradeId,
       gradeName: s.grades.name,
       gradeOrder: s.grades.displayOrder,
+      /** 等級要件達成率の分母（半期の目標設定上限数）。評価票に「◯件達成／上限◯件」と出すために持つ */
+      gradeTargetCap: s.grades.targetCap,
       totalScore: s.evaluations.totalScore,
       maxScore: s.evaluations.maxScore,
       requirementRate: s.evaluations.requirementRate,
@@ -529,4 +531,23 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
     gates,
     showsCriteria: full,
   };
+}
+
+/**
+ * 元の配点表（移行前の「KPI基準定義_配点」シートの写し）。
+ *
+ * 参考値としてだけ使う。評価の計算には使わない（計算に使うのは scheme_items と scheme_rank_ratios）。
+ * 元の表で「その等級では対象外」だった組み合わせは行が無い。
+ */
+export async function listReferencePoints(companyId: string) {
+  const db = await getDb();
+  return db
+    .select({
+      kpiItemId: s.kpiReferencePoints.kpiItemId,
+      pointGroup: s.kpiReferencePoints.pointGroup,
+      rank: s.kpiReferencePoints.rank,
+      points: s.kpiReferencePoints.points,
+    })
+    .from(s.kpiReferencePoints)
+    .where(eq(s.kpiReferencePoints.companyId, companyId));
 }

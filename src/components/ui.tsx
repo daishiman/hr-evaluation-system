@@ -176,9 +176,10 @@ export function RankMark({ rank }: { rank: string | null }) {
           ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]"
           : "border-[var(--line)] bg-[var(--subtle)] text-[var(--ink-muted)]",
       )}
-      aria-label={`ランク ${rank ?? "未判定"}`}
+      aria-label={rank ? `ランク ${rank}` : "実績が未入力のため判定外"}
     >
-      {rank}
+      {/* ランクが付いていない＝実績が入力されていない。空白にすると理由が伝わらないので「—」を出す */}
+      {rank ?? "—"}
     </span>
   );
 }

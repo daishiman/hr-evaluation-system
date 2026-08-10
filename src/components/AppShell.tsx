@@ -1,8 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ROLE_LABEL, type Viewer } from "@/lib/session";
+import { listCompanies } from "@/lib/queries";
 import { NavLink } from "@/components/NavLink";
 import { SignOutButton } from "@/components/SignOutButton";
+import { CompanyScopeSwitcher } from "@/components/CompanyScopeSwitcher";
+import { ReasonNote } from "@/components/ui";
 
 /**
  * 画面の骨格。
@@ -32,15 +35,23 @@ const NAV: Record<Viewer["role"], { href: string; label: string }[]> = {
     { href: "/admin/raises", label: "昇給の設定" },
     { href: "/criteria", label: "評価基準を確認する" },
   ],
+  // システム全体管理者は、上の「会社の管理者」の画面もそのまま使える（操作する会社はヘッダーで切り替える）
   SUPER_ADMIN: [
     { href: "/system", label: "ホーム" },
     { href: "/system/companies", label: "会社一覧" },
     { href: "/system/users", label: "利用者一覧" },
+    { href: "/admin/members", label: "社員" },
+    { href: "/admin/cycles", label: "評価サイクル" },
+    { href: "/admin/forms", label: "アンケート" },
+    { href: "/admin/scheme", label: "評価セット" },
+    { href: "/admin/masters", label: "制度マスタ" },
+    { href: "/admin/raises", label: "昇給の設定" },
   ],
 };
 
-export function AppShell({ viewer, children }: { viewer: Viewer; children: ReactNode }) {
+export async function AppShell({ viewer, children }: { viewer: Viewer; children: ReactNode }) {
   const nav = NAV[viewer.role] ?? NAV.EMPLOYEE;
+  const companies = viewer.role === "SUPER_ADMIN" ? await listCompanies() : [];
   return (
     <>
       <header className="app-header">
@@ -54,14 +65,36 @@ export function AppShell({ viewer, children }: { viewer: Viewer; children: React
           ))}
         </nav>
         <div className="ml-4 flex shrink-0 items-center gap-3 border-l border-[var(--line)] pl-4">
-          <span className="hidden text-right text-[12px] leading-tight sm:block">
+          {viewer.role === "SUPER_ADMIN" && (
+            <CompanyScopeSwitcher
+              companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+              currentId={viewer.companyId}
+            />
+          )}
+          <Link href="/account/password" className="hidden text-right text-[12px] leading-tight no-underline sm:block">
             <span className="block font-semibold">{viewer.name}</span>
             <span className="block text-[var(--ink-muted)]">{ROLE_LABEL[viewer.role]}</span>
-          </span>
+          </Link>
           <SignOutButton />
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl px-5 py-7 xl:max-w-6xl">{children}</main>
+      <main className="mx-auto w-full max-w-5xl px-5 py-7 xl:max-w-6xl">
+        {viewer.mustChangePassword && (
+          <div className="mb-5 no-print">
+            <ReasonNote
+              action={
+                <Link href="/account/password" className="btn btn-primary no-underline">
+                  パスワードを変更する
+                </Link>
+              }
+            >
+              <strong>パスワードの変更をお願いします。</strong>
+              いまのパスワードは、アカウントを発行したときの仮のものです。
+            </ReasonNote>
+          </div>
+        )}
+        {children}
+      </main>
     </>
   );
 }
