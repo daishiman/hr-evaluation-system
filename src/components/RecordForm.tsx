@@ -139,7 +139,8 @@ export function RecordForm({
             </span>
             {f.type === "select" ? (
               <select name={f.name} defaultValue={f.defaultValue ?? ""} className="input mt-1 w-full">
-                <option value="">選択してください</option>
+                {/* 「空欄」に意味がある項目（例: 適用しない）は自前の選択肢を持っているので、案内文の行を足さない */}
+                {!f.options.some((o) => o.value === "") && <option value="">選択してください</option>}
                 {f.options.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}

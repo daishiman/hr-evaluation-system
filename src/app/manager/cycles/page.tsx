@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import { listCycles, listEvaluations } from "@/lib/queries";
 import { listPendingRespondents } from "@/lib/evaluate";
+import { detectStaleCycles } from "@/lib/impact";
 import { ActionButton } from "@/components/ActionButton";
 import { Badge, Card, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
@@ -37,10 +38,12 @@ export default async function ManagerCycles({
   const sp = await searchParams;
   const selected = cycles.find((c) => c.id === sp.cycle) ?? cycles.find((c) => c.status === "open") ?? cycles[0];
 
-  const [pending, evals] = await Promise.all([
+  const [pending, evals, staleCycles] = await Promise.all([
     listPendingRespondents(companyId, selected.id),
     listEvaluations(companyId, { cycleId: selected.id }),
+    detectStaleCycles(companyId),
   ]);
+  const stale = staleCycles.find((c) => c.cycleId === selected.id);
   const submitted = pending.filter((p) => p.status === "submitted");
   const notSubmitted = pending.filter((p) => p.status !== "submitted");
   const drafts = evals.filter((e) => e.status !== "finalized");
@@ -75,6 +78,32 @@ export default async function ManagerCycles({
           <span className="unit"> / {pending.length} 人が提出済み</span>
         </p>
       </Card>
+
+      {stale && (
+        <div className="mt-4">
+          <Card className="card-pad">
+            <p className="m-0 text-[13px] font-bold">この期の評価は、いまの基準より古い可能性があります</p>
+            <p className="m-0 mt-1 text-[13px]">
+              最後に集計したあとに、次のものが変わりました：{stale.changed.slice(0, 3).map((c) => c.label).join("／")}
+              {stale.changed.length > 3 ? ` ほか${stale.changed.length - 3}件` : ""}。
+            </p>
+            <p className="footnote m-0 mt-1">
+              集計し直せるのは確認中の{stale.recomputable}件です。
+              {stale.finalized > 0 && `確定済みの${stale.finalized}件は、判定した当時の基準のまま据え置きます。`}
+            </p>
+            {stale.recomputable > 0 && (
+              <div className="mt-3">
+                <ActionButton
+                  url="/api/evaluations/build"
+                  body={{ cycleId: selected.id }}
+                  label="いまの基準で集計し直す"
+                  confirm={`確認中の${stale.recomputable}件を、いまの基準・配点で計算し直します。確定済みの評価は変わりません。よろしいですか？`}
+                />
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       <SectionHeading>未提出の方</SectionHeading>
       {notSubmitted.length === 0 ? (
@@ -115,7 +144,22 @@ export default async function ManagerCycles({
         )}
       </Card>
 
-      <SectionHeading aside={<span className="footnote">確認して確定すると本人に公開されます</span>}>
+      <SectionHeading
+        aside={
+          evals.length > 0 ? (
+            <span className="flex flex-wrap gap-2">
+              <a href={`/api/export?type=results&cycleId=${selected.id}`} className="btn btn-tertiary">
+                評価結果をCSVに書き出す
+              </a>
+              <a href={`/api/export?type=kpi&cycleId=${selected.id}`} className="btn btn-tertiary">
+                KPI明細をCSVに書き出す
+              </a>
+            </span>
+          ) : (
+            <span className="footnote">確認して確定すると本人に公開されます</span>
+          )
+        }
+      >
         この期の評価（{evals.length}件・うち確認中 {drafts.length}件）
       </SectionHeading>
       {evals.length === 0 ? (

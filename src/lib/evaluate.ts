@@ -84,6 +84,34 @@ export async function buildEvaluationsForCycle(
     if (!user || !grade) continue;
 
     try {
+      /* ── 先にこの人の既存評価を見る ──
+         確定済みなら計算そのものを行わない（据え置き）。
+         作り直すときは同じ評価IDを使い回す。IDが変わると、
+         配布済みの評価票リンクが開けなくなるため。 */
+      const existing = (
+        await db
+          .select()
+          .from(s.evaluations)
+          .where(
+            and(
+              eq(s.evaluations.companyId, companyId),
+              eq(s.evaluations.cycleId, cycleId),
+              eq(s.evaluations.employeeId, res.employeeId),
+            ),
+          )
+          .limit(1)
+      )[0];
+      if (existing?.status === "finalized") {
+        out.push({
+          evaluationId: existing.id,
+          employeeId: res.employeeId,
+          employeeName: user.name,
+          ok: false,
+          message: "確定済みのため作り直しませんでした。",
+        });
+        continue;
+      }
+
       const questions = await db
         .select()
         .from(s.formQuestions)
@@ -152,7 +180,7 @@ export async function buildEvaluationsForCycle(
       /* ── 8項目のランク判定と得点化 ── */
       const itemRows: typeof s.evaluationItems.$inferInsert[] = [];
       const scored: { kpiItemId: string; itemName: string; rank: Rank; points: number; maxPoints: number }[] = [];
-      const evalId = newId("ev");
+      const evalId = existing?.id ?? newId("ev");
 
       items.forEach((si, idx) => {
         const m = kpiItems.find((k) => k.id === si.kpiItemId);
@@ -236,30 +264,6 @@ export async function buildEvaluationsForCycle(
       });
 
       /* ── 保存（同じサイクル・同じ人の未確定分は作り直す） ── */
-      const existing = (
-        await db
-          .select()
-          .from(s.evaluations)
-          .where(
-            and(
-              eq(s.evaluations.companyId, companyId),
-              eq(s.evaluations.cycleId, cycleId),
-              eq(s.evaluations.employeeId, res.employeeId),
-            ),
-          )
-          .limit(1)
-      )[0];
-
-      if (existing?.status === "finalized") {
-        out.push({
-          evaluationId: existing.id,
-          employeeId: res.employeeId,
-          employeeName: user.name,
-          ok: false,
-          message: "確定済みのため作り直しませんでした。",
-        });
-        continue;
-      }
       if (existing) {
         await db.delete(s.evaluations).where(eq(s.evaluations.id, existing.id));
       }
@@ -285,6 +289,10 @@ export async function buildEvaluationsForCycle(
         requiredBehaviorPointsSnapshot: hasBehavior ? (th?.requiredBehaviorPoints ?? null) : null,
         evaluatorId,
         status: "draft",
+        // いつの基準で計算したかを必ず残す。
+        // ここが空だと「基準を変えたのに集計し直していない評価」を
+        // 見つけられず、集計し直しても警告が消えない（→ src/lib/impact.ts）。
+        computedAt: new Date(),
       });
 
       await insertMany((rows) => db.insert(s.evaluationItems).values(rows), itemRows);

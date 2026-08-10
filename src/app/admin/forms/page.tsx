@@ -95,6 +95,9 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <Link href={`/admin/forms/${f.id}/responses`} className="btn btn-secondary">
+                    回答一覧を見る
+                  </Link>
                   <Link href={`/admin/forms/${f.id}`} className="btn btn-tertiary">
                     設問を見る
                   </Link>

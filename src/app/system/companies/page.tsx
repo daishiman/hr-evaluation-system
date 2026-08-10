@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/session";
-import { listCompanies } from "@/lib/queries";
+import { getTemplateSummary, listCompanies } from "@/lib/queries";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { Badge, Card, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
@@ -10,21 +10,49 @@ export const dynamic = "force-dynamic";
 /** 会社の追加と停止（システム全体管理者のみ）。 */
 export default async function SystemCompanies() {
   await requireRole("SUPER_ADMIN");
-  const companies = await listCompanies();
+  const [companies, template] = await Promise.all([listCompanies(), getTemplateSummary()]);
 
   return (
     <>
       <PageTitle
         title="会社一覧"
-        lede="会社を追加すると、同時にその会社の管理者アカウントを1つ作ります。等級やKPIなどの制度は、その管理者が制度マスタの画面から登録します。"
+        lede="会社を追加すると、同時にその会社の管理者アカウントを1つ作り、標準の制度（等級・KPI・ランク基準・配点・昇給ルール）を写します。写したあとは会社ごとに自由に変更できます。"
       />
+
+      {template && (
+        <>
+          <SectionHeading>会社を追加したときに写される標準の制度</SectionHeading>
+          <Card className="card-pad">
+            <p className="m-0 text-[13px] text-ink-muted">
+              現行の運用（評価基準シート）から取り込んだ内容です。ここを直接使う会社はなく、新しい会社を作るときの下敷きになります。
+            </p>
+            <dl className="mt-3 grid gap-x-6 gap-y-2 text-[13px] sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ["等級", template.grades],
+                ["等級要件の設問", template.gradeRequirements],
+                ["昇格要件", template.promotionRequirements],
+                ["KPI項目", template.kpiItems],
+                ["ランク基準", template.rankCriteria],
+                ["KPIの設問", template.kpiQuestions],
+                ["昇給額（等級別）", template.raiseSettings],
+                ["昇給の特例", template.raiseExceptions],
+              ].map(([label, n]) => (
+                <div key={String(label)} className="flex items-baseline justify-between gap-2 border-b border-line pb-1">
+                  <dt className="text-ink-muted">{label}</dt>
+                  <dd className="num m-0 font-bold">{Number(n).toLocaleString("ja-JP")}</dd>
+                </div>
+              ))}
+            </dl>
+          </Card>
+        </>
+      )}
 
       <SectionHeading>会社を追加する</SectionHeading>
       <RecordForm
         url="/api/companies"
         method="POST"
         submitLabel="この内容で会社を追加する"
-        description="会社IDは画面には出ませんが、あとから変更できません。英小文字・数字・ハイフンで入力してください。"
+        description="会社IDは画面には出ませんが、あとから変更できません。英小文字・数字・ハイフンで入力してください。追加すると上の標準の制度が自動で写されます。"
         resetAfterSubmit
         fields={[
           { name: "name", label: "会社名", type: "text", required: true },

@@ -12,6 +12,7 @@ import {
   listRankRatios,
   listSchemeItems,
 } from "@/lib/queries";
+import { detectStaleCycles } from "@/lib/impact";
 import { RecordForm } from "@/components/RecordForm";
 import { Badge, Card, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 
@@ -43,6 +44,8 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
   const items = scheme ? await listSchemeItems(companyId, scheme.id) : [];
   const criteria = items.length > 0 ? await listRankCriteria(companyId, items.map((i) => i.kpiItemId)) : [];
   const ratios = scheme ? await listRankRatios(companyId, scheme.id) : [];
+  // 基準を直した結果、どのサイクルが古いままかをこの画面で知らせる
+  const staleCycles = await detectStaleCycles(companyId);
 
   if (!grade) {
     return (
@@ -64,6 +67,26 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         title="制度マスタ"
         lede="評価に使う数値と要件をここで決めます。変更は以後の評価に反映され、確定済みの評価は判定当時の内容のまま残ります。"
       />
+
+      {staleCycles.length > 0 && (
+        <Card className="card-pad">
+          <p className="m-0 text-[13px] font-bold">基準を変えたあと、集計し直していない評価があります</p>
+          <ul className="m-0 mt-2 list-disc pl-5 text-[13px]">
+            {staleCycles.map((c) => (
+              <li key={c.cycleId}>
+                {c.cycleName}：確認中 {c.recomputable}件が古い基準のままです
+                {c.finalized > 0 && `（確定済み ${c.finalized}件は当時の基準のまま据え置き）`}。
+                <Link href={`/manager/cycles?cycle=${c.cycleId}`} className="ml-1 text-[var(--brand-deep)]">
+                  集計し直す
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="footnote m-0 mt-2">
+            確定済みの評価は、基準を変えても結果が動きません（判定した当時の値を控えてあるためです）。
+          </p>
+        </Card>
+      )}
 
       <SectionHeading>等級を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
@@ -87,8 +110,26 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
           { name: "autonomyLevel", label: "自律の水準", type: "text", defaultValue: grade.autonomyLevel ?? "" },
           { name: "responsibilityLevel", label: "責任の水準", type: "text", defaultValue: grade.responsibilityLevel ?? "" },
           { name: "deadlineNote", label: "期限の考え方", type: "text", defaultValue: grade.deadlineNote ?? "" },
+          {
+            name: "behaviorBand",
+            label: "行動指針の適用",
+            type: "select",
+            defaultValue: grade.behaviorBand ?? "",
+            help: "この等級のアンケートに行動指針（創造性・専門性・個別性・対等性・連帯性の5問）を出すかどうかです。次に作るアンケートから反映されます。",
+            options: [
+              { value: "", label: "適用しない" },
+              { value: "g1_2", label: "等級1〜2の基準を適用する" },
+              { value: "g3_4", label: "等級3〜4の基準を適用する" },
+            ],
+          },
         ]}
       />
+      <div className="mt-3">
+        <ReasonNote>
+          行動指針の適用について: 移行元の資料では、AM Ⅰ・AM Ⅱ に行動指針を出さない記録（同期ログ）と、出している記録（実際のアンケート用紙と回答一覧）が食い違っていました。
+          実際に使われていたアンケート用紙のほうを採用して初期値を入れています。制度としての正解はこの画面で会社ごとに切り替えられます。
+        </ReasonNote>
+      </div>
 
       <SectionHeading>昇格の条件</SectionHeading>
       {!th ? (
@@ -117,31 +158,20 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
       )}
 
       <SectionHeading>昇給額</SectionHeading>
-      {!raise ? (
-        <ReasonNote>この等級の昇給額が登録されていません。</ReasonNote>
-      ) : (
-        <>
-          {raise.isProvisional && (
-            <div className="mb-3">
-              <ReasonNote>
-                <ProvisionalMark /> いまの金額は叩き台の初期値です。実際の金額に変えて保存してください。
-              </ReasonNote>
-            </div>
-          )}
-          <RecordForm
-            url="/api/masters"
-            method="PUT"
-            fixed={{ kind: "raise", id: raise.id }}
-            submitLabel="昇給額を保存する"
-            description={`年額は「月額 × 月数」で自動計算します（いまの年額 ${raise.annualAmount.toLocaleString("ja-JP")}円）。`}
-            fields={[
-              { name: "monthlyAmount", label: "月額", type: "number", required: true, defaultValue: raise.monthlyAmount, unit: "円" },
-              { name: "months", label: "支給の月数", type: "number", required: true, defaultValue: raise.months, unit: "ヶ月" },
-              { name: "note", label: "補足", type: "text", defaultValue: raise.note ?? "" },
-            ]}
-          />
-        </>
-      )}
+      <Card className="card-pad">
+        <p className="m-0 text-[13px]">
+          {raise
+            ? `${grade.name}のいまの昇給額は 月額 ${raise.monthlyAmount.toLocaleString("ja-JP")}円 です。`
+            : "この等級の昇給額はまだ登録されていません。"}
+        </p>
+        <p className="footnote m-0 mt-1">
+          金額・回数の上限・事業所ごとの調整率と、変更したときの記録は
+          <Link href={`/admin/raises?grade=${grade.id}`} className="mx-1 text-[var(--brand-deep)]">
+            昇給の設定
+          </Link>
+          でまとめて扱います。
+        </p>
+      </Card>
 
       <SectionHeading>等級要件（{myGradeReqs.length}件）</SectionHeading>
       <Card>

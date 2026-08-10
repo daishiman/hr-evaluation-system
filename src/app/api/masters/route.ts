@@ -23,6 +23,8 @@ const bodySchema = z.discriminatedUnion("kind", [
     autonomyLevel: z.string().max(200).nullable().optional(),
     responsibilityLevel: z.string().max(200).nullable().optional(),
     deadlineNote: z.string().max(200).nullable().optional(),
+    /** 行動指針をこの等級に出すか。null なら出さない（会社ごとに切り替えられる） */
+    behaviorBand: z.enum(["g1_2", "g3_4"]).nullable().optional(),
     isActive: z.boolean().optional(),
   }),
   z.object({
@@ -36,7 +38,28 @@ const bodySchema = z.discriminatedUnion("kind", [
     id: z.string().min(1),
     monthlyAmount: z.number().int().min(0).max(10_000_000),
     months: z.number().int().min(1).max(24),
+    maxCount: z.number().int().min(1).max(50).optional(),
+    /** 改定履歴に残す理由と適用開始（金額を変えたときだけ使う） */
+    reason: z.string().max(200).nullable().optional(),
+    effectiveFrom: z.string().max(20).nullable().optional(),
     note: z.string().max(200).nullable().optional(),
+  }),
+  z.object({
+    kind: z.literal("raisePolicy"),
+    id: z.string().min(1),
+    requiredACount: z.number().int().min(0).max(20),
+    chancesPerYear: z.number().int().min(0).max(12),
+    allowDecrease: z.boolean().optional(),
+    judgeUnit: z.string().min(1).max(120).optional(),
+    reflectUpperNote: z.string().max(200).nullable().optional(),
+    reflectLowerNote: z.string().max(200).nullable().optional(),
+    targetNote: z.string().max(300).nullable().optional(),
+  }),
+  z.object({
+    kind: z.literal("office"),
+    id: z.string().min(1),
+    raiseAdjustRate: z.number().min(0).max(3),
+    name: z.string().min(1).max(60).optional(),
   }),
   z.object({
     kind: z.literal("gradeRequirement"),
@@ -95,7 +118,7 @@ export async function PUT(req: Request) {
       case "grade": {
         await ownGrade(body.id);
         const patch: Record<string, unknown> = {};
-        for (const k of ["name", "targetCap", "autonomyLevel", "responsibilityLevel", "deadlineNote", "isActive"] as const) {
+        for (const k of ["name", "targetCap", "autonomyLevel", "responsibilityLevel", "deadlineNote", "behaviorBand", "isActive"] as const) {
           if (body[k] !== undefined) patch[k] = body[k];
         }
         await db.update(s.grades).set(patch).where(eq(s.grades.id, body.id));
@@ -120,22 +143,78 @@ export async function PUT(req: Request) {
         };
       }
       case "raise": {
-        await ensure(
-          await db.select({ id: s.raiseSettings.id }).from(s.raiseSettings)
-            .where(and(eq(s.raiseSettings.id, body.id), eq(s.raiseSettings.companyId, companyId))).limit(1),
-          "昇給額",
-        );
+        const current = (
+          await db
+            .select()
+            .from(s.raiseSettings)
+            .where(and(eq(s.raiseSettings.id, body.id), eq(s.raiseSettings.companyId, companyId)))
+            .limit(1)
+        )[0];
+        if (!current) throw new HttpError(404, "昇給額が見つかりませんでした。");
         await db
           .update(s.raiseSettings)
           .set({
             monthlyAmount: body.monthlyAmount,
             months: body.months,
             annualAmount: body.monthlyAmount * body.months,
+            ...(body.maxCount !== undefined ? { maxCount: body.maxCount } : {}),
             note: body.note ?? null,
             isProvisional: false,
           })
           .where(eq(s.raiseSettings.id, body.id));
-        return { message: "昇給額を保存しました。" };
+
+        // 金額が変わったときだけ改定履歴を1行残す。
+        // 給与の金額は「いつ・いくらから・いくらに・なぜ変えたか」を後から説明できないと困るため。
+        if (current.monthlyAmount !== body.monthlyAmount) {
+          await db.insert(s.raiseRevisions).values({
+            id: newId("rrev"),
+            companyId,
+            gradeId: current.gradeId,
+            beforeAmount: current.monthlyAmount,
+            afterAmount: body.monthlyAmount,
+            effectiveFrom: body.effectiveFrom || null,
+            reason: body.reason || null,
+            revisedById: viewer.id,
+          });
+          return { message: "昇給額を保存し、改定履歴に記録しました。" };
+        }
+        return { message: "昇給額を保存しました。（金額は変わっていないため履歴は増えていません）" };
+      }
+      case "raisePolicy": {
+        await ensure(
+          await db.select({ id: s.raisePolicies.id }).from(s.raisePolicies)
+            .where(and(eq(s.raisePolicies.id, body.id), eq(s.raisePolicies.companyId, companyId))).limit(1),
+          "昇給ルール",
+        );
+        await db
+          .update(s.raisePolicies)
+          .set({
+            requiredACount: body.requiredACount,
+            chancesPerYear: body.chancesPerYear,
+            ...(body.allowDecrease !== undefined ? { allowDecrease: body.allowDecrease } : {}),
+            ...(body.judgeUnit !== undefined ? { judgeUnit: body.judgeUnit } : {}),
+            ...(body.reflectUpperNote !== undefined ? { reflectUpperNote: body.reflectUpperNote } : {}),
+            ...(body.reflectLowerNote !== undefined ? { reflectLowerNote: body.reflectLowerNote } : {}),
+            ...(body.targetNote !== undefined ? { targetNote: body.targetNote } : {}),
+            isProvisional: false,
+          })
+          .where(eq(s.raisePolicies.id, body.id));
+        return { message: "昇給ルールを保存しました。" };
+      }
+      case "office": {
+        await ensure(
+          await db.select({ id: s.offices.id }).from(s.offices)
+            .where(and(eq(s.offices.id, body.id), eq(s.offices.companyId, companyId))).limit(1),
+          "事業所",
+        );
+        await db
+          .update(s.offices)
+          .set({
+            raiseAdjustRate: body.raiseAdjustRate,
+            ...(body.name !== undefined ? { name: body.name } : {}),
+          })
+          .where(eq(s.offices.id, body.id));
+        return { message: "事業所の設定を保存しました。" };
       }
       case "gradeRequirement": {
         await ownGrade(body.gradeId);

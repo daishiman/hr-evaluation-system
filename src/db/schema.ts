@@ -11,7 +11,14 @@ import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-or
 
 const id = () => text("id").primaryKey();
 const createdAt = () => integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date());
-const updatedAt = () => integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date());
+// 更新時刻は保存のたびに自動で進める。
+// 「基準を変えたのに、いつ変えたか分からない」状態だと、
+// どのサイクルを集計し直すべきかを判定できなくなるため（→ src/lib/impact.ts）。
+const updatedAt = () =>
+  integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date())
+    .$onUpdate(() => new Date());
 
 /* ───────────────────────── 会社（テナント） ───────────────────────── */
 
@@ -21,9 +28,31 @@ export const companies = sqliteTable("companies", {
   slug: text("slug").notNull().unique(),
   businessType: text("business_type").notNull().default("給付事業"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  /** システム標準テンプレート。新しい会社を作るとき、この会社の制度を丸ごと複製する。 */
+  isTemplate: integer("is_template", { mode: "boolean" }).notNull().default(false),
+  /** 複製元のテンプレート会社 */
+  templateSourceId: text("template_source_id"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+/** 事業所。稼働・報告書送付率など「事業所実績」の単位であり、昇給の調整率もここに紐づく。 */
+export const offices = sqliteTable(
+  "offices",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    code: text("code").notNull(),
+    name: text("name").notNull(),
+    displayOrder: integer("display_order").notNull().default(0),
+    /** 昇給額に掛ける事業所ごとの調整率（既定 1.0） */
+    raiseAdjustRate: real("raise_adjust_rate").notNull().default(1),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("uq_offices_company_code").on(t.companyId, t.code)],
+);
 
 /* ───────────────────────── 認証（Better Auth） ─────────────────────────
  * users は Better Auth の必須列に、業務用の列（会社・ロール・等級・上長など）を足したもの。
@@ -43,6 +72,8 @@ export const users = sqliteTable(
     /** SUPER_ADMIN | COMPANY_ADMIN | MANAGER | EMPLOYEE */
     role: text("role").notNull().default("EMPLOYEE"),
     gradeId: text("grade_id"),
+    /** 所属事業所 */
+    officeId: text("office_id"),
     /** 上長（評価者）。自己参照 */
     managerId: text("manager_id"),
     employeeCode: text("employee_code"),
@@ -199,6 +230,7 @@ export const behaviorLevels = sqliteTable(
     label: text("label").notNull(),
     text: text("text").notNull(),
     createdAt: createdAt(),
+    updatedAt: updatedAt(),
   },
   (t) => [index("idx_blv_guideline").on(t.guidelineId)],
 );
@@ -475,6 +507,10 @@ export const formResponses = sqliteTable(
     cycleId: text("cycle_id").notNull().references(() => evaluationCycles.id, { onDelete: "cascade" }),
     employeeId: text("employee_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     gradeId: text("grade_id").notNull().references(() => grades.id),
+    /** 回答時点の所属事業所（期中異動があるためスナップショットで持つ） */
+    officeId: text("office_id"),
+    /** 取り込み元（csv など）。手入力は空。 */
+    importSource: text("import_source"),
     /** draft | submitted */
     status: text("status").notNull().default("draft"),
     submittedAt: integer("submitted_at", { mode: "timestamp_ms" }),
@@ -518,6 +554,10 @@ export const evaluations = sqliteTable(
     gradeId: text("grade_id").notNull().references(() => grades.id),
     responseId: text("response_id").references(() => formResponses.id),
     schemeId: text("scheme_id").notNull().references(() => evaluationSchemes.id),
+    /** 期末時点の所属事業所（特例「期中に異動した者」の判定に使う） */
+    officeId: text("office_id"),
+    /** この結果を集計した日時。制度マスタの更新がこれより新しければ「再集計が必要」と判定する。 */
+    computedAt: integer("computed_at", { mode: "timestamp_ms" }),
 
     /** 8項目の合計得点（100点満点） */
     totalScore: real("total_score").notNull().default(0),
@@ -648,6 +688,96 @@ export const evaluationGates = sqliteTable(
 
 /* ───────────────────────── 昇給・KGI設定 ───────────────────────── */
 
+/** 昇給ルールの本体（会社に1件）。判定単位・反映時期・端数処理などをここで持つ。 */
+export const raisePolicies = sqliteTable(
+  "raise_policies",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }).unique(),
+    /** 判定の単位（例: 半期（4月〜9月／10月〜3月）） */
+    judgeUnit: text("judge_unit").notNull().default("半期"),
+    judgeTimingNote: text("judge_timing_note"),
+    /** 反映時期 */
+    reflectUpperNote: text("reflect_upper_note"),
+    reflectLowerNote: text("reflect_lower_note"),
+    raiseForm: text("raise_form"),
+    targetNote: text("target_note"),
+    /** 降給を行うか（既定は行わない） */
+    allowDecrease: integer("allow_decrease", { mode: "boolean" }).notNull().default(false),
+    /** 年間の昇給機会 */
+    chancesPerYear: integer("chances_per_year").notNull().default(2),
+    /** 選ぶKPI項目数と、昇給に必要なAの数 */
+    selectedItemCount: integer("selected_item_count").notNull().default(8),
+    requiredACount: integer("required_a_count").notNull().default(8),
+    /** 連続達成の加算を使うか */
+    streakEnabled: integer("streak_enabled", { mode: "boolean" }).notNull().default(false),
+    streak2Multiplier: real("streak2_multiplier").notNull().default(1.5),
+    streak3Multiplier: real("streak3_multiplier").notNull().default(2),
+    streakMaxMultiplier: real("streak_max_multiplier").notNull().default(2),
+    /** 端数処理の単位（円） */
+    roundingUnit: integer("rounding_unit").notNull().default(100),
+    /** 賞与: 個人Pt 1点あたりの金額と賞与原資 */
+    bonusYenPerPoint: integer("bonus_yen_per_point").notNull().default(0),
+    bonusPoolYen: integer("bonus_pool_yen").notNull().default(0),
+    note: text("note"),
+    isProvisional: integer("is_provisional", { mode: "boolean" }).notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+);
+
+/** 判定パターンと処遇（8項目すべてA／7A1B／C以下を含む／Eあり） */
+export const raisePatterns = sqliteTable(
+  "raise_patterns",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    seq: integer("seq").notNull(),
+    pattern: text("pattern").notNull(),
+    judgment: text("judgment").notNull(),
+    treatment: text("treatment").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("idx_rpat_company").on(t.companyId)],
+);
+
+/** 昇給の特例・例外（中途入職・産育休・時短・期中異動など）。条件分岐ではなく行で持つ。 */
+export const raiseExceptions = sqliteTable(
+  "raise_exceptions",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    seq: integer("seq").notNull(),
+    /** 対象のケース */
+    caseText: text("case_text").notNull(),
+    /** その扱い */
+    handling: text("handling").notNull(),
+    /** 判定から除外する特例か（在籍不足など） */
+    excludesJudgement: integer("excludes_judgement", { mode: "boolean" }).notNull().default(false),
+    isProvisional: integer("is_provisional", { mode: "boolean" }).notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("idx_rexc_company").on(t.companyId)],
+);
+
+/** 昇給額の改定履歴。金額を変えたら必ず1行残す。 */
+export const raiseRevisions = sqliteTable(
+  "raise_revisions",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    gradeId: text("grade_id").notNull().references(() => grades.id, { onDelete: "cascade" }),
+    beforeAmount: integer("before_amount"),
+    afterAmount: integer("after_amount").notNull(),
+    effectiveFrom: text("effective_from"),
+    reason: text("reason"),
+    revisedById: text("revised_by_id").references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("idx_rrev_company").on(t.companyId), index("idx_rrev_grade").on(t.gradeId)],
+);
+
 export const raiseSettings = sqliteTable(
   "raise_settings",
   {
@@ -657,6 +787,9 @@ export const raiseSettings = sqliteTable(
     monthlyAmount: integer("monthly_amount").notNull().default(0),
     months: integer("months").notNull().default(6),
     annualAmount: integer("annual_amount").notNull().default(0),
+    /** 同じ等級のまま昇給できる回数の上限 */
+    maxCount: integer("max_count").notNull().default(8),
+    capNote: text("cap_note"),
     note: text("note"),
     /** 未確定のため仮置き */
     isProvisional: integer("is_provisional", { mode: "boolean" }).notNull().default(true),
@@ -680,6 +813,7 @@ export const kgiCoefficients = sqliteTable(
     displayOrder: integer("display_order").notNull().default(0),
     isProvisional: integer("is_provisional", { mode: "boolean" }).notNull().default(true),
     createdAt: createdAt(),
+    updatedAt: updatedAt(),
   },
   (t) => [index("idx_kgi_company").on(t.companyId)],
 );
