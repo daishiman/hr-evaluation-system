@@ -15,6 +15,12 @@ export async function getAuth() {
   const { env } = await getCloudflareContext({ async: true });
   const db = drizzle(env.DB, { schema });
 
+  // 秘密鍵が未設定のまま動くと、セッションを偽造できる状態になる。
+  // 既定値で動かさず、はっきり止める。
+  if (!env.BETTER_AUTH_SECRET) {
+    throw new Error("BETTER_AUTH_SECRET が設定されていません。wrangler secret put で設定してください。");
+  }
+
   return betterAuth({
     database: drizzleAdapter(db, {
       provider: "sqlite",

@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { getDb, schema as s } from "@/lib/db";
+import { getDb, insertMany, schema as s } from "@/lib/db";
 import { computeActualValue } from "@/lib/domain/formula";
 import { judgeOverall, judgeRank, scoreFromRank, type Direction, type Rank, type RankCriterion, type RankRatio } from "@/lib/domain/scoring";
 import { newId } from "@/lib/id";
@@ -83,96 +83,123 @@ export async function buildEvaluationsForCycle(
     const grade = grades.find((g) => g.id === res.gradeId);
     if (!user || !grade) continue;
 
-    const questions = await db
-      .select()
-      .from(s.formQuestions)
-      .where(eq(s.formQuestions.formId, res.formId))
-      .orderBy(s.formQuestions.displayOrder);
-    const answers = await db.select().from(s.formAnswers).where(eq(s.formAnswers.responseId, res.id));
-    const answerOf = (qid: string) => answers.find((a) => a.questionId === qid) ?? null;
+    try {
+      const questions = await db
+        .select()
+        .from(s.formQuestions)
+        .where(eq(s.formQuestions.formId, res.formId))
+        .orderBy(s.formQuestions.displayOrder);
+      const answers = await db.select().from(s.formAnswers).where(eq(s.formAnswers.responseId, res.id));
+      const answerOf = (qid: string) => answers.find((a) => a.questionId === qid) ?? null;
 
-    /* ── 等級要件・昇格要件・行動指針を回答から拾う ── */
-    const vars: Record<string, number> = {
-      等級別の半期目標設定上限数: grade.targetCap,
-      等級別の1人あたり必要回数: grade.pointGroup === "AM" ? 3 : 2,
-    };
-    let reqAchieved = 0;
-    let reqTotal = 0;
-    let goalAchieved = 0;
-    let goalTotal = 0;
-    let behaviorTotal = 0;
-    let hasBehavior = false;
-    const reqRows: { grId: string | null; category: string; text: string; achieved: boolean }[] = [];
-    const gateRows: { prId: string | null; kind: string; text: string; achieved: boolean }[] = [];
-    const behRows: { gId: string; aspect: string; aspectName: string; score: number; label: string }[] = [];
+      /* ── 等級要件・昇格要件・行動指針を回答から拾う ── */
+      const vars: Record<string, number> = {
+        等級別の半期目標設定上限数: grade.targetCap,
+        等級別の1人あたり必要回数: grade.pointGroup === "AM" ? 3 : 2,
+      };
+      let reqAchieved = 0;
+      let reqTotal = 0;
+      let goalAchieved = 0;
+      let goalTotal = 0;
+      let behaviorTotal = 0;
+      let hasBehavior = false;
+      const reqRows: { grId: string | null; category: string; text: string; achieved: boolean }[] = [];
+      const gateRows: { prId: string | null; kind: string; text: string; achieved: boolean }[] = [];
+      const behRows: { gId: string; aspect: string; aspectName: string; score: number; label: string }[] = [];
 
-    const goalCap = Math.min(grade.targetCap, questions.filter((q) => q.gradeRequirementId).length || grade.targetCap);
+      const goalCap = Math.min(grade.targetCap, questions.filter((q) => q.gradeRequirementId).length || grade.targetCap);
 
-    for (const q of questions) {
-      const a = answerOf(q.id);
-      const num = a?.valueNumber ?? null;
+      for (const q of questions) {
+        const a = answerOf(q.id);
+        const num = a?.valueNumber ?? null;
 
-      if (q.questionType === "yesno") {
-        const ok = num === 1;
-        if (q.gradeRequirementId) {
-          reqTotal++;
-          if (ok) reqAchieved++;
-          if (goalTotal < goalCap) {
-            goalTotal++;
-            if (ok) goalAchieved++;
+        if (q.questionType === "yesno") {
+          const ok = num === 1;
+          if (q.gradeRequirementId) {
+            reqTotal++;
+            if (ok) reqAchieved++;
+            if (goalTotal < goalCap) {
+              goalTotal++;
+              if (ok) goalAchieved++;
+            }
+            reqRows.push({ grId: q.gradeRequirementId, category: q.section, text: q.title, achieved: ok });
           }
-          reqRows.push({ grId: q.gradeRequirementId, category: q.section, text: q.title, achieved: ok });
-        }
-        if (q.isGate) {
-          gateRows.push({
-            prId: q.promotionRequirementId,
-            kind: q.section === "training" ? "report" : "test",
-            text: q.title,
-            achieved: ok,
+          if (q.isGate) {
+            gateRows.push({
+              prId: q.promotionRequirementId,
+              kind: q.section === "training" ? "report" : "test",
+              text: q.title,
+              achieved: ok,
+            });
+          }
+        } else if (q.behaviorGuidelineId) {
+          hasBehavior = true;
+          const g = behaviorGuidelines.find((b) => b.id === q.behaviorGuidelineId);
+          const score = num ?? 0;
+          behaviorTotal += score;
+          behRows.push({
+            gId: q.behaviorGuidelineId,
+            aspect: g?.aspect ?? "",
+            aspectName: g?.aspectName ?? q.title,
+            score,
+            label: a?.valueText ?? "",
           });
         }
-      } else if (q.behaviorGuidelineId) {
-        hasBehavior = true;
-        const g = behaviorGuidelines.find((b) => b.id === q.behaviorGuidelineId);
-        const score = num ?? 0;
-        behaviorTotal += score;
-        behRows.push({
-          gId: q.behaviorGuidelineId,
-          aspect: g?.aspect ?? "",
-          aspectName: g?.aspectName ?? q.title,
-          score,
-          label: a?.valueText ?? "",
-        });
+
+        if (q.kpiQuestionKey && num !== null) vars[q.kpiQuestionKey] = num;
       }
 
-      if (q.kpiQuestionKey && num !== null) vars[q.kpiQuestionKey] = num;
-    }
+      /* ── 8項目のランク判定と得点化 ── */
+      const itemRows: typeof s.evaluationItems.$inferInsert[] = [];
+      const scored: { kpiItemId: string; itemName: string; rank: Rank; points: number; maxPoints: number }[] = [];
+      const evalId = newId("ev");
 
-    /* ── 8項目のランク判定と得点化 ── */
-    const itemRows: typeof s.evaluationItems.$inferInsert[] = [];
-    const scored: { kpiItemId: string; itemName: string; rank: Rank; points: number; maxPoints: number }[] = [];
-    const evalId = newId("ev");
+      items.forEach((si, idx) => {
+        const m = kpiItems.find((k) => k.id === si.kpiItemId);
+        if (!m) return;
+        const crits: RankCriterion[] = criteria
+          .filter((c) => c.kpiItemId === m.id)
+          .map((c) => ({
+            rank: c.rank as Rank,
+            displayLabel: c.displayLabel,
+            lowerBound: c.lowerBound,
+            upperBound: c.upperBound,
+            meaning: c.meaning,
+          }));
 
-    items.forEach((si, idx) => {
-      const m = kpiItems.find((k) => k.id === si.kpiItemId);
-      if (!m) return;
-      const crits: RankCriterion[] = criteria
-        .filter((c) => c.kpiItemId === m.id)
-        .map((c) => ({
-          rank: c.rank as Rank,
-          displayLabel: c.displayLabel,
-          lowerBound: c.lowerBound,
-          upperBound: c.upperBound,
-          meaning: c.meaning,
-        }));
+        // 等級要件達成率（固定枠）は○×回答の達成割合をそのまま実績値にする
+        const actual = si.isFixedSlot
+          ? Math.round((goalAchieved / Math.max(1, goalCap)) * 1000) / 10
+          : computeActualValue(m.formula ?? "", vars);
 
-      // 等級要件達成率（固定枠）は○×回答の達成割合をそのまま実績値にする
-      const actual = si.isFixedSlot
-        ? Math.round((goalAchieved / Math.max(1, goalCap)) * 1000) / 10
-        : computeActualValue(m.formula ?? "", vars);
+        const direction = (m.direction === "lower" ? "lower" : "higher") as Direction;
+        if (actual === null) {
+          itemRows.push({
+            id: newId("ei"),
+            companyId,
+            evaluationId: evalId,
+            kpiItemId: m.id,
+            categoryId: si.categoryId,
+            itemName: m.name,
+            categoryName: categories.find((c) => c.id === si.categoryId)?.name ?? "等級要件（固定枠）",
+            unit: m.unit,
+            direction,
+            actualValue: null,
+            rank: null,
+            points: 0,
+            maxPoints: si.weight,
+            rationale: "計算に必要な回答が不足しているため、実績値を出せませんでした。回答を確認してください。",
+            calcNote: m.formula,
+            isProvisional: m.isProvisional,
+            displayOrder: idx + 1,
+          });
+          scored.push({ kpiItemId: m.id, itemName: m.name, rank: "E", points: 0, maxPoints: si.weight });
+          return;
+        }
 
-      const direction = (m.direction === "lower" ? "lower" : "higher") as Direction;
-      if (actual === null) {
+        const j = judgeRank(actual, crits, direction);
+        const points = scoreFromRank(j.rank, si.weight, rankRatios);
+        scored.push({ kpiItemId: m.id, itemName: m.name, rank: j.rank, points, maxPoints: si.weight });
         itemRows.push({
           id: newId("ei"),
           companyId,
@@ -183,112 +210,86 @@ export async function buildEvaluationsForCycle(
           categoryName: categories.find((c) => c.id === si.categoryId)?.name ?? "等級要件（固定枠）",
           unit: m.unit,
           direction,
-          actualValue: null,
-          rank: null,
-          points: 0,
+          actualValue: actual,
+          rank: j.rank,
+          points,
           maxPoints: si.weight,
-          rationale: "計算に必要な回答が不足しているため、実績値を出せませんでした。回答を確認してください。",
+          thresholdLabel: j.criterion?.displayLabel ?? null,
+          thresholdLower: j.criterion?.lowerBound ?? null,
+          thresholdUpper: j.criterion?.upperBound ?? null,
+          rationale: j.rationale,
           calcNote: m.formula,
           isProvisional: m.isProvisional,
           displayOrder: idx + 1,
         });
-        scored.push({ kpiItemId: m.id, itemName: m.name, rank: "E", points: 0, maxPoints: si.weight });
-        return;
+      });
+
+      /* ── 総合判定 ── */
+      const th = thresholds.find((t) => t.fromGradeId === grade.id) ?? null;
+      const overall = judgeOverall({
+        items: scored,
+        raiseRequiresAllA: scheme.raiseRequiresAllA,
+        requiredKpiPoints: th?.requiredKpiPoints ?? null,
+        requiredBehaviorPoints: hasBehavior ? (th?.requiredBehaviorPoints ?? null) : null,
+        behaviorTotal: hasBehavior ? behaviorTotal : null,
+        gates: gateRows.map((g) => ({ text: g.text, achieved: g.achieved })),
+      });
+
+      /* ── 保存（同じサイクル・同じ人の未確定分は作り直す） ── */
+      const existing = (
+        await db
+          .select()
+          .from(s.evaluations)
+          .where(
+            and(
+              eq(s.evaluations.companyId, companyId),
+              eq(s.evaluations.cycleId, cycleId),
+              eq(s.evaluations.employeeId, res.employeeId),
+            ),
+          )
+          .limit(1)
+      )[0];
+
+      if (existing?.status === "finalized") {
+        out.push({
+          evaluationId: existing.id,
+          employeeId: res.employeeId,
+          employeeName: user.name,
+          ok: false,
+          message: "確定済みのため作り直しませんでした。",
+        });
+        continue;
+      }
+      if (existing) {
+        await db.delete(s.evaluations).where(eq(s.evaluations.id, existing.id));
       }
 
-      const j = judgeRank(actual, crits, direction);
-      const points = scoreFromRank(j.rank, si.weight, rankRatios);
-      scored.push({ kpiItemId: m.id, itemName: m.name, rank: j.rank, points, maxPoints: si.weight });
-      itemRows.push({
-        id: newId("ei"),
+      await db.insert(s.evaluations).values({
+        id: evalId,
         companyId,
-        evaluationId: evalId,
-        kpiItemId: m.id,
-        categoryId: si.categoryId,
-        itemName: m.name,
-        categoryName: categories.find((c) => c.id === si.categoryId)?.name ?? "等級要件（固定枠）",
-        unit: m.unit,
-        direction,
-        actualValue: actual,
-        rank: j.rank,
-        points,
-        maxPoints: si.weight,
-        thresholdLabel: j.criterion?.displayLabel ?? null,
-        thresholdLower: j.criterion?.lowerBound ?? null,
-        thresholdUpper: j.criterion?.upperBound ?? null,
-        rationale: j.rationale,
-        calcNote: m.formula,
-        isProvisional: m.isProvisional,
-        displayOrder: idx + 1,
-      });
-    });
-
-    /* ── 総合判定 ── */
-    const th = thresholds.find((t) => t.fromGradeId === grade.id) ?? null;
-    const overall = judgeOverall({
-      items: scored,
-      raiseRequiresAllA: scheme.raiseRequiresAllA,
-      requiredKpiPoints: th?.requiredKpiPoints ?? null,
-      requiredBehaviorPoints: hasBehavior ? (th?.requiredBehaviorPoints ?? null) : null,
-      behaviorTotal: hasBehavior ? behaviorTotal : null,
-      gates: gateRows.map((g) => ({ text: g.text, achieved: g.achieved })),
-    });
-
-    /* ── 保存（同じサイクル・同じ人の未確定分は作り直す） ── */
-    const existing = (
-      await db
-        .select()
-        .from(s.evaluations)
-        .where(
-          and(
-            eq(s.evaluations.companyId, companyId),
-            eq(s.evaluations.cycleId, cycleId),
-            eq(s.evaluations.employeeId, res.employeeId),
-          ),
-        )
-        .limit(1)
-    )[0];
-
-    if (existing?.status === "finalized") {
-      out.push({
-        evaluationId: existing.id,
+        cycleId,
         employeeId: res.employeeId,
-        employeeName: user.name,
-        ok: false,
-        message: "確定済みのため作り直しませんでした。",
+        gradeId: grade.id,
+        responseId: res.id,
+        schemeId: scheme.id,
+        totalScore: overall.totalScore,
+        maxScore: overall.maxScore,
+        requirementRate: Math.round((reqAchieved / Math.max(1, reqTotal)) * 1000) / 10,
+        requirementAchieved: reqAchieved,
+        requirementTotal: reqTotal,
+        behaviorTotal: hasBehavior ? behaviorTotal : null,
+        raiseEligible: overall.raiseEligible,
+        promotionEligible: overall.promotionEligible,
+        promotionBlockedReason: overall.promotionBlockedReason,
+        requiredKpiPointsSnapshot: th?.requiredKpiPoints ?? null,
+        requiredBehaviorPointsSnapshot: hasBehavior ? (th?.requiredBehaviorPoints ?? null) : null,
+        evaluatorId,
+        status: "draft",
       });
-      continue;
-    }
-    if (existing) {
-      await db.delete(s.evaluations).where(eq(s.evaluations.id, existing.id));
-    }
 
-    await db.insert(s.evaluations).values({
-      id: evalId,
-      companyId,
-      cycleId,
-      employeeId: res.employeeId,
-      gradeId: grade.id,
-      responseId: res.id,
-      schemeId: scheme.id,
-      totalScore: overall.totalScore,
-      maxScore: overall.maxScore,
-      requirementRate: Math.round((reqAchieved / Math.max(1, reqTotal)) * 1000) / 10,
-      requirementAchieved: reqAchieved,
-      requirementTotal: reqTotal,
-      behaviorTotal: hasBehavior ? behaviorTotal : null,
-      raiseEligible: overall.raiseEligible,
-      promotionEligible: overall.promotionEligible,
-      promotionBlockedReason: overall.promotionBlockedReason,
-      requiredKpiPointsSnapshot: th?.requiredKpiPoints ?? null,
-      requiredBehaviorPointsSnapshot: hasBehavior ? (th?.requiredBehaviorPoints ?? null) : null,
-      evaluatorId,
-      status: "draft",
-    });
-
-    if (itemRows.length > 0) await db.insert(s.evaluationItems).values(itemRows);
-    if (reqRows.length > 0) {
-      await db.insert(s.evaluationRequirements).values(
+      await insertMany((rows) => db.insert(s.evaluationItems).values(rows), itemRows);
+      await insertMany(
+        (rows) => db.insert(s.evaluationRequirements).values(rows),
         reqRows.map((r) => ({
           id: newId("er"),
           companyId,
@@ -299,9 +300,8 @@ export async function buildEvaluationsForCycle(
           achieved: r.achieved,
         })),
       );
-    }
-    if (gateRows.length > 0) {
-      await db.insert(s.evaluationGates).values(
+      await insertMany(
+        (rows) => db.insert(s.evaluationGates).values(rows),
         gateRows.map((g) => ({
           id: newId("eg"),
           companyId,
@@ -312,9 +312,8 @@ export async function buildEvaluationsForCycle(
           achieved: g.achieved,
         })),
       );
-    }
-    if (behRows.length > 0) {
-      await db.insert(s.evaluationBehaviors).values(
+      await insertMany(
+        (rows) => db.insert(s.evaluationBehaviors).values(rows),
         behRows.map((b) => ({
           id: newId("eb"),
           companyId,
@@ -326,15 +325,25 @@ export async function buildEvaluationsForCycle(
           levelLabel: b.label,
         })),
       );
-    }
 
-    out.push({
-      evaluationId: evalId,
-      employeeId: res.employeeId,
-      employeeName: user.name,
-      ok: true,
-      message: overall.raiseReason,
-    });
+      out.push({
+        evaluationId: evalId,
+        employeeId: res.employeeId,
+        employeeName: user.name,
+        ok: true,
+        message: overall.raiseReason,
+      });
+    } catch (e) {
+      // ひとり分の計算でつまずいても、ほかの人の集計は続ける。
+      // 何が足りなかったのかは画面にそのまま出す（黙って飛ばさない）。
+      out.push({
+        evaluationId: "",
+        employeeId: res.employeeId,
+        employeeName: user.name,
+        ok: false,
+        message: e instanceof Error ? `集計できませんでした：${e.message}` : "集計できませんでした。",
+      });
+    }
   }
 
   return out;

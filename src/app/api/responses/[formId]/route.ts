@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { getDb, schema as s } from "@/lib/db";
+import { getDb, insertMany, schema as s } from "@/lib/db";
 import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
@@ -102,18 +102,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
     }
 
     await db.delete(s.formAnswers).where(eq(s.formAnswers.responseId, responseId));
-    if (incoming.length > 0) {
-      await db.insert(s.formAnswers).values(
-        incoming.map((a) => ({
-          id: newId("fa"),
-          companyId: form.companyId,
-          responseId,
-          questionId: a.questionId,
-          valueNumber: a.valueNumber ?? null,
-          valueText: a.valueText ?? null,
-        })),
-      );
-    }
+    await insertMany(
+      (rows) => db.insert(s.formAnswers).values(rows),
+      incoming.map((a) => ({
+        id: newId("fa"),
+        companyId: form.companyId,
+        responseId,
+        questionId: a.questionId,
+        valueNumber: a.valueNumber ?? null,
+        valueText: a.valueText ?? null,
+      })),
+    );
 
     return {
       responseId,

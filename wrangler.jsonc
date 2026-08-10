@@ -2,13 +2,19 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "hr-evaluation-system",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2026-08-10",
+  // ローカル実行用のランタイム（workerd）が対応している最新日付に合わせる
+  "compatibility_date": "2026-08-08",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
   "observability": { "enabled": true },
+  "upload_source_maps": true,
+  // 未設定のままデプロイして「本番だけ動かない」を防ぐ
+  "secrets": { "required": ["BETTER_AUTH_SECRET"] },
+  // 想定外の重い処理で費用が膨らまないための安全弁
+  "limits": { "cpu_ms": 30000 },
   "d1_databases": [
     {
       "binding": "DB",
