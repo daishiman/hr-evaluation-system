@@ -210,7 +210,7 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
               </>
             )}
           </p>
-          <div className="grid gap-4">
+          <div className="stack">
             {items.map((i) => {
               const crits = criteria.filter((c) => c.kpiItemId === i.kpiItemId).sort((a, b) => a.rank.localeCompare(b.rank));
               return (
@@ -249,8 +249,16 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
       {kgi.length > 0 && (
         <>
           <SectionHeading>事業所KGIの達成係数</SectionHeading>
-          <p className="footnote">賞与の個人ポイント計算に使う係数です。</p>
-          <div className="grid gap-3 md:grid-cols-2">
+          <p className="footnote">
+            賞与の個人ポイント計算に使う係数です（個人Pt ＝ KPI評価点の合計 × この係数）。
+          </p>
+          <p className="footnote">
+            元の資料の区分は「95〜99%」と「100〜110%」の間、「111〜120%」と「121%以上」の間が
+            とびとびで、達成率が99.5%や110.5%のときにどの係数を使うか決まっていませんでした。
+            そのため、上の区分の下限にそろえる形（99%までは0.6、100%からは1.0）で
+            すき間を埋めた値を初期値にしています。元の資料そのままの値ではありません。
+          </p>
+          <div className="field-grid">
             {kgi.map((k) => (
               <RecordForm
                 key={k.id}

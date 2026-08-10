@@ -5,6 +5,7 @@ import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
 import { GRADE_REQUIREMENT_MAX, swapForMove } from "@/lib/domain/grade-requirements";
+import { checkRangeCoverage } from "@/lib/domain/kgi";
 
 export const dynamic = "force-dynamic";
 
@@ -168,12 +169,25 @@ export async function PUT(req: Request) {
             .limit(1)
         )[0];
         if (!current) throw new HttpError(404, "昇給額が見つかりませんでした。");
+
+        /* 「年間の上昇額」＝ 1回あたりの昇給額 × 年間の昇給機会。
+           元シート（昇給設定）の値がこの定義:
+             Beginner 3,000円 → 6,000円 ／ Regular 4,000円 → 8,000円
+             Chief 5,000円 → 10,000円 ／ Manager Ⅱ 10,000円 → 20,000円
+           月額基本給が1年でいくら上がるか、という意味であって、
+           半期6ヶ月分の支給総額（昇給額×6）ではない。
+           昇給機会の回数は会社ごとに変えられるので raise_policies から取る。 */
+        const policy = (
+          await db.select().from(s.raisePolicies).where(eq(s.raisePolicies.companyId, companyId)).limit(1)
+        )[0];
+        const chancesPerYear = policy?.chancesPerYear ?? 2;
+
         await db
           .update(s.raiseSettings)
           .set({
             monthlyAmount: body.monthlyAmount,
             months: body.months,
-            annualAmount: body.monthlyAmount * body.months,
+            annualAmount: body.monthlyAmount * chancesPerYear,
             ...(body.maxCount !== undefined ? { maxCount: body.maxCount } : {}),
             note: body.note ?? null,
             isProvisional: false,
@@ -377,6 +391,33 @@ export async function PUT(req: Request) {
             ...(body.displayLabel !== undefined ? { displayLabel: body.displayLabel } : {}),
           })
           .where(eq(s.kpiRankCriteria.id, body.id));
+
+        /* 保存後に、その項目のA〜Eが数直線を隙間なく・重なりなく覆えているかを見る。
+           1行ずつ直す途中では必ず一時的にずれるため、保存自体は止めない。
+           そのかわり「どこが抜けたか／重なったか」を日本語で返し、直し忘れを防ぐ。 */
+        const target = (
+          await db.select({ kpiItemId: s.kpiRankCriteria.kpiItemId }).from(s.kpiRankCriteria)
+            .where(eq(s.kpiRankCriteria.id, body.id)).limit(1)
+        )[0];
+        const siblings = await db
+          .select()
+          .from(s.kpiRankCriteria)
+          .where(and(eq(s.kpiRankCriteria.companyId, companyId), eq(s.kpiRankCriteria.kpiItemId, target.kpiItemId)));
+        const problems = checkRangeCoverage(
+          siblings
+            .sort((a, b) => a.rank.localeCompare(b.rank))
+            .map((r) => ({ label: `${r.rank}（${r.displayLabel}）`, lowerBound: r.lowerBound, upperBound: r.upperBound })),
+          "実績値",
+        );
+        if (problems.length > 0) {
+          return {
+            message:
+              "ランク基準を保存しました。ただし、この項目の基準に次の問題があります。" +
+              problems.map((p) => p.message).join(" ") +
+              " このままだと、あてはまるランクが決まらない実績値や、2つのランクに同時にあてはまる実績値が出ます。",
+            warnings: problems.map((p) => p.message),
+          };
+        }
         return { message: "ランク基準を保存しました。" };
       }
       case "kgi": {
@@ -393,6 +434,24 @@ export async function PUT(req: Request) {
             isProvisional: false,
           })
           .where(eq(s.kgiCoefficients.id, body.id));
+
+        // 達成係数の表も、達成率の数直線を覆えているかを同じ物差しで見る
+        const rows = await db.select().from(s.kgiCoefficients).where(eq(s.kgiCoefficients.companyId, companyId));
+        const kgiProblems = checkRangeCoverage(
+          rows
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+            .map((r) => ({ label: r.label, lowerBound: r.lowerBound, upperBound: r.upperBound })),
+          "達成率",
+        );
+        if (kgiProblems.length > 0) {
+          return {
+            message:
+              "達成係数を保存しました。ただし次の問題があります。" +
+              kgiProblems.map((p) => p.message).join(" ") +
+              " このままだと、係数が決まらない達成率が出ます。",
+            warnings: kgiProblems.map((p) => p.message),
+          };
+        }
         return { message: "達成係数を保存しました。" };
       }
     }

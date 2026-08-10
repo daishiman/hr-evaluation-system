@@ -1,17 +1,20 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb, insertMany, schema as s } from "@/lib/db";
-import { computeActualValue } from "@/lib/domain/formula";
+import { computeActualValue, FormulaError } from "@/lib/domain/formula";
 import {
   gradeRequirementRate,
   judgeOverall,
   judgeRank,
-  scoreFromRank,
+  scoreItem,
   type Direction,
   type Rank,
   type RankCriterion,
   type RankRatio,
   type ScoredItem,
+  type ScoringMode,
 } from "@/lib/domain/scoring";
+import { computeBonus, type KgiCoefficientRow } from "@/lib/domain/kgi";
+import { indexReferencePoints, referenceKey } from "@/lib/domain/reference-points";
 import { newId } from "@/lib/id";
 
 /**
@@ -55,7 +58,8 @@ export async function buildEvaluationsForCycle(
     schemes.find((x) => x.id === cycle.schemeId) ?? schemes.find((x) => x.status === "active") ?? schemes[0];
   if (!scheme) return [];
 
-  const [items, ratios, kpiItems, criteria, grades, thresholds, responses] = await Promise.all([
+  const [items, ratios, kpiItems, criteria, grades, thresholds, responses, refPoints, kgiRows, raisePolicy] =
+    await Promise.all([
     db.select().from(s.schemeItems).where(eq(s.schemeItems.schemeId, scheme.id)).orderBy(s.schemeItems.displayOrder),
     db.select().from(s.schemeRankRatios).where(eq(s.schemeRankRatios.schemeId, scheme.id)),
     db.select().from(s.kpiItems).where(eq(s.kpiItems.companyId, companyId)),
@@ -72,6 +76,11 @@ export async function buildEvaluationsForCycle(
           eq(s.formResponses.status, "submitted"),
         ),
       ),
+    // 項目別絶対点方式を選んだときに使う、移行前の配点表
+    db.select().from(s.kpiReferencePoints).where(eq(s.kpiReferencePoints.companyId, companyId)),
+    // 事業所KGI達成係数（個人Pt・賞与額の算出に使う）
+    db.select().from(s.kgiCoefficients).where(eq(s.kgiCoefficients.companyId, companyId)),
+    db.select().from(s.raisePolicies).where(eq(s.raisePolicies.companyId, companyId)).limit(1),
   ]);
 
   const targets = opts?.employeeIds?.length
@@ -86,6 +95,26 @@ export async function buildEvaluationsForCycle(
   ]);
 
   const rankRatios: RankRatio[] = ratios.map((r) => ({ rank: r.rank as Rank, ratio: r.ratio }));
+
+  /* ランク→点数の換算方式。会社が管理画面で選ぶ（既定は一律割合方式＝仮）。 */
+  const scoringMode: ScoringMode = scheme.scoringMode === "absolute" ? "absolute" : "ratio";
+  const refIndex = indexReferencePoints(
+    refPoints.map((r) => ({
+      kpiItemId: r.kpiItemId,
+      pointGroup: r.pointGroup,
+      rank: r.rank,
+      points: r.points,
+    })),
+  );
+
+  const kgiCoefficients: KgiCoefficientRow[] = kgiRows.map((k) => ({
+    label: k.label,
+    lowerBound: k.lowerBound,
+    upperBound: k.upperBound,
+    coefficient: k.coefficient,
+    displayOrder: k.displayOrder,
+  }));
+  const yenPerPoint = raisePolicy[0]?.bonusYenPerPoint ?? 0;
 
   const out: BuildResult[] = [];
   for (const res of targets) {
@@ -202,8 +231,31 @@ export async function buildEvaluationsForCycle(
             meaning: c.meaning,
           }));
 
-        // 等級要件達成率（固定枠）は上で出した達成率をそのまま実績値にする
-        const actual = si.isFixedSlot ? requirementRate : computeActualValue(m.formula ?? "", vars);
+        /* 等級要件達成率（固定枠）は上で出した達成率をそのまま実績値にする。
+           それ以外は計算式を評価する。
+
+           計算式は「分母が0」「回答が空で変数が埋まらない」ときに例外を投げる。
+           ここで受け止めないと、8項目のうち1項目でもつまずいた時点で
+           その人の集計まるごとが失敗し、評価そのものが1件も作られない。
+           分母0・未回答は「その項目だけ判定外」にするのが制度上の扱い
+           （ランクEに落とさない＝実績が無いのに未達と断定しない）。 */
+        let actual: number | null;
+        let unratedReason: string | null = null;
+        if (si.isFixedSlot) {
+          actual = requirementRate;
+          unratedReason =
+            "このアンケートに等級要件の設問が1件も含まれていないため、達成率を出せませんでした（判定外）。アンケートに等級要件を追加してください。";
+        } else {
+          try {
+            actual = computeActualValue(m.formula ?? "", vars);
+          } catch (e) {
+            actual = null;
+            unratedReason =
+              e instanceof FormulaError
+                ? `${e.message}（この項目は判定外として扱いました）`
+                : "計算に必要な回答が不足しているため、実績値を出せませんでした（判定外）。回答を確認してください。";
+          }
+        }
 
         const direction = (m.direction === "lower" ? "lower" : "higher") as Direction;
         if (actual === null) {
@@ -221,9 +273,9 @@ export async function buildEvaluationsForCycle(
             rank: null,
             points: 0,
             maxPoints: si.weight,
-            rationale: si.isFixedSlot
-              ? "このアンケートに等級要件の設問が1件も含まれていないため、達成率を出せませんでした（判定外）。アンケートに等級要件を追加してください。"
-              : "計算に必要な回答が不足しているため、実績値を出せませんでした（判定外）。回答を確認してください。",
+            rationale:
+              unratedReason ??
+              "計算に必要な回答が不足しているため、実績値を出せませんでした（判定外）。回答を確認してください。",
             calcNote: m.formula,
             isProvisional: m.isProvisional,
             displayOrder: idx + 1,
@@ -234,8 +286,17 @@ export async function buildEvaluationsForCycle(
         }
 
         const j = judgeRank(actual, crits, direction);
-        const points = scoreFromRank(j.rank, si.weight, rankRatios);
-        scored.push({ kpiItemId: m.id, itemName: m.name, rank: j.rank, points, maxPoints: si.weight });
+        /* 会社が選んだ換算方式で点数にする。
+           絶対点方式のときは、この人の等級区分（point_group）の列を元の配点表から引く。 */
+        const sc = scoreItem({
+          rank: j.rank,
+          weight: si.weight,
+          mode: scoringMode,
+          ratios: rankRatios,
+          absolute: refIndex.get(referenceKey(m.id, grade.pointGroup)) ?? null,
+        });
+        const points = sc.points;
+        scored.push({ kpiItemId: m.id, itemName: m.name, rank: j.rank, points, maxPoints: sc.maxPoints });
         itemRows.push({
           id: newId("ei"),
           companyId,
@@ -249,16 +310,26 @@ export async function buildEvaluationsForCycle(
           actualValue: actual,
           rank: j.rank,
           points,
-          maxPoints: si.weight,
+          maxPoints: sc.maxPoints,
           thresholdLabel: j.criterion?.displayLabel ?? null,
           thresholdLower: j.criterion?.lowerBound ?? null,
           thresholdUpper: j.criterion?.upperBound ?? null,
-          rationale: j.rationale,
+          // 「どのランク行に当たったか」に加えて「その点数がどう決まったか」も残す
+          rationale: `${j.rationale}${sc.note}`,
           calcNote: m.formula,
           isProvisional: m.isProvisional,
           displayOrder: idx + 1,
         });
       });
+
+      /* ── 賞与（仮）: 個人Pt ＝ KPI評価点合計 × 事業所KGI達成係数 ──
+         事業所KGIの達成率は、いまのアンケート73問の中に聞く設問が無い。
+         元スプレッドシートでも別表から手で持ってきていた値のため、
+         アンケートに設問キー office_kgi_rate を足した会社だけ値が入る。
+         入っていなければ達成率は null のままにして、賞与額を0円と書かない
+         （0円と表示すると「賞与なしと判定された」に化けるため）。
+         → 事業所ごとに達成率を登録する画面は未実装（docs/product/backlog.md）。 */
+      const officeKgiRate = vars["office_kgi_rate"] ?? null;
 
       /* ── 総合判定 ── */
       const th = thresholds.find((t) => t.fromGradeId === grade.id) ?? null;
@@ -270,6 +341,16 @@ export async function buildEvaluationsForCycle(
         behaviorTotal: hasBehavior ? behaviorTotal : null,
         gates: gateRows.map((g) => ({ text: g.text, achieved: g.achieved })),
       });
+
+      const bonus = {
+        rate: officeKgiRate,
+        result: computeBonus({
+          kpiTotalScore: overall.totalScore,
+          officeAchievementRate: officeKgiRate,
+          coefficients: kgiCoefficients,
+          yenPerPoint,
+        }),
+      };
 
       /* ── 保存（同じサイクル・同じ人の未確定分は作り直す） ── */
       if (existing) {
@@ -290,6 +371,13 @@ export async function buildEvaluationsForCycle(
         requirementAchieved: reqAchieved,
         requirementTotal: reqTotal,
         behaviorTotal: hasBehavior ? behaviorTotal : null,
+        // 賞与（仮）。事業所KGIの達成率が未入力なら null のまま残し、0円とは書かない。
+        officeAchievementRate: bonus.rate,
+        kgiCoefficient: bonus.result.coefficient,
+        personalPoints: bonus.result.personalPoints,
+        bonusYen: bonus.result.bonusYen,
+        bonusRationale: bonus.result.rationale,
+        scoringModeSnapshot: scoringMode,
         raiseEligible: overall.raiseEligible,
         promotionEligible: overall.promotionEligible,
         promotionBlockedReason: overall.promotionBlockedReason,
