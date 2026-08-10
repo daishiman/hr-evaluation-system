@@ -10,11 +10,16 @@
     "binding": "ASSETS"
   },
   "observability": { "enabled": true },
+  // 公開アドレス。ログインの折り返し先に使う（秘密の値ではない）
+  "vars": { "BETTER_AUTH_URL": "https://hr-evaluation-system.daishimanju.workers.dev" },
+  // 版ごとの下見用URLは作らない（本番と同じデータに別の入口を増やさないため）
+  "preview_urls": false,
   "upload_source_maps": true,
   // 未設定のままデプロイして「本番だけ動かない」を防ぐ
   "secrets": { "required": ["BETTER_AUTH_SECRET"] },
-  // 想定外の重い処理で費用が膨らまないための安全弁
-  "limits": { "cpu_ms": 30000 },
+  // 費用の安全弁（limits.cpu_ms）は有料プランのみ設定できるため、
+  // 無料プランで動かしている間は指定しない。有料化したら次を有効にする。
+  // "limits": { "cpu_ms": 30000 },
   "d1_databases": [
     {
       "binding": "DB",

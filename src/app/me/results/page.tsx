@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireViewer } from "@/lib/session";
 import { listEvaluations } from "@/lib/queries";
 import { Badge, Card, EmptyState, Num, PageTitle, SectionHeading } from "@/components/ui";
-import { TrendChart } from "@/components/Charts";
+import { TrendChart } from "@/components/LazyCharts";
 import { formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";

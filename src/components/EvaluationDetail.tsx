@@ -1,6 +1,6 @@
 import { getEvaluationDetail, listEvaluations } from "@/lib/queries";
 import { Badge, Bar, Card, DefList, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
-import { EightAxisRadar } from "@/components/Charts";
+import { EightAxisRadar } from "@/components/LazyCharts";
 import { formatPeriod, rankToPercent } from "@/lib/view";
 import type { Role } from "@/lib/session";
 

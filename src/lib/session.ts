@@ -174,7 +174,31 @@ export class HttpError extends Error {
   }
 }
 
+/**
+ * 別サイトの画面から勝手に送られた書き込みを弾く。
+ *
+ * ログインしたまま外部のページを開いても、そこからこのアプリのデータを
+ * 書き換えられないようにするための確認。データを変えるAPIはすべて apiViewer を
+ * 通るので、ここで1回だけ見ればよい。
+ */
+async function assertSameOrigin(): Promise<void> {
+  const h = await headers();
+  const origin = h.get("origin");
+  if (!origin) return; // 画面以外（社内バッチ等）からの呼び出しにはブラウザが付けない
+  const host = h.get("host");
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    throw new HttpError(403, "この操作は受け付けられませんでした。画面を開き直してからもう一度お試しください。");
+  }
+  if (!host || originHost !== host) {
+    throw new HttpError(403, "この操作は受け付けられませんでした。画面を開き直してからもう一度お試しください。");
+  }
+}
+
 export async function apiViewer(min: Role = "EMPLOYEE"): Promise<Viewer> {
+  await assertSameOrigin();
   const v = await getViewer();
   if (!v) throw new HttpError(401, "ログインが必要です。");
   if (RANK[v.role] < RANK[min]) throw new HttpError(403, "この操作を行う権限がありません。");

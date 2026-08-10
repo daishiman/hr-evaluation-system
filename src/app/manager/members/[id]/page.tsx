@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { canViewEmployee, requireRole, ROLE_LABEL, type Role } from "@/lib/session";
 import { getMember, listEvaluations, listNotes } from "@/lib/queries";
 import { Badge, Card, DefList, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
-import { TrendChart } from "@/components/Charts";
+import { TrendChart } from "@/components/LazyCharts";
 import { NoteForm } from "@/components/NoteForm";
 import { formatDate, formatPeriod } from "@/lib/view";
 
