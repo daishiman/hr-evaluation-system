@@ -197,7 +197,7 @@ export function FormBuilder({
             </div>
 
             {openId === i && (
-              <div className="mt-3 grid gap-3 border-t border-[var(--line)] pt-3 md:grid-cols-2">
+              <div className="field-grid mt-3 border-t border-[var(--line)] pt-3">
                 <label className="md:col-span-2">
                   <span className="block text-[12px] text-[var(--ink-muted)]">設問文</span>
                   <input className="input mt-1 w-full" value={r.title} onChange={(e) => patch(i, { title: e.target.value })} />

@@ -42,7 +42,7 @@ export default async function SystemHome() {
         actions={<LinkButton href="/system/companies" variant="primary">会社を追加する</LinkButton>}
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="card-grid card-grid-3">
         <Card className="card-pad hero-tint">
           <p className="m-0 text-[12px] text-[var(--ink-muted)]">登録されている会社</p>
           <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">

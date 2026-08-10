@@ -54,7 +54,7 @@ export default async function ManagerHome() {
           body="会社の管理者が新しい評価期間を開始すると、ここに回答状況が並びます。"
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="card-grid">
           <Card className="card-pad">
             <p className="todo-row-title m-0">アンケートが未提出の方</p>
             <p className="hero-number num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
