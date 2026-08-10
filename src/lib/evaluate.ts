@@ -1,7 +1,17 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb, insertMany, schema as s } from "@/lib/db";
 import { computeActualValue } from "@/lib/domain/formula";
-import { judgeOverall, judgeRank, scoreFromRank, type Direction, type Rank, type RankCriterion, type RankRatio } from "@/lib/domain/scoring";
+import {
+  gradeRequirementRate,
+  judgeOverall,
+  judgeRank,
+  scoreFromRank,
+  type Direction,
+  type Rank,
+  type RankCriterion,
+  type RankRatio,
+  type ScoredItem,
+} from "@/lib/domain/scoring";
 import { newId } from "@/lib/id";
 
 /**
@@ -127,15 +137,11 @@ export async function buildEvaluationsForCycle(
       };
       let reqAchieved = 0;
       let reqTotal = 0;
-      let goalAchieved = 0;
-      let goalTotal = 0;
       let behaviorTotal = 0;
       let hasBehavior = false;
       const reqRows: { grId: string | null; category: string; text: string; achieved: boolean }[] = [];
       const gateRows: { prId: string | null; kind: string; text: string; achieved: boolean }[] = [];
       const behRows: { gId: string; aspect: string; aspectName: string; score: number; label: string }[] = [];
-
-      const goalCap = Math.min(grade.targetCap, questions.filter((q) => q.gradeRequirementId).length || grade.targetCap);
 
       for (const q of questions) {
         const a = answerOf(q.id);
@@ -146,10 +152,6 @@ export async function buildEvaluationsForCycle(
           if (q.gradeRequirementId) {
             reqTotal++;
             if (ok) reqAchieved++;
-            if (goalTotal < goalCap) {
-              goalTotal++;
-              if (ok) goalAchieved++;
-            }
             reqRows.push({ grId: q.gradeRequirementId, category: q.section, text: q.title, achieved: ok });
           }
           if (q.isGate) {
@@ -179,8 +181,12 @@ export async function buildEvaluationsForCycle(
 
       /* ── 8項目のランク判定と得点化 ── */
       const itemRows: typeof s.evaluationItems.$inferInsert[] = [];
-      const scored: { kpiItemId: string; itemName: string; rank: Rank; points: number; maxPoints: number }[] = [];
+      const scored: ScoredItem[] = [];
       const evalId = existing?.id ?? newId("ev");
+
+      /* 等級要件達成率。分母は「半期の目標設定上限数」であってアンケートの設問数ではない
+         （元スプレッドシートの計算式どおり）。上限を超えて達成した場合は100%で頭打ちにする。 */
+      const requirementRate = gradeRequirementRate(reqAchieved, grade.targetCap);
 
       items.forEach((si, idx) => {
         const m = kpiItems.find((k) => k.id === si.kpiItemId);
@@ -195,10 +201,8 @@ export async function buildEvaluationsForCycle(
             meaning: c.meaning,
           }));
 
-        // 等級要件達成率（固定枠）は○×回答の達成割合をそのまま実績値にする
-        const actual = si.isFixedSlot
-          ? Math.round((goalAchieved / Math.max(1, goalCap)) * 1000) / 10
-          : computeActualValue(m.formula ?? "", vars);
+        // 等級要件達成率（固定枠）は上で出した達成率をそのまま実績値にする
+        const actual = si.isFixedSlot ? requirementRate : computeActualValue(m.formula ?? "", vars);
 
         const direction = (m.direction === "lower" ? "lower" : "higher") as Direction;
         if (actual === null) {
@@ -216,12 +220,13 @@ export async function buildEvaluationsForCycle(
             rank: null,
             points: 0,
             maxPoints: si.weight,
-            rationale: "計算に必要な回答が不足しているため、実績値を出せませんでした。回答を確認してください。",
+            rationale: "計算に必要な回答が不足しているため、実績値を出せませんでした（判定外）。回答を確認してください。",
             calcNote: m.formula,
             isProvisional: m.isProvisional,
             displayOrder: idx + 1,
           });
-          scored.push({ kpiItemId: m.id, itemName: m.name, rank: "E", points: 0, maxPoints: si.weight });
+          // ランクは付けない（現行GASも「判定外」として扱っている）。配点は分母に残す。
+          scored.push({ kpiItemId: m.id, itemName: m.name, rank: null, points: 0, maxPoints: si.weight });
           return;
         }
 
@@ -278,7 +283,7 @@ export async function buildEvaluationsForCycle(
         schemeId: scheme.id,
         totalScore: overall.totalScore,
         maxScore: overall.maxScore,
-        requirementRate: Math.round((reqAchieved / Math.max(1, reqTotal)) * 1000) / 10,
+        requirementRate,
         requirementAchieved: reqAchieved,
         requirementTotal: reqTotal,
         behaviorTotal: hasBehavior ? behaviorTotal : null,

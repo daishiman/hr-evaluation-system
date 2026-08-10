@@ -631,13 +631,10 @@ export async function buildSeed() {
           const answersByKey = {};
           const answerRows = [];
           let reqAchieved = 0, reqTotal = 0;
-          let goalAchieved = 0, goalTotal = 0;
           let behaviorTotal = 0;
           const gateRows = [];
           const reqRows = [];
           const behRows = [];
-          // 半期に目標として設定できる等級要件の件数（等級ごとの上限）
-          const goalCap = Math.min(gradeDef.targetCap, fq.filter((x) => x.grade_requirement_id).length);
 
           fq.forEach((qrow) => {
             let valNum = null, valText = null;
@@ -646,7 +643,6 @@ export async function buildSeed() {
               valNum = ok; valText = ok ? "はい" : "いいえ";
               if (qrow.grade_requirement_id) {
                 reqTotal++; if (ok) reqAchieved++;
-                if (goalTotal < goalCap) { goalTotal++; if (ok) goalAchieved++; }
                 reqRows.push({ gr: qrow.grade_requirement_id, category: qrow.section, text: qrow.title, achieved: ok });
               }
               if (qrow.is_gate) gateRows.push({ pr: qrow.promotion_requirement_id, kind: qrow.section === "training" ? "report" : "test", text: qrow.title, achieved: ok });
@@ -712,6 +708,9 @@ export async function buildSeed() {
             formAnswers.push(rest);
           });
 
+          // 等級要件達成率＝達成数÷半期の目標設定上限数（100%で頭打ち）。src/lib/domain/scoring.ts と同じ決まり。
+          const reqRate = Math.round(Math.min(100, (reqAchieved / Math.max(1, gradeDef.targetCap)) * 100) * 10) / 10;
+
           let total = 0, maxTotal = 0;
           const itemRows = [];
           chosen.forEach((ci, idx) => {
@@ -720,7 +719,7 @@ export async function buildSeed() {
             const direction = /低いほど|少ないほど|逆転/.test(m["評価方向"] ?? "") ? "lower" : "higher";
             let actual = null;
             if (ci.no === 1) {
-              actual = Math.round((goalAchieved / Math.max(1, goalCap)) * 1000) / 10;
+              actual = reqRate;
             } else {
               actual = evalFormula(m["実績値の計算式（設問IDで表記）"], vars);
             }
@@ -759,7 +758,7 @@ export async function buildSeed() {
             response_id: respId, scheme_id: schemeId,
             office_id: offId(deptToOffice(e.dept)), computed_at: T(new Date(`${cy.end}T12:00:00Z`)),
             total_score: Math.round(total * 10) / 10, max_score: maxTotal,
-            requirement_rate: Math.round((reqAchieved / Math.max(1, reqTotal)) * 1000) / 10,
+            requirement_rate: reqRate,
             requirement_achieved: reqAchieved, requirement_total: reqTotal,
             behavior_total: g.band ? behaviorTotal : null,
             raise_eligible: allA ? 1 : 0,

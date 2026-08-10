@@ -761,3 +761,35 @@ details.disclosure .disclosure-body {
 .input::placeholder { color: color-mix(in srgb, var(--ink-muted) 60%, transparent); }
 .input:disabled { background: var(--subtle); color: var(--ink-muted); }
 .input-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+
+/* ============================================================
+   印刷（A4縦）
+   評価票をそのまま紙に出せるようにする。移行元（GAS）の
+   「A4 HTML評価票」と同じ用途。画面の飾りと操作は落とす。
+   ============================================================ */
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+
+  body { background: #fff; }
+  main { max-width: none; padding: 0; }
+
+  /* ヘッダー・ナビ・ボタンなど、紙に不要なものは出さない */
+  .app-header,
+  .no-print,
+  .btn { display: none !important; }
+
+  /* 面の陰影は紙では邪魔になるので罫線だけにする */
+  .card,
+  .card.hero-tint {
+    background: #fff !important;
+    box-shadow: none !important;
+    border: 1px solid var(--line);
+    break-inside: avoid;
+  }
+
+  .section-heading { break-after: avoid; }
+  .card-row { break-inside: avoid; }
+
+  /* 色の付いた数字・バッジは、色が出ない環境でも読めるように濃さを上げる */
+  .hero-number .num-display { color: var(--ink) !important; }
+}

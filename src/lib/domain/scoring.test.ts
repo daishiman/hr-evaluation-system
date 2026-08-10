@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { judgeRank, matchesCriterion, scoreFromRank, judgeOverall, type RankCriterion } from "./scoring";
+import { judgeRank, matchesCriterion, scoreFromRank, judgeOverall, gradeRequirementRate, type RankCriterion } from "./scoring";
 
 /** No.1 等級要件達成率（高いほど良い） 100/80/60/40 */
 const requirementRate: RankCriterion[] = [
@@ -198,5 +198,49 @@ describe("judgeOverall — 昇給と昇格の判定", () => {
     });
     expect(res.promotionEligible).toBe(true);
     expect(res.promotionBlockedReason).toBeNull();
+  });
+});
+
+/* 現行GAS（移行元）の実際の出力と突き合わせて固定したふるまい。
+   一次資料は data/_gas-internal-json.md（回答一覧「評価結果」シートの内部JSON）。 */
+describe("gradeRequirementRate — 等級要件達成率", () => {
+  it("分母は半期の目標設定上限数（設問数ではない）", () => {
+    // 元スプレッドシートの例: 半期上限5件中3件達成＝60%
+    expect(gradeRequirementRate(3, 5)).toBe(60);
+  });
+
+  it("上限より多く達成しても100%で頭打ちになる", () => {
+    // 現行GASの実績: 等級３Chief 17件達成／上限5件 → 100%
+    expect(gradeRequirementRate(17, 5)).toBe(100);
+    // 等級１Beginner 9件達成／上限5件 → 100%
+    expect(gradeRequirementRate(9, 5)).toBe(100);
+  });
+
+  it("達成0件なら0%、上限が0でも落ちない", () => {
+    expect(gradeRequirementRate(0, 5)).toBe(0);
+    expect(gradeRequirementRate(2, 0)).toBe(100);
+  });
+});
+
+describe("judgeOverall — 実績が入力されていない項目（判定外）", () => {
+  it("判定外の項目はA未満と断定せず、判定できていないと表示する", () => {
+    const res = judgeOverall({
+      items: [
+        { kpiItemId: "k1", itemName: "等級要件達成率", rank: "A", points: 40, maxPoints: 40 },
+        { kpiItemId: "k2", itemName: "ヒヤリ報告件数", rank: null, points: 0, maxPoints: 10 },
+      ],
+      raiseRequiresAllA: true,
+      requiredKpiPoints: null,
+      requiredBehaviorPoints: null,
+      behaviorTotal: null,
+      gates: [],
+    });
+    expect(res.raiseEligible).toBe(false);
+    expect(res.unratedItemNames).toEqual(["ヒヤリ報告件数"]);
+    expect(res.raiseReason).toContain("判定できていません");
+    expect(res.raiseReason).not.toContain("ヒヤリ報告件数（E）");
+    // 未回答でも配点は分母に残る（現行GASと同じ: 40 / 70点 の考え方）
+    expect(res.maxScore).toBe(50);
+    expect(res.totalScore).toBe(40);
   });
 });

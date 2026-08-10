@@ -1,6 +1,7 @@
 import { getEvaluationDetail, listEvaluations } from "@/lib/queries";
 import { Badge, Bar, Card, DefList, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { EightAxisRadar } from "@/components/LazyCharts";
+import { PrintButton } from "@/components/PrintButton";
 import { formatPeriod, rankToPercent } from "@/lib/view";
 import type { Role } from "@/lib/session";
 
@@ -47,6 +48,8 @@ export async function EvaluationDetail({
   }));
 
   const gateFail = gates.filter((g) => !g.achieved);
+  // 実績が入力されておらずランクを付けられなかった項目（移行元のGASでいう「判定外」）
+  const unrated = items.filter((i) => i.rank === null);
   const supportReqs = requirements.filter((r) => r.category === "support");
   const operationReqs = requirements.filter((r) => r.category === "operation");
 
@@ -56,9 +59,12 @@ export async function EvaluationDetail({
         title={`${head.employeeName} さん ／ ${head.cycleName}`}
         lede={`${head.gradeName} ／ 対象期間 ${formatPeriod(head.periodStart, head.periodEnd)}`}
         actions={
-          <a href={backHref} className="btn btn-tertiary">
-            一覧に戻る
-          </a>
+          <>
+            <PrintButton />
+            <a href={backHref} className="btn btn-tertiary no-print">
+              一覧に戻る
+            </a>
+          </>
         }
       />
 
@@ -118,6 +124,7 @@ export async function EvaluationDetail({
             <div className="row-main">
               <p className="todo-row-title m-0">
                 {i.itemName}
+                {i.rank === null ? <> <Badge tone="alert">判定外</Badge></> : null}
                 {i.isProvisional ? <> <ProvisionalMark /></> : null}
               </p>
               <p className="todo-row-sub m-0">
@@ -140,19 +147,36 @@ export async function EvaluationDetail({
           </div>
         ))}
       </Card>
+      {unrated.length > 0 && (
+        <p className="footnote mt-2">
+          {unrated.map((i) => i.itemName).join("、")} は実績が入力されていないため判定できていません（判定外）。
+          配点は合計に残しているので、回答をそろえて集計し直すと点数が上がることがあります。
+        </p>
+      )}
       {!showsCriteria && (
         <p className="footnote mt-2">
           配点と基準の数値は、上長・管理者のみが確認できます。判定の理由は上に表示しています。
         </p>
       )}
 
-      <SectionHeading>等級要件（支援・運営）</SectionHeading>
+      <SectionHeading
+        aside={
+          <span className="footnote">
+            達成率 <Num value={head.requirementRate} unit="%" />
+          </span>
+        }
+      >
+        等級要件（支援・運営）
+      </SectionHeading>
       <Card className="card-pad">
-        <Bar
-          value={head.requirementAchieved ?? 0}
-          max={head.requirementTotal ?? 0}
-          label="項目を達成"
-        />
+        {/* 達成率の分母は「半期の目標設定上限数」。答えた設問の数ではない（元の計算式どおり）。
+            上限より多く達成することがあるため、バーは上限に対する進み具合を示す。 */}
+        <Bar value={head.requirementRate ?? 0} max={100} label="％（達成率）" />
+        <p className="footnote mt-1">
+          <Num value={head.requirementAchieved} unit="件" /> 達成／半期の目標設定上限{" "}
+          <Num value={head.gradeTargetCap} unit="件" />（アンケートの等級要件の設問は{" "}
+          <Num value={head.requirementTotal} unit="件" />）。上限を超えて達成した場合も達成率は100%が上限です。
+        </p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {[
             { title: "支援について", rows: supportReqs },

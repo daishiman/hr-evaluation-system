@@ -102,12 +102,32 @@ export function scoreFromRank(rank: Rank, weight: number, ratios: RankRatio[]): 
   return Math.round(weight * ratio * 10) / 10;
 }
 
+/* ─────────────────── 等級要件達成率（固定枠の実績値） ─────────────────── */
+
+/**
+ * 等級要件達成率を出す。
+ *
+ * 元スプレッドシートの計算式:
+ *   100% = 半期での自身の等級要件達成数 ÷ 半期の目標設定上限数
+ *   （例: 半期上限5件中3件達成＝60% → Cランク）
+ *
+ * 分母は**等級ごとの目標設定上限数**であって、アンケートの設問数ではない。
+ * 上限より多く達成することがあるため（現行GASの実績で 17件／上限5件 の例がある）、
+ * 100% で頭打ちにする。頭打ちにしないと 340% のような値がランク基準表からはみ出す。
+ */
+export function gradeRequirementRate(achieved: number, targetCap: number): number {
+  const cap = Math.max(1, targetCap);
+  const rate = (achieved / cap) * 100;
+  return Math.round(Math.min(100, rate) * 10) / 10;
+}
+
 /* ───────────────────────── 総合判定 ───────────────────────── */
 
 export interface ScoredItem {
   kpiItemId: string;
   itemName: string;
-  rank: Rank;
+  /** 実績値が出せずランクを付けられなかった項目は null（現行GASの「判定外」にあたる） */
+  rank: Rank | null;
   points: number;
   maxPoints: number;
 }
@@ -132,20 +152,44 @@ export interface OverallResult {
   raiseReason: string;
   promotionEligible: boolean;
   promotionBlockedReason: string | null;
+  /** 実績が足りずランクを付けられなかった項目の名前（画面に「判定外」として出す） */
+  unratedItemNames: string[];
 }
 
 export function judgeOverall(input: OverallInput): OverallResult {
   const totalScore = Math.round(input.items.reduce((s, i) => s + i.points, 0) * 10) / 10;
   const maxScore = Math.round(input.items.reduce((s, i) => s + i.maxPoints, 0) * 10) / 10;
 
-  // 昇給判定: 選択した項目がすべてA
-  const nonA = input.items.filter((i) => i.rank !== "A");
-  const raiseEligible = input.raiseRequiresAllA ? input.items.length > 0 && nonA.length === 0 : totalScore >= maxScore;
-  const raiseReason = input.raiseRequiresAllA
-    ? raiseEligible
-      ? `選択された${input.items.length}項目すべてがAのため、昇給の要件を満たします。`
-      : `${nonA.map((i) => `${i.itemName}（${i.rank}）`).join("、")} がA未満のため、昇給は見送りです。`
-    : `合計${totalScore}点 / ${maxScore}点。`;
+  /* 昇給判定: 選択した項目がすべてA。
+     実績が入力されておらずランクを付けられなかった項目（判定外）は「A未満」と言い切らず、
+     未判定として別に数える。実績が無いのに E と断定するのは事実に反するため。 */
+  const unrated = input.items.filter((i) => i.rank === null);
+  const nonA = input.items.filter((i) => i.rank !== null && i.rank !== "A");
+  const raiseEligible = input.raiseRequiresAllA
+    ? input.items.length > 0 && nonA.length === 0 && unrated.length === 0
+    : totalScore >= maxScore;
+
+  const raiseReasonParts: string[] = [];
+  if (input.raiseRequiresAllA) {
+    if (raiseEligible) {
+      raiseReasonParts.push(`選択された${input.items.length}項目すべてがAのため、昇給の要件を満たします。`);
+    } else {
+      if (nonA.length > 0) {
+        raiseReasonParts.push(`${nonA.map((i) => `${i.itemName}（${i.rank}）`).join("、")} がA未満のため、昇給は見送りです。`);
+      }
+      if (unrated.length > 0) {
+        raiseReasonParts.push(
+          `${unrated.map((i) => i.itemName).join("、")} は実績が入力されていないため判定できていません（判定外）。`,
+        );
+      }
+    }
+  } else {
+    raiseReasonParts.push(`合計${totalScore}点 / ${maxScore}点。`);
+    if (unrated.length > 0) {
+      raiseReasonParts.push(`${unrated.map((i) => i.itemName).join("、")} は実績が未入力のため判定外です。`);
+    }
+  }
+  const raiseReason = raiseReasonParts.join("");
 
   // 昇格判定: 必須ゲート → 点数 の順に見る
   const blockedGates = input.gates.filter((g) => !g.achieved);
@@ -173,5 +217,6 @@ export function judgeOverall(input: OverallInput): OverallResult {
     raiseReason,
     promotionEligible: reasons.length === 0,
     promotionBlockedReason: reasons.length === 0 ? null : reasons.join(""),
+    unratedItemNames: unrated.map((i) => i.itemName),
   };
 }

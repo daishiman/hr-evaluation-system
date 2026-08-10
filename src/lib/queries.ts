@@ -448,6 +448,8 @@ export async function listEvaluations(companyId: string, opts?: { employeeId?: s
       gradeId: s.evaluations.gradeId,
       gradeName: s.grades.name,
       gradeOrder: s.grades.displayOrder,
+      /** 等級要件達成率の分母（半期の目標設定上限数）。評価票に「◯件達成／上限◯件」と出すために持つ */
+      gradeTargetCap: s.grades.targetCap,
       totalScore: s.evaluations.totalScore,
       maxScore: s.evaluations.maxScore,
       requirementRate: s.evaluations.requirementRate,
