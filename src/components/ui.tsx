@@ -166,7 +166,7 @@ export function DefList({ rows }: { rows: { label: string; value: ReactNode }[] 
 }
 
 /** A〜E のランク表示。色相を増やさず太さと罫線で差をつける。 */
-export function RankMark({ rank }: { rank: string }) {
+export function RankMark({ rank }: { rank: string | null }) {
   const strong = rank === "A";
   return (
     <span
@@ -176,7 +176,7 @@ export function RankMark({ rank }: { rank: string }) {
           ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]"
           : "border-[var(--line)] bg-[var(--subtle)] text-[var(--ink-muted)]",
       )}
-      aria-label={`ランク ${rank}`}
+      aria-label={`ランク ${rank ?? "未判定"}`}
     >
       {rank}
     </span>
