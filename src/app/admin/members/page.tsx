@@ -3,6 +3,7 @@ import { requireRole, ROLE_LABEL } from "@/lib/session";
 import { listGrades, listMembers } from "@/lib/queries";
 import { Badge, Card, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 import { RecordForm } from "@/components/RecordForm";
+import { MembersCsvImport } from "@/components/MembersCsvImport";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,17 @@ export default async function AdminMembers() {
           { name: "hiredAt", label: "入社日", type: "date" },
         ]}
       />
+
+      <SectionHeading
+        aside={
+          <a href="/api/export?type=members" className="btn btn-tertiary">
+            社員一覧を書き出す
+          </a>
+        }
+      >
+        名簿をまとめて取り込む
+      </SectionHeading>
+      <MembersCsvImport />
 
       <SectionHeading aside={<span className="footnote">名前を押すと詳細を確認できます</span>}>
         在籍中（{active.length}人）

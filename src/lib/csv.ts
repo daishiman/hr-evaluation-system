@@ -19,9 +19,29 @@ export function toCsv(headers: string[], rows: CsvCell[][]): string {
   return "﻿" + lines.join("\r\n") + "\r\n";
 }
 
-/** CSV文字列を2次元配列にする。空行は読み飛ばす。 */
+/**
+ * 見出し行を見て、区切り文字がカンマかタブかを決める。
+ * スプレッドシートから範囲をコピーして貼り付けるとタブ区切りになるため、
+ * 「ファイルを選ぶ」でも「表を貼り付ける」でも同じように読めるようにする。
+ */
+function detectDelimiter(src: string): "," | "\t" {
+  const head = src.split(/\r?\n/, 1)[0] ?? "";
+  let inQuote = false;
+  let commas = 0;
+  let tabs = 0;
+  for (const c of head) {
+    if (c === '"') inQuote = !inQuote;
+    else if (inQuote) continue;
+    else if (c === ",") commas++;
+    else if (c === "\t") tabs++;
+  }
+  return tabs > commas ? "\t" : ",";
+}
+
+/** CSV文字列（またはタブ区切り）を2次元配列にする。空行は読み飛ばす。 */
 export function parseCsv(text: string): string[][] {
   const src = text.replace(/^﻿/, "");
+  const delimiter = detectDelimiter(src);
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -44,7 +64,7 @@ export function parseCsv(text: string): string[][] {
     }
     if (c === '"') {
       quoted = true;
-    } else if (c === ",") {
+    } else if (c === delimiter) {
       row.push(cell);
       cell = "";
     } else if (c === "\n" || c === "\r") {

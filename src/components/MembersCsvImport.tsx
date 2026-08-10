@@ -1,42 +1,35 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, ReasonNote } from "@/components/ui";
 
-type RowResult = {
+type MemberRowResult = {
   row: number;
   name: string;
-  status: "取り込み" | "スキップ";
+  email: string;
+  status: "新規作成" | "更新" | "エラー";
   reason?: string;
-  answered?: number;
-  unreadable?: string[];
 };
 
 /**
- * 回答一覧（スプレッドシートの書き出し）の取り込み。
+ * 社員一覧のまとめ登録。
  *
- * ファイルを選ぶか、スプレッドシートからそのまま貼り付けて取り込む。
- * 取り込めなかった行も理由つきで一覧に出す（揃った分だけ先に進める）。
+ * 表を貼り付けるか、CSVを選んで取り込む。取り込む前に「まず内容を確認する」で
+ * 何行目の何が不正かを確かめられる（確認の段階では何も保存しない）。
  */
-export function CsvImport({ formId, formTitle }: { formId: string; formTitle: string }) {
+export function MembersCsvImport() {
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [rows, setRows] = useState<RowResult[] | null>(null);
-  /** 直前の結果が「確認だけ（まだ保存していない）」かどうか */
+  const [rows, setRows] = useState<MemberRowResult[] | null>(null);
   const [checked, setChecked] = useState(false);
 
-  const preview = text.trim() === "" ? [] : text.trim().split(/\r?\n/).slice(0, 3);
-
-  const onFile = async (file: File | undefined) => {
-    if (!file) return;
-    setFileName(file.name);
-    setText(await file.text());
+  const reset = () => {
     setMessage(null);
     setError(null);
     setRows(null);
@@ -48,15 +41,19 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
       return;
     }
     setBusy(true);
-    setError(null);
     setMessage(null);
+    setError(null);
     try {
-      const res = await fetch("/api/import/responses", {
+      const res = await fetch("/api/import/members", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ formId, csv: text, dryRun }),
+        body: JSON.stringify({
+          csv: text,
+          dryRun,
+          initialPassword: password.trim() === "" ? undefined : password.trim(),
+        }),
       });
-      const data = (await res.json()) as { ok: boolean; message?: string; rows?: RowResult[] };
+      const data = (await res.json()) as { ok: boolean; message?: string; rows?: MemberRowResult[] };
       if (!res.ok || !data.ok) {
         setError(data.message ?? "取り込みできませんでした。");
         return;
@@ -75,19 +72,27 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
   return (
     <Card className="card-pad">
       <p className="m-0 text-[13px]">
-        「{formTitle}」の回答として取り込みます。1行目に設問名、2行目から回答を入れてください。
-        氏名（または社員番号）でこのシステムの登録者と突き合わせます。
+        1行目に「氏名」「メールアドレス」「社員番号」「役割」「等級」「事業所」「所属」「上長」「入社日」「利用状態」の見出しを入れ、2行目から社員を並べてください。
+        この画面の「社員一覧を書き出す」で作ったCSVは、そのまま取り込めます。
+      </p>
+      <p className="footnote m-0 mt-1">
+        メールアドレスが同じ方はすでにいる方として情報を更新します。上長は氏名・メールアドレス・社員番号のどれでも指定でき、同じファイルの中の方も指定できます。
       </p>
 
       <div className="mt-3 grid gap-3">
         <label className="block text-[13px] font-bold">
-          回答一覧のファイル（CSV）
+          社員一覧のファイル（CSV）
           <input
-            ref={fileRef}
             type="file"
             accept=".csv,text/csv"
             className="mt-1 block w-full text-[13px] font-normal"
-            onChange={(e) => onFile(e.target.files?.[0])}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setFileName(file.name);
+              setText(await file.text());
+              reset();
+            }}
           />
           {fileName && <span className="footnote block">選択中：{fileName}</span>}
         </label>
@@ -101,19 +106,26 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
             onChange={(e) => {
               setText(e.target.value);
               setFileName(null);
-              setRows(null);
+              reset();
             }}
-            placeholder="タイムスタンプ,氏名（回答者）,【支援】１）…"
+            placeholder="氏名,メールアドレス,社員番号,役割,等級,事業所,所属,上長,入社日,利用状態"
           />
         </label>
-      </div>
 
-      {preview.length > 0 && (
-        <div className="mt-3">
-          <p className="footnote m-0">取り込む内容の先頭（確認用）</p>
-          <pre className="mt-1 max-h-32 overflow-auto rounded bg-subtle p-2 text-[11px] leading-5">{preview.join("\n")}</pre>
-        </div>
-      )}
+        <label className="block text-[13px] font-bold">
+          新しく登録する方の最初のパスワード
+          <input
+            type="password"
+            className="input mt-1 w-full font-normal"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+          <span className="footnote block">
+            8文字以上。すでに登録済みの方だけを更新するときは空欄のままで構いません。発行後、ご本人にお伝えください。
+          </span>
+        </label>
+      </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <Button variant="tertiary" onClick={() => run(true)} disabled={busy}>
@@ -122,7 +134,6 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
         <Button onClick={() => run(false)} disabled={busy}>
           {busy ? "処理しています…" : "この内容を取り込む"}
         </Button>
-        <span className="footnote">同じ方の回答がすでにある場合は、新しい内容で置き換えます。</span>
       </div>
 
       {error && (
@@ -140,25 +151,19 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
               <tr>
                 <th className="col-num">行</th>
                 <th>氏名</th>
+                <th>メールアドレス</th>
                 <th>結果</th>
                 <th>内容</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.row}>
+                <tr key={`${r.row}-${r.status}`}>
                   <td className="col-num num">{r.row}</td>
                   <td>{r.name || "（空欄）"}</td>
+                  <td className="text-[12px]">{r.email}</td>
                   <td>{r.status}</td>
-                  <td>
-                    {r.status === "取り込み" ? `${r.answered ?? 0}問を保存` : (r.reason ?? "")}
-                    {r.unreadable && r.unreadable.length > 0 && (
-                      <span className="footnote block">
-                        値を読み取れなかった設問{r.unreadable.length}問（点数に入りません）：{r.unreadable.slice(0, 3).join("／")}
-                        {r.unreadable.length > 3 ? " ほか" : ""}
-                      </span>
-                    )}
-                  </td>
+                  <td>{r.reason ?? ""}</td>
                 </tr>
               ))}
             </tbody>

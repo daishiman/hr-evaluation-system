@@ -4,12 +4,12 @@ import { getDb, schema as s } from "@/lib/db";
 import { apiViewer, HttpError, resolveCompanyId } from "@/lib/session";
 import { jsonError } from "@/lib/api";
 import { csvResponse } from "@/lib/csv";
-import { buildKpiDetailCsv, buildResponsesCsv, buildResultsCsv } from "@/lib/export";
+import { buildKpiDetailCsv, buildMembersCsv, buildResponsesCsv, buildResultsCsv } from "@/lib/export";
 
 export const dynamic = "force-dynamic";
 
 const querySchema = z.object({
-  type: z.enum(["responses", "results", "kpi"]),
+  type: z.enum(["responses", "results", "kpi", "members"]),
   formId: z.string().min(1).optional(),
   cycleId: z.string().min(1).optional(),
   companyId: z.string().min(1).optional(),
@@ -30,6 +30,11 @@ export async function GET(req: Request) {
     if (!companyId) throw new HttpError(400, "会社を指定してください。");
 
     const db = await getDb();
+
+    if (q.type === "members") {
+      const file = await buildMembersCsv(companyId);
+      return csvResponse(file.filename, file.csv);
+    }
 
     if (q.type === "responses") {
       if (!q.formId) throw new HttpError(400, "書き出すアンケートを指定してください。");

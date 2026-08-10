@@ -263,3 +263,62 @@ export async function buildKpiDetailCsv(companyId: string, cycleId: string): Pro
   const cycleName = rows[0]?.cycleName ?? "";
   return { filename: `KPI明細_${cycleName}.csv`, csv: toCsv(KPI_HEADERS, body) };
 }
+
+/* ───────────────── 4. 社員一覧（取り込みと同じ列） ───────────────── */
+
+/**
+ * 社員一覧の列。ここに書き出したCSVを、そのまま取り込みに使える（列名も並びも同じ）。
+ * 上長は氏名で書く（社員番号がまだ無い会社でも読めるようにするため）。
+ */
+export const MEMBER_HEADERS = [
+  "氏名", "メールアドレス", "社員番号", "役割", "等級", "事業所", "所属", "上長", "入社日", "利用状態",
+] as const;
+
+const ROLE_TO_LABEL: Record<string, string> = {
+  SUPER_ADMIN: "システム管理者",
+  COMPANY_ADMIN: "会社管理者",
+  MANAGER: "マネージャー",
+  EMPLOYEE: "社員",
+};
+
+export async function buildMembersCsv(companyId: string): Promise<CsvFile> {
+  const db = await getDb();
+
+  const rows = await db
+    .select({
+      id: s.users.id,
+      name: s.users.name,
+      email: s.users.email,
+      employeeCode: s.users.employeeCode,
+      role: s.users.role,
+      gradeName: s.grades.name,
+      gradeOrder: s.grades.displayOrder,
+      officeName: s.offices.name,
+      department: s.users.department,
+      managerId: s.users.managerId,
+      hiredAt: s.users.hiredAt,
+      isActive: s.users.isActive,
+    })
+    .from(s.users)
+    .leftJoin(s.grades, eq(s.grades.id, s.users.gradeId))
+    .leftJoin(s.offices, eq(s.offices.id, s.users.officeId))
+    .where(eq(s.users.companyId, companyId))
+    .orderBy(asc(s.grades.displayOrder), asc(s.users.name));
+
+  const nameById = new Map(rows.map((r) => [r.id, r.name]));
+
+  const body = rows.map((r) => [
+    r.name,
+    r.email,
+    r.employeeCode ?? "",
+    ROLE_TO_LABEL[r.role] ?? r.role,
+    r.gradeName ?? "",
+    r.officeName ?? "",
+    r.department ?? "",
+    (r.managerId && nameById.get(r.managerId)) ?? "",
+    r.hiredAt ?? "",
+    r.isActive ? "在籍中" : "利用停止",
+  ]);
+
+  return { filename: "社員一覧.csv", csv: toCsv([...MEMBER_HEADERS], body) };
+}
