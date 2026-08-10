@@ -43,6 +43,7 @@ export function SchemeEditor({
   kpiItems,
   initial,
   raiseRequiresAllA,
+  scoringMode,
   pointGroups,
   reference,
 }: {
@@ -52,6 +53,8 @@ export function SchemeEditor({
   kpiItems: KpiOption[];
   initial: { kpiItemId: string; categoryId: string | null; weight: number; isFixedSlot: boolean }[];
   raiseRequiresAllA: boolean;
+  /** ランクを点数に直すやり方。"ratio"＝一律割合 / "absolute"＝項目別の点数表 */
+  scoringMode: "ratio" | "absolute";
   /** 元の配点表の等級区分（Beginner / Regular / Chief / AM / Manager） */
   pointGroups: string[];
   /** 元の配点表の写し。参考値としてだけ使い、計算には使わない */
@@ -72,6 +75,7 @@ export function SchemeEditor({
     ),
   );
   const [allA, setAllA] = useState(raiseRequiresAllA);
+  const [mode, setMode] = useState<"ratio" | "absolute">(scoringMode);
   const [refGroup, setRefGroup] = useState(pointGroups[0] ?? "");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -159,7 +163,7 @@ export function SchemeEditor({
       const res = await fetch("/api/scheme", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ schemeId, items: selections, raiseRequiresAllA: allA }),
+        body: JSON.stringify({ schemeId, items: selections, raiseRequiresAllA: allA, scoringMode: mode }),
       });
       const json = (await res.json()) as { ok: boolean; message?: string };
       if (!res.ok || !json.ok) {
@@ -201,6 +205,55 @@ export function SchemeEditor({
       )}
       {error && <ReasonNote>{error}</ReasonNote>}
       {message && <p className="m-0 mt-3 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+
+      <Card className="card-pad mt-4">
+        <p className="section-heading m-0">
+          ランクを点数に直すやり方 <ProvisionalMark />
+        </p>
+        <p className="footnote m-0">
+          A〜Eのランクが決まったあと、それを何点にするかの決め方です。どちらか一方を選んでください。
+          いまは「一律の割合」を初期値にしています。すでに確定した評価は、確定した当時のやり方のまま残ります。
+        </p>
+        <div className="mt-3 grid gap-2">
+          {[
+            {
+              value: "ratio" as const,
+              title: "一律の割合で決める（おすすめ・いまの設定）",
+              body:
+                "どの項目も同じ割合で点数にします（A＝満点の100% / B＝80% / C＝60% / D＝40% / E＝0点）。" +
+                "項目の重みは配点だけで決まるので、説明しやすく、項目を入れ替えても点数表を作り直す必要がありません。" +
+                "割合そのものは仮の値で、あとから変えられます。",
+            },
+            {
+              value: "absolute" as const,
+              title: "項目ごとの点数表で決める（移行前のやり方）",
+              body:
+                "項目ごとに違う点数表を使います（例：ある項目は100/85/70/55/0点、別の項目は10/8/7/5/0点）。" +
+                "移行前の配点表をそのまま再現できますが、項目を1つ変えるたびに等級ごとの点数表を作り直す必要があります。" +
+                "点数表が未登録の項目は、これまでどおり一律の割合で計算します。",
+            },
+          ].map((o) => (
+            <label
+              key={o.value}
+              className={`flex cursor-pointer gap-3 rounded-[10px] border p-3 ${
+                mode === o.value ? "border-[var(--accent)] bg-[var(--tint)]" : "border-[var(--line)]"
+              }`}
+            >
+              <input
+                type="radio"
+                name="scoringMode"
+                className="mt-1"
+                checked={mode === o.value}
+                onChange={() => setMode(o.value)}
+              />
+              <span className="min-w-0">
+                <span className="block text-[13px] font-semibold">{o.title}</span>
+                <span className="footnote m-0 block">{o.body}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </Card>
 
       {pointGroups.length > 0 && (
         <Card className="card-pad mt-4">
@@ -284,7 +337,7 @@ export function SchemeEditor({
               </label>
             </div>
 
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
+            <div className="field-grid mt-3">
               {options.map((o) => (
                 <button
                   key={o.id}

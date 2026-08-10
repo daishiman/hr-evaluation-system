@@ -95,11 +95,98 @@ export interface RankRatio {
   ratio: number;
 }
 
-/** ランクと配点から獲得点数を出す。 */
+/** ランクと配点から獲得点数を出す（一律割合方式）。 */
 export function scoreFromRank(rank: Rank, weight: number, ratios: RankRatio[]): number {
   const r = ratios.find((x) => x.rank === rank);
   const ratio = r ? r.ratio : 0;
   return Math.round(weight * ratio * 10) / 10;
+}
+
+/* ─────────────── ランク→点数の換算方式（会社ごとに選べる） ───────────────
+ *
+ * 制度の意味が変わる論点なので、方式を1つに決め打ちせず、管理画面から選べるようにしている。
+ *
+ *  1) ratio（一律割合方式・既定）
+ *     どの項目も同じ割合で減点する。A=100% / B=80% / C=60% / D=40% / E=0%。
+ *     割合は scheme_rank_ratios テーブルにあり、会社ごとに変更できる。
+ *     元の制度に無かった按分のため「仮」バッジを付けて表示する。
+ *
+ *  2) absolute（項目別絶対点方式）
+ *     移行前の「KPI基準定義_配点」シートのやり方。項目ごとに刻みが違う
+ *     （項目1 = 100/85/70/55/0、項目2 = 10/8/7/5/0 など）。
+ *     点数は kpi_reference_points テーブル（等級区分×ランク）から引く。
+ *
+ * どちらを選んでも、確定時に evaluation_items へ点数と根拠を保存するため、
+ * あとから方式を切り替えても確定済みの評価は動かない。
+ */
+
+export type ScoringMode = "ratio" | "absolute";
+
+/** 項目別絶対点方式で使う、1項目分のランク別点数表 */
+export interface AbsolutePointTable {
+  /** ランクごとの点数。元の表で「-」（対象外）だったランクは含めない */
+  byRank: { rank: string; points: number }[];
+}
+
+export interface ScoreItemInput {
+  rank: Rank;
+  /** 一律割合方式で使う配点（Aのときの点数） */
+  weight: number;
+  mode: ScoringMode;
+  ratios: RankRatio[];
+  /** 項目別絶対点方式で使う点数表。方式が absolute のときだけ参照する */
+  absolute?: AbsolutePointTable | null;
+}
+
+export interface ScoreItemResult {
+  points: number;
+  /** その項目の満点（合計の分母に使う） */
+  maxPoints: number;
+  /** 「何点がどう決まったか」を日本語で説明した文字列 */
+  note: string;
+  /** 絶対点方式を選んだのに点数表が無く、一律割合方式へ退避した場合に true */
+  fellBackToRatio: boolean;
+}
+
+/**
+ * 選んだ方式でランクを点数に換算する。
+ *
+ * 絶対点方式を選んでいても、その項目の点数表が無い（元シートで対象外だった等級区分など）
+ * 場合は一律割合方式へ退避し、退避したことを note と fellBackToRatio で返す。
+ * 黙って0点にすると「評価されなかった」ことが「0点だった」に化けるため。
+ */
+export function scoreItem(input: ScoreItemInput): ScoreItemResult {
+  if (input.mode === "absolute") {
+    const table = input.absolute;
+    const a = table?.byRank.find((x) => x.rank === "A");
+    const hit = table?.byRank.find((x) => x.rank === input.rank);
+    if (table && a) {
+      // 元の表で対象外だったランクは0点として扱う（Eは元表でも0点）
+      const points = hit ? hit.points : 0;
+      return {
+        points: Math.round(points * 10) / 10,
+        maxPoints: Math.round(a.points * 10) / 10,
+        note: `項目別絶対点方式：ランク${input.rank}の点数 ${points}点（この項目の満点は${a.points}点）。`,
+        fellBackToRatio: false,
+      };
+    }
+    const points = scoreFromRank(input.rank, input.weight, input.ratios);
+    return {
+      points,
+      maxPoints: input.weight,
+      note: `この項目には元の配点表がないため、一律割合方式で計算しました：配点${input.weight}点 × ランク${input.rank}の割合 ＝ ${points}点。`,
+      fellBackToRatio: true,
+    };
+  }
+
+  const points = scoreFromRank(input.rank, input.weight, input.ratios);
+  const ratio = input.ratios.find((x) => x.rank === input.rank)?.ratio ?? 0;
+  return {
+    points,
+    maxPoints: input.weight,
+    note: `一律割合方式：配点${input.weight}点 × ランク${input.rank}の割合${Math.round(ratio * 100)}% ＝ ${points}点。`,
+    fellBackToRatio: false,
+  };
 }
 
 /* ─────────────────── 等級要件達成率（固定枠の実績値） ─────────────────── */

@@ -402,6 +402,12 @@ export const evaluationSchemes = sqliteTable(
     effectiveFrom: text("effective_from"),
     effectiveTo: text("effective_to"),
     totalPoints: integer("total_points").notNull().default(100),
+    /**
+     * ランク→点数の換算方式。制度の意味が変わる論点なので会社ごとに選べる。
+     *  ratio    … 一律割合方式（A=100% / B=80% / C=60% / D=40% / E=0%）※既定・仮
+     *  absolute … 項目別絶対点方式（移行前の配点表 kpi_reference_points をそのまま使う）
+     */
+    scoringMode: text("scoring_mode").notNull().default("ratio"),
     /** 昇給条件: 選んだ項目すべてがAであること */
     raiseRequiresAllA: integer("raise_requires_all_a", { mode: "boolean" }).notNull().default(true),
     note: text("note"),
@@ -599,6 +605,21 @@ export const evaluations = sqliteTable(
     requirementTotal: integer("requirement_total").default(0),
     /** 行動指針の合計点 */
     behaviorTotal: real("behavior_total"),
+
+    /* ── 賞与の集計（元シート「配点」の集計欄）──
+       個人Pt ＝ KPI評価点合計 × 事業所KGI達成係数 ／ 賞与額 ＝ 個人Pt × 1点あたり金額。
+       配点が未確定のため、画面には必ず「仮」バッジを付けて出す。
+       確定時の係数と方式もここに残し、あとで係数表や方式を変えても過去の評価が動かないようにする。 */
+    /** 判定に使った事業所KGIの達成率（%） */
+    officeAchievementRate: real("office_achievement_rate"),
+    /** 引き当てた達成係数のスナップショット */
+    kgiCoefficient: real("kgi_coefficient"),
+    personalPoints: real("personal_points"),
+    bonusYen: integer("bonus_yen"),
+    /** 「なぜこの係数・この金額か」を日本語で保存 */
+    bonusRationale: text("bonus_rationale"),
+    /** 判定当時のランク→点数の換算方式（ratio | absolute） */
+    scoringModeSnapshot: text("scoring_mode_snapshot"),
 
     /** 昇給可否＝選択項目がすべてA */
     raiseEligible: integer("raise_eligible", { mode: "boolean" }).notNull().default(false),

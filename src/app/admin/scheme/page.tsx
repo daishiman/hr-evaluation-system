@@ -74,6 +74,7 @@ export default async function AdminSchemePage() {
           isFixedSlot: i.isFixedSlot,
         }))}
         raiseRequiresAllA={scheme.raiseRequiresAllA}
+        scoringMode={scheme.scoringMode === "absolute" ? "absolute" : "ratio"}
         pointGroups={pointGroups}
         reference={reference}
       />
