@@ -110,8 +110,26 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
           { name: "autonomyLevel", label: "自律の水準", type: "text", defaultValue: grade.autonomyLevel ?? "" },
           { name: "responsibilityLevel", label: "責任の水準", type: "text", defaultValue: grade.responsibilityLevel ?? "" },
           { name: "deadlineNote", label: "期限の考え方", type: "text", defaultValue: grade.deadlineNote ?? "" },
+          {
+            name: "behaviorBand",
+            label: "行動指針の適用",
+            type: "select",
+            defaultValue: grade.behaviorBand ?? "",
+            help: "この等級のアンケートに行動指針（創造性・専門性・個別性・対等性・連帯性の5問）を出すかどうかです。次に作るアンケートから反映されます。",
+            options: [
+              { value: "", label: "適用しない" },
+              { value: "g1_2", label: "等級1〜2の基準を適用する" },
+              { value: "g3_4", label: "等級3〜4の基準を適用する" },
+            ],
+          },
         ]}
       />
+      <div className="mt-3">
+        <ReasonNote>
+          行動指針の適用について: 移行元の資料では、AM Ⅰ・AM Ⅱ に行動指針を出さない記録（同期ログ）と、出している記録（実際のアンケート用紙と回答一覧）が食い違っていました。
+          実際に使われていたアンケート用紙のほうを採用して初期値を入れています。制度としての正解はこの画面で会社ごとに切り替えられます。
+        </ReasonNote>
+      </div>
 
       <SectionHeading>昇格の条件</SectionHeading>
       {!th ? (

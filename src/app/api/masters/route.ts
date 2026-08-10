@@ -23,6 +23,8 @@ const bodySchema = z.discriminatedUnion("kind", [
     autonomyLevel: z.string().max(200).nullable().optional(),
     responsibilityLevel: z.string().max(200).nullable().optional(),
     deadlineNote: z.string().max(200).nullable().optional(),
+    /** 行動指針をこの等級に出すか。null なら出さない（会社ごとに切り替えられる） */
+    behaviorBand: z.enum(["g1_2", "g3_4"]).nullable().optional(),
     isActive: z.boolean().optional(),
   }),
   z.object({
@@ -116,7 +118,7 @@ export async function PUT(req: Request) {
       case "grade": {
         await ownGrade(body.id);
         const patch: Record<string, unknown> = {};
-        for (const k of ["name", "targetCap", "autonomyLevel", "responsibilityLevel", "deadlineNote", "isActive"] as const) {
+        for (const k of ["name", "targetCap", "autonomyLevel", "responsibilityLevel", "deadlineNote", "behaviorBand", "isActive"] as const) {
           if (body[k] !== undefined) patch[k] = body[k];
         }
         await db.update(s.grades).set(patch).where(eq(s.grades.id, body.id));
