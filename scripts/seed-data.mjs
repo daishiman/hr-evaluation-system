@@ -800,6 +800,12 @@ export async function buildSeed() {
             answerRows.push({
               id: `fa_${respId}_${qrow.id.split("_").pop()}`, company_id: cid, response_id: respId,
               question_id: qrow.id, value_number: valNum, value_text: valText, value_json: null,
+              /* 回答したときの設問文をその場で写し取る。
+                 実際の回答（Web・CSV取込）と同じ形にしておかないと、
+                 過去の回答を読む画面が常に「保存される前の回答です」と断り書きを出してしまう。 */
+              question_title: qrow.title, question_type: qrow.question_type,
+              question_section: qrow.section, question_unit: qrow.unit,
+              question_options_json: qrow.options_json, question_display_order: qrow.display_order,
               created_at: NOW, updated_at: NOW, __key: qrow.kpi_question_key,
             });
           });
