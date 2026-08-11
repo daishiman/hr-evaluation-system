@@ -1,0 +1,72 @@
+[
+ {
+  "code": "beginner",
+  "name": "等級１：Beginner",
+  "pointGroup": "Beginner",
+  "targetCap": 5,
+  "autonomy": "自律度Level：補助",
+  "resp": null,
+  "deadline": "達成期限：なし",
+  "band": "g1_2"
+ },
+ {
+  "code": "regular",
+  "name": "等級２：Regular",
+  "pointGroup": "Regular",
+  "targetCap": 5,
+  "autonomy": "自律度Level：遂行",
+  "resp": null,
+  "deadline": "達成期限：２年（１０件以下は降格）",
+  "band": "g1_2"
+ },
+ {
+  "code": "chief",
+  "name": "等級３：Chief",
+  "pointGroup": "Chief",
+  "targetCap": 5,
+  "autonomy": "自律度Level：指示",
+  "resp": null,
+  "deadline": "達成期限：３年（１５件以下は降格）",
+  "band": "g3_4"
+ },
+ {
+  "code": "am1",
+  "name": "等級４：AM Ⅰ",
+  "pointGroup": "AM",
+  "targetCap": 3,
+  "autonomy": null,
+  "resp": "責任Level：管理",
+  "deadline": "達成期限：1.5年（降格要件）",
+  "band": "g3_4"
+ },
+ {
+  "code": "am2",
+  "name": "等級４：AM Ⅱ",
+  "pointGroup": "AM",
+  "targetCap": 2,
+  "autonomy": null,
+  "resp": "責任Level：提案",
+  "deadline": "達成期限：1.5年（降格要件）",
+  "band": "g3_4"
+ },
+ {
+  "code": "manager1",
+  "name": "等級５：Manager Ⅰ",
+  "pointGroup": "Manager",
+  "targetCap": 2,
+  "autonomy": null,
+  "resp": "責任Level：改善",
+  "deadline": "達成期限：２年（降格要件）",
+  "band": null
+ },
+ {
+  "code": "manager2",
+  "name": "等級５：Manager Ⅱ",
+  "pointGroup": "Manager",
+  "targetCap": 2,
+  "autonomy": null,
+  "resp": "責任Level：創出",
+  "deadline": "達成期限：２年（降格要件）",
+  "band": null
+ }
+]

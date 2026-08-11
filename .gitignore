@@ -44,6 +44,19 @@ data/*
 # テストが落ちる
 !data/_authoritative-kpi-criteria.tsv
 
+# 制度マスタ（等級・KPI項目・閾値・設問文・配点・行動指針）。
+# scripts/seed-data.mjs が読み、authoritative-criteria.test.ts がそれを検証するため、
+# 追跡しないとCIでテストが落ちる。中身は制度の定義だけで、
+# 個人名・メールアドレス・評価内容・会社名は含まない（追加時は必ず確認すること）。
+!data/kpi-master.json
+!data/kpi-ranks.json
+!data/kpi-questions.json
+!data/kpi-points.json
+!data/grades.json
+!data/grade-requirements.json
+!data/promotion-requirements.json
+!data/behavior-guidelines.json
+
 # Next.js / OpenNext / Cloudflare
 .next/
 .open-next/

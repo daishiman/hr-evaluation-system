@@ -1,0 +1,392 @@
+[
+ {
+  "gradeCode": "beginner",
+  "category": "support",
+  "seq": 1,
+  "text": "インテークやアセスメント"
+ },
+ {
+  "gradeCode": "beginner",
+  "category": "support",
+  "seq": 2,
+  "text": "支援に必要な記録及び準備"
+ },
+ {
+  "gradeCode": "beginner",
+  "category": "support",
+  "seq": 3,
+  "text": "プログラム（授産）の準備"
+ },
+ {
+  "gradeCode": "beginner",
+  "category": "support",
+  "seq": 4,
+  "text": "プログラム（授産）に関する社外調整"
+ },
+ {
+  "gradeCode": "beginner",
+  "category": "support",
+  "seq": 5,
+  "text": "見学・体験に必要な準備"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "support",
+  "seq": 1,
+  "text": "インテークやアセスメント"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "support",
+  "seq": 2,
+  "text": "支援に必要な記録及び準備"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "support",
+  "seq": 3,
+  "text": "プログラム（授産）の準備・実施（指導）"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "support",
+  "seq": 4,
+  "text": "プログラム（授産）に関する社外調整"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "support",
+  "seq": 5,
+  "text": "見学・体験に必要な準備及び実施（記録）"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "support",
+  "seq": 6,
+  "text": "個別支援計画に基づいた支援・面談・会議等"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "support",
+  "seq": 7,
+  "text": "契約に必要な記録及び準備"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "support",
+  "seq": 8,
+  "text": "モニタリング案の作成"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "support",
+  "seq": 1,
+  "text": "インテークやアセスメント"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "support",
+  "seq": 2,
+  "text": "支援に必要な記録及び準備"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "support",
+  "seq": 3,
+  "text": "プログラム（授産）の準備・実施（指導）"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "support",
+  "seq": 4,
+  "text": "プログラム（授産）に関する社外調整"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "support",
+  "seq": 5,
+  "text": "見学・体験に必要な準備及び実施（記録）"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "support",
+  "seq": 6,
+  "text": "個別支援計画に基づいた支援・面談・会議等"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "support",
+  "seq": 7,
+  "text": "契約に必要な記録及び準備"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "support",
+  "seq": 8,
+  "text": "モニタリング案の作成"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "support",
+  "seq": 9,
+  "text": "対話的な「聴く」ことが出来る"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "support",
+  "seq": 10,
+  "text": "どんなケース（利用者）でも、対応が出来る"
+ },
+ {
+  "gradeCode": "am1",
+  "category": "support",
+  "seq": 1,
+  "text": "専門的な知識を根拠とした助言・指導"
+ },
+ {
+  "gradeCode": "am1",
+  "category": "support",
+  "seq": 2,
+  "text": "支援指針を根拠とした助言・指導"
+ },
+ {
+  "gradeCode": "am2",
+  "category": "support",
+  "seq": 1,
+  "text": "新たな支援手法や知識取得に関する提案"
+ },
+ {
+  "gradeCode": "manager1",
+  "category": "support",
+  "seq": 1,
+  "text": "支援方針達成に向けた改善"
+ },
+ {
+  "gradeCode": "beginner",
+  "category": "operation",
+  "seq": 1,
+  "text": "備品・消耗品等の管理・申請・発注"
+ },
+ {
+  "gradeCode": "beginner",
+  "category": "operation",
+  "seq": 2,
+  "text": "事業所の安全確認"
+ },
+ {
+  "gradeCode": "beginner",
+  "category": "operation",
+  "seq": 3,
+  "text": "スケジュールやお知らせ等の作成"
+ },
+ {
+  "gradeCode": "beginner",
+  "category": "operation",
+  "seq": 4,
+  "text": "職員シフトや利用予定表などの作成"
+ },
+ {
+  "gradeCode": "beginner",
+  "category": "operation",
+  "seq": 5,
+  "text": "SNS等の記事（案）の作成"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "operation",
+  "seq": 1,
+  "text": "備品・消耗品等の管理・申請・発注"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "operation",
+  "seq": 2,
+  "text": "事業所の安全確認"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "operation",
+  "seq": 3,
+  "text": "スケジュールやお知らせ等の作成"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "operation",
+  "seq": 4,
+  "text": "職員シフトや利用予定表などの作成"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "operation",
+  "seq": 5,
+  "text": "SNS等の記事（案）の作成"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "operation",
+  "seq": 6,
+  "text": "開所日などの企画や必要な調整、申請"
+ },
+ {
+  "gradeCode": "regular",
+  "category": "operation",
+  "seq": 7,
+  "text": "日々の運営や各種MTGの司会"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "operation",
+  "seq": 1,
+  "text": "備品・消耗品等の管理・申請・発注"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "operation",
+  "seq": 2,
+  "text": "事業所の安全確認"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "operation",
+  "seq": 3,
+  "text": "スケジュールやお知らせ等の作成"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "operation",
+  "seq": 4,
+  "text": "職員シフトや利用予定表などの作成"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "operation",
+  "seq": 5,
+  "text": "SNS等の記事（案）の作成"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "operation",
+  "seq": 6,
+  "text": "開所日などの企画や必要な調整、申請"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "operation",
+  "seq": 7,
+  "text": "日々の運営や各種MTGの司会"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "operation",
+  "seq": 8,
+  "text": "仮払いなどの申請・精算等が出来る"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "operation",
+  "seq": 9,
+  "text": "消防計画の作成や避難訓練等の実施が出来る"
+ },
+ {
+  "gradeCode": "chief",
+  "category": "operation",
+  "seq": 10,
+  "text": "緊急連絡網の更新が出来る"
+ },
+ {
+  "gradeCode": "am1",
+  "category": "operation",
+  "seq": 1,
+  "text": "利用者に関する管理（日報・記録・支援状況等）"
+ },
+ {
+  "gradeCode": "am1",
+  "category": "operation",
+  "seq": 2,
+  "text": "職員に関する管理（シフト・配置・心身の状況等）"
+ },
+ {
+  "gradeCode": "am1",
+  "category": "operation",
+  "seq": 3,
+  "text": "苦情・ヒヤリハット等の把握"
+ },
+ {
+  "gradeCode": "am2",
+  "category": "operation",
+  "seq": 1,
+  "text": "経営指針に基づいた、プログラム（授産）の起案"
+ },
+ {
+  "gradeCode": "am2",
+  "category": "operation",
+  "seq": 2,
+  "text": "経営指針に基づいた、環境改善の起案"
+ },
+ {
+  "gradeCode": "am2",
+  "category": "operation",
+  "seq": 3,
+  "text": "経営指針に基づいた、地域企画などの起案"
+ },
+ {
+  "gradeCode": "am2",
+  "category": "operation",
+  "seq": 4,
+  "text": "事業計画・予算（案）の起案"
+ },
+ {
+  "gradeCode": "manager1",
+  "category": "operation",
+  "seq": 1,
+  "text": "利用（支援）環境の改善"
+ },
+ {
+  "gradeCode": "manager1",
+  "category": "operation",
+  "seq": 2,
+  "text": "労働（職場）環境の改善"
+ },
+ {
+  "gradeCode": "manager1",
+  "category": "operation",
+  "seq": 3,
+  "text": "苦情・ヒヤリハット等の改善"
+ },
+ {
+  "gradeCode": "manager1",
+  "category": "operation",
+  "seq": 4,
+  "text": "KGI達成に向けた改善"
+ },
+ {
+  "gradeCode": "manager2",
+  "category": "operation",
+  "seq": 1,
+  "text": "新規事業（福祉事業）の創出"
+ },
+ {
+  "gradeCode": "manager2",
+  "category": "operation",
+  "seq": 2,
+  "text": "新規事業（授産）の創出"
+ },
+ {
+  "gradeCode": "manager2",
+  "category": "operation",
+  "seq": 3,
+  "text": "他業界との交流を持ち、新しいシナジーの創出"
+ },
+ {
+  "gradeCode": "manager2",
+  "category": "operation",
+  "seq": 4,
+  "text": "エリアで１番の実績のための取組の創出"
+ },
+ {
+  "gradeCode": "manager2",
+  "category": "operation",
+  "seq": 5,
+  "text": "中期の事業計画・予算の作成"
+ }
+]
