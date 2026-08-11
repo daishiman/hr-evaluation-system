@@ -77,6 +77,8 @@ backup.sql
 
 # misc
 *.tsbuildinfo
+# 網羅率の測定結果（毎回作り直すもの。履歴に入れない）
+coverage/
 
 drizzle/.add-user.sql
 drizzle/.reference-points.sql
