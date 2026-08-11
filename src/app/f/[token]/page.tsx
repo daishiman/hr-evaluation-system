@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { LinkButton, PageTitle, ReasonNote } from "@/components/ui";
 import { listActiveExtensions } from "@/lib/response-access";
 import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
+import { judgeFormEntry } from "@/lib/domain/form-entry";
 
 export const dynamic = "force-dynamic";
 
@@ -47,15 +48,9 @@ export default async function PublicForm({ params }: { params: Promise<{ token: 
       .limit(1)
   )[0];
 
-  if (viewer.gradeId !== form.gradeId && !mine) {
-    return (
-      <AppShell viewer={viewer}>
-        <PageTitle title="このアンケートの対象ではありません" />
-        <ReasonNote action={<LinkButton href="/me/forms">自分のアンケートを見る</LinkButton>}>
-          このアンケートは別の等級の方向けです。ご自身の等級のアンケートは「実績を報告する」から開けます。
-        </ReasonNote>
-      </AppShell>
-    );
+  // 対象等級が違っても閉ざさない。中身の確認画面へ送り、そこで回答できない理由を伝える。
+  if (judgeFormEntry({ viewerGradeId: viewer.gradeId, formGradeId: form.gradeId, hasResponse: !!mine }) === "content-only") {
+    redirect(`/forms/${form.id}`);
   }
 
   const judgement = judgeFormDeadline({
