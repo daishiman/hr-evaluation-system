@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { CopyReminder } from "@/components/CopyReminder";
+import { CopyUrl } from "@/components/CopyUrl";
+import { appOrigin, formUrl } from "@/lib/origin";
 import { requireRole } from "@/lib/session";
 import { getForm, listResponseStatus } from "@/lib/queries";
 import { listFormExtensions } from "@/lib/response-access";
@@ -43,16 +44,9 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
     listResponseStatus(companyId, form.id),
     listFormExtensions(companyId, form.id),
   ]);
-  /*
-   * 催促の文面にはそのまま開けるURLを入れる（相対パスだと貼り付け先で開けないため）。
-   * ただし Host ヘッダーは呼び出し側が自由に付けられるので、そのまま信じると
-   * 別ドメインのURLが催促文に混ざる余地がある。設定（APP_ORIGIN）があればそれを優先し、
-   * 無いときだけ Host を使う。この文面を作るのは管理者自身で、送信もされないため
-   * 実害は小さいが、貼り付ける先が社外になりうるので設定側で固定できるようにしておく。
-   */
-  const h = await headers();
-  const origin =
-    process.env.APP_ORIGIN?.replace(/\/$/, "") ?? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? ""}`;
+  /* 催促の文面にはそのまま開けるURLを入れる（相対パスだと貼り付け先で開けないため）。
+     優先順位の理由は appOrigin() 側に書いてある。 */
+  const origin = await appOrigin();
   const judgement = judgeFormDeadline({
     status: form.status,
     opensAt: form.opensAt,
@@ -114,12 +108,15 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
         <div className="mt-4">
           <ReasonNote>
             {missing.length}人がまだ回答していません（{missing.slice(0, 5).map((r) => r.name).join("、")}
-            {missing.length > 5 ? " ほか" : ""}）。回答画面のURLは <code className="text-[11px]">/f/{form.publicToken}</code> です。
+            {missing.length > 5 ? " ほか" : ""}）。
           </ReasonNote>
+          <p className="mt-2">
+            <CopyUrl url={formUrl(origin, form.publicToken)} label="回答画面のURL" />
+          </p>
           <div className="mt-3">
             <CopyReminder
               names={missing.map((r) => r.name)}
-              url={`${origin}/f/${form.publicToken}`}
+              url={formUrl(origin, form.publicToken)}
               deadline={form.closesAt}
             />
           </div>

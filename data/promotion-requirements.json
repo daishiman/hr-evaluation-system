@@ -1,0 +1,242 @@
+[
+ {
+  "gradeCode": "beginner",
+  "kind": "report",
+  "transitionLabel": "等級１→等級２",
+  "seq": 1,
+  "text": "スキルアップ研修（チーフ以上）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "beginner",
+  "kind": "report",
+  "transitionLabel": "等級１→等級２",
+  "seq": 2,
+  "text": "IT機器基礎研修（本部）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "beginner",
+  "kind": "test",
+  "transitionLabel": "等級１→等級２",
+  "seq": 1,
+  "text": "実施事業について",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "regular",
+  "kind": "report",
+  "transitionLabel": "等級２→等級３",
+  "seq": 1,
+  "text": "MBTI Basic Feedback",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "regular",
+  "kind": "report",
+  "transitionLabel": "等級２→等級３",
+  "seq": 2,
+  "text": "ダイアローグ基礎研修",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "regular",
+  "kind": "report",
+  "transitionLabel": "等級２→等級３",
+  "seq": 3,
+  "text": "他事業所の見学（県内３ヶ所）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "regular",
+  "kind": "report",
+  "transitionLabel": "等級２→等級３",
+  "seq": 4,
+  "text": "学会・大会等への参加（１回）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "regular",
+  "kind": "test",
+  "transitionLabel": "等級２→等級３",
+  "seq": 1,
+  "text": "障がい・疾患基礎（指定図書）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "regular",
+  "kind": "test",
+  "transitionLabel": "等級２→等級３",
+  "seq": 2,
+  "text": "MBTI Basic Feedback",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "chief",
+  "kind": "report",
+  "transitionLabel": "等級３→等級４",
+  "seq": 1,
+  "text": "ファシリテーション",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "chief",
+  "kind": "report",
+  "transitionLabel": "等級３→等級４",
+  "seq": 2,
+  "text": "配置加算要件ではない社外研修（２回）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "chief",
+  "kind": "report",
+  "transitionLabel": "等級３→等級４",
+  "seq": 3,
+  "text": "他法人の見学（県内２/県外１ヵ所）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "chief",
+  "kind": "report",
+  "transitionLabel": "等級３→等級４",
+  "seq": 4,
+  "text": "学会・大会等への参加（１回）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "chief",
+  "kind": "report",
+  "transitionLabel": "等級３→等級４",
+  "seq": 5,
+  "text": "他法人との交流会等への参加（３回 ※主催可）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "chief",
+  "kind": "test",
+  "transitionLabel": "等級３→等級４",
+  "seq": 1,
+  "text": "総合支援法等",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "chief",
+  "kind": "test",
+  "transitionLabel": "等級３→等級４",
+  "seq": 2,
+  "text": "MBTI Basic Feedback",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "am1",
+  "kind": "report",
+  "transitionLabel": "AMⅠ→ AMⅡ",
+  "seq": 1,
+  "text": "MBTI：タイプダイナミクス",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "am1",
+  "kind": "report",
+  "transitionLabel": "AMⅠ→ AMⅡ",
+  "seq": 2,
+  "text": "予算書・経理基礎研修",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "am1",
+  "kind": "report",
+  "transitionLabel": "AMⅠ→ AMⅡ",
+  "seq": 3,
+  "text": "配置加算要件ではない社外研修（２回）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "am1",
+  "kind": "report",
+  "transitionLabel": "AMⅠ→ AMⅡ",
+  "seq": 4,
+  "text": "他法人（同事業態）の見学（県内２ヵ所）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "am2",
+  "kind": "report",
+  "transitionLabel": "等級４→等級５",
+  "seq": 1,
+  "text": "ダイアローグ研修：Taking up",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "am2",
+  "kind": "report",
+  "transitionLabel": "等級４→等級５",
+  "seq": 2,
+  "text": "他法人の見学（県内３/県外２ヵ所）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "am2",
+  "kind": "report",
+  "transitionLabel": "等級４→等級５",
+  "seq": 3,
+  "text": "配置加算要件ではない社外研修（３回）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "am2",
+  "kind": "report",
+  "transitionLabel": "等級４→等級５",
+  "seq": 4,
+  "text": "学会・大会等への参加（２回）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "am2",
+  "kind": "report",
+  "transitionLabel": "等級４→等級５",
+  "seq": 5,
+  "text": "他法人との交流会等への参加（６回 ※主催可）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "am2",
+  "kind": "test",
+  "transitionLabel": "等級４→等級５",
+  "seq": 1,
+  "text": "MBTI協会認定ユーザー試験",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "manager1",
+  "kind": "report",
+  "transitionLabel": "ManagerⅠ→ ManagerⅡ",
+  "seq": 1,
+  "text": "他法人の見学（県内２ / 県外４ヵ所）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "manager1",
+  "kind": "report",
+  "transitionLabel": "ManagerⅠ→ ManagerⅡ",
+  "seq": 2,
+  "text": "運営・マネジメントに関する研修参加（３回）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "manager1",
+  "kind": "report",
+  "transitionLabel": "ManagerⅠ→ ManagerⅡ",
+  "seq": 3,
+  "text": "他法人との交流会等への参加（10回 ※主催可）",
+  "isGate": 1
+ },
+ {
+  "gradeCode": "manager1",
+  "kind": "test",
+  "transitionLabel": "ManagerⅠ→ ManagerⅡ",
+  "seq": 1,
+  "text": "新規事業計画・予算（案）の立案作成",
+  "isGate": 1
+ }
+]

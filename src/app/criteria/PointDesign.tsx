@@ -69,12 +69,10 @@ export function PointDesign({
   rule,
   gradeName,
   selectableCount,
-  monetaryNames,
 }: {
   rule: GradePointRule | null;
   gradeName: string;
   selectableCount: number;
-  monetaryNames: string[];
 }) {
   if (!rule) {
     return (
@@ -120,10 +118,8 @@ export function PointDesign({
         {rule.majorSlotCount > 0 && (
           <SlotRow
             swatch="var(--brand)"
-            title={`${rule.majorSlotPoints}点枠（金銭に関わる項目）`}
-            detail={`${rule.majorSlotPoints}点 × ${rule.majorSlotCount}つ。${
-              monetaryNames.length > 0 ? `${monetaryNames.join("・")} から1つだけ選ぶ` : "選べる候補が登録されていません"
-            }`}
+            title={`${rule.majorSlotPoints}点枠（とくに重く見る項目）`}
+            detail={`${rule.majorSlotPoints}点 × ${rule.majorSlotCount}つ。下の「選べる項目」から選ぶ（どの分類からでも可）`}
             subtotal={rule.majorSlotPoints * rule.majorSlotCount}
           />
         )}

@@ -4,8 +4,11 @@
  * 制度（2026-08-11 確定・data/kpi-points.json のランクA行で実測検証済み）:
  *   - 評価は等級区分を問わず 100点満点。100点で次の等級に昇格する。
  *   - 「等級要件達成率」(No.1) は全等級で必須の固定枠。配点は等級区分ごとに違う。
- *   - Chief 以上は金銭系（単価率／売上達成率／利益率）を1つだけ 20点枠として選ぶ。
+ *   - Chief 以上は「ほかより重く見る項目」を1つだけ 20点枠として選ぶ。
+ *     2026-08-11 まではこの枠を金銭系（単価率／売上達成率／利益率）に限っていたが、
+ *     何を重く見るかは会社が決めることなので、どの項目でも置けるようにした。
  *   - 残りは1項目 10点。
+ *   - どの枠にどの項目を入れるか、どの分類から選ぶかは自由（同じ分類の重複も可）。
  *
  *   等級区分  固定枠  20点枠  10点枠  項目数
  *   Beginner   100      0       0        1
@@ -112,7 +115,10 @@ export function indexRules(rules: GradePointRule[]): Map<string, GradePointRule>
  */
 export function describeRule(rule: GradePointRule): string {
   const parts = [`等級要件達成率（固定枠）${rule.fixedSlotPoints}点`];
-  if (rule.majorSlotCount > 0) parts.push(`金銭系の${rule.majorSlotPoints}点枠を${rule.majorSlotCount}項目`);
+  if (rule.majorSlotCount > 0) parts.push(`${rule.majorSlotPoints}点枠を${rule.majorSlotCount}項目`);
   if (rule.minorSlotCount > 0) parts.push(`ほかの項目を${rule.minorSlotPoints}点ずつ${rule.minorSlotCount}項目`);
-  return `${rule.pointGroup} は ${parts.join(" ＋ ")} ＝ ${rule.totalPoints}点。配点は等級区分から決まるため、この画面では変更できません。`;
+  return (
+    `${rule.pointGroup} は ${parts.join(" ＋ ")} ＝ ${rule.totalPoints}点。配点は等級区分から決まるため、この画面では変更できません。` +
+    "固定枠を除く枠には、どの分類のどの項目でも入れられます（同じ分類から複数選んでもかまいません）。"
+  );
 }

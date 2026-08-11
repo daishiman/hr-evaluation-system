@@ -26,19 +26,22 @@ export interface CategoryOption {
   description: string | null;
 }
 
-/** 等級区分1つぶんの設定（持ち点の型・選べる項目・いまの選択） */
+/** 等級区分1つぶんの設定（持ち点の型・いまの選択） */
 export interface GroupSetup {
   pointGroup: string;
   /** その等級区分に属する等級名（「等級４：AM Ⅰ・等級４：AM Ⅱ」のような表示用の文字列） */
   gradeLabel: string;
   rule: GradePointRule;
-  /** その等級区分で選べる項目のID（kpi_reference_points に行がある項目） */
-  selectableItemIds: string[];
+  /**
+   * その等級区分でランク基準（A〜E）が定義されている項目のID。
+   * 選べる項目を絞るためではなく、「その等級区分を想定していない閾値で採点される」項目に注意を出すために使う。
+   */
+  ratedItemIds: string[];
   initial: { kpiItemId: string; isFixedSlot: boolean; isMajorSlot: boolean }[];
 }
 
 interface Pick {
-  /** 20点枠に選んだ金銭系の項目。20点枠を持たない等級区分では null */
+  /** 重い枠（20点枠）に選んだ項目。この枠を持たない等級区分では null */
   majorId: string | null;
   /** 10点枠に選んだ項目 */
   minorIds: string[];
@@ -137,9 +140,8 @@ export function SchemeEditor({
               selections: sel,
               validation: validateScheme(sel, {
                 rule: g.rule,
-                selectableItemIds: g.selectableItemIds,
                 fixedSlotItemIds: kpiItems.filter((k) => k.isFixedSlot).map((k) => k.id),
-                monetaryItemIds: kpiItems.filter((k) => k.isMonetary).map((k) => k.id),
+                ratedItemIds: g.ratedItemIds,
                 itemNameOf: (id) => itemOf(id)?.name ?? id,
               }),
             },
@@ -156,8 +158,10 @@ export function SchemeEditor({
 
   const { selections, validation: v } = results[group.pointGroup];
   const rule = group.rule;
-  const selectable = new Set(group.selectableItemIds);
-  const monetaryOptions = kpiItems.filter((k) => k.isMonetary && selectable.has(k.id) && !k.isFixedSlot);
+  /* 候補は絞らない。固定枠の項目だけは重複して選べないので外す。
+     rated は「その等級区分でランク基準があるか」。選べるかどうかではなく、注意を出すかどうかに使う。 */
+  const rated = new Set(group.ratedItemIds);
+  const majorOptions = kpiItems.filter((k) => !k.isFixedSlot);
   const minorRemaining = rule.minorSlotCount - pick.minorIds.length;
 
   const setPick = (next: Partial<Pick>) => {
@@ -270,6 +274,21 @@ export function SchemeEditor({
           </ReasonNote>
         </div>
       )}
+
+      {/* 保存はできるが知らせておくこと。エラーと同じ見た目にすると区別が付かないため、
+          「保存を止めるものではない」ことを見出しで明示する。 */}
+      {v.warnings.length > 0 && (
+        <div className="mt-3">
+          <ReasonNote>
+            <p className="m-0 font-bold">保存はできますが、ご確認ください</p>
+            <ul className="m-0 list-disc pl-5">
+              {v.warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </ReasonNote>
+        </div>
+      )}
       {error && <ReasonNote>{error}</ReasonNote>}
       {message && <p className="m-0 mt-3 text-[13px] text-[var(--brand-deep)]">{message}</p>}
 
@@ -296,11 +315,11 @@ export function SchemeEditor({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="section-heading m-0">
-                {rule.majorSlotPoints}点枠（金銭系から1つ） <Badge tone="required">必須</Badge>
+                {rule.majorSlotPoints}点枠（1つ選ぶ） <Badge tone="required">必須</Badge>
               </p>
               <p className="footnote m-0">
-                単価率・売上達成率・利益率のうち1つを、ほかより重い{rule.majorSlotPoints}点の枠として選びます。
-                {group.pointGroup === "Chief" && " Chief では利益率を選べません（この等級区分の評価対象外のため）。"}
+                ほかより重い{rule.majorSlotPoints}点の枠です。どの項目でも置けます（分類も問いません）。
+                この等級区分でとくに重く見たい項目を1つ選んでください。
               </p>
             </div>
             <p className="m-0">
@@ -308,7 +327,7 @@ export function SchemeEditor({
             </p>
           </div>
           <div className="field-grid mt-3">
-            {monetaryOptions.map((o) => (
+            {majorOptions.map((o) => (
               <button
                 key={o.id}
                 type="button"
@@ -322,7 +341,15 @@ export function SchemeEditor({
                     : "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-[13px] hover:border-[var(--brand)]"
                 }
               >
-                <span className="block font-bold">{o.name}</span>
+                <span className="block font-bold">
+                  {o.name}
+                  {!rated.has(o.id) && (
+                    <>
+                      {" "}
+                      <Badge tone="required">基準未設定</Badge>
+                    </>
+                  )}
+                </span>
                 <span className="block text-[11px] text-[var(--ink-muted)]">
                   単位 {o.unit}
                   {o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}
@@ -335,9 +362,7 @@ export function SchemeEditor({
 
       {rule.minorSlotCount > 0 ? (
         categories.map((c) => {
-          const options = kpiItems.filter(
-            (k) => k.categoryId === c.id && selectable.has(k.id) && !k.isFixedSlot && k.id !== pick.majorId,
-          );
+          const options = kpiItems.filter((k) => k.categoryId === c.id && !k.isFixedSlot && k.id !== pick.majorId);
           if (options.length === 0) return null;
           return (
             <Card key={c.id} className="card-pad mt-4">
@@ -374,6 +399,12 @@ export function SchemeEditor({
                           <>
                             {" "}
                             <ProvisionalMark note="制度として未確定の項目です（叩き台）。" />
+                          </>
+                        )}
+                        {!rated.has(o.id) && (
+                          <>
+                            {" "}
+                            <Badge tone="required">基準未設定</Badge>
                           </>
                         )}
                       </span>

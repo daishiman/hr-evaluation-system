@@ -2,27 +2,32 @@ import { Badge, Card, Num } from "@/components/ui";
 import type { SelectableItem } from "./data";
 
 /**
- * その等級区分で「選べる項目」の一覧。
+ * その等級区分で選べる項目の一覧。
  *
- * 選べるかどうかは kpi_reference_points（元の配点表の写し）に行があるかどうかが正。
- * 元の表で「-」だった組み合わせは行を作っていないので、ここに出てこない項目は
- * 「その等級区分では評価しない」という意味になる。
+ * 2026-08-11 の自由化により、固定枠を除けば全項目がどの枠にも入れられる。
+ * 一覧から項目を消す条件は無い。
+ * ランク基準が未設定の項目は消さずに残し、その旨を添える（消すと理由が読めなくなるため）。
  */
 
 function ItemRow({
   item,
   points,
   adopted,
+  href,
 }: {
   item: SelectableItem;
   points: number;
   adopted: boolean;
+  /** その項目のランク基準（A〜E）へのリンク */
+  href: string;
 }) {
   return (
     <div className="card-row items-start">
       <div className="row-main">
         <p className="todo-row-title m-0">
-          No.{item.no} {item.name}{" "}
+          <a href={href} className="underline">
+            No.{item.no} {item.name}
+          </a>{" "}
           {adopted && <Badge tone="active">この等級で採用中</Badge>}
           {item.isProvisional && <Badge tone="dropped">仮置き</Badge>}
         </p>
@@ -41,7 +46,7 @@ function ItemRow({
 
 export function SelectableItems({
   items,
-  missingMonetary,
+  withoutCriteria,
   majorSlotPoints,
   majorSlotCount,
   minorSlotPoints,
@@ -49,9 +54,10 @@ export function SelectableItems({
   fixedSlotPoints,
   adoptedIds,
   gradeName,
+  criteriaHref,
 }: {
   items: SelectableItem[];
-  missingMonetary: SelectableItem[];
+  withoutCriteria: SelectableItem[];
   majorSlotPoints: number;
   majorSlotCount: number;
   minorSlotPoints: number;
@@ -59,11 +65,13 @@ export function SelectableItems({
   fixedSlotPoints: number;
   adoptedIds: Set<string>;
   gradeName: string;
+  /** 項目名から、その項目のランク基準（A〜E）へ飛ぶためのリンク */
+  criteriaHref: (kpiItemId: string) => string;
 }) {
   const fixed = items.filter((i) => i.isFixedSlot);
-  const monetary = items.filter((i) => i.isMonetary);
-  // 20点枠を持たない等級区分では、金銭系の項目も「10点枠の候補」として扱われる
-  const others = items.filter((i) => !i.isFixedSlot && !(majorSlotCount > 0 && i.isMonetary));
+  /* 固定枠以外は、20点枠にも10点枠にも同じ項目を置けるようになったため、
+     枠ごとに候補を分けて出す意味がなくなった。1つの一覧にまとめる。 */
+  const others = items.filter((i) => !i.isFixedSlot);
 
   // カテゴリごとにまとめる。33項目を1列に並べると、どこを見ればよいか分からなくなるため
   const byCategory = new Map<string, SelectableItem[]>();
@@ -76,42 +84,46 @@ export function SelectableItems({
     <>
       <Card>
         {fixed.map((i) => (
-          <ItemRow key={i.kpiItemId} item={i} points={fixedSlotPoints} adopted={adoptedIds.has(i.kpiItemId)} />
+          <ItemRow
+            key={i.kpiItemId}
+            item={i}
+            points={fixedSlotPoints}
+            adopted={adoptedIds.has(i.kpiItemId)}
+            href={criteriaHref(i.kpiItemId)}
+          />
         ))}
       </Card>
       <p className="footnote mt-2">
         等級要件達成率は差し替えできません。どの等級でも必ずこの1項目が入ります。
       </p>
 
-      {majorSlotCount > 0 && (
-        <>
-          <p className="section-heading mt-5 mb-2">
-            {majorSlotPoints}点枠の候補（金銭に関わる項目・この中から1つ）
-          </p>
-          <Card>
-            {monetary.length === 0 ? (
-              <div className="card-row">
-                <p className="m-0 text-[13px]">この等級区分で選べる金銭に関わる項目が登録されていません。</p>
-              </div>
-            ) : (
-              monetary.map((i) => (
-                <ItemRow key={i.kpiItemId} item={i} points={majorSlotPoints} adopted={adoptedIds.has(i.kpiItemId)} />
-              ))
-            )}
-          </Card>
-          {missingMonetary.length > 0 && (
-            <p className="footnote mt-2">
-              {missingMonetary.map((i) => i.name).join("・")}は {gradeName} では選べません。
-              元の配点表にこの等級区分の行が無く、制度としてこの等級では評価しないと決まっているためです。
-            </p>
-          )}
-        </>
-      )}
-
       <p className="section-heading mt-5 mb-2">
-        {minorSlotPoints}点枠の候補（<Num value={others.length} unit="件" />
-        の中から <Num value={minorSlotCount} unit="つ" />）
+        選べる項目（<Num value={others.length} unit="件" />
+        の中から{" "}
+        {majorSlotCount > 0 ? (
+          <>
+            {majorSlotPoints}点枠に <Num value={majorSlotCount} unit="つ" />、{minorSlotPoints}点枠に{" "}
+            <Num value={minorSlotCount} unit="つ" />
+          </>
+        ) : (
+          <>
+            {minorSlotPoints}点枠に <Num value={minorSlotCount} unit="つ" />
+          </>
+        )}
+        ）
       </p>
+      <p className="footnote mb-2">
+        どの項目をどの枠に入れるかは自由です。分類はまとめて見るための区切りで、同じ分類から何項目選んでもかまいません。
+        {majorSlotCount > 0 && `${majorSlotPoints}点枠にもこの一覧の項目から選びます。`}
+      </p>
+      {withoutCriteria.length > 0 && (
+        <p className="footnote mb-2">
+          {withoutCriteria.map((i) => i.name).join("・")}のランク基準（A〜E）は、{gradeName}{" "}
+          を対象として想定されていません。選ぶことも採点することもできますが、
+          上位の等級を想定して作られた閾値がそのまま使われるため、{gradeName}{" "}
+          には厳しすぎる可能性があります。項目名から閾値を確認してください。
+        </p>
+      )}
       {others.length === 0 ? (
         <p className="footnote">
           この等級区分では、等級要件達成率だけで満点になります。ほかの項目は評価の対象になりません（0点ではなく、そもそも点数を付けません）。
@@ -130,7 +142,9 @@ export function SelectableItems({
                 <ul className="m-0 list-none space-y-1 p-0 text-[13px]">
                   {list.map((i) => (
                     <li key={i.kpiItemId}>
-                      No.{i.no} {i.name}
+                      <a href={criteriaHref(i.kpiItemId)} className="underline">
+                        No.{i.no} {i.name}
+                      </a>
                       {adoptedIds.has(i.kpiItemId) && <> <Badge tone="active">採用中</Badge></>}
                       <span className="footnote">
                         {" "}

@@ -187,31 +187,22 @@ export async function buildFormDraft(opts: {
     const kpiNames = kpiIds.length
       ? await db.select().from(s.kpiItems).where(inArray(s.kpiItems.id, kpiIds))
       : [];
-    /* 「その等級ではランク基準が定義されていない項目」を落とすための一覧。
-       kpi_rank_criteria.target_grades は元シートの「対象等級」欄そのままで、
-       ここまで一度も参照されていなかった（デッド列）。
-       基準が無い項目を出題しても、集計時にランクを付けられず判定外になるだけなので、
-       設問の時点で外す。 */
-    const rankTargets = kpiIds.length
-      ? await db
-          .select({ kpiItemId: s.kpiRankCriteria.kpiItemId, targetGrades: s.kpiRankCriteria.targetGrades })
-          .from(s.kpiRankCriteria)
-          .where(and(eq(s.kpiRankCriteria.companyId, companyId), inArray(s.kpiRankCriteria.kpiItemId, kpiIds)))
-      : [];
-    const ratedHere = (kpiItemId: string) => {
-      const rows = rankTargets.filter((r) => r.kpiItemId === kpiItemId);
-      // 基準行そのものが無い項目は判断材料が無いので落とさない（設定漏れを設問の消失にしない）
-      if (rows.length === 0) return true;
-      return rows.some((r) => targetsPointGroup(r.targetGrades, grade.pointGroup));
-    };
+    /* 設問を出すかどうかは「管理者がこの等級区分で選んだかどうか」で決める。items がその答え。
+       マスタの「対象等級」欄（kpi_questions.target_grades / kpi_rank_criteria.target_grades）は
+       元スプレッドシートの推奨であって、会社が選び直したなら会社の意思のほうが正しい。
 
+       2026-08-11 まではランク基準の対象等級に合わない項目を丸ごと落としていたが、
+       項目選択を自由化した結果「選べるのにアンケートに出ず、点が付かない」項目が生まれるため、
+       この足切りはやめた。基準が未設定であることは評価セットの画面側で警告する。 */
     for (const i of items) {
-      if (!ratedHere(i.kpiItemId)) continue;
-      for (const q of questions.filter(
-        // kpi_questions.target_grades もデッド列だった。この列を見ないと、
-        // Beginner のアンケートに Chief 以上限定の設問（q4_1 昇給率・q6_1 単価率など）が出てしまう。
-        (x) => x.kpiItemId === i.kpiItemId && targetsPointGroup(x.targetGrades, grade.pointGroup),
-      )) {
+      /* 設問は原則この等級区分向けのものだけを出す。
+         Beginner のアンケートに Chief 以上限定の設問（q4_1 昇給率など）が出るのを防ぐため。
+         ただし1件も残らない場合は、対象等級の指定を無視して全部出す。
+         管理者がこの等級区分で選んだ以上、実績を聞かなければ評価そのものが成立しないため、
+         「設問が消える」より「想定外の等級に設問が出る」ほうが害が小さい。 */
+      const mine = questions.filter((x) => x.kpiItemId === i.kpiItemId);
+      const forThisGrade = mine.filter((x) => targetsPointGroup(x.targetGrades, grade.pointGroup));
+      for (const q of forThisGrade.length > 0 ? forThisGrade : mine) {
         push({
           section: "kpi",
           questionType: q.inputType === "select" ? "single" : "number",

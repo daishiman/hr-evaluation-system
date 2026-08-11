@@ -66,6 +66,25 @@ function boundText(c: RankCriterionRow, direction: string): string {
   return "範囲の指定なし";
 }
 
+/**
+ * 項目ブロックのアンカーID。
+ * 一覧（選べる項目・採用中の項目）から「その項目の評価基準」へ直接飛ばすために、
+ * リンク側と描画側で同じ関数を使う（文字列を二重に書くとズレるため）。
+ */
+export function anchorIdOf(kpiItemId: string): string {
+  return `kpi-${kpiItemId}`;
+}
+
+/** 定義書の1列を「見出し：中身」で出す。値が無い列は行ごと出さない（空欄を並べても読めないため）。 */
+function DefRow({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <p className="m-0 text-[13px]">
+      <span className="footnote">{label}</span> {value}
+    </p>
+  );
+}
+
 function ItemFlow({
   item,
   weight,
@@ -74,6 +93,7 @@ function ItemFlow({
   questions,
   criteria,
   ratios,
+  open,
 }: {
   item: SelectableItem;
   weight: number;
@@ -82,11 +102,13 @@ function ItemFlow({
   questions: QuestionRow[];
   criteria: RankCriterionRow[];
   ratios: { rank: string; ratio: number }[];
+  /** 一覧から「この項目の評価を見る」で飛んできたときだけ開いておく */
+  open: boolean;
 }) {
   const sorted = [...criteria].sort((a, b) => RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank));
 
   return (
-    <details className="card card-pad">
+    <details className="card card-pad" id={anchorIdOf(item.kpiItemId)} open={open}>
       <summary className="cursor-pointer list-item text-[13px]">
         <span className="font-semibold">
           No.{item.no} {item.name}
@@ -98,6 +120,32 @@ function ItemFlow({
       </summary>
 
       <div className="mt-3 grid gap-4">
+        <div>
+          <p className="m-0 mb-1 text-[12px] font-semibold text-[var(--ink-muted)]">⓪ この項目の定義</p>
+          <div className="grid gap-1">
+            <DefRow label="何を見る項目か" value={item.intent} />
+            <DefRow label="実績区分" value={item.measureType} />
+            <DefRow label="データ取得元" value={item.dataSource} />
+            <DefRow label="判断時期" value={item.judgeTiming} />
+            <DefRow
+              label="A水準の型"
+              value={[item.aType, item.aStandard && `A＝${item.aStandard}`].filter(Boolean).join(" ／ ") || null}
+            />
+            <DefRow
+              label="制御可能性"
+              value={
+                item.controllability === "外部影響"
+                  ? "外部影響（利用者・家族・市場の反応が結果を左右する）"
+                  : item.controllability === "内部完結"
+                    ? "内部完結（本人・事業所の実行だけでAに届く）"
+                    : item.controllability
+              }
+            />
+            <DefRow label="なぜその水準をAとするか" value={item.aRationale} />
+            <DefRow label="備考" value={item.remarks} />
+          </div>
+        </div>
+
         <div>
           <p className="m-0 mb-1 text-[12px] font-semibold text-[var(--ink-muted)]">① 本人に聞くこと</p>
           {questions.length === 0 ? (
@@ -189,6 +237,7 @@ export function ScoringFlow({
   questions,
   criteria,
   ratios,
+  openItemId,
 }: {
   items: SelectableItem[];
   weightOf: (item: SelectableItem) => number;
@@ -197,6 +246,7 @@ export function ScoringFlow({
   questions: QuestionRow[];
   criteria: RankCriterionRow[];
   ratios: { rank: string; ratio: number }[];
+  openItemId?: string | null;
 }) {
   if (items.length === 0) {
     return (
@@ -218,6 +268,7 @@ export function ScoringFlow({
           questions={questions.filter((q) => q.kpiItemId === item.kpiItemId)}
           criteria={criteria.filter((c) => c.kpiItemId === item.kpiItemId)}
           ratios={ratios}
+          open={item.kpiItemId === openItemId}
         />
       ))}
     </div>
