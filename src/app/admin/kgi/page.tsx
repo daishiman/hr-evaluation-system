@@ -252,7 +252,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
           <p className="footnote">
             元の表は「111〜120%」のように整数で書かれていて、99%と100%の間・110%と111%の間が抜けていました。
             99.5% のような小数が来てもどこかに必ず当てはまるよう、下限以上・上限未満で連続させています。
-            係数そのものは <Link href="/admin/masters">制度マスタ</Link> で変更できます。
+            係数そのものは <Link href="/admin/masters">等級・昇格・行動指針</Link> で変更できます。
           </p>
         </>
       )}

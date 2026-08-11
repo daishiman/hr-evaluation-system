@@ -5,6 +5,8 @@ import { requireRole } from "@/lib/session";
 import { getDb, schema as s } from "@/lib/db";
 import { getForm, listFormQuestions, listKpiItems } from "@/lib/queries";
 import { FormBuilder, type BuilderQuestion } from "@/components/FormBuilder";
+import { FormPreview } from "@/components/FormPreview";
+import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { Badge, Card, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL } from "@/lib/view";
@@ -64,7 +66,21 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
     kpiQuestionKey: q.kpiQuestionKey,
   }));
 
-  const editable = responses.length === 0;
+  // 公開後は回答0件でもすでに読まれている可能性があるため、同じ版の内容は変えない。
+  const editable = form.status === "draft" && responses.length === 0;
+  const previewQuestions = questions.map((q) => ({
+    id: q.id,
+    section: q.section,
+    questionType: q.questionType,
+    title: q.title,
+    helpText: q.helpText,
+    unit: q.unit,
+    required: q.required,
+    validationMin: q.validationMin,
+    validationMax: q.validationMax,
+    optionsJson: q.optionsJson,
+    displayOrder: q.displayOrder,
+  }));
 
   return (
     <>
@@ -91,7 +107,34 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
         <p className="footnote m-0 mt-1">
           回答画面には、配点・ランク基準・昇格に必要な点数は一切表示されません（回答が点数合わせにならないようにするためです）。
         </p>
+        {/* 設問は制度マスタ・評価セットの写し。直す向きは常に「制度 → アンケート」にする。 */}
+        <p className="footnote m-0 mt-1">
+          設問は、等級要件・昇格要件・行動指針・評価セットの設定から自動で作られます。下書きで回答がまだない場合だけ、制度側の設定を直してから作り直せます。公開済み・締め切り済みの版は当時の記録として変えず、内容を変えるときは新しい版を作ってください。
+        </p>
+        {editable && form.status === "draft" && (
+          <div className="mt-3">
+            <ActionButton
+              url={`/api/forms/${form.id}/questions`}
+              body={{}}
+              label="いまの評価項目に合わせて設問を作り直す"
+              variant="secondary"
+              confirm={`「${form.title}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ回答は1件もありません。よろしいですか？`}
+            />
+          </div>
+        )}
       </Card>
+
+      <SectionHeading>回答者に見える内容（確認専用）</SectionHeading>
+      <p className="footnote mb-2">
+        保存済みの設問文・補足・必須／任意・答え方を表示します。ここには入力欄がなく、開いても回答や下書きは作られません。
+      </p>
+      <details className="card card-pad">
+        <summary className="cursor-pointer text-[13px] font-semibold">アンケートの中身を表示する（{previewQuestions.length}問）</summary>
+        <div className="mt-4 border-t border-[var(--line)] pt-4">
+          {form.description && <p className="mb-4 whitespace-pre-wrap text-[13px] leading-relaxed">{form.description}</p>}
+          <FormPreview questions={previewQuestions} />
+        </div>
+      </details>
 
       <SectionHeading>タイトルと説明</SectionHeading>
       {editable ? (
@@ -110,8 +153,10 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
            入力欄を出しておいて保存時に断ると徒労になるため、理由を先に出す。 */
         <>
           <ReasonNote>
-            このアンケートにはすでに{responses.length}
-            件の回答があるため、タイトルと説明文は変更できません。回答した方が読んだ文面をあとから変えると、何に対する回答か分からなくなるためです。内容を変えるときは、アンケート一覧から新しい版を作ってください。
+            {responses.length > 0
+              ? `このアンケートにはすでに${responses.length}件の回答があるため、タイトルと説明文は変更できません。回答した方が読んだ文面をあとから変えると、何に対する回答か分からなくなるためです。`
+              : "公開済みのアンケートは、回答が0件でもすでに読まれている可能性があるため、タイトルと説明文を変更できません。"}
+            内容を変えるときは、アンケート一覧から新しい版を作ってください。
           </ReasonNote>
           <Card className="card-pad mt-2">
             <p className="m-0 text-[13px] font-bold">{form.title}</p>
@@ -143,7 +188,9 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
         lockReason={
           editable
             ? undefined
-            : `このアンケートにはすでに${responses.length}件の回答があるため、設問を変更できません。内容を変えるときは、アンケート一覧から新しい版を作ってください。`
+            : responses.length > 0
+              ? `このアンケートにはすでに${responses.length}件の回答があるため、設問を変更できません。内容を変えるときは、アンケート一覧から新しい版を作ってください。`
+              : "公開済みのアンケートは、回答が0件でもすでに読まれている可能性があるため、設問を変更できません。内容を変えるときは、アンケート一覧から新しい版を作ってください。"
         }
       />
     </>

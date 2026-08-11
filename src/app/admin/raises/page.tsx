@@ -10,7 +10,7 @@ import {
   listRaiseSettings,
 } from "@/lib/queries";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, Disclosure, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { formatDate } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -151,127 +151,123 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
             </>
           )}
 
-          <SectionHeading>{grade.name} の改定履歴（{myRevisions.length}件）</SectionHeading>
-          {myRevisions.length === 0 ? (
-            <Card className="card-pad">
-              <p className="footnote m-0">
-                まだ金額を変えていません。上の金額を変えて保存すると、変更前後の金額と理由がここに残ります。
-              </p>
-            </Card>
+          <div className="mt-4">
+            <Disclosure summary={`${grade.name} の改定履歴`} meta={`${myRevisions.length}件`}>
+              {myRevisions.length === 0 ? (
+                <p className="footnote m-0">
+                  まだ金額を変えていません。上の金額を変えて保存すると、変更前後の金額と理由がここに残ります。
+                </p>
+              ) : (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>変更した日</th>
+                        <th className="col-num">変更前（円）</th>
+                        <th className="col-num">変更後（円）</th>
+                        <th>適用開始</th>
+                        <th>理由</th>
+                        <th>変更した人</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {myRevisions.map((r) => (
+                        <tr key={r.id}>
+                          <td>{formatDate(r.createdAt)}</td>
+                          <td className="col-num"><Num value={r.beforeAmount} /></td>
+                          <td className="col-num"><Num value={r.afterAmount} /></td>
+                          <td>{r.effectiveFrom ?? "—"}</td>
+                          <td>{r.reason ?? "—"}</td>
+                          <td>{r.revisedByName ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Disclosure>
+          </div>
+        </>
+      )}
+
+      <div className="mt-4">
+        <Disclosure summary="事業所ごとの調整率" meta={offices.length === 0 ? "事業所なし" : `${offices.length}事業所`}>
+          <p className="m-0 text-[13px]">
+            事業所ごとに金額を変える場合だけ設定します。1.0 のままなら等級の金額をそのまま適用します。
+          </p>
+          <div className="mt-3 grid gap-3">
+            {offices.length === 0 ? (
+              <ReasonNote>事業所が登録されていません。</ReasonNote>
+            ) : (
+              offices.map((o) => (
+                <RecordForm
+                  key={o.id}
+                  url="/api/masters"
+                  method="PUT"
+                  fixed={{ kind: "office", id: o.id }}
+                  title={o.name}
+                  submitLabel="この事業所の設定を保存する"
+                  description={
+                    raise
+                      ? `いまの調整率だと、${grade?.name}の月額は ${Math.round(raise.monthlyAmount * o.raiseAdjustRate).toLocaleString("ja-JP")}円 になります。`
+                      : undefined
+                  }
+                  fields={[
+                    { name: "name", label: "事業所名", type: "text", required: true, defaultValue: o.name },
+                    { name: "raiseAdjustRate", label: "調整率", type: "number", required: true, defaultValue: o.raiseAdjustRate, unit: "倍" },
+                  ]}
+                />
+              ))
+            )}
+          </div>
+        </Disclosure>
+      </div>
+
+      <div className="mt-4">
+        <Disclosure summary="判定ルールと特例を確認する" meta={`判定${patterns.length}件・特例${exceptions.length}件`}>
+          <h2 className="section-heading">ランクの組み合わせと扱い</h2>
+          {patterns.length === 0 ? (
+            <ReasonNote>判定パターンが登録されていません。</ReasonNote>
           ) : (
-            <div className="table-scroll">
+            <div className="table-scroll mt-3">
               <table>
                 <thead>
-                  <tr>
-                    <th>変更した日</th>
-                    <th className="col-num">変更前（円）</th>
-                    <th className="col-num">変更後（円）</th>
-                    <th>適用開始</th>
-                    <th>理由</th>
-                    <th>変更した人</th>
-                  </tr>
+                  <tr><th>8項目のランク</th><th>判定</th><th>扱い</th></tr>
                 </thead>
                 <tbody>
-                  {myRevisions.map((r) => (
-                    <tr key={r.id}>
-                      <td>{formatDate(r.createdAt)}</td>
-                      <td className="col-num">
-                        <Num value={r.beforeAmount} />
-                      </td>
-                      <td className="col-num">
-                        <Num value={r.afterAmount} />
-                      </td>
-                      <td>{r.effectiveFrom ?? "—"}</td>
-                      <td>{r.reason ?? "—"}</td>
-                      <td>{r.revisedByName ?? "—"}</td>
+                  {patterns.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.pattern}</td>
+                      <td><Badge tone={p.judgment.includes("満たす") ? "done" : "required"}>{p.judgment}</Badge></td>
+                      <td>{p.treatment}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </>
-      )}
 
-      <SectionHeading>事業所ごとの調整率</SectionHeading>
-      <Card className="card-pad">
-        <p className="m-0 text-[13px]">
-          事業所の事情で金額に差をつける場合に使います。1.0 のままなら調整しません（等級の金額がそのまま適用されます）。
-        </p>
-      </Card>
-      <div className="mt-3 grid gap-3">
-        {offices.length === 0 ? (
-          <ReasonNote>事業所が登録されていません。</ReasonNote>
-        ) : (
-          offices.map((o) => (
-            <RecordForm
-              key={o.id}
-              url="/api/masters"
-              method="PUT"
-              fixed={{ kind: "office", id: o.id }}
-              title={o.name}
-              submitLabel="この事業所の設定を保存する"
-              description={
-                raise
-                  ? `いまの調整率だと、${grade?.name}の月額は ${Math.round(raise.monthlyAmount * o.raiseAdjustRate).toLocaleString("ja-JP")}円 になります。`
-                  : undefined
-              }
-              fields={[
-                { name: "name", label: "事業所名", type: "text", required: true, defaultValue: o.name },
-                { name: "raiseAdjustRate", label: "調整率", type: "number", required: true, defaultValue: o.raiseAdjustRate, unit: "倍" },
-              ]}
-            />
-          ))
-        )}
-      </div>
-
-      <SectionHeading>ランクの組み合わせと扱い</SectionHeading>
-      {patterns.length === 0 ? (
-        <ReasonNote>判定パターンが登録されていません。</ReasonNote>
-      ) : (
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>8項目のランク</th>
-                <th>判定</th>
-                <th>扱い</th>
-              </tr>
-            </thead>
-            <tbody>
-              {patterns.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.pattern}</td>
-                  <td>
-                    <Badge tone={p.judgment.includes("満たす") ? "done" : "required"}>{p.judgment}</Badge>
-                  </td>
-                  <td>{p.treatment}</td>
-                </tr>
+          <h2 className="section-heading mt-5">特例の扱い（{exceptions.length}件）</h2>
+          {exceptions.length === 0 ? (
+            <ReasonNote>特例が登録されていません。</ReasonNote>
+          ) : (
+            <Card className="mt-3">
+              {exceptions.map((e) => (
+                <div key={e.id} className="card-row">
+                  <div className="row-main">
+                    <p className="todo-row-title m-0">{e.caseText}</p>
+                    <p className="todo-row-sub m-0">{e.handling}</p>
+                  </div>
+                  {e.excludesJudgement && <Badge tone="required">判定の対象外</Badge>}
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <SectionHeading>特例の扱い（{exceptions.length}件）</SectionHeading>
-      {exceptions.length === 0 ? (
-        <ReasonNote>特例が登録されていません。</ReasonNote>
-      ) : (
-        <Card>
-          {exceptions.map((e) => (
-            <div key={e.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">{e.caseText}</p>
-                <p className="todo-row-sub m-0">{e.handling}</p>
-              </div>
-              {e.excludesJudgement && <Badge tone="required">判定の対象外</Badge>}
-            </div>
-          ))}
-        </Card>
-      )}
-      <p className="footnote">
-        特例は自動では適用されません。該当する方がいる期は、評価を確定する前に上長が内容を確認してください。
-      </p>
+            </Card>
+          )}
+          <p className="footnote">
+            特例は自動適用されません。該当する方がいる期は、評価を確定する前に上長が確認してください。
+          </p>
+        </Disclosure>
+      </div>
     </>
   );
 }

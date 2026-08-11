@@ -33,26 +33,32 @@ const ACCOUNT: NavGroup = {
 /** 会社の管理者とシステム全体管理者で共通の、会社ごとの運用メニュー。 */
 const COMPANY_GROUPS: NavGroup[] = [
   {
-    title: "評価を進める",
+    title: "制度を順番に設定する",
+    items: [
+      { href: "/admin/setup", label: "制度設定ガイド（1〜6）" },
+      { href: "/admin/masters/requirements", label: "等級要件（支援・運営）" },
+      { href: "/admin/masters", label: "等級・昇格・行動指針" },
+      { href: "/admin/scheme", label: "KPI・評価セット" },
+    ],
+  },
+  {
+    title: "評価を順番に進める",
     items: [
       { href: "/admin/cycles", label: "評価期間" },
       { href: "/admin/forms", label: "アンケート" },
+      { href: "/manager/cycles", label: "評価・結果を確認する" },
+    ],
+  },
+  {
+    title: "運用を補う",
+    items: [
       { href: "/admin/kgi", label: "事業所KGIの達成率" },
-      { href: "/manager/cycles", label: "評価を確認・確定する" },
+      { href: "/admin/raises", label: "昇給の設定" },
     ],
   },
   {
     title: "人を管理する",
     items: [{ href: "/admin/members", label: "社員" }],
-  },
-  {
-    title: "制度を設定する",
-    items: [
-      { href: "/admin/scheme", label: "評価セット（8項目・配点）" },
-      { href: "/admin/masters", label: "制度マスタ" },
-      { href: "/admin/masters/requirements", label: "等級要件（支援・運営）" },
-      { href: "/admin/raises", label: "昇給の設定" },
-    ],
   },
   {
     title: "基準を確認する",

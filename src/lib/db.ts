@@ -12,6 +12,55 @@ export async function getDb(): Promise<DB> {
 
 export { schema };
 
+/** D1 は1つのSQL文につき bound parameter が最大100個。上限ちょうどを避けて99個までにする。 */
+export const D1_SAFE_BOUND_PARAMETER_LIMIT = 99;
+
+/**
+ * Drizzle の INSERT で1行が使う bound parameter 数を安全側に見積もる。
+ *
+ * 渡した列は1列につき1個。加えて schema の `$defaultFn` など、呼び出し側の
+ * オブジェクトには現れない自動列が parameter になるため、4個ぶん余裕を持たせる。
+ * 現在の共通列は created_at / updated_at の2個だが、将来1〜2列増えても
+ * D1の上限を越えないようにしている。
+ */
+export function estimateInsertBoundParameters(row: Record<string, unknown>): number {
+  return Object.keys(row).length + 4;
+}
+
+/**
+ * 各chunkの bound parameter 見積もりがD1の安全上限以下になるよう行を分ける。
+ * 順序と全行を保ち、1行だけで上限を越える入力は黙って発行せず先に失敗させる。
+ */
+export function chunkRowsForD1<T extends Record<string, unknown>>(
+  rows: T[],
+  limit = D1_SAFE_BOUND_PARAMETER_LIMIT,
+): T[][] {
+  if (limit <= 0 || limit >= 100) {
+    throw new Error("D1のbound parameter安全上限は1以上100未満にしてください。");
+  }
+
+  const chunks: T[][] = [];
+  let chunk: T[] = [];
+  let used = 0;
+
+  for (const row of rows) {
+    const needed = estimateInsertBoundParameters(row);
+    if (needed > limit) {
+      throw new Error(`1行のbound parameter見積もり（${needed}個）がD1の安全上限（${limit}個）を超えています。`);
+    }
+    if (chunk.length > 0 && used + needed > limit) {
+      chunks.push(chunk);
+      chunk = [];
+      used = 0;
+    }
+    chunk.push(row);
+    used += needed;
+  }
+
+  if (chunk.length > 0) chunks.push(chunk);
+  return chunks;
+}
+
 /**
  * まとめて登録するときの分割保存。
  *
@@ -24,11 +73,5 @@ export async function insertMany<T extends Record<string, unknown>>(
   run: (rows: T[]) => Promise<any>,
   rows: T[],
 ): Promise<void> {
-  if (rows.length === 0) return;
-  // 作成日時など、書いていない列も自動で付くので少し多めに見積もる
-  const columns = Object.keys(rows[0]).length + 4;
-  const perChunk = Math.max(1, Math.floor(90 / columns));
-  for (let i = 0; i < rows.length; i += perChunk) {
-    await run(rows.slice(i, i + perChunk));
-  }
+  for (const chunk of chunkRowsForD1(rows)) await run(chunk);
 }

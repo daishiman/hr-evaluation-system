@@ -390,11 +390,19 @@ export async function listFormKpiCoverage(companyId: string, cycleId: string) {
 
   const [schemeItems, asked, itemNames] = await Promise.all([
     db
-      .select({ pointGroup: s.schemeItems.pointGroup, kpiItemId: s.schemeItems.kpiItemId })
+      .select({
+        pointGroup: s.schemeItems.pointGroup,
+        kpiItemId: s.schemeItems.kpiItemId,
+        isFixedSlot: s.schemeItems.isFixedSlot,
+      })
       .from(s.schemeItems)
       .where(and(eq(s.schemeItems.companyId, companyId), eq(s.schemeItems.schemeId, scheme.id))),
     db
-      .select({ formId: s.formQuestions.formId, kpiItemId: s.formQuestions.kpiItemId })
+      .select({
+        formId: s.formQuestions.formId,
+        kpiItemId: s.formQuestions.kpiItemId,
+        gradeRequirementId: s.formQuestions.gradeRequirementId,
+      })
       .from(s.formQuestions)
       .innerJoin(s.forms, eq(s.forms.id, s.formQuestions.formId))
       .where(and(eq(s.forms.companyId, companyId), eq(s.forms.cycleId, cycleId))),
@@ -409,13 +417,20 @@ export async function listFormKpiCoverage(companyId: string, cycleId: string) {
     selectedByGroup.set(r.pointGroup, [...(selectedByGroup.get(r.pointGroup) ?? []), r.kpiItemId]);
   }
   const askedByForm = new Map<string, string[]>();
+  /* 固定枠（等級要件達成率）の実績は等級要件の「はい／いいえ」から出す。
+     KPI設問が無くても聞けているので、その事実を別に持っておく（form-sync.ts で合流させる）。 */
+  const fixedSlotItemIds = schemeItems.filter((r) => r.isFixedSlot).map((r) => r.kpiItemId);
+  const requirementFormIds = new Set<string>();
   for (const r of asked) {
+    if (r.gradeRequirementId) requirementFormIds.add(r.formId);
     if (!r.kpiItemId) continue; // 等級要件・行動指針の設問はKPI項目に紐づかない
     askedByForm.set(r.formId, [...(askedByForm.get(r.formId) ?? []), r.kpiItemId]);
   }
   return {
     selectedByGroup,
     askedByForm,
+    fixedSlotItemIds,
+    hasRequirementQuestions: (formId: string) => requirementFormIds.has(formId),
     nameOf: (id: string) => itemNames.find((x) => x.id === id)?.name ?? id,
   };
 }

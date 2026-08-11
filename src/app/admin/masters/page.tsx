@@ -15,7 +15,7 @@ import { RecordForm } from "@/components/RecordForm";
 import { PromotionRequirementEditor } from "@/components/PromotionRequirementEditor";
 import { RankCriteriaPanel } from "@/components/RankCriteriaPanel";
 import { GRADE_REQUIREMENT_MAX } from "@/lib/domain/grade-requirements";
-import { Card, EmptyState, LinkButton, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Card, Disclosure, EmptyState, LinkButton, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +51,7 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
   if (!grade) {
     return (
       <>
-        <PageTitle title="制度マスタ" />
+        <PageTitle title="等級・昇格・行動指針" />
         <EmptyState title="等級が登録されていません" body="初期データの投入が済んでいるかご確認ください。" />
       </>
     );
@@ -67,7 +67,7 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageTitle
-        title="制度マスタ"
+        title="等級・昇格・行動指針"
         lede="評価に使う数値と要件をここで決めます。変更は以後の評価に反映され、確定済みの評価は判定当時の内容のまま残ります。"
       />
 
@@ -128,10 +128,11 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         ]}
       />
       <div className="mt-3">
-        <ReasonNote>
-          行動指針の適用について: 移行元の資料では、AM Ⅰ・AM Ⅱ に行動指針を出さない記録（同期ログ）と、出している記録（実際のアンケート用紙と回答一覧）が食い違っていました。
-          実際に使われていたアンケート用紙のほうを採用して初期値を入れています。制度としての正解はこの画面で会社ごとに切り替えられます。
-        </ReasonNote>
+        <Disclosure summary="行動指針の初期設定について">
+          <p className="footnote m-0">
+            移行元には、AM Ⅰ・AM Ⅱへ行動指針を出さない記録と、実際に出したアンケートがありました。初期値は実際のアンケートを採用していますが、会社の制度に合わせて上の「行動指針の適用」で切り替えられます。
+          </p>
+        </Disclosure>
       </div>
 
       <SectionHeading>昇格の条件</SectionHeading>
@@ -208,35 +209,36 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
       )}
 
       {kgi.length > 0 && (
-        <>
-          <SectionHeading>事業所KGIの達成係数</SectionHeading>
-          <p className="footnote">
-            賞与の個人ポイント計算に使う係数です（個人Pt ＝ KPI評価点の合計 × この係数）。
-          </p>
-          <p className="footnote">
-            元の資料の区分は「95〜99%」と「100〜110%」の間、「111〜120%」と「121%以上」の間が
-            とびとびで、達成率が99.5%や110.5%のときにどの係数を使うか決まっていませんでした。
-            そのため、上の区分の下限にそろえる形（99%までは0.6、100%からは1.0）で
-            すき間を埋めた値を初期値にしています。元の資料そのままの値ではありません。
-          </p>
-          <div className="field-grid">
-            {kgi.map((k) => (
-              <RecordForm
-                key={k.id}
-                url="/api/masters"
-                method="PUT"
-                fixed={{ kind: "kgi", id: k.id }}
-                submitLabel="係数を保存する"
-                title={k.label}
-                description={k.isProvisional ? "いまの値は叩き台の初期値です。" : undefined}
-                fields={[
-                  { name: "label", label: "区分の名前", type: "text", required: true, defaultValue: k.label },
-                  { name: "coefficient", label: "係数", type: "number", required: true, defaultValue: k.coefficient },
-                ]}
-              />
-            ))}
-          </div>
-        </>
+        <div className="mt-4">
+          <Disclosure summary="事業所KGIの達成係数を変更する" meta={`${kgi.length}区分`}>
+            <p className="footnote">
+              賞与の個人ポイント計算に使います（個人Pt ＝ KPI評価点の合計 × 係数）。通常は変更が必要なときだけ開きます。
+            </p>
+            <details className="mb-4">
+              <summary className="cursor-pointer text-[12px] font-semibold text-[var(--ink-muted)]">初期値の決め方を確認する</summary>
+              <p className="footnote m-0 mt-2">
+                元資料の区分間に空白があったため、上の区分の下限にそろえて連続する範囲へ補っています。元資料そのままの値ではありません。
+              </p>
+            </details>
+            <div className="field-grid">
+              {kgi.map((k) => (
+                <RecordForm
+                  key={k.id}
+                  url="/api/masters"
+                  method="PUT"
+                  fixed={{ kind: "kgi", id: k.id }}
+                  submitLabel="係数を保存する"
+                  title={k.label}
+                  description={k.isProvisional ? "いまの値は叩き台の初期値です。" : undefined}
+                  fields={[
+                    { name: "label", label: "区分の名前", type: "text", required: true, defaultValue: k.label },
+                    { name: "coefficient", label: "係数", type: "number", required: true, defaultValue: k.coefficient },
+                  ]}
+                />
+              ))}
+            </div>
+          </Disclosure>
+        </div>
       )}
     </>
   );

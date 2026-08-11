@@ -109,6 +109,32 @@ export function SectionHeading({ children, aside }: { children: ReactNode; aside
   );
 }
 
+/**
+ * 詳細を必要なときだけ開くための共通パネル。
+ * 初期表示では要点（summary / meta）だけにし、長い説明や補助設定で画面を埋めない。
+ */
+export function Disclosure({
+  summary,
+  meta,
+  children,
+  defaultOpen = false,
+}: {
+  summary: ReactNode;
+  meta?: ReactNode;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details className="disclosure card" open={defaultOpen || undefined}>
+      <summary>
+        <span>{summary}</span>
+        {meta && <span className="disclosure-meta">{meta}</span>}
+      </summary>
+      <div className="disclosure-body">{children}</div>
+    </details>
+  );
+}
+
 /* ───────────────────────── 空状態 ─────────────────────────
  * 「次に何をすればいいか」を必ず書く。
  */

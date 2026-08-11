@@ -880,21 +880,30 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 details.disclosure { border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 details.disclosure summary {
   cursor: pointer;
-  padding: 12px 16px;
+  padding: 14px var(--pad-card);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   list-style: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-block);
 }
+details.disclosure summary:hover { background: var(--subtle); }
+details.disclosure[open] summary { border-bottom: 1px solid var(--line); }
 details.disclosure summary::after { content: "＋"; color: var(--ink-muted); font-weight: 400; }
 details.disclosure[open] summary::after { content: "－"; }
 details.disclosure .disclosure-body {
-  padding: 0 16px 14px;
-  font-size: 12px;
+  padding: var(--pad-card);
+}
+details.disclosure .disclosure-body > :first-child { margin-top: 0; }
+details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
+.disclosure-meta {
   color: var(--ink-muted);
-  line-height: 1.9;
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: auto;
+  text-align: right;
 }
 
 .footnote { font-size: 12px; color: var(--ink-muted); }

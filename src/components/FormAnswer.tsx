@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, Card, ReasonNote } from "@/components/ui";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { normalizeNumeric } from "@/lib/ux-patterns";
-import { isAnswered, parseOptions, type OptionLike } from "@/lib/domain/answer-snapshot";
+import { isAnswered, parseOptions, scaleSteps, type OptionLike } from "@/lib/domain/answer-snapshot";
 
 export interface AnswerQuestion {
   id: string;
@@ -270,16 +270,6 @@ export function FormAnswer({
   );
 }
 
-/** 段階（scale）の選択肢。設問に範囲が入っていなければ1〜5にする。 */
-function scaleSteps(q: AnswerQuestion): number[] {
-  const min = q.validationMin ?? 1;
-  const max = q.validationMax ?? 5;
-  if (max <= min || max - min > 10) return [1, 2, 3, 4, 5];
-  const steps: number[] = [];
-  for (let n = min; n <= max; n++) steps.push(n);
-  return steps;
-}
-
 function QuestionField({
   q,
   value,
@@ -297,12 +287,18 @@ function QuestionField({
 
   const body = () => {
     if (q.questionType === "yesno") {
+      /* 「はい」がどちらの意味かは設問ごとに違う（提出した／行った／合格した）。
+         設問と一緒に作られた選択肢の文言があればそれを使い、無いときだけ素の はい／いいえ にする。 */
+      const yesNo =
+        options.length >= 2
+          ? options.map((o) => ({ v: o.score ?? Number(o.value), label: o.label }))
+          : [
+              { v: 1, label: "はい" },
+              { v: 0, label: "いいえ" },
+            ];
       return (
-        <div className="mt-2 flex gap-2" id={`f_${q.id}`} tabIndex={-1}>
-          {[
-            { v: 1, label: "はい" },
-            { v: 0, label: "いいえ" },
-          ].map((o) => (
+        <div className="mt-2 flex flex-wrap gap-2" id={`f_${q.id}`} tabIndex={-1}>
+          {yesNo.map((o) => (
             <button
               key={o.v}
               type="button"
@@ -354,6 +350,10 @@ function QuestionField({
           )}
         </div>
       );
+    }
+
+    if (q.questionType === "single" && options.length === 0) {
+      return <p className="footnote m-0 mt-2">選択肢が登録されていません。会社の管理者にご連絡ください。</p>;
     }
 
     if (q.questionType === "text") {
