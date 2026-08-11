@@ -52,8 +52,8 @@ describe("画面の器の作法", () => {
 
   it("カード1枚の頭は CardHead に集約する（左に読むもの・右に押すものの並べ方を書き起こさない）", () => {
     const owner = join(SRC, "components", "ui.tsx");
-    // SchemeEditor だけは、カードの頭ではなく「カードの中の節見出し」に同じ並びを使っている
-    const allowed = new Set(["SchemeEditor.tsx"]);
+    // SchemeGroupPicker だけは、カードの頭ではなく「カードの中の節見出し」に同じ並びを使っている
+    const allowed = new Set(["SchemeGroupPicker.tsx"]);
     const offenders = sourceFiles.filter(
       (p) =>
         p !== owner &&
