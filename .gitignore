@@ -29,6 +29,9 @@ __pycache__/
 venv/
 dist/
 build/
+# ただしソースの中の build は成果物ではない。
+# /api/evaluations/build は「評価を作る」APIの受け口で、URLの一部としてこの名前になる。
+!src/app/api/evaluations/build/
 *.log
 
 # === 人事評価の実データ（個人情報・評価内容）===
