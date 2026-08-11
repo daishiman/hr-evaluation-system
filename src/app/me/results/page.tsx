@@ -14,7 +14,7 @@ export default async function MyResults() {
 
   const all = (await listEvaluations(viewer.companyId, viewer.role, { employeeId: viewer.id })).filter((e) => e.status === "finalized");
 
-  // 行動指針の点数は「昇格に必要な点数」が逆算できるため、評価される側には返していない。
+  // 行動指針の点数は「昇格に必要な点数」が逆算できるため、一般の方には返していない。
   // 返ってこない系列をグラフに置くと空の折れ線と凡例だけが残るので、見える人にだけ足す。
   const canSeePoints = canSeeCriteria(viewer.role);
   const trend = [...all]

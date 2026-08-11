@@ -33,8 +33,13 @@ const patchSchema = z
     department: z.string().max(60).nullable().optional(),
     hiredAt: z.iso.date("入社日は実在する日付を入力してください").nullable().optional(),
     isActive: z.boolean().optional(),
-    /** パスワードの再発行 */
-    password: z.string().min(8, "パスワードは8文字以上にしてください").max(72).optional(),
+    /**
+     * パスワードの再発行。
+     * 下限は本人の変更画面（PasswordChangeForm の MIN_LENGTH）と揃える。
+     * 画面から送られるのは生成された12文字だが、APIを直接叩かれても
+     * 本人の変更画面より弱い値が入らないようにここで止める。
+     */
+    password: z.string().min(10, "パスワードは10文字以上にしてください").max(72).optional(),
   })
   .strict();
 
@@ -171,11 +176,15 @@ export async function PATCH(req: Request) {
       }
     }
 
+    // 発行した値そのものは返さない（画面が自分で送った値を控えとして持っている）。
+    // ここで返すと、通信の記録や運用のログに平文で残る経路を増やしてしまう。
     return {
       message:
         body.isActive === false
           ? `${target.name}さんを利用停止にしました。これまでの記録は残っています。`
-          : "利用者の情報を保存しました。",
+          : body.password
+            ? `${target.name}さんの仮パスワードを発行しました。いまのログインはすべて解除されています。この画面に出ている値をご本人にお伝えください。`
+            : "利用者の情報を保存しました。",
     };
   });
 }
@@ -226,7 +235,7 @@ const createSchema = z
   .object({
     name: z.string().trim().min(1, "氏名を入力してください").max(60),
     email: z.string().trim().email("メールアドレスの形式を確認してください"),
-    password: z.string().min(8, "パスワードは8文字以上にしてください").max(72),
+    password: z.string().min(10, "パスワードは10文字以上にしてください").max(72),
     role: z.enum(ROLES),
     companyId: z.string().nullable().optional(),
   })

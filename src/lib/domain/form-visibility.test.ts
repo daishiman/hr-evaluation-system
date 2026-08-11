@@ -45,7 +45,7 @@ describe("中身の確認画面に渡す設問", () => {
     expect(JSON.parse(q.optionsJson ?? "[]")[0].score).toBe(4);
   });
 
-  it("評価される方には配点を渡さない", () => {
+  it("一般の方には配点を渡さない", () => {
     const [q] = toContentQuestions([question()], false);
     expect(q.optionsJson).not.toContain("score");
     // 設問文・必須／任意・単位など、読むために要るものは変えない

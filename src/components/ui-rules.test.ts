@@ -42,7 +42,7 @@ describe("画面の器の作法", () => {
     // .row-main（見出し＋補足の入れ物）を自前で書いている画面を検出する。
     // 入力欄が並ぶ編集画面は行の中身が画面ごとに違うため、下の許可リストで除く。
     const editors = new Set(
-      ["FormAnswer.tsx", "GradeRequirementEditor.tsx", "PromotionRequirementEditor.tsx", "PointDesign.tsx", "BehaviorGuidelineEditor.tsx"].map((n) => n),
+      ["FormAnswer.tsx", "GradeRequirementEditor.tsx", "PromotionRequirementEditor.tsx", "PointDesign.tsx", "BehaviorGuidelineEditor.tsx", "BehaviorBandSetEditor.tsx"].map((n) => n),
     );
     const offenders = sourceFiles.filter(
       (p) => p !== owner && !editors.has(p.split("/").pop() ?? "") && readFileSync(p, "utf8").includes('className="row-main"'),

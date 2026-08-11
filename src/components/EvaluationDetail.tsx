@@ -8,7 +8,7 @@ import type { Role } from "@/lib/session";
 
 /**
  * 評価結果の詳細。
- * 同じ画面をロール別に使い分ける。評価される方には配点・閾値・昇格に必要な点数を出さない
+ * 同じ画面をロール別に使い分ける。一般の方には配点・閾値・昇格に必要な点数を出さない
  * （出さない判断は queries.getEvaluationDetail で行い、ここは受け取った内容を描くだけ）。
  */
 export async function EvaluationDetail({
@@ -308,7 +308,7 @@ export async function EvaluationDetail({
         </div>
       </Card>
 
-      {/* 賞与（仮）。評価される側には出さない（個人Ptから KPI評価点合計 が逆算できるため、
+      {/* 賞与（仮）。一般の方には出さない（個人Ptから KPI評価点合計 が逆算できるため、
           queries.getEvaluationDetail で null にして返している）。 */}
       {showsCriteria && (
         <>

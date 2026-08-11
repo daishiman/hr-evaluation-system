@@ -4,7 +4,7 @@ import { homeItemFor, isCurrent, navGroupsFor, type NavGroup } from "@/lib/nav";
 const hrefsOf = (groups: NavGroup[]) => groups.flatMap((g) => g.items.map((i) => i.href));
 
 describe("サイドバーのメニュー", () => {
-  it("評価される方には、制度の設定と評価基準を一切出さない", () => {
+  it("一般の方には、制度の設定と評価基準を一切出さない", () => {
     const hrefs = hrefsOf(navGroupsFor("EMPLOYEE"));
     expect(hrefs.some((h) => h.startsWith("/admin"))).toBe(false);
     expect(hrefs.some((h) => h.startsWith("/system"))).toBe(false);
@@ -63,6 +63,29 @@ describe("サイドバーのメニュー", () => {
     expect(labels).not.toContain("制度マスタ");
     expect(labels).toContain("等級の設定");
     expect(labels).toContain("行動指針");
+  });
+
+  it.each(["MANAGER", "COMPANY_ADMIN"] as const)(
+    "%s も評価を受ける立場なので、自分の実績報告と結果への入口がある",
+    (role) => {
+      const hrefs = hrefsOf(navGroupsFor(role));
+      expect(hrefs).toContain("/me/forms");
+      expect(hrefs).toContain("/me/results");
+    },
+  );
+
+  it("会社に属さないシステム全体管理者には、自分の評価を出さない", () => {
+    const hrefs = hrefsOf(navGroupsFor("SUPER_ADMIN"));
+    expect(hrefs.some((h) => h.startsWith("/me"))).toBe(false);
+  });
+
+  it("自分の実績報告と結果は、どのロールでも同じ語で呼ぶ", () => {
+    for (const href of ["/me/forms", "/me/results"]) {
+      const labels = (["EMPLOYEE", "MANAGER", "COMPANY_ADMIN"] as const).map(
+        (r) => navGroupsFor(r).flatMap((g) => g.items).find((i) => i.href === href)?.label,
+      );
+      expect(new Set(labels).size).toBe(1);
+    }
   });
 
   it("システム全体管理者にはシステム管理と会社ごとの運用の両方が出る", () => {

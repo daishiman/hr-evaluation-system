@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { BEHAVIOR_BANDS } from "@/lib/domain/behavior";
 
 /**
  * 制度マスタ更新 API の入力スキーマ。
@@ -14,8 +13,11 @@ export const bodySchema = z.discriminatedUnion("kind", [
     autonomyLevel: z.string().max(200).nullable().optional(),
     responsibilityLevel: z.string().max(200).nullable().optional(),
     deadlineNote: z.string().max(200).nullable().optional(),
-    /** 行動指針をこの等級に出すか。null なら出さない（会社ごとに切り替えられる） */
-    behaviorBand: z.enum(BEHAVIOR_BANDS).nullable().optional(),
+    /**
+     * この等級に出す行動指針の基準セット（会社が作ったセットの code）。null なら出さない。
+     * 値の妥当性は「自社に実在し、使用中であること」をサーバー側で必ず確かめる。
+     */
+    behaviorBand: z.string().min(1).max(60).nullable().optional(),
     isActive: z.boolean().optional(),
   }),
   z.object({
@@ -89,9 +91,22 @@ export const bodySchema = z.discriminatedUnion("kind", [
     direction: z.enum(["up", "down"]),
   }),
   z.object({
-    /** 行動指針の観点（創造性…）の呼び名と、その等級帯で使うかどうか */
+    /**
+     * 行動指針の基準セット。
+     * id なし＝新規作成（copyFromBand があれば、そのセットの観点と文章ごと複製する）。
+     * id あり＝呼び名の変更・使用停止／再開。code は作ったあと変えない。
+     */
+    kind: z.literal("behaviorBandSet"),
+    id: z.string().min(1).optional(),
+    name: z.string().min(1).max(60).optional(),
+    copyFromBand: z.string().min(1).max(60).optional(),
+    isActive: z.boolean().optional(),
+  }),
+  z.object({
+    /** 行動指針の観点（創造性…）。id なし＝その基準セットに新しい観点を追加する */
     kind: z.literal("behaviorGuideline"),
-    id: z.string().min(1),
+    id: z.string().min(1).optional(),
+    band: z.string().min(1).max(60).optional(),
     aspectName: z.string().min(1).max(60).optional(),
     isActive: z.boolean().optional(),
   }),

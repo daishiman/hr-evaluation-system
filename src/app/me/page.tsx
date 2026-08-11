@@ -7,7 +7,7 @@ import { requireViewer } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-/** 評価される方のホーム。回答すべきアンケートと最新結果を最優先で示す。 */
+/** 一般の方のホーム。回答すべきアンケートと最新結果を最優先で示す。 */
 export default async function MyHome() {
   const viewer = await requireViewer();
   if (!viewer.companyId) {

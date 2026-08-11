@@ -100,6 +100,15 @@ export async function copyCompanyMasters(
   );
   counts["昇格に必要な点数"] = thresholds.length;
 
+  /* 行動指針の基準セット。
+     code はそのまま写す（等級の割り当てと観点がこの文字列で結ばれているため）。
+     ここを写し忘れると、新しい会社の行動指針画面に基準が1つも出ない。 */
+  const bandSets = await db.select().from(s.behaviorBandSets).where(byCompany(s.behaviorBandSets));
+  await copyRows(bandSets, "bbs", toCompanyId, () => ({}), (v) =>
+    db.insert(s.behaviorBandSets).values(v as never),
+  );
+  counts["行動指針の基準"] = bandSets.length;
+
   /* 行動指針とその段階 */
   const guidelines = await db.select().from(s.behaviorGuidelines).where(byCompany(s.behaviorGuidelines));
   const guidelineMap = await copyRows(guidelines, "bg", toCompanyId, () => ({}), (v) =>
