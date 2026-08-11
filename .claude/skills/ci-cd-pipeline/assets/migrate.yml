@@ -75,8 +75,9 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         if: steps.pm.outputs.name == 'pnpm'
-        with:
-          version: 10
+        # バージョンは package.json の packageManager から読ませる。
+        # ここで version: を指定すると、packageManager がある repo では
+        # 「Multiple versions of pnpm specified」で落ちる。
 
       - uses: actions/setup-node@v4
         with:
