@@ -23,6 +23,16 @@ const behaviors = read("behavior-guidelines.json");
 /** 移行前の配点表の列（等級区分ごとに配点が違う）。 */
 const POINT_GROUPS = ["Beginner", "Regular", "Chief", "AM", "Manager"];
 
+/**
+ * 行動指針の基準セットの初期値。会社が画面から追加・複製・改名できる。
+ * 呼び名は等級名（Beginner / Regular / Chief / AM）にそろえる。
+ * src/lib/domain/behavior.ts の DEFAULT_BAND_SETS と同じ内容にしておく。
+ */
+const BEHAVIOR_BAND_SETS = [
+  { code: "g1_2", name: "Beginner・Regular向け" },
+  { code: "g3_4", name: "Chief・AM向け" },
+];
+
 export const CATEGORIES = [
   { code: "sales", name: "売上・収益", description: "売上と利益を予算どおり確保できたかを測る領域", items: [6, 9, 12, 24] },
   { code: "occupancy", name: "稼働・利用者獲得", description: "定員に対する稼働と、新しい利用者の獲得を測る領域", items: [5, 10, 14, 30, 33] },
@@ -307,6 +317,7 @@ export async function buildSeed() {
   const grades = [];
   const gradeRequirements = [];
   const promotionRequirements = [];
+  const behaviorBandSets = [];
   const behaviorGuidelines = [];
   const behaviorLevels = [];
   const promotionThresholds = [];
@@ -394,6 +405,14 @@ export async function buildSeed() {
         id: `preq_${co.key}_${i}`, company_id: cid, grade_id: gid(r.gradeCode), kind: r.kind,
         transition_label: r.transitionLabel, seq: r.seq, text: r.text, is_gate: r.isGate,
         is_active: 1, created_at: NOW, updated_at: MASTER_AT,
+      });
+    });
+
+    /* 行動指針の基準セット（会社ごとに追加・複製・改名できる。ここに入るのは初期値） */
+    BEHAVIOR_BAND_SETS.forEach((set, i) => {
+      behaviorBandSets.push({
+        id: `bbs_${co.key}_${set.code}`, company_id: cid, code: set.code, name: set.name,
+        display_order: i + 1, is_active: 1, created_at: NOW, updated_at: NOW,
       });
     });
 
@@ -945,6 +964,7 @@ export async function buildSeed() {
   sql.push(...insert("grades", grades));
   sql.push(...insert("grade_requirements", gradeRequirements));
   sql.push(...insert("promotion_requirements", promotionRequirements));
+  sql.push(...insert("behavior_band_sets", behaviorBandSets));
   sql.push(...insert("behavior_guidelines", behaviorGuidelines));
   sql.push(...insert("behavior_levels", behaviorLevels));
   sql.push(...insert("promotion_thresholds", promotionThresholds));
