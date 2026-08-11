@@ -27,6 +27,7 @@ export default async function ManagerEvaluation({ params }: { params: Promise<{ 
         evaluationId={id}
         role={viewer.role}
         backHref="/manager/cycles"
+        backLabel="評価・結果を確認する"
       />
 
       <SectionHeading>この人だけ集計し直す</SectionHeading>

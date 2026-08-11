@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { canSeeCriteria, requireViewer } from "@/lib/session";
 import { listEvaluations } from "@/lib/queries";
-import { Badge, Card, EmptyState, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, EmptyState, Num, PageTitle, SectionHeading } from "@/components/ui";
 import { TrendChart } from "@/components/LazyCharts";
 import { formatPeriod } from "@/lib/view";
 
@@ -45,21 +45,18 @@ export default async function MyResults() {
           <SectionHeading>評価期間ごとの結果</SectionHeading>
           <Card>
             {all.map((e) => (
-              <div key={e.id} className="card-row">
-                <div className="row-main">
-                  <p className="todo-row-title m-0">
-                    <Link href={`/me/results/${e.id}`} className="text-[var(--brand-deep)]">{e.cycleName}</Link>
-                  </p>
-                  <p className="todo-row-sub m-0">
-                    {formatPeriod(e.periodStart, e.periodEnd)} ／ {e.gradeName}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <Num value={e.requirementRate} unit="%" />
-                  <p className="m-0 text-[11px] text-[var(--ink-muted)]">等級要件の達成率</p>
-                </div>
-                {e.raiseEligible ? <Badge tone="active">昇給の要件を満たす</Badge> : <Badge tone="done">継続</Badge>}
-              </div>
+              <CardRow
+                key={e.id}
+                title={<Link href={`/me/results/${e.id}`} className="text-[var(--brand-deep)]">{e.cycleName}</Link>}
+                sub={`${formatPeriod(e.periodStart, e.periodEnd)} ／ ${e.gradeName}`}
+                value={
+                  <>
+                    <Num value={e.requirementRate} unit="%" />
+                    <p className="m-0 text-[12px] text-[var(--ink-muted)]">等級要件の達成率</p>
+                  </>
+                }
+                marks={e.raiseEligible ? <Badge tone="active">昇給の要件を満たす</Badge> : <Badge tone="done">継続</Badge>}
+              />
             ))}
           </Card>
         </>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge, Bar, Card, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardRow, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
 import { formatPeriod } from "@/lib/view";
 
 export interface ManagerCycleSummary {
@@ -54,7 +54,7 @@ export function managerNextAction(input: {
   return {
     title: "いま急いで対応する作業はありません",
     body: "新しい提出や確認待ちの評価が入ると、ここに次の作業が表示されます。",
-    label: "評価サイクルを見る",
+    label: "評価・結果を確認する",
   };
 }
 
@@ -127,27 +127,26 @@ export function ManagerDashboard({
       ) : (
         <Card>
           {draftEvaluations.slice(0, 5).map((evaluation) => (
-            <div key={evaluation.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">
-                  <Link href={`/manager/evaluations/${evaluation.id}`} className="text-[var(--brand-deep)]">
-                    {evaluation.employeeName ?? "氏名未設定"}
-                  </Link>
-                </p>
-                <p className="todo-row-sub m-0">{evaluation.gradeName ?? "等級未設定"}</p>
-              </div>
-              <Badge tone="required">確認・確定が必要</Badge>
-            </div>
+            <CardRow
+              key={evaluation.id}
+              title={
+                <Link href={`/manager/evaluations/${evaluation.id}`} className="text-[var(--brand-deep)]">
+                  {evaluation.employeeName ?? "氏名未設定"}
+                </Link>
+              }
+              sub={evaluation.gradeName ?? "等級未設定"}
+              marks={<Badge tone="required">確認・確定が必要</Badge>}
+            />
           ))}
           {draftEvaluations.length > 5 && (
             <div className="card-row">
-              <p className="footnote m-0">ほか {draftEvaluations.length - 5}件は評価サイクルで確認できます。</p>
+              <p className="footnote m-0">ほか {draftEvaluations.length - 5}件は「評価・結果を確認する」で確認できます。</p>
             </div>
           )}
         </Card>
       )}
 
-      <SectionHeading aside={<Link href="/manager/members" className="footnote">メンバーを見る</Link>}>
+      <SectionHeading aside={<Link href="/manager/members" className="footnote">メンバー</Link>}>
         チームの状況
       </SectionHeading>
       {team.length === 0 ? (
@@ -174,27 +173,26 @@ export function ManagerDashboard({
             <summary>メンバー別の状況を見る（{team.length}人）</summary>
             <div className="disclosure-body p-0 text-[var(--ink)]">
               {team.map((member) => (
-                <div key={member.id} className="card-row">
-                  <div className="row-main">
-                    <p className="todo-row-title m-0">
-                      <Link href={`/manager/members/${member.id}`} className="text-[var(--brand-deep)]">
-                        {member.name}
-                      </Link>
-                    </p>
-                    <p className="todo-row-sub m-0">
-                      {member.gradeName ?? "等級未設定"} ／ {member.department ?? "所属未設定"}
-                    </p>
-                  </div>
-                  {member.responseStatus === "submitted" ? (
-                    <Badge tone="done">提出済み</Badge>
-                  ) : member.responseStatus === "draft" ? (
-                    <Badge tone="active">入力途中</Badge>
-                  ) : member.responseStatus === "none" ? (
-                    <Badge tone="required">未着手</Badge>
-                  ) : (
-                    <Badge tone="closed">対象アンケートなし</Badge>
-                  )}
-                </div>
+                <CardRow
+                  key={member.id}
+                  title={
+                    <Link href={`/manager/members/${member.id}`} className="text-[var(--brand-deep)]">
+                      {member.name}
+                    </Link>
+                  }
+                  sub={`${member.gradeName ?? "等級未設定"} ／ ${member.department ?? "所属未設定"}`}
+                  marks={
+                    member.responseStatus === "submitted" ? (
+                      <Badge tone="done">提出済み</Badge>
+                    ) : member.responseStatus === "draft" ? (
+                      <Badge tone="active">入力途中</Badge>
+                    ) : member.responseStatus === "none" ? (
+                      <Badge tone="required">未着手</Badge>
+                    ) : (
+                      <Badge tone="closed">対象アンケートなし</Badge>
+                    )
+                  }
+                />
               ))}
             </div>
           </details>

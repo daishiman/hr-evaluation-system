@@ -30,7 +30,7 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageTitle title="利用者" lede="全社の利用者をここで確認・変更できます。" />
+      <PageTitle title="利用者一覧" lede="全社の利用者をここで確認・変更できます。" />
 
       {/* 全体像は数字だけ。誰が何人いるかを一行で掴ませる */}
       <Card className="card-pad hero-tint">
@@ -46,15 +46,15 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
 
       <SectionHeading>会社でしぼる</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
-        <Link href="/system/users" className="chip" aria-pressed={scope === ""}>
+        <Link href="/system/users" className="chip" aria-current={scope === "" ? "true" : undefined}>
           すべて（{all.length}）
         </Link>
         {companies.map((c) => (
-          <Link key={c.id} href={`/system/users?company=${c.id}`} className="chip" aria-pressed={scope === c.id}>
+          <Link key={c.id} href={`/system/users?company=${c.id}`} className="chip" aria-current={scope === c.id ? "true" : undefined}>
             {c.name}（{all.filter((u) => u.companyId === c.id).length}）
           </Link>
         ))}
-        <Link href="/system/users?company=none" className="chip" aria-pressed={scope === "none"}>
+        <Link href="/system/users?company=none" className="chip" aria-current={scope === "none" ? "true" : undefined}>
           会社に属さない（{all.filter((u) => !u.companyId).length}）
         </Link>
       </div>

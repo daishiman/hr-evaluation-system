@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge, Bar, Card, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardHead, CardRow, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
 
 export interface MyActionForm {
   formId: string;
@@ -96,16 +96,15 @@ export function MyDashboard({
         </div>
       ) : latestSubmittedForm ? (
         <Card className="card-pad hero-tint">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="todo-row-title m-0">{latestSubmittedForm.title}</p>
-                <Badge tone="done">提出済み</Badge>
-              </div>
-              <p className="todo-row-sub m-0 mt-1">提出は完了しています。評価が確定すると、この下に結果が表示されます。</p>
-            </div>
-            <LinkButton href={`/me/forms/${latestSubmittedForm.formId}`}>提出した内容を見る</LinkButton>
-          </div>
+          <CardHead
+            title={
+              <>
+                {latestSubmittedForm.title} <Badge tone="done">提出済み</Badge>
+              </>
+            }
+            sub="提出は完了しています。評価が確定すると、この下に結果が表示されます。"
+            actions={<LinkButton href={`/me/forms/${latestSubmittedForm.formId}`}>提出した内容を見る</LinkButton>}
+          />
         </Card>
       ) : (
         <EmptyState
@@ -154,19 +153,20 @@ export function MyDashboard({
               <summary>過去の結果を見る（{previous.length}件）</summary>
               <div className="disclosure-body p-0 text-[var(--ink)]">
                 {previous.map((result) => (
-                  <div key={result.id} className="card-row">
-                    <div className="row-main">
-                      <p className="todo-row-title m-0">
-                        <Link href={`/me/results/${result.id}`} className="text-[var(--brand-deep)]">
-                          {result.cycleName ?? "評価結果"}
-                        </Link>
-                      </p>
-                      <p className="todo-row-sub m-0">
+                  <CardRow
+                    key={result.id}
+                    title={
+                      <Link href={`/me/results/${result.id}`} className="text-[var(--brand-deep)]">
+                        {result.cycleName ?? "評価結果"}
+                      </Link>
+                    }
+                    sub={
+                      <>
                         {result.gradeName ?? "等級未設定"} ／ 等級要件の達成率 <Num value={result.requirementRate} unit="%" />
-                      </p>
-                    </div>
-                    <ResultBadges result={result} />
-                  </div>
+                      </>
+                    }
+                    marks={<ResultBadges result={result} />}
+                  />
                 ))}
               </div>
             </details>

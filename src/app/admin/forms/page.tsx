@@ -5,7 +5,7 @@ import { describeFormKpiDiff, diffFormKpiItems, effectiveAskedItems } from "@/li
 import { ActionButton } from "@/components/ActionButton";
 import { CopyUrl } from "@/components/CopyUrl";
 import { appOrigin, formUrl } from "@/lib/origin";
-import { Badge, Card, EmptyState, LinkButton, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardHead, EmptyState, LinkButton, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +70,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
       <SectionHeading>評価期間を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {cycles.map((c) => (
-          <Link key={c.id} href={`/admin/forms?cycle=${c.id}`} className="chip" aria-pressed={c.id === selected.id}>
+          <Link key={c.id} href={`/admin/forms?cycle=${c.id}`} className="chip" aria-current={c.id === selected.id ? "true" : undefined}>
             {c.name}
           </Link>
         ))}
@@ -98,9 +98,9 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
         <div className="stack">
           {forms.map((f) => (
             <Card key={f.id} className="card-pad">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="todo-row-title m-0">
+              <CardHead
+                title={
+                  <>
                     {f.title}{" "}
                     {f.status === "published" ? (
                       <Badge tone="active">公開中</Badge>
@@ -109,27 +109,33 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                     ) : (
                       <Badge tone="done">下書き</Badge>
                     )}
-                  </p>
-                  <p className="todo-row-sub m-0">
+                  </>
+                }
+                sub={
+                  <>
                     対象：{f.gradeName ?? "—"} ／ 第{f.version}版 ／ 設問 <Num value={Number(f.questionCount ?? 0)} unit="問" /> ／ 回答{" "}
                     <Num value={Number(f.responseCount ?? 0)} unit="件" />
-                  </p>
-                  {f.status === "published" && (
+                  </>
+                }
+                detail={
+                  f.status === "published" ? (
                     <p className="footnote m-0 mt-1">
                       <CopyUrl url={formUrl(origin, f.publicToken)} />
                       <span className="ml-1">（開くにはログインが必要です）</span>
                     </p>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/admin/forms/${f.id}/responses`} className="btn btn-secondary">
-                    回答一覧を見る
-                  </Link>
-                  <Link href={`/admin/forms/${f.id}`} className="btn btn-tertiary">
-                    内容を確認・編集
-                  </Link>
-                </div>
-              </div>
+                  ) : undefined
+                }
+                actions={
+                  <>
+                    <LinkButton href={`/admin/forms/${f.id}/responses`} variant="secondary">
+                      回答一覧を見る
+                    </LinkButton>
+                    <LinkButton href={`/admin/forms/${f.id}`} variant="tertiary">
+                      内容を確認・編集
+                    </LinkButton>
+                  </>
+                }
+              />
 
               <div className="mt-3 flex flex-wrap gap-3">
                 {f.status === "draft" && (

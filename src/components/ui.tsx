@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { clsx } from "clsx";
 
 /* ───────────────────────── ボタン ───────────────────────── */
@@ -22,6 +22,21 @@ export function LinkButton({
   ...rest
 }: ComponentProps<typeof Link> & { variant?: ButtonVariant; block?: boolean }) {
   return <Link className={clsx("btn", `btn-${variant}`, block && "btn-block", className)} {...rest} />;
+}
+
+/**
+ * 画面遷移ではないリンク（CSVの書き出しなど、サーバーがファイルを返すURL）用のボタン。
+ *
+ * Next.js の Link は画面遷移を先読みしてしまうため、ダウンロードには使えない。
+ * とはいえ見た目・タップ領域はボタンと同じでなければならないので、素の <a> に
+ * `btn` を書き散らさずここに集約する。
+ */
+export function DownloadButton({
+  variant = "tertiary",
+  className,
+  ...rest
+}: ComponentProps<"a"> & { variant?: ButtonVariant }) {
+  return <a className={clsx("btn", `btn-${variant}`, className)} {...rest} />;
 }
 
 /* ───────────────────────── バッジ ─────────────────────────
@@ -84,15 +99,57 @@ export function Card({ className, children }: { className?: string; children: Re
 }
 
 /**
- * 画面の見出し。
+ * パンくずの1段。
+ * 決め事: **いまの画面は入れず、上位の画面だけを並べる**（見出しと同じ語を2回読ませない）。
+ * href を省いた段は、開けない中間分類として灰色のまま出す。
+ */
+export interface Crumb {
+  label: string;
+  href?: string;
+}
+
+/**
+ * 画面の見出し。全画面でこの1つだけを使う。
+ *
+ * - `breadcrumb`: いまどこにいて、どこへ戻れるか。画面の中に「一覧に戻る」ボタンを置かない。
+ * - `tags`: 対象者・期間・状態など、スクロール中も見えていてほしい札。
+ * - `sticky`: 縦に長い画面だけ true にして、見出しの帯を固定ヘッダーの下に貼り付ける
+ *   （適用範囲は docs/product/spec.md §6。画面ごとに position: sticky を書かない）。
+ *
  * 下の余白はこの箱だけで付ける（見出しと説明文の両方に margin を付けると二重に空く）。
  */
-export function PageTitle({ title, lede, actions }: { title: string; lede?: string; actions?: ReactNode }) {
+export function PageTitle({
+  title,
+  lede,
+  actions,
+  breadcrumb,
+  tags,
+  sticky,
+}: {
+  title: string;
+  lede?: string;
+  actions?: ReactNode;
+  breadcrumb?: Crumb[];
+  tags?: ReactNode;
+  sticky?: boolean;
+}) {
   return (
-    <div className="page-head">
+    <div className="page-head" data-sticky={sticky ? "true" : undefined}>
       <div className="min-w-0">
+        {breadcrumb && breadcrumb.length > 0 && (
+          <nav aria-label="現在の位置">
+            <ol className="breadcrumb">
+              {breadcrumb.map((c, i) => (
+                <li key={`${c.label}-${i}`}>
+                  {c.href ? <Link href={c.href}>{c.label}</Link> : <span aria-current="page">{c.label}</span>}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
         <h1 className="page-title">{title}</h1>
         {lede && <p className="page-lede">{lede}</p>}
+        {tags && <div className="page-head-tags">{tags}</div>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
@@ -100,12 +157,25 @@ export function PageTitle({ title, lede, actions }: { title: string; lede?: stri
 }
 
 /** セクションの見出し。上下の余白は .section-head に集約している。 */
-export function SectionHeading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
+export function SectionHeading({
+  children,
+  aside,
+  help,
+}: {
+  children: ReactNode;
+  /** 見出しの右に置く補助リンク（「すべて見る」など）。 */
+  aside?: ReactNode;
+  /** 見出しのすぐ下に添える1行の説明。段落を画面ごとに書き起こさないためのスロット。 */
+  help?: ReactNode;
+}) {
   return (
-    <div className="section-head">
-      <h2 className="section-heading">{children}</h2>
-      {aside}
-    </div>
+    <>
+      <div className="section-head">
+        <h2 className="section-heading">{children}</h2>
+        {aside}
+      </div>
+      {help && <p className="footnote m-0 -mt-1.5 mb-2">{help}</p>}
+    </>
   );
 }
 
@@ -183,16 +253,166 @@ export function Bar({ value, max, label }: { value: number; max: number; label?:
 
 /* ───────────────────────── 定義リスト ───────────────────────── */
 
-export function DefList({ rows }: { rows: { label: string; value: ReactNode }[] }) {
+/**
+ * 1件の中身（ラベルと値の対）を並べる標準形。
+ *
+ * **項目と値の羅列を表（table）で書かない。** 列が1本しかない表は表ではなく、
+ * 狭い画面で横スクロールを生むだけになる。判断基準は docs/product/spec.md §5-5。
+ * 見た目（ラベル幅・区切り・狭い画面での縦積み）は .def-list に集約している。
+ */
+export function DefList({ rows }: { rows: { label: string; value: ReactNode; key?: string }[] }) {
   return (
     <dl className="def-list">
       {rows.map((r) => (
-        <div key={r.label} className="flex flex-wrap gap-x-3 gap-y-1 border-b border-[var(--line)] py-2 last:border-b-0">
-          <dt className="w-40 shrink-0 text-[12px] text-[var(--ink-muted)]">{r.label}</dt>
-          <dd className="m-0 min-w-0 flex-1 text-[13px]">{r.value}</dd>
+        // ラベルが重なりうる用途（同じ設問文が2つある等）は key を明示して渡す
+        <div key={r.key ?? r.label}>
+          <dt>{r.label}</dt>
+          <dd>{r.value}</dd>
         </div>
       ))}
     </dl>
+  );
+}
+
+/**
+ * 同じ粒度の数値を数個ならべるサマリー（対象◯人／提出済み◯人 …）。
+ *
+ * 意味の違う値を混ぜない（それは DefList の仕事）。数値は大きく、
+ * ラベルは小さく muted に固定する（画面ごとに組み方を変えない）。
+ */
+export function StatGrid({ stats }: { stats: { label: string; value: ReactNode }[] }) {
+  return (
+    <dl className="stat-grid" style={{ "--stat-cols": Math.min(stats.length, 4) } as CSSProperties}>
+      {stats.map((s) => (
+        <div key={s.label}>
+          <dt>{s.label}</dt>
+          <dd>{s.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * 一覧をカードで出す標準形。
+ *
+ * 表（DataTable）を使わない一覧はすべてこれで書く。とくに
+ * 「1件ごとの情報量が多い」「行ごとに取れる操作が違う」「長い文章が入る」
+ * 履歴・申請・調整のたぐいはこちら（判断基準は docs/product/spec.md §5-5）。
+ *
+ * 並びは上から: 見出し（+ 状態の札）→ ラベル付きの値 → 長い文章 → 操作。
+ * この順番は画面ごとに変えない。
+ */
+export interface RecordItem {
+  key: string;
+  title: ReactNode;
+  marks?: ReactNode;
+  rows?: { label: string; value: ReactNode }[];
+  note?: ReactNode;
+  action?: ReactNode;
+}
+
+export function RecordList({ items }: { items: RecordItem[] }) {
+  return (
+    <Card>
+      {items.map((it) => (
+        <div key={it.key} className="list-card">
+          <div className="list-card-head">
+            <span className="min-w-0">{it.title}</span>
+            {it.marks}
+          </div>
+          {it.rows && it.rows.length > 0 && <DefList rows={it.rows} />}
+          {it.note && <p className="list-card-note">{it.note}</p>}
+          {it.action && <div className="list-card-actions">{it.action}</div>}
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+/**
+ * 一覧の1行（1件＝1行、読むだけの行）。
+ *
+ * RecordList との使い分け（docs/product/spec.md §5-5）:
+ * - 1件を「名前＋補足1行＋状態」で言い切れる → CardRow（ホーム・一覧の既定）
+ * - ラベル付きの値が複数ある／長い文章が入る／行ごとに操作が違う → RecordList
+ *
+ * 並びは上から（横並びのときは左から）**見出し → 補足 → 右の数値 → 状態の札** で固定する。
+ * 画面ごとに順番を入れ替えない。狭い画面では .card-row 側で自動的に折り返す。
+ */
+export function CardRow({
+  lead,
+  title,
+  sub,
+  detail,
+  value,
+  marks,
+  alignTop,
+  className,
+}: {
+  /** 行の先頭に置く小さな印（ランク・色見本）。文章は入れない。 */
+  lead?: ReactNode;
+  title: ReactNode;
+  sub?: ReactNode;
+  /** 締切・提出日など、補足のさらに下に添える短い注記（.footnote の段落を渡す）。 */
+  detail?: ReactNode;
+  value?: ReactNode;
+  marks?: ReactNode;
+  /** 補足が数行になる（本文・回答など）ときだけ true。既定は上下中央。 */
+  alignTop?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={clsx("card-row", alignTop && "items-start", className)}>
+      {lead}
+      <div className="row-main">
+        <p className="todo-row-title m-0">{title}</p>
+        {sub && <p className="todo-row-sub m-0">{sub}</p>}
+        {detail}
+      </div>
+      {value && <div className="shrink-0 text-right">{value}</div>}
+      {marks}
+    </div>
+  );
+}
+
+/**
+ * カード1枚の頭（名前＋状態の札／補足／そのカードから出ていく操作）。
+ *
+ * 1件＝カード1枚で、中に編集フォームや明細を抱える画面（評価期間・アンケート・
+ * 会社など）はこの頭を必ず使う。左に読むもの、右に押すものを固定し、
+ * 画面ごとに flex の並べ方を書き起こさない。
+ */
+export function CardHead({
+  lead,
+  title,
+  heading,
+  sub,
+  detail,
+  actions,
+}: {
+  /** 名前の左に置く小さな印（手順番号など）。文章は入れない。 */
+  lead?: ReactNode;
+  title: ReactNode;
+  /** そのカードが画面の節そのものであるときだけ true（見出しとして読み上げさせる）。 */
+  heading?: boolean;
+  sub?: ReactNode;
+  detail?: ReactNode;
+  actions?: ReactNode;
+}) {
+  const Title = heading ? "h2" : "p";
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-0 items-start gap-3">
+        {lead}
+        <div className="min-w-0">
+          <Title className="todo-row-title m-0">{title}</Title>
+          {sub && <p className="todo-row-sub m-0">{sub}</p>}
+          {detail}
+        </div>
+      </div>
+      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+    </div>
   );
 }
 

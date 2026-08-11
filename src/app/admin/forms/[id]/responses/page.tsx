@@ -9,7 +9,8 @@ import { listFormExtensions } from "@/lib/response-access";
 import { CsvImport } from "@/components/CsvImport";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, RecordList, SectionHeading, StatGrid } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import { FORM_STATUS_LABEL, formatDate } from "@/lib/view";
 import { formatJpDate, judgeFormDeadline, jstDateString } from "@/lib/domain/form-deadline";
 
@@ -62,39 +63,37 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
   return (
     <>
       <PageTitle
+        breadcrumb={[
+          { label: "アンケート", href: `/admin/forms?cycle=${form.cycleId}` },
+          { label: form.title, href: `/admin/forms/${form.id}` },
+        ]}
         title="回答一覧"
-        lede={`${form.title}（${form.cycleName ?? ""} ／ 対象：${form.gradeName ?? "—"} ／ ${FORM_STATUS_LABEL[form.status] ?? form.status}）`}
-        actions={
+        lede={`${form.cycleName ?? ""} ／ 対象：${form.gradeName ?? "—"}`}
+        tags={
           <>
-            <a href={`/api/export?type=responses&formId=${form.id}`} className="btn btn-secondary">
-              CSVに書き出す
-            </a>
-            <Link href={`/admin/forms/${form.id}`} className="btn btn-tertiary">
-              設問を見る
-            </Link>
+            {form.cycleName && <span className="tag">{form.cycleName}</span>}
+            <span className="tag">対象 {form.gradeName ?? "—"}</span>
+            <span className="tag" data-tone="muted">
+              {FORM_STATUS_LABEL[form.status] ?? form.status}
+            </span>
           </>
+        }
+        actions={
+          <DownloadButton href={`/api/export?type=responses&formId=${form.id}`} variant="secondary">
+            CSVに書き出す
+          </DownloadButton>
         }
       />
 
       <Card className="card-pad">
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div>
-            <dt className="footnote m-0">対象の人数</dt>
-            <dd className="m-0"><Num value={active.length} unit="人" display /></dd>
-          </div>
-          <div>
-            <dt className="footnote m-0">提出済み</dt>
-            <dd className="m-0"><Num value={submitted.length} unit="人" display /></dd>
-          </div>
-          <div>
-            <dt className="footnote m-0">入力途中</dt>
-            <dd className="m-0"><Num value={drafting.length} unit="人" display /></dd>
-          </div>
-          <div>
-            <dt className="footnote m-0">未回答</dt>
-            <dd className="m-0"><Num value={missing.length} unit="人" display /></dd>
-          </div>
-        </dl>
+        <StatGrid
+          stats={[
+            { label: "対象の人数", value: <Num value={active.length} unit="人" display /> },
+            { label: "提出済み", value: <Num value={submitted.length} unit="人" display /> },
+            { label: "入力途中", value: <Num value={drafting.length} unit="人" display /> },
+            { label: "未回答", value: <Num value={missing.length} unit="人" display /> },
+          ]}
+        />
       </Card>
 
       <p className="footnote mt-2">
@@ -133,55 +132,65 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
           body={`${form.gradeName ?? "この等級"}に登録されている方がいないため、回答する人がいません。メンバー画面で等級を設定してください。`}
         />
       ) : (
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>氏名</th>
-                <th>社員番号</th>
-                <th>事業所</th>
-                <th>状況</th>
-                <th>回答日時</th>
-                <th>取り込み元</th>
-                <th>個別の期限</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const ext = activeExtensions.filter((e) => e.employeeId === r.employeeId);
-                const until = ext.map((e) => e.extendedUntil).sort().at(-1) ?? null;
-                return (
-                <tr key={r.employeeId}>
-                  <td>
-                    {r.responseId ? (
-                      <Link href={`/me/responses/${r.responseId}`} className="text-[var(--brand-deep)]">
-                        {r.name}
-                      </Link>
-                    ) : (
-                      r.name
-                    )}
-                    {!r.isActive && <span className="footnote"> （利用停止中）</span>}
-                  </td>
-                  <td>{r.employeeCode ?? "—"}</td>
-                  <td>{r.officeName ?? r.department ?? "—"}</td>
-                  <td>
-                    {r.status === "submitted" ? (
-                      <Badge tone="done">提出済み</Badge>
-                    ) : r.status === "draft" ? (
-                      <Badge tone="active">入力途中</Badge>
-                    ) : (
-                      <Badge tone="required">未回答</Badge>
-                    )}
-                  </td>
-                  <td>{formatWhen(r.submittedAt)}</td>
-                  <td>{r.importSource === "csv" ? "取り込み（CSV）" : r.responseId ? "この画面から回答" : "—"}</td>
-                  <td>{until ? formatJpDate(until) : "—"}</td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        /* 対象者は「同じ項目を持つ多数の行を上から見比べる」一覧なので表のまま。
+           狭い画面では DataTable が自動でカードに畳む（docs/product/spec.md §5-5）。 */
+        <DataTable
+          caption="対象者と回答の状況"
+          rows={rows}
+          rowKey={(r) => r.employeeId}
+          columns={[
+            {
+              key: "name",
+              header: "氏名",
+              role: "title",
+              cell: (r) => (
+                <>
+                  {r.responseId ? (
+                    <Link href={`/me/responses/${r.responseId}`} className="text-[var(--brand-deep)]">
+                      {r.name}
+                    </Link>
+                  ) : (
+                    r.name
+                  )}
+                  {!r.isActive && <span className="footnote"> （利用停止中）</span>}
+                </>
+              ),
+            },
+            {
+              key: "status",
+              header: "状況",
+              role: "mark",
+              cell: (r) =>
+                r.status === "submitted" ? (
+                  <Badge tone="done">提出済み</Badge>
+                ) : r.status === "draft" ? (
+                  <Badge tone="active">入力途中</Badge>
+                ) : (
+                  <Badge tone="required">未回答</Badge>
+                ),
+            },
+            { key: "code", header: "社員番号", cell: (r) => r.employeeCode ?? "—" },
+            { key: "office", header: "事業所", cell: (r) => r.officeName ?? r.department ?? "—" },
+            { key: "at", header: "回答日時", cell: (r) => formatWhen(r.submittedAt) },
+            {
+              key: "from",
+              header: "取り込み元",
+              cell: (r) => (r.importSource === "csv" ? "取り込み（CSV）" : r.responseId ? "この画面から回答" : "—"),
+            },
+            {
+              key: "until",
+              header: "個別の期限",
+              cell: (r) => {
+                const until = activeExtensions
+                  .filter((e) => e.employeeId === r.employeeId)
+                  .map((e) => e.extendedUntil)
+                  .sort()
+                  .at(-1);
+                return until ? formatJpDate(until) : "—";
+              },
+            },
+          ]}
+        />
       )}
 
       <SectionHeading aside={<span className="footnote">記録は消えません（取り消しても履歴に残ります）</span>}>
@@ -226,44 +235,32 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
       )}
 
       {extensions.length > 0 && (
+        /* 延長は1件ごとに理由（長い文章）と操作が付くため、表ではなくカードで出す
+           （docs/product/spec.md §5-5）。 */
         <div className="mt-4">
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>対象の方</th>
-                  <th>延ばした期限</th>
-                  <th>理由</th>
-                  <th>登録した日時</th>
-                  <th>状態</th>
-                </tr>
-              </thead>
-              <tbody>
-                {extensions.map((e) => (
-                  <tr key={e.id}>
-                    <td>{e.employeeName ?? "—"}</td>
-                    <td>{formatJpDate(e.extendedUntil)}</td>
-                    <td>{e.reason ?? "—"}</td>
-                    <td>{formatWhen(e.createdAt)}</td>
-                    <td>
-                      {e.revokedAt ? (
-                        <span className="footnote">{formatWhen(e.revokedAt)}に取り消し</span>
-                      ) : (
-                        <ActionButton
-                          url={`/api/forms/${form.id}/extensions`}
-                          method="PATCH"
-                          body={{ extensionId: e.id }}
-                          label="延長を取り消す"
-                          variant="tertiary"
-                          confirm={`${e.employeeName ?? "この方"}の延長を取り消すと、締切を過ぎている場合はその場で回答できなくなります。記録は履歴として残ります。`}
-                        />
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <RecordList
+            items={extensions.map((e) => ({
+              key: e.id,
+              title: e.employeeName ?? "—",
+              marks: e.revokedAt ? <Badge tone="closed">取り消し済み</Badge> : <Badge tone="active">延長中</Badge>,
+              rows: [
+                { label: "延ばした期限", value: formatJpDate(e.extendedUntil) },
+                { label: "登録した日時", value: formatWhen(e.createdAt) },
+                ...(e.revokedAt ? [{ label: "取り消した日時", value: formatWhen(e.revokedAt) }] : []),
+              ],
+              note: e.reason ? `理由：${e.reason}` : null,
+              action: e.revokedAt ? null : (
+                <ActionButton
+                  url={`/api/forms/${form.id}/extensions`}
+                  method="PATCH"
+                  body={{ extensionId: e.id }}
+                  label="延長を取り消す"
+                  variant="tertiary"
+                  confirm={`${e.employeeName ?? "この方"}の延長を取り消すと、締切を過ぎている場合はその場で回答できなくなります。記録は履歴として残ります。`}
+                />
+              ),
+            }))}
+          />
         </div>
       )}
 

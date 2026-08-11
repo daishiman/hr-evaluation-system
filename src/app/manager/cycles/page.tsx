@@ -4,7 +4,7 @@ import { listCycles, listEvaluations } from "@/lib/queries";
 import { listPendingRespondents } from "@/lib/evaluate";
 import { detectStaleCycles } from "@/lib/impact";
 import { ActionButton } from "@/components/ActionButton";
-import { Badge, Card, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export default async function ManagerCycles({
   if (cycles.length === 0) {
     return (
       <>
-        <PageTitle title="評価サイクル" />
+        <PageTitle title="評価・結果を確認する" />
         <EmptyState
           title="評価期間がまだありません"
           body="会社の管理者が評価期間を作ると、ここに回答状況と評価の作成ボタンが並びます。"
@@ -51,7 +51,7 @@ export default async function ManagerCycles({
   return (
     <>
       <PageTitle
-        title="評価サイクル"
+        title="評価・結果を確認する"
         lede="半期ごとに、提出されたアンケートから評価を作り、内容を確認して確定します。"
       />
 
@@ -61,8 +61,8 @@ export default async function ManagerCycles({
           <Link
             key={c.id}
             href={`/manager/cycles?cycle=${c.id}`}
-            className={c.id === selected.id ? "chip" : "chip"}
-            aria-pressed={c.id === selected.id}
+            className="chip"
+            aria-current={c.id === selected.id ? "true" : undefined}
           >
             {c.name}
           </Link>
@@ -111,15 +111,12 @@ export default async function ManagerCycles({
       ) : (
         <Card>
           {notSubmitted.map((p) => (
-            <div key={p.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">{p.name}</p>
-                <p className="todo-row-sub m-0">
-                  {p.status === "draft" ? "入力途中です。提出まで進んでいません。" : "まだ入力を始めていません。"}
-                </p>
-              </div>
-              <Badge tone="required">未提出</Badge>
-            </div>
+            <CardRow
+              key={p.id}
+              title={p.name}
+              sub={p.status === "draft" ? "入力途中です。提出まで進んでいません。" : "まだ入力を始めていません。"}
+              marks={<Badge tone="required">未提出</Badge>}
+            />
           ))}
         </Card>
       )}
@@ -148,12 +145,12 @@ export default async function ManagerCycles({
         aside={
           evals.length > 0 ? (
             <span className="flex flex-wrap gap-2">
-              <a href={`/api/export?type=results&cycleId=${selected.id}`} className="btn btn-tertiary">
+              <DownloadButton href={`/api/export?type=results&cycleId=${selected.id}`} variant="tertiary">
                 評価結果をCSVに書き出す
-              </a>
-              <a href={`/api/export?type=kpi&cycleId=${selected.id}`} className="btn btn-tertiary">
+              </DownloadButton>
+              <DownloadButton href={`/api/export?type=kpi&cycleId=${selected.id}`} variant="tertiary">
                 KPI明細をCSVに書き出す
-              </a>
+              </DownloadButton>
             </span>
           ) : (
             <span className="footnote">確認して確定すると本人に公開されます</span>
@@ -167,24 +164,27 @@ export default async function ManagerCycles({
       ) : (
         <Card>
           {evals.map((e) => (
-            <div key={e.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">
-                  <Link href={`/manager/evaluations/${e.id}`} className="text-[var(--brand-deep)]">
-                    {e.employeeName}
-                  </Link>
-                </p>
-                <p className="todo-row-sub m-0">
+            <CardRow
+              key={e.id}
+              title={
+                <Link href={`/manager/evaluations/${e.id}`} className="text-[var(--brand-deep)]">
+                  {e.employeeName}
+                </Link>
+              }
+              sub={
+                <>
                   {e.gradeName} ／ {e.raiseEligible ? "昇給の要件を満たしています" : "昇給は見送り"}
                   {e.promotionEligible ? " ／ 昇格の要件も満たしています" : ""}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <Num value={e.totalScore} display />
-                <span className="unit">点</span>
-              </div>
-              {e.status === "finalized" ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
-            </div>
+                </>
+              }
+              value={
+                <>
+                  <Num value={e.totalScore} display />
+                  <span className="unit">点</span>
+                </>
+              }
+              marks={e.status === "finalized" ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
+            />
           ))}
         </Card>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui";
 
 /**
  * 配布用URLを、そのまま開ける形で見せて、1クリックでコピーできるようにする。
@@ -24,12 +25,12 @@ export function CopyUrl({ url, label = "配布用のURL" }: { url: string; label
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
       <span className="footnote m-0">{label}：</span>
-      <a href={url} className="text-[11px] underline break-all" target="_blank" rel="noreferrer">
+      <a href={url} className="text-[12px] underline break-all" target="_blank" rel="noreferrer">
         {url}
       </a>
-      <button type="button" className="btn btn-tertiary text-[11px]" onClick={() => void copy()}>
+      <Button type="button" variant="tertiary" className="text-[12px]" onClick={() => void copy()}>
         {copied ? "コピーしました" : "コピー"}
-      </button>
+      </Button>
     </span>
   );
 }

@@ -1,4 +1,4 @@
-import { Badge, Card, LinkButton } from "@/components/ui";
+import { Badge, Card, CardHead, LinkButton } from "@/components/ui";
 
 export interface SetupAction {
   href: string;
@@ -28,21 +28,20 @@ export function SetupGuide({ steps }: { steps: SetupStep[] }) {
       {steps.map((step) => (
         <Card key={step.number} className="card-pad">
           <article data-setup-step={step.number}>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex min-w-0 items-start gap-3">
+            <CardHead
+              heading
+              lead={
                 <span
                   className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] font-bold text-[var(--brand-deep)]"
                   aria-hidden="true"
                 >
                   {step.number}
                 </span>
-                <div className="min-w-0">
-                  <h2 className="todo-row-title m-0">{step.title}</h2>
-                  <p className="todo-row-sub m-0 mt-1">{step.summary}</p>
-                </div>
-              </div>
-              <Badge tone={step.complete ? "done" : "alert"}>{step.statusLabel}</Badge>
-            </div>
+              }
+              title={step.title}
+              sub={step.summary}
+              actions={<Badge tone={step.complete ? "done" : "alert"}>{step.statusLabel}</Badge>}
+            />
 
             <p className="m-0 mt-3 text-[13px]">
               <span className="font-semibold">現在：</span>

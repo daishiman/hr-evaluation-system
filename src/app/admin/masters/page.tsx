@@ -66,9 +66,12 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
 
   return (
     <>
+      {/* 設定項目が縦に長く並ぶ画面。どの等級を編集しているかを帯に固定する */}
       <PageTitle
+        sticky
         title="等級・昇格・行動指針"
         lede="評価に使う数値と要件をここで決めます。変更は以後の評価に反映され、確定済みの評価は判定当時の内容のまま残ります。"
+        tags={<span className="tag">編集中の等級 {grade.name}</span>}
       />
 
       {staleCycles.length > 0 && (
@@ -94,7 +97,7 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
       <SectionHeading>等級を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {grades.map((g) => (
-          <Link key={g.id} href={`/admin/masters?grade=${g.id}`} className="chip" aria-pressed={g.id === grade.id}>
+          <Link key={g.id} href={`/admin/masters?grade=${g.id}`} className="chip" aria-current={g.id === grade.id ? "true" : undefined}>
             {g.name}
           </Link>
         ))}

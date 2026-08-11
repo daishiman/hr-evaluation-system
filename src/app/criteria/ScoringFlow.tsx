@@ -1,4 +1,5 @@
 import { Badge, Card, Num } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import type { SelectableItem } from "./data";
 
 /**
@@ -182,40 +183,39 @@ function ItemFlow({
           {sorted.length === 0 ? (
             <p className="m-0 text-[13px]">この項目のランク基準が登録されていません。会社の管理者に登録を依頼してください。</p>
           ) : (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ランク</th>
-                    <th>この範囲なら</th>
-                    <th>数式で書くと</th>
-                    <th className="col-num">割合</th>
-                    <th className="col-num">点数</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((c) => {
-                    const ratio = ratios.find((r) => r.rank === c.rank)?.ratio ?? 0;
-                    return (
-                      <tr key={c.id}>
-                        <td className="num font-bold">{c.rank}</td>
-                        <td>
-                          {c.displayLabel}
-                          {c.meaning && <span className="footnote"> ／ {c.meaning}</span>}
-                        </td>
-                        <td className="footnote">{boundText(c, item.direction)}</td>
-                        <td className="col-num">
-                          <Num value={Math.round(ratio * 100)} unit="%" />
-                        </td>
-                        <td className="col-num">
-                          <Num value={scoreOf(weight, ratio)} unit="点" />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            /* ランクごとの範囲と点数を上から見比べる表。項目が揃っていて数値を突き合わせるので表のまま
+               （docs/product/spec.md §5-5）。 */
+            <DataTable
+              caption="ランクごとの範囲と点数"
+              rows={sorted}
+              rowKey={(c) => c.id}
+              columns={[
+                { key: "rank", header: "ランク", role: "title", cell: (c) => <span className="num font-bold">{c.rank}</span> },
+                {
+                  key: "range",
+                  header: "この範囲なら",
+                  cell: (c) => (
+                    <>
+                      {c.displayLabel}
+                      {c.meaning && <span className="footnote"> ／ {c.meaning}</span>}
+                    </>
+                  ),
+                },
+                { key: "formula", header: "数式で書くと", cell: (c) => <span className="footnote">{boundText(c, item.direction)}</span> },
+                {
+                  key: "ratio",
+                  header: "割合",
+                  num: true,
+                  cell: (c) => <Num value={Math.round((ratios.find((r) => r.rank === c.rank)?.ratio ?? 0) * 100)} unit="%" />,
+                },
+                {
+                  key: "score",
+                  header: "点数",
+                  num: true,
+                  cell: (c) => <Num value={scoreOf(weight, ratios.find((r) => r.rank === c.rank)?.ratio ?? 0)} unit="点" />,
+                },
+              ]}
+            />
           )}
           <p className="footnote mt-2">
             {item.direction === "lower"

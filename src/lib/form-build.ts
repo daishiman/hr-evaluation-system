@@ -68,7 +68,7 @@ export async function buildQuestionRows(opts: {
       .where(and(eq(s.evaluationCycles.id, cycleId), eq(s.evaluationCycles.companyId, companyId)))
       .limit(1)
   )[0];
-  if (!cycle) throw new HttpError(404, "評価サイクルが見つかりませんでした。");
+  if (!cycle) throw new HttpError(404, "評価期間が見つかりませんでした。");
 
   const rows: Row[] = [];
   const push = (r: Omit<Row, "id" | "companyId" | "formId" | "displayOrder">) => {
@@ -250,7 +250,7 @@ export async function buildFormDraft(opts: {
       .where(and(eq(s.evaluationCycles.id, cycleId), eq(s.evaluationCycles.companyId, companyId)))
       .limit(1)
   )[0];
-  if (!cycle) throw new HttpError(404, "評価サイクルが見つかりませんでした。");
+  if (!cycle) throw new HttpError(404, "評価期間が見つかりませんでした。");
   if (cycle.status === "closed") throw new HttpError(400, "締め切り済みのサイクルにはアンケートを追加できません。");
 
   const grade = (

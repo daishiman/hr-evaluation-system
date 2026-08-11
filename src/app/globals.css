@@ -14,6 +14,10 @@
   /* 主要CTA + 結果のキー数字(この2用途のみ) */
   --accent: #e8590c;
   --accent-deep: #c74e0b;
+  /* 白文字を載せる面はここを使う。--accent に白文字だと 3.58:1 で本文の基準（4.5:1）に届かない。
+     --accent は「大きい数字の文字色」専用（36px以上の太字なので 3:1 の基準で足りる）。 */
+  --accent-on-white-bg: #c74e0b;
+  --accent-on-white-bg-hover: #a84209;
 
   /* テキストと構造(画面の90%) */
   --ink: #16191d;
@@ -51,7 +55,14 @@
 
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  /* 固定ヘッダー（56px）＋見出し帯（約48px）と固定操作バー（約72px）の下に
+     アンカー先や次のフォーカスが潜り込まないようにする。
+     この2値は --header-h と .action-bar の高さと必ず対で保つ。 */
+  scroll-padding-top: 112px;
+  scroll-padding-bottom: 96px;
+}
 
 body {
   margin: 0;
@@ -93,7 +104,7 @@ body {
   border-radius: 4px;
   background: #fff;
   padding: 0 5px;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-num);
   color: var(--ink-muted);
   line-height: 1.6;
@@ -105,6 +116,27 @@ body {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* 指で押す端末では、押せるものを 44px 以上にする。
+   マウス環境まで太らせると一覧の密度が落ちるため、pointer: coarse のときだけ効かせる。 */
+@media (pointer: coarse) {
+  .btn,
+  .sidebar-link,
+  .sidebar-close,
+  .sidebar-close-sp,
+  .sidebar-open-pc,
+  .sidebar-open-sp,
+  .input,
+  .field input[type="text"],
+  .field input[type="email"],
+  .field input[type="password"],
+  .field input[type="date"],
+  .field select,
+  .field-toggle,
+  .account-trigger {
+    min-height: 44px;
+  }
 }
 
 /* ============================================================
@@ -193,12 +225,20 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 .sidebar-head .app-name { flex: 1 1 auto; min-width: 0; }
 .sidebar-scope { padding: 0 4px; }
 
-.sidebar-nav { display: grid; gap: var(--space-block); }
+/* 分類の切れ目だけに罫線を引く。
+   意味のない横棒（見出しの下・項目の間）は引かない。
+   ホーム（見出しなしの先頭グループ）の下だけは、分類の外側にあることを
+   はっきりさせるため罫線を引く。 */
+.sidebar-nav { display: grid; gap: 14px; }
 .sidebar-group { display: grid; gap: 2px; }
+.sidebar-group + .sidebar-group {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
 .sidebar-group-title {
-  margin: 0 0 2px;
+  margin: 0 0 4px;
   padding: 0 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--ink-muted);
   letter-spacing: 0.04em;
@@ -212,6 +252,9 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
   min-height: 36px;
   line-height: 1.5;
 }
+/* 分類の中の項目であることが分かるよう、見出しがあるグループだけ字下げする */
+.sidebar-group-title + .sidebar-link,
+.sidebar-group-title ~ .sidebar-link { padding-left: 18px; }
 .sidebar-link:hover { background: var(--subtle); }
 .sidebar-link[aria-current="page"] {
   background: var(--brand-soft);
@@ -304,7 +347,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 }
 .app-name:hover { background: var(--subtle); }
 .app-name .app-name-sub {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--ink-muted);
   margin-left: 8px;
@@ -347,6 +390,85 @@ main {
 }
 .page-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; line-height: 1.5; }
 .page-lede { font-size: 13px; color: var(--ink-muted); margin: 0; line-height: 1.7; }
+
+/* ---- 見出しの上のパンくず（いまどこにいるか・どこへ戻れるか）----
+   画面の中に「一覧に戻る」ボタンを置く代わりに、全画面で同じ位置に出す。 */
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.breadcrumb li { display: inline-flex; align-items: center; gap: 4px; }
+.breadcrumb li + li::before { content: "›"; color: var(--line); }
+.breadcrumb a { color: var(--ink-muted); text-decoration: none; }
+.breadcrumb a:hover { color: var(--brand-deep); text-decoration: underline; }
+.breadcrumb [aria-current="page"] { color: var(--ink); }
+
+/* ---- 見出しの札（対象者・期間・状態）----
+   スクロールしても消えないよう、見出しの帯の中に置く。 */
+.page-head-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+
+/* ---- 見出しを固定する（長い画面だけ）----
+   固定ヘッダー（--header-h）の真下に貼り付き、対象者・期間・状態が
+   スクロールしても見えたままになる。適用範囲は docs/product/spec.md §6。 */
+.page-head[data-sticky="true"] {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 15;
+  align-items: center;
+  background: var(--brand-mist);
+  border-bottom: 1px solid var(--line);
+  margin: 0 calc(var(--pad-page-x) * -1) var(--space-block);
+  padding: 12px var(--pad-page-x);
+}
+/* 本文の先頭にあるときだけ、上の余白を食べて固定ヘッダーに接するようにする。
+   パスワード変更の呼びかけなどが上にある画面では、そのぶん下にずれる。 */
+.app-main > .page-head[data-sticky="true"]:first-child { margin-top: -24px; }
+.page-head[data-sticky="true"] .page-title { font-size: 16px; margin-bottom: 0; }
+.page-head[data-sticky="true"] .page-lede { display: none; }
+
+/* ---- 主要な操作を画面下に固定する帯 ----
+   実装は components/layout/StickyActionBar.tsx の1箇所だけ。
+   画面ごとに position: sticky を書き散らさない。 */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 16;
+  margin: var(--space-section) calc(var(--pad-page-x) * -1) -64px;
+  padding: 10px var(--pad-page-x);
+  background: #fff;
+  border-top: 1px solid var(--line);
+}
+.action-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-tight) var(--space-block);
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+.action-bar-status { font-size: 12px; color: var(--ink-muted); min-width: 0; }
+.action-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-tight); }
+@media (max-width: 639px) {
+  /* 狭い画面では、押すものを1行いっぱいに広げて親指で押せるようにする */
+  .action-bar-inner { justify-content: stretch; }
+  .action-bar-actions { flex: 1 1 100%; }
+  .action-bar-actions .btn { flex: 1 1 auto; }
+}
 
 /* 見出しの前後の余白は、見出しを包むこの箱でだけ付ける（二重に空けない） */
 .section-head {
@@ -436,11 +558,43 @@ main {
 .grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-block); }
 @media (max-width: 639px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
 
-/* 定義リスト */
-.def-list { display: grid; grid-template-columns: 8rem 1fr; row-gap: 8px; font-size: 13px; }
-.def-list dt { color: var(--ink-muted); }
-.def-list dd { margin: 0; }
-@media (max-width: 480px) { .def-list { grid-template-columns: 6.5rem 1fr; } }
+/* ------------------------------------------------------------
+   定義リスト（ラベル＋値の対）。
+   「1件の中身を並べる」ときの標準形。表にしない（列が1本しかない表は表ではない）。
+   広い画面はラベルと値を横に、狭い画面は縦積みにする。
+   ------------------------------------------------------------ */
+.def-list { font-size: 13px; }
+.def-list > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.def-list > div:last-child { border-bottom: none; }
+.def-list dt { flex: 0 0 8rem; color: var(--ink-muted); font-size: 12px; }
+.def-list dd { flex: 1 1 12rem; margin: 0; min-width: 0; }
+@media (max-width: 480px) {
+  /* 狭い画面ではラベルを値の上に置く（8rem を削り合って値が2文字幅になるのを防ぐ） */
+  .def-list dt { flex-basis: 100%; }
+}
+
+/* ------------------------------------------------------------
+   サマリー（指標を数個ならべる箱）。
+   「対象◯人／提出済み◯人」のような同じ粒度の数値を横に並べる用途だけに使う。
+   1つずつ意味の違う値を入れない（それは定義リストの仕事）。
+   ------------------------------------------------------------ */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-block);
+}
+@media (min-width: 640px) {
+  .stat-grid { grid-template-columns: repeat(var(--stat-cols, 4), minmax(0, 1fr)); }
+}
+.stat-grid > div { min-width: 0; }
+.stat-grid dt { margin: 0; font-size: 12px; color: var(--ink-muted); }
+.stat-grid dd { margin: 2px 0 0; }
 
 /* ============================================================
    ボタン (§5) — 3階層 + 破壊的
@@ -463,13 +617,16 @@ main {
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
 .btn-primary {
-  background: var(--accent);
-  border: 1px solid var(--accent);
+  background: var(--accent-on-white-bg);
+  border: 1px solid var(--accent-on-white-bg);
   color: #fff;
   font-weight: 600;
   padding: 8px 20px;
 }
-.btn-primary:hover:not(:disabled) { background: var(--accent-deep); border-color: var(--accent-deep); }
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-on-white-bg-hover);
+  border-color: var(--accent-on-white-bg-hover);
+}
 
 .btn-secondary {
   background: #fff;
@@ -525,7 +682,7 @@ main {
   border-radius: 999px;
   border: 1px solid transparent;
   padding: 2px 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.6;
 }
@@ -538,22 +695,24 @@ main {
   color: var(--ink-muted);
   border-radius: 4px;
   padding: 1px 6px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .badge-alert {
   background: var(--danger-soft);
   color: var(--danger);
   border-radius: 4px;
   padding: 1px 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 /* ============================================================
    テーブル (§5)
    ============================================================ */
-.table-scroll { overflow-x: auto; border-radius: 12px; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+/* 表は「同じ属性の行を見比べる」ときだけ使う。判断基準は docs/product/spec.md §5-5。
+   表を出すかカードに落とすかは容器の幅で切り替える（.data-table / DataTable が唯一の実装）。 */
+.table-scroll { border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th {
   text-align: left;
   font-size: 12px;
@@ -562,12 +721,22 @@ thead th {
   border-bottom: 1px solid var(--line);
   padding: 10px 12px;
   white-space: nowrap;
+  /* 列見出しはスクロールしても消えない。固定ヘッダー（と、あれば見出し帯）の下に貼り付く。 */
+  position: sticky;
+  top: var(--table-head-top, var(--header-h));
+  z-index: 4;
+  background: #fff;
 }
 tbody td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--subtle); }
-th.col-num, td.col-num { text-align: right; }
+/* 数値の列は右揃え＋等幅（桁位置を縦にそろえる）。文字列の列には付けない。 */
+th.col-num, td.col-num { text-align: right; font-variant-numeric: tabular-nums; }
 tr.row-excluded td { color: var(--ink-muted); }
+
+/* 見出し帯を固定している画面では、その帯のぶんだけ列見出しを下げる。
+   帯の高さ（約52px）を変えたらこの値も対で直す。 */
+body:has(.page-head[data-sticky="true"]) { --table-head-top: calc(var(--header-h) + 52px); }
 
 input[type="checkbox"] {
   width: 18px;
@@ -577,36 +746,43 @@ input[type="checkbox"] {
 }
 input[type="checkbox"]:disabled { cursor: not-allowed; }
 
-/* テーブル→カードの切替は「画面幅」ではなくコンテナクエリ(容器の幅)で判定 (§5-2)
-   同じ部品をモーダルやサイドバーに置いても正しく振る舞う */
+/* ------------------------------------------------------------
+   表 → カードの切替。
+   「画面幅」ではなく容器の幅（コンテナクエリ）で判定する。同じ部品を
+   折りたたみの中や狭い欄に置いても正しく振る舞うため。
+   列が多い表（5列以上）は、横に潰れる前に早めカードへ落とす。
+   ------------------------------------------------------------ */
 .list-host { container-type: inline-size; }
-.deal-cards { display: none; }
+.list-cards { display: none; }
 @container (max-width: 639px) {
-  .table-scroll { display: none; }
-  .deal-cards { display: block; }
+  .list-host > .table-scroll { display: none; }
+  .list-host > .list-cards { display: block; }
 }
-.deal-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
+@container (max-width: 899px) {
+  .list-host[data-cards="wide"] > .table-scroll { display: none; }
+  .list-host[data-cards="wide"] > .list-cards { display: block; }
+}
+
+/* 表の1行を1枚のカードに畳んだもの。中身は「主役の1行 + ラベル付きの値」。 */
+.list-card {
+  padding: 12px 16px;
   border-bottom: 1px solid var(--line);
 }
-.deal-card:last-child { border-bottom: none; }
-.deal-card.is-excluded { color: var(--ink-muted); }
-.deal-card .dc-main { flex: 1; min-width: 0; }
-.deal-card .dc-title { font-weight: 600; font-size: 14px; }
-.deal-card .dc-sub { font-size: 12px; color: var(--ink-muted); }
-.deal-card .dc-price {
-  font-family: var(--font-num);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  font-weight: 700;
-  font-size: 15px;
-  white-space: nowrap;
-  text-align: right;
+.list-card:last-child { border-bottom: none; }
+.list-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 14px;
+  font-weight: 600;
 }
-.deal-card .dc-right { display: grid; gap: 6px; justify-items: end; }
+.list-card .def-list { margin-top: 6px; }
+.list-card .def-list > div { padding: 4px 0; border-bottom: none; }
+.list-card .def-list dt { flex-basis: 7rem; }
+/* 長い文章（理由・補足）は値の対にせず、1段落として置く */
+.list-card-note { margin: 6px 0 0; font-size: 13px; line-height: 1.7; }
+.list-card-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: var(--space-tight); }
 
 /* ============================================================
    フォーム (§5)
@@ -621,6 +797,8 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 }
 .field input[type="text"],
 .field input[type="email"],
+.field input[type="password"],
+.field input[type="date"],
 .field select,
 .field textarea {
   font: inherit;
@@ -636,6 +814,44 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .field .hint { font-size: 12px; color: var(--ink-muted); margin: 0; }
 .field .error-msg { font-size: 12px; color: var(--danger); margin: 0; }
 .field.has-error input { border-color: var(--danger); }
+
+/* パスワード欄の「表示する / 隠す」。
+   目のアイコンだけのボタンにはしない（何が起きるかを文字で言う）。 */
+.field-toggle {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-deep);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.field-toggle:hover { background: var(--subtle); text-decoration: underline; }
+
+/* 満たすべき条件の一覧。打ち込む前から見えていること（打ってから怒られない）。
+   満たしたかどうかは色だけでなく印と読み上げ用の文字でも伝える。 */
+.rule-list { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.rule-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-muted); }
+.rule-item[data-met="true"] { color: var(--ink); }
+.rule-mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-muted);
+}
+.rule-item[data-met="true"] .rule-mark {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+}
 
 /* ============================================================
    空状態 / 注意の面 (§5)
@@ -850,7 +1066,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   padding: 8px 0 4px;
 }
 .delta-compare .dc-item { text-align: center; }
-.delta-compare .dc-label { font-size: 11px; color: var(--ink-muted); }
+.delta-compare .dc-label { font-size: 12px; color: var(--ink-muted); }
 .delta-compare .dc-value {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
@@ -917,8 +1133,8 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
 .swatch-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 .swatch { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
 .swatch .sw-color { height: 48px; }
-.swatch .sw-meta { padding: 8px 10px; font-size: 11px; line-height: 1.6; }
-.swatch .sw-meta code { font-size: 10px; color: var(--ink-muted); }
+.swatch .sw-meta { padding: 8px 10px; font-size: 12px; line-height: 1.6; }
+.swatch .sw-meta code { font-size: 12px; color: var(--ink-muted); }
 .demo-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 
 .chip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -933,6 +1149,10 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   cursor: pointer;
   font-family: inherit;
 }
+/* 選択中の見た目。ボタンは aria-pressed、リンク（現在地を表す）は aria-current。
+   リンクに aria-pressed を付けない（読み上げが「ボタン」として扱えず意味が壊れる）。 */
+.chip[aria-current="true"],
+.chip[aria-current="page"],
 .chip[aria-pressed="true"] {
   border-color: var(--brand);
   background: var(--brand-soft);
@@ -1237,6 +1457,12 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
     break-inside: avoid;
   }
 
+  /* 紙には「貼り付く」概念がないので、列見出しは普通の行に戻す。
+     ただし複数ページにまたがる表では各ページの先頭に列見出しを繰り返す。 */
+  thead th { position: static; background: #fff !important; }
+  thead { display: table-header-group; }
+  tbody tr { break-inside: avoid; }
+
   .section-heading { break-after: avoid; }
   .card-row,
   .user-row,
@@ -1245,7 +1471,17 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   /* 押して初めて出る操作（アカウントメニュー・切り替え）は紙に出さない */
   .account-menu,
   .switch-2,
+  .action-bar,
+  .breadcrumb,
   .profile-row-action { display: none !important; }
+
+  /* 固定していた見出しは、紙では普通の見出しに戻す */
+  .page-head[data-sticky="true"] {
+    position: static;
+    margin: 0 0 var(--space-block);
+    padding: 0;
+    background: transparent;
+  }
 
   /* 色の付いた数字・バッジは、色が出ない環境でも読めるように濃さを上げる */
   .hero-number .num-display { color: var(--ink) !important; }

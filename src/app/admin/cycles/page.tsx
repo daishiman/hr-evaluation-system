@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/session";
 import { getActiveScheme, listCycles, listForms } from "@/lib/queries";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardHead, DownloadButton, EmptyState, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -28,14 +28,14 @@ export default async function AdminCycles() {
   return (
     <>
       <PageTitle
-        title="評価サイクル"
+        title="評価期間"
         lede="半期ごとの評価期間を作ります。期間を作ってからアンケートを配り、期末に受付を締め切って評価を作ります。"
       />
 
       {!scheme && (
         <div className="mb-4">
-          <ReasonNote action={<Link href="/admin/scheme" className="btn btn-secondary">評価セットを設定する</Link>}>
-            有効な評価セット（8項目と配点）がないため、評価期間を作れません。
+          <ReasonNote action={<LinkButton href="/admin/scheme" variant="secondary">評価セットを設定する</LinkButton>}>
+            有効な評価セット（KPIの項目と配点）がないため、評価期間を作れません。
           </ReasonNote>
         </div>
       )}
@@ -45,7 +45,7 @@ export default async function AdminCycles() {
         url="/api/cycles"
         method="POST"
         submitLabel="この期間を作る"
-        description="いま有効な評価セット（8項目と配点）がこの期間に紐づきます。あとで配点を変えても、この期間の判定条件は作成時のまま残ります。"
+        description="いま有効な評価セット（KPIの項目と配点）がこの期間に紐づきます。あとで配点を変えても、この期間の判定条件は作成時のまま残ります。"
         resetAfterSubmit
         fields={[
           { name: "name", label: "期間の名前", type: "text", required: true, placeholder: `${thisYear}年度 上期`, help: "例：2026年度 上期" },
@@ -65,9 +65,9 @@ export default async function AdminCycles() {
             const responses = my.reduce((sum, f) => sum + Number(f.responseCount ?? 0), 0);
             return (
               <Card key={c.id} className="card-pad">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="todo-row-title m-0">
+                <CardHead
+                  title={
+                    <>
                       {c.name}{" "}
                       {c.status === "open" ? (
                         <Badge tone="active">回答受付中</Badge>
@@ -76,26 +76,26 @@ export default async function AdminCycles() {
                       ) : (
                         <Badge tone="done">準備中</Badge>
                       )}
-                    </p>
-                    <p className="todo-row-sub m-0">
-                      {formatPeriod(c.periodStart, c.periodEnd)} ／ アンケート{my.length}件（公開中 {published}件） ／ 回答{responses}件
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link href={`/admin/forms?cycle=${c.id}`} className="btn btn-tertiary">
-                      アンケートを見る
-                    </Link>
-                    <Link href={`/manager/cycles?cycle=${c.id}`} className="btn btn-tertiary">
-                      進行状況を見る
-                    </Link>
-                    <a href={`/api/export?type=results&cycleId=${c.id}`} className="btn btn-tertiary">
-                      評価結果をCSVに書き出す
-                    </a>
-                    <a href={`/api/export?type=kpi&cycleId=${c.id}`} className="btn btn-tertiary">
-                      KPI明細をCSVに書き出す
-                    </a>
-                  </div>
-                </div>
+                    </>
+                  }
+                  sub={`${formatPeriod(c.periodStart, c.periodEnd)} ／ アンケート${my.length}件（公開中 ${published}件） ／ 回答${responses}件`}
+                  actions={
+                    <>
+                      <LinkButton href={`/admin/forms?cycle=${c.id}`} variant="tertiary">
+                        アンケートを見る
+                      </LinkButton>
+                      <LinkButton href={`/manager/cycles?cycle=${c.id}`} variant="tertiary">
+                        進行状況を見る
+                      </LinkButton>
+                      <DownloadButton href={`/api/export?type=results&cycleId=${c.id}`} variant="tertiary">
+                        評価結果をCSVに書き出す
+                      </DownloadButton>
+                      <DownloadButton href={`/api/export?type=kpi&cycleId=${c.id}`} variant="tertiary">
+                        KPI明細をCSVに書き出す
+                      </DownloadButton>
+                    </>
+                  }
+                />
 
                 <div className="mt-3 flex flex-wrap gap-3">
                   {c.status !== "open" && c.status !== "closed" && (
@@ -132,9 +132,9 @@ export default async function AdminCycles() {
                   <div className="mt-3">
                     <ReasonNote
                       action={
-                        <Link href={`/admin/forms?cycle=${c.id}`} className="btn btn-secondary">
+                        <LinkButton href={`/admin/forms?cycle=${c.id}`} variant="secondary">
                           アンケートを作る
-                        </Link>
+                        </LinkButton>
                       }
                     >
                       この期間のアンケートがまだありません。等級ごとのアンケートを作ると、対象の方が回答できます。

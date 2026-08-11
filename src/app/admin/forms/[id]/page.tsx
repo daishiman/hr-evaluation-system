@@ -8,7 +8,7 @@ import { FormBuilder, type BuilderQuestion } from "@/components/FormBuilder";
 import { FormPreview } from "@/components/FormPreview";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -84,18 +84,28 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
 
   return (
     <>
+      {/* 設問を足していくと縦に長くなる画面。対象の等級・版・状態は帯に固定して見えたままにする */}
       <PageTitle
+        sticky
+        breadcrumb={[{ label: "アンケート", href: `/admin/forms?cycle=${form.cycleId}` }]}
         title={form.title}
-        lede={`${form.cycleName ?? ""} ／ 対象：${form.gradeName ?? "—"} ／ 第${form.version}版 ／ ${FORM_STATUS_LABEL[form.status] ?? form.status}`}
-        actions={
+        lede={`${form.cycleName ?? ""} ／ 対象：${form.gradeName ?? "—"} ／ 第${form.version}版`}
+        tags={
           <>
-            <Link href={`/admin/forms/${form.id}/responses`} className="btn btn-secondary">
-              回答一覧を見る
-            </Link>
-            <Link href={`/admin/forms?cycle=${form.cycleId}`} className="btn btn-tertiary">
-              一覧に戻る
-            </Link>
+            <span className="tag">{form.cycleName ?? "期間未設定"}</span>
+            <span className="tag">対象 {form.gradeName ?? "—"}</span>
+            <span className="tag" data-tone="muted">
+              第{form.version}版
+            </span>
+            <Badge tone={form.status === "published" ? "active" : form.status === "closed" ? "closed" : "dropped"}>
+              {FORM_STATUS_LABEL[form.status] ?? form.status}
+            </Badge>
           </>
+        }
+        actions={
+          <LinkButton href={`/admin/forms/${form.id}/responses`} variant="secondary">
+            回答一覧を見る
+          </LinkButton>
         }
       />
 

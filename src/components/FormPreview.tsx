@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui";
+import { Card, SectionHeading } from "@/components/ui";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { parseOptions, scaleSteps } from "@/lib/domain/answer-snapshot";
 
@@ -47,10 +47,9 @@ export function FormPreview({ questions }: { questions: PreviewQuestion[] }) {
     <>
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
-          <h2 className="section-heading mb-1">
+          <SectionHeading help={SECTION_HELP[g.section]}>
             {SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}
-          </h2>
-          {SECTION_HELP[g.section] && <p className="footnote m-0 mb-2">{SECTION_HELP[g.section]}</p>}
+          </SectionHeading>
           <Card className="card-pad">
             <div className="space-y-5">
               {g.rows.map((q) => (

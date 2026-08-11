@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireViewer, ROLE_LABEL, type Role } from "@/lib/session";
 import { getSelfProfile, listProfileFieldPolicies } from "@/lib/queries";
 import { PROFILE_FIELDS, resolveSelfEditMapForCompany, isSelfEditableField } from "@/lib/domain/profile-fields";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
-import { Card, PageTitle, SectionHeading } from "@/components/ui";
+import { Card, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
 import { SelfProfileEditor, type ProfileRow } from "@/components/SelfProfileEditor";
 import { formatDate } from "@/lib/view";
 
@@ -128,9 +127,9 @@ export default async function AccountPage() {
               ? "いまのパスワードは、アカウントを発行したときの仮のものです。"
               : "パスワードはいつでも変更できます。"}
           </p>
-          <Link href="/account/password" className={`btn ${me.mustChangePassword ? "btn-primary" : "btn-secondary"}`}>
+          <LinkButton href="/account/password" variant={me.mustChangePassword ? "primary" : "secondary"}>
             パスワードを変える
-          </Link>
+          </LinkButton>
         </div>
       </Card>
 

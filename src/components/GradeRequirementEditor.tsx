@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, ReasonNote } from "@/components/ui";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import {
   CATEGORY_LABEL,
   GRADE_REQUIREMENT_MAX,
@@ -169,16 +170,15 @@ export function GradeRequirementEditor({
                 <Button variant="tertiary" disabled={busy} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
                   直す
                 </Button>
-                <Button
+                <ConfirmButton
+                  label="使わない"
                   variant="danger-outline"
-                  disabled={busy}
-                  onClick={() => {
-                    if (!window.confirm(`「${r.text}」を今後のアンケートに出さないようにします。よろしいですか？\n（すでに公開したアンケートと確定済みの評価はそのまま残ります）`)) return;
-                    void send({ kind: "gradeRequirement", id: r.id, gradeId, category, text: r.text, isActive: false });
-                  }}
-                >
-                  使わない
-                </Button>
+                  busy={busy}
+                  confirm={`「${r.text}」を今後のアンケートに出さないようにします。すでに公開したアンケートと、確定済みの評価はそのまま残ります。`}
+                  onConfirm={() =>
+                    void send({ kind: "gradeRequirement", id: r.id, gradeId, category, text: r.text, isActive: false })
+                  }
+                />
               </div>
             )}
           </div>

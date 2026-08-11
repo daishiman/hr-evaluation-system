@@ -14,5 +14,5 @@ export default async function MyResult({ params }: { params: Promise<{ id: strin
   const mine = await listEvaluations(viewer.companyId, viewer.role, { employeeId: viewer.id });
   if (!mine.some((e) => e.id === id)) notFound();
 
-  return <EvaluationDetail companyId={viewer.companyId} evaluationId={id} role={viewer.role} backHref="/me/results" />;
+  return <EvaluationDetail companyId={viewer.companyId} evaluationId={id} role={viewer.role} backHref="/me/results" backLabel="評価の結果を見る" />;
 }

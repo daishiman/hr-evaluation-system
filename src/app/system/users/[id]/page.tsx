@@ -34,12 +34,8 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
   return (
     <>
       <PageTitle
+        breadcrumb={[{ label: "利用者一覧", href: "/system/users" }]}
         title={`${user.name} さん`}
-        actions={
-          <Link href="/system/users" className="btn btn-tertiary">
-            一覧に戻る
-          </Link>
-        }
       />
 
       {/* いまの姿を先に1枚で見せる。細かい入力欄はその下 */}

@@ -10,7 +10,8 @@ import {
   listRaiseSettings,
 } from "@/lib/queries";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, Disclosure, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, Disclosure, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import { formatDate } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -98,7 +99,7 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
       ) : (
         <div className="mb-5 flex flex-wrap gap-2">
           {grades.map((g) => (
-            <Link key={g.id} href={`/admin/raises?grade=${g.id}`} className="chip" aria-pressed={g.id === grade?.id}>
+            <Link key={g.id} href={`/admin/raises?grade=${g.id}`} className="chip" aria-current={g.id === grade?.id ? "true" : undefined}>
               {g.name}
             </Link>
           ))}
@@ -158,32 +159,29 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
                   まだ金額を変えていません。上の金額を変えて保存すると、変更前後の金額と理由がここに残ります。
                 </p>
               ) : (
-                <div className="table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>変更した日</th>
-                        <th className="col-num">変更前（円）</th>
-                        <th className="col-num">変更後（円）</th>
-                        <th>適用開始</th>
-                        <th>理由</th>
-                        <th>変更した人</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {myRevisions.map((r) => (
-                        <tr key={r.id}>
-                          <td>{formatDate(r.createdAt)}</td>
-                          <td className="col-num"><Num value={r.beforeAmount} /></td>
-                          <td className="col-num"><Num value={r.afterAmount} /></td>
-                          <td>{r.effectiveFrom ?? "—"}</td>
-                          <td>{r.reason ?? "—"}</td>
-                          <td>{r.revisedByName ?? "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                /* 改定履歴は1件ごとの出来事（理由という長い文章を含む）なのでカードで出す
+                   （docs/product/spec.md §5-5）。 */
+                <RecordList
+                  items={myRevisions.map((r) => ({
+                    key: r.id,
+                    title: formatDate(r.createdAt),
+                    rows: [
+                      {
+                        label: "月額",
+                        value: (
+                          <>
+                            <Num value={r.beforeAmount} unit="円" />
+                            <span className="mx-1 text-[var(--ink-muted)]">→</span>
+                            <Num value={r.afterAmount} unit="円" />
+                          </>
+                        ),
+                      },
+                      { label: "適用開始", value: r.effectiveFrom ?? "—" },
+                      { label: "変更した人", value: r.revisedByName ?? "—" },
+                    ],
+                    note: r.reason ? `理由：${r.reason}` : null,
+                  }))}
+                />
               )}
             </Disclosure>
           </div>
@@ -225,41 +223,44 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
 
       <div className="mt-4">
         <Disclosure summary="判定ルールと特例を確認する" meta={`判定${patterns.length}件・特例${exceptions.length}件`}>
-          <h2 className="section-heading">ランクの組み合わせと扱い</h2>
+          <SectionHeading>ランクの組み合わせと扱い</SectionHeading>
           {patterns.length === 0 ? (
             <ReasonNote>判定パターンが登録されていません。</ReasonNote>
           ) : (
-            <div className="table-scroll mt-3">
-              <table>
-                <thead>
-                  <tr><th>8項目のランク</th><th>判定</th><th>扱い</th></tr>
-                </thead>
-                <tbody>
-                  {patterns.map((p) => (
-                    <tr key={p.id}>
-                      <td>{p.pattern}</td>
-                      <td><Badge tone={p.judgment.includes("満たす") ? "done" : "required"}>{p.judgment}</Badge></td>
-                      <td>{p.treatment}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mt-3">
+              {/* ランクの組み合わせを上から見比べる参照表。項目が揃っているので表のまま。 */}
+              <DataTable
+                caption="ランクの組み合わせと扱い"
+                rows={patterns}
+                rowKey={(p) => p.id}
+                columns={[
+                  { key: "pattern", header: "KPIのランク", role: "title", cell: (p) => p.pattern },
+                  {
+                    key: "judgment",
+                    header: "判定",
+                    role: "mark",
+                    cell: (p) => (
+                      <Badge tone={p.judgment.includes("満たす") ? "done" : "required"}>{p.judgment}</Badge>
+                    ),
+                  },
+                  { key: "treatment", header: "扱い", cell: (p) => p.treatment },
+                ]}
+              />
             </div>
           )}
 
-          <h2 className="section-heading mt-5">特例の扱い（{exceptions.length}件）</h2>
+          <SectionHeading>特例の扱い（{exceptions.length}件）</SectionHeading>
           {exceptions.length === 0 ? (
             <ReasonNote>特例が登録されていません。</ReasonNote>
           ) : (
             <Card className="mt-3">
               {exceptions.map((e) => (
-                <div key={e.id} className="card-row">
-                  <div className="row-main">
-                    <p className="todo-row-title m-0">{e.caseText}</p>
-                    <p className="todo-row-sub m-0">{e.handling}</p>
-                  </div>
-                  {e.excludesJudgement && <Badge tone="required">判定の対象外</Badge>}
-                </div>
+                <CardRow
+                  key={e.id}
+                  title={e.caseText}
+                  sub={e.handling}
+                  marks={e.excludesJudgement ? <Badge tone="required">判定の対象外</Badge> : undefined}
+                />
               ))}
             </Card>
           )}

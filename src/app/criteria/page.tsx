@@ -8,7 +8,7 @@ import {
   listPromotionThresholds,
   listRaiseSettings,
 } from "@/lib/queries";
-import { Badge, Card, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 import {
   getActiveScheme,
   listGradePointRules,
@@ -119,15 +119,18 @@ export default async function CriteriaPage({
 
   return (
     <>
+      {/* 項目ごとの採点の流れまで並ぶ長い画面。どの等級を見ているかを帯に固定する */}
       <PageTitle
-        title="採点の基準を確認する"
+        sticky
+        title="評価の基準"
         lede="等級ごとの配点・選べる項目・ランクの決め方・昇格に必要な点数を確認できます。この画面は評価される方には表示されません。"
+        tags={grade ? <span className="tag">表示中の等級 {grade.name}</span> : undefined}
       />
 
       <SectionHeading>等級を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {grades.map((g) => (
-          <a key={g.id} href={`/criteria?grade=${g.id}`} className="chip" aria-pressed={g.id === grade?.id}>
+          <a key={g.id} href={`/criteria?grade=${g.id}`} className="chip" aria-current={g.id === grade?.id ? "true" : undefined}>
             {g.name}
           </a>
         ))}
@@ -230,29 +233,31 @@ export default async function CriteriaPage({
                 {adopted.map((a) => {
                   const item = selectable.find((i) => i.kpiItemId === a.kpiItemId);
                   return (
-                    <div key={a.id} className="card-row items-start">
-                      <div className="row-main">
-                        <p className="todo-row-title m-0">
+                    <CardRow
+                      key={a.id}
+                      alignTop
+                      title={
+                        <>
                           {item ? `No.${item.no} ${item.name}` : "（この等級区分では選べない項目が入っています）"}{" "}
                           {a.isFixedSlot && <Badge tone="done">固定枠</Badge>}
                           {a.isMajorSlot && <Badge tone="active">金銭の枠</Badge>}
-                        </p>
-                        <p className="todo-row-sub m-0">
-                          {item ? `${item.categoryName ?? "カテゴリ未設定"} ／ 単位 ${item.unit}` : ""}
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <Num value={a.weight} display />
-                        <span className="unit">点</span>
-                        {item && (
-                          <p className="m-0 mt-1">
-                            <a href={criteriaHref(item.kpiItemId)} className="text-[12px] underline">
-                              評価の基準を見る
-                            </a>
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                        </>
+                      }
+                      sub={item ? `${item.categoryName ?? "カテゴリ未設定"} ／ 単位 ${item.unit}` : ""}
+                      value={
+                        <>
+                          <Num value={a.weight} display />
+                          <span className="unit">点</span>
+                          {item && (
+                            <p className="m-0 mt-1">
+                              <a href={criteriaHref(item.kpiItemId)} className="text-[12px] underline">
+                                評価の基準を見る
+                              </a>
+                            </p>
+                          )}
+                        </>
+                      }
+                    />
                   );
                 })}
               </Card>
@@ -324,16 +329,12 @@ export default async function CriteriaPage({
           ) : (
             <Card>
               {myPromo.map((p) => (
-                <div key={p.id} className="card-row">
-                  <div className="row-main">
-                    <p className="todo-row-title m-0">{p.text}</p>
-                    <p className="todo-row-sub m-0">
-                      {p.kind === "report" ? "受講して報告書を提出" : "独学してテストに合格"}
-                      {p.transitionLabel ? ` ／ ${p.transitionLabel}` : ""}
-                    </p>
-                  </div>
-                  {p.isGate ? <Badge tone="alert">必須（未提出だと昇格不可）</Badge> : <Badge tone="done">任意</Badge>}
-                </div>
+                <CardRow
+                  key={p.id}
+                  title={p.text}
+                  sub={`${p.kind === "report" ? "受講して報告書を提出" : "独学してテストに合格"}${p.transitionLabel ? ` ／ ${p.transitionLabel}` : ""}`}
+                  marks={p.isGate ? <Badge tone="alert">必須（未提出だと昇格不可）</Badge> : <Badge tone="done">任意</Badge>}
+                />
               ))}
             </Card>
           )}
@@ -343,9 +344,11 @@ export default async function CriteriaPage({
               <SectionHeading>行動指針（{grade.name} の等級帯）</SectionHeading>
               <Card>
                 {myBehaviors.map((b) => (
-                  <div key={b.id} className="card-row items-start">
-                    <div className="row-main">
-                      <p className="todo-row-title m-0">{b.aspectName}</p>
+                  <CardRow
+                    key={b.id}
+                    alignTop
+                    title={b.aspectName}
+                    detail={
                       <ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-[12px] text-[var(--ink-muted)]">
                         {b.levels.map((l) => (
                           <li key={l.id}>
@@ -353,8 +356,8 @@ export default async function CriteriaPage({
                           </li>
                         ))}
                       </ul>
-                    </div>
-                  </div>
+                    }
+                  />
                 ))}
               </Card>
             </>

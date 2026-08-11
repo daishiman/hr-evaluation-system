@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, CardRow, ReasonNote } from "@/components/ui";
+import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 
 /**
@@ -172,29 +173,33 @@ export function FormBuilder({
       <div className="grid gap-3">
         {rows.map((r, i) => (
           <Card key={i} className="card-pad">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="todo-row-title m-0">
+            <CardHead
+              title={
+                <>
                   <span className="num mr-2 text-[var(--ink-muted)]">{i + 1}.</span>
                   {r.title || <span className="text-[var(--ink-muted)]">（設問文が未入力です）</span>}
-                </p>
-                <p className="todo-row-sub m-0">
+                </>
+              }
+              sub={
+                <>
                   {SECTION_LABEL[r.section] ?? r.section} ／ {TYPE_LABEL[r.questionType] ?? r.questionType}
                   {r.unit ? ` ／ 単位 ${r.unit}` : ""} ／ {r.required ? "必須" : "任意"}
-                </p>
-                {r.linkLabel && <p className="footnote m-0 mt-1">集計との紐づけ：{r.linkLabel}</p>}
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                {r.isGate && <Badge tone="alert">昇格の必須要件</Badge>}
-                <Button onClick={() => move(i, -1)} disabled={i === 0} aria-label="1つ上へ">
-                  ↑
-                </Button>
-                <Button onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label="1つ下へ">
-                  ↓
-                </Button>
-                <Button onClick={() => setOpenId(openId === i ? null : i)}>{openId === i ? "閉じる" : "編集"}</Button>
-              </div>
-            </div>
+                </>
+              }
+              detail={r.linkLabel ? <p className="footnote m-0 mt-1">集計との紐づけ：{r.linkLabel}</p> : undefined}
+              actions={
+                <>
+                  {r.isGate && <Badge tone="alert">昇格の必須要件</Badge>}
+                  <Button onClick={() => move(i, -1)} disabled={i === 0} aria-label="1つ上へ">
+                    ↑
+                  </Button>
+                  <Button onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label="1つ下へ">
+                    ↓
+                  </Button>
+                  <Button onClick={() => setOpenId(openId === i ? null : i)}>{openId === i ? "閉じる" : "編集"}</Button>
+                </>
+              }
+            />
 
             {openId === i && (
               <div className="field-grid mt-3 border-t border-[var(--line)] pt-3">
@@ -319,12 +324,23 @@ export function FormBuilder({
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      {/* 設問が増えるほど縦に伸びる画面。設問数と保存ボタンは画面下に固定する */}
+      <StickyActionBar
+        status={
+          <>
+            <span className="text-[13px] text-[var(--ink)]">
+              設問 <span className="num font-bold">{rows.length}</span>
+              <span className="unit"> 問</span>
+            </span>
+            <span className="mx-2 text-[var(--line)]">|</span>
+            保存しても公開はされません。公開はアンケート一覧から行います。
+          </>
+        }
+      >
         <Button variant="primary" onClick={save} disabled={busy}>
-          {busy ? "保存しています…" : `設問を保存する（${rows.length}問）`}
+          {busy ? "保存しています…" : "設問を保存する"}
         </Button>
-        <span className="footnote">保存しても公開はされません。公開はアンケート一覧から行います。</span>
-      </div>
+      </StickyActionBar>
     </>
   );
 }
@@ -333,19 +349,23 @@ function QuestionList({ rows }: { rows: BuilderQuestion[] }) {
   return (
     <Card>
       {rows.map((r, i) => (
-        <div key={i} className="card-row items-start">
-          <div className="row-main">
-            <p className="todo-row-title m-0">
+        <CardRow
+          key={i}
+          alignTop
+          title={
+            <>
               <span className="num mr-2 text-[var(--ink-muted)]">{i + 1}.</span>
               {r.title}
-            </p>
-            <p className="todo-row-sub m-0">
+            </>
+          }
+          sub={
+            <>
               {SECTION_LABEL[r.section] ?? r.section} ／ {TYPE_LABEL[r.questionType] ?? r.questionType}
               {r.unit ? ` ／ 単位 ${r.unit}` : ""} ／ {r.required ? "必須" : "任意"}
-            </p>
-          </div>
-          {r.isGate && <Badge tone="alert">昇格の必須要件</Badge>}
-        </div>
+            </>
+          }
+          marks={r.isGate ? <Badge tone="alert">昇格の必須要件</Badge> : undefined}
+        />
       ))}
     </Card>
   );

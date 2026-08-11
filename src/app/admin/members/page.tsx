@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole, ROLE_LABEL } from "@/lib/session";
 import { listGrades, listMembers, listProfileFieldPolicies } from "@/lib/queries";
 import { resolveSelfEditMap, CONFIGURABLE_FIELDS } from "@/lib/domain/profile-fields";
-import { Card, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+import { Card, Disclosure, DownloadButton, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
@@ -63,9 +63,9 @@ export default async function AdminMembers() {
               </span>
             ))
           )}
-          <Link href="/admin/members/policy" className="btn btn-tertiary">
+          <LinkButton href="/admin/members/policy" variant="tertiary">
             変更できる範囲を決める
-          </Link>
+          </LinkButton>
         </div>
       </Card>
 
@@ -124,9 +124,9 @@ export default async function AdminMembers() {
 
       <SectionHeading
         aside={
-          <a href="/api/export?type=members" className="btn btn-tertiary">
+          <DownloadButton href="/api/export?type=members" variant="tertiary">
             社員一覧を書き出す
-          </a>
+          </DownloadButton>
         }
       >
         人を増やす・まとめて取り込む

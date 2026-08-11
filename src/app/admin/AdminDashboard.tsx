@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Badge, Bar, Card, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardHead, DefList, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export interface AdminDashboardSnapshot {
@@ -224,6 +224,8 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <Badge tone="active">次の一手</Badge>
+              {/* この画面で唯一の「視覚的な主役」。節見出し（SectionHeading・13px）ではなく
+                  本文より大きい文字で出す意図的な例外。ほかの画面に増やさない。 */}
               <h2 id="admin-next-action" className="m-0 mt-2 text-[18px] font-bold">
                 {model.nextAction.title}
               </h2>
@@ -248,23 +250,27 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
             badgeTone={model.preparation.completed === model.preparation.total ? "done" : "required"}
           >
             <Bar value={model.preparation.completed} max={model.preparation.total} label="準備できた設定" />
-            <dl className="mt-3 grid gap-2 text-[12px]">
-              <StateRow
-                label="等級要件・昇格要件"
-                value={`${snapshot.activeGradeRequirementCount}件・${snapshot.activePromotionRequirementCount}件`}
-                ready={model.preparation.requirementsReady}
+            <div className="mt-3">
+              <DefList
+                rows={[
+                  stateRow(
+                    "等級要件・昇格要件",
+                    `${snapshot.activeGradeRequirementCount}件・${snapshot.activePromotionRequirementCount}件`,
+                    model.preparation.requirementsReady,
+                  ),
+                  stateRow(
+                    "行動指針",
+                    `${snapshot.activeBehaviorGuidelineCount}観点・適用${snapshot.behaviorAppliedGradeCount}等級`,
+                    model.preparation.behaviorReady,
+                  ),
+                  stateRow(
+                    "KPI・評価セット",
+                    model.preparation.schemeReady ? "設定あり" : "要確認",
+                    model.preparation.schemeReady,
+                  ),
+                ]}
               />
-              <StateRow
-                label="行動指針"
-                value={`${snapshot.activeBehaviorGuidelineCount}観点・適用${snapshot.behaviorAppliedGradeCount}等級`}
-                ready={model.preparation.behaviorReady}
-              />
-              <StateRow
-                label="KPI・評価セット"
-                value={model.preparation.schemeReady ? "設定あり" : "要確認"}
-                ready={model.preparation.schemeReady}
-              />
-            </dl>
+            </div>
           </StageCard>
 
           <StageCard
@@ -274,23 +280,25 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
             badgeTone={model.operationState === "responses_ready" ? "done" : "active"}
           >
             <Bar value={snapshot.submittedCount} max={snapshot.respondentCount} label="提出済み" />
-            <dl className="mt-3 grid gap-2 text-[12px]">
-              <StateRow
-                label="評価期間"
-                value={
-                  snapshot.cycle
-                    ? `${snapshot.cycle.name}（${CYCLE_STATUS_LABEL[snapshot.cycle.status] ?? snapshot.cycle.status}）`
-                    : "未設定"
-                }
-                ready={snapshot.hasOpenCycle}
+            <div className="mt-3">
+              <DefList
+                rows={[
+                  stateRow(
+                    "評価期間",
+                    snapshot.cycle
+                      ? `${snapshot.cycle.name}（${CYCLE_STATUS_LABEL[snapshot.cycle.status] ?? snapshot.cycle.status}）`
+                      : "未設定",
+                    snapshot.hasOpenCycle,
+                  ),
+                  stateRow(
+                    "公開アンケート",
+                    `${snapshot.publishedFormCount} / ${snapshot.formCount}件`,
+                    snapshot.publishedFormCount > 0 && snapshot.draftFormCount === 0,
+                  ),
+                  stateRow("回答対象", `${snapshot.respondentCount}人`, snapshot.respondentCount > 0),
+                ]}
               />
-              <StateRow
-                label="公開アンケート"
-                value={`${snapshot.publishedFormCount} / ${snapshot.formCount}件`}
-                ready={snapshot.publishedFormCount > 0 && snapshot.draftFormCount === 0}
-              />
-              <StateRow label="回答対象" value={`${snapshot.respondentCount}人`} ready={snapshot.respondentCount > 0} />
-            </dl>
+            </div>
           </StageCard>
 
           <StageCard
@@ -300,15 +308,19 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
             badgeTone={model.reviewState === "complete" ? "done" : model.reviewState === "in_progress" ? "active" : "closed"}
           >
             <Bar value={snapshot.finalizedEvaluationCount} max={snapshot.evaluationCount} label="確定済み" />
-            <dl className="mt-3 grid gap-2 text-[12px]">
-              <StateRow label="作成された評価" value={`${snapshot.evaluationCount}件`} ready={snapshot.evaluationCount > 0} />
-              <StateRow label="確認中" value={`${unfinalized}件`} ready={snapshot.evaluationCount > 0 && unfinalized === 0} />
-              <StateRow
-                label="確定済み"
-                value={`${snapshot.finalizedEvaluationCount}件`}
-                ready={snapshot.evaluationCount > 0 && unfinalized === 0}
+            <div className="mt-3">
+              <DefList
+                rows={[
+                  stateRow("作成された評価", `${snapshot.evaluationCount}件`, snapshot.evaluationCount > 0),
+                  stateRow("確認中", `${unfinalized}件`, snapshot.evaluationCount > 0 && unfinalized === 0),
+                  stateRow(
+                    "確定済み",
+                    `${snapshot.finalizedEvaluationCount}件`,
+                    snapshot.evaluationCount > 0 && unfinalized === 0,
+                  ),
+                ]}
               />
-            </dl>
+            </div>
           </StageCard>
         </div>
       </section>
@@ -378,26 +390,30 @@ function StageCard({
 }) {
   return (
     <Card className="card-pad">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="m-0 text-[14px] font-bold">
-          <span className="num mr-2 text-[var(--ink-muted)]">{number}</span>
-          {title}
-        </h3>
-        <Badge tone={badgeTone}>{badge}</Badge>
-      </div>
-      {children}
+      {/* 手順の札つきカードの頭。制度設定ガイド（SetupGuide）と同じ組み方にそろえている。 */}
+      <CardHead
+        heading
+        lead={<span className="num text-[var(--ink-muted)]">{number}</span>}
+        title={title}
+        actions={<Badge tone={badgeTone}>{badge}</Badge>}
+      />
+      <div className="mt-3">{children}</div>
     </Card>
   );
 }
 
-function StateRow({ label, value, ready }: { label: string; value: string; ready: boolean }) {
-  return (
-    <div className="flex items-start justify-between gap-3 border-t border-[var(--line)] pt-2 first:border-t-0 first:pt-0">
-      <dt className="text-[var(--ink-muted)]">{label}</dt>
-      <dd className="m-0 text-right font-bold">
+/**
+ * 現在地カードの1行（DefList に渡す形）。
+ * 「準備済み／要確認」は色や太さでは伝わらないので、読み上げ用の語を値の頭に付ける。
+ */
+function stateRow(label: string, value: string, ready: boolean) {
+  return {
+    label,
+    value: (
+      <span className="font-bold">
         <span className="sr-only">{ready ? "準備済み: " : "要確認: "}</span>
         {value}
-      </dd>
-    </div>
-  );
+      </span>
+    ),
+  };
 }
