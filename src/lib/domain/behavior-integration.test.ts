@@ -103,8 +103,9 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     expect(ui).toContain('data-off={off ? "true" : undefined}');
     expect(css).toContain('.card[data-off="true"]');
     expect(css).toContain("border-style: dashed");
-    // 本文の文字色は薄くしない（読みやすさの下限を割るため）。区別は札で付ける。
-    expect(css).not.toMatch(/\.card\[data-off="true"\][^}]*color:/);
+    // 本文の文字色は薄くしない（読みやすさの下限を割るため）。区別は面・線・札で付ける。
+    // border-color は変えてよいので、文字色（color: 単体）だけを見る。
+    expect(css).not.toMatch(/\.card\[data-off="true"\][^}]*[^-]color:\s*var\(--ink-muted\)/);
   });
 
   it("等級切替時は昇格フォームと下書き状態を作り直す", () => {

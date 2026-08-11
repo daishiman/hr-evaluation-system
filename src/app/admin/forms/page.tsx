@@ -97,7 +97,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
       ) : (
         <div className="stack">
           {forms.map((f) => (
-            <Card key={f.id} className="card-pad">
+            <Card key={f.id} className="card-pad" off={f.status === "closed"}>
               <CardHead
                 title={
                   <>

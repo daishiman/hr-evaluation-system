@@ -322,13 +322,15 @@ export interface RecordItem {
   rows?: { label: string; value: ReactNode }[];
   note?: ReactNode;
   action?: ReactNode;
+  /** いまは使わない設定にしてある件（取り消し済み・締め切り済み）。面と枠で沈める。 */
+  off?: boolean;
 }
 
 export function RecordList({ items }: { items: RecordItem[] }) {
   return (
     <Card>
       {items.map((it) => (
-        <div key={it.key} className="list-card">
+        <div key={it.key} className="list-card" data-off={it.off ? "true" : undefined}>
           <div className="list-card-head">
             <span className="min-w-0">{it.title}</span>
             {it.marks}

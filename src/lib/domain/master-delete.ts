@@ -32,11 +32,10 @@ export function placesText(usedBy: readonly string[]): string {
  */
 export function deleteBlockedReason(usedBy: readonly string[]): string | null {
   if (usedBy.length === 0) return null;
-  return (
-    `${placesText(usedBy)}ですでに使っているため、完全には消せません。` +
-    "公開したアンケートと確定済みの評価をそのまま残すためです。" +
-    "今後のアンケートに出したくないときは「使わない」を押してください（一覧には残りますが、次に作るアンケートには出ません）。"
-  );
+  /* 1件ずつ出る文なので短く言い切る。
+     長い説明を項目の数だけ並べると、一覧そのものが読めなくなる
+     （2026-08-12、等級要件の9項目すべてに3行の説明が出て一覧が埋まった）。 */
+  return `${placesText(usedBy)}で使っているため、完全には消せません。「使わない」なら次のアンケートから外せます。`;
 }
 
 /**
