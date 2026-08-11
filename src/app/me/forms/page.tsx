@@ -76,6 +76,9 @@ function FormRow({ row }: { row: MyFormRow }) {
   const remain = daysUntilDeadline(row.deadline.effectiveUntil, new Date());
   return (
     <CardRow
+      /* もう答えられないもの（締め切り済み・新しい版に差し替わった）は沈める。
+         「自分がまだやること」だけが白い面で立って見える状態にする。 */
+      off={!row.deadline.canAnswer || row.supersededBy !== null}
       title={
         <Link href={`/me/forms/${row.formId}`} className="text-[var(--brand-deep)]">
           {row.title}

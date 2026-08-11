@@ -83,7 +83,8 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
         </div>
       )}
 
-      <Card className="card-pad">
+      {/* 一覧で沈めている締め切り済みは、開いた先でも同じ見た目にする */}
+      <Card className="card-pad" off={form.status === "closed"}>
         <p className="m-0 text-[13px]">回答期間 {formatPeriod(form.opensAt, form.closesAt)}</p>
         {form.description && <p className="m-0 mt-2 whitespace-pre-wrap text-[13px] leading-relaxed">{form.description}</p>}
         <p className="footnote m-0 mt-2">

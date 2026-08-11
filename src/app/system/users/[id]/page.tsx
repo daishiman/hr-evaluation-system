@@ -40,7 +40,7 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
       />
 
       {/* いまの姿を先に1枚で見せる。細かい入力欄はその下 */}
-      <Card className="card-pad hero-tint">
+      <Card className="card-pad hero-tint" off={!user.isActive}>
         <div className="identity-head">
           <Avatar name={user.name} seed={user.id} size={56} />
           <div className="min-w-0">

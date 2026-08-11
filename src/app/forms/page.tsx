@@ -64,6 +64,7 @@ export default async function FormContentList({ searchParams }: { searchParams: 
           {forms.map((f) => (
             <CardRow
               key={f.id}
+              off={f.status === "closed"}
               title={
                 <Link href={`/forms/${f.id}`} className="text-[var(--brand-deep)]">
                   {f.title}

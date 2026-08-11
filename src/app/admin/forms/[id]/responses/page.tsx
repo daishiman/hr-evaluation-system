@@ -138,6 +138,7 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
           caption="対象者と回答の状況"
           rows={rows}
           rowKey={(r) => r.employeeId}
+          rowOff={(r) => !r.isActive}
           columns={[
             {
               key: "name",
@@ -241,6 +242,7 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
           <RecordList
             items={extensions.map((e) => ({
               key: e.id,
+              off: e.revokedAt !== null,
               title: e.employeeName ?? "—",
               marks: e.revokedAt ? <Badge tone="closed">取り消し済み</Badge> : <Badge tone="active">延長中</Badge>,
               rows: [
