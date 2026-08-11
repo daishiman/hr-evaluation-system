@@ -941,6 +941,233 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
 }
 
 /* ============================================================
+   人（アカウント）まわり
+   文字を減らし、絵と札で「いまどうなっているか」を先に伝えるための部品。
+   色は既存のトークンだけを使い、新しい色相を増やさない。
+   ============================================================ */
+
+/* ---- 名前の頭文字アイコン ----
+   同じ人がいつも同じ色に見えるよう、色は名前から決める（Avatar.tsx）。
+   彩度は抑え、文字が主役のままにする。 */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+  user-select: none;
+  color: var(--brand-deep);
+  background: var(--brand-soft);
+}
+.avatar[data-tone="1"] { color: #7a4b12; background: #fbf0dd; }
+.avatar[data-tone="2"] { color: #1f5f4a; background: #dff0e9; }
+.avatar[data-tone="3"] { color: #5a3d8a; background: #eae3f7; }
+.avatar[data-tone="4"] { color: #8a3b3b; background: #f8e3e3; }
+.avatar[data-tone="5"] { color: #3d5570; background: #e5ebf2; }
+
+/* ---- 小さな札（アイコン＋短い語）----
+   「役割」「会社」「等級」のような属性を、文にせず並べるために使う。 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--ink);
+  white-space: nowrap;
+  max-width: 100%;
+}
+.tag > svg { color: var(--ink-muted); flex-shrink: 0; }
+.tag[data-tone="muted"] { color: var(--ink-muted); background: var(--subtle); }
+
+.identity-head { display: flex; align-items: center; gap: 14px; }
+@media (max-width: 480px) {
+  .identity-head { align-items: flex-start; gap: 10px; }
+}
+
+/* ---- 右上のアカウントメニュー ---- */
+.account-menu { position: relative; }
+.account-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  padding: 2px 4px 2px 2px;
+  cursor: pointer;
+}
+.account-trigger:hover { background: var(--subtle); border-color: var(--line); }
+.account-caret { color: var(--ink-muted); }
+/* 仮パスワードのままであることを、開かなくても分かる小さな点で伝える */
+.account-dot {
+  position: absolute;
+  top: 2px;
+  right: 16px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 1.5px solid #fff;
+}
+
+.account-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: 268px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgb(22 25 29 / 12%);
+  padding: 12px;
+  transform-origin: top right;
+}
+.account-pop-head { display: flex; align-items: center; gap: 10px; }
+.account-pop-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.account-pop-alert {
+  margin: 10px 0 0;
+  border: 1px solid var(--caution-border);
+  background: var(--caution-soft);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.account-pop-links { display: grid; gap: 2px; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.account-pop-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.account-pop-link:hover { background: var(--subtle); }
+.account-pop-link > svg { color: var(--ink-muted); }
+.account-pop-signout { color: var(--danger); }
+.account-pop-signout > svg { color: var(--danger); }
+.account-pop-link:disabled { color: var(--ink-muted); cursor: default; }
+
+/* ---- 利用者の一覧行 ---- */
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px var(--pad-card);
+  border-bottom: 1px solid var(--line);
+  color: inherit;
+}
+.user-row:last-child { border-bottom: none; }
+.user-row:hover { background: var(--subtle); }
+.user-row[data-muted="true"] .avatar { filter: grayscale(1); }
+.user-row-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+@media (max-width: 640px) {
+  .user-row { flex-wrap: wrap; }
+  .user-row-tags { flex-basis: 100%; justify-content: flex-start; }
+}
+
+/* ---- 項目ごとの行（自分の情報・本人が変更できる項目）----
+   最初に見えるのは「アイコン・項目名・値・変えられるかどうか」だけ。
+   なぜその項目があるのかは、項目名を押したときに出す。 */
+.profile-rows { display: block; }
+.profile-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px var(--pad-card);
+  border-bottom: 1px solid var(--line);
+}
+.profile-row:last-child { border-bottom: none; }
+.profile-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--subtle);
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+.profile-row[data-locked="true"] .profile-row-icon { background: transparent; border: 1px dashed var(--line); }
+.profile-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.profile-row-label > svg { transition: transform 120ms; }
+.rot-180 { transform: rotate(180deg); }
+.profile-row-value { margin: 2px 0 0; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.profile-row-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.7; color: var(--ink-muted); }
+.profile-row-action,
+.profile-row-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+.profile-row-action {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--brand-deep);
+  font-family: inherit;
+  cursor: pointer;
+}
+.profile-row-action:hover { background: var(--brand-soft); border-color: var(--brand); }
+.profile-row-lock { border: 1px dashed var(--line); color: var(--ink-muted); }
+.profile-saved { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--brand-deep); }
+.profile-error {
+  margin: 12px var(--pad-card);
+  border: 1px solid var(--danger);
+  background: var(--danger-soft);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+/* ---- 2択のスイッチ（そのまま状態表示になる）---- */
+.switch-2 { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; flex-shrink: 0; }
+.switch-2-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: #fff;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.switch-2-btn + .switch-2-btn { border-left: 1px solid var(--line); }
+.switch-2-btn[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-deep); font-weight: 600; }
+.switch-2-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* ============================================================
    Tailwind v4 への橋渡し（CSS変数が単一の真実）
    ============================================================ */
 @theme inline {
@@ -1011,7 +1238,14 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   }
 
   .section-heading { break-after: avoid; }
-  .card-row { break-inside: avoid; }
+  .card-row,
+  .user-row,
+  .profile-row { break-inside: avoid; }
+
+  /* 押して初めて出る操作（アカウントメニュー・切り替え）は紙に出さない */
+  .account-menu,
+  .switch-2,
+  .profile-row-action { display: none !important; }
 
   /* 色の付いた数字・バッジは、色が出ない環境でも読めるように濃さを上げる */
   .hero-number .num-display { color: var(--ink) !important; }

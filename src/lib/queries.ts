@@ -17,7 +17,7 @@ const s = schema;
 
 /* ───────────────── 会社・等級 ───────────────── */
 
-/** 実際に運用している会社の一覧（制度のひな形＝システム標準テンプレートは除く）。 */
+/** 実在会社の一覧。管理画面で停止会社も確認できるよう、ひな形だけを除く。 */
 export async function listCompanies() {
   const db = await getDb();
   return db.select().from(s.companies).where(eq(s.companies.isTemplate, false)).orderBy(asc(s.companies.name));
@@ -565,7 +565,7 @@ export async function listMembers(companyId: string, opts?: { managerId?: string
       profileNote: s.users.profileNote,
     })
     .from(s.users)
-    .leftJoin(s.grades, eq(s.grades.id, s.users.gradeId))
+    .leftJoin(s.grades, and(eq(s.grades.id, s.users.gradeId), eq(s.grades.companyId, s.users.companyId)))
     .where(where)
     .orderBy(asc(s.grades.displayOrder), asc(s.users.name));
 }
@@ -775,3 +775,115 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
 /* 元の配点表（移行前の「KPI基準定義_配点」シートの写し）は、
    件数が多く参考値としてしか使わないため、ここではまとめて読まない。
    選んだ等級区分のぶんだけ src/app/api/reference-points/route.ts で読む。 */
+
+/* ───────────────── 本人が変更してよい項目の設定 ───────────────── */
+
+/**
+ * 会社の「本人が変更してよい項目」設定。
+ * 行が無い項目は既定値で埋める（→ src/lib/domain/profile-fields.ts）。
+ */
+export async function listProfileFieldPolicies(companyId: string) {
+  const db = await getDb();
+  return db
+    .select({ field: s.profileFieldPolicies.field, selfEditable: s.profileFieldPolicies.selfEditable })
+    .from(s.profileFieldPolicies)
+    .where(eq(s.profileFieldPolicies.companyId, companyId));
+}
+
+/**
+ * 自分自身の登録内容。
+ *
+ * listMembers と違い、会社に属さない利用者（システム全体管理者）でも読める。
+ * 本人の情報なので、人物メモ以外はすべて返す。
+ */
+export async function getSelfProfile(userId: string) {
+  const db = await getDb();
+  const rows = await db
+    .select({
+      id: s.users.id,
+      name: s.users.name,
+      email: s.users.email,
+      role: s.users.role,
+      department: s.users.department,
+      employeeCode: s.users.employeeCode,
+      hiredAt: s.users.hiredAt,
+      isActive: s.users.isActive,
+      gradeId: s.users.gradeId,
+      gradeName: s.grades.name,
+      managerId: s.users.managerId,
+      companyId: s.users.companyId,
+      companyName: s.companies.name,
+      mustChangePassword: s.users.mustChangePassword,
+      createdAt: s.users.createdAt,
+    })
+    .from(s.users)
+    .leftJoin(s.grades, and(eq(s.grades.id, s.users.gradeId), eq(s.grades.companyId, s.users.companyId)))
+    .leftJoin(s.companies, eq(s.companies.id, s.users.companyId))
+    .where(eq(s.users.id, userId))
+    .limit(1);
+  const me = rows[0];
+  if (!me) return null;
+
+  // 上長の名前は、誰が自分の評価を確定するのかを本人に示すために添える
+  let managerName: string | null = null;
+  if (me.managerId && me.companyId) {
+    const m = await db
+      .select({ name: s.users.name })
+      .from(s.users)
+      .where(and(eq(s.users.id, me.managerId), eq(s.users.companyId, me.companyId)))
+      .limit(1);
+    managerName = m[0]?.name ?? null;
+  }
+  return { ...me, managerName };
+}
+
+/** システム全体管理者向け。会社に属さない利用者も含めた全利用者。 */
+export async function listAllUsers() {
+  const db = await getDb();
+  return db
+    .select({
+      id: s.users.id,
+      name: s.users.name,
+      email: s.users.email,
+      role: s.users.role,
+      department: s.users.department,
+      employeeCode: s.users.employeeCode,
+      hiredAt: s.users.hiredAt,
+      isActive: s.users.isActive,
+      gradeId: s.users.gradeId,
+      gradeName: s.grades.name,
+      managerId: s.users.managerId,
+      companyId: s.users.companyId,
+      companyName: s.companies.name,
+    })
+    .from(s.users)
+    .leftJoin(s.grades, and(eq(s.grades.id, s.users.gradeId), eq(s.grades.companyId, s.users.companyId)))
+    .leftJoin(s.companies, eq(s.companies.id, s.users.companyId))
+    .orderBy(asc(s.companies.name), asc(s.users.name));
+}
+
+export async function getAnyUser(userId: string) {
+  const db = await getDb();
+  const rows = await db
+    .select({
+      id: s.users.id,
+      name: s.users.name,
+      email: s.users.email,
+      role: s.users.role,
+      department: s.users.department,
+      employeeCode: s.users.employeeCode,
+      hiredAt: s.users.hiredAt,
+      isActive: s.users.isActive,
+      gradeId: s.users.gradeId,
+      gradeName: s.grades.name,
+      managerId: s.users.managerId,
+      companyId: s.users.companyId,
+      companyName: s.companies.name,
+    })
+    .from(s.users)
+    .leftJoin(s.grades, and(eq(s.grades.id, s.users.gradeId), eq(s.grades.companyId, s.users.companyId)))
+    .leftJoin(s.companies, eq(s.companies.id, s.users.companyId))
+    .where(eq(s.users.id, userId))
+    .limit(1);
+  return rows[0] ?? null;
+}

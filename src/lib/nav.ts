@@ -24,11 +24,9 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-/** どのロールでも共通で最後に置く。自分のアカウントの設定。 */
-const ACCOUNT: NavGroup = {
-  title: "アカウント",
-  items: [{ href: "/account/password", label: "パスワードを変える" }],
-};
+/* 自分のアカウント（情報の確認・変更・パスワード・ログアウト）はサイドバーに置かない。
+   全ロールのメニュー末尾に同じ項目が並ぶと、その分だけ毎回読む量が増えるため、
+   右上の自分のアイコン（AccountMenu）にまとめている。 */
 
 /** 会社の管理者とシステム全体管理者で共通の、会社ごとの運用メニュー。 */
 const COMPANY_GROUPS: NavGroup[] = [
@@ -83,13 +81,11 @@ export function navGroupsFor(role: Role): NavGroup[] {
           ],
         },
         ...COMPANY_GROUPS,
-        ACCOUNT,
       ];
     case "COMPANY_ADMIN":
       return [
         { title: null, items: [{ href: "/admin", label: "ホーム", exact: true }] },
         ...COMPANY_GROUPS,
-        ACCOUNT,
       ];
     case "MANAGER":
       return [
@@ -106,7 +102,6 @@ export function navGroupsFor(role: Role): NavGroup[] {
           title: "基準を確認する",
           items: [{ href: "/criteria", label: "評価の基準" }],
         },
-        ACCOUNT,
       ];
     default:
       return [
@@ -118,7 +113,6 @@ export function navGroupsFor(role: Role): NavGroup[] {
             { href: "/me/results", label: "評価の結果を見る" },
           ],
         },
-        ACCOUNT,
       ];
   }
 }

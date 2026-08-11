@@ -1084,3 +1084,26 @@ export const employeeNotes = sqliteTable(
   },
   (t) => [index("idx_en_employee").on(t.employeeId)],
 );
+
+/* ───────────────────────── 本人が変更してよい項目 ─────────────────────────
+ * 「氏名は本人に直させたい。所属と入社日は会社の管理者が管理したい」——
+ * この線引きは会社ごとに違うので、コードに埋め込まず会社ごとの行として持つ。
+ *
+ * 役割・等級・上長はこのテーブルに入れない。本人に開放すると自分を管理者に
+ * 昇格させられるため、設定で切り替えられないこと自体を仕組みにする
+ * （→ src/lib/domain/profile-fields.ts）。
+ */
+export const profileFieldPolicies = sqliteTable(
+  "profile_field_policies",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    /** src/lib/domain/profile-fields.ts の SELF_EDITABLE_FIELDS のキー */
+    field: text("field").notNull(),
+    /** true なら本人が自分で変更できる。false なら会社の管理者だけ */
+    selfEditable: integer("self_editable", { mode: "boolean" }).notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("uq_pfp_company_field").on(t.companyId, t.field)],
+);

@@ -9,8 +9,16 @@ describe("サイドバーのメニュー", () => {
     expect(hrefs.some((h) => h.startsWith("/admin"))).toBe(false);
     expect(hrefs.some((h) => h.startsWith("/system"))).toBe(false);
     expect(hrefs).not.toContain("/criteria");
-    // 自分の実績報告と結果、パスワード変更だけが見える
-    expect(hrefs).toEqual(["/me", "/me/forms", "/me/results", "/account/password"]);
+    // 自分の実績報告と結果だけが見える
+    expect(hrefs).toEqual(["/me", "/me/forms", "/me/results"]);
+  });
+
+  it("自分のアカウントはサイドバーに出さない（右上のアイコンにまとめる）", () => {
+    for (const role of ["EMPLOYEE", "MANAGER", "COMPANY_ADMIN", "SUPER_ADMIN"] as const) {
+      const hrefs = hrefsOf(navGroupsFor(role));
+      expect(hrefs.some((h) => h.startsWith("/account"))).toBe(false);
+      expect(navGroupsFor(role).some((g) => g.title === "アカウント")).toBe(false);
+    }
   });
 
   it("マネージャーには制度の設定を出さない（評価基準は見てよい）", () => {

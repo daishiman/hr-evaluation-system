@@ -1,79 +1,134 @@
 import Link from "next/link";
 import { requireRole, ROLE_LABEL, type Role } from "@/lib/session";
-import { listCompanies, listMembers } from "@/lib/queries";
-import { Badge, Card, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+import { listAllUsers, listCompanies } from "@/lib/queries";
+import { Card, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+import { Avatar } from "@/components/Avatar";
+import { Icon } from "@/components/Icon";
+import { RecordForm } from "@/components/RecordForm";
 
 export const dynamic = "force-dynamic";
 
 /**
  * 全社の利用者一覧。
- * システム全体管理者は全社を見られるが、会社を選ばないと一覧は出さない
- * （誰の情報かが分からないまま大量に並ぶのを避けるため）。
+ *
+ * 「誰が・どの立場で・どの会社にいるか」だけを一覧に出し、
+ * 中身（等級・上長・パスワード）はその人のページに置く。
+ * 会社に属さないシステム全体管理者もここに出す（一覧から漏れると誰も直せなくなる）。
  */
 export default async function SystemUsers({ searchParams }: { searchParams: Promise<{ company?: string }> }) {
   await requireRole("SUPER_ADMIN");
-  const companies = await listCompanies();
+  const [companies, all] = await Promise.all([listCompanies(), listAllUsers()]);
   const sp = await searchParams;
-  const company = companies.find((c) => c.id === sp.company) ?? companies[0] ?? null;
 
-  if (!company) {
-    return (
-      <>
-        <PageTitle title="利用者一覧" />
-        <EmptyState title="会社が登録されていません" body="先に会社を追加してください。" />
-      </>
-    );
-  }
+  const superAdmins = all.filter((u) => u.role === "SUPER_ADMIN");
+  const scope = sp.company ?? "";
+  const scoped =
+    scope === "" ? all : scope === "none" ? all.filter((u) => !u.companyId) : all.filter((u) => u.companyId === scope);
 
-  const members = await listMembers(company.id);
-  const byRole = (r: string) => members.filter((m) => m.role === r);
+  const byRole = (r: string) => scoped.filter((u) => u.role === r);
+  const countLabel = (r: Role) => `${ROLE_LABEL[r]} ${byRole(r).length}`;
 
   return (
     <>
-      <PageTitle
-        title="利用者一覧"
-        lede="会社ごとの利用者を確認できます。アカウントの発行・変更は各社の管理者が行います。"
-      />
+      <PageTitle title="利用者" lede="全社の利用者をここで確認・変更できます。" />
 
-      <SectionHeading>会社を選ぶ</SectionHeading>
-      <div className="mb-5 flex flex-wrap gap-2">
-        {companies.map((c) => (
-          <Link key={c.id} href={`/system/users?company=${c.id}`} className="chip" aria-pressed={c.id === company.id}>
-            {c.name}
-          </Link>
-        ))}
-      </div>
-
+      {/* 全体像は数字だけ。誰が何人いるかを一行で掴ませる */}
       <Card className="card-pad hero-tint">
-        <p className="m-0 text-[12px] text-[var(--ink-muted)]">{company.name}</p>
         <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
-          {members.filter((m) => m.isActive).length}
-          <span className="unit"> / {members.length} 人が在籍中</span>
+          {scoped.filter((u) => u.isActive).length}
+          <span className="unit"> / {scoped.length} 人が利用中</span>
         </p>
-        <p className="m-0 mt-2 text-[13px]">
-          会社の管理者 {byRole("COMPANY_ADMIN").length}人 ／ マネージャー {byRole("MANAGER").length}人 ／ 評価される方{" "}
-          {byRole("EMPLOYEE").length}人
+        <p className="m-0 mt-2 text-[13px] text-[var(--ink-muted)]">
+          {countLabel("SUPER_ADMIN")}人 ／ {countLabel("COMPANY_ADMIN")}人 ／ {countLabel("MANAGER")}人 ／{" "}
+          {countLabel("EMPLOYEE")}人
         </p>
       </Card>
 
-      <SectionHeading>利用者（{members.length}人）</SectionHeading>
-      {members.length === 0 ? (
-        <EmptyState title="利用者がまだいません" body="この会社の管理者がアカウントを発行すると、ここに並びます。" />
+      <SectionHeading>会社でしぼる</SectionHeading>
+      <div className="mb-5 flex flex-wrap gap-2">
+        <Link href="/system/users" className="chip" aria-pressed={scope === ""}>
+          すべて（{all.length}）
+        </Link>
+        {companies.map((c) => (
+          <Link key={c.id} href={`/system/users?company=${c.id}`} className="chip" aria-pressed={scope === c.id}>
+            {c.name}（{all.filter((u) => u.companyId === c.id).length}）
+          </Link>
+        ))}
+        <Link href="/system/users?company=none" className="chip" aria-pressed={scope === "none"}>
+          会社に属さない（{all.filter((u) => !u.companyId).length}）
+        </Link>
+      </div>
+
+      <SectionHeading aside={<span className="footnote">名前を押すと変更できます</span>}>
+        利用者（{scoped.length}人）
+      </SectionHeading>
+      {scoped.length === 0 ? (
+        <EmptyState title="この条件の利用者はいません" body="別の会社を選ぶか、下から追加してください。" />
       ) : (
         <Card>
-          {members.map((m) => (
-            <div key={m.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">{m.name}</p>
-                <p className="todo-row-sub m-0">
-                  {m.email} ／ {m.gradeName ?? "等級 未設定"} ／ {m.department ?? "所属 未設定"}
+          {scoped.map((u) => (
+            <Link key={u.id} href={`/system/users/${u.id}`} className="user-row no-underline">
+              <Avatar name={u.name} seed={u.id} size={36} />
+              <div className="min-w-0 flex-1">
+                <p className="m-0 truncate text-[14px] font-semibold text-[var(--ink)]">
+                  {u.name}
+                  {!u.isActive && <span className="ml-2 badge badge-closed">利用停止</span>}
                 </p>
+                <p className="m-0 truncate text-[12px] text-[var(--ink-muted)]">{u.email}</p>
               </div>
-              <Badge tone={m.isActive ? "done" : "closed"}>{ROLE_LABEL[m.role as Role] ?? m.role}</Badge>
-            </div>
+              <span className="user-row-tags">
+                <span className="tag">
+                  <Icon name="shield" size={13} />
+                  {ROLE_LABEL[u.role as Role] ?? u.role}
+                </span>
+                <span className="tag">
+                  <Icon name="building" size={13} />
+                  {u.companyName ?? "所属なし"}
+                </span>
+              </span>
+            </Link>
           ))}
         </Card>
       )}
+
+      <SectionHeading>利用者を追加する</SectionHeading>
+      <Disclosure
+        summary="新しい利用者を作る"
+        meta="システム全体管理者もここから作れます"
+        defaultOpen={superAdmins.filter((u) => u.isActive).length <= 1}
+      >
+        <RecordForm
+          url="/api/system/users"
+          method="POST"
+          submitLabel="この内容でアカウントを作る"
+          description="発行後、メールアドレスと仮パスワードをご本人にお伝えください。最初のログイン後に変更をお願いする表示が出ます。"
+          resetAfterSubmit
+          fields={[
+            { name: "name", label: "氏名", type: "text", required: true },
+            { name: "email", label: "メールアドレス（ログインID）", type: "email", required: true },
+            { name: "password", label: "仮パスワード", type: "password", required: true, help: "8文字以上" },
+            {
+              name: "role",
+              label: "役割",
+              type: "select",
+              required: true,
+              defaultValue: "COMPANY_ADMIN",
+              options: (["SUPER_ADMIN", "COMPANY_ADMIN", "MANAGER", "EMPLOYEE"] as Role[]).map((r) => ({
+                value: r,
+                label: ROLE_LABEL[r],
+              })),
+            },
+            {
+              name: "companyId",
+              label: "所属会社",
+              type: "select",
+              help: "システム全体管理者だけは、会社を選ばなくても作れます。",
+              options: companies.filter((c) => c.isActive).map((c) => ({ value: c.id, label: c.name })),
+            },
+          ]}
+        />
+      </Disclosure>
+
       <p className="footnote mt-3">
         個人の評価内容は、その会社の管理者・マネージャーが確認します。この画面では評価の中身は表示しません。
       </p>

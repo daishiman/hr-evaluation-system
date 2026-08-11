@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole, ROLE_LABEL, type Role } from "@/lib/session";
-import { getMember, listEvaluations, listGrades, listMembers } from "@/lib/queries";
+import { getMember, listEvaluations, listGrades, listMembers, listProfileFieldPolicies } from "@/lib/queries";
+import { CONFIGURABLE_FIELDS, resolveSelfEditMap } from "@/lib/domain/profile-fields";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, DefList, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { Avatar } from "@/components/Avatar";
+import { Icon } from "@/components/Icon";
+import { Card, Disclosure, Num, PageTitle, SectionHeading } from "@/components/ui";
 import { formatDate } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -19,12 +22,20 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
   const member = await getMember(companyId, id);
   if (!member) notFound();
 
-  const [grades, members, evals] = await Promise.all([
+  const [grades, members, evals, policies] = await Promise.all([
     listGrades(companyId),
     listMembers(companyId),
     listEvaluations(companyId, viewer.role, { employeeId: id }),
+    listProfileFieldPolicies(companyId),
   ]);
   const managers = members.filter((m) => m.id !== id && m.role !== "EMPLOYEE" && m.isActive);
+  const selfEdit = resolveSelfEditMap(policies);
+  const managerName = members.find((m) => m.id === member.managerId)?.name ?? null;
+  const finalizedCount = evals.filter((e) => e.status === "finalized").length;
+
+  /** 入力欄に「本人も直せる項目かどうか」を添える（管理者が直した内容を本人が戻せる場合がある）。 */
+  const selfEditHint = (key: keyof typeof selfEdit) =>
+    selfEdit[key] ? "本人も自分の画面から変更できます。" : undefined;
 
   return (
     <>
@@ -43,25 +54,57 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
         }
       />
 
-      <SectionHeading>いまの登録内容</SectionHeading>
-      <Card className="card-pad">
-        <DefList
-          rows={[
-            { label: "等級", value: member.gradeName ?? "未設定" },
-            { label: "所属", value: member.department ?? "—" },
-            { label: "社員番号", value: member.employeeCode ?? "—" },
-            { label: "入社日", value: formatDate(member.hiredAt) },
-            { label: "上長", value: members.find((m) => m.id === member.managerId)?.name ?? "未設定" },
-            {
-              label: "状態",
-              value: member.isActive ? <Badge tone="active">在籍</Badge> : <Badge tone="closed">利用停止</Badge>,
-            },
-            { label: "確定済みの評価", value: <Num value={evals.filter((e) => e.status === "finalized").length} unit="件" /> },
-          ]}
-        />
+      {/* いまの姿は札で1枚に。読む文章を増やさず、目で拾えるようにする */}
+      <Card className="card-pad hero-tint">
+        <div className="identity-head">
+          <Avatar name={member.name} seed={member.id} size={56} />
+          <div className="min-w-0">
+            <p className="m-0 flex items-center gap-1 truncate text-[13px] text-[var(--ink-muted)]">
+              <Icon name="mail" size={13} />
+              {member.email}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="tag">
+                <Icon name="layers" size={13} />
+                {member.gradeName ?? "等級 未設定"}
+              </span>
+              <span className="tag">
+                <Icon name="building" size={13} />
+                {member.department ?? "所属 未設定"}
+              </span>
+              <span className="tag">
+                <Icon name="users" size={13} />
+                上長 {managerName ?? "未設定"}
+              </span>
+              <span className="tag">
+                <Icon name="calendar" size={13} />
+                {member.hiredAt ? `${formatDate(member.hiredAt)} 入社` : "入社日 未設定"}
+              </span>
+              <span className="tag">
+                <Icon name="hash" size={13} />
+                {member.employeeCode ?? "社員番号 未設定"}
+              </span>
+              <span className="tag" data-tone={member.isActive ? undefined : "muted"}>
+                <Icon name="power" size={13} />
+                {member.isActive ? "在籍" : "利用停止"}
+              </span>
+            </div>
+            <p className="m-0 mt-2 text-[12px] text-[var(--ink-muted)]">
+              確定済みの評価 <Num value={finalizedCount} unit="件" />
+            </p>
+          </div>
+        </div>
       </Card>
 
-      <SectionHeading>登録内容を変える</SectionHeading>
+      <SectionHeading
+        aside={
+          <Link href="/admin/members/policy" className="btn btn-tertiary">
+            本人が変更できる範囲
+          </Link>
+        }
+      >
+        登録内容を変える
+      </SectionHeading>
       <RecordForm
         url="/api/members"
         method="PATCH"
@@ -69,7 +112,7 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
         submitLabel="この内容で保存する"
         description="等級を変えると、次に作るアンケートと評価の計算に反映されます。確定済みの評価は変わりません。"
         fields={[
-          { name: "name", label: "氏名", type: "text", required: true, defaultValue: member.name },
+          { name: "name", label: "氏名", type: "text", required: true, defaultValue: member.name, help: selfEditHint("name") },
           {
             name: "role",
             label: "役割",
@@ -96,23 +139,25 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
             defaultValue: member.managerId ?? "",
             options: managers.map((m) => ({ value: m.id, label: m.name })),
           },
-          { name: "department", label: "所属", type: "text", defaultValue: member.department ?? "" },
-          { name: "employeeCode", label: "社員番号", type: "text", defaultValue: member.employeeCode ?? "" },
-          { name: "hiredAt", label: "入社日", type: "date", defaultValue: member.hiredAt ?? "" },
+          { name: "department", label: "所属", type: "text", defaultValue: member.department ?? "", help: selfEditHint("department") },
+          { name: "employeeCode", label: "社員番号", type: "text", defaultValue: member.employeeCode ?? "", help: selfEditHint("employeeCode") },
+          { name: "hiredAt", label: "入社日", type: "date", defaultValue: member.hiredAt ?? "", help: selfEditHint("hiredAt") },
           { name: "profileNote", label: "メモ（本人には表示されません）", type: "textarea", defaultValue: member.profileNote ?? "" },
         ]}
       />
 
       <SectionHeading>パスワードの再発行</SectionHeading>
-      <RecordForm
-        url="/api/members"
-        method="PATCH"
-        fixed={{ userId: member.id }}
-        submitLabel="パスワードを再発行する"
-        description="ログインできなくなったときに使います。新しいパスワードをご本人にお伝えください。"
-        resetAfterSubmit
-        fields={[{ name: "password", label: "新しいパスワード", type: "password", required: true, help: "8文字以上" }]}
-      />
+      <Disclosure summary="パスワードを再発行する" meta="ログインできなくなったときに使います">
+        <RecordForm
+          url="/api/members"
+          method="PATCH"
+          fixed={{ userId: member.id }}
+          submitLabel="パスワードを再発行する"
+          description="新しいパスワードをご本人にお伝えください。"
+          resetAfterSubmit
+          fields={[{ name: "password", label: "新しいパスワード", type: "password", required: true, help: "8文字以上" }]}
+        />
+      </Disclosure>
 
       <SectionHeading>利用の停止と再開</SectionHeading>
       <Card className="card-pad">

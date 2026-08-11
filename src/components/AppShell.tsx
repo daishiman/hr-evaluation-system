@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ROLE_LABEL, type Viewer } from "@/lib/session";
 import { listCompanies } from "@/lib/queries";
-import { SignOutButton } from "@/components/SignOutButton";
+import { AccountMenu } from "@/components/AccountMenu";
 import { AppSidebar, SIDEBAR_INIT_SCRIPT } from "@/components/AppSidebar";
 import { homeItemFor, navGroupsFor } from "@/lib/nav";
 import { ReasonNote } from "@/components/ui";
@@ -27,7 +27,7 @@ export async function AppShell({ viewer, children }: { viewer: Viewer; children:
       <AppSidebar
         groups={groups}
         appSubtitle={viewer.companyName ?? "全社共通"}
-        companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+        companies={companies.filter((c) => c.isActive).map((c) => ({ id: c.id, name: c.name }))}
         currentCompanyId={viewer.companyId}
         homeHref={home.href}
       />
@@ -38,11 +38,19 @@ export async function AppShell({ viewer, children }: { viewer: Viewer; children:
             人事評価
           </Link>
           <div className="ml-auto flex shrink-0 items-center gap-3">
-            <Link href="/account/password" className="hidden text-right text-[12px] leading-tight no-underline sm:block">
-              <span className="block font-semibold">{viewer.name}</span>
-              <span className="block text-[var(--ink-muted)]">{ROLE_LABEL[viewer.role]}</span>
-            </Link>
-            <SignOutButton />
+            {/* 自分のことは、すべてこのアイコンの中にまとめる（ヘッダーに文字を増やさない） */}
+            <AccountMenu
+              userId={viewer.id}
+              name={viewer.name}
+              email={viewer.email}
+              roleLabel={ROLE_LABEL[viewer.role]}
+              companyContextLabel={
+                viewer.companyName
+                  ? `${viewer.role === "SUPER_ADMIN" ? "操作中" : "所属"}: ${viewer.companyName}`
+                  : null
+              }
+              needsPasswordChange={viewer.mustChangePassword}
+            />
           </div>
         </header>
 

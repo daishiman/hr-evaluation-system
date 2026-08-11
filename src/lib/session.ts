@@ -68,6 +68,7 @@ export async function getViewer(): Promise<Viewer | null> {
       mustChangePassword: schema.users.mustChangePassword,
       isActive: schema.users.isActive,
       companyName: schema.companies.name,
+      companyIsActive: schema.companies.isActive,
     })
     .from(schema.users)
     .leftJoin(schema.companies, eq(schema.companies.id, schema.users.companyId))
@@ -79,6 +80,10 @@ export async function getViewer(): Promise<Viewer | null> {
   if (!u || !u.isActive) return null;
 
   const role: Role = (ROLES as readonly string[]).includes(u.role) ? (u.role as Role) : "EMPLOYEE";
+
+  // 会社所属が必須のロールは、会社が未設定または停止中ならセッションが残っていても通さない。
+  // SUPER_ADMIN の companyId は所属ではなく、後段で選ぶ操作対象会社なのでこの判定から除く。
+  if (role !== "SUPER_ADMIN" && (!u.companyId || !u.companyIsActive)) return null;
 
   // システム全体管理者は会社に属さないため、いま見ている会社を別に決める（他のロールは自社に固定）
   let companyId = u.companyId;
