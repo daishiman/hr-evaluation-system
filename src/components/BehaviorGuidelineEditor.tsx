@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { behaviorBandLabel } from "@/lib/domain/behavior";
+import { behaviorBandLabel, type BehaviorBandSetRow } from "@/lib/domain/behavior";
 
 /**
  * 行動指針（観点 × 5段階の文言）の編集。
@@ -37,7 +37,15 @@ export interface BehaviorGuidelineRow {
   levels: BehaviorLevelRow[];
 }
 
-export function BehaviorGuidelineEditor({ band, rows }: { band: string; rows: BehaviorGuidelineRow[] }) {
+export function BehaviorGuidelineEditor({
+  band,
+  bandSets,
+  rows,
+}: {
+  band: string;
+  bandSets: readonly BehaviorBandSetRow[];
+  rows: BehaviorGuidelineRow[];
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +53,8 @@ export function BehaviorGuidelineEditor({ band, rows }: { band: string; rows: Be
   /** 開いている入力欄。行のidをキーにして、開いているものだけを持つ */
   const [editingLevel, setEditingLevel] = useState<Record<string, { label: string; text: string }>>({});
   const [editingName, setEditingName] = useState<Record<string, string>>({});
+  /** 「観点を追加する」を開いているときだけ持つ下書き。 */
+  const [newAspectName, setNewAspectName] = useState<string | null>(null);
 
   const send = async (payload: Record<string, unknown>) => {
     setBusy(true);
@@ -74,14 +84,17 @@ export function BehaviorGuidelineEditor({ band, rows }: { band: string; rows: Be
 
   const list = rows.filter((r) => r.band === band).sort((a, b) => a.seq - b.seq);
 
-  if (list.length === 0) {
-    return <ReasonNote>{behaviorBandLabel(band)}の行動指針が登録されていません。</ReasonNote>;
-  }
-
   return (
     <div className="stack">
       {error && <ReasonNote>{error}</ReasonNote>}
       {message && <p className="m-0 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+
+      {list.length === 0 && (
+        <ReasonNote>
+          {behaviorBandLabel(bandSets, band)}にはまだ問う内容がありません。下の「観点を追加する」から作るか、
+          ほかの基準を複製して作り直してください。この基準を等級に出しても、行動指針の設問は出ません。
+        </ReasonNote>
+      )}
 
       {list.map((g) => (
         <Card key={g.id} className="card-pad">
@@ -232,6 +245,44 @@ export function BehaviorGuidelineEditor({ band, rows }: { band: string; rows: Be
           </div>
         </Card>
       ))}
+
+      <Card className="card-pad">
+        {newAspectName === null ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" disabled={busy} onClick={() => setNewAspectName("")}>
+              観点を追加する
+            </Button>
+            <span className="footnote">この基準で問う項目を1つ増やします（5段階の文章は下書きが入ります）。</span>
+          </div>
+        ) : (
+          <>
+            <label className="block text-[12px] text-[var(--ink-muted)]">
+              観点の呼び名（そのまま設問になります）
+              <input
+                value={newAspectName}
+                onChange={(event) => setNewAspectName(event.target.value)}
+                className="input mt-1 w-full"
+                placeholder="例：協調性について"
+              />
+            </label>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                variant="primary"
+                disabled={busy || newAspectName.trim() === ""}
+                onClick={async () => {
+                  const ok = await send({ kind: "behaviorGuideline", band, aspectName: newAspectName.trim() });
+                  if (ok) setNewAspectName(null);
+                }}
+              >
+                追加する
+              </Button>
+              <Button variant="tertiary" disabled={busy} onClick={() => setNewAspectName(null)}>
+                やめる
+              </Button>
+            </div>
+          </>
+        )}
+      </Card>
     </div>
   );
 }

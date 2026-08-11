@@ -18,7 +18,7 @@ const TABLES = [
   "form_deadline_extensions",
   "scheme_rank_ratios", "scheme_items", "evaluation_schemes", "grade_point_rules",
   "kpi_questions", "kpi_reference_points", "kpi_rank_criteria", "kpi_items", "kpi_categories",
-  "promotion_thresholds", "behavior_levels", "behavior_guidelines",
+  "promotion_thresholds", "behavior_levels", "behavior_guidelines", "behavior_band_sets",
   "promotion_requirements", "grade_requirements",
   "sessions", "accounts", "verifications", "users", "grades", "offices", "companies",
 ];
