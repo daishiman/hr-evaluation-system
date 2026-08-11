@@ -64,3 +64,4 @@ backup.sql
 
 drizzle/.add-user.sql
 drizzle/.reference-points.sql
+drizzle/.grade-schemes.sql

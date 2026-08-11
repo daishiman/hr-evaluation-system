@@ -28,19 +28,52 @@ export interface RankCriterion {
 export interface RankJudgement {
   rank: Rank;
   criterion: RankCriterion | null;
-  /** 「なぜこのランクか」を日本語で説明した文字列 */
+  /** 「なぜこのランクか」を日本語で説明した文字列（評価者向け。閾値をそのまま出す） */
   rationale: string;
+  /** 本人向けの説明。閾値の数値を出さず、実績値とランクだけで説明する */
+  rationaleEmployee: string;
   /** 基準表に穴があり、最下位ランクへ丸めた場合に true */
   fellThrough: boolean;
 }
+
+/* ───────────── 本人向けの言い換え ─────────────
+ *
+ * 本人に見せる文には、配点・獲得点数・満点・閾値の数値を一切入れない（2026-08-11 決定）。
+ * 閾値を本人に出すと「あと0.4%で上のランクだった」という交渉の材料になり、
+ * 実績そのものではなく境界の押し引きに関心が向くため。
+ * 実績値とランク（A〜E）は本人に見せてよい ＝ 自分が何をどれだけやったかは本人の情報。
+ */
+
+/** ランクを「上から何番目の水準か」に言い換える。閾値の数字を出さずに位置だけ伝える。 */
+export function rankLevelLabel(rank: Rank): string {
+  const idx = RANK_ORDER.indexOf(rank);
+  if (idx === 0) return "もっとも高い水準";
+  if (idx === RANK_ORDER.length - 1) return "もっとも下の水準";
+  return `上から${["", "2", "3", "4"][idx]}番目の水準`;
+}
+
+/** 実績が出せずランクを付けられなかった項目の、本人向けの説明。 */
+export const UNRATED_RATIONALE_EMPLOYEE =
+  "実績を計算するための回答がそろっていないため、この項目は今回判定していません（判定外）。";
+
+/** 等級要件の設問が1件も無く、固定枠の達成率が出せなかったときの本人向けの説明。 */
+export const UNRATED_REQUIREMENT_RATIONALE_EMPLOYEE =
+  "今回のアンケートに等級要件の設問が含まれていなかったため、この項目は判定していません（判定外）。";
 
 /**
  * 実績値からランクを判定する。
  *
  * criteria は A→E の順に並んでいなくてもよい（内部で並べ替える）。
+ * unit を渡すと本人向けの文に単位が付く（「実績値 92%」）。
  */
-export function judgeRank(value: number, criteria: RankCriterion[], direction: Direction): RankJudgement {
+export function judgeRank(
+  value: number,
+  criteria: RankCriterion[],
+  direction: Direction,
+  opts?: { unit?: string | null },
+): RankJudgement {
   const sorted = [...criteria].sort((a, b) => RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank));
+  const shown = `${formatValue(value)}${opts?.unit && opts.unit !== "-" ? opts.unit : ""}`;
 
   for (const c of sorted) {
     if (matchesCriterion(value, c, direction)) {
@@ -48,6 +81,7 @@ export function judgeRank(value: number, criteria: RankCriterion[], direction: D
         rank: c.rank,
         criterion: c,
         rationale: `実績値 ${formatValue(value)} が「${c.displayLabel}」に該当するため ${c.rank} と判定しました。`,
+        rationaleEmployee: `実績値 ${shown} は${rankLevelLabel(c.rank)}に該当するため、${c.rank} と判定しました。`,
         fellThrough: false,
       };
     }
@@ -59,6 +93,9 @@ export function judgeRank(value: number, criteria: RankCriterion[], direction: D
     rank: "E",
     criterion: last,
     rationale: `実績値 ${formatValue(value)} は基準表のどの範囲にも一致しなかったため、最下位の E として扱いました。基準表の見直しが必要です。`,
+    /* 本人向けにも「基準表に穴がある」という事実は伏せない。
+       黙ってEにすると、本人には「実績が悪かったからE」としか読めなくなるため。 */
+    rationaleEmployee: `実績値 ${shown} は評価基準のどの水準にも当てはまらなかったため、いったん${rankLevelLabel("E")}（E）として扱っています。評価基準の見直しが必要な状態です。`,
     fellThrough: true,
   };
 }
@@ -142,8 +179,10 @@ export interface ScoreItemResult {
   points: number;
   /** その項目の満点（合計の分母に使う） */
   maxPoints: number;
-  /** 「何点がどう決まったか」を日本語で説明した文字列 */
+  /** 「何点がどう決まったか」を日本語で説明した文字列（評価者向け） */
   note: string;
+  /** 本人向けの説明。点数・満点・割合の数値を出さず、ランクが反映されたことだけを伝える */
+  noteEmployee: string;
   /** 絶対点方式を選んだのに点数表が無く、一律割合方式へ退避した場合に true */
   fellBackToRatio: boolean;
 }
@@ -167,6 +206,7 @@ export function scoreItem(input: ScoreItemInput): ScoreItemResult {
         points: Math.round(points * 10) / 10,
         maxPoints: Math.round(a.points * 10) / 10,
         note: `項目別絶対点方式：ランク${input.rank}の点数 ${points}点（この項目の満点は${a.points}点）。`,
+        noteEmployee: `この項目は ${input.rank} として評価点に反映しています。`,
         fellBackToRatio: false,
       };
     }
@@ -175,6 +215,7 @@ export function scoreItem(input: ScoreItemInput): ScoreItemResult {
       points,
       maxPoints: input.weight,
       note: `この項目には元の配点表がないため、一律割合方式で計算しました：配点${input.weight}点 × ランク${input.rank}の割合 ＝ ${points}点。`,
+      noteEmployee: `この項目は ${input.rank} として評価点に反映しています。`,
       fellBackToRatio: true,
     };
   }
@@ -185,6 +226,10 @@ export function scoreItem(input: ScoreItemInput): ScoreItemResult {
     points,
     maxPoints: input.weight,
     note: `一律割合方式：配点${input.weight}点 × ランク${input.rank}の割合${Math.round(ratio * 100)}% ＝ ${points}点。`,
+    /* 本人向けは「ランクが点数に反映された」ことだけを伝える。
+       配点も割合も出さないのは、項目ごとの重みが分かると
+       「配点の大きい項目だけ頑張る」方向に働くため（2026-08-11 決定）。 */
+    noteEmployee: `この項目は ${input.rank} として評価点に反映しています。`,
     fellBackToRatio: false,
   };
 }
@@ -240,8 +285,12 @@ export interface OverallResult {
   maxScore: number;
   raiseEligible: boolean;
   raiseReason: string;
+  /** 本人向けの昇給理由。点数・満点の数値を出さない */
+  raiseReasonEmployee: string;
   promotionEligible: boolean;
   promotionBlockedReason: string | null;
+  /** 本人向けの昇格できない理由。必要点数・獲得点数の数値を出さない */
+  promotionBlockedReasonEmployee: string | null;
   /** 実績が足りずランクを付けられなかった項目の名前（画面に「判定外」として出す） */
   unratedItemNames: string[];
 }
@@ -259,36 +308,56 @@ export function judgeOverall(input: OverallInput): OverallResult {
     ? input.items.length > 0 && nonA.length === 0 && unrated.length === 0
     : totalScore >= maxScore;
 
+  /* 昇給理由は「評価者向け」と「本人向け」を同時に作る。
+     本人向けには点数・満点を出さない（項目ごとのランクと、何が足りなかったかだけを伝える）。
+     表示側で数字を消す作りにすると、消し忘れが本人に見える事故になるため、
+     数字を含まない文をここで作り切って保存する。 */
+  const unratedNames = unrated.map((i) => i.itemName).join("、");
   const raiseReasonParts: string[] = [];
+  const raiseReasonEmployeeParts: string[] = [];
   if (input.raiseRequiresAllA) {
     if (raiseEligible) {
       raiseReasonParts.push(`選択された${input.items.length}項目すべてがAのため、昇給の要件を満たします。`);
+      raiseReasonEmployeeParts.push("評価対象の項目がすべてAのため、昇給の要件を満たしています。");
     } else {
       if (nonA.length > 0) {
-        raiseReasonParts.push(`${nonA.map((i) => `${i.itemName}（${i.rank}）`).join("、")} がA未満のため、昇給は見送りです。`);
+        const names = nonA.map((i) => `${i.itemName}（${i.rank}）`).join("、");
+        raiseReasonParts.push(`${names} がA未満のため、昇給は見送りです。`);
+        raiseReasonEmployeeParts.push(`${names} がAに届いていないため、今回の昇給は見送りです。`);
       }
       if (unrated.length > 0) {
-        raiseReasonParts.push(
-          `${unrated.map((i) => i.itemName).join("、")} は実績が入力されていないため判定できていません（判定外）。`,
-        );
+        raiseReasonParts.push(`${unratedNames} は実績が入力されていないため判定できていません（判定外）。`);
+        raiseReasonEmployeeParts.push(`${unratedNames} は実績が入力されていないため判定できていません（判定外）。`);
       }
     }
   } else {
     raiseReasonParts.push(`合計${totalScore}点 / ${maxScore}点。`);
+    raiseReasonEmployeeParts.push(
+      raiseEligible
+        ? "評価点が満点に達しているため、昇給の要件を満たしています。"
+        : "評価点が満点に達していないため、今回の昇給は見送りです。",
+    );
     if (unrated.length > 0) {
-      raiseReasonParts.push(`${unrated.map((i) => i.itemName).join("、")} は実績が未入力のため判定外です。`);
+      raiseReasonParts.push(`${unratedNames} は実績が未入力のため判定外です。`);
+      raiseReasonEmployeeParts.push(`${unratedNames} は実績が入力されていないため判定できていません（判定外）。`);
     }
   }
   const raiseReason = raiseReasonParts.join("");
+  const raiseReasonEmployee = raiseReasonEmployeeParts.join("");
 
   // 昇格判定: 必須ゲート → 点数 の順に見る
   const blockedGates = input.gates.filter((g) => !g.achieved);
   const reasons: string[] = [];
+  const reasonsEmployee: string[] = [];
   if (blockedGates.length > 0) {
-    reasons.push(`昇格要件が未達です（${blockedGates.map((g) => g.text).join("、")}）。`);
+    const names = blockedGates.map((g) => g.text).join("、");
+    reasons.push(`昇格要件が未達です（${names}）。`);
+    // 何をすれば昇格に近づくかは本人に伝わったほうがよいので、要件そのものは隠さない
+    reasonsEmployee.push(`昇格要件が未達です（${names}）。`);
   }
   if (input.requiredKpiPoints !== null && totalScore < input.requiredKpiPoints) {
     reasons.push(`KPI評価点が${totalScore}点で、昇格に必要な${input.requiredKpiPoints}点に達していません。`);
+    reasonsEmployee.push("KPI評価が、昇格に必要な水準に達していません。");
   }
   if (
     input.requiredBehaviorPoints !== null &&
@@ -298,6 +367,7 @@ export function judgeOverall(input: OverallInput): OverallResult {
     reasons.push(
       `行動指針の評価が${input.behaviorTotal}点で、昇格に必要な${input.requiredBehaviorPoints}点に達していません。`,
     );
+    reasonsEmployee.push("行動指針の評価が、昇格に必要な水準に達していません。");
   }
 
   return {
@@ -305,8 +375,10 @@ export function judgeOverall(input: OverallInput): OverallResult {
     maxScore,
     raiseEligible,
     raiseReason,
+    raiseReasonEmployee,
     promotionEligible: reasons.length === 0,
     promotionBlockedReason: reasons.length === 0 ? null : reasons.join(""),
+    promotionBlockedReasonEmployee: reasonsEmployee.length === 0 ? null : reasonsEmployee.join(""),
     unratedItemNames: unrated.map((i) => i.itemName),
   };
 }

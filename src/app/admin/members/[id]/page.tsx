@@ -22,7 +22,7 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
   const [grades, members, evals] = await Promise.all([
     listGrades(companyId),
     listMembers(companyId),
-    listEvaluations(companyId, { employeeId: id }),
+    listEvaluations(companyId, viewer.role, { employeeId: id }),
   ]);
   const managers = members.filter((m) => m.id !== id && m.role !== "EMPLOYEE" && m.isActive);
 

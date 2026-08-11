@@ -40,7 +40,7 @@ export default async function ManagerCycles({
 
   const [pending, evals, staleCycles] = await Promise.all([
     listPendingRespondents(companyId, selected.id),
-    listEvaluations(companyId, { cycleId: selected.id }),
+    listEvaluations(companyId, viewer.role, { cycleId: selected.id }),
     detectStaleCycles(companyId),
   ]);
   const stale = staleCycles.find((c) => c.cycleId === selected.id);

@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getViewer, homePathFor } from "@/lib/session";
 import { getDb, schema as s } from "@/lib/db";
 import { AppShell } from "@/components/AppShell";
 import { LinkButton, PageTitle, ReasonNote } from "@/components/ui";
+import { listActiveExtensions } from "@/lib/response-access";
+import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,10 @@ export const dynamic = "force-dynamic";
  *
  * 人事評価の回答は誰が答えたかが分からないと集計できないため、
  * このURLでもログインは必須にしている（URLを知っていれば誰でも書ける状態にはしない）。
- * ログイン後は、自分の等級のアンケートであれば回答画面へそのまま送る。
+ *
+ * 以前は状態も回答期間も見ずに回答画面へ送っていたため、まだ公開していないアンケートや
+ * 締め切ったアンケートのURLを踏んだ人が、理由の分からない画面に着いていた。
+ * ここで状態と期間を見て、「いつから／いつまでか」を日本語で案内する。
  */
 export default async function PublicForm({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -33,12 +38,51 @@ export default async function PublicForm({ params }: { params: Promise<{ token: 
     );
   }
 
-  if (viewer.gradeId !== form.gradeId) {
+  // 過去に自分が答えていれば、等級が変わっていても読み返せるようにする
+  const mine = (
+    await db
+      .select({ id: s.formResponses.id })
+      .from(s.formResponses)
+      .where(and(eq(s.formResponses.formId, form.id), eq(s.formResponses.employeeId, viewer.id)))
+      .limit(1)
+  )[0];
+
+  if (viewer.gradeId !== form.gradeId && !mine) {
     return (
       <AppShell viewer={viewer}>
         <PageTitle title="このアンケートの対象ではありません" />
         <ReasonNote action={<LinkButton href="/me/forms">自分のアンケートを見る</LinkButton>}>
           このアンケートは別の等級の方向けです。ご自身の等級のアンケートは「実績を報告する」から開けます。
+        </ReasonNote>
+      </AppShell>
+    );
+  }
+
+  const judgement = judgeFormDeadline({
+    status: form.status,
+    opensAt: form.opensAt,
+    closesAt: form.closesAt,
+    extensions: await listActiveExtensions(form.id, viewer.id),
+    now: new Date(),
+  });
+
+  // 提出済み・回答途中なら、締切後でも読み返せるように回答画面へ送る（そこで読み取り専用になる）
+  if (!judgement.canAnswer && !mine) {
+    const detail =
+      judgement.state === "before_open" && form.opensAt
+        ? `受付は${formatJpDate(form.opensAt)}に始まります。`
+        : judgement.state === "not_published"
+          ? "担当の方が公開の準備をしています。"
+          : "";
+    return (
+      <AppShell viewer={viewer}>
+        <PageTitle title={form.title} />
+        <ReasonNote action={<LinkButton href="/me/forms">自分のアンケートを見る</LinkButton>}>
+          {judgement.message}
+          {detail}
+          {judgement.state === "past_deadline" || judgement.state === "closed_by_admin"
+            ? "事情があって今から提出したい場合は、上長または会社の管理者にご相談ください。個別に期限を延ばすことができます。"
+            : "受付が始まると「実績を報告する」の一覧にも並びます。"}
         </ReasonNote>
       </AppShell>
     );

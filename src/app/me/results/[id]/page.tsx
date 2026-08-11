@@ -11,7 +11,7 @@ export default async function MyResult({ params }: { params: Promise<{ id: strin
   if (!viewer.companyId) notFound();
 
   // 自分の評価しか開けない（URLを書き換えても他人の結果は出さない）
-  const mine = await listEvaluations(viewer.companyId, { employeeId: viewer.id });
+  const mine = await listEvaluations(viewer.companyId, viewer.role, { employeeId: viewer.id });
   if (!mine.some((e) => e.id === id)) notFound();
 
   return <EvaluationDetail companyId={viewer.companyId} evaluationId={id} role={viewer.role} backHref="/me/results" />;

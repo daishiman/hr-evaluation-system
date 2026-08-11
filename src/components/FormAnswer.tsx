@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, ReasonNote } from "@/components/ui";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { normalizeNumeric } from "@/lib/ux-patterns";
+import { isAnswered, parseOptions, type OptionLike } from "@/lib/domain/answer-snapshot";
 
 export interface AnswerQuestion {
   id: string;
@@ -24,9 +25,9 @@ export interface AnswerValue {
   questionId: string;
   valueNumber: number | null;
   valueText: string | null;
+  /** 複数選択で選んだ選択肢の value。ほかの形式では使わない */
+  valueChoices: string[] | null;
 }
-
-type Option = { value: string; label: string; score: number };
 
 /**
  * アンケート回答画面。
@@ -38,20 +39,28 @@ type Option = { value: string; label: string; score: number };
  *  - 入力のたびに自動保存（1秒後）。保存できたら「保存済み HH:MM」を出す
  *  - Enter は次の欄へ移る（提出はボタンだけ）。日本語変換中の Enter は無視する
  *  - 未入力は赤くせず、提出時にまとめて知らせる
+ *
+ * 設問の形式は、管理画面で作れるもの（はい/いいえ・1つ選ぶ・いくつでも選ぶ・数値・文章・段階）を
+ * すべて答えられるようにしてある。以前は数値と選択肢しか描いておらず、
+ * 選択肢の無い「文章で書く」設問が数値入力欄になって回答できなかった。
  */
 export function FormAnswer({
   formId,
   questions,
   initial,
   submitted,
-  closed,
+  lockedReason,
+  deadlineNote,
   note,
 }: {
   formId: string;
   questions: AnswerQuestion[];
   initial: AnswerValue[];
   submitted: boolean;
-  closed: boolean;
+  /** 回答できない理由（締切・締め切り済みなど）。null なら回答できる */
+  lockedReason: string | null;
+  /** 回答できるときに上部へ常時出す期限の案内 */
+  deadlineNote: string | null;
   note: string | null;
 }) {
   const router = useRouter();
@@ -64,19 +73,22 @@ export function FormAnswer({
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const readOnly = submitted || closed;
+  const readOnly = submitted || lockedReason !== null;
 
   const ordered = useMemo(
     () =>
-      SECTION_ORDER.map((sec) => ({
-        section: sec,
-        rows: questions.filter((q) => q.section === sec).sort((a, b) => a.displayOrder - b.displayOrder),
-      })).filter((g) => g.rows.length > 0),
+      SECTION_ORDER.concat("free")
+        .map((sec) => ({
+          section: sec,
+          rows: questions.filter((q) => q.section === sec).sort((a, b) => a.displayOrder - b.displayOrder),
+        }))
+        .filter((g) => g.rows.length > 0),
     [questions],
   );
   const fieldOrder = useMemo(() => ordered.flatMap((g) => g.rows.map((r) => r.id)), [ordered]);
 
-  const answeredCount = questions.filter((q) => values[q.id]?.valueNumber !== null && values[q.id] !== undefined).length;
+  // 「答えた」の数え方は設問の形式ごとに変える（自由記述は文字、複数選択は選んだ数）
+  const answeredCount = questions.filter((q) => isAnswered(q.questionType, values[q.id])).length;
 
   const save = useCallback(
     async (status: "draft" | "submitted", nextValues: Record<string, AnswerValue>, nextMemo: string) => {
@@ -89,7 +101,9 @@ export function FormAnswer({
           body: JSON.stringify({
             status,
             note: nextMemo || null,
-            answers: Object.values(nextValues).filter((a) => a.valueNumber !== null || a.valueText),
+            answers: Object.values(nextValues).filter(
+              (a) => a.valueNumber !== null || a.valueText || (a.valueChoices?.length ?? 0) > 0,
+            ),
           }),
         });
         const json = (await res.json()) as { ok: boolean; message?: string };
@@ -116,7 +130,7 @@ export function FormAnswer({
         const next = {
           ...prev,
           [questionId]: {
-            ...{ questionId, valueNumber: null, valueText: null },
+            ...{ questionId, valueNumber: null, valueText: null, valueChoices: null },
             ...prev[questionId],
             ...patch,
           },
@@ -138,7 +152,7 @@ export function FormAnswer({
     document.getElementById(`f_${nextId}`)?.focus();
   };
 
-  const missing = questions.filter((q) => q.required && (values[q.id]?.valueNumber ?? null) === null);
+  const missing = questions.filter((q) => q.required && !isAnswered(q.questionType, values[q.id]));
 
   if (readOnly) {
     return (
@@ -146,7 +160,7 @@ export function FormAnswer({
         <ReasonNote>
           {submitted
             ? "提出済みのため編集できません。内容の修正が必要な場合は、上長にご連絡ください。"
-            : "このアンケートは締め切られているため入力できません。"}
+            : lockedReason}
         </ReasonNote>
         <div className="mt-4">
           <AnswerReadOnly ordered={ordered} values={values} />
@@ -171,14 +185,16 @@ export function FormAnswer({
                 : "入力すると自動で保存されます"}
           </p>
         </div>
+        {/* 期限は常に見えるところに置く（締切に気づかないまま入力し続けるのを防ぐ） */}
+        {deadlineNote && <p className="m-0 mt-1 text-[12px] text-[var(--ink-muted)]">{deadlineNote}</p>}
       </div>
 
       {error && <ReasonNote>{error}</ReasonNote>}
 
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
-          <h2 className="section-heading mb-1">{SECTION_LABEL[g.section] ?? g.section}</h2>
-          <p className="footnote m-0 mb-2">{SECTION_HELP[g.section]}</p>
+          <h2 className="section-heading mb-1">{SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}</h2>
+          {SECTION_HELP[g.section] && <p className="footnote m-0 mb-2">{SECTION_HELP[g.section]}</p>}
           <Card className="card-pad">
             <div className="space-y-5">
               {g.rows.map((q) => (
@@ -254,6 +270,16 @@ export function FormAnswer({
   );
 }
 
+/** 段階（scale）の選択肢。設問に範囲が入っていなければ1〜5にする。 */
+function scaleSteps(q: AnswerQuestion): number[] {
+  const min = q.validationMin ?? 1;
+  const max = q.validationMax ?? 5;
+  if (max <= min || max - min > 10) return [1, 2, 3, 4, 5];
+  const steps: number[] = [];
+  for (let n = min; n <= max; n++) steps.push(n);
+  return steps;
+}
+
 function QuestionField({
   q,
   value,
@@ -265,18 +291,13 @@ function QuestionField({
   onChange: (patch: Partial<AnswerValue>) => void;
   onEnter: () => void;
 }) {
-  const options: Option[] = q.optionsJson ? (JSON.parse(q.optionsJson) as Option[]) : [];
+  const options: OptionLike[] = parseOptions(q.optionsJson);
   const current = value?.valueNumber ?? null;
+  const chosen = value?.valueChoices ?? [];
 
-  return (
-    <div>
-      <label className="m-0 block text-[13px] font-bold" htmlFor={`f_${q.id}`}>
-        {q.title}
-        {!q.required && <span className="footnote"> （任意）</span>}
-      </label>
-      {q.helpText && <p className="footnote m-0 mt-0.5">{q.helpText}</p>}
-
-      {q.questionType === "yesno" ? (
+  const body = () => {
+    if (q.questionType === "yesno") {
+      return (
         <div className="mt-2 flex gap-2" id={`f_${q.id}`} tabIndex={-1}>
           {[
             { v: 1, label: "はい" },
@@ -287,52 +308,137 @@ function QuestionField({
               type="button"
               className="chip"
               aria-pressed={current === o.v}
-              onClick={() => onChange({ valueNumber: o.v, valueText: o.label })}
+              onClick={() => onChange({ valueNumber: o.v, valueText: o.label, valueChoices: null })}
             >
               {o.label}
             </button>
           ))}
         </div>
-      ) : options.length > 0 ? (
+      );
+    }
+
+    if (q.questionType === "multi") {
+      // いくつでも選ぶ。選んだ選択肢は value_json に入れる（点数には使わない）
+      return (
+        <div className="mt-2 space-y-1" id={`f_${q.id}`} tabIndex={-1}>
+          {options.length === 0 ? (
+            <p className="footnote m-0">選択肢が登録されていません。会社の管理者にご連絡ください。</p>
+          ) : (
+            options.map((o) => {
+              const on = chosen.includes(o.value);
+              return (
+                <label
+                  key={o.value}
+                  className={
+                    on
+                      ? "flex w-full items-center gap-2 rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-[13px]"
+                      : "flex w-full items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] hover:border-[var(--brand)]"
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={(e) => {
+                      const next = e.target.checked ? [...chosen, o.value] : chosen.filter((v) => v !== o.value);
+                      onChange({
+                        valueChoices: next,
+                        valueNumber: null,
+                        valueText: next.map((v) => options.find((x) => x.value === v)?.label ?? v).join("、") || null,
+                      });
+                    }}
+                  />
+                  {o.label}
+                </label>
+              );
+            })
+          )}
+        </div>
+      );
+    }
+
+    if (q.questionType === "text") {
+      // 自由記述。文字は value_text に入れる（数値欄にしない）
+      return (
+        <textarea
+          id={`f_${q.id}`}
+          className="input mt-2 min-h-[80px] w-full"
+          defaultValue={value?.valueText ?? ""}
+          onChange={(e) => onChange({ valueText: e.target.value, valueNumber: null, valueChoices: null })}
+          placeholder="そのまま文章で書いてください。"
+        />
+      );
+    }
+
+    if (q.questionType === "scale" && options.length === 0) {
+      return (
+        <div className="mt-2 flex flex-wrap gap-2" id={`f_${q.id}`} tabIndex={-1}>
+          {scaleSteps(q).map((n) => (
+            <button
+              key={n}
+              type="button"
+              className="chip"
+              aria-pressed={current === n}
+              onClick={() => onChange({ valueNumber: n, valueText: String(n), valueChoices: null })}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    if (options.length > 0) {
+      return (
         <div className="mt-2 space-y-1" id={`f_${q.id}`} tabIndex={-1}>
           {options.map((o) => (
             <button
               key={o.value}
               type="button"
               className={
-                current === o.score
+                current === (o.score ?? Number(o.value))
                   ? "block w-full rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-[13px]"
                   : "block w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-[13px] hover:border-[var(--brand)]"
               }
-              aria-pressed={current === o.score}
-              onClick={() => onChange({ valueNumber: o.score, valueText: o.label })}
+              aria-pressed={current === (o.score ?? Number(o.value))}
+              onClick={() => onChange({ valueNumber: o.score ?? Number(o.value), valueText: o.label, valueChoices: null })}
             >
               {o.label}
             </button>
           ))}
         </div>
-      ) : (
-        <div className="mt-2 flex items-center gap-2">
-          <input
-            id={`f_${q.id}`}
-            className="input input-num w-40"
-            inputMode="decimal"
-            enterKeyHint="next"
-            defaultValue={current ?? ""}
-            onChange={(e) => onChange({ valueNumber: normalizeNumeric(e.target.value), valueText: null })}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter") return;
-              if (e.nativeEvent.isComposing) return; // 日本語変換の確定Enterでは動かさない
-              e.preventDefault();
-              onEnter();
-            }}
-          />
-          {q.unit && <span className="unit">{q.unit}</span>}
-          {q.validationMin !== null && (
-            <span className="footnote">{q.validationMin}以上の数字を入力してください</span>
-          )}
-        </div>
-      )}
+      );
+    }
+
+    return (
+      <div className="mt-2 flex items-center gap-2">
+        <input
+          id={`f_${q.id}`}
+          className="input input-num w-40"
+          inputMode="decimal"
+          enterKeyHint="next"
+          defaultValue={current ?? ""}
+          onChange={(e) => onChange({ valueNumber: normalizeNumeric(e.target.value), valueText: null, valueChoices: null })}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            if (e.nativeEvent.isComposing) return; // 日本語変換の確定Enterでは動かさない
+            e.preventDefault();
+            onEnter();
+          }}
+        />
+        {q.unit && <span className="unit">{q.unit}</span>}
+        {q.validationMin !== null && <span className="footnote">{q.validationMin}以上の数字を入力してください</span>}
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <label className="m-0 block text-[13px] font-bold" htmlFor={`f_${q.id}`}>
+        {q.title}
+        {!q.required && <span className="footnote"> （任意）</span>}
+      </label>
+      {q.helpText && <p className="footnote m-0 mt-0.5">{q.helpText}</p>}
+      {body()}
     </div>
   );
 }
@@ -348,27 +454,32 @@ function AnswerReadOnly({
     <>
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
-          <h2 className="section-heading mb-1">{SECTION_LABEL[g.section] ?? g.section}</h2>
+          <h2 className="section-heading mb-1">{SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}</h2>
           <Card>
-            {g.rows.map((q) => (
-              <div key={q.id} className="card-row items-start">
-                <div className="row-main">
-                  <p className="todo-row-title m-0">{q.title}</p>
+            {g.rows.map((q) => {
+              const v = values[q.id];
+              const shown = v?.valueText?.trim()
+                ? v.valueText
+                : v?.valueNumber !== null && v?.valueNumber !== undefined
+                  ? `${v.valueNumber}${q.unit ?? ""}`
+                  : null;
+              return (
+                <div key={q.id} className="card-row items-start">
+                  <div className="row-main">
+                    <p className="todo-row-title m-0">{q.title}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    {shown === null ? (
+                      <span className="footnote">未回答</span>
+                    ) : q.questionType === "number" ? (
+                      <span className="num font-bold">{shown}</span>
+                    ) : (
+                      <Badge tone="done">{shown}</Badge>
+                    )}
+                  </div>
                 </div>
-                <div className="shrink-0 text-right">
-                  {values[q.id]?.valueText ? (
-                    <Badge tone="done">{values[q.id].valueText}</Badge>
-                  ) : values[q.id]?.valueNumber !== null && values[q.id]?.valueNumber !== undefined ? (
-                    <span className="num font-bold">
-                      {values[q.id].valueNumber}
-                      {q.unit && <span className="unit">{q.unit}</span>}
-                    </span>
-                  ) : (
-                    <span className="footnote">未回答 </span>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </Card>
         </section>
       ))}

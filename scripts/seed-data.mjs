@@ -36,6 +36,55 @@ export const CATEGORIES = [
 const categoryOfItem = new Map();
 for (const c of CATEGORIES) for (const no of c.items) categoryOfItem.set(no, c.code);
 
+/* ───────────────── 等級区分ごとの持ち点の型 ─────────────────
+ * 制度（2026-08-11 確定）:
+ *   - 等級区分を問わず100点満点。100点で昇格。
+ *   - 「等級要件達成率」(No.1) は全等級で必須の固定枠。配点は等級区分ごとに違う。
+ *   - Chief 以上は金銭系（単価率／売上達成率／利益率）を1つだけ20点枠として選ぶ。
+ *   - 残りは1項目10点。
+ * 固定枠の配点は data/kpi-points.json（正本）の No.1・ランクA の値をそのまま使い、
+ * 10点枠の数は残りの点数から割り出す。ここに数値を書き写すと正本と二重管理になるため。
+ */
+const TOTAL_POINTS = 100;
+const MAJOR_SLOT_POINTS = 20;
+const MINOR_SLOT_POINTS = 10;
+/** 金銭系（20点枠に置ける項目）。No.6 単価率 / No.9 売上達成率 / No.24 利益率 */
+export const MONETARY_ITEMS = [6, 9, 24];
+/** 20点枠を持つのは Chief 以上（事業所の金銭責任が発生する等級区分） */
+const MAJOR_SLOT_COUNT = { Beginner: 0, Regular: 0, Chief: 1, AM: 1, Manager: 1 };
+
+/** その等級区分で評価対象になる項目No（元の配点表に行がある＝対象、「-」は対象外） */
+export const selectableItemsOf = (group) =>
+  kpiPoints
+    .filter((p) => p["ランク"] === "A" && !["", "-", "－"].includes(String(p[group] ?? "").trim()))
+    .map((p) => Number(p["項目No"]));
+
+export const GRADE_POINT_RULES = POINT_GROUPS.map((group, i) => {
+  const fixed = Number(kpiPoints.find((p) => p["ランク"] === "A" && Number(p["項目No"]) === 1)?.[group]);
+  const majorCount = MAJOR_SLOT_COUNT[group];
+  const minorCount = (TOTAL_POINTS - fixed - MAJOR_SLOT_POINTS * majorCount) / MINOR_SLOT_POINTS;
+  if (!Number.isInteger(minorCount) || minorCount < 0) {
+    throw new Error(`${group} の配点の型が合いません（固定枠 ${fixed} 点から10点枠の数を割り出せません）。`);
+  }
+  return {
+    pointGroup: group,
+    displayOrder: i + 1,
+    totalPoints: TOTAL_POINTS,
+    fixedSlotPoints: fixed,
+    majorSlotPoints: majorCount > 0 ? MAJOR_SLOT_POINTS : 0,
+    majorSlotCount: majorCount,
+    minorSlotPoints: MINOR_SLOT_POINTS,
+    minorSlotCount: minorCount,
+  };
+});
+
+/** 「対象等級」欄（元シートの表記そのまま）にこの等級区分が含まれるか。src/lib/domain/grade-points.ts と同じ判定。 */
+const targetsPointGroup = (targetGrades, group) => {
+  const raw = (targetGrades ?? "").trim();
+  if (raw === "" || raw === "全等級") return true;
+  return raw.split(/[／/、,・]/).map((x) => x.trim()).filter(Boolean).includes(group);
+};
+
 /* ───────────────── 補助 ───────────────── */
 
 const q = (v) => {
@@ -87,7 +136,7 @@ const insert = (table, rows) => {
 
 /* ───────────────── 会社定義 ───────────────── */
 
-const COMPANIES = [
+export const COMPANIES = [
   {
     /**
      * システム標準テンプレート。
@@ -97,7 +146,7 @@ const COMPANIES = [
     key: "template",
     name: "システム標準テンプレート",
     isTemplate: true,
-    scheme: { sales: [9, 14], occupancy: [10, 12], compliance: [16, 12], safety: [2, 10], hr: [11, 12], quality: [13, 12], growth: [27, 10] },
+    scheme: { sales: 9, occupancy: 10, compliance: 16, safety: 2, hr: 11, quality: 13, growth: 27 },
     schemeName: "標準評価セット（テンプレート）",
     offices: [{ code: "hq", name: "本部" }],
   },
@@ -106,22 +155,22 @@ const COMPANIES = [
     key: "kyufu",
     name: "給付事業（1社目）",
     isTenantOfRecord: true,
-    scheme: { sales: [9, 14], occupancy: [10, 12], compliance: [16, 12], safety: [2, 10], hr: [11, 12], quality: [13, 12], growth: [27, 10] },
+    scheme: { sales: 9, occupancy: 10, compliance: 16, safety: 2, hr: 11, quality: 13, growth: 27 },
     schemeName: "2026年度 標準評価セット",
     offices: [{ code: "hq", name: "本部" }, { code: "office1", name: "第1事業所" }, { code: "office2", name: "第2事業所" }],
   },
   {
     key: "sakura",
     name: "さくら福祉会",
-    /** この会社が選ぶ7カテゴリの項目（カテゴリごとに1つ）と配点 */
-    scheme: { sales: [9, 14], occupancy: [10, 12], compliance: [16, 12], safety: [2, 10], hr: [11, 12], quality: [13, 12], growth: [27, 10] },
+    /** この会社が選ぶ7カテゴリの項目（カテゴリごとに1つ）。配点は等級区分から決まるのでここには書かない */
+    scheme: { sales: 9, occupancy: 10, compliance: 16, safety: 2, hr: 11, quality: 13, growth: 27 },
     schemeName: "2026年度 標準評価セット",
     offices: [{ code: "hq", name: "本部" }, { code: "office1", name: "第1事業所" }, { code: "office2", name: "第2事業所" }],
   },
   {
     key: "mirai",
     name: "みらい支援ネット",
-    scheme: { sales: [6, 12], occupancy: [5, 12], compliance: [15, 14], safety: [31, 10], hr: [20, 12], quality: [21, 12], growth: [32, 13] },
+    scheme: { sales: 6, occupancy: 5, compliance: 15, safety: 31, hr: 20, quality: 21, growth: 32 },
     schemeName: "2026年度 コンプライアンス重点セット",
     offices: [{ code: "hq", name: "本部" }, { code: "office1", name: "第1事業所" }, { code: "office2", name: "第2事業所" }],
   },
@@ -177,10 +226,45 @@ const RAISE_BY_GRADE = {
   manager1: { amount: 8000, max: 10, note: "事業所全体の経営数値に責任を持つ" },
   manager2: { amount: 10000, max: 10, note: "法人全体への影響が最も大きい" },
 };
-// 等級要件達成率（固定枠）の配点＝100 − 他7項目の合計
-for (const c of COMPANIES) {
-  const rest = Object.values(c.scheme).reduce((s, [, w]) => s + w, 0);
-  c.fixedWeight = 100 - rest;
+/**
+ * 会社ごと・等級区分ごとに「評価に使う項目」を決める。
+ *
+ * 等級区分によって選べる項目も項目数も違うため、会社の希望（カテゴリごとの1項目）を
+ * その等級区分で選べるものだけに絞り、足りないぶんはカテゴリの並び順で補う。
+ * 補い方に意味を持たせない（特定のカテゴリに偏らせない）ため、順番だけで決めている。
+ */
+export function chosenItemsFor(co, rule) {
+  const selectable = selectableItemsOf(rule.pointGroup);
+  const wanted = CATEGORIES.map((c) => co.scheme[c.code]).filter((no) => Number.isFinite(no));
+
+  const rows = [{ no: 1, cat: null, fixed: 1, major: 0, weight: rule.fixedSlotPoints }];
+
+  let majorNo = null;
+  if (rule.majorSlotCount > 0) {
+    // 20点枠は金銭系から1つ。会社が選んでいる金銭系を優先し、無ければ選べる金銭系の先頭
+    majorNo =
+      wanted.find((no) => MONETARY_ITEMS.includes(no) && selectable.includes(no)) ??
+      MONETARY_ITEMS.find((no) => selectable.includes(no));
+    if (!majorNo) throw new Error(`${rule.pointGroup} で選べる金銭系の項目がありません。`);
+    rows.push({ no: majorNo, cat: categoryOfItem.get(majorNo), fixed: 0, major: 1, weight: rule.majorSlotPoints });
+  }
+
+  const candidates = [...new Set([...wanted, ...CATEGORIES.flatMap((c) => c.items)])].filter(
+    (no) => no !== 1 && no !== majorNo && selectable.includes(no),
+  );
+  const minors = candidates.slice(0, rule.minorSlotCount);
+  if (minors.length < rule.minorSlotCount) {
+    throw new Error(`${co.key} の ${rule.pointGroup} で選べる項目が足りません（${minors.length}/${rule.minorSlotCount}）。`);
+  }
+  for (const no of minors) {
+    rows.push({ no, cat: categoryOfItem.get(no) ?? null, fixed: 0, major: 0, weight: rule.minorSlotPoints });
+  }
+
+  const total = rows.reduce((s, x) => s + x.weight, 0);
+  if (total !== rule.totalPoints) {
+    throw new Error(`${co.key} の ${rule.pointGroup} の合計が ${total} 点になりました（${rule.totalPoints}点になりません）。`);
+  }
+  return rows;
 }
 
 const CYCLES = [
@@ -231,6 +315,7 @@ export async function buildSeed() {
   const kpiRankCriteria = [];
   const kpiReferencePointRows = [];
   const kpiQuestionRows = [];
+  const gradePointRules = [];
   const schemes = [];
   const schemeItems = [];
   const schemeRankRatios = [];
@@ -365,6 +450,8 @@ export async function buildSeed() {
         a_type: m["A水準の型"], a_standard: m["Aランクの基準"], controllability: m["制御可能性"],
         a_rationale: m["なぜその水準をAとするか"], remarks: m["備考"],
         is_fixed_slot: no === 1 ? 1 : 0,
+        // 金銭系＝20点枠に置ける項目。Chief以上はここから1つだけ選ぶ
+        is_monetary: MONETARY_ITEMS.includes(no) ? 1 : 0,
         is_provisional: /新規（素案）/.test(m["備考"] ?? "") ? 1 : 0,
         provisional_note: /新規（素案）/.test(m["備考"] ?? "") ? "元スプレッドシートで素案のまま確定していない項目です。" : null,
         is_active: 1, created_at: NOW, updated_at: MASTER_AT,
@@ -435,26 +522,41 @@ export async function buildSeed() {
       });
     });
 
-    /* 評価セット（8項目＋配点100点） */
+    /* 等級区分ごとの持ち点の型 */
+    GRADE_POINT_RULES.forEach((r) => {
+      gradePointRules.push({
+        id: `gpr_${co.key}_${r.pointGroup}`, company_id: cid, point_group: r.pointGroup,
+        display_order: r.displayOrder, total_points: r.totalPoints, fixed_slot_points: r.fixedSlotPoints,
+        major_slot_points: r.majorSlotPoints, major_slot_count: r.majorSlotCount,
+        minor_slot_points: r.minorSlotPoints, minor_slot_count: r.minorSlotCount,
+        note: r.majorSlotCount > 0
+          ? "固定枠（等級要件達成率）＋金銭系の20点枠1つ＋10点枠で100点。"
+          : "固定枠（等級要件達成率）＋10点枠で100点。20点枠はChief以上のみ。",
+        created_at: NOW, updated_at: MASTER_AT,
+      });
+    });
+
+    /* 評価セット（等級区分ごとに項目数と配点が違う） */
     const schemeId = `sch_${co.key}`;
     schemes.push({
       id: schemeId, company_id: cid, name: co.schemeName, status: "active",
       effective_from: "2026-04-01", effective_to: null, total_points: 100, raise_requires_all_a: 1,
-      note: "等級要件達成率を固定枠とし、7カテゴリから1項目ずつ選んでいます。配点は叩き台の初期値です。",
+      note: "等級要件達成率を固定枠とし、等級区分ごとに項目を選んでいます。配点は等級区分から決まります。",
       created_at: NOW, updated_at: NOW,
     });
-    const chosen = [{ no: 1, weight: co.fixedWeight, cat: null, fixed: 1 }];
-    CATEGORIES.forEach((c) => {
-      const pick = co.scheme[c.code];
-      if (pick) chosen.push({ no: pick[0], weight: pick[1], cat: c.code, fixed: 0 });
-    });
-    chosen.forEach((ci, i) => {
-      schemeItems.push({
-        id: `si_${co.key}_${ci.no}`, company_id: cid, scheme_id: schemeId, kpi_item_id: `kpi_${co.key}_${ci.no}`,
-        category_id: ci.cat ? `cat_${co.key}_${ci.cat}` : null, weight: ci.weight,
-        is_fixed_slot: ci.fixed, display_order: i + 1, created_at: NOW, updated_at: MASTER_AT,
+    /** 等級区分 → その区分で評価する項目 */
+    const chosenByGroup = new Map(GRADE_POINT_RULES.map((r) => [r.pointGroup, chosenItemsFor(co, r)]));
+    for (const [group, rowsOfGroup] of chosenByGroup) {
+      rowsOfGroup.forEach((ci, i) => {
+        schemeItems.push({
+          id: `si_${co.key}_${group}_${ci.no}`, company_id: cid, scheme_id: schemeId,
+          kpi_item_id: `kpi_${co.key}_${ci.no}`, point_group: group,
+          category_id: ci.cat ? `cat_${co.key}_${ci.cat}` : null, weight: ci.weight,
+          is_fixed_slot: ci.fixed, is_major_slot: ci.major, display_order: i + 1,
+          created_at: NOW, updated_at: MASTER_AT,
+        });
       });
-    });
+    }
     // ランク→点数の按分（叩き台の初期値。管理画面から変更できる）
     [["A", 1], ["B", 0.8], ["C", 0.6], ["D", 0.4], ["E", 0]].forEach(([rk, ratio]) => {
       schemeRankRatios.push({
@@ -577,6 +679,8 @@ export async function buildSeed() {
           opens_at: cy.start, closes_at: cy.end, created_at: NOW, updated_at: NOW,
         });
 
+        // その等級の等級区分で評価する項目（等級区分が違えば項目数も配点も違う）
+        const chosen = chosenByGroup.get(g.pointGroup);
         let order = 0;
         const fq = [];
         const push = (r) => { fq.push({ id: `fq_${formId}_${fq.length}`, company_id: cid, form_id: formId, display_order: ++order, created_at: NOW, updated_at: NOW, ...r }); };
@@ -622,11 +726,14 @@ export async function buildSeed() {
             });
           });
         }
-        // KPI設問（この会社の評価セットに入っていて、この等級が対象の項目のみ）
+        // KPI設問（この等級区分の評価セットに入っていて、この等級区分が対象の設問のみ）
         chosen.forEach((ci) => {
           const item = kpiMaster.find((m) => Number(m.No) === ci.no);
-          // 評価セットの8項目は全等級に同じ配点で適用する（叩き台の方針。詳細は docs/product/backlog.md）
-          kpiQuestions.filter((qq) => Number(qq["項目No"]) === ci.no).forEach((qq) => {
+          /* 「対象等級」欄を見ないと、Beginner のアンケートに Chief 以上限定の設問
+             （昇給率・単価率など）が出てしまう。src/lib/form-build.ts と同じ絞り込み。 */
+          kpiQuestions
+            .filter((qq) => Number(qq["項目No"]) === ci.no && targetsPointGroup(qq["対象等級"], g.pointGroup))
+            .forEach((qq) => {
             const chk = qq["入力チェック"] ?? "";
             push({
               section: "kpi", question_type: qq["回答形式"]?.includes("プルダウン") ? "single" : "number",
@@ -693,6 +800,12 @@ export async function buildSeed() {
             answerRows.push({
               id: `fa_${respId}_${qrow.id.split("_").pop()}`, company_id: cid, response_id: respId,
               question_id: qrow.id, value_number: valNum, value_text: valText, value_json: null,
+              /* 回答したときの設問文をその場で写し取る。
+                 実際の回答（Web・CSV取込）と同じ形にしておかないと、
+                 過去の回答を読む画面が常に「保存される前の回答です」と断り書きを出してしまう。 */
+              question_title: qrow.title, question_type: qrow.question_type,
+              question_section: qrow.section, question_unit: qrow.unit,
+              question_options_json: qrow.options_json, question_display_order: qrow.display_order,
               created_at: NOW, updated_at: NOW, __key: qrow.kpi_question_key,
             });
           });
@@ -840,6 +953,7 @@ export async function buildSeed() {
   sql.push(...insert("kpi_rank_criteria", kpiRankCriteria));
   sql.push(...insert("kpi_reference_points", kpiReferencePointRows));
   sql.push(...insert("kpi_questions", kpiQuestionRows));
+  sql.push(...insert("grade_point_rules", gradePointRules));
   sql.push(...insert("evaluation_schemes", schemes));
   sql.push(...insert("scheme_items", schemeItems));
   sql.push(...insert("scheme_rank_ratios", schemeRankRatios));
@@ -871,6 +985,7 @@ export async function buildSeed() {
       行動指針: behaviorGuidelines.length, 行動指針の段階: behaviorLevels.length,
       KPI項目: kpiItems.length, ランク基準: kpiRankCriteria.length, KPI設問: kpiQuestionRows.length,
       元の配点: kpiReferencePointRows.length,
+      等級区分の配点: gradePointRules.length,
       評価セット: schemes.length, 選択項目: schemeItems.length,
       サイクル: cycles.length, フォーム: forms.length, フォーム設問: formQuestions.length,
       回答: formResponses.length, 回答明細: formAnswers.length,

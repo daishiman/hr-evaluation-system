@@ -4,9 +4,13 @@ import { notFound } from "next/navigation";
 import { CopyReminder } from "@/components/CopyReminder";
 import { requireRole } from "@/lib/session";
 import { getForm, listResponseStatus } from "@/lib/queries";
+import { listFormExtensions } from "@/lib/response-access";
 import { CsvImport } from "@/components/CsvImport";
+import { ActionButton } from "@/components/ActionButton";
+import { RecordForm } from "@/components/RecordForm";
 import { Badge, Card, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatDate } from "@/lib/view";
+import { formatJpDate, judgeFormDeadline, jstDateString } from "@/lib/domain/form-deadline";
 
 export const dynamic = "force-dynamic";
 
@@ -35,10 +39,27 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
   const form = await getForm(companyId, id);
   if (!form) notFound();
 
-  const rows = await listResponseStatus(companyId, form.id);
-  // 催促の文面にはそのまま開けるURLを入れる（相対パスだと貼り付け先で開けないため）
+  const [rows, extensions] = await Promise.all([
+    listResponseStatus(companyId, form.id),
+    listFormExtensions(companyId, form.id),
+  ]);
+  /*
+   * 催促の文面にはそのまま開けるURLを入れる（相対パスだと貼り付け先で開けないため）。
+   * ただし Host ヘッダーは呼び出し側が自由に付けられるので、そのまま信じると
+   * 別ドメインのURLが催促文に混ざる余地がある。設定（APP_ORIGIN）があればそれを優先し、
+   * 無いときだけ Host を使う。この文面を作るのは管理者自身で、送信もされないため
+   * 実害は小さいが、貼り付ける先が社外になりうるので設定側で固定できるようにしておく。
+   */
   const h = await headers();
-  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? ""}`;
+  const origin =
+    process.env.APP_ORIGIN?.replace(/\/$/, "") ?? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? ""}`;
+  const judgement = judgeFormDeadline({
+    status: form.status,
+    opensAt: form.opensAt,
+    closesAt: form.closesAt,
+    now: new Date(),
+  });
+  const activeExtensions = extensions.filter((e) => !e.revokedAt);
   const active = rows.filter((r) => r.isActive);
   const submitted = active.filter((r) => r.status === "submitted");
   const drafting = active.filter((r) => r.status === "draft");
@@ -82,6 +103,13 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
         </dl>
       </Card>
 
+      <p className="footnote mt-2">
+        回答期間 {form.opensAt ? formatJpDate(form.opensAt) : "指定なし"} 〜{" "}
+        {form.closesAt ? formatJpDate(form.closesAt) : "指定なし"}（締切日は当日いっぱいまで回答できます）／ いまの状態：
+        {judgement.message}
+        {activeExtensions.length > 0 ? ` ／ 個別に期限を延ばしている方：${activeExtensions.length}人` : ""}
+      </p>
+
       {missing.length > 0 && (
         <div className="mt-4">
           <ReasonNote>
@@ -118,13 +146,23 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
                 <th>状況</th>
                 <th>回答日時</th>
                 <th>取り込み元</th>
+                <th>個別の期限</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {rows.map((r) => {
+                const ext = activeExtensions.filter((e) => e.employeeId === r.employeeId);
+                const until = ext.map((e) => e.extendedUntil).sort().at(-1) ?? null;
+                return (
                 <tr key={r.employeeId}>
                   <td>
-                    {r.name}
+                    {r.responseId ? (
+                      <Link href={`/me/responses/${r.responseId}`} className="text-[var(--brand-deep)]">
+                        {r.name}
+                      </Link>
+                    ) : (
+                      r.name
+                    )}
                     {!r.isActive && <span className="footnote"> （利用停止中）</span>}
                   </td>
                   <td>{r.employeeCode ?? "—"}</td>
@@ -140,10 +178,95 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
                   </td>
                   <td>{formatWhen(r.submittedAt)}</td>
                   <td>{r.importSource === "csv" ? "取り込み（CSV）" : r.responseId ? "この画面から回答" : "—"}</td>
+                  <td>{until ? formatJpDate(until) : "—"}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      <SectionHeading aside={<span className="footnote">記録は消えません（取り消しても履歴に残ります）</span>}>
+        回答期限の延長
+      </SectionHeading>
+      <p className="footnote mb-2">
+        締切を過ぎると回答できなくなります。休職・出張などで間に合わなかった方には、ここでその方だけ期限を延ばせます。延ばした期限は本人の回答画面にも表示されます。
+      </p>
+
+      {rows.length > 0 && (
+        <RecordForm
+          url={`/api/forms/${form.id}/extensions`}
+          method="POST"
+          submitLabel="この内容で期限を延ばす"
+          fields={[
+            {
+              name: "employeeId",
+              label: "対象の方",
+              type: "select",
+              required: true,
+              options: rows.map((r) => ({
+                value: r.employeeId,
+                label: `${r.name}（${r.status === "submitted" ? "提出済み" : r.status === "draft" ? "入力途中" : "未回答"}）`,
+              })),
+            },
+            {
+              name: "extendedUntil",
+              label: "いつまで延ばすか",
+              type: "date",
+              required: true,
+              help: `もとの締切（${form.closesAt ? formatJpDate(form.closesAt) : "指定なし"}）より後の日付を選んでください。指定した日の終わりまで回答できます。`,
+              defaultValue: jstDateString(new Date()),
+            },
+            {
+              name: "reason",
+              label: "理由",
+              type: "textarea",
+              help: "あとから「なぜ延ばしたか」を確認できるようにするための記録です（例：長期休暇のため）。",
+            },
+          ]}
+        />
+      )}
+
+      {extensions.length > 0 && (
+        <div className="mt-4">
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>対象の方</th>
+                  <th>延ばした期限</th>
+                  <th>理由</th>
+                  <th>登録した日時</th>
+                  <th>状態</th>
+                </tr>
+              </thead>
+              <tbody>
+                {extensions.map((e) => (
+                  <tr key={e.id}>
+                    <td>{e.employeeName ?? "—"}</td>
+                    <td>{formatJpDate(e.extendedUntil)}</td>
+                    <td>{e.reason ?? "—"}</td>
+                    <td>{formatWhen(e.createdAt)}</td>
+                    <td>
+                      {e.revokedAt ? (
+                        <span className="footnote">{formatWhen(e.revokedAt)}に取り消し</span>
+                      ) : (
+                        <ActionButton
+                          url={`/api/forms/${form.id}/extensions`}
+                          method="PATCH"
+                          body={{ extensionId: e.id }}
+                          label="延長を取り消す"
+                          variant="tertiary"
+                          confirm={`${e.employeeName ?? "この方"}の延長を取り消すと、締切を過ぎている場合はその場で回答できなくなります。記録は履歴として残ります。`}
+                        />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

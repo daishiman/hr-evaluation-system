@@ -29,32 +29,69 @@ const INK_MUTED = "#545e6b";
 export interface RadarPoint {
   /** 項目名（軸のラベル） */
   item: string;
-  /** 0〜100 の達成度 */
-  value: number;
+  /** 0〜100 の達成度。判定外（実績が未入力）は null で、0点とは区別する */
+  value: number | null;
   rank: string | null;
+  /** 実績が入力されておらずランクを付けられなかった項目 */
+  unrated?: boolean;
 }
 
 /**
- * 8角形レーダーチャート。
- * 8項目の達成度を1枚で見せ、どの方向が弱いかを形で分かるようにする。
+ * 項目別の達成度を1枚で見せるレーダーチャート。
+ *
+ * 軸の数は等級区分によって 1〜8 と変わるため、項目数は固定にしない。
+ * 3項目に満たないと多角形が形にならない（1軸は点、2軸は線）ので、
+ * そのときは横棒に切り替える。形で語れない数を無理に多角形で描かないため。
  */
 export function EightAxisRadar({
   data,
   compare,
   compareLabel,
   label = "今回",
+  valueLabel = "達成度",
 }: {
   data: RadarPoint[];
   compare?: RadarPoint[];
   compareLabel?: string;
   label?: string;
+  /** ツールチップに出す軸の意味（実点数で描くか、ランクで描くかで変わる） */
+  valueLabel?: string;
 }) {
+  /* 判定外の軸はラベルに ※ を添える。値を欠損にするだけだと、
+     形がへこんだ理由が「悪い」なのか「測れていない」なのか読み取れないため。 */
+  const unratedNames = new Set(data.filter((d) => d.unrated || d.rank === null).map((d) => d.item));
+
   const merged = data.map((d) => ({
     item: d.item,
     rank: d.rank,
     [label]: d.value,
-    ...(compare ? { [compareLabel ?? "前回"]: compare.find((c) => c.item === d.item)?.value ?? 0 } : {}),
+    ...(compare ? { [compareLabel ?? "前回"]: compare.find((c) => c.item === d.item)?.value ?? null } : {}),
   }));
+
+  if (data.length < 3) {
+    return (
+      <div>
+        {data.map((d) => (
+          <div key={d.item} style={{ marginBottom: 10 }}>
+            <p style={{ margin: 0, fontSize: 12, color: INK_MUTED }}>
+              {d.item}
+              {unratedNames.has(d.item) ? "（判定外）" : ""}
+            </p>
+            <div style={{ height: 8, borderRadius: 4, background: LINE, overflow: "hidden" }}>
+              <div
+                style={{
+                  height: "100%",
+                  width: `${d.value ?? 0}%`,
+                  background: d.value === null ? "transparent" : BRAND,
+                  borderRadius: 4,
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: "100%", height: 340 }}>
@@ -64,7 +101,9 @@ export function EightAxisRadar({
           <PolarAngleAxis
             dataKey="item"
             tick={{ fontSize: 11, fill: INK_MUTED }}
-            tickFormatter={(v: string) => (v.length > 9 ? `${v.slice(0, 9)}…` : v)}
+            tickFormatter={(v: string) =>
+              `${v.length > 9 ? `${v.slice(0, 9)}…` : v}${unratedNames.has(v) ? "※" : ""}`
+            }
           />
           <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10, fill: INK_MUTED }} tickCount={6} />
           {compare && (
@@ -74,11 +113,20 @@ export function EightAxisRadar({
               stroke={BRAND_SOFT}
               fill={BRAND_SOFT}
               fillOpacity={0.25}
+              connectNulls={false}
             />
           )}
-          <Radar name={label} dataKey={label} stroke={BRAND} fill={BRAND} fillOpacity={0.3} />
+          <Radar
+            name={label}
+            dataKey={label}
+            stroke={BRAND}
+            fill={BRAND}
+            fillOpacity={0.3}
+            /* 判定外を線でつながない。つなぐと0点として面積に混ざってしまう */
+            connectNulls={false}
+          />
           <Tooltip
-            formatter={(v) => [`${v ?? "—"}%`, "達成度"]}
+            formatter={(v) => [v === null || v === undefined ? "判定外（実績が未入力）" : `${v}%`, valueLabel]}
             contentStyle={{ fontSize: 12, borderRadius: 8, border: `1px solid ${LINE}` }}
           />
           {compare && <Legend wrapperStyle={{ fontSize: 12 }} />}

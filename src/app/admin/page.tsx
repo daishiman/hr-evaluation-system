@@ -38,7 +38,7 @@ export default async function AdminHome() {
   const current = cycles.find((c) => c.status === "open") ?? cycles[0] ?? null;
   const [pending, evals, forms, items] = await Promise.all([
     current ? listPendingRespondents(companyId, current.id) : Promise.resolve([]),
-    current ? listEvaluations(companyId, { cycleId: current.id }) : Promise.resolve([]),
+    current ? listEvaluations(companyId, viewer.role, { cycleId: current.id }) : Promise.resolve([]),
     current ? listForms(companyId, current.id) : Promise.resolve([]),
     scheme ? listSchemeItems(companyId, scheme.id) : Promise.resolve([]),
   ]);

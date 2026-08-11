@@ -1,48 +1,91 @@
-import { requireRole } from "@/lib/session";
+import { redirect } from "next/navigation";
+import { canSeeCriteria, homePathFor, requireRole } from "@/lib/session";
 import {
-  getActiveScheme,
   listBehaviorGuidelines,
   listGradeRequirements,
   listGrades,
   listPromotionRequirements,
   listPromotionThresholds,
   listRaiseSettings,
-  listRankCriteria,
-  listRankRatios,
-  listSchemeItems,
 } from "@/lib/queries";
 import { Badge, Card, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import {
+  getActiveScheme,
+  listGradePointRules,
+  listQuestionsFor,
+  listRankCriteriaFor,
+  listRankRatios,
+  listSchemeItemsAllGroups,
+  listSelectableItemsByGroup,
+  slotCountOf,
+  type SelectableItem,
+} from "./data";
+import { PointDesign, PointRuleComparison } from "./PointDesign";
+import { SelectableItems } from "./SelectableItems";
+import { ScoringFlow } from "./ScoringFlow";
 
 export const dynamic = "force-dynamic";
 
 /**
- * 評価基準の確認ページ（マネージャー以上のみ）。
+ * 採点基準の確認ページ（マネージャー以上のみ）。
  *
- * ここに出る数値（ランク基準・配点・昇格に必要な点数・昇給額）は
+ * ここに出る数値（等級区分ごとの配点・ランク基準・昇格に必要な点数・昇給額）は
  * すべてDBのマスタから読んでいる。制度を変えるとこの画面の表示も変わる。
  * 評価される方には、この画面も、この画面が読む値も一切渡さない。
+ *
+ * 画面の並びは「どの等級を見るか → 満点の内訳 → 選べる項目 → 1項目ずつの採点の流れ」。
+ * 情報量が多いので、項目ごとの細かい話は既定で畳んでおき、見たいものだけ開く。
  */
 export default async function CriteriaPage({ searchParams }: { searchParams: Promise<{ grade?: string }> }) {
   const viewer = await requireRole("MANAGER");
+  // 配点・閾値・必要点数は評価される側に出さない（明示要件）。
+  // requireRole と canSeeCriteria の二重で止めるのは、見せてよいロールの定義が
+  // 変わったときにこの画面だけ取り残されないようにするため。
+  if (!canSeeCriteria(viewer.role)) redirect(`${homePathFor(viewer.role)}?denied=1`);
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  const [grades, scheme, gradeReqs, promoReqs, behaviors, thresholds, raises] = await Promise.all([
-    listGrades(companyId),
-    getActiveScheme(companyId),
-    listGradeRequirements(companyId),
-    listPromotionRequirements(companyId),
-    listBehaviorGuidelines(companyId),
-    listPromotionThresholds(companyId),
-    listRaiseSettings(companyId),
-  ]);
+  const [grades, gradeReqs, promoReqs, behaviors, thresholds, raises, rules, selectableByGroup, scheme] =
+    await Promise.all([
+      listGrades(companyId),
+      listGradeRequirements(companyId),
+      listPromotionRequirements(companyId),
+      listBehaviorGuidelines(companyId),
+      listPromotionThresholds(companyId),
+      listRaiseSettings(companyId),
+      listGradePointRules(companyId),
+      listSelectableItemsByGroup(companyId),
+      getActiveScheme(companyId),
+    ]);
 
   const sp = await searchParams;
   const grade = grades.find((g) => g.id === sp.grade) ?? grades[0] ?? null;
+  const pointGroup = grade?.pointGroup ?? null;
 
-  const items = scheme ? await listSchemeItems(companyId, scheme.id) : [];
+  const rule = rules.find((r) => r.pointGroup === pointGroup) ?? null;
+  const selectable = pointGroup ? (selectableByGroup.get(pointGroup) ?? []) : [];
+
+  // 評価セットで実際に選ばれている項目（等級区分ごとに選び直せる）
+  const schemeItems = scheme ? await listSchemeItemsAllGroups(companyId, scheme.id) : [];
   const ratios = scheme ? await listRankRatios(companyId, scheme.id) : [];
-  const criteria = items.length > 0 ? await listRankCriteria(companyId, items.map((i) => i.kpiItemId)) : [];
+  const adopted = schemeItems.filter((i) => i.pointGroup === pointGroup);
+  const adoptedIds = new Set(adopted.map((i) => i.kpiItemId));
+
+  const itemIds = selectable.map((i) => i.kpiItemId);
+  const [questions, criteria] = await Promise.all([
+    listQuestionsFor(companyId, itemIds),
+    listRankCriteriaFor(companyId, itemIds),
+  ]);
+
+  // 20点枠の候補（金銭に関わる項目）のうち、この等級区分では選べないもの。
+  // 「なぜ候補に出てこないのか」を黙って隠さないために、名前と理由を出す。
+  const allMonetary = new Map<string, SelectableItem>();
+  for (const list of selectableByGroup.values()) {
+    for (const i of list) if (i.isMonetary) allMonetary.set(i.kpiItemId, i);
+  }
+  const missingMonetary = [...allMonetary.values()]
+    .filter((i) => !selectable.some((x) => x.kpiItemId === i.kpiItemId))
+    .sort((a, b) => a.no - b.no);
 
   const th = grade ? (thresholds.find((t) => t.fromGradeId === grade.id) ?? null) : null;
   const raise = grade ? (raises.find((r) => r.gradeId === grade.id) ?? null) : null;
@@ -50,11 +93,25 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
   const myPromo = grade ? promoReqs.filter((r) => r.gradeId === grade.id) : [];
   const myBehaviors = grade?.behaviorBand ? behaviors.filter((b) => b.band === grade.behaviorBand) : [];
 
+  /** この項目がその等級区分で何点の枠に入るか。実際に選ばれていればその配点をそのまま使う。 */
+  const weightOf = (item: SelectableItem): number => {
+    const hit = adopted.find((a) => a.kpiItemId === item.kpiItemId);
+    if (hit) return hit.weight;
+    if (item.isFixedSlot) return rule?.fixedSlotPoints ?? 0;
+    if (item.isMonetary && (rule?.majorSlotCount ?? 0) > 0) return rule?.majorSlotPoints ?? 0;
+    return rule?.minorSlotPoints ?? 0;
+  };
+  const slotLabelOf = (item: SelectableItem): string => {
+    if (item.isFixedSlot) return "固定枠";
+    if (item.isMonetary && (rule?.majorSlotCount ?? 0) > 0) return `${rule?.majorSlotPoints}点枠（金銭）`;
+    return `${rule?.minorSlotPoints}点枠`;
+  };
+
   return (
     <>
       <PageTitle
-        title="評価基準を確認する"
-        lede="等級ごとの要件・KPIのランク基準・配点・昇格に必要な点数を確認できます。この画面は評価される方には表示されません。"
+        title="採点の基準を確認する"
+        lede="等級ごとの配点・選べる項目・ランクの決め方・昇格に必要な点数を確認できます。この画面は評価される方には表示されません。"
       />
 
       <SectionHeading>等級を選ぶ</SectionHeading>
@@ -70,16 +127,36 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
         <EmptyState title="等級が登録されていません" body="会社の管理者に等級の登録を依頼してください。" />
       ) : (
         <>
-          <Card className="card-pad hero-tint">
-            <p className="m-0 text-[12px] text-[var(--ink-muted)]">{grade.name} から次の等級へ上がるための条件</p>
-            <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
-              <Num value={th?.requiredKpiPoints ?? null} />
-              <span className="unit">点 / 100点</span>
-            </p>
-            <p className="m-0 mt-2 text-[13px]">
+          <SectionHeading>この等級の持ち点の型</SectionHeading>
+          <PointDesign
+            rule={rule}
+            gradeName={grade.name}
+            selectableCount={selectable.length}
+            monetaryNames={selectable.filter((i) => i.isMonetary).map((i) => i.name)}
+          />
+
+          <details className="card card-pad mt-3">
+            <summary className="cursor-pointer text-[13px] font-semibold">ほかの等級区分と見くらべる</summary>
+            <div className="mt-3">
+              <PointRuleComparison rules={rules} currentGroup={pointGroup} />
+              <p className="footnote mt-2">
+                等級区分は配点をまとめる単位です。AMⅠとAMⅡ、ManagerⅠとManagerⅡは配点が同じで、等級要件の中身だけが違います。
+              </p>
+            </div>
+          </details>
+
+          <SectionHeading>昇格・昇給の条件</SectionHeading>
+          <Card className="card-pad">
+            <p className="m-0 text-[13px]">
               {th ? (
                 <>
-                  行動指針は <Num value={th.requiredBehaviorPoints} unit="点" /> 以上（{th.label}）
+                  {grade.name} から次の等級へ上がるには{" "}
+                  <span className="num font-bold">
+                    <Num value={th.requiredKpiPoints} />
+                    <span className="unit">点</span>
+                  </span>{" "}
+                  ／ 満点 <Num value={rule?.totalPoints ?? null} unit="点" />。行動指針は{" "}
+                  <Num value={th.requiredBehaviorPoints} unit="点" /> 以上（{th.label}）
                   {th.isProvisional && (
                     <>
                       {" "}
@@ -91,67 +168,71 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
                 "この等級からの昇格条件はまだ登録されていません。"
               )}
             </p>
+            {raise && (
+              <p className="m-0 mt-2 text-[13px]">
+                昇給額は月額 <Num value={raise.monthlyAmount} unit="円" /> ／ 年額{" "}
+                <Num value={raise.annualAmount} unit="円" />
+                {raise.isProvisional && (
+                  <>
+                    {" "}
+                    <ProvisionalMark note="昇給額は制度として未確定のため、叩き台の初期値です。管理画面から変更できます。" />
+                  </>
+                )}
+                {raise.note ? `（${raise.note}）` : ""}
+              </p>
+            )}
             <p className="footnote m-0 mt-2">
+              昇給は{scheme?.raiseRequiresAllA === false ? "満点" : "「選んだ項目がすべてA」"}が条件です。
               この点数はアンケートの回答画面には表示されません（回答が点数合わせにならないようにするためです）。
             </p>
           </Card>
 
-          {raise && (
-            <>
-              <SectionHeading>昇給額</SectionHeading>
-              <Card className="card-pad">
-                <p className="m-0 text-[13px]">
-                  月額 <Num value={raise.monthlyAmount} unit="円" /> ／ 年額{" "}
-                  <Num value={raise.annualAmount} unit="円" />
-                  {raise.isProvisional && (
-                    <>
-                      {" "}
-                      <ProvisionalMark note="昇給額は制度として未確定のため、叩き台の初期値です。管理画面から変更できます。" />
-                    </>
-                  )}
-                </p>
-                {raise.note && <p className="footnote m-0 mt-1">{raise.note}</p>}
-              </Card>
-            </>
+          <SectionHeading>この等級で選べる項目</SectionHeading>
+          {!rule ? (
+            <ReasonNote>この等級区分の配点の型が登録されていないため、選べる項目を出せません。</ReasonNote>
+          ) : (
+            <SelectableItems
+              items={selectable}
+              missingMonetary={missingMonetary}
+              majorSlotPoints={rule.majorSlotPoints}
+              majorSlotCount={rule.majorSlotCount}
+              minorSlotPoints={rule.minorSlotPoints}
+              minorSlotCount={rule.minorSlotCount}
+              fixedSlotPoints={rule.fixedSlotPoints}
+              adoptedIds={adoptedIds}
+              gradeName={grade.name}
+            />
           )}
 
-          <SectionHeading>KPI 8項目と配点</SectionHeading>
+          <SectionHeading>いま採用している項目</SectionHeading>
           {!scheme ? (
-            <ReasonNote>有効な評価セットが登録されていません。会社の管理者が8項目と配点を設定すると表示されます。</ReasonNote>
+            <ReasonNote>
+              有効な評価セットが登録されていません。会社の管理者が等級区分ごとに項目と配点を設定すると表示されます。
+            </ReasonNote>
+          ) : adopted.length === 0 ? (
+            <ReasonNote>
+              {grade.name} の項目がまだ選ばれていません。上の「選べる項目」から{" "}
+              {rule ? slotCountOf(rule) : 0} 件を選ぶ必要があります。
+            </ReasonNote>
           ) : (
             <>
               <Card>
-                {items.map((i) => {
-                  const crits = criteria
-                    .filter((c) => c.kpiItemId === i.kpiItemId)
-                    .sort((a, b) => a.rank.localeCompare(b.rank));
+                {adopted.map((a) => {
+                  const item = selectable.find((i) => i.kpiItemId === a.kpiItemId);
                   return (
-                    <div key={i.id} className="card-row items-start">
+                    <div key={a.id} className="card-row items-start">
                       <div className="row-main">
                         <p className="todo-row-title m-0">
-                          {i.name}
-                          {i.isProvisional && (
-                            <>
-                              {" "}
-                              <ProvisionalMark note={"制度として未確定の項目です（叩き台）。"} />
-                            </>
-                          )}
+                          {item ? `No.${item.no} ${item.name}` : "（この等級区分では選べない項目が入っています）"}{" "}
+                          {a.isFixedSlot && <Badge tone="done">固定枠</Badge>}
+                          {a.isMajorSlot && <Badge tone="active">金銭の枠</Badge>}
                         </p>
                         <p className="todo-row-sub m-0">
-                          {i.isFixedSlot ? "固定枠（差し替えできません）" : (i.categoryName ?? "カテゴリ未設定")} ／ 単位{" "}
-                          {i.unit} ／ {i.direction === "lower" ? "低いほど良い" : "高いほど良い"}
+                          {item ? `${item.categoryName ?? "カテゴリ未設定"} ／ 単位 ${item.unit}` : ""}
                         </p>
-                        {i.formula && <p className="m-0 mt-1 text-[11px] text-[var(--ink-muted)]">計算式：{i.formula}</p>}
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {crits.map((c) => (
-                            <span key={c.id} className="badge badge-done">
-                              {c.rank}：{c.displayLabel}
-                            </span>
-                          ))}
-                        </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <Num value={i.weight} display />
+                        <Num value={a.weight} display />
                         <span className="unit">点</span>
                       </div>
                     </div>
@@ -159,19 +240,37 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
                 })}
               </Card>
               <p className="footnote mt-2">
-                配点の合計 <Num value={items.reduce((sum, i) => sum + i.weight, 0)} unit="点" /> ／ 満点{" "}
-                <Num value={scheme.totalPoints} unit="点" />。ランクごとの点数の割合は{" "}
-                {ratios.map((r) => `${r.rank}=${Math.round(r.ratio * 100)}%`).join("、")}
-                {ratios.some((r) => r.isProvisional) && (
-                  <>
-                    {" "}
-                    <ProvisionalMark note="ランクごとの割合は制度として未確定のため、叩き台の初期値です。" />
-                  </>
-                )}
-                。昇給は{scheme.raiseRequiresAllA ? "「選んだ8項目がすべてA」" : "満点"}が条件です。
+                合計 <Num value={adopted.reduce((sum, a) => sum + a.weight, 0)} unit="点" /> ／ 満点{" "}
+                <Num value={rule?.totalPoints ?? scheme.totalPoints} unit="点" />。
               </p>
             </>
           )}
+
+          <SectionHeading>1項目ずつの採点の流れ</SectionHeading>
+          <p className="footnote mb-2">
+            聞くこと → 実績値 → ランク → 点数、の順に1項目ぶんを通して見られます。点数は「配点 × ランクの割合」で決まり、
+            割合は{" "}
+            {ratios.length > 0
+              ? ratios.map((r) => `${r.rank}=${Math.round(r.ratio * 100)}%`).join("、")
+              : "まだ登録されていません"}
+            です
+            {ratios.some((r) => r.isProvisional) && (
+              <>
+                {" "}
+                <ProvisionalMark note="ランクごとの割合は制度として未確定のため、叩き台の初期値です。" />
+              </>
+            )}
+            。見たい項目を開いてください。
+          </p>
+          <ScoringFlow
+            items={selectable}
+            weightOf={weightOf}
+            slotLabelOf={slotLabelOf}
+            adoptedIds={adoptedIds}
+            questions={questions}
+            criteria={criteria}
+            ratios={ratios}
+          />
 
           <SectionHeading>等級要件（{grade.name}）</SectionHeading>
           {myReqs.length === 0 ? (

@@ -1,28 +1,21 @@
+import { and, asc, eq } from "drizzle-orm";
 import { requireRole } from "@/lib/session";
-import {
-  getActiveScheme,
-  listGrades,
-  listKpiCategories,
-  listKpiItems,
-  listSchemeItems,
-} from "@/lib/queries";
+import { getDb, schema as s } from "@/lib/db";
+import { getActiveScheme, listGrades, listKpiCategories, listKpiItems } from "@/lib/queries";
 import { EmptyState, PageTitle, ReasonNote } from "@/components/ui";
-import { SchemeEditor } from "@/components/SchemeEditor";
+import { SchemeEditor, type GroupSetup } from "@/components/SchemeEditor";
 
 export const dynamic = "force-dynamic";
 
 /**
- * 評価セット（8項目・配点）の設定。会社の管理者のみ。
- * 選べる項目・カテゴリ・満点はすべてDBから読む。ここに点数を書かない。
+ * 評価セット（等級区分ごとの項目）の設定。会社の管理者のみ。
+ * 選べる項目・項目数・配点はすべてDBから読む。ここに点数を書かない。
  */
 export default async function AdminSchemePage() {
   const viewer = await requireRole("COMPANY_ADMIN");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  /* 元の配点表（参考値・800件超）はここでは読まない。
-     画面で「元の配点を表示する」を押したときに、選んだ等級区分のぶんだけ
-     /api/reference-points から読む。 */
   const [scheme, categories, kpiItems, grades] = await Promise.all([
     getActiveScheme(companyId),
     listKpiCategories(companyId),
@@ -30,14 +23,10 @@ export default async function AdminSchemePage() {
     listGrades(companyId),
   ]);
 
-  // 元の配点表は「等級区分」ごとの列だった（AMⅠ/Ⅱ、MgrⅠ/Ⅱは同じ列）。等級の並び順のまま重複を除く
-  const pointGroups: string[] = [];
-  for (const g of grades) if (!pointGroups.includes(g.pointGroup)) pointGroups.push(g.pointGroup);
-
   if (!scheme) {
     return (
       <>
-        <PageTitle title="評価セット（8項目・配点）" />
+        <PageTitle title="評価セット（等級区分ごとの項目）" />
         <ReasonNote>
           有効な評価セットが登録されていません。初期データの投入が済んでいるかご確認ください。
         </ReasonNote>
@@ -45,17 +34,63 @@ export default async function AdminSchemePage() {
     );
   }
 
-  const items = await listSchemeItems(companyId, scheme.id);
+  const db = await getDb();
+  /* scheme_items は等級区分と20点枠のフラグまで要るので、ここで直接読む。
+     元の配点表（kpi_reference_points）は「その等級区分で評価対象になる項目」の正本でもあるため、
+     項目IDと等級区分だけを引いて選択肢の絞り込みに使う（点数は計算に使わない）。 */
+  const [rules, items, refs] = await Promise.all([
+    db
+      .select()
+      .from(s.gradePointRules)
+      .where(eq(s.gradePointRules.companyId, companyId))
+      .orderBy(asc(s.gradePointRules.displayOrder)),
+    db
+      .select({
+        kpiItemId: s.schemeItems.kpiItemId,
+        pointGroup: s.schemeItems.pointGroup,
+        isFixedSlot: s.schemeItems.isFixedSlot,
+        isMajorSlot: s.schemeItems.isMajorSlot,
+      })
+      .from(s.schemeItems)
+      .where(and(eq(s.schemeItems.companyId, companyId), eq(s.schemeItems.schemeId, scheme.id)))
+      .orderBy(asc(s.schemeItems.displayOrder)),
+    db
+      .select({ kpiItemId: s.kpiReferencePoints.kpiItemId, pointGroup: s.kpiReferencePoints.pointGroup })
+      .from(s.kpiReferencePoints)
+      .where(eq(s.kpiReferencePoints.companyId, companyId)),
+  ]);
+
+  // AMⅠ/Ⅱ・ManagerⅠ/Ⅱ は同じ等級区分なので、等級名をまとめて1タブにする
+  const groups: GroupSetup[] = rules.map((r) => ({
+    pointGroup: r.pointGroup,
+    gradeLabel:
+      grades
+        .filter((g) => g.pointGroup === r.pointGroup)
+        .map((g) => g.name)
+        .join("・") || "この等級区分の等級は未登録",
+    rule: {
+      pointGroup: r.pointGroup,
+      totalPoints: r.totalPoints,
+      fixedSlotPoints: r.fixedSlotPoints,
+      majorSlotPoints: r.majorSlotPoints,
+      majorSlotCount: r.majorSlotCount,
+      minorSlotPoints: r.minorSlotPoints,
+      minorSlotCount: r.minorSlotCount,
+    },
+    selectableItemIds: [...new Set(refs.filter((x) => x.pointGroup === r.pointGroup).map((x) => x.kpiItemId))],
+    initial: items
+      .filter((i) => i.pointGroup === r.pointGroup)
+      .map((i) => ({ kpiItemId: i.kpiItemId, isFixedSlot: i.isFixedSlot, isMajorSlot: i.isMajorSlot })),
+  }));
 
   return (
     <>
       <PageTitle
-        title="評価セット（8項目・配点）"
-        lede={`固定枠1つ + カテゴリ${categories.length}種から1つずつ、合計${categories.length + 1}項目・${scheme.totalPoints}点で設定します。ここで決めた内容が評価の計算に使われます。`}
+        title="評価セット（等級区分ごとの項目）"
+        lede="等級区分ごとに、評価に使うKPIを選びます。選ぶ項目数と配点は等級区分ごとに決まっているため、この画面では変更できません。ここで決めた内容が、次に作るアンケートと集計に使われます。"
       />
       <SchemeEditor
         schemeId={scheme.id}
-        totalPoints={scheme.totalPoints}
         categories={categories.map((c) => ({ id: c.id, name: c.name, description: c.description }))}
         kpiItems={kpiItems.map((k) => ({
           id: k.id,
@@ -64,19 +99,13 @@ export default async function AdminSchemePage() {
           unit: k.unit,
           categoryId: k.categoryId,
           isFixedSlot: k.isFixedSlot,
+          isMonetary: k.isMonetary,
           isProvisional: k.isProvisional,
           intent: k.intent,
           aStandard: k.aStandard,
         }))}
-        initial={items.map((i) => ({
-          kpiItemId: i.kpiItemId,
-          categoryId: i.categoryId,
-          weight: i.weight,
-          isFixedSlot: i.isFixedSlot,
-        }))}
+        groups={groups}
         raiseRequiresAllA={scheme.raiseRequiresAllA}
-        scoringMode={scheme.scoringMode === "absolute" ? "absolute" : "ratio"}
-        pointGroups={pointGroups}
       />
     </>
   );

@@ -23,7 +23,7 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
   if (!member) notFound();
 
   const [evals, notes] = await Promise.all([
-    listEvaluations(viewer.companyId, { employeeId: id }),
+    listEvaluations(viewer.companyId, viewer.role, { employeeId: id }),
     listNotes(viewer.companyId, id),
   ]);
   const finalized = evals.filter((e) => e.status === "finalized");

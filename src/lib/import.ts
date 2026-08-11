@@ -4,6 +4,7 @@ import { getDb, insertMany, schema as s } from "@/lib/db";
 import { newId } from "@/lib/id";
 import { parseCsv } from "@/lib/csv";
 import { HttpError } from "@/lib/session";
+import { parseOptions, questionSnapshot, type QuestionSnapshot } from "@/lib/domain/answer-snapshot";
 
 /**
  * スプレッドシート（Googleフォームの回答一覧）からの一括取り込み。
@@ -34,6 +35,29 @@ function toNumber(raw: string): number | null {
   if (t === "") return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * 複数選択の1セル（「研修A, 研修C」「研修A、研修C」など）から、選択肢に当てはまるものを拾う。
+ *
+ * 区切り記号は表計算・Googleフォームの書き出しによって揺れるため、
+ * 読点・カンマ・中黒・スラッシュのどれでも区切れるようにする。
+ * どれにも当てはまらなければ空配列を返し、呼び出し側が「読めなかった」として画面に報告する
+ * （勝手に0点にしない）。
+ */
+export function matchMultiChoices(raw: string, optionsJson: string | null): string[] {
+  const opts = parseOptions(optionsJson);
+  if (opts.length === 0) return [];
+  const parts = raw
+    .split(/[、,・/／|｜]/)
+    .map((p) => normalizeKey(p))
+    .filter((p) => p !== "");
+  const picked: string[] = [];
+  for (const p of parts) {
+    const hit = opts.find((o) => normalizeKey(o.label) === p || normalizeKey(o.value) === p);
+    if (hit && !picked.includes(hit.value)) picked.push(hit.value);
+  }
+  return picked;
 }
 
 const YES = ["はい", "○", "◯", "実施済み", "基準を満たす", "達成", "true", "1", "yes"];
@@ -159,27 +183,41 @@ export async function importResponsesCsv(
     }
 
     // 値を設問の形式に合わせて変換する
-    const answers: { questionId: string; valueNumber: number | null; valueText: string | null }[] = [];
+    const answers: {
+      questionId: string;
+      valueNumber: number | null;
+      valueText: string | null;
+      valueJson: string | null;
+      snapshot: QuestionSnapshot;
+    }[] = [];
     const unreadable: string[] = [];
     for (const { col, q } of questionCols) {
       const raw = (line[col] ?? "").trim();
       if (raw === "") continue;
       let valueNumber: number | null = null;
+      let valueJson: string | null = null;
       const norm = normalizeKey(raw);
       if (q.questionType === "yesno") {
         if (YES.map(normalizeKey).includes(norm)) valueNumber = 1;
         else if (NO.map(normalizeKey).includes(norm)) valueNumber = 0;
       } else if (q.questionType === "single" && q.optionsJson) {
-        const opts = JSON.parse(q.optionsJson) as { value: string; label: string; score?: number }[];
+        const opts = parseOptions(q.optionsJson);
         const hit = opts.find((o) => normalizeKey(o.label) === norm || normalizeKey(o.value) === norm);
         if (hit) valueNumber = hit.score ?? Number(hit.value);
+      } else if (q.questionType === "multi") {
+        // 複数選択は「研修A, 研修C」のように1つのセルに並ぶ。選択肢に当てはまるものだけ拾う
+        const picked = matchMultiChoices(raw, q.optionsJson);
+        if (picked.length > 0) valueJson = JSON.stringify(picked);
+      } else if (q.questionType === "text") {
+        // 自由記述は数値にしない（文字をそのまま残す）
       } else {
         valueNumber = toNumber(raw);
       }
       // 意味が取れなかった値は、書かれた文字をそのまま残したうえで画面に報告する
       // （黙って0点として集計すると、原因の分からない低評価になるため）
-      if (valueNumber === null && q.questionType !== "text") unreadable.push(q.title);
-      answers.push({ questionId: q.id, valueNumber, valueText: raw });
+      const readable = q.questionType === "text" || (q.questionType === "multi" ? valueJson !== null : valueNumber !== null);
+      if (!readable) unreadable.push(q.title);
+      answers.push({ questionId: q.id, valueNumber, valueText: raw, valueJson, snapshot: questionSnapshot(q) });
     }
 
     const existing = (
@@ -229,7 +267,17 @@ export async function importResponsesCsv(
 
     await insertMany(
       (vals) => db.insert(s.formAnswers).values(vals),
-      answers.map((a) => ({ id: newId("fa"), companyId, responseId, questionId: a.questionId, valueNumber: a.valueNumber, valueText: a.valueText })),
+      answers.map((a) => ({
+        id: newId("fa"),
+        companyId,
+        responseId,
+        questionId: a.questionId,
+        valueNumber: a.valueNumber,
+        valueText: a.valueText,
+        valueJson: a.valueJson,
+        // 取り込んだ回答にも当時の設問文を写し取る（Web回答と同じ扱いにする）
+        ...a.snapshot,
+      })),
     );
 
     imported++;
