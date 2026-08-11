@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { clsx } from "clsx";
 
 /* ───────────────────────── ボタン ───────────────────────── */
@@ -225,16 +225,79 @@ export function Bar({ value, max, label }: { value: number; max: number; label?:
 
 /* ───────────────────────── 定義リスト ───────────────────────── */
 
+/**
+ * 1件の中身（ラベルと値の対）を並べる標準形。
+ *
+ * **項目と値の羅列を表（table）で書かない。** 列が1本しかない表は表ではなく、
+ * 狭い画面で横スクロールを生むだけになる。判断基準は docs/product/spec.md §5-5。
+ * 見た目（ラベル幅・区切り・狭い画面での縦積み）は .def-list に集約している。
+ */
 export function DefList({ rows }: { rows: { label: string; value: ReactNode }[] }) {
   return (
     <dl className="def-list">
       {rows.map((r) => (
-        <div key={r.label} className="flex flex-wrap gap-x-3 gap-y-1 border-b border-[var(--line)] py-2 last:border-b-0">
-          <dt className="w-40 shrink-0 text-[12px] text-[var(--ink-muted)]">{r.label}</dt>
-          <dd className="m-0 min-w-0 flex-1 text-[13px]">{r.value}</dd>
+        <div key={r.label}>
+          <dt>{r.label}</dt>
+          <dd>{r.value}</dd>
         </div>
       ))}
     </dl>
+  );
+}
+
+/**
+ * 同じ粒度の数値を数個ならべるサマリー（対象◯人／提出済み◯人 …）。
+ *
+ * 意味の違う値を混ぜない（それは DefList の仕事）。数値は大きく、
+ * ラベルは小さく muted に固定する（画面ごとに組み方を変えない）。
+ */
+export function StatGrid({ stats }: { stats: { label: string; value: ReactNode }[] }) {
+  return (
+    <dl className="stat-grid" style={{ "--stat-cols": Math.min(stats.length, 4) } as CSSProperties}>
+      {stats.map((s) => (
+        <div key={s.label}>
+          <dt>{s.label}</dt>
+          <dd>{s.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * 一覧をカードで出す標準形。
+ *
+ * 表（DataTable）を使わない一覧はすべてこれで書く。とくに
+ * 「1件ごとの情報量が多い」「行ごとに取れる操作が違う」「長い文章が入る」
+ * 履歴・申請・調整のたぐいはこちら（判断基準は docs/product/spec.md §5-5）。
+ *
+ * 並びは上から: 見出し（+ 状態の札）→ ラベル付きの値 → 長い文章 → 操作。
+ * この順番は画面ごとに変えない。
+ */
+export interface RecordItem {
+  key: string;
+  title: ReactNode;
+  marks?: ReactNode;
+  rows?: { label: string; value: ReactNode }[];
+  note?: ReactNode;
+  action?: ReactNode;
+}
+
+export function RecordList({ items }: { items: RecordItem[] }) {
+  return (
+    <Card>
+      {items.map((it) => (
+        <div key={it.key} className="list-card">
+          <div className="list-card-head">
+            <span className="min-w-0">{it.title}</span>
+            {it.marks}
+          </div>
+          {it.rows && it.rows.length > 0 && <DefList rows={it.rows} />}
+          {it.note && <p className="list-card-note">{it.note}</p>}
+          {it.action && <div className="list-card-actions">{it.action}</div>}
+        </div>
+      ))}
+    </Card>
   );
 }
 

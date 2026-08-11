@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, Disclosure, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, DefList, Disclosure, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { validateScheme, type SchemeSelection } from "@/lib/domain/scheme";
 import { describeRule, expectedItemCount, pointsForSlot, type GradePointRule } from "@/lib/domain/grade-points";
@@ -341,16 +341,14 @@ export function SchemeEditor({
                   <Card key={item.id} className="card-pad">
                     <p className="m-0 text-[13px] font-bold">{item.name}</p>
                     <p className="footnote m-0 mt-1">{category?.name ?? "分類なし"} ／ 単位 {item.unit}</p>
-                    <dl className="mt-3 grid gap-2 text-[12px]">
-                      <div>
-                        <dt className="text-[var(--ink-muted)]">評価する目的</dt>
-                        <dd className="m-0">{item.intent ?? "説明は未設定です"}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[var(--ink-muted)]">Aの目安</dt>
-                        <dd className="m-0">{item.aStandard ?? "基準は未設定です"}</dd>
-                      </div>
-                    </dl>
+                    <div className="mt-3">
+                      <DefList
+                        rows={[
+                          { label: "評価する目的", value: item.intent ?? "説明は未設定です" },
+                          { label: "Aの目安", value: item.aStandard ?? "基準は未設定です" },
+                        ]}
+                      />
+                    </div>
                   </Card>
                 );
               })}

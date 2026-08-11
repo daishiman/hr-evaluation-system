@@ -11,7 +11,8 @@ import {
 } from "@/lib/queries";
 import { matchKgiCoefficient } from "@/lib/domain/kgi";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import { formatDate, formatPeriod, CYCLE_STATUS_LABEL } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -216,39 +217,39 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
         <ReasonNote>達成係数が登録されていません。</ReasonNote>
       ) : (
         <>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>区分</th>
-                  <th className="col-num">達成係数</th>
-                  <th>適用する達成率</th>
-                </tr>
-              </thead>
-              <tbody>
-                {coefficients.map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      {c.label}
-                      {c.isProvisional ? (
-                        <>
-                          {" "}
-                          <ProvisionalMark />
-                        </>
-                      ) : null}
-                    </td>
-                    <td className="col-num">
-                      <Num value={c.coefficient} />
-                    </td>
-                    <td>
-                      {c.lowerBound === null ? "下限なし" : `${c.lowerBound}% 以上`} ／{" "}
-                      {c.upperBound === null ? "上限なし" : `${c.upperBound}% 未満`}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* 区分ごとの係数を上から見比べる参照表。行の項目が同じで数値を突き合わせる用途なので表のまま。 */}
+          <DataTable
+            caption="使われる達成係数"
+            rows={coefficients}
+            rowKey={(c) => c.id}
+            columns={[
+              {
+                key: "label",
+                header: "区分",
+                role: "title",
+                cell: (c) => (
+                  <>
+                    {c.label}
+                    {c.isProvisional ? (
+                      <>
+                        {" "}
+                        <ProvisionalMark />
+                      </>
+                    ) : null}
+                  </>
+                ),
+              },
+              { key: "coefficient", header: "達成係数", num: true, cell: (c) => <Num value={c.coefficient} /> },
+              {
+                key: "range",
+                header: "適用する達成率",
+                cell: (c) =>
+                  `${c.lowerBound === null ? "下限なし" : `${c.lowerBound}% 以上`} ／ ${
+                    c.upperBound === null ? "上限なし" : `${c.upperBound}% 未満`
+                  }`,
+              },
+            ]}
+          />
           <p className="footnote">
             元の表は「111〜120%」のように整数で書かれていて、99%と100%の間・110%と111%の間が抜けていました。
             99.5% のような小数が来てもどこかに必ず当てはまるよう、下限以上・上限未満で連続させています。
@@ -265,36 +266,30 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
           </p>
         </Card>
       ) : (
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>変更した日</th>
-                <th>事業所</th>
-                <th className="col-num">変更前</th>
-                <th className="col-num">変更後</th>
-                <th>理由</th>
-                <th>変更した人</th>
-              </tr>
-            </thead>
-            <tbody>
-              {revisions.map((r) => (
-                <tr key={r.id}>
-                  <td>{formatDate(r.createdAt)}</td>
-                  <td>{r.officeName ?? "—"}</td>
-                  <td className="col-num">
-                    {r.beforeRate === null ? <Badge tone="active">初回登録</Badge> : <Num value={r.beforeRate} unit="%" />}
-                  </td>
-                  <td className="col-num">
+        /* 履歴は1件ごとの出来事（理由という長い文章を含む）なので、表ではなくカードで出す
+           （docs/product/spec.md §5-5）。 */
+        <RecordList
+          items={revisions.map((r) => ({
+            key: r.id,
+            title: r.officeName ?? "—",
+            marks: r.beforeRate === null ? <Badge tone="active">初回登録</Badge> : undefined,
+            rows: [
+              { label: "変更した日", value: formatDate(r.createdAt) },
+              {
+                label: "達成率",
+                value: (
+                  <>
+                    {r.beforeRate === null ? "未登録" : <Num value={r.beforeRate} unit="%" />}
+                    <span className="mx-1 text-[var(--ink-muted)]">→</span>
                     <Num value={r.afterRate} unit="%" />
-                  </td>
-                  <td>{r.reason ?? "—"}</td>
-                  <td>{r.revisedByName ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </>
+                ),
+              },
+              { label: "変更した人", value: r.revisedByName ?? "—" },
+            ],
+            note: r.reason ? `理由：${r.reason}` : null,
+          }))}
+        />
       )}
 
       <p className="footnote">

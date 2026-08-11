@@ -1,4 +1,5 @@
 import { Card, Num } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import { slotCountOf, type GradePointRule } from "./data";
 
 /**
@@ -146,60 +147,58 @@ export function PointDesign({
 /** 全等級区分の配点をならべた比較表。「自分の等級だけ特別ではない」ことを確かめるために置く。 */
 export function PointRuleComparison({ rules, currentGroup }: { rules: GradePointRule[]; currentGroup: string | null }) {
   return (
-    <div className="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>等級区分</th>
-            <th className="col-num">満点</th>
-            <th className="col-num">等級要件</th>
-            <th className="col-num">20点枠</th>
-            <th className="col-num">10点枠</th>
-            <th className="col-num">選ぶ項目数</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rules.map((r) => (
-            <tr key={r.id}>
-              <td>
-                {r.pointGroup}
-                {r.pointGroup === currentGroup && <span className="footnote"> ← いま見ている等級</span>}
-              </td>
-              <td className="col-num">
-                <Num value={r.totalPoints} />
-              </td>
-              <td className="col-num">
-                <Num value={r.fixedSlotPoints} />
-              </td>
-              <td className="col-num">
-                {r.majorSlotCount > 0 ? (
-                  <>
-                    <Num value={r.majorSlotPoints} />
-                    <span className="unit">点 ×</span>
-                    <Num value={r.majorSlotCount} />
-                  </>
-                ) : (
-                  <span className="text-[var(--ink-muted)]">—</span>
-                )}
-              </td>
-              <td className="col-num">
-                {r.minorSlotCount > 0 ? (
-                  <>
-                    <Num value={r.minorSlotPoints} />
-                    <span className="unit">点 ×</span>
-                    <Num value={r.minorSlotCount} />
-                  </>
-                ) : (
-                  <span className="text-[var(--ink-muted)]">—</span>
-                )}
-              </td>
-              <td className="col-num">
-                <Num value={slotCountOf(r)} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    /* 等級区分ごとの配点を横並びで見比べるための表。数値を突き合わせる用途そのものなので表が最適
+       （docs/product/spec.md §5-5）。狭い画面では DataTable が自動でカードに畳む。 */
+    <DataTable
+      caption="等級区分ごとの配点"
+      rows={rules}
+      rowKey={(r) => r.id}
+      columns={[
+        {
+          key: "group",
+          header: "等級区分",
+          role: "title",
+          cell: (r) => (
+            <>
+              {r.pointGroup}
+              {r.pointGroup === currentGroup && <span className="footnote"> ← いま見ている等級</span>}
+            </>
+          ),
+        },
+        { key: "total", header: "満点", num: true, cell: (r) => <Num value={r.totalPoints} /> },
+        { key: "fixed", header: "等級要件", num: true, cell: (r) => <Num value={r.fixedSlotPoints} /> },
+        {
+          key: "major",
+          header: "20点枠",
+          num: true,
+          cell: (r) =>
+            r.majorSlotCount > 0 ? (
+              <>
+                <Num value={r.majorSlotPoints} />
+                <span className="unit">点 ×</span>
+                <Num value={r.majorSlotCount} />
+              </>
+            ) : (
+              <span className="text-[var(--ink-muted)]">—</span>
+            ),
+        },
+        {
+          key: "minor",
+          header: "10点枠",
+          num: true,
+          cell: (r) =>
+            r.minorSlotCount > 0 ? (
+              <>
+                <Num value={r.minorSlotPoints} />
+                <span className="unit">点 ×</span>
+                <Num value={r.minorSlotCount} />
+              </>
+            ) : (
+              <span className="text-[var(--ink-muted)]">—</span>
+            ),
+        },
+        { key: "slots", header: "選ぶ項目数", num: true, cell: (r) => <Num value={slotCountOf(r)} /> },
+      ]}
+    />
   );
 }

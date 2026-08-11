@@ -533,11 +533,43 @@ main {
 .grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-block); }
 @media (max-width: 639px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
 
-/* 定義リスト */
-.def-list { display: grid; grid-template-columns: 8rem 1fr; row-gap: 8px; font-size: 13px; }
-.def-list dt { color: var(--ink-muted); }
-.def-list dd { margin: 0; }
-@media (max-width: 480px) { .def-list { grid-template-columns: 6.5rem 1fr; } }
+/* ------------------------------------------------------------
+   定義リスト（ラベル＋値の対）。
+   「1件の中身を並べる」ときの標準形。表にしない（列が1本しかない表は表ではない）。
+   広い画面はラベルと値を横に、狭い画面は縦積みにする。
+   ------------------------------------------------------------ */
+.def-list { font-size: 13px; }
+.def-list > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.def-list > div:last-child { border-bottom: none; }
+.def-list dt { flex: 0 0 8rem; color: var(--ink-muted); font-size: 12px; }
+.def-list dd { flex: 1 1 12rem; margin: 0; min-width: 0; }
+@media (max-width: 480px) {
+  /* 狭い画面ではラベルを値の上に置く（8rem を削り合って値が2文字幅になるのを防ぐ） */
+  .def-list dt { flex-basis: 100%; }
+}
+
+/* ------------------------------------------------------------
+   サマリー（指標を数個ならべる箱）。
+   「対象◯人／提出済み◯人」のような同じ粒度の数値を横に並べる用途だけに使う。
+   1つずつ意味の違う値を入れない（それは定義リストの仕事）。
+   ------------------------------------------------------------ */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-block);
+}
+@media (min-width: 640px) {
+  .stat-grid { grid-template-columns: repeat(var(--stat-cols, 4), minmax(0, 1fr)); }
+}
+.stat-grid > div { min-width: 0; }
+.stat-grid dt { margin: 0; font-size: 12px; color: var(--ink-muted); }
+.stat-grid dd { margin: 2px 0 0; }
 
 /* ============================================================
    ボタン (§5) — 3階層 + 破壊的
@@ -649,8 +681,10 @@ main {
 /* ============================================================
    テーブル (§5)
    ============================================================ */
-.table-scroll { overflow-x: auto; border-radius: 12px; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+/* 表は「同じ属性の行を見比べる」ときだけ使う。判断基準は docs/product/spec.md §5-5。
+   表を出すかカードに落とすかは容器の幅で切り替える（.data-table / DataTable が唯一の実装）。 */
+.table-scroll { border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th {
   text-align: left;
   font-size: 12px;
@@ -659,12 +693,22 @@ thead th {
   border-bottom: 1px solid var(--line);
   padding: 10px 12px;
   white-space: nowrap;
+  /* 列見出しはスクロールしても消えない。固定ヘッダー（と、あれば見出し帯）の下に貼り付く。 */
+  position: sticky;
+  top: var(--table-head-top, var(--header-h));
+  z-index: 4;
+  background: #fff;
 }
 tbody td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--subtle); }
-th.col-num, td.col-num { text-align: right; }
+/* 数値の列は右揃え＋等幅（桁位置を縦にそろえる）。文字列の列には付けない。 */
+th.col-num, td.col-num { text-align: right; font-variant-numeric: tabular-nums; }
 tr.row-excluded td { color: var(--ink-muted); }
+
+/* 見出し帯を固定している画面では、その帯のぶんだけ列見出しを下げる。
+   帯の高さ（約52px）を変えたらこの値も対で直す。 */
+body:has(.page-head[data-sticky="true"]) { --table-head-top: calc(var(--header-h) + 52px); }
 
 input[type="checkbox"] {
   width: 18px;
@@ -674,36 +718,43 @@ input[type="checkbox"] {
 }
 input[type="checkbox"]:disabled { cursor: not-allowed; }
 
-/* テーブル→カードの切替は「画面幅」ではなくコンテナクエリ(容器の幅)で判定 (§5-2)
-   同じ部品をモーダルやサイドバーに置いても正しく振る舞う */
+/* ------------------------------------------------------------
+   表 → カードの切替。
+   「画面幅」ではなく容器の幅（コンテナクエリ）で判定する。同じ部品を
+   折りたたみの中や狭い欄に置いても正しく振る舞うため。
+   列が多い表（5列以上）は、横に潰れる前に早めカードへ落とす。
+   ------------------------------------------------------------ */
 .list-host { container-type: inline-size; }
-.deal-cards { display: none; }
+.list-cards { display: none; }
 @container (max-width: 639px) {
-  .table-scroll { display: none; }
-  .deal-cards { display: block; }
+  .list-host > .table-scroll { display: none; }
+  .list-host > .list-cards { display: block; }
 }
-.deal-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
+@container (max-width: 899px) {
+  .list-host[data-cards="wide"] > .table-scroll { display: none; }
+  .list-host[data-cards="wide"] > .list-cards { display: block; }
+}
+
+/* 表の1行を1枚のカードに畳んだもの。中身は「主役の1行 + ラベル付きの値」。 */
+.list-card {
+  padding: 12px 16px;
   border-bottom: 1px solid var(--line);
 }
-.deal-card:last-child { border-bottom: none; }
-.deal-card.is-excluded { color: var(--ink-muted); }
-.deal-card .dc-main { flex: 1; min-width: 0; }
-.deal-card .dc-title { font-weight: 600; font-size: 14px; }
-.deal-card .dc-sub { font-size: 12px; color: var(--ink-muted); }
-.deal-card .dc-price {
-  font-family: var(--font-num);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  font-weight: 700;
-  font-size: 15px;
-  white-space: nowrap;
-  text-align: right;
+.list-card:last-child { border-bottom: none; }
+.list-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 14px;
+  font-weight: 600;
 }
-.deal-card .dc-right { display: grid; gap: 6px; justify-items: end; }
+.list-card .def-list { margin-top: 6px; }
+.list-card .def-list > div { padding: 4px 0; border-bottom: none; }
+.list-card .def-list dt { flex-basis: 7rem; }
+/* 長い文章（理由・補足）は値の対にせず、1段落として置く */
+.list-card-note { margin: 6px 0 0; font-size: 13px; line-height: 1.7; }
+.list-card-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: var(--space-tight); }
 
 /* ============================================================
    フォーム (§5)
@@ -1337,6 +1388,12 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
     border: 1px solid var(--line);
     break-inside: avoid;
   }
+
+  /* 紙には「貼り付く」概念がないので、列見出しは普通の行に戻す。
+     ただし複数ページにまたがる表では各ページの先頭に列見出しを繰り返す。 */
+  thead th { position: static; background: #fff !important; }
+  thead { display: table-header-group; }
+  tbody tr { break-inside: avoid; }
 
   .section-heading { break-after: avoid; }
   .card-row,

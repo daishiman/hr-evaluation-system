@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, ReasonNote } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 
 type MemberRowResult = {
   row: number;
@@ -144,30 +145,21 @@ export function MembersCsvImport() {
       {message && <p className="mt-3 m-0 text-[13px] font-bold">{message}</p>}
 
       {rows && rows.length > 0 && (
-        <div className="table-scroll mt-3">
+        <div className="mt-3">
           {checked && <p className="footnote m-0 mb-1">まだ保存していません。内容でよければ「この内容を取り込む」を押してください。</p>}
-          <table>
-            <thead>
-              <tr>
-                <th className="col-num">行</th>
-                <th>氏名</th>
-                <th>メールアドレス</th>
-                <th>結果</th>
-                <th>内容</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={`${r.row}-${r.status}`}>
-                  <td className="col-num num">{r.row}</td>
-                  <td>{r.name || "（空欄）"}</td>
-                  <td className="text-[12px]">{r.email}</td>
-                  <td>{r.status}</td>
-                  <td>{r.reason ?? ""}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* 取り込み結果は行番号順に上から突き合わせる一覧なので表のまま（狭い画面では自動でカードに畳む）。 */}
+          <DataTable
+            caption="取り込みの結果"
+            rows={rows}
+            rowKey={(r) => `${r.row}-${r.status}`}
+            columns={[
+              { key: "name", header: "氏名", role: "title", cell: (r) => r.name || "（空欄）" },
+              { key: "status", header: "結果", role: "mark", cell: (r) => r.status },
+              { key: "row", header: "行", num: true, cell: (r) => <span className="num">{r.row}</span> },
+              { key: "email", header: "メールアドレス", cell: (r) => <span className="text-[12px]">{r.email}</span> },
+              { key: "reason", header: "内容", cell: (r) => r.reason ?? "" },
+            ]}
+          />
         </div>
       )}
     </Card>
