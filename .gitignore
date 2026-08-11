@@ -81,3 +81,6 @@ backup.sql
 drizzle/.add-user.sql
 drizzle/.reference-points.sql
 drizzle/.grade-schemes.sql
+# サンプルデータの投入・削除SQL（実行のたびに作り直す。パスワードのハッシュを含むため残さない）
+drizzle/sample*.sql
+drizzle/.sample*.sql

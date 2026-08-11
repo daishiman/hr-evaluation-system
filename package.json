@@ -18,6 +18,10 @@
     "db:migrate:remote": "wrangler d1 migrations apply hr-evaluation-db --remote",
     "db:seed:local": "node scripts/seed.mjs --local",
     "db:seed:remote": "node scripts/seed.mjs --remote",
+    "db:sample:local": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning scripts/seed-sample.mjs",
+    "db:sample:remote": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning scripts/seed-sample.mjs --remote",
+    "db:sample:remove:local": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning scripts/seed-sample.mjs --remove",
+    "db:sample:remove:remote": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning scripts/seed-sample.mjs --remove --remote",
     "db:backup": "wrangler d1 export hr-evaluation-db --remote --output=backup.sql",
     "user:add": "node scripts/add-user.mjs",
     "db:seed:reference": "node scripts/seed-reference-points.mjs"
