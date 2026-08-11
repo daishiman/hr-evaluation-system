@@ -75,7 +75,8 @@ export default async function AdminSetupPage() {
       statusLabel: activeGrades.length > 0 && activeRequirements.length > 0 ? "登録あり" : "要設定",
       actions: [
         { href: "/admin/masters/requirements", label: "等級要件を設定する" },
-        { href: "/admin/masters", label: "等級・昇格要件を確認する" },
+        { href: "/admin/masters", label: "等級の設定を確認する" },
+        { href: "/admin/masters/promotion", label: "昇格の条件・要件を確認する" },
       ],
       detail:
         "アンケートの支援・運営の設問と昇格要件は、ここで保存した内容から作られます。先にアンケートを作ると、あとで制度を直しても作成済みの版には自動反映されません。",
@@ -87,7 +88,7 @@ export default async function AdminSetupPage() {
       current: `行動指針 ${activeGuidelines.length}観点 ／ 判定文 ${behaviorLevelCount}件 ／ 適用する等級 ${behaviorAppliedGrades}/${activeGrades.length}段階`,
       complete: activeGuidelines.length > 0 && behaviorAppliedGrades > 0,
       statusLabel: activeGuidelines.length > 0 && behaviorAppliedGrades > 0 ? "設定あり" : "要確認",
-      actions: [{ href: "/admin/masters", label: "行動指針の適用を確認する" }],
+      actions: [{ href: "/admin/behavior", label: "行動指針を確認する" }],
       detail:
         "行動指針を適用した等級には、アンケート作成時に行動指針の設問が入ります。等級ごとの適用を決めてから評価セットとアンケートへ進みます。",
     },

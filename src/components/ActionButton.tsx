@@ -60,9 +60,15 @@ export function ActionButton({
   };
 
   return (
-    <div>
-      {error && <ReasonNote>{error}</ReasonNote>}
-      {result && <p className="m-0 mb-2 text-[12px] text-[var(--brand-deep)]">{result}</p>}
+    /* 一覧の行の中に置かれることがある。実行の結果やエラーの文が幅を要求すると
+       行の本文が潰れるので、通知は幅の上限を持たせて折り返す。 */
+    <div className="min-w-0 max-w-full">
+      {error && (
+        <div className="mb-2 max-w-[22rem]">
+          <ReasonNote>{error}</ReasonNote>
+        </div>
+      )}
+      {result && <p className="m-0 mb-2 max-w-[22rem] text-[12px] text-[var(--brand-deep)]">{result}</p>}
       {confirm ? (
         <ConfirmButton label={label} confirm={confirm} variant={variant} busy={busy} onConfirm={() => void run()}>
           {children}

@@ -147,7 +147,7 @@ export const grades = sqliteTable(
     /** 配点表の等級区分: Beginner | Regular | Chief | AM | Manager（AMⅠ/Ⅱ、MgrⅠ/Ⅱは同じ配点基準） */
     pointGroup: text("point_group").notNull(),
     displayOrder: integer("display_order").notNull(),
-    /** 半期の目標設定上限数（等級要件達成率の分母） */
+    /** 半期に立てる目標数の運用目安。等級要件達成率の分母には使わない。 */
     targetCap: integer("target_cap").notNull().default(5),
     autonomyLevel: text("autonomy_level"),
     responsibilityLevel: text("responsibility_level"),

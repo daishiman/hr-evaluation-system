@@ -1,98 +1,65 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/session";
-import {
-  getActiveScheme,
-  listGradeRequirements,
-  listGrades,
-  listKgiCoefficients,
-  listPromotionRequirements,
-  listPromotionThresholds,
-  listRaiseSettings,
-  listSchemeItems,
-} from "@/lib/queries";
+import { listGradeRequirements, listGrades, listPromotionThresholds, listRaiseSettings } from "@/lib/queries";
 import { detectStaleCycles } from "@/lib/impact";
 import { RecordForm } from "@/components/RecordForm";
-import { PromotionRequirementEditor } from "@/components/PromotionRequirementEditor";
-import { RankCriteriaPanel } from "@/components/RankCriteriaPanel";
+import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
+import { behaviorBandLabel } from "@/lib/domain/behavior";
 import { GRADE_REQUIREMENT_MAX } from "@/lib/domain/grade-requirements";
-import { Card, Disclosure, EmptyState, LinkButton, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Card, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 /**
- * 制度マスタ。等級・昇格の条件・昇給額・等級要件・昇格要件・ランク基準をここで決める。
+ * 等級そのものの設定だけを扱う画面。
  *
- * 評価に使う数値をコードに書かないための画面。ここを変えると、以後の評価の計算が変わる。
- * すでに確定した評価は判定当時の値を持っているため、過去の結果は動かない。
+ * 「等級とは何か」（名前・水準・目標の上限）をここで決める。
+ * その等級で何を問うか・どうすれば上がれるか・行動指針を出すかは、
+ * それぞれ別の画面に置く。1つの画面に全部を積むと、直したい設定が
+ * どこにあるか毎回探すことになるため。
  */
-export default async function AdminMasters({ searchParams }: { searchParams: Promise<{ grade?: string; tab?: string }> }) {
+export default async function AdminMasters({ searchParams }: { searchParams: Promise<{ grade?: string }> }) {
   const viewer = await requireRole("COMPANY_ADMIN");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  const [grades, thresholds, raises, gradeReqs, promoReqs, scheme, kgi] = await Promise.all([
+  const [grades, raises, gradeReqs, thresholds, staleCycles] = await Promise.all([
     listGrades(companyId),
-    listPromotionThresholds(companyId),
     listRaiseSettings(companyId),
     listGradeRequirements(companyId),
-    listPromotionRequirements(companyId),
-    getActiveScheme(companyId),
-    listKgiCoefficients(companyId),
+    listPromotionThresholds(companyId),
+    detectStaleCycles(companyId),
   ]);
 
   const sp = await searchParams;
   const grade = grades.find((g) => g.id === sp.grade) ?? grades[0] ?? null;
-  /* ランク基準（8項目 × A〜Eで40件）は折りたたみを開いたときに読む。
-     ここでは「開く価値があるか」を出すための件数だけを数える。 */
-  const schemeItemCount = scheme ? (await listSchemeItems(companyId, scheme.id)).length : 0;
-  // 基準を直した結果、どのサイクルが古いままかをこの画面で知らせる
-  const staleCycles = await detectStaleCycles(companyId);
 
   if (!grade) {
     return (
       <>
-        <PageTitle title="等級・昇格・行動指針" />
+        <PageTitle title="等級の設定" />
         <EmptyState title="等級が登録されていません" body="初期データの投入が済んでいるかご確認ください。" />
       </>
     );
   }
 
-  const th = thresholds.find((t) => t.fromGradeId === grade.id) ?? null;
   const raise = raises.find((r) => r.gradeId === grade.id) ?? null;
   const myGradeReqs = gradeReqs.filter((r) => r.gradeId === grade.id && r.isActive);
   const supportCount = myGradeReqs.filter((r) => r.category === "support").length;
   const operationCount = myGradeReqs.filter((r) => r.category === "operation").length;
-  const myPromoReqs = promoReqs.filter((r) => r.gradeId === grade.id);
+  const th = thresholds.find((t) => t.fromGradeId === grade.id) ?? null;
 
   return (
     <>
       {/* 設定項目が縦に長く並ぶ画面。どの等級を編集しているかを帯に固定する */}
       <PageTitle
         sticky
-        title="等級・昇格・行動指針"
-        lede="評価に使う数値と要件をここで決めます。変更は以後の評価に反映され、確定済みの評価は判定当時の内容のまま残ります。"
+        title="等級の設定"
+        lede="等級の名前と水準をここで決めます。変更は以後の評価に反映され、確定済みの評価は判定当時の内容のまま残ります。"
         tags={<span className="tag">編集中の等級 {grade.name}</span>}
       />
 
-      {staleCycles.length > 0 && (
-        <Card className="card-pad">
-          <p className="m-0 text-[13px] font-bold">基準を変えたあと、集計し直していない評価があります</p>
-          <ul className="m-0 mt-2 list-disc pl-5 text-[13px]">
-            {staleCycles.map((c) => (
-              <li key={c.cycleId}>
-                {c.cycleName}：確認中 {c.recomputable}件が古い基準のままです
-                {c.finalized > 0 && `（確定済み ${c.finalized}件は当時の基準のまま据え置き）`}。
-                <Link href={`/manager/cycles?cycle=${c.cycleId}`} className="ml-1 text-[var(--brand-deep)]">
-                  集計し直す
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <p className="footnote m-0 mt-2">
-            確定済みの評価は、基準を変えても結果が動きません（判定した当時の値を控えてあるためです）。
-          </p>
-        </Card>
-      )}
+      <StaleCyclesNotice cycles={staleCycles} />
 
       <SectionHeading>等級を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
@@ -103,146 +70,84 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         ))}
       </div>
 
-      <SectionHeading>{grade.name} の等級設定</SectionHeading>
+      <SectionHeading>{grade.name} の内容</SectionHeading>
+      {/* 等級の切り替えで入力欄を作り直す。key を付けないと、前の等級に入れた値が
+          そのまま残り、それを保存して別の等級の内容を上書きしてしまう */}
       <RecordForm
+        key={grade.id}
         url="/api/masters"
         method="PUT"
         fixed={{ kind: "grade", id: grade.id }}
         submitLabel="等級の設定を保存する"
-        description="「半期の目標設定上限数」は目標を何件まで立てられるかの目安です。等級要件達成率の分母には使いません（分母は登録した等級要件の項目数です）。"
+        description="「半期の目標設定上限数」は、本人が半期に立てられる目標の件数の目安です。等級要件達成率には使いません。達成率の分母は、そのアンケートを作った時点で実際に出題した等級要件の項目数です。"
         fields={[
           { name: "name", label: "等級の名前", type: "text", required: true, defaultValue: grade.name },
           { name: "targetCap", label: "半期の目標設定上限数", type: "number", required: true, defaultValue: grade.targetCap, unit: "件" },
           { name: "autonomyLevel", label: "自律の水準", type: "text", defaultValue: grade.autonomyLevel ?? "" },
           { name: "responsibilityLevel", label: "責任の水準", type: "text", defaultValue: grade.responsibilityLevel ?? "" },
           { name: "deadlineNote", label: "期限の考え方", type: "text", defaultValue: grade.deadlineNote ?? "" },
-          {
-            name: "behaviorBand",
-            label: "行動指針の適用",
-            type: "select",
-            defaultValue: grade.behaviorBand ?? "",
-            help: "この等級のアンケートに行動指針（創造性・専門性・個別性・対等性・連帯性の5問）を出すかどうかです。次に作るアンケートから反映されます。",
-            options: [
-              { value: "", label: "適用しない" },
-              { value: "g1_2", label: "等級1〜2の基準を適用する" },
-              { value: "g3_4", label: "等級3〜4の基準を適用する" },
-            ],
-          },
         ]}
       />
-      <div className="mt-3">
-        <Disclosure summary="行動指針の初期設定について">
-          <p className="footnote m-0">
-            移行元には、AM Ⅰ・AM Ⅱへ行動指針を出さない記録と、実際に出したアンケートがありました。初期値は実際のアンケートを採用していますが、会社の制度に合わせて上の「行動指針の適用」で切り替えられます。
+
+      <SectionHeading>この等級について、別の画面で決めること</SectionHeading>
+      <div className="stack">
+        <Card className="card-pad">
+          <p className="m-0 text-[13px] font-bold">等級要件（支援・運営）</p>
+          <p className="m-0 mt-1 text-[13px]">
+            いまは <b>支援について {supportCount}項目</b>・<b>運営について {operationCount}項目</b>（合計{" "}
+            <b>{supportCount + operationCount}項目</b>）です。次に作るアンケートでは、この有効な項目の合計が達成率の分母になります。
           </p>
-        </Disclosure>
+          <p className="footnote m-0 mt-1">区分ごとに{GRADE_REQUIREMENT_MAX}項目までです。</p>
+          <div className="mt-3">
+            <LinkButton variant="secondary" href={`/admin/masters/requirements?grade=${grade.id}`}>
+              等級要件を編集する
+            </LinkButton>
+          </div>
+        </Card>
+
+        <Card className="card-pad">
+          <p className="m-0 text-[13px] font-bold">昇格の条件・要件</p>
+          <p className="m-0 mt-1 text-[13px]">
+            {th
+              ? `${grade.name}から上がるには、KPI評価点 ${th.requiredKpiPoints}点・行動指針 ${th.requiredBehaviorPoints}点が必要です。`
+              : "この等級からの昇格条件は登録されていません（最上位の等級の場合は設定不要です）。"}
+          </p>
+          <div className="mt-3">
+            <LinkButton variant="secondary" href={`/admin/masters/promotion?grade=${grade.id}`}>
+              昇格の条件・要件を編集する
+            </LinkButton>
+          </div>
+        </Card>
+
+        <Card className="card-pad">
+          <p className="m-0 text-[13px] font-bold">行動指針</p>
+          <p className="m-0 mt-1 text-[13px]">
+            {grade.behaviorBand
+              ? `${grade.name}のアンケートには、${behaviorBandLabel(grade.behaviorBand)}を出します。`
+              : `${grade.name}のアンケートには、行動指針を出しません。`}
+          </p>
+          <div className="mt-3">
+            <LinkButton variant="secondary" href="/admin/behavior">
+              行動指針を編集する
+            </LinkButton>
+          </div>
+        </Card>
+
+        <Card className="card-pad">
+          <p className="m-0 text-[13px] font-bold">昇給額</p>
+          <p className="m-0 mt-1 text-[13px]">
+            {raise
+              ? `${grade.name}のいまの昇給額は 月額 ${raise.monthlyAmount.toLocaleString("ja-JP")}円 です。`
+              : "この等級の昇給額はまだ登録されていません。"}
+          </p>
+          <p className="footnote m-0 mt-1">金額・回数の上限・事業所ごとの調整率と、変更したときの記録をまとめて扱います。</p>
+          <div className="mt-3">
+            <LinkButton variant="secondary" href={`/admin/raises?grade=${grade.id}`}>
+              昇給の設定を開く
+            </LinkButton>
+          </div>
+        </Card>
       </div>
-
-      <SectionHeading>昇格の条件</SectionHeading>
-      {!th ? (
-        <ReasonNote>この等級からの昇格条件が登録されていません。最上位の等級の場合は設定不要です。</ReasonNote>
-      ) : (
-        <>
-          {th.isProvisional && (
-            <div className="mb-3">
-              <ReasonNote>
-                <ProvisionalMark /> いまの値は叩き台の初期値です。制度として決まった点数を入れて保存すると、仮置きの表示が消えます。
-              </ReasonNote>
-            </div>
-          )}
-          <RecordForm
-            url="/api/masters"
-            method="PUT"
-            fixed={{ kind: "threshold", id: th.id }}
-            submitLabel="昇格の条件を保存する"
-            description={`${th.label}。ここで決めた点数は、アンケートの回答画面には絶対に表示されません。`}
-            fields={[
-              { name: "requiredKpiPoints", label: "必要なKPI評価点", type: "number", required: true, defaultValue: th.requiredKpiPoints, unit: "点 / 100点" },
-              { name: "requiredBehaviorPoints", label: "必要な行動指針の点数", type: "number", required: true, defaultValue: th.requiredBehaviorPoints, unit: "点" },
-            ]}
-          />
-        </>
-      )}
-
-      <SectionHeading>昇給額</SectionHeading>
-      <Card className="card-pad">
-        <p className="m-0 text-[13px]">
-          {raise
-            ? `${grade.name}のいまの昇給額は 月額 ${raise.monthlyAmount.toLocaleString("ja-JP")}円 です。`
-            : "この等級の昇給額はまだ登録されていません。"}
-        </p>
-        <p className="footnote m-0 mt-1">
-          金額・回数の上限・事業所ごとの調整率と、変更したときの記録は
-          <Link href={`/admin/raises?grade=${grade.id}`} className="mx-1 text-[var(--brand-deep)]">
-            昇給の設定
-          </Link>
-          でまとめて扱います。
-        </p>
-      </Card>
-
-      <SectionHeading>等級要件</SectionHeading>
-      <Card className="card-pad">
-        <p className="m-0 text-[13px]">
-          {grade.name} の等級要件は、<b>支援について {supportCount}項目</b>・<b>運営について {operationCount}項目</b>（合計{" "}
-          <b>{supportCount + operationCount}項目</b>）です。この合計が等級要件達成率の分母になります。
-        </p>
-        <p className="footnote m-0 mt-1">
-          項目の追加・並べ替え・見直しは専用の画面で行います（区分ごとに{GRADE_REQUIREMENT_MAX}項目まで）。
-        </p>
-        <div className="mt-3">
-          <LinkButton variant="secondary" href={`/admin/masters/requirements?grade=${grade.id}`}>
-            等級要件を編集する
-          </LinkButton>
-        </div>
-      </Card>
-
-      <SectionHeading>昇格要件</SectionHeading>
-      <PromotionRequirementEditor gradeId={grade.id} gradeName={grade.name} rows={myPromoReqs} />
-
-      <SectionHeading>KPIのランク基準（会社全体）</SectionHeading>
-      {schemeItemCount === 0 ? (
-        <ReasonNote>評価セットが未設定のため、ランク基準を表示できません。</ReasonNote>
-      ) : (
-        <>
-          <p className="footnote">
-            A〜Eの線引きは項目ごとに決めます。開いたときに読み込むため、直したいときだけ開いてください。
-          </p>
-          <RankCriteriaPanel itemCount={schemeItemCount} />
-        </>
-      )}
-
-      {kgi.length > 0 && (
-        <div className="mt-4">
-          <Disclosure summary="事業所KGIの達成係数を変更する" meta={`${kgi.length}区分`}>
-            <p className="footnote">
-              賞与の個人ポイント計算に使います（個人Pt ＝ KPI評価点の合計 × 係数）。通常は変更が必要なときだけ開きます。
-            </p>
-            <details className="mb-4">
-              <summary className="cursor-pointer text-[12px] font-semibold text-[var(--ink-muted)]">初期値の決め方を確認する</summary>
-              <p className="footnote m-0 mt-2">
-                元資料の区分間に空白があったため、上の区分の下限にそろえて連続する範囲へ補っています。元資料そのままの値ではありません。
-              </p>
-            </details>
-            <div className="field-grid">
-              {kgi.map((k) => (
-                <RecordForm
-                  key={k.id}
-                  url="/api/masters"
-                  method="PUT"
-                  fixed={{ kind: "kgi", id: k.id }}
-                  submitLabel="係数を保存する"
-                  title={k.label}
-                  description={k.isProvisional ? "いまの値は叩き台の初期値です。" : undefined}
-                  fields={[
-                    { name: "label", label: "区分の名前", type: "text", required: true, defaultValue: k.label },
-                    { name: "coefficient", label: "係数", type: "number", required: true, defaultValue: k.coefficient },
-                  ]}
-                />
-              ))}
-            </div>
-          </Disclosure>
-        </div>
-      )}
     </>
   );
 }

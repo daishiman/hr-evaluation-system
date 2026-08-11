@@ -58,7 +58,14 @@ export default async function SystemCompanies() {
           { name: "businessType", label: "事業の種類", type: "text", placeholder: "給付事業" },
           { name: "adminName", label: "管理者の氏名", type: "text", required: true },
           { name: "adminEmail", label: "管理者のメールアドレス", type: "email", required: true },
-          { name: "adminPassword", label: "管理者の最初のパスワード", type: "password", required: true, help: "8文字以上" },
+          {
+              name: "adminPassword",
+              label: "管理者の最初のパスワード",
+              type: "password",
+              required: true,
+              generate: true,
+              help: "この場で作った値を出しています。写して管理者に渡してください。本人がログインすると、変更のお願いが出ます。",
+            },
         ]}
       />
 

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  *
  * 制度マスタの中に混ぜていたときは「支援について」「運営について」が1つの一覧に
  * 混ざって見えず、いくつ登録できるのかも分からなかった。
- * 等級要件は達成率の分母を決める設定なので、専用の画面に切り出して数を見せる。
+ * 等級要件は次に作るアンケートの達成率分母を決める設定なので、専用の画面に切り出して数を見せる。
  */
 export default async function AdminGradeRequirements({
   searchParams,
@@ -29,7 +29,7 @@ export default async function AdminGradeRequirements({
     return (
       <>
         <PageTitle title="等級要件（支援・運営）" />
-        <EmptyState title="等級が登録されていません" body="先に「等級・昇格・行動指針」で等級を登録してください。" />
+        <EmptyState title="等級が登録されていません" body="先に「等級の設定」で等級を登録してください。" />
       </>
     );
   }
@@ -41,7 +41,7 @@ export default async function AdminGradeRequirements({
       <PageTitle
         sticky
         title="等級要件（支援・運営）"
-        lede="等級ごとに「支援について」「運営について」の項目を決めます。ここに登録した項目の数が、等級要件達成率の分母になります。"
+        lede="等級ごとに「支援について」「運営について」の項目を決めます。次に作るアンケートでは、有効な項目の数が等級要件達成率の分母になります。公開済みアンケートは作成時の項目数を保ちます。"
         tags={
           <>
             <span className="tag">
@@ -74,11 +74,11 @@ export default async function AdminGradeRequirements({
       />
 
       <p className="footnote mt-5">
-        等級そのものの設定（名前・昇格の条件・昇給額など）は
+        等級そのものの設定（名前・水準・半期の目標設定上限数）は
         <Link href={`/admin/masters?grade=${grade.id}`} className="mx-1 text-[var(--brand-deep)]">
-          等級・昇格・行動指針
+          等級の設定
         </Link>
-        で行います。
+        で行います。昇格条件は「昇格の条件・要件」、昇給額は「昇給の設定」で変更します。
       </p>
     </>
   );

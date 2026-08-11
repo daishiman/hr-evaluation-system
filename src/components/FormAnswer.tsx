@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, ReasonNote, SectionHeading } from "@/components/ui";
+import { Button, Card, ReasonNote, SectionHeading } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { normalizeNumeric } from "@/lib/ux-patterns";
@@ -468,13 +468,17 @@ function AnswerReadOnly({
                   <div className="row-main">
                     <p className="todo-row-title m-0">{q.title}</p>
                   </div>
-                  <div className="shrink-0 text-right">
+                  {/* 回答は選択肢の文がそのまま入る（行動指針の選択肢は1行では収まらない）。
+                      幅を固定すると設問名のほうが潰れるので、ここは縮む側にする。 */}
+                  <div className="min-w-0 text-right">
                     {shown === null ? (
                       <span className="footnote">未回答</span>
                     ) : q.questionType === "number" ? (
                       <span className="num font-bold">{shown}</span>
                     ) : (
-                      <Badge tone="done">{shown}</Badge>
+                      /* 札（Badge）は折り返さない決まりなので、選んだ選択肢の文には使わない。
+                         行動指針のように1行で収まらない選択肢がある。 */
+                      <span className="text-[13px] font-semibold">{shown}</span>
                     )}
                   </div>
                 </div>

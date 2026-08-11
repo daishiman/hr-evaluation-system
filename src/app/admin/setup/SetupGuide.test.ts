@@ -5,7 +5,7 @@ import { SetupGuide, type SetupStep } from "./SetupGuide";
 
 const definitions = [
   ["等級要件・等級・昇格要件を決める", "/admin/masters/requirements"],
-  ["行動指針を確認する", "/admin/masters"],
+  ["行動指針を確認する", "/admin/behavior"],
   ["KPI・評価セットを決める", "/admin/scheme"],
   ["評価期間を作る", "/admin/cycles"],
   ["アンケートを作って配る", "/admin/forms"],

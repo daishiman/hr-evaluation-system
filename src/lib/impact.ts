@@ -20,11 +20,14 @@ const WATCHED = [
   { table: s.schemeRankRatios, label: "ランクごとの点数の割合" },
   { table: s.promotionThresholds, label: "昇格に必要な点数" },
   { table: s.kpiItems, label: "KPI項目の計算式" },
-  { table: s.behaviorLevels, label: "行動指針の段階と点数" },
   { table: s.gradeRequirements, label: "等級要件" },
   { table: s.promotionRequirements, label: "昇格要件" },
   { table: s.kgiCoefficients, label: "達成係数" },
 ];
+
+/* behavior_guidelines / behavior_levels は公開時に form_questions と選択肢へ写す。
+   評価もその写しを読むため、あとから行動指針を直しても既存フォーム・既存評価は変わらない。
+   ここへ加えると、集計し直しても結果が変わらないサイクルを stale と誤表示してしまう。 */
 
 /* office_kgi_results（事業所KGIの達成率）はここに載せない。
    達成率を保存した時点で、その事業所・そのサイクルの確認中の評価の

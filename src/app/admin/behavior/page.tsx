@@ -1,0 +1,116 @@
+import Link from "next/link";
+import { requireRole } from "@/lib/session";
+import { listBehaviorGuidelines, listGrades } from "@/lib/queries";
+import { BehaviorBandAssignmentEditor } from "@/components/BehaviorBandAssignmentEditor";
+import { BehaviorGuidelineEditor } from "@/components/BehaviorGuidelineEditor";
+import { behaviorBandLabel } from "@/lib/domain/behavior";
+import { Card, CardRow, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * 行動指針だけを扱う画面。
+ *
+ * この画面が持つ責務はひとつ:「行動指針として何を問い、どの等級に出すか」。
+ * 等級そのものの設定や昇格の条件は別の画面にある（一緒に置くと、直したい設定が
+ * どの画面にあるか毎回探すことになる）。
+ *
+ * 点数の重み（模範3〜悪影響-1）と、昇格に必要な合計点は、ここでは変えられない。
+ * 前者は制度の骨格、後者は「昇格の条件」の設定なので、それぞれの持ち場で決める。
+ */
+export default async function AdminBehavior({ searchParams }: { searchParams: Promise<{ band?: string }> }) {
+  const viewer = await requireRole("COMPANY_ADMIN");
+  if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
+  const companyId = viewer.companyId;
+
+  const [guidelines, grades] = await Promise.all([listBehaviorGuidelines(companyId), listGrades(companyId)]);
+
+  const bands = [...new Set(guidelines.map((g) => g.band))];
+  const sp = await searchParams;
+  const band = bands.includes(sp.band ?? "") ? (sp.band as string) : (bands[0] ?? null);
+
+  const rows = guidelines.map((g) => ({
+    id: g.id,
+    band: g.band,
+    aspect: g.aspect,
+    aspectName: g.aspectName,
+    seq: g.seq,
+    isActive: g.isActive,
+    levels: g.levels.map((l) => ({ id: l.id, score: l.score, label: l.label, text: l.text })),
+  }));
+
+  const applied = grades.filter((g) => g.behaviorBand !== null);
+
+  return (
+    <>
+      <PageTitle
+        title="行動指針"
+        lede="アンケートで問う行動指針の中身と、どの等級に出すかを決めます。変更は次に作るアンケートから反映され、すでに公開したアンケートと確定済みの評価は動きません。"
+      />
+
+      <SectionHeading>どの等級に出すか</SectionHeading>
+      <Card className="card-pad">
+        {grades.length === 0 ? (
+          <p className="m-0 text-[13px]">等級が登録されていません。</p>
+        ) : (
+          <>
+            <p className="m-0 text-[13px]">
+              いま行動指針の基準を割り当てている等級は <b>{applied.length}件</b>
+              {applied.length > 0 && `（${applied.map((g) => `${g.name}：${behaviorBandLabel(g.behaviorBand)}`).join(" / ")}）`}
+              です。
+            </p>
+            <div className="mt-2 grid gap-2">
+              {grades.map((g) => (
+                <CardRow
+                  key={g.id}
+                  title={g.name}
+                  sub={g.behaviorBand ? behaviorBandLabel(g.behaviorBand) : "行動指針を出さない"}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </Card>
+
+      {grades.length > 0 && (
+        <div className="mt-3">
+          <BehaviorBandAssignmentEditor
+            grades={grades.map((grade) => ({ id: grade.id, name: grade.name, behaviorBand: grade.behaviorBand }))}
+            availableBands={bands}
+          />
+        </div>
+      )}
+
+      <div className="mt-3">
+        <Disclosure summary="行動指針の初期設定について">
+          <p className="footnote m-0">
+            移行元には、AM Ⅰ・AM Ⅱへ行動指針を出さない記録と、実際に出したアンケートがありました。初期値は実際のアンケートを採用しています。会社の制度に合わせて上で切り替えてください。
+          </p>
+        </Disclosure>
+      </div>
+
+      <SectionHeading>何を問うか</SectionHeading>
+      {band === null ? (
+        <EmptyState title="行動指針が登録されていません" body="初期データの投入が済んでいるかご確認ください。" />
+      ) : (
+        <>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {bands.map((b) => (
+              <Link key={b} href={`/admin/behavior?band=${b}`} className="chip" aria-current={b === band ? "true" : undefined}>
+                {behaviorBandLabel(b)}
+              </Link>
+            ))}
+          </div>
+          <p className="footnote">
+            点数（模範3・信頼2・安定1・不安定0・悪影響-1）は変えられません。会社ごとに変えられるのは「どういう状態をその点数と見なすか」の文章です。昇格に必要な合計点は
+            <Link href="/admin/masters/promotion" className="mx-1 text-[var(--brand-deep)]">
+              昇格の条件・要件
+            </Link>
+            で決めます。
+          </p>
+          <BehaviorGuidelineEditor band={band} rows={rows} />
+        </>
+      )}
+    </>
+  );
+}

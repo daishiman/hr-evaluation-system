@@ -545,13 +545,18 @@ main {
   gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--line);
+  /* 行の中身が入りきらないときは、文章を細く潰すのではなく折り返して段を増やす。
+     操作の数が多い行・押して初めて何かが出る行でも、本文が1文字ずつ縦に
+     折り返される壊れ方をしないための保険（画面幅を問わず効かせる）。 */
+  flex-wrap: wrap;
 }
 .card-row:last-child { border-bottom: none; }
-.row-main { flex: 1 1 auto; min-width: 0; }
+/* 本文は最低でもこの幅を要求する。min-width: 0 は長い語を折り返すために必要だが、
+   これだけだと隣に幅の広い箱が来たとき 0 まで潰れる。 */
+.row-main { flex: 1 1 16rem; min-width: 0; }
 .row-grow { flex: 1 1 auto; }
 
 @media (max-width: 639px) {
-  .card-row { flex-wrap: wrap; }
   .card-row .row-main { flex-basis: 100%; }
 }
 
@@ -876,37 +881,27 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 }
 
 /* ============================================================
-   モーダル (§5)
+   確認ダイアログ (§5)
+
+   取り消しのきかない操作の確認は、押した場所の幅に左右されない中央の
+   ダイアログで出す（ConfirmButton だけがこれを使う）。
+   一覧の行の中に確認文の箱を差し込むと、本文側（.row-main は min-width: 0）が
+   潰れて1文字ずつ縦に折り返される。置き場所を用意し忘れた行だけが崩れる、
+   という壊れ方をしないよう、出し方そのものを行から切り離している。
    ============================================================ */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(22, 25, 29, .45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  z-index: 50;
-}
-.modal-overlay[hidden] { display: none; }
-.modal {
-  background: #fff;
+.confirm-dialog {
+  border: 1px solid var(--caution-border);
   border-radius: 12px;
+  padding: 0;
+  background: var(--caution-soft);
   box-shadow: 0 12px 40px rgba(22, 25, 29, .2);
-  max-width: 480px;
-  width: 100%;
+  width: min(420px, calc(100vw - 32px));
   max-height: calc(100dvh - 40px);
   overflow-y: auto;
+  color: inherit;
 }
-.modal-head { padding: 18px 20px 0; }
-.modal-title { font-size: 15px; font-weight: 700; margin: 0; }
-.modal-body { padding: 12px 20px; }
-.modal-foot {
-  padding: 12px 20px 18px;
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-}
+.confirm-dialog::backdrop { background: rgba(22, 25, 29, .45); }
+.confirm-dialog-body { padding: 16px 18px; line-height: 1.9; }
 
 /* 下書き復元バー(復元は黙ってやらない: 通知+破棄) */
 .restore-note {
@@ -1423,6 +1418,8 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
 .input::placeholder { color: color-mix(in srgb, var(--ink-muted) 60%, transparent); }
 .input:disabled { background: var(--subtle); color: var(--ink-muted); }
 .input-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+/* 発行したパスワードなど、1文字ずつ読み分ける値。字を詰めず、幅をそろえて出す */
+.input-code { font-family: var(--font-num); letter-spacing: .06em; }
 
 /* ============================================================
    印刷（A4縦）

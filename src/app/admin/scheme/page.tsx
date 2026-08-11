@@ -2,9 +2,12 @@ import { and, asc, eq } from "drizzle-orm";
 import { requireRole } from "@/lib/session";
 import { getDb, schema as s } from "@/lib/db";
 import { getActiveScheme, listGrades, listKpiCategories, listKpiItems } from "@/lib/queries";
-import { EmptyState, PageTitle, ReasonNote } from "@/components/ui";
+import { EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { SchemeEditor, type GroupSetup } from "@/components/SchemeEditor";
+import { RankCriteriaPanel } from "@/components/RankCriteriaPanel";
 import { targetsPointGroup } from "@/lib/domain/grade-points";
+import { detectStaleCycles } from "@/lib/impact";
+import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -17,17 +20,19 @@ export default async function AdminSchemePage() {
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  const [scheme, categories, kpiItems, grades] = await Promise.all([
+  const [scheme, categories, kpiItems, grades, staleCycles] = await Promise.all([
     getActiveScheme(companyId),
     listKpiCategories(companyId),
     listKpiItems(companyId),
     listGrades(companyId),
+    detectStaleCycles(companyId),
   ]);
 
   if (!scheme) {
     return (
       <>
         <PageTitle title="KPI・評価セット" />
+        <StaleCyclesNotice cycles={staleCycles} />
         <ReasonNote>
           有効な評価セットが登録されていません。初期データの投入が済んでいるかご確認ください。
         </ReasonNote>
@@ -94,6 +99,7 @@ export default async function AdminSchemePage() {
         title="KPI・評価セット"
         lede="等級区分ごとに、評価に使うKPIを選びます。選ぶ項目数と配点は等級区分ごとに決まっているため、この画面では変更できません。ここで決めた内容が、次に作るアンケートと集計に使われます。"
       />
+      <StaleCyclesNotice cycles={staleCycles} />
       <SchemeEditor
         schemeId={scheme.id}
         categories={categories.map((c) => ({ id: c.id, name: c.name, description: c.description }))}
@@ -112,6 +118,20 @@ export default async function AdminSchemePage() {
         groups={groups}
         raiseRequiresAllA={scheme.raiseRequiresAllA}
       />
+
+      {/* A〜Eの線引きは「どのKPIを使うか」と同じ持ち場の話なので、この画面に置く。
+          等級ごとの設定ではないため、等級の画面には出さない */}
+      <SectionHeading>KPIのランク基準（会社全体）</SectionHeading>
+      {items.length === 0 ? (
+        <ReasonNote>評価セットに項目がないため、ランク基準を表示できません。</ReasonNote>
+      ) : (
+        <>
+          <p className="footnote">
+            選んだKPIごとに、実績値がどこからどこまでならA〜Eのどれになるかを決めます。開いたときに読み込むため、直したいときだけ開いてください。
+          </p>
+          <RankCriteriaPanel itemCount={items.length} />
+        </>
+      )}
     </>
   );
 }

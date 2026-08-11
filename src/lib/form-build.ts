@@ -122,7 +122,13 @@ export async function buildQuestionRows(opts: {
     const guidelines = await db
       .select()
       .from(s.behaviorGuidelines)
-      .where(and(eq(s.behaviorGuidelines.companyId, companyId), eq(s.behaviorGuidelines.band, grade.behaviorBand)))
+      .where(
+        and(
+          eq(s.behaviorGuidelines.companyId, companyId),
+          eq(s.behaviorGuidelines.band, grade.behaviorBand),
+          eq(s.behaviorGuidelines.isActive, true),
+        ),
+      )
       .orderBy(asc(s.behaviorGuidelines.seq));
     const levels = guidelines.length
       ? await db

@@ -64,6 +64,7 @@ export async function POST(req: Request) {
       companyId,
       role: "COMPANY_ADMIN",
       isActive: true,
+      mustChangePassword: true,
     });
     await db.insert(s.accounts).values({
       id: newId("acc"),
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
       message: copied
         ? `${body.name}を追加し、管理者アカウントを作りました。` +
           `標準の制度（等級${copied["等級"]}件・KPI項目${copied["KPI項目"]}件・ランク基準${copied["ランク基準"]}件・昇給額${copied["昇給額"]}件ほか）を写してあります。` +
-          `内容は「等級・昇格・行動指針」の画面から、この会社だけ変更できます。`
+          `内容は「等級の設定」「昇格の条件・要件」「行動指針」「KPI・評価セット」から、この会社だけ変更できます。`
         : `${body.name}を追加し、管理者アカウントを作りました。標準の制度が登録されていないため、制度（等級・KPI・配点）は管理者の画面から登録してください。`,
     };
   });

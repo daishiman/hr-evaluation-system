@@ -42,7 +42,7 @@ describe("画面の器の作法", () => {
     // .row-main（見出し＋補足の入れ物）を自前で書いている画面を検出する。
     // 入力欄が並ぶ編集画面は行の中身が画面ごとに違うため、下の許可リストで除く。
     const editors = new Set(
-      ["FormAnswer.tsx", "GradeRequirementEditor.tsx", "PromotionRequirementEditor.tsx", "PointDesign.tsx"].map((n) => n),
+      ["FormAnswer.tsx", "GradeRequirementEditor.tsx", "PromotionRequirementEditor.tsx", "PointDesign.tsx", "BehaviorGuidelineEditor.tsx"].map((n) => n),
     );
     const offenders = sourceFiles.filter(
       (p) => p !== owner && !editors.has(p.split("/").pop() ?? "") && readFileSync(p, "utf8").includes('className="row-main"'),
@@ -90,6 +90,30 @@ describe("画面の器の作法", () => {
     // window.confirm は文面の見た目を画面側で整えられず、確認の作法が1箇所だけ変わる。
     const offenders = sourceFiles.filter((p) => readFileSync(p, "utf8").includes("window.confirm"));
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("確認・入力を割り込ませるダイアログを書いてよいのは ConfirmButton だけ", () => {
+    // 確認は「押した場所の幅に左右されない中央のダイアログ」で出す、を1箇所で守る。
+    // 画面ごとに行の中へ確認文の箱を差し込むと、本文（.row-main は min-width: 0）が
+    // 潰れて1文字ずつ縦に折り返される崩れ方をする（実際にそうなっていた）。
+    const owner = join(SRC, "components", "ConfirmButton.tsx");
+    const offenders = sourceFiles.filter((p) => p !== owner && /<dialog[\s>]/.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("確認ダイアログはキャンセルを初期フォーカスにし、暗黙のフォーム送信をしない", () => {
+    const source = readFileSync(join(SRC, "components", "ConfirmButton.tsx"), "utf8");
+    expect(source).toMatch(/<Button type="button" autoFocus[\s\S]*?>\s*やめる/);
+    expect(source.match(/type="button"/g)?.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("一覧の行は、入りきらないときに折り返す（本文を潰さない）", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const row = css.slice(css.indexOf(".card-row {"));
+    const block = row.slice(0, row.indexOf("}"));
+    expect(block).toContain("flex-wrap: wrap");
+    // 本文は最低限の幅を要求する（min-width: 0 だけだと隣の箱に押し潰される）
+    expect(css).toContain(".row-main { flex: 1 1 16rem; min-width: 0; }");
   });
 
   it("文字は12px未満にしない（画面・共通CSSとも）", () => {

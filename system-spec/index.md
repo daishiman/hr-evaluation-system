@@ -8,6 +8,7 @@
 | 文書 | 内容 |
 |---|---|
 | [account-and-users.md](./account-and-users.md) | 本人プロフィール・編集ポリシー・利用者管理の不変条件 |
+| [master-settings.md](./master-settings.md) | 制度設定画面の責務・会社境界・スナップショット・再集計の不変条件 |
 
 ## 更新ルール
 

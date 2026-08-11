@@ -7,6 +7,7 @@ import {
   scopeEvaluationItem,
   scopeEvaluationRow,
 } from "@/lib/domain/evaluation-view";
+import { rangeLabel } from "@/lib/domain/scoring";
 
 /**
  * 読み取り。すべての関数が company_id での絞り込みを前提にする。
@@ -114,7 +115,20 @@ export async function listRankCriteria(companyId: string, kpiItemIds?: string[])
   const where = kpiItemIds
     ? and(eq(s.kpiRankCriteria.companyId, companyId), inArray(s.kpiRankCriteria.kpiItemId, kpiItemIds))
     : eq(s.kpiRankCriteria.companyId, companyId);
-  return db.select().from(s.kpiRankCriteria).where(where).orderBy(asc(s.kpiRankCriteria.rank));
+  const rows = await db
+    .select({ criterion: s.kpiRankCriteria, unit: s.kpiItems.unit, direction: s.kpiItems.direction })
+    .from(s.kpiRankCriteria)
+    .innerJoin(s.kpiItems, eq(s.kpiItems.id, s.kpiRankCriteria.kpiItemId))
+    .where(where)
+    .orderBy(asc(s.kpiRankCriteria.rank));
+
+  /* display_label は既存DBとの互換性のため残しているが、表示の正本にはしない。
+     判定に使う境界と別々に読むと、古い行だけ説明文が実際の判定と食い違うため、
+     すべての読取で数値境界・単位・向きから導出する。 */
+  return rows.map(({ criterion, unit, direction }) => ({
+    ...criterion,
+    displayLabel: rangeLabel(criterion, unit, direction === "lower" ? "lower" : "higher"),
+  }));
 }
 
 export async function getActiveScheme(companyId: string) {

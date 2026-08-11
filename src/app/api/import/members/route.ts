@@ -9,8 +9,6 @@ const bodySchema = z.object({
   companyId: z.string().min(1).optional(),
   /** スプレッドシートからコピーした社員一覧（CSV／タブ区切り） */
   csv: z.string().min(1, "取り込む内容を貼り付けてください").max(2_000_000),
-  /** 新しく登録する方に設定する最初のパスワード */
-  initialPassword: z.string().min(8, "最初のパスワードは8文字以上にしてください").max(72).optional(),
   /** true のときは保存せず、結果の見込みだけを返す */
   dryRun: z.boolean().optional(),
 });
@@ -30,7 +28,6 @@ export async function POST(req: Request) {
 
     const result = await importMembersCsv(companyId, body.csv, {
       dryRun: body.dryRun === true,
-      initialPassword: body.initialPassword,
     });
 
     const notes: string[] = [];

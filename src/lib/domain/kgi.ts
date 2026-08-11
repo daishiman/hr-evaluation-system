@@ -34,6 +34,22 @@ export interface KgiMatch {
 }
 
 /**
+ * KGI係数の表示名を、判定に使う境界から導く。
+ *
+ * DBの label は移行元との互換性のため残っているが、たとえば「95〜99%」という
+ * 整数向けの旧表記では、実際に同じ区分へ入る 99.5% を説明できない。
+ * 判定と表示が別々の正本にならないよう、利用者へ見せる範囲は常にここで作る。
+ */
+export function kgiRangeLabel(row: Pick<KgiCoefficientRow, "lowerBound" | "upperBound">): string {
+  const lower = row.lowerBound === null ? null : `${formatRate(row.lowerBound)}%`;
+  const upper = row.upperBound === null ? null : `${formatRate(row.upperBound)}%`;
+  if (lower !== null && upper !== null) return `${lower}以上 ${upper}未満`;
+  if (lower !== null) return `${lower}以上`;
+  if (upper !== null) return `${upper}未満`;
+  return "すべての達成率が該当";
+}
+
+/**
  * 事業所KGI達成率（%）から係数を引き当てる。
  *
  * 判定は「下限以上・上限未満」で統一する（ランク基準の通常指標と同じ規則）。
@@ -48,7 +64,7 @@ export function matchKgiCoefficient(achievementRate: number, rows: KgiCoefficien
     return {
       row: r,
       coefficient: r.coefficient,
-      rationale: `事業所KGI達成率 ${formatRate(achievementRate)}% が「${r.label}」に該当するため、達成係数 ${r.coefficient} を適用しました。`,
+      rationale: `事業所KGI達成率 ${formatRate(achievementRate)}% が「${kgiRangeLabel(r)}」に該当するため、達成係数 ${r.coefficient} を適用しました。`,
     };
   }
   return null;
@@ -65,7 +81,7 @@ export interface CoverageProblem {
  */
 export function checkKgiCoverage(rows: KgiCoefficientRow[]): CoverageProblem[] {
   return checkRangeCoverage(
-    rows.map((r) => ({ label: r.label, lowerBound: r.lowerBound, upperBound: r.upperBound })),
+    rows.map((r) => ({ label: kgiRangeLabel(r), lowerBound: r.lowerBound, upperBound: r.upperBound })),
     "達成率",
   );
 }

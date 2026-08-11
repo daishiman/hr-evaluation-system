@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, ReasonNote } from "@/components/ui";
+import { generateInitialPassword } from "@/lib/domain/initial-password";
 
 /**
  * 管理画面の小さな入力フォーム（共通）。
@@ -14,7 +15,20 @@ import { Button, Card, ReasonNote } from "@/components/ui";
  */
 
 export type FieldSpec =
-  | { name: string; label: string; type: "text" | "email" | "password" | "date"; required?: boolean; placeholder?: string; help?: string; defaultValue?: string }
+  | {
+      name: string;
+      label: string;
+      type: "text" | "email" | "password" | "date";
+      required?: boolean;
+      placeholder?: string;
+      help?: string;
+      defaultValue?: string;
+      /**
+       * 開いたときに作った値を初期表示する（発行して相手に渡すパスワード向け）。
+       * 渡す側が読み上げ・書き写しをするため、伏せ字にせずそのまま見せる。
+       */
+      generate?: boolean;
+    }
   | { name: string; label: string; type: "number"; required?: boolean; help?: string; defaultValue?: number | null; unit?: string }
   | { name: string; label: string; type: "select"; options: { value: string; label: string }[]; required?: boolean; help?: string; defaultValue?: string }
   | { name: string; label: string; type: "checkbox"; help?: string; defaultValue?: boolean }
@@ -48,6 +62,33 @@ export function RecordForm({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /* 作ったパスワード。サーバーで描いたHTMLと食い違わないよう、画面が出てから作る
+     （サーバーとブラウザで別々の乱数になると React が警告を出す）。 */
+  const [generated, setGenerated] = useState<Record<string, string>>({});
+  const [issuedGenerated, setIssuedGenerated] = useState<Record<string, string> | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const generateNames = fields
+    .filter((f) => "generate" in f && f.generate)
+    .map((f) => f.name)
+    .join(",");
+
+  useEffect(() => {
+    if (generateNames === "") return;
+    const made: Record<string, string> = {};
+    for (const name of generateNames.split(",")) made[name] = generateInitialPassword();
+    setGenerated(made);
+  }, [generateNames]);
+
+  const beginNextSubmission = () => {
+    const made: Record<string, string> = {};
+    for (const name of generateNames.split(",").filter(Boolean)) made[name] = generateInitialPassword();
+    setGenerated(made);
+    setIssuedGenerated(null);
+    setCopied(null);
+    setMessage(null);
+    setError(null);
+    router.refresh();
+  };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
     if (e.key !== "Enter") return;
@@ -112,9 +153,21 @@ export function RecordForm({
         return;
       }
       setMessage(json.message ?? "保存しました。");
-      if (resetAfterSubmit) form.reset();
+      if (resetAfterSubmit) {
+        if (generateNames !== "") {
+          // サーバーへ送った値を控えとして残す。次の値は、管理者がこの控えを
+          // 写し終えて「次の入力」を始めるまで作らない。
+          const issued: Record<string, string> = {};
+          for (const name of generateNames.split(",")) issued[name] = String(payload[name] ?? "");
+          setIssuedGenerated(issued);
+        } else {
+          form.reset();
+        }
+      }
       onSaved?.();
-      router.refresh();
+      // 発行済みの秘密情報を表示している間は、親の再描画で控えを失う可能性を作らない。
+      // 一覧の再読込は「次の入力」を始めるときに行う。
+      if (!(resetAfterSubmit && generateNames !== "")) router.refresh();
     } catch {
       setError("通信できませんでした。入力内容はこの画面に残っています。");
     } finally {
@@ -126,16 +179,17 @@ export function RecordForm({
     <Card className="card-pad">
       {title && <p className="section-heading m-0 mb-1">{title}</p>}
       {description && <p className="footnote m-0 mb-3">{description}</p>}
-      <form
-        ref={formRef}
-        onKeyDown={onKeyDown}
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submit();
-        }}
-        className="field-grid"
-      >
-        {fields.map((f) => (
+      {issuedGenerated === null ? (
+        <form
+          ref={formRef}
+          onKeyDown={onKeyDown}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+          className="field-grid"
+        >
+          {fields.map((f) => (
           <label key={f.name} className={f.type === "textarea" ? "md:col-span-2" : undefined}>
             <span className="block text-[12px] text-[var(--ink-muted)]">
               {f.label}
@@ -169,6 +223,44 @@ export function RecordForm({
                 />
                 {f.unit && <span className="unit">{f.unit}</span>}
               </span>
+            ) : "generate" in f && f.generate ? (
+              /* 発行して相手に渡す値。伏せ字にすると渡す側が読めないので、そのまま見せる。
+                 打ち直しもできるが、初期表示は必ず作った値にする */
+              <span className="mt-1 flex flex-wrap items-center gap-2">
+                <input
+                  name={f.name}
+                  type="text"
+                  value={generated[f.name] ?? ""}
+                  onChange={(e) => {
+                    setGenerated((s) => ({ ...s, [f.name]: e.target.value }));
+                    setCopied(null);
+                  }}
+                  autoComplete="off"
+                  spellCheck={false}
+                  enterKeyHint="next"
+                  className="input input-code w-full sm:w-64"
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setGenerated((s) => ({ ...s, [f.name]: generateInitialPassword() }));
+                    setCopied(null);
+                  }}
+                >
+                  作り直す
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard
+                      .writeText(generated[f.name] ?? "")
+                      .then(() => setCopied(f.name))
+                      .catch(() => setCopied(null));
+                  }}
+                >
+                  {copied === f.name ? "写しました" : "写す"}
+                </Button>
+              </span>
             ) : (
               <input
                 name={f.name}
@@ -182,13 +274,48 @@ export function RecordForm({
             )}
             {f.help && f.type !== "checkbox" && <span className="footnote block">{f.help}</span>}
           </label>
-        ))}
-        <div className="md:col-span-2">
-          <Button type="submit" variant="primary" disabled={busy}>
-            {busy ? "保存しています…" : submitLabel}
-          </Button>
+          ))}
+          <div className="md:col-span-2">
+            <Button type="submit" variant="primary" disabled={busy}>
+              {busy ? "保存しています…" : submitLabel}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="field-grid" role="status">
+          <div className="md:col-span-2">
+            <ReasonNote>
+              今回発行した値です。この画面を離れる前にご本人へ伝えるか、安全な場所へ控えてください。
+            </ReasonNote>
+          </div>
+          {Object.entries(issuedGenerated).map(([name, value]) => (
+            <label key={name}>
+              <span className="block text-[12px] text-[var(--ink-muted)]">
+                {fields.find((field) => field.name === name)?.label ?? name}
+              </span>
+              <span className="mt-1 flex flex-wrap items-center gap-2">
+                <input className="input input-code w-full sm:w-64" type="text" value={value} readOnly />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard
+                      .writeText(value)
+                      .then(() => setCopied(name))
+                      .catch(() => setCopied(null));
+                  }}
+                >
+                  {copied === name ? "写しました" : "写す"}
+                </Button>
+              </span>
+            </label>
+          ))}
+          <div className="md:col-span-2">
+            <Button type="button" variant="tertiary" onClick={beginNextSubmission}>
+              次の入力を始める
+            </Button>
+          </div>
         </div>
-      </form>
+      )}
       {error && (
         <div className="mt-3">
           <ReasonNote>{error}</ReasonNote>

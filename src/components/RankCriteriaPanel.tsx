@@ -9,8 +9,8 @@ import { Card, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
  * KPIのランク基準（A〜Eの線引き）の編集。
  *
  * 8項目 × 5ランクで40件ぶんの入力欄になるため、開いたときに初めて読む。
- * 制度マスタ画面のほかの設定（等級・昇格の条件・昇給額）は毎回見るが、
- * ランク基準は「基準を直したいときだけ」開く場所なので、常に読み込まない。
+ * KPI・評価セットの項目選択は毎回見るが、ランク基準は
+ * 「基準を直したいときだけ」開く場所なので、常に読み込まない。
  */
 
 interface CriteriaRow {
@@ -28,6 +28,7 @@ interface ItemRow {
   weight: number;
   direction: string;
   formula: string | null;
+  isFixedSlot: boolean;
   criteria: CriteriaRow[];
 }
 
@@ -73,7 +74,17 @@ export function RankCriteriaPanel({ itemCount }: { itemCount: number }) {
                   </p>
                   <p className="todo-row-sub m-0">
                     単位 {i.unit} ／ {i.direction === "lower" ? "低いほど良い" : "高いほど良い"}
-                    {i.formula ? ` ／ 計算式 ${i.formula}` : ""}
+                    {i.isFixedSlot
+                      ? " ／ 実績値は「アンケートで出した等級要件のうち達成した数 ÷ 出した数 × 100」で出します"
+                      : i.formula
+                        ? ` ／ 計算式 ${i.formula}`
+                        : ""}
+                  </p>
+                  <p className="footnote m-0 mt-1">
+                    {i.direction === "lower"
+                      ? "下限は「その値を含まない」、上限は「その値を含む」で判定します。"
+                      : "下限は「その値を含む」、上限は「その値を含まない」で判定します。"}
+                    空欄にすると、その側の制限なし（青天井）になります。
                   </p>
                   <div className="mt-3 grid gap-2">
                     {i.criteria.map((c) => (
@@ -83,13 +94,16 @@ export function RankCriteriaPanel({ itemCount }: { itemCount: number }) {
                         method="PUT"
                         fixed={{ kind: "rankCriteria", id: c.id }}
                         submitLabel={`ランク${c.rank}の基準を保存`}
+                        /* 画面に出す表記は入力させない。判定に使うのは下限・上限の数値だけなので、
+                           文言を別に書けるようにすると、書いてある範囲と実際に判定される範囲が
+                           食い違う（説明文だけが嘘になる）。表記は保存時に数値から作り直す。 */
+                        description={`ランク${c.rank}のいまの表記：${c.displayLabel}`}
                         /* 保存したら控えを捨てて読み直す。あとで開き直したときに
                            古い値が残っていると、それを上書き保存して直した内容が消えるため */
                         onSaved={reload}
                         fields={[
                           { name: "lowerBound", label: `ランク${c.rank} の下限`, type: "number", defaultValue: c.lowerBound, unit: i.unit },
                           { name: "upperBound", label: `ランク${c.rank} の上限`, type: "number", defaultValue: c.upperBound, unit: i.unit },
-                          { name: "displayLabel", label: "画面に出す表記", type: "text", defaultValue: c.displayLabel },
                         ]}
                       />
                     ))}
