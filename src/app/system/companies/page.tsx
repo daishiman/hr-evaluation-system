@@ -75,7 +75,7 @@ export default async function SystemCompanies() {
       ) : (
         <div className="stack">
           {companies.map((c) => (
-            <Card key={c.id} className="card-pad">
+            <Card key={c.id} className="card-pad" off={!c.isActive}>
               <CardHead
                 title={
                   <>

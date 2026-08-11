@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import { listGrades, listPromotionRequirements, listPromotionThresholds } from "@/lib/queries";
+import { getDb } from "@/lib/db";
+import { promotionRequirementUsage } from "@/lib/master-usage";
 import { detectStaleCycles } from "@/lib/impact";
 import { RecordForm } from "@/components/RecordForm";
 import { PromotionRequirementEditor } from "@/components/PromotionRequirementEditor";
@@ -28,6 +30,9 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
     listPromotionRequirements(companyId),
     detectStaleCycles(companyId),
   ]);
+
+  /* 「完全に消せるか」を画面で出し分けるための材料。判定そのものは API 側でも必ず行う。 */
+  const usage = await promotionRequirementUsage(await getDb(), companyId);
 
   const sp = await searchParams;
   const grade = grades.find((g) => g.id === sp.grade) ?? grades[0] ?? null;
@@ -120,7 +125,7 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
       )}
 
       <SectionHeading>昇格要件</SectionHeading>
-      <PromotionRequirementEditor key={grade.id} gradeId={grade.id} gradeName={grade.name} rows={myPromoReqs} />
+      <PromotionRequirementEditor key={grade.id} gradeId={grade.id} gradeName={grade.name} rows={myPromoReqs} usage={usage} />
     </>
   );
 }

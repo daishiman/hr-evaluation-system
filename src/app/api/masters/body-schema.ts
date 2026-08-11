@@ -146,3 +146,17 @@ export const bodySchema = z.discriminatedUnion("kind", [
 ]);
 
 export type MasterUpdateBody = z.infer<typeof bodySchema>;
+
+/**
+ * 制度マスタの削除（完全に消す）の入力スキーマ。
+ *
+ * 消してよいのは、利用者が自分で足せる4種類だけ。等級・事業所・評価期間のように
+ * 過去の記録がぶら下がるものは、ここに入れない（消せる形をそもそも作らない）。
+ * 実際に消してよいかは、参照件数を数えたうえでサーバー側で判定する。
+ */
+export const deleteBodySchema = z.object({
+  kind: z.enum(["behaviorBandSet", "behaviorGuideline", "gradeRequirement", "promotionRequirement"]),
+  id: z.string().min(1),
+});
+
+export type MasterDeleteBody = z.infer<typeof deleteBodySchema>;

@@ -61,16 +61,50 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     expect(branch).toContain("eq(s.behaviorBandSets.companyId, companyId), eq(s.behaviorBandSets.code, band)");
   });
 
-  it("使用中の基準セットは止められず、消す操作そのものを作らない", () => {
+  it("使用中の基準セットは止められず、消すのは一度も使っていないものだけ", () => {
     const apply = read("src/app/api/masters/apply-master-update.ts");
     const setEditor = read("src/components/BehaviorBandSetEditor.tsx");
 
     expect(apply).toContain("先に「どの等級に出すか」でほかの基準か「適用しない」に変えてから、使用を止めてください。");
-    // 物理削除はしない。公開済みアンケート・確定済み評価がぶら下げている観点を巻き込むため。
+    /* 「使わない」を扱うこの経路からは物理削除しない。
+       消す操作は delete-master-item.ts に分けてあり、そちらが
+       「一度でも使ったか」を数えてから消す（判定の実物は delete-master-item.test.ts）。 */
     expect(apply).not.toContain("db.delete(s.behaviorBandSets)");
     expect(apply).not.toContain("db.delete(s.behaviorGuidelines)");
     expect(setEditor).toContain('from "@/components/ConfirmButton"');
     expect(setEditor).toContain("すでに公開したアンケートと確定済みの評価はそのまま残ります");
+  });
+
+  it("消せない項目には、画面に理由と次にすることが出る", () => {
+    const setEditor = read("src/components/BehaviorBandSetEditor.tsx");
+    const guidelineEditor = read("src/components/BehaviorGuidelineEditor.tsx");
+    const gradeEditor = read("src/components/GradeRequirementEditor.tsx");
+    const promoEditor = read("src/components/PromotionRequirementEditor.tsx");
+
+    /* ボタンを消すだけで黙らない。「なぜ消せないか」と「代わりに何をすればよいか」を
+       その場に出す（無言の読み取り専用を作らない）。 */
+    for (const source of [guidelineEditor, gradeEditor, promoEditor]) {
+      expect(source).toContain("deleteBlockedReason");
+      expect(source).toContain("DELETE_LABEL");
+    }
+    // 基準セットは「等級に出す設定になっていないか」も見るので専用の理由を使う
+    expect(setEditor).toContain("bandSetBlockedReason");
+    expect(setEditor).toContain("DELETE_LABEL");
+    // 「使わない」「もう一度使う」は消さずに残す（消すのはそれに加えた3つ目の選択肢）
+    expect(guidelineEditor).toContain("使わない");
+    expect(promoEditor).toContain("戻す");
+  });
+
+  it("使用しない状態は、カード全体の見た目と札の両方で分かる（色だけに頼らない）", () => {
+    const ui = read("src/components/ui.tsx");
+    const css = read("src/app/globals.css");
+
+    // 面と枠線の変化は共通の1箇所（data-off）にまとめる。画面ごとに書き散らさない。
+    expect(ui).toContain('data-off={off ? "true" : undefined}');
+    expect(css).toContain('.card[data-off="true"]');
+    expect(css).toContain("border-style: dashed");
+    // 本文の文字色は薄くしない（読みやすさの下限を割るため）。区別は札で付ける。
+    expect(css).not.toMatch(/\.card\[data-off="true"\][^}]*color:/);
   });
 
   it("等級切替時は昇格フォームと下書き状態を作り直す", () => {

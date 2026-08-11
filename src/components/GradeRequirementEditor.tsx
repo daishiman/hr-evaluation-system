@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { requestMasterDelete } from "@/components/master-delete-request";
+import { DELETE_LABEL, deleteBlockedReason, deleteConfirmText } from "@/lib/domain/master-delete";
+import type { UsageMap } from "@/lib/master-usage";
 import {
   CATEGORY_LABEL,
   GRADE_REQUIREMENT_MAX,
@@ -22,8 +25,11 @@ import {
  *   - 各区分は 0〜10 項目。10個ちょうどにする必要はないので、空欄を10個並べない。
  *   - 「いま何個 / あと何個」を常に出す。ここが達成率の分母になるため、数が見えないと制度が読めない。
  *
- * 保存はすべて /api/masters（PUT）。削除はせず「使わない」に切り替える。
- * 過去のアンケート・確定済みの評価がこの項目を参照しているため、行ごと消すと過去が読めなくなる。
+ * 保存はすべて /api/masters（PUT）。止め方は2段階:
+ *   - 「使わない」: 次に作るアンケートから外すだけ。あとから戻せる。
+ *   - 「完全に消す」: まだ一度もアンケートに出しておらず、評価の記録にも無いときだけ出る。
+ * 一度でも使った項目は消せない（過去のアンケート・確定済みの評価がこの行を参照しているため、
+ * 消すと過去が読めなくなる）。判定はサーバー側で行う。
  */
 
 type Draft = { open: boolean; text: string };
@@ -32,10 +38,13 @@ export function GradeRequirementEditor({
   gradeId,
   gradeName,
   rows,
+  usage,
 }: {
   gradeId: string;
   gradeName: string;
   rows: RequirementRow[];
+  /** 項目ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
+  usage: UsageMap;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -70,6 +79,24 @@ export function GradeRequirementEditor({
       setBusy(false);
     }
   };
+
+  /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
+  const remove = async (id: string) => {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const result = await requestMasterDelete("gradeRequirement", id);
+    if (result.ok) {
+      setMessage(result.message);
+      router.refresh();
+    } else {
+      setError(result.message);
+    }
+    setBusy(false);
+  };
+
+  /** 使っている場所があるなら消させない。理由はその場で読めるようにする。 */
+  const blockedOf = (id: string) => deleteBlockedReason(usage[id] ?? []);
 
   const support = activeOf(rows, "support");
   const operation = activeOf(rows, "operation");
@@ -111,7 +138,10 @@ export function GradeRequirementEditor({
             <span className="num mt-[2px] w-6 shrink-0 text-[13px] text-[var(--ink-muted)]">{i + 1}</span>
             <div className="row-main">
               {editing[r.id] === undefined ? (
-                <p className="m-0 text-[13px]">{r.text}</p>
+                <>
+                  <p className="m-0 text-[13px]">{r.text}</p>
+                  {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
+                </>
               ) : (
                 <>
                   <textarea
@@ -179,6 +209,15 @@ export function GradeRequirementEditor({
                     void send({ kind: "gradeRequirement", id: r.id, gradeId, category, text: r.text, isActive: false })
                   }
                 />
+                {blockedOf(r.id) === null && (
+                  <ConfirmButton
+                    label={DELETE_LABEL}
+                    variant="danger-outline"
+                    busy={busy}
+                    confirm={deleteConfirmText(r.text)}
+                    onConfirm={() => void remove(r.id)}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -259,10 +298,11 @@ export function GradeRequirementEditor({
           </summary>
           <Card className="mt-2">
             {unused.map((r) => (
-              <div key={r.id} className="card-row items-center">
+              <div key={r.id} className="card-row items-center" data-off="true">
                 <div className="row-main">
-                  <p className="m-0 text-[13px] text-[var(--ink-muted)]">{r.text}</p>
+                  <p className="m-0 text-[13px]">{r.text}</p>
                   <p className="footnote m-0">{CATEGORY_LABEL[r.category as RequirementCategory] ?? r.category}</p>
+                  {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
                 </div>
                 <Badge tone="closed">使わない</Badge>
                 <Button
@@ -272,6 +312,15 @@ export function GradeRequirementEditor({
                 >
                   戻す
                 </Button>
+                {blockedOf(r.id) === null && (
+                  <ConfirmButton
+                    label={DELETE_LABEL}
+                    variant="danger-outline"
+                    busy={busy}
+                    confirm={deleteConfirmText(r.text)}
+                    onConfirm={() => void remove(r.id)}
+                  />
+                )}
               </div>
             ))}
           </Card>
