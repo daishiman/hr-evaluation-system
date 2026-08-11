@@ -7,6 +7,7 @@ import { BEHAVIOR_LEVEL_TEMPLATE, defaultLevelText, nextDisplayOrder } from "@/l
 import { GRADE_REQUIREMENT_MAX, swapForMove } from "@/lib/domain/grade-requirements";
 import { checkKgiCoverage, checkRangeCoverage } from "@/lib/domain/kgi";
 import { rangeLabel } from "@/lib/domain/scoring";
+import { checkBounds } from "@/lib/domain/number-input";
 import type { MasterUpdateBody } from "./body-schema";
 
 type Db = Awaited<ReturnType<typeof getDb>>;
@@ -525,10 +526,19 @@ export async function applyMasterUpdate(args: {
         const merged = (
           await db.select().from(s.kpiRankCriteria).where(eq(s.kpiRankCriteria.id, body.id)).limit(1)
         )[0];
+        const mergedLower = next.lowerBound !== undefined ? next.lowerBound : merged.lowerBound;
+        const mergedUpper = next.upperBound !== undefined ? next.upperBound : merged.upperBound;
+
+        /* 下限が上限より大きい（または同じ）組は、当てはまる値が1つも無い空の範囲になる。
+           保存してしまうと、そのランクに誰も入らないことに気づけないので、ここで断る。
+           画面でも同じ判定をしているが、画面を通さずに送られたときに素通りしないよう受け口でも見る。 */
+        const bounds = checkBounds(mergedLower, mergedUpper);
+        if (!bounds.ok) throw new HttpError(400, bounds.message);
+
         const displayLabel = rangeLabel(
           {
-            lowerBound: next.lowerBound !== undefined ? next.lowerBound : merged.lowerBound,
-            upperBound: next.upperBound !== undefined ? next.upperBound : merged.upperBound,
+            lowerBound: mergedLower,
+            upperBound: mergedUpper,
           },
           item?.unit ?? null,
           item?.direction === "lower" ? "lower" : "higher",

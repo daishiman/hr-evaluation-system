@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, CardRow, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
+import { NumberField } from "@/components/NumberField";
 import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 
 /**
@@ -251,11 +252,16 @@ export function FormBuilder({
                     </label>
                     <label>
                       <span className="block text-[12px] text-[var(--ink-muted)]">入力できる最小値</span>
-                      <input
+                      {/* 回答画面と同じ部品を使う。空欄のままにできる（＝下限を決めない）。
+                          以前はここで打った文字をそのまま数値にしていたため、全角で打つと
+                          「決めたつもりなのに決まっていない」状態になっていた。 */}
+                      <NumberField
                         className="input input-num mt-1 w-24"
-                        inputMode="decimal"
-                        value={r.validationMin ?? ""}
-                        onChange={(e) => patch(i, { validationMin: e.target.value === "" ? null : Number(e.target.value) })}
+                        name={`validationMin_${i}`}
+                        ariaLabel="入力できる最小値"
+                        defaultValue={r.validationMin ?? null}
+                        policy={{ allowNegative: true }}
+                        onValueChange={(value) => patch(i, { validationMin: value })}
                       />
                     </label>
                   </>

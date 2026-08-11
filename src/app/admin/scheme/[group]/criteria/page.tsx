@@ -166,9 +166,29 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
                        文言を別に書けるようにすると、書いてある範囲と実際に判定される範囲が
                        食い違う（説明文だけが嘘になる）。表記は保存時に数値から作り直す。 */
                     description={`ランク${c.rank}のいまの表記：${c.displayLabel}`}
+                    /* 下限が上限より大きい（または同じ）組は、当てはまる値が1つも無い範囲になる。
+                       保存してから気づくと、そのランクに誰も入らないまま運用されてしまうので、送る前に断る。 */
+                    boundsPair={{ lower: "lowerBound", upper: "upperBound" }}
                     fields={[
-                      { name: "lowerBound", label: `ランク${c.rank} の下限`, type: "number", defaultValue: c.lowerBound, unit: i.unit },
-                      { name: "upperBound", label: `ランク${c.rank} の上限`, type: "number", defaultValue: c.upperBound, unit: i.unit },
+                      /* 下限・上限は空欄を残せる（空欄＝上（下）に制限なし）。
+                         達成率のような割合を入れる指標があるので小数を許し、
+                         「前年比 -5%」のような負の基準もありうるのでマイナスも許す。 */
+                      {
+                        name: "lowerBound",
+                        label: `ランク${c.rank} の下限`,
+                        type: "number",
+                        defaultValue: c.lowerBound,
+                        unit: i.unit,
+                        policy: { allowNegative: true },
+                      },
+                      {
+                        name: "upperBound",
+                        label: `ランク${c.rank} の上限`,
+                        type: "number",
+                        defaultValue: c.upperBound,
+                        unit: i.unit,
+                        policy: { allowNegative: true },
+                      },
                     ]}
                   />
                 ))}

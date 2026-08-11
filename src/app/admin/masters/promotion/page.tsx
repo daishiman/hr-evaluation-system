@@ -89,8 +89,24 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
             submitLabel="昇格の条件を保存する"
             description={`${th.label}。行動指針の点数は、観点ごとの点数（模範3〜悪影響-1）の合計です。何を問うかは行動指針の画面で決めます。`}
             fields={[
-              { name: "requiredKpiPoints", label: "必要なKPI評価点", type: "number", required: true, defaultValue: th.requiredKpiPoints, unit: "点 / 100点" },
-              { name: "requiredBehaviorPoints", label: "必要な行動指針の点数", type: "number", required: true, defaultValue: th.requiredBehaviorPoints, unit: "点" },
+              {
+                name: "requiredKpiPoints",
+                label: "必要なKPI評価点",
+                type: "number",
+                required: true,
+                defaultValue: th.requiredKpiPoints,
+                unit: "点 / 100点",
+                policy: { allowDecimal: false, min: 0, max: 100 },
+              },
+              {
+                name: "requiredBehaviorPoints",
+                label: "必要な行動指針の点数",
+                type: "number",
+                required: true,
+                defaultValue: th.requiredBehaviorPoints,
+                unit: "点",
+                policy: { allowDecimal: false, min: 0, max: 100 },
+              },
             ]}
           />
           <p className="footnote">

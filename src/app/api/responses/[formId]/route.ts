@@ -6,6 +6,7 @@ import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
 import { judgeFormDeadline } from "@/lib/domain/form-deadline";
 import { isAnswered, questionSnapshot } from "@/lib/domain/answer-snapshot";
+import { checkAnswerNumbers } from "@/lib/domain/number-input";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +140,19 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
       });
 
     if (body.status === "submitted") {
+      /* 数値の回答が設問の決まり（0以上・1以上など）に収まっているかを、受け口の側でも見る。
+         画面の制限だけでは、画面を通さずに送られたときに素通りするため。
+         下書きの自動保存には当てない（打っている最中に断ると入力が止まる）。 */
+      const range = checkAnswerNumbers(
+        incoming.map((a) => ({
+          title: a.question.title,
+          validationMin: a.question.validationMin,
+          validationMax: a.question.validationMax,
+          value: a.valueNumber,
+        })),
+      );
+      if (!range.ok) throw new HttpError(400, range.message);
+
       const answeredIds = new Set(
         incoming.filter((a) => isAnswered(a.question.questionType, a)).map((a) => a.question.id),
       );

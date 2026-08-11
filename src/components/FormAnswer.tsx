@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button, Card, ReasonNote, SectionHeading } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
-import { normalizeNumeric } from "@/lib/ux-patterns";
+import { NumberField } from "@/components/NumberField";
+import { questionNumberPolicy } from "@/lib/domain/number-input";
 import { isAnswered, parseOptions, scaleSteps, type OptionLike } from "@/lib/domain/answer-snapshot";
 
 export interface AnswerQuestion {
@@ -411,21 +412,20 @@ function QuestionField({
 
     return (
       <div className="mt-2 flex items-center gap-2">
-        <input
+        {/* 管理画面の数値欄と同じ部品を使う。回答する人によって作法が変わらないようにするため。
+            打っている最中も親へ値を渡す（reportWhileTyping）。この画面は下書きを自動で保存しており、
+            欄から離れるまで保存されないと、打ったところで閉じた人の入力が消えてしまう。 */}
+        <NumberField
           id={`f_${q.id}`}
+          name={`f_${q.id}`}
           className="input input-num w-40"
-          inputMode="decimal"
-          enterKeyHint="next"
-          defaultValue={current ?? ""}
-          onChange={(e) => onChange({ valueNumber: normalizeNumeric(e.target.value), valueText: null, valueChoices: null })}
-          onKeyDown={(e) => {
-            if (e.key !== "Enter") return;
-            if (e.nativeEvent.isComposing) return; // 日本語変換の確定Enterでは動かさない
-            e.preventDefault();
-            onEnter();
-          }}
+          defaultValue={current ?? null}
+          policy={questionNumberPolicy(q)}
+          unit={q.unit}
+          reportWhileTyping
+          onValueChange={(value) => onChange({ valueNumber: value, valueText: null, valueChoices: null })}
+          onEnter={onEnter}
         />
-        {q.unit && <span className="unit">{q.unit}</span>}
         {q.validationMin !== null && <span className="footnote">{q.validationMin}以上の数字を入力してください</span>}
       </div>
     );
