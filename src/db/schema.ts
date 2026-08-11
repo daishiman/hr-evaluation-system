@@ -152,7 +152,7 @@ export const grades = sqliteTable(
     autonomyLevel: text("autonomy_level"),
     responsibilityLevel: text("responsibility_level"),
     deadlineNote: text("deadline_note"),
-    /** 行動指針の等級帯: g1_2 | g3_4 |（なし） */
+    /** この等級に出す行動指針の基準セット（behavior_band_sets.code）。null なら出さない */
     behaviorBand: text("behavior_band"),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
     createdAt: createdAt(),
@@ -202,13 +202,39 @@ export const promotionRequirements = sqliteTable(
 
 /* ───────────────────────── 行動指針 ───────────────────────── */
 
-/** 行動指針の観点（創造性・専門性・個別性・対等性・連帯性）× 等級帯 */
+/**
+ * 行動指針の基準セット。会社ごとに何セットでも作れる。
+ *
+ * 初期値は Beginner・Regular 向けと Chief・AM 向けの2つだが、会社の制度に合わせて
+ * 追加・複製・改名できる。code は作ったあと変えない（等級の割り当て・アンケートの
+ * 組み立てがこの文字列で結ばれているため）。呼び名を変えるのは name のほう。
+ *
+ * 使い終わったセットは消さずに is_active=false にする。物理削除にすると、
+ * すでに公開したアンケートや確定済みの評価がぶら下げている観点まで巻き込む。
+ */
+export const behaviorBandSets = sqliteTable(
+  "behavior_band_sets",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    /** 会社の中で一意。behavior_guidelines.band と grades.behavior_band がこの値を指す */
+    code: text("code").notNull(),
+    name: text("name").notNull(),
+    displayOrder: integer("display_order").notNull(),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("uq_bbs_company_code").on(t.companyId, t.code)],
+);
+
+/** 行動指針の観点（創造性・専門性・個別性・対等性・連帯性）× 基準セット */
 export const behaviorGuidelines = sqliteTable(
   "behavior_guidelines",
   {
     id: id(),
     companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
-    /** g1_2（等級1〜2）| g3_4（等級3〜4） */
+    /** 基準セットの code（behavior_band_sets.code） */
     band: text("band").notNull(),
     /** creativity | expertise | individuality | equality | solidarity */
     aspect: text("aspect").notNull(),

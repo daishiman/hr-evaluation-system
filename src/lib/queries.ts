@@ -79,6 +79,16 @@ export async function listPromotionRequirements(companyId: string) {
     .orderBy(asc(s.promotionRequirements.gradeId), asc(s.promotionRequirements.kind), asc(s.promotionRequirements.seq));
 }
 
+/** 会社が持っている行動指針の基準セット。使用を止めたものも「もう一度使う」ために返す。 */
+export async function listBehaviorBandSets(companyId: string) {
+  const db = await getDb();
+  return db
+    .select()
+    .from(s.behaviorBandSets)
+    .where(eq(s.behaviorBandSets.companyId, companyId))
+    .orderBy(asc(s.behaviorBandSets.displayOrder), asc(s.behaviorBandSets.code));
+}
+
 export async function listBehaviorGuidelines(companyId: string) {
   const db = await getDb();
   const guidelines = await db

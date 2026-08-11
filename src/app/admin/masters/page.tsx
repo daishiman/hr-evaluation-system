@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/session";
-import { listGradeRequirements, listGrades, listPromotionThresholds, listRaiseSettings } from "@/lib/queries";
+import { listBehaviorBandSets, listGradeRequirements, listGrades, listPromotionThresholds, listRaiseSettings } from "@/lib/queries";
 import { detectStaleCycles } from "@/lib/impact";
 import { RecordForm } from "@/components/RecordForm";
 import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
@@ -23,12 +23,13 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  const [grades, raises, gradeReqs, thresholds, staleCycles] = await Promise.all([
+  const [grades, raises, gradeReqs, thresholds, staleCycles, bandSets] = await Promise.all([
     listGrades(companyId),
     listRaiseSettings(companyId),
     listGradeRequirements(companyId),
     listPromotionThresholds(companyId),
     detectStaleCycles(companyId),
+    listBehaviorBandSets(companyId),
   ]);
 
   const sp = await searchParams;
@@ -123,7 +124,7 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
           <p className="m-0 text-[13px] font-bold">行動指針</p>
           <p className="m-0 mt-1 text-[13px]">
             {grade.behaviorBand
-              ? `${grade.name}のアンケートには、${behaviorBandLabel(grade.behaviorBand)}を出します。`
+              ? `${grade.name}のアンケートには、${behaviorBandLabel(bandSets, grade.behaviorBand)}を出します。`
               : `${grade.name}のアンケートには、行動指針を出しません。`}
           </p>
           <div className="mt-3">

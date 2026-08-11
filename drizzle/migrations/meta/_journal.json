@@ -57,6 +57,13 @@
       "when": 1786426582179,
       "tag": "0010_profile_field_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1786500002000,
+      "tag": "0011_behavior_band_sets",
+      "breakpoints": true
     }
   ]
 }
