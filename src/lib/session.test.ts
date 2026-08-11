@@ -7,6 +7,7 @@ import {
   canSeeFormContent,
   canSeeFormResponses,
   resolveCompanyId,
+  ROLE_LABEL,
   ROLES,
   type Viewer,
 } from "@/lib/session";
@@ -42,7 +43,7 @@ describe("権限の強さ", () => {
     expect(canSeeCriteria("SUPER_ADMIN")).toBe(true);
   });
 
-  it("評価される方には評価基準・配点を見せない", () => {
+  it("一般の方には評価基準・配点を見せない", () => {
     expect(canSeeCriteria("EMPLOYEE")).toBe(false);
     expect(canEditScheme("MANAGER")).toBe(false);
   });
@@ -77,5 +78,29 @@ describe("アンケートの見え方", () => {
   it("中身を読めることは、回答を読めることを意味しない", () => {
     const readOnly = ROLES.filter((r) => canSeeFormContent(r) && !canSeeFormResponses(r));
     expect(readOnly).toEqual(["MANAGER", "EMPLOYEE"]);
+  });
+});
+
+/**
+ * 役割の呼び名。
+ *
+ * マネージャーも会社の管理者も自分の上長から評価を受けるため、
+ * 「評価される／しない」で役割を言い分けない。設定を持たない立場は「一般」。
+ */
+describe("役割の呼び名", () => {
+  it("EMPLOYEE は「一般」と呼ぶ", () => {
+    expect(ROLE_LABEL.EMPLOYEE).toBe("一般");
+  });
+
+  it("評価されるかどうかで役割を言い分けない", () => {
+    for (const role of ROLES) {
+      expect(ROLE_LABEL[role]).not.toContain("評価される");
+      expect(ROLE_LABEL[role]).not.toContain("被評価");
+    }
+  });
+
+  it("保存する値（EMPLOYEE など）は呼び名と切り離しておく", () => {
+    // 呼び名を変えてもDBの値は変えない。過去のデータと突き合わせができなくなるため
+    expect(ROLES).toEqual(["SUPER_ADMIN", "COMPANY_ADMIN", "MANAGER", "EMPLOYEE"]);
   });
 });

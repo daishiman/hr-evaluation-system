@@ -23,11 +23,23 @@ const RANK: Record<Role, number> = {
   EMPLOYEE: 1,
 };
 
+/**
+ * 画面に出す役割の呼び名。
+ *
+ * EMPLOYEE を「評価される方」とは呼ばない。マネージャーも会社の管理者も
+ * 自分の上長から評価を受けるため、「評価される／しない」で役割を言い分けると
+ * 事実と食い違う。ここで分けているのは「制度を設定・閲覧できる範囲」なので、
+ * 設定を持たない立場は「一般」と呼ぶ。
+ *
+ * DBに入っている値（EMPLOYEE など）は変えない。呼び名は今後も変わりうるが、
+ * 保存済みのデータを呼び名に合わせて書き換えると、過去のデータと突き合わせが
+ * できなくなるため、変えるのは表示だけにする。
+ */
 export const ROLE_LABEL: Record<Role, string> = {
   SUPER_ADMIN: "システム全体管理者",
   COMPANY_ADMIN: "会社の管理者",
   MANAGER: "マネージャー",
-  EMPLOYEE: "評価される方",
+  EMPLOYEE: "一般",
 };
 
 export interface Viewer {
@@ -162,7 +174,8 @@ export function atLeast(role: Role, min: Role): boolean {
 
 /**
  * 評価基準・配点・昇格に必要な点数を見てよいか。
- * 評価される側には画面にもAPIの返り値にも出さない（要件の明示事項）。
+ * 一般（EMPLOYEE）には画面にもAPIの返り値にも出さない（要件の明示事項）。
+ * マネージャーは自分も評価を受けるが、基準は見てよい。
  */
 export function canSeeCriteria(role: Role): boolean {
   return atLeast(role, "MANAGER");
@@ -194,7 +207,7 @@ export function canEditForm(role: Role): boolean {
   return atLeast(role, "COMPANY_ADMIN");
 }
 
-/** 評価される側の情報（プロフィール・評価メモ）を変更してよいか。 */
+/** 他の人の情報（プロフィール・評価メモ）を変更してよいか。 */
 export function canEditEmployee(role: Role): boolean {
   return atLeast(role, "COMPANY_ADMIN");
 }

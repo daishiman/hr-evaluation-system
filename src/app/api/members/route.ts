@@ -14,7 +14,7 @@ const roleSchema = z.enum(["COMPANY_ADMIN", "MANAGER", "EMPLOYEE"]);
 const createSchema = z.object({
   name: z.string().min(1, "氏名を入力してください").max(60),
   email: z.string().email("メールアドレスの形式を確認してください"),
-  password: z.string().min(8, "パスワードは8文字以上にしてください").max(72),
+  password: z.string().min(10, "パスワードは10文字以上にしてください").max(72),
   role: roleSchema,
   gradeId: z.string().nullable().optional(),
   managerId: z.string().nullable().optional(),
@@ -80,8 +80,13 @@ const patchSchema = z.object({
   hiredAt: z.iso.date().nullable().optional(),
   profileNote: z.string().max(1000).nullable().optional(),
   isActive: z.boolean().optional(),
-  /** パスワードの再発行 */
-  password: z.string().min(8).max(72).optional(),
+  /**
+   * パスワードの再発行。
+   * 下限は本人の変更画面（PasswordChangeForm の MIN_LENGTH）と揃える。
+   * 画面から送られるのは生成された12文字だが、APIを直接叩かれても
+   * 本人の変更画面より弱い値が入らないようにここで止める。
+   */
+  password: z.string().min(10, "パスワードは10文字以上にしてください").max(72).optional(),
 });
 
 /** 社員情報の変更。退職はデータを消さず「利用停止」で扱う（過去の評価は残す）。 */
@@ -156,11 +161,15 @@ export async function PATCH(req: Request) {
       await db.update(s.users).set(patch).where(eq(s.users.id, target.id));
     }
 
+    // 発行した値そのものは返さない（画面が自分で送った値を控えとして持っている）。
+    // ここで返すと、通信の記録や運用のログに平文で残る経路を増やしてしまう。
     return {
       message:
         body.isActive === false
           ? `${target.name}さんを利用停止にしました。過去の評価の記録は残っています。`
-          : "社員情報を保存しました。",
+          : body.password
+            ? `${target.name}さんの仮パスワードを発行しました。いまのログインはすべて解除されています。この画面に出ている値をご本人にお伝えください。`
+            : "社員情報を保存しました。",
     };
   });
 }
