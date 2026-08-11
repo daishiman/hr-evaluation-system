@@ -23,8 +23,6 @@ const ALLOWED: Record<string, string> = {
   "src/app/manager/page.tsx": "件数の集計だけ",
   "src/app/system/page.tsx": "SystemDashboard に渡すだけ",
   "src/app/admin/masters/page.tsx": "等級を選ぶチップ。等級に停止状態は出していない",
-  "src/app/admin/forms/[id]/page.tsx": "画面全体の状態。カード単位で沈める対象が無い",
-  "src/app/forms/[id]/page.tsx": "画面全体の状態。カード単位で沈める対象が無い",
   "src/app/api/companies/route.ts": "画面ではない",
   "src/app/api/forms/route.ts": "画面ではない",
   "src/app/api/members/route.ts": "画面ではない",
@@ -70,6 +68,24 @@ describe("使わない設定のものは、どの画面でも同じ見た目で�
     expect(css).toContain('.card.hero-tint[data-off="true"]');
     // 本文の文字色は薄くしない（読みやすさの下限）
     expect(css).not.toMatch(/\[data-off="true"\][^{]*\{[^}]*color:\s*var\(--ink-muted\)/);
+  });
+
+  it("等級・事業所に「使わない」の切り替えを足したら、見た目の対応漏れとして落とす", () => {
+    /* 等級と事業所は、いまどの画面にも「使わない」に切り替える操作が無い
+       （データ上の欄はあるが、そこへ行き着く画面が無い）。だから見た目も持たせていない。
+       あとから切り替えを足したときに、見た目だけ置き去りになるのを防ぐ。
+       落ちたら「切り替えを足した画面」に off / data-off も一緒に足すこと。 */
+    const offenders = walk("src/app")
+      .concat(walk("src/components"))
+      .filter((rel) => {
+        const source = readFileSync(join(ROOT, rel), "utf8");
+        /* 「kind: "grade"」のすぐ後ろに isActive が並ぶ＝切り替えを送っている形。
+           同じファイルに等級要件の r.isActive があるだけでは落とさない。 */
+        const togglesGradeOrOffice = /kind:\s*"(grade|office)"[\s\S]{0,400}?isActive/.test(source);
+        return togglesGradeOrOffice && !OFF_MARKS.test(source);
+      });
+
+    expect(offenders).toEqual([]);
   });
 
   it("沈める指定は共通部品が受け取る（画面ごとに書き起こさない）", () => {
