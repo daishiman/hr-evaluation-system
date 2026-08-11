@@ -62,7 +62,10 @@ const COMPANY_GROUPS: NavGroup[] = [
   },
   {
     title: "基準を確認する",
-    items: [{ href: "/criteria", label: "評価の基準" }],
+    items: [
+      { href: "/criteria", label: "評価の基準" },
+      { href: "/forms", label: "アンケートの中身" },
+    ],
   },
 ];
 
@@ -102,7 +105,10 @@ export function navGroupsFor(role: Role): NavGroup[] {
         },
         {
           title: "基準を確認する",
-          items: [{ href: "/criteria", label: "評価の基準" }],
+          items: [
+            { href: "/criteria", label: "評価の基準" },
+            { href: "/forms", label: "アンケートの中身" },
+          ],
         },
       ];
     default:
@@ -114,6 +120,13 @@ export function navGroupsFor(role: Role): NavGroup[] {
             { href: "/me/forms", label: "実績を報告する" },
             { href: "/me/results", label: "評価の結果を見る" },
           ],
+        },
+        /* アンケートの中身は全ロールが読める（配点・昇格ゲートは出さない）。
+           自分あての1本を答えることと、どの等級で何を聞いているかを読むことは
+           別の用事なので、「実績を報告する」と同じ分類には入れない。 */
+        {
+          title: "内容を確認する",
+          items: [{ href: "/forms", label: "アンケートの中身" }],
         },
       ];
   }
