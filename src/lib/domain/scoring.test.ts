@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { judgeRank, matchesCriterion, scoreFromRank, judgeOverall, gradeRequirementRate, type RankCriterion } from "./scoring";
+import { judgeRank, matchesCriterion, rangeLabel, scoreFromRank, judgeOverall, gradeRequirementRate, type RankCriterion } from "./scoring";
 
 /** No.1 等級要件達成率（高いほど良い） 100/80/60/40 */
 const requirementRate: RankCriterion[] = [
@@ -525,5 +525,31 @@ describe("judgeOverall — 本人向けの昇給・昇格理由", () => {
     });
     expect(res.raiseReasonEmployee).toContain("ヒヤリ報告件数");
     expect(res.raiseReasonEmployee).toContain("判定できていません");
+  });
+});
+
+describe("rangeLabel — 表記は下限・上限から必ず導く", () => {
+  it("高いほど良い指標は「以上／未満」で書く（matchesCriterion と同じ境界）", () => {
+    expect(rangeLabel({ lowerBound: 80, upperBound: 100 }, "%", "higher")).toBe("80%以上 100%未満");
+    expect(rangeLabel({ lowerBound: 100, upperBound: null }, "%", "higher")).toBe("100%以上");
+    expect(rangeLabel({ lowerBound: null, upperBound: 40 }, "%", "higher")).toBe("40%未満");
+  });
+
+  it("低いほど良い指標は「超／以下」で書く（境界の含み方が逆になる）", () => {
+    expect(rangeLabel({ lowerBound: 5, upperBound: 10 }, "%", "lower")).toBe("5%超 10%以下");
+    expect(rangeLabel({ lowerBound: null, upperBound: 5 }, "%", "lower")).toBe("5%以下");
+    expect(rangeLabel({ lowerBound: 20, upperBound: null }, "%", "lower")).toBe("20%超");
+  });
+
+  it("両側とも空欄なら、制限なしと分かる言い方にする", () => {
+    expect(rangeLabel({ lowerBound: null, upperBound: null }, "%", "higher")).toBe("すべての実績値が該当");
+  });
+
+  it("単位が無い項目でも、数字だけで成り立つ表記にする", () => {
+    expect(rangeLabel({ lowerBound: 3, upperBound: 5 }, null, "higher")).toBe("3以上 5未満");
+  });
+
+  it("小数は末尾の0を落として書く（99.50 とは書かない）", () => {
+    expect(rangeLabel({ lowerBound: 99.5, upperBound: null }, "%", "higher")).toBe("99.5%以上");
   });
 });

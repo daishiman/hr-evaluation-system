@@ -106,7 +106,14 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
           fields={[
             { name: "name", label: "氏名", type: "text", required: true },
             { name: "email", label: "メールアドレス（ログインID）", type: "email", required: true },
-            { name: "password", label: "仮パスワード", type: "password", required: true, help: "8文字以上" },
+            {
+              name: "password",
+              label: "仮パスワード",
+              type: "password",
+              required: true,
+              generate: true,
+              help: "この場で作った値を出しています。写して本人に渡してください。",
+            },
             {
               name: "role",
               label: "役割",

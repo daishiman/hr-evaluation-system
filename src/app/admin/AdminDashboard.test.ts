@@ -34,17 +34,18 @@ const ready: AdminDashboardSnapshot = {
   submittedCount: 10,
   evaluationCount: 10,
   finalizedEvaluationCount: 10,
-  provisionalCount: 0,
+  provisionalPromotionCount: 0,
+  provisionalRaiseCount: 0,
 };
 
 describe("buildAdminDashboardModel", () => {
   it.each([
     ["等級", { gradeCount: 0 }, "/admin/masters"],
     ["等級要件", { activeGradeRequirementCount: 0 }, "/admin/masters/requirements"],
-    ["昇格要件", { activePromotionRequirementCount: 0 }, "/admin/masters"],
-    ["行動指針", { activeBehaviorGuidelineCount: 0 }, "/admin/masters"],
-    ["行動指針の等級適用", { behaviorAppliedGradeCount: 0 }, "/admin/masters"],
-    ["KPI", { kpiItemCount: 0 }, "/admin/masters"],
+    ["昇格要件", { activePromotionRequirementCount: 0 }, "/admin/masters/promotion"],
+    ["行動指針", { activeBehaviorGuidelineCount: 0 }, "/admin/behavior"],
+    ["行動指針の等級適用", { behaviorAppliedGradeCount: 0 }, "/admin/behavior"],
+    ["KPI", { kpiItemCount: 0 }, "/admin/scheme"],
     ["評価セット", { hasActiveScheme: false, schemeItemCount: 0 }, "/admin/scheme"],
     ["評価期間", { hasOpenCycle: false }, "/admin/cycles"],
     ["アンケート作成", { formCount: 0, publishedFormCount: 0 }, "/admin/forms?cycle=cycle-2026-h1"],
@@ -92,6 +93,8 @@ describe("AdminDashboard", () => {
     const html = renderToStaticMarkup(createElement(AdminDashboard, { snapshot: ready }));
     for (const href of [
       "/admin/masters/requirements",
+      "/admin/masters/promotion",
+      "/admin/behavior",
       "/admin/masters",
       "/admin/scheme",
       "/admin/cycles",
@@ -100,5 +103,29 @@ describe("AdminDashboard", () => {
     ]) {
       expect(html).toContain(`href="${href}`);
     }
+  });
+
+  it.each([
+    ["昇格条件", { provisionalPromotionCount: 2, provisionalRaiseCount: 0 }, "/admin/masters/promotion", "の昇格条件", "の昇給額"],
+    ["昇給額", { provisionalPromotionCount: 0, provisionalRaiseCount: 3 }, "/admin/raises", "の昇給額", "の昇格条件"],
+  ])("%sだけが暫定なら、その設定を解決できる画面だけを案内する", (_label, patch, expectedHref, expectedText, absentText) => {
+    const html = renderToStaticMarkup(createElement(AdminDashboard, { snapshot: { ...ready, ...patch } }));
+
+    expect(html).toContain(`href="${expectedHref}"`);
+    expect(html).toContain(expectedText);
+    expect(html).not.toContain(absentText);
+  });
+
+  it("昇格条件と昇給額がどちらも暫定なら、それぞれの解決先を案内する", () => {
+    const html = renderToStaticMarkup(
+      createElement(AdminDashboard, {
+        snapshot: { ...ready, provisionalPromotionCount: 2, provisionalRaiseCount: 3 },
+      }),
+    );
+
+    expect(html).toContain('href="/admin/masters/promotion"');
+    expect(html).toContain('href="/admin/raises"');
+    expect(html).toContain("の昇格条件が2件");
+    expect(html).toContain("の昇給額が3件");
   });
 });

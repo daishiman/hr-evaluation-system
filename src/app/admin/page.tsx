@@ -99,8 +99,8 @@ export default async function AdminHome() {
         submittedCount: pending.filter((row) => row.status === "submitted").length,
         evaluationCount: evaluations.length,
         finalizedEvaluationCount: evaluations.filter((row) => row.status === "finalized").length,
-        provisionalCount:
-          thresholds.filter((row) => row.isProvisional).length + raises.filter((row) => row.isProvisional).length,
+        provisionalPromotionCount: thresholds.filter((row) => row.isProvisional).length,
+        provisionalRaiseCount: raises.filter((row) => row.isProvisional).length,
       }}
     />
   );

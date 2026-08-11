@@ -5,6 +5,7 @@ import {
   gradeRequirementRate,
   judgeOverall,
   judgeRank,
+  rangeLabel,
   scoreItem,
   UNRATED_RATIONALE_EMPLOYEE,
   UNRATED_REQUIREMENT_RATIONALE_EMPLOYEE,
@@ -217,7 +218,9 @@ export async function buildEvaluationsForCycle(
           behRows.push({
             gId: q.behaviorGuidelineId,
             aspect: g?.aspect ?? "",
-            aspectName: g?.aspectName ?? q.title,
+            /* 設問名はアンケートを作った時点の写しを使う。現在のマスタ名を引くと、
+               公開済みの設問は旧名なのに、あとで作った評価だけ新名になる。 */
+            aspectName: q.title,
             score,
             label: a?.valueText ?? "",
           });
@@ -243,7 +246,7 @@ export async function buildEvaluationsForCycle(
           .filter((c) => c.kpiItemId === m.id)
           .map((c) => ({
             rank: c.rank as Rank,
-            displayLabel: c.displayLabel,
+            displayLabel: rangeLabel(c, m.unit, m.direction === "lower" ? "lower" : "higher"),
             lowerBound: c.lowerBound,
             upperBound: c.upperBound,
             meaning: c.meaning,

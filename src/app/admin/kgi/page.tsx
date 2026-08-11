@@ -9,11 +9,13 @@ import {
   listOfficeKgiResults,
   listOfficeKgiRevisions,
 } from "@/lib/queries";
-import { matchKgiCoefficient } from "@/lib/domain/kgi";
+import { kgiRangeLabel, matchKgiCoefficient } from "@/lib/domain/kgi";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
+import { Badge, Card, Disclosure, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { formatDate, formatPeriod, CYCLE_STATUS_LABEL } from "@/lib/view";
+import { detectStaleCycles } from "@/lib/impact";
+import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -33,11 +35,12 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  const [cycles, offices, coefficients, policy] = await Promise.all([
+  const [cycles, offices, coefficients, policy, staleCycles] = await Promise.all([
     listCycles(companyId),
     listOffices(companyId),
     listKgiCoefficients(companyId),
     getRaisePolicy(companyId),
+    detectStaleCycles(companyId),
   ]);
 
   const sp = await searchParams;
@@ -47,6 +50,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
     return (
       <>
         <PageTitle title="事業所KGIの達成率" lede="賞与の個人Ptを出すために使う、事業所ごとの達成率を登録します。" />
+        <StaleCyclesNotice cycles={staleCycles} />
         <EmptyState
           title="評価期間がまだありません"
           body="達成率は評価期間ごとに登録します。先に評価期間を作ってください。"
@@ -67,7 +71,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
   ]);
 
   const coefficientRows = coefficients.map((c) => ({
-    label: c.label,
+    label: kgiRangeLabel(c),
     lowerBound: c.lowerBound,
     upperBound: c.upperBound,
     coefficient: c.coefficient,
@@ -82,16 +86,11 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
         title="事業所KGIの達成率"
         lede="賞与の個人Pt（＝KPI評価点合計 × 達成係数）を出すために使う数字です。事業所ごと・評価期間ごとに登録します。"
       />
+      <StaleCyclesNotice cycles={staleCycles} />
 
       {coefficients.length === 0 && (
         <div className="mb-4">
-          <ReasonNote
-            action={
-              <LinkButton href="/admin/masters" variant="secondary">
-                達成係数を設定する
-              </LinkButton>
-            }
-          >
+          <ReasonNote>
             達成係数の表が登録されていないため、達成率を入れても個人Pt・賞与額を出せません。
           </ReasonNote>
         </div>
@@ -138,7 +137,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
       {offices.length === 0 ? (
         <ReasonNote
           action={
-            <LinkButton href="/admin/masters" variant="secondary">
+            <LinkButton href="/admin/members" variant="secondary">
               事業所を確認する
             </LinkButton>
           }
@@ -224,12 +223,12 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
             rowKey={(c) => c.id}
             columns={[
               {
-                key: "label",
-                header: "区分",
+                key: "range",
+                header: "適用する達成率",
                 role: "title",
                 cell: (c) => (
                   <>
-                    {c.label}
+                    {kgiRangeLabel(c)}
                     {c.isProvisional ? (
                       <>
                         {" "}
@@ -240,21 +239,35 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
                 ),
               },
               { key: "coefficient", header: "達成係数", num: true, cell: (c) => <Num value={c.coefficient} /> },
-              {
-                key: "range",
-                header: "適用する達成率",
-                cell: (c) =>
-                  `${c.lowerBound === null ? "下限なし" : `${c.lowerBound}% 以上`} ／ ${
-                    c.upperBound === null ? "上限なし" : `${c.upperBound}% 未満`
-                  }`,
-              },
             ]}
           />
           <p className="footnote">
             元の表は「111〜120%」のように整数で書かれていて、99%と100%の間・110%と111%の間が抜けていました。
             99.5% のような小数が来てもどこかに必ず当てはまるよう、下限以上・上限未満で連続させています。
-            係数そのものは <Link href="/admin/masters">等級・昇格・行動指針</Link> で変更できます。
           </p>
+          {/* 係数は達成率と同じ持ち場の話なので、直す場所もこの画面に置く。
+              普段は見るだけなので、開いたときだけ入力欄を出す */}
+          <Disclosure summary="達成係数を変更する" meta={`${coefficients.length}区分`}>
+            <p className="footnote">
+              賞与の個人ポイント計算に使います（個人Pt ＝ KPI評価点の合計 × 係数）。適用する達成率の範囲は変えられません。
+            </p>
+            <div className="field-grid">
+              {coefficients.map((k) => (
+                <RecordForm
+                  key={k.id}
+                  url="/api/masters"
+                  method="PUT"
+                  fixed={{ kind: "kgi", id: k.id }}
+                  submitLabel="係数を保存する"
+                  title={kgiRangeLabel(k)}
+                  description={k.isProvisional ? "いまの値は叩き台の初期値です。" : undefined}
+                  fields={[
+                    { name: "coefficient", label: "係数", type: "number", required: true, defaultValue: k.coefficient },
+                  ]}
+                />
+              ))}
+            </div>
+          </Disclosure>
         </>
       )}
 

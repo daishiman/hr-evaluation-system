@@ -54,6 +54,7 @@ export async function POST(req: Request) {
         department: body.department ?? null,
         hiredAt: body.hiredAt ?? null,
         isActive: true,
+        mustChangePassword: true,
       }),
       db.insert(s.accounts).values({
         id: newId("acc"),

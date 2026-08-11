@@ -141,7 +141,7 @@ export async function PUT(req: Request) {
 
     const warnings = [...applied.coverageProblems];
     if (applied.unmatched > 0) {
-      warnings.push(`達成率 ${body.achievementRate}% に当てはまる達成係数が表にありません。「等級・昇格・行動指針」のKGI係数をご確認ください。`);
+      warnings.push(`達成率 ${body.achievementRate}% に当てはまる達成係数が表にありません。「事業所KGIの達成率」の達成係数をご確認ください。`);
     }
 
     return {

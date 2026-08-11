@@ -5,7 +5,7 @@ import { getActiveScheme, listRankCriteria, listRankRatios, listSchemeItems } fr
 export const dynamic = "force-dynamic";
 
 /**
- * KPIのランク基準（A〜Eの線引き）を、制度マスタ画面の折りたたみを開いたときに読む。
+ * KPIのランク基準（A〜Eの線引き）を、KPI・評価セット画面の折りたたみを開いたときに読む。
  *
  * 8項目 × 5ランク ＝ 40件ぶんの入力欄があり、画面を開いた瞬間に全部を
  * HTMLへ埋め込むと重い。ここは「基準を直したいときだけ開く」場所なので、
@@ -34,7 +34,11 @@ export async function GET() {
         unit: i.unit,
         weight: i.weight,
         direction: i.direction,
-        formula: i.formula,
+        /* 固定枠（等級要件達成率）は計算式を通らない。実績は「アンケートで出した
+           等級要件のうち達成した数 ÷ 出した数」で出す（src/lib/evaluate.ts）。
+           マスタに残っている旧計算式をそのまま出すと、実装と食い違う説明になる。 */
+        formula: i.isFixedSlot ? null : i.formula,
+        isFixedSlot: i.isFixedSlot,
         criteria: criteria
           .filter((c) => c.kpiItemId === i.kpiItemId)
           .sort((a, b) => a.rank.localeCompare(b.rank))

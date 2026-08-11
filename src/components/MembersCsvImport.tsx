@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, ReasonNote } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
+import { toCsv } from "@/lib/csv";
+import type { IssuedMemberCredential } from "@/lib/domain/initial-password";
 
 type MemberRowResult = {
   row: number;
@@ -12,6 +14,22 @@ type MemberRowResult = {
   status: "新規作成" | "更新" | "エラー";
   reason?: string;
 };
+
+/** サーバーへ平文を再送せず、今回のレスポンスに含まれた値だけを管理者の端末へ書き出す。 */
+function downloadCredentials(credentials: IssuedMemberCredential[]) {
+  const csv = toCsv(
+    ["メールアドレス", "仮パスワード"],
+    credentials.map((credential) => [credential.email, credential.initialPassword]),
+  );
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "新規社員の仮パスワード.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
 
 /**
  * 社員一覧のまとめ登録。
@@ -23,17 +41,18 @@ export function MembersCsvImport() {
   const router = useRouter();
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
-  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<MemberRowResult[] | null>(null);
+  const [credentials, setCredentials] = useState<IssuedMemberCredential[]>([]);
   const [checked, setChecked] = useState(false);
 
   const reset = () => {
     setMessage(null);
     setError(null);
     setRows(null);
+    setCredentials([]);
   };
 
   const run = async (dryRun: boolean) => {
@@ -51,16 +70,21 @@ export function MembersCsvImport() {
         body: JSON.stringify({
           csv: text,
           dryRun,
-          initialPassword: password.trim() === "" ? undefined : password.trim(),
         }),
       });
-      const data = (await res.json()) as { ok: boolean; message?: string; rows?: MemberRowResult[] };
+      const data = (await res.json()) as {
+        ok: boolean;
+        message?: string;
+        rows?: MemberRowResult[];
+        credentials?: IssuedMemberCredential[];
+      };
       if (!res.ok || !data.ok) {
         setError(data.message ?? "取り込みできませんでした。");
         return;
       }
       setMessage(data.message ?? "取り込みました。");
       setRows(data.rows ?? []);
+      setCredentials(dryRun ? [] : (data.credentials ?? []));
       setChecked(dryRun);
       if (!dryRun) router.refresh();
     } catch {
@@ -113,19 +137,9 @@ export function MembersCsvImport() {
           />
         </label>
 
-        <label className="block text-[13px] font-bold">
-          新しく登録する方の最初のパスワード
-          <input
-            type="password"
-            className="input mt-1 w-full font-normal"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-          />
-          <span className="footnote block">
-            8文字以上。すでに登録済みの方だけを更新するときは空欄のままで構いません。発行後、ご本人にお伝えください。
-          </span>
-        </label>
+        <p className="footnote m-0">
+          新しく登録する方には、一人ずつ異なる仮パスワードを安全に作ります。登録済みの方のパスワードは変更しません。
+        </p>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -143,6 +157,35 @@ export function MembersCsvImport() {
         </div>
       )}
       {message && <p className="mt-3 m-0 text-[13px] font-bold">{message}</p>}
+
+      {credentials.length > 0 && (
+        <div className="mt-3">
+          <ReasonNote>
+            仮パスワードは今回だけ表示します。この画面を離れる前に一覧を保存し、それぞれご本人へ安全な方法でお伝えください。
+          </ReasonNote>
+          <div className="mt-2">
+            <Button type="button" variant="tertiary" onClick={() => downloadCredentials(credentials)}>
+              仮パスワード一覧を保存する
+            </Button>
+          </div>
+          <div className="mt-2">
+            <DataTable
+              caption="今回発行した仮パスワード"
+              rows={credentials}
+              rowKey={(credential) => `${credential.row}-${credential.email}`}
+              columns={[
+                { key: "name", header: "氏名", role: "title", cell: (credential) => credential.name },
+                { key: "email", header: "メールアドレス", cell: (credential) => credential.email },
+                {
+                  key: "initialPassword",
+                  header: "仮パスワード",
+                  cell: (credential) => <span className="input-code">{credential.initialPassword}</span>,
+                },
+              ]}
+            />
+          </div>
+        </div>
+      )}
 
       {rows && rows.length > 0 && (
         <div className="mt-3">

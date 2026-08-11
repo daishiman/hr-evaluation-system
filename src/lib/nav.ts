@@ -34,8 +34,10 @@ const COMPANY_GROUPS: NavGroup[] = [
     title: "制度を順番に設定する",
     items: [
       { href: "/admin/setup", label: "制度設定ガイド" },
+      { href: "/admin/masters", label: "等級の設定" },
       { href: "/admin/masters/requirements", label: "等級要件（支援・運営）" },
-      { href: "/admin/masters", label: "等級・昇格・行動指針" },
+      { href: "/admin/masters/promotion", label: "昇格の条件・要件" },
+      { href: "/admin/behavior", label: "行動指針" },
       { href: "/admin/scheme", label: "KPI・評価セット" },
     ],
   },

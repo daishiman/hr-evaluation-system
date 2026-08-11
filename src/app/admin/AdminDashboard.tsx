@@ -30,7 +30,8 @@ export interface AdminDashboardSnapshot {
   submittedCount: number;
   evaluationCount: number;
   finalizedEvaluationCount: number;
-  provisionalCount: number;
+  provisionalPromotionCount: number;
+  provisionalRaiseCount: number;
 }
 
 export interface DashboardAction {
@@ -80,7 +81,7 @@ export function buildAdminDashboardModel(snapshot: AdminDashboardSnapshot): Admi
       title: "等級と要件の土台を確認します",
       body: "アンケートの対象になる等級がまだありません。最初に制度の土台を整えます。",
       href: "/admin/masters",
-      label: "等級・昇格の設定を確認する",
+      label: "等級の設定を確認する",
     };
   } else if (snapshot.activeGradeRequirementCount === 0) {
     nextAction = {
@@ -93,21 +94,21 @@ export function buildAdminDashboardModel(snapshot: AdminDashboardSnapshot): Admi
     nextAction = {
       title: "昇格要件を確認します",
       body: "点数だけでは決められない、報告書やテストなどの条件を確認します。",
-      href: "/admin/masters",
+      href: "/admin/masters/promotion",
       label: "昇格要件を確認する",
     };
   } else if (!behaviorReady) {
     nextAction = {
       title: "行動指針を確認します",
       body: "どの等級に、どの行動指針を適用するかを確認します。",
-      href: "/admin/masters",
+      href: "/admin/behavior",
       label: "行動指針を確認する",
     };
   } else if (snapshot.kpiItemCount === 0) {
     nextAction = {
       title: "KPIの基準を確認します",
       body: "成果を何で測るかを確認してから、評価セットを組みます。",
-      href: "/admin/masters",
+      href: "/admin/scheme",
       label: "KPIの基準を確認する",
     };
   } else if (!schemeReady) {
@@ -338,10 +339,18 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
         </Card>
       )}
 
-      {snapshot.provisionalCount > 0 && (
+      {snapshot.provisionalPromotionCount > 0 && (
         <div className="mt-4">
-          <ReasonNote action={<LinkButton href="/admin/masters">等級・昇格の設定で確認する</LinkButton>}>
-            <ProvisionalMark /> の設定が{snapshot.provisionalCount}件あります。運用前に昇格条件・昇給額を確認してください。
+          <ReasonNote action={<LinkButton href="/admin/masters/promotion">昇格の条件・要件で確認する</LinkButton>}>
+            <ProvisionalMark /> の昇格条件が{snapshot.provisionalPromotionCount}件あります。運用前に内容を確認してください。
+          </ReasonNote>
+        </div>
+      )}
+
+      {snapshot.provisionalRaiseCount > 0 && (
+        <div className="mt-4">
+          <ReasonNote action={<LinkButton href="/admin/raises">昇給の設定で確認する</LinkButton>}>
+            <ProvisionalMark /> の昇給額が{snapshot.provisionalRaiseCount}件あります。運用前に内容を確認してください。
           </ReasonNote>
         </div>
       )}
@@ -353,15 +362,17 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
         </p>
         <ol className="m-0 mt-3 grid list-decimal gap-2 pl-5 text-[13px]">
           <li>
+            <Link href="/admin/masters" className="text-[var(--brand-deep)]">等級の設定</Link> — 制度の土台になる等級と水準を決める
+          </li>
+          <li>
             <Link href="/admin/masters/requirements" className="text-[var(--brand-deep)]">等級要件</Link>・
-            <Link href="/admin/masters" className="text-[var(--brand-deep)]">昇格要件</Link> — 何を満たすかを決める
+            <Link href="/admin/masters/promotion" className="text-[var(--brand-deep)]">昇格の条件・要件</Link> — 何を満たすかを決める
           </li>
           <li>
-            <Link href="/admin/masters" className="text-[var(--brand-deep)]">行動指針</Link> — どの等級に適用するかを決める
+            <Link href="/admin/behavior" className="text-[var(--brand-deep)]">行動指針</Link> — 何を問い、どの等級に出すかを決める
           </li>
           <li>
-            <Link href="/admin/masters" className="text-[var(--brand-deep)]">KPIの基準</Link>・
-            <Link href="/admin/scheme" className="text-[var(--brand-deep)]">評価セット</Link> — 測る項目を決める
+            <Link href="/admin/scheme" className="text-[var(--brand-deep)]">KPI・評価セット</Link> — 測る項目とA〜Eの線引きを決める
           </li>
           <li>
             <Link href="/admin/cycles" className="text-[var(--brand-deep)]">評価期間</Link> — 今回の半期を作る

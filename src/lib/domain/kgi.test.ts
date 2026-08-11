@@ -5,6 +5,7 @@ import {
   checkRangeCoverage,
   computeBonus,
   effectiveOfficeId,
+  kgiRangeLabel,
   planBonusRecalc,
   type BonusRecalcTarget,
   type KgiCoefficientRow,
@@ -50,8 +51,16 @@ describe("matchKgiCoefficient — 係数の引き当て", () => {
   });
 
   it("判定根拠に達成率と区分名が日本語で残る", () => {
-    expect(matchKgiCoefficient(97, coefficients)?.rationale).toContain("95〜99%");
+    expect(matchKgiCoefficient(97, coefficients)?.rationale).toContain("95%以上 100%未満");
     expect(matchKgiCoefficient(97, coefficients)?.rationale).toContain("0.6");
+  });
+});
+
+describe("kgiRangeLabel — 判定境界と同じ表記", () => {
+  it("旧ラベルに依存せず、下限以上・上限未満を表す", () => {
+    expect(kgiRangeLabel(coefficients[3])).toBe("95%以上 100%未満");
+    expect(kgiRangeLabel(coefficients[0])).toBe("121%以上");
+    expect(kgiRangeLabel(coefficients[5])).toBe("90%未満");
   });
 });
 
@@ -224,7 +233,7 @@ describe("planBonusRecalc — 達成率を登録したときに既存の評価�
   it("判定根拠が日本語で残り、仮の金額であることが書かれている", () => {
     const plan = planBonusRecalc(targets, input);
     const d1 = plan.updates.find((u) => u.evaluationId === "ev_draft1")!;
-    expect(d1.rationale).toContain("111〜120%");
+    expect(d1.rationale).toContain("111%以上 121%未満");
     expect(d1.rationale).toContain("仮の金額");
   });
 

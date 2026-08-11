@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { targetsPointGroup } from "@/lib/domain/grade-points";
+import { rangeLabel } from "@/lib/domain/scoring";
 
 /**
  * 「採点基準」画面だけが使う読み取り。
@@ -156,11 +157,16 @@ export async function listQuestionsFor(companyId: string, kpiItemIds: string[]) 
 export async function listRankCriteriaFor(companyId: string, kpiItemIds: string[]) {
   if (kpiItemIds.length === 0) return [];
   const db = await getDb();
-  return db
-    .select()
+  const rows = await db
+    .select({ criterion: s.kpiRankCriteria, unit: s.kpiItems.unit, direction: s.kpiItems.direction })
     .from(s.kpiRankCriteria)
+    .innerJoin(s.kpiItems, eq(s.kpiItems.id, s.kpiRankCriteria.kpiItemId))
     .where(and(eq(s.kpiRankCriteria.companyId, companyId), inArray(s.kpiRankCriteria.kpiItemId, kpiItemIds)))
     .orderBy(asc(s.kpiRankCriteria.rank));
+  return rows.map(({ criterion, unit, direction }) => ({
+    ...criterion,
+    displayLabel: rangeLabel(criterion, unit, direction === "lower" ? "lower" : "higher"),
+  }));
 }
 
 /* ───────────────── 評価セット（いま採用している項目） ───────────────── */

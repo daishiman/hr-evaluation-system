@@ -39,8 +39,10 @@ describe("サイドバーのメニュー", () => {
     // 設定元から成果まで、依存する順番で迷わずたどれる
     const ordered = [
       "/admin/setup",
-      "/admin/masters/requirements",
       "/admin/masters",
+      "/admin/masters/requirements",
+      "/admin/masters/promotion",
+      "/admin/behavior",
       "/admin/scheme",
       "/admin/cycles",
       "/admin/forms",
@@ -50,7 +52,8 @@ describe("サイドバーのメニュー", () => {
 
     const labels = groups.flatMap((g) => g.items.map((i) => i.label));
     expect(labels).not.toContain("制度マスタ");
-    expect(labels).toContain("等級・昇格・行動指針");
+    expect(labels).toContain("等級の設定");
+    expect(labels).toContain("行動指針");
   });
 
   it("システム全体管理者にはシステム管理と会社ごとの運用の両方が出る", () => {
@@ -94,10 +97,10 @@ describe("現在地の判定", () => {
     expect(at("/admin/forms", "/admin")).toBe(false);
   });
 
-  it("等級要件にいるとき、制度マスタは現在地にしない（深い方だけを光らせる）", () => {
+  it("等級要件にいるとき、等級の設定は現在地にしない（深い方だけを光らせる）", () => {
     expect(at("/admin/masters/requirements", "/admin/masters/requirements")).toBe(true);
     expect(at("/admin/masters/requirements", "/admin/masters")).toBe(false);
-    // 制度マスタ自身にいるときは制度マスタが現在地
+    // 等級の設定自身にいるときは等級の設定が現在地
     expect(at("/admin/masters", "/admin/masters")).toBe(true);
   });
 

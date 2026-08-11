@@ -141,7 +141,14 @@ export default async function AdminMembers() {
         fields={[
           { name: "name", label: "氏名", type: "text", required: true },
           { name: "email", label: "メールアドレス（ログインID）", type: "email", required: true },
-          { name: "password", label: "最初のパスワード", type: "password", required: true, help: "8文字以上。あとから本人が変更できます。" },
+          {
+            name: "password",
+            label: "最初のパスワード",
+            type: "password",
+            required: true,
+            generate: true,
+            help: "この場で作った値を出しています。写して本人に渡してください。あとから本人が変更できます。",
+          },
           {
             name: "role",
             label: "役割",

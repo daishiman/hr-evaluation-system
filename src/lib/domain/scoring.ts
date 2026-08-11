@@ -124,6 +124,36 @@ function formatValue(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, "");
 }
 
+/**
+ * ランク基準の「画面に出す表記」を、下限・上限から作る。
+ *
+ * 表記を人が自由に書けるようにすると、「80%以上100%未満」と書いてあるのに
+ * 実際は別の範囲で判定される、という嘘の説明文が作れてしまう。
+ * 判定は matchesCriterion の数値だけで行うので、文言はそこから必ず導く。
+ * 境界の言い回し（以上／未満／以下／超）も matchesCriterion と同じ規則にする。
+ */
+export function rangeLabel(
+  c: { lowerBound: number | null; upperBound: number | null },
+  unit: string | null,
+  direction: Direction,
+): string {
+  const u = unit ?? "";
+  const lo = c.lowerBound === null ? null : `${formatValue(c.lowerBound)}${u}`;
+  const hi = c.upperBound === null ? null : `${formatValue(c.upperBound)}${u}`;
+
+  if (direction === "lower") {
+    // 低いほど良い項目は「上限以下・下限超」
+    if (lo !== null && hi !== null) return `${lo}超 ${hi}以下`;
+    if (hi !== null) return `${hi}以下`;
+    if (lo !== null) return `${lo}超`;
+    return "すべての実績値が該当";
+  }
+  if (lo !== null && hi !== null) return `${lo}以上 ${hi}未満`;
+  if (lo !== null) return `${lo}以上`;
+  if (hi !== null) return `${hi}未満`;
+  return "すべての実績値が該当";
+}
+
 /* ───────────────────────── 得点化 ───────────────────────── */
 
 export interface RankRatio {
