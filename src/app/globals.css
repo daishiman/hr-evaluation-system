@@ -128,6 +128,12 @@ body {
   .sidebar-open-pc,
   .sidebar-open-sp,
   .input,
+  .field input[type="text"],
+  .field input[type="email"],
+  .field input[type="password"],
+  .field input[type="date"],
+  .field select,
+  .field-toggle,
   .account-trigger {
     min-height: 44px;
   }
@@ -791,6 +797,8 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 }
 .field input[type="text"],
 .field input[type="email"],
+.field input[type="password"],
+.field input[type="date"],
 .field select,
 .field textarea {
   font: inherit;
@@ -806,6 +814,44 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .field .hint { font-size: 12px; color: var(--ink-muted); margin: 0; }
 .field .error-msg { font-size: 12px; color: var(--danger); margin: 0; }
 .field.has-error input { border-color: var(--danger); }
+
+/* パスワード欄の「表示する / 隠す」。
+   目のアイコンだけのボタンにはしない（何が起きるかを文字で言う）。 */
+.field-toggle {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-deep);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.field-toggle:hover { background: var(--subtle); text-decoration: underline; }
+
+/* 満たすべき条件の一覧。打ち込む前から見えていること（打ってから怒られない）。
+   満たしたかどうかは色だけでなく印と読み上げ用の文字でも伝える。 */
+.rule-list { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.rule-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-muted); }
+.rule-item[data-met="true"] { color: var(--ink); }
+.rule-mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-muted);
+}
+.rule-item[data-met="true"] .rule-mark {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+}
 
 /* ============================================================
    空状態 / 注意の面 (§5)

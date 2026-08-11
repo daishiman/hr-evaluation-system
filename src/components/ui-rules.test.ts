@@ -67,8 +67,9 @@ describe("画面の器の作法", () => {
     const owner = join(SRC, "components", "ui.tsx");
     // 素の <a>/<button>/<Link> に btn を貼ると、押せる大きさ（44px）・見た目の段階
     // （primary/secondary/tertiary）がその箇所だけ揃わなくなる。
-    const offenders = sourceFiles.filter((p) => p !== owner && readFileSync(p, "utf8").includes('className="btn'));
-    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+    // 文字列で書いても差し込みで書いても（className={`btn ...`}）同じく禁止する。
+    const offenders = sourceFiles.filter((p) => /className=(["{`])(?:\{?`)?btn[\s"`]/.test(readFileSync(p, "utf8")));
+    expect(offenders.filter((p) => p !== owner).map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
 
   it("節見出しは SectionHeading に集約する（見出しタグを直接書かない）", () => {
