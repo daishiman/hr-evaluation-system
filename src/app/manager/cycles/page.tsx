@@ -26,7 +26,7 @@ export default async function ManagerCycles({
   if (cycles.length === 0) {
     return (
       <>
-        <PageTitle title="評価サイクル" />
+        <PageTitle title="評価・結果を確認する" />
         <EmptyState
           title="評価期間がまだありません"
           body="会社の管理者が評価期間を作ると、ここに回答状況と評価の作成ボタンが並びます。"
@@ -51,7 +51,7 @@ export default async function ManagerCycles({
   return (
     <>
       <PageTitle
-        title="評価サイクル"
+        title="評価・結果を確認する"
         lede="半期ごとに、提出されたアンケートから評価を作り、内容を確認して確定します。"
       />
 
@@ -61,8 +61,8 @@ export default async function ManagerCycles({
           <Link
             key={c.id}
             href={`/manager/cycles?cycle=${c.id}`}
-            className={c.id === selected.id ? "chip" : "chip"}
-            aria-pressed={c.id === selected.id}
+            className="chip"
+            aria-current={c.id === selected.id ? "true" : undefined}
           >
             {c.name}
           </Link>

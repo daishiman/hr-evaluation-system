@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { canViewEmployee, requireViewer } from "@/lib/session";
 import { getResponseDetail } from "@/lib/response-access";
 import { ResponseSnapshot } from "@/components/ResponseSnapshot";
@@ -39,8 +38,22 @@ export default async function ResponsePage({ params }: { params: Promise<{ id: s
   return (
     <>
       <PageTitle
+        breadcrumb={isMine ? [{ label: "実績を報告する", href: "/me/forms" }] : undefined}
         title={detail.form.title}
         lede={`${detail.form.cycleName ?? ""} ／ ${detail.form.gradeName ?? ""}${isMine ? "" : ` ／ ${detail.response.employeeName ?? "（氏名なし）"}さんの回答`}`}
+        tags={
+          <>
+            {detail.form.cycleName && <span className="tag">{detail.form.cycleName}</span>}
+            {detail.form.gradeName && (
+              <span className="tag" data-tone="muted">
+                {detail.form.gradeName}
+              </span>
+            )}
+            <span className="tag" data-tone="muted">
+              {RESPONSE_STATUS_LABEL[detail.response.status] ?? detail.response.status}
+            </span>
+          </>
+        }
       />
 
       <div className="mb-4">
@@ -71,14 +84,6 @@ export default async function ResponsePage({ params }: { params: Promise<{ id: s
 
       <p className="footnote mt-3">
         この画面は回答したときの設問文・選択肢のまま表示しています。設問が作り直されても、当時の内容は変わりません。
-        {isMine && (
-          <>
-            {" "}
-            <Link href="/me/forms" className="text-[var(--brand-deep)]">
-              自分のアンケート一覧へ戻る
-            </Link>
-          </>
-        )}
       </p>
     </>
   );

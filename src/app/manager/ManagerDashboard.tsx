@@ -54,7 +54,7 @@ export function managerNextAction(input: {
   return {
     title: "いま急いで対応する作業はありません",
     body: "新しい提出や確認待ちの評価が入ると、ここに次の作業が表示されます。",
-    label: "評価サイクルを見る",
+    label: "評価・結果を確認する",
   };
 }
 
@@ -141,13 +141,13 @@ export function ManagerDashboard({
           ))}
           {draftEvaluations.length > 5 && (
             <div className="card-row">
-              <p className="footnote m-0">ほか {draftEvaluations.length - 5}件は評価サイクルで確認できます。</p>
+              <p className="footnote m-0">ほか {draftEvaluations.length - 5}件は「評価・結果を確認する」で確認できます。</p>
             </div>
           )}
         </Card>
       )}
 
-      <SectionHeading aside={<Link href="/manager/members" className="footnote">メンバーを見る</Link>}>
+      <SectionHeading aside={<Link href="/manager/members" className="footnote">メンバー</Link>}>
         チームの状況
       </SectionHeading>
       {team.length === 0 ? (

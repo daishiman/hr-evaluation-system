@@ -112,7 +112,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
       <SectionHeading>評価期間を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {cycles.map((c) => (
-          <Link key={c.id} href={`/admin/kgi?cycle=${c.id}`} className="chip" aria-pressed={c.id === cycle.id}>
+          <Link key={c.id} href={`/admin/kgi?cycle=${c.id}`} className="chip" aria-current={c.id === cycle.id ? "true" : undefined}>
             {c.name}
           </Link>
         ))}

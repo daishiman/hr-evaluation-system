@@ -51,7 +51,14 @@
 
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  /* 固定ヘッダー（56px）＋見出し帯（約48px）と固定操作バー（約72px）の下に
+     アンカー先や次のフォーカスが潜り込まないようにする。
+     この2値は --header-h と .action-bar の高さと必ず対で保つ。 */
+  scroll-padding-top: 112px;
+  scroll-padding-bottom: 96px;
+}
 
 body {
   margin: 0;
@@ -193,10 +200,18 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 .sidebar-head .app-name { flex: 1 1 auto; min-width: 0; }
 .sidebar-scope { padding: 0 4px; }
 
-.sidebar-nav { display: grid; gap: var(--space-block); }
+/* 分類の切れ目だけに罫線を引く。
+   意味のない横棒（見出しの下・項目の間）は引かない。
+   ホーム（見出しなしの先頭グループ）の下だけは、分類の外側にあることを
+   はっきりさせるため罫線を引く。 */
+.sidebar-nav { display: grid; gap: 14px; }
 .sidebar-group { display: grid; gap: 2px; }
+.sidebar-group + .sidebar-group {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
 .sidebar-group-title {
-  margin: 0 0 2px;
+  margin: 0 0 4px;
   padding: 0 10px;
   font-size: 11px;
   font-weight: 700;
@@ -212,6 +227,9 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
   min-height: 36px;
   line-height: 1.5;
 }
+/* 分類の中の項目であることが分かるよう、見出しがあるグループだけ字下げする */
+.sidebar-group-title + .sidebar-link,
+.sidebar-group-title ~ .sidebar-link { padding-left: 18px; }
 .sidebar-link:hover { background: var(--subtle); }
 .sidebar-link[aria-current="page"] {
   background: var(--brand-soft);
@@ -347,6 +365,85 @@ main {
 }
 .page-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; line-height: 1.5; }
 .page-lede { font-size: 13px; color: var(--ink-muted); margin: 0; line-height: 1.7; }
+
+/* ---- 見出しの上のパンくず（いまどこにいるか・どこへ戻れるか）----
+   画面の中に「一覧に戻る」ボタンを置く代わりに、全画面で同じ位置に出す。 */
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.breadcrumb li { display: inline-flex; align-items: center; gap: 4px; }
+.breadcrumb li + li::before { content: "›"; color: var(--line); }
+.breadcrumb a { color: var(--ink-muted); text-decoration: none; }
+.breadcrumb a:hover { color: var(--brand-deep); text-decoration: underline; }
+.breadcrumb [aria-current="page"] { color: var(--ink); }
+
+/* ---- 見出しの札（対象者・期間・状態）----
+   スクロールしても消えないよう、見出しの帯の中に置く。 */
+.page-head-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+
+/* ---- 見出しを固定する（長い画面だけ）----
+   固定ヘッダー（--header-h）の真下に貼り付き、対象者・期間・状態が
+   スクロールしても見えたままになる。適用範囲は docs/product/spec.md §6。 */
+.page-head[data-sticky="true"] {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 15;
+  align-items: center;
+  background: var(--brand-mist);
+  border-bottom: 1px solid var(--line);
+  margin: 0 calc(var(--pad-page-x) * -1) var(--space-block);
+  padding: 12px var(--pad-page-x);
+}
+/* 本文の先頭にあるときだけ、上の余白を食べて固定ヘッダーに接するようにする。
+   パスワード変更の呼びかけなどが上にある画面では、そのぶん下にずれる。 */
+.app-main > .page-head[data-sticky="true"]:first-child { margin-top: -24px; }
+.page-head[data-sticky="true"] .page-title { font-size: 16px; margin-bottom: 0; }
+.page-head[data-sticky="true"] .page-lede { display: none; }
+
+/* ---- 主要な操作を画面下に固定する帯 ----
+   実装は components/layout/StickyActionBar.tsx の1箇所だけ。
+   画面ごとに position: sticky を書き散らさない。 */
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 16;
+  margin: var(--space-section) calc(var(--pad-page-x) * -1) -64px;
+  padding: 10px var(--pad-page-x);
+  background: #fff;
+  border-top: 1px solid var(--line);
+}
+.action-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-tight) var(--space-block);
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+.action-bar-status { font-size: 12px; color: var(--ink-muted); min-width: 0; }
+.action-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-tight); }
+@media (max-width: 639px) {
+  /* 狭い画面では、押すものを1行いっぱいに広げて親指で押せるようにする */
+  .action-bar-inner { justify-content: stretch; }
+  .action-bar-actions { flex: 1 1 100%; }
+  .action-bar-actions .btn { flex: 1 1 auto; }
+}
 
 /* 見出しの前後の余白は、見出しを包むこの箱でだけ付ける（二重に空けない） */
 .section-head {
@@ -933,6 +1030,10 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   cursor: pointer;
   font-family: inherit;
 }
+/* 選択中の見た目。ボタンは aria-pressed、リンク（現在地を表す）は aria-current。
+   リンクに aria-pressed を付けない（読み上げが「ボタン」として扱えず意味が壊れる）。 */
+.chip[aria-current="true"],
+.chip[aria-current="page"],
 .chip[aria-pressed="true"] {
   border-color: var(--brand);
   background: var(--brand-soft);
@@ -1245,7 +1346,17 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   /* 押して初めて出る操作（アカウントメニュー・切り替え）は紙に出さない */
   .account-menu,
   .switch-2,
+  .action-bar,
+  .breadcrumb,
   .profile-row-action { display: none !important; }
+
+  /* 固定していた見出しは、紙では普通の見出しに戻す */
+  .page-head[data-sticky="true"] {
+    position: static;
+    margin: 0 0 var(--space-block);
+    padding: 0;
+    background: transparent;
+  }
 
   /* 色の付いた数字・バッジは、色が出ない環境でも読めるように濃さを上げる */
   .hero-number .num-display { color: var(--ink) !important; }

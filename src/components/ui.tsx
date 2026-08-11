@@ -84,15 +84,57 @@ export function Card({ className, children }: { className?: string; children: Re
 }
 
 /**
- * 画面の見出し。
+ * パンくずの1段。
+ * 決め事: **いまの画面は入れず、上位の画面だけを並べる**（見出しと同じ語を2回読ませない）。
+ * href を省いた段は、開けない中間分類として灰色のまま出す。
+ */
+export interface Crumb {
+  label: string;
+  href?: string;
+}
+
+/**
+ * 画面の見出し。全画面でこの1つだけを使う。
+ *
+ * - `breadcrumb`: いまどこにいて、どこへ戻れるか。画面の中に「一覧に戻る」ボタンを置かない。
+ * - `tags`: 対象者・期間・状態など、スクロール中も見えていてほしい札。
+ * - `sticky`: 縦に長い画面だけ true にして、見出しの帯を固定ヘッダーの下に貼り付ける
+ *   （適用範囲は docs/product/spec.md §6。画面ごとに position: sticky を書かない）。
+ *
  * 下の余白はこの箱だけで付ける（見出しと説明文の両方に margin を付けると二重に空く）。
  */
-export function PageTitle({ title, lede, actions }: { title: string; lede?: string; actions?: ReactNode }) {
+export function PageTitle({
+  title,
+  lede,
+  actions,
+  breadcrumb,
+  tags,
+  sticky,
+}: {
+  title: string;
+  lede?: string;
+  actions?: ReactNode;
+  breadcrumb?: Crumb[];
+  tags?: ReactNode;
+  sticky?: boolean;
+}) {
   return (
-    <div className="page-head">
+    <div className="page-head" data-sticky={sticky ? "true" : undefined}>
       <div className="min-w-0">
+        {breadcrumb && breadcrumb.length > 0 && (
+          <nav aria-label="現在の位置">
+            <ol className="breadcrumb">
+              {breadcrumb.map((c, i) => (
+                <li key={`${c.label}-${i}`}>
+                  {c.href ? <Link href={c.href}>{c.label}</Link> : <span aria-current="page">{c.label}</span>}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
         <h1 className="page-title">{title}</h1>
         {lede && <p className="page-lede">{lede}</p>}
+        {tags && <div className="page-head-tags">{tags}</div>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, ReasonNote } from "@/components/ui";
+import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 
 /**
@@ -319,12 +320,23 @@ export function FormBuilder({
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      {/* 設問が増えるほど縦に伸びる画面。設問数と保存ボタンは画面下に固定する */}
+      <StickyActionBar
+        status={
+          <>
+            <span className="text-[13px] text-[var(--ink)]">
+              設問 <span className="num font-bold">{rows.length}</span>
+              <span className="unit"> 問</span>
+            </span>
+            <span className="mx-2 text-[var(--line)]">|</span>
+            保存しても公開はされません。公開はアンケート一覧から行います。
+          </>
+        }
+      >
         <Button variant="primary" onClick={save} disabled={busy}>
-          {busy ? "保存しています…" : `設問を保存する（${rows.length}問）`}
+          {busy ? "保存しています…" : "設問を保存する"}
         </Button>
-        <span className="footnote">保存しても公開はされません。公開はアンケート一覧から行います。</span>
-      </div>
+      </StickyActionBar>
     </>
   );
 }

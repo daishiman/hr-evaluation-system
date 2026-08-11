@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         .where(and(eq(s.evaluationSchemes.companyId, companyId), eq(s.evaluationSchemes.status, "active")))
         .limit(1)
     )[0];
-    if (!scheme) throw new HttpError(400, "有効な評価セットがありません。先に8項目と配点を設定してください。");
+    if (!scheme) throw new HttpError(400, "有効な評価セットがありません。先に「KPI・評価セット」で項目と配点を設定してください。");
 
     const id = newId("cyc");
     await db.insert(s.evaluationCycles).values({
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       schemeId: scheme.id,
       status: "planning",
     });
-    return { id, message: "評価サイクルを作りました。次にアンケートを作ってください。" };
+    return { id, message: "評価期間を作りました。次にアンケートを作ってください。" };
   });
 }
 
@@ -69,7 +69,7 @@ export async function PATCH(req: Request) {
         .where(and(eq(s.evaluationCycles.id, body.cycleId), eq(s.evaluationCycles.companyId, companyId)))
         .limit(1)
     )[0];
-    if (!cycle) throw new HttpError(404, "評価サイクルが見つかりませんでした。");
+    if (!cycle) throw new HttpError(404, "評価期間が見つかりませんでした。");
 
     await db
       .update(s.evaluationCycles)

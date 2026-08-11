@@ -61,10 +61,24 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
     now: new Date(),
   });
 
+  /* 設問を上から順に埋めていく縦長の画面。
+     どの期の・どの等級のアンケートかを帯に固定して、スクロールしても見えるようにする。 */
   const header = (
     <PageTitle
+      sticky
+      breadcrumb={[{ label: "実績を報告する", href: "/me/forms" }]}
       title={form.title}
-      lede={`${form.cycleName ?? ""} ／ ${form.gradeName ?? ""} ／ 回答期間 ${formatPeriod(form.opensAt, form.closesAt)}`}
+      lede={`回答期間 ${formatPeriod(form.opensAt, form.closesAt)}`}
+      tags={
+        <>
+          {form.cycleName && <span className="tag">{form.cycleName}</span>}
+          {form.gradeName && (
+            <span className="tag" data-tone="muted">
+              {form.gradeName}
+            </span>
+          )}
+        </>
+      }
     />
   );
 

@@ -23,7 +23,7 @@ export default async function ManagerMembers() {
   return (
     <>
       <PageTitle
-        title="メンバーを見る"
+        title="メンバー"
         lede="等級・所属・直近の評価を確認できます。名前を選ぶと、その方の評価の履歴が見られます。"
       />
 

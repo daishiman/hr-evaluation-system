@@ -28,14 +28,14 @@ export default async function AdminCycles() {
   return (
     <>
       <PageTitle
-        title="評価サイクル"
+        title="評価期間"
         lede="半期ごとの評価期間を作ります。期間を作ってからアンケートを配り、期末に受付を締め切って評価を作ります。"
       />
 
       {!scheme && (
         <div className="mb-4">
           <ReasonNote action={<Link href="/admin/scheme" className="btn btn-secondary">評価セットを設定する</Link>}>
-            有効な評価セット（8項目と配点）がないため、評価期間を作れません。
+            有効な評価セット（KPIの項目と配点）がないため、評価期間を作れません。
           </ReasonNote>
         </div>
       )}
@@ -45,7 +45,7 @@ export default async function AdminCycles() {
         url="/api/cycles"
         method="POST"
         submitLabel="この期間を作る"
-        description="いま有効な評価セット（8項目と配点）がこの期間に紐づきます。あとで配点を変えても、この期間の判定条件は作成時のまま残ります。"
+        description="いま有効な評価セット（KPIの項目と配点）がこの期間に紐づきます。あとで配点を変えても、この期間の判定条件は作成時のまま残ります。"
         resetAfterSubmit
         fields={[
           { name: "name", label: "期間の名前", type: "text", required: true, placeholder: `${thisYear}年度 上期`, help: "例：2026年度 上期" },

@@ -70,7 +70,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
       <SectionHeading>評価期間を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {cycles.map((c) => (
-          <Link key={c.id} href={`/admin/forms?cycle=${c.id}`} className="chip" aria-pressed={c.id === selected.id}>
+          <Link key={c.id} href={`/admin/forms?cycle=${c.id}`} className="chip" aria-current={c.id === selected.id ? "true" : undefined}>
             {c.name}
           </Link>
         ))}

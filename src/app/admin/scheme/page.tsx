@@ -27,7 +27,7 @@ export default async function AdminSchemePage() {
   if (!scheme) {
     return (
       <>
-        <PageTitle title="評価セット（等級区分ごとの項目）" />
+        <PageTitle title="KPI・評価セット" />
         <ReasonNote>
           有効な評価セットが登録されていません。初期データの投入が済んでいるかご確認ください。
         </ReasonNote>
@@ -90,7 +90,8 @@ export default async function AdminSchemePage() {
   return (
     <>
       <PageTitle
-        title="評価セット（等級区分ごとの項目）"
+        sticky
+        title="KPI・評価セット"
         lede="等級区分ごとに、評価に使うKPIを選びます。選ぶ項目数と配点は等級区分ごとに決まっているため、この画面では変更できません。ここで決めた内容が、次に作るアンケートと集計に使われます。"
       />
       <SchemeEditor

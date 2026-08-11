@@ -119,15 +119,18 @@ export default async function CriteriaPage({
 
   return (
     <>
+      {/* 項目ごとの採点の流れまで並ぶ長い画面。どの等級を見ているかを帯に固定する */}
       <PageTitle
-        title="採点の基準を確認する"
+        sticky
+        title="評価の基準"
         lede="等級ごとの配点・選べる項目・ランクの決め方・昇格に必要な点数を確認できます。この画面は評価される方には表示されません。"
+        tags={grade ? <span className="tag">表示中の等級 {grade.name}</span> : undefined}
       />
 
       <SectionHeading>等級を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {grades.map((g) => (
-          <a key={g.id} href={`/criteria?grade=${g.id}`} className="chip" aria-pressed={g.id === grade?.id}>
+          <a key={g.id} href={`/criteria?grade=${g.id}`} className="chip" aria-current={g.id === grade?.id ? "true" : undefined}>
             {g.name}
           </a>
         ))}

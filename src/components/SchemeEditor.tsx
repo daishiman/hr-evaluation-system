@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Disclosure, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { validateScheme, type SchemeSelection } from "@/lib/domain/scheme";
 import { describeRule, expectedItemCount, pointsForSlot, type GradePointRule } from "@/lib/domain/grade-points";
 
@@ -514,18 +515,29 @@ export function SchemeEditor({
         </p>
       </Card>
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
-        <Button variant="primary" onClick={save} disabled={busy || !v.ok}>
-          {busy ? "保存しています…" : `${group.pointGroup} の内容を保存する`}
-        </Button>
-        <span className="footnote">
-          残り <Num value={rule.totalPoints - v.total} unit="点" />
-        </span>
-      </div>
-      <p className="footnote mt-2">
+      <p className="footnote mt-4">
         保存は表示している等級区分だけに反映されます。ほかの等級区分はタブを切り替えて保存してください。
         確定済みの評価は判定当時の配点のまま残るため、過去の結果は変わりません。
       </p>
+
+      {/* 候補が長く並ぶ画面なので、いまの合計点と保存ボタンを画面下に固定する。
+          押せない理由も同じ場所に出す（黙って押せないボタンを置かない）。 */}
+      <StickyActionBar
+        status={
+          <>
+            <span className="text-[13px] text-[var(--ink)]">
+              {group.pointGroup} 合計 <span className="num font-bold">{v.total}</span>
+              <span className="unit"> / {rule.totalPoints} 点</span>
+            </span>
+            <span className="mx-2 text-[var(--line)]">|</span>
+            {v.ok ? `残り ${rule.totalPoints - v.total} 点` : (v.errors[0] ?? "設定が未完了です")}
+          </>
+        }
+      >
+        <Button variant="primary" onClick={save} disabled={busy || !v.ok}>
+          {busy ? "保存しています…" : `${group.pointGroup} の内容を保存する`}
+        </Button>
+      </StickyActionBar>
     </>
   );
 }

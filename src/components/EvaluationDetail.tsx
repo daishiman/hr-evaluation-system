@@ -16,11 +16,14 @@ export async function EvaluationDetail({
   evaluationId,
   role,
   backHref,
+  backLabel,
 }: {
   companyId: string;
   evaluationId: string;
   role: Role;
+  /** 戻り先はパンくずの1段目として出す（画面の中に「一覧に戻る」ボタンを置かない） */
   backHref: string;
+  backLabel: string;
 }) {
   const detail = await getEvaluationDetail(companyId, evaluationId, role);
   if (!detail) {
@@ -65,9 +68,23 @@ export async function EvaluationDetail({
 
   return (
     <>
+      {/* 縦に長い画面。誰の・どの期の・確定済みかどうかを帯に固定して見えたままにする */}
       <PageTitle
+        sticky
+        breadcrumb={[{ label: backLabel, href: backHref }]}
         title={`${head.employeeName} さん ／ ${head.cycleName}`}
         lede={`${head.gradeName} ／ 対象期間 ${formatPeriod(head.periodStart, head.periodEnd)}`}
+        tags={
+          <>
+            <span className="tag">{head.gradeName}</span>
+            <span className="tag" data-tone="muted">
+              {formatPeriod(head.periodStart, head.periodEnd)}
+            </span>
+            <Badge tone={head.status === "finalized" ? "done" : "active"}>
+              {head.status === "finalized" ? "確定済み" : "確認中"}
+            </Badge>
+          </>
+        }
         actions={
           <>
             {/* 実績値の出どころ（このとき提出したアンケート）へ辿れるようにする。
@@ -78,9 +95,6 @@ export async function EvaluationDetail({
               </a>
             )}
             <PrintButton />
-            <a href={backHref} className="btn btn-tertiary no-print">
-              一覧に戻る
-            </a>
           </>
         }
       />

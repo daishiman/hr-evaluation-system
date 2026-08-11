@@ -62,17 +62,25 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
   return (
     <>
       <PageTitle
+        breadcrumb={[
+          { label: "アンケート", href: `/admin/forms?cycle=${form.cycleId}` },
+          { label: form.title, href: `/admin/forms/${form.id}` },
+        ]}
         title="回答一覧"
-        lede={`${form.title}（${form.cycleName ?? ""} ／ 対象：${form.gradeName ?? "—"} ／ ${FORM_STATUS_LABEL[form.status] ?? form.status}）`}
-        actions={
+        lede={`${form.cycleName ?? ""} ／ 対象：${form.gradeName ?? "—"}`}
+        tags={
           <>
-            <a href={`/api/export?type=responses&formId=${form.id}`} className="btn btn-secondary">
-              CSVに書き出す
-            </a>
-            <Link href={`/admin/forms/${form.id}`} className="btn btn-tertiary">
-              設問を見る
-            </Link>
+            {form.cycleName && <span className="tag">{form.cycleName}</span>}
+            <span className="tag">対象 {form.gradeName ?? "—"}</span>
+            <span className="tag" data-tone="muted">
+              {FORM_STATUS_LABEL[form.status] ?? form.status}
+            </span>
           </>
+        }
+        actions={
+          <a href={`/api/export?type=responses&formId=${form.id}`} className="btn btn-secondary">
+            CSVに書き出す
+          </a>
         }
       />
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, ReasonNote } from "@/components/ui";
+import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { normalizeNumeric } from "@/lib/ux-patterns";
 import { isAnswered, parseOptions, scaleSteps, type OptionLike } from "@/lib/domain/answer-snapshot";
@@ -171,24 +172,6 @@ export function FormAnswer({
 
   return (
     <>
-      <div className="sticky top-[56px] z-10 -mx-4 mb-4 border-b border-[var(--line)] bg-white/95 px-4 py-2 backdrop-blur md:-mx-6 md:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="m-0 text-[13px]">
-            入力できた項目 <span className="num font-bold">{answeredCount}</span>
-            <span className="unit"> / {questions.length}</span>
-          </p>
-          <p className="m-0 text-[12px] text-[var(--ink-muted)]">
-            {saving
-              ? "保存しています…"
-              : savedAt
-                ? `保存済み ${savedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`
-                : "入力すると自動で保存されます"}
-          </p>
-        </div>
-        {/* 期限は常に見えるところに置く（締切に気づかないまま入力し続けるのを防ぐ） */}
-        {deadlineNote && <p className="m-0 mt-1 text-[12px] text-[var(--ink-muted)]">{deadlineNote}</p>}
-      </div>
-
       {error && <ReasonNote>{error}</ReasonNote>}
 
       {ordered.map((g) => (
@@ -229,7 +212,7 @@ export function FormAnswer({
         </Card>
       </section>
 
-      {confirming ? (
+      {confirming && (
         <Card className="card-pad">
           <p className="todo-row-title m-0">この内容で提出します</p>
           <p className="todo-row-sub m-0 mt-1">
@@ -242,7 +225,32 @@ export function FormAnswer({
               </ReasonNote>
             </div>
           )}
-          <div className="mt-3 flex flex-wrap gap-2">
+        </Card>
+      )}
+
+      {/* 進み具合・保存状態・締切と、次に押すものを画面下に固定する。
+          同じボタンを本文と帯の両方には置かない（押す場所を1つにする）。 */}
+      <StickyActionBar
+        status={
+          <>
+            <span className="text-[13px] text-[var(--ink)]">
+              入力できた項目 <span className="num font-bold">{answeredCount}</span>
+              <span className="unit"> / {questions.length}</span>
+            </span>
+            <span className="mx-2 text-[var(--line)]">|</span>
+            {saving
+              ? "保存しています…"
+              : savedAt
+                ? `保存済み ${savedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`
+                : "入力すると自動で保存されます"}
+            {/* 締切は常に見えるところに置く（気づかないまま入力し続けるのを防ぐ） */}
+            {deadlineNote && <span className="ml-2">／ {deadlineNote}</span>}
+          </>
+        }
+      >
+        {confirming ? (
+          <>
+            <Button onClick={() => setConfirming(false)}>入力に戻る</Button>
             <Button
               variant="primary"
               disabled={saving}
@@ -253,19 +261,13 @@ export function FormAnswer({
             >
               提出する
             </Button>
-            <Button onClick={() => setConfirming(false)}>入力に戻る</Button>
-          </div>
-        </Card>
-      ) : (
-        <div className="flex flex-wrap items-center gap-3">
+          </>
+        ) : (
           <Button variant="primary" onClick={() => setConfirming(true)}>
             内容を確認して提出する
           </Button>
-          <span className="footnote">
-            途中でやめても入力内容は残ります。あとから続きを入力できます。
-          </span>
-        </div>
-      )}
+        )}
+      </StickyActionBar>
     </>
   );
 }

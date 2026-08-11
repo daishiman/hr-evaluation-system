@@ -38,13 +38,9 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
   return (
     <>
       <PageTitle
+        breadcrumb={[{ label: "メンバー", href: "/manager/members" }]}
         title={`${member.name} さん`}
         lede={`${member.gradeName ?? "等級未設定"} ／ ${member.department ?? "所属未設定"} ／ ${ROLE_LABEL[member.role as Role] ?? member.role}`}
-        actions={
-          <Link href="/manager/members" className="btn btn-tertiary">
-            一覧に戻る
-          </Link>
-        }
       />
 
       <SectionHeading>基本情報</SectionHeading>
@@ -83,7 +79,7 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
 
       <SectionHeading>これまでの評価</SectionHeading>
       {evals.length === 0 ? (
-        <EmptyState title="評価がまだありません" body="アンケートの提出後、「評価サイクル」から評価を作成できます。" />
+        <EmptyState title="評価がまだありません" body="アンケートの提出後、サイドバーの「評価・結果を確認する」から評価を作成できます。" />
       ) : (
         <Card>
           {evals.map((e) => (

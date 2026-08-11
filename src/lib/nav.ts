@@ -33,7 +33,7 @@ const COMPANY_GROUPS: NavGroup[] = [
   {
     title: "制度を順番に設定する",
     items: [
-      { href: "/admin/setup", label: "制度設定ガイド（1〜6）" },
+      { href: "/admin/setup", label: "制度設定ガイド" },
       { href: "/admin/masters/requirements", label: "等級要件（支援・運営）" },
       { href: "/admin/masters", label: "等級・昇格・行動指針" },
       { href: "/admin/scheme", label: "KPI・評価セット" },
@@ -92,7 +92,7 @@ export function navGroupsFor(role: Role): NavGroup[] {
         { title: null, items: [{ href: "/manager", label: "ホーム", exact: true }] },
         {
           title: "評価を進める",
-          items: [{ href: "/manager/cycles", label: "評価を確認・確定する" }],
+          items: [{ href: "/manager/cycles", label: "評価・結果を確認する" }],
         },
         {
           title: "人を見る",

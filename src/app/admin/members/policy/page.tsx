@@ -31,13 +31,9 @@ export default async function ProfilePolicyPage() {
   return (
     <>
       <PageTitle
+        breadcrumb={[{ label: "社員", href: "/admin/members" }]}
         title="本人が変更できる項目"
         lede="社員が自分の画面（自分の情報）で直せる項目を決めます。ここで「会社の管理者のみ」にした項目は、本人の画面では鍵付きで表示され、変更できません。"
-        actions={
-          <Link href="/admin/members" className="btn btn-tertiary">
-            社員一覧に戻る
-          </Link>
-        }
       />
 
       <SectionHeading>項目ごとに決める</SectionHeading>

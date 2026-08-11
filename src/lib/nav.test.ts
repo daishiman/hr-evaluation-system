@@ -105,3 +105,33 @@ describe("現在地の判定", () => {
     expect(hrefs.every((h) => !at("/admin/nowhere", h))).toBe(true);
   });
 });
+
+/**
+ * 用語の固定（docs/product/spec.md §5-4）。
+ *
+ * サイドバーの語が正本で、各画面の見出しはこれと同じ語を使う。
+ * ここで止めておかないと、画面を直すたびに少しずつ別の呼び名が増える。
+ */
+describe("メニューの用語", () => {
+  const allLabels = (["SUPER_ADMIN", "COMPANY_ADMIN", "MANAGER", "EMPLOYEE"] as const).flatMap((r) =>
+    navGroupsFor(r).flatMap((g) => [...(g.title ? [g.title] : []), ...g.items.map((i) => i.label)]),
+  );
+
+  it.each([
+    ["評価サイクル"],
+    ["採点の基準"],
+    ["マスタ"],
+    ["フォーム"],
+    ["（1〜6）"],
+  ])("使わないことにした語«%s»がメニューに出ていない", (word) => {
+    expect(allLabels.filter((l) => l.includes(word))).toEqual([]);
+  });
+
+  it("同じ画面（/manager/cycles）は、どのロールでも同じ語で呼ぶ", () => {
+    const labels = (["COMPANY_ADMIN", "MANAGER"] as const).map(
+      (r) => navGroupsFor(r).flatMap((g) => g.items).find((i) => i.href === "/manager/cycles")?.label,
+    );
+    expect(new Set(labels).size).toBe(1);
+    expect(labels[0]).toBe("評価・結果を確認する");
+  });
+});

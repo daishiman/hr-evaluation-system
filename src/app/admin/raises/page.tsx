@@ -98,7 +98,7 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
       ) : (
         <div className="mb-5 flex flex-wrap gap-2">
           {grades.map((g) => (
-            <Link key={g.id} href={`/admin/raises?grade=${g.id}`} className="chip" aria-pressed={g.id === grade?.id}>
+            <Link key={g.id} href={`/admin/raises?grade=${g.id}`} className="chip" aria-current={g.id === grade?.id ? "true" : undefined}>
               {g.name}
             </Link>
           ))}
@@ -232,7 +232,7 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
             <div className="table-scroll mt-3">
               <table>
                 <thead>
-                  <tr><th>8項目のランク</th><th>判定</th><th>扱い</th></tr>
+                  <tr><th>KPIのランク</th><th>判定</th><th>扱い</th></tr>
                 </thead>
                 <tbody>
                   {patterns.map((p) => (
