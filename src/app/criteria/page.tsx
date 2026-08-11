@@ -22,7 +22,7 @@ import {
 } from "./data";
 import { PointDesign, PointRuleComparison } from "./PointDesign";
 import { SelectableItems } from "./SelectableItems";
-import { ScoringFlow } from "./ScoringFlow";
+import { anchorIdOf, ScoringFlow } from "./ScoringFlow";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,11 @@ export const dynamic = "force-dynamic";
  * 画面の並びは「どの等級を見るか → 満点の内訳 → 選べる項目 → 1項目ずつの採点の流れ」。
  * 情報量が多いので、項目ごとの細かい話は既定で畳んでおき、見たいものだけ開く。
  */
-export default async function CriteriaPage({ searchParams }: { searchParams: Promise<{ grade?: string }> }) {
+export default async function CriteriaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ grade?: string; item?: string }>;
+}) {
   const viewer = await requireRole("MANAGER");
   // 配点・閾値・必要点数は評価される側に出さない（明示要件）。
   // requireRole と canSeeCriteria の二重で止めるのは、見せてよいロールの定義が
@@ -77,15 +81,10 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
     listRankCriteriaFor(companyId, itemIds),
   ]);
 
-  // 20点枠の候補（金銭に関わる項目）のうち、この等級区分では選べないもの。
-  // 「なぜ候補に出てこないのか」を黙って隠さないために、名前と理由を出す。
-  const allMonetary = new Map<string, SelectableItem>();
-  for (const list of selectableByGroup.values()) {
-    for (const i of list) if (i.isMonetary) allMonetary.set(i.kpiItemId, i);
-  }
-  const missingMonetary = [...allMonetary.values()]
-    .filter((i) => !selectable.some((x) => x.kpiItemId === i.kpiItemId))
-    .sort((a, b) => a.no - b.no);
+  /* この等級区分を対象として想定されていないランク基準しか無い項目。
+     採点自体は行われる（採点は target_grades を見ず、項目ごとの唯一の閾値を使う）。
+     つまり上位等級向けの閾値がそのまま当たるので、消さずに名前を出して注意を添える。 */
+  const withoutCriteria = selectable.filter((i) => !i.hasCriteria).sort((a, b) => a.no - b.no);
 
   const th = grade ? (thresholds.find((t) => t.fromGradeId === grade.id) ?? null) : null;
   const raise = grade ? (raises.find((r) => r.gradeId === grade.id) ?? null) : null;
@@ -93,19 +92,30 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
   const myPromo = grade ? promoReqs.filter((r) => r.gradeId === grade.id) : [];
   const myBehaviors = grade?.behaviorBand ? behaviors.filter((b) => b.band === grade.behaviorBand) : [];
 
-  /** この項目がその等級区分で何点の枠に入るか。実際に選ばれていればその配点をそのまま使う。 */
+  /* この項目がその等級区分で何点になるか。
+     実際に選ばれていればその配点をそのまま使う。
+     選ばれていない項目は、どの枠に入れるかを会社が自由に決められるようになったため
+     点数を先読みできない。10点枠に入れた場合の点数を「めやす」として出す。 */
   const weightOf = (item: SelectableItem): number => {
     const hit = adopted.find((a) => a.kpiItemId === item.kpiItemId);
     if (hit) return hit.weight;
     if (item.isFixedSlot) return rule?.fixedSlotPoints ?? 0;
-    if (item.isMonetary && (rule?.majorSlotCount ?? 0) > 0) return rule?.majorSlotPoints ?? 0;
     return rule?.minorSlotPoints ?? 0;
   };
   const slotLabelOf = (item: SelectableItem): string => {
     if (item.isFixedSlot) return "固定枠";
-    if (item.isMonetary && (rule?.majorSlotCount ?? 0) > 0) return `${rule?.majorSlotPoints}点枠（金銭）`;
-    return `${rule?.minorSlotPoints}点枠`;
+    const hit = adopted.find((a) => a.kpiItemId === item.kpiItemId);
+    if (hit?.isMajorSlot) return `${rule?.majorSlotPoints}点枠`;
+    if (hit) return `${rule?.minorSlotPoints}点枠`;
+    return "未採用";
   };
+
+  /* 項目名から、その項目のランク基準（A〜E）へ飛ぶリンク。
+     ?item= を付けるのは、飛んだ先の <details> を開いた状態でサーバーが返すため。
+     この画面はサーバーコンポーネントなので、リンクだけでは開閉を切り替えられない。
+     「選んだ項目」と「その項目をどう評価するか」を必ず行き来できるようにしておく。 */
+  const criteriaHref = (kpiItemId: string): string =>
+    `/criteria?grade=${grade?.id ?? ""}&item=${kpiItemId}#${anchorIdOf(kpiItemId)}`;
 
   return (
     <>
@@ -132,7 +142,6 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
             rule={rule}
             gradeName={grade.name}
             selectableCount={selectable.length}
-            monetaryNames={selectable.filter((i) => i.isMonetary).map((i) => i.name)}
           />
 
           <details className="card card-pad mt-3">
@@ -193,7 +202,7 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
           ) : (
             <SelectableItems
               items={selectable}
-              missingMonetary={missingMonetary}
+              withoutCriteria={withoutCriteria}
               majorSlotPoints={rule.majorSlotPoints}
               majorSlotCount={rule.majorSlotCount}
               minorSlotPoints={rule.minorSlotPoints}
@@ -201,6 +210,7 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
               fixedSlotPoints={rule.fixedSlotPoints}
               adoptedIds={adoptedIds}
               gradeName={grade.name}
+              criteriaHref={criteriaHref}
             />
           )}
 
@@ -234,6 +244,13 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
                       <div className="shrink-0 text-right">
                         <Num value={a.weight} display />
                         <span className="unit">点</span>
+                        {item && (
+                          <p className="m-0 mt-1">
+                            <a href={criteriaHref(item.kpiItemId)} className="text-[12px] underline">
+                              評価の基準を見る
+                            </a>
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
@@ -270,6 +287,7 @@ export default async function CriteriaPage({ searchParams }: { searchParams: Pro
             questions={questions}
             criteria={criteria}
             ratios={ratios}
+            openItemId={sp.item ?? null}
           />
 
           <SectionHeading>等級要件（{grade.name}）</SectionHeading>

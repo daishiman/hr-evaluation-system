@@ -1,17 +1,32 @@
 /**
  * 評価セット（等級区分ごとの項目選択と配点）の組み立てルール。
  *
- * 制度上の決めごと（2026-08-11 確定）:
+ * 制度上の決めごと（2026-08-11 確定 / 2026-08-11 項目選択を自由化）:
  *  - 選ぶ項目数と配点は等級区分で変わる（grade_point_rules が正）。
  *  - 「等級要件達成率」は全等級で必須の固定枠。差し替えできない。
- *  - Chief 以上は金銭系を1つだけ 20点枠として選ぶ。残りは1項目10点。
- *  - どの項目をその等級区分で選べるかは kpi_reference_points に行があるかどうかが正。
+ *  - それ以外の枠には、**どの項目でも入れられる**。分類の重複も可。
  *  - 合計は満点（既定100点）ちょうど。
  *
- * 以前は「固定枠1 + 7カテゴリから1つずつ = 8件ちょうど」だったが、
- * Regular は固定枠のほかに2項目しか選べず、7カテゴリから1つずつは物理的に成り立たない。
- * カテゴリの網羅は制度の要件ではなかったため、この検証はやめている
- * （偏りは画面側で「カテゴリが偏っています」と助言する程度に留める）。
+ * 自由化でやめた検証（意図的に消している。戻すときは理由を書くこと）:
+ *
+ *  1. カテゴリ網羅（「7カテゴリから1つずつ」）
+ *     Regular は固定枠のほかに2項目しか選べず、物理的に成り立たなかった。
+ *
+ *  2. 等級区分ごとの選択候補の制限（kpi_reference_points に行がある項目だけ）
+ *     元スプレッドシートの配点表に行があるかどうかで候補を絞っていたため、
+ *     Regular では33項目中10項目しか選べなかった。
+ *     元表は「その会社が過去にそう運用していた」記録であって、制度上の禁止ではない。
+ *     会社ごとに評価軸を組み替えられることが要件なので、候補は絞らない。
+ *
+ *  3. 20点枠を金銭系（単価率・売上達成率・利益率）に限る制限
+ *     20点枠は「ほかより重く見る枠」であって「お金の枠」ではない。
+ *     何を重く見るかは会社が決めることなので、どの項目でも置けるようにした。
+ *
+ * ただし自由に選べることと、選んだ項目が適切な水準で評価されることは別問題。
+ * ランク基準（kpi_rank_criteria）は項目ごとに1組しかなく、採点は target_grades を見ない。
+ * つまりその等級区分を想定していない項目を選ぶと、上位等級向けの閾値がそのまま当たる。
+ * これを見えるようにするため warnings で返す（判定は validateScheme の呼び出し側ではなく
+ * この関数の中で行う。画面とAPIで判断が食い違わないようにするため）。
  *
  * どれもDBの値を使って判定する。ここには点数を書かない。
  */
@@ -30,20 +45,24 @@ export interface SchemeSelection {
 
 export interface SchemeValidation {
   ok: boolean;
-  /** 画面にそのまま出せる日本語の指摘。空なら問題なし。 */
+  /** 画面にそのまま出せる日本語の指摘。空なら問題なし。これがあると保存できない。 */
   errors: string[];
+  /** 保存はできるが知らせておくべきこと。空なら問題なし。 */
+  warnings: string[];
   total: number;
 }
 
 export interface ValidateSchemeOptions {
   /** この等級区分の持ち点の型 */
   rule: GradePointRule;
-  /** この等級区分で選べる項目のID（kpi_reference_points に行がある項目） */
-  selectableItemIds: Iterable<string>;
   /** 固定枠になれる項目のID（kpi_items.is_fixed_slot = true。実データでは No.1 の1件） */
   fixedSlotItemIds: Iterable<string>;
-  /** 20点枠になれる項目のID（kpi_items.is_monetary = true。No.6/9/24） */
-  monetaryItemIds: Iterable<string>;
+  /**
+   * この等級区分を対象としてランク基準（A〜E）が作られている項目のID。
+   * ここに無い項目を選んでも採点はされるが、上位等級向けの閾値が当たる。
+   * 渡さなかった場合は判定しない（呼び出し側がまだ対応していない箇所での誤警告を避ける）。
+   */
+  ratedItemIds?: Iterable<string>;
   /** 指摘に業務の言葉（項目名）を出すための引き当て */
   itemNameOf?: (id: string) => string;
 }
@@ -51,11 +70,10 @@ export interface ValidateSchemeOptions {
 export function validateScheme(selections: SchemeSelection[], opts: ValidateSchemeOptions): SchemeValidation {
   const { rule } = opts;
   const errors: string[] = [];
+  const warnings: string[] = [];
   const total = selections.reduce((sum, x) => sum + x.weight, 0);
   const nameOf = opts.itemNameOf ?? ((id: string) => id);
-  const selectable = new Set(opts.selectableItemIds);
   const fixedCandidates = new Set(opts.fixedSlotItemIds);
-  const monetary = new Set(opts.monetaryItemIds);
 
   const expected = expectedItemCount(rule);
   if (selections.length !== expected) {
@@ -78,29 +96,37 @@ export function validateScheme(selections: SchemeSelection[], opts: ValidateSche
     }
   }
 
-  /* 20点枠は金銭系（単価率・売上達成率・利益率）だけ。
+  /* 20点枠に置ける項目の種類は問わない（どの項目でも重く見てよい）。
+     見るのは「枠の数がその等級区分の型と合っているか」だけ。
      Beginner / Regular は majorSlotCount が0なので「0件であること」も同じ式で見る。 */
   const major = selections.filter((x) => !x.isFixedSlot && x.isMajorSlot);
   if (major.length !== rule.majorSlotCount) {
     errors.push(
       rule.majorSlotCount === 0
         ? `${rule.pointGroup} に${rule.majorSlotPoints || 20}点枠はありません（いまは${major.length}件選ばれています）。`
-        : `${rule.majorSlotPoints}点枠（金銭系）はちょうど${rule.majorSlotCount}件にしてください（いまは${major.length}件）。`,
+        : `${rule.majorSlotPoints}点枠はちょうど${rule.majorSlotCount}件にしてください（いまは${major.length}件）。`,
     );
   }
-  for (const m of major) {
-    if (!monetary.has(m.kpiItemId)) {
-      errors.push(
-        `「${nameOf(m.kpiItemId)}」は${rule.majorSlotPoints}点枠にできません。${rule.majorSlotPoints}点枠に置けるのは金銭系の項目だけです。`,
-      );
-    }
-  }
 
-  /* その等級区分で評価対象になっていない項目は選べない。
-     元の配点表（kpi_reference_points）にその等級区分の行があるかどうかが正。 */
-  for (const sel of selections) {
-    if (!selectable.has(sel.kpiItemId)) {
-      errors.push(`「${nameOf(sel.kpiItemId)}」は ${rule.pointGroup} の評価対象ではないため選べません。`);
+  /* その等級区分を想定していないランク基準しか無い項目は、採点自体は行われる。
+     ただし当たる閾値は上位等級向けのものなので、意図せず厳しくなる。
+     このズレは画面上どこにも出ないため、ここで必ず気づけるようにする。 */
+  if (opts.ratedItemIds !== undefined) {
+    const rated = new Set(opts.ratedItemIds);
+    const unrated = selections.filter((x) => !rated.has(x.kpiItemId));
+    /* errors ではなく warnings にする。
+       errors にすると「基準を整えるまで項目を選べない」ことになり、
+       「まず評価軸を決めて、それから基準を詰める」という自然な作業順序を塞いでしまう。
+       今回の自由化そのものが「選び方を制度で縛らない」ためのものなので、
+       ここで新しい縛りを作ると自由化の意味が薄れる。
+       そのぶん文面では「上位等級向けの閾値が当たる」ところまで書き切り、読み飛ばしにくくする。 */
+    if (unrated.length > 0) {
+      warnings.push(
+        `${unrated.map((x) => `「${nameOf(x.kpiItemId)}」`).join("・")}のランク基準（A〜E）は、` +
+          `${rule.pointGroup} を対象として想定されていません。このまま保存でき、採点も行われますが、` +
+          `上位の等級を想定して作られた基準がそのまま使われるため、${rule.pointGroup} には厳しすぎる可能性があります。` +
+          `「評価基準」で閾値を確認してください。`,
+      );
     }
   }
 
@@ -129,5 +155,5 @@ export function validateScheme(selections: SchemeSelection[], opts: ValidateSche
     );
   }
 
-  return { ok: errors.length === 0, errors, total };
+  return { ok: errors.length === 0, errors, warnings, total };
 }

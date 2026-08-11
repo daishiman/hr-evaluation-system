@@ -5,7 +5,7 @@ import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
 import { validateScheme } from "@/lib/domain/scheme";
-import { pointsForSlot, slotKindOf, type GradePointRule } from "@/lib/domain/grade-points";
+import { pointsForSlot, slotKindOf, targetsPointGroup, type GradePointRule } from "@/lib/domain/grade-points";
 
 export const dynamic = "force-dynamic";
 
@@ -93,15 +93,16 @@ export async function PUT(req: Request) {
       throw new HttpError(400, "この会社に登録されていないKPI項目が含まれています。");
     }
 
-    /* その等級区分で選べる項目は「元の配点表にその等級区分の行があるか」が正。
-       固定枠になれるのは kpi_items.is_fixed_slot、20点枠に置けるのは is_monetary の項目だけ。 */
-    const refRows = await db
-      .select({ kpiItemId: s.kpiReferencePoints.kpiItemId })
-      .from(s.kpiReferencePoints)
-      .where(
-        and(eq(s.kpiReferencePoints.companyId, companyId), eq(s.kpiReferencePoints.pointGroup, body.pointGroup)),
-      );
-    const selectableItemIds = new Set(refRows.map((r) => r.kpiItemId));
+    /* 選べる項目は絞らない（どの項目でも、どの分類からでも選べる）。
+       ここで引くのは「その等級区分でランク基準が定義済みか」だけ。
+       未定義の項目も採点はされるが、上位等級向けの閾値が当たるため、検証側で知らせる。 */
+    const criteriaRows = await db
+      .select({ kpiItemId: s.kpiRankCriteria.kpiItemId, targetGrades: s.kpiRankCriteria.targetGrades })
+      .from(s.kpiRankCriteria)
+      .where(eq(s.kpiRankCriteria.companyId, companyId));
+    const ratedItemIds = new Set(
+      criteriaRows.filter((r) => targetsPointGroup(r.targetGrades, body.pointGroup)).map((r) => r.kpiItemId),
+    );
 
     const selections = body.items.map((i) => ({
       kpiItemId: i.kpiItemId,
@@ -114,9 +115,8 @@ export async function PUT(req: Request) {
 
     const v = validateScheme(selections, {
       rule,
-      selectableItemIds,
       fixedSlotItemIds: kpiItems.filter((k) => k.isFixedSlot).map((k) => k.id),
-      monetaryItemIds: kpiItems.filter((k) => k.isMonetary).map((k) => k.id),
+      ratedItemIds,
       itemNameOf: (id) => kpiItems.find((k) => k.id === id)?.name ?? id,
     });
     if (!v.ok) throw new HttpError(400, v.errors.join(" "));
@@ -169,6 +169,8 @@ export async function PUT(req: Request) {
       message:
         `${body.pointGroup} の評価セット（${selections.length}項目・${v.total}点）を保存しました。` +
         "確定済みの評価は判定当時の設定のまま残るため、過去の結果は変わりません。",
+      // 保存はできたが伝えるべきこと（ランク基準が未定義の項目など）。画面がそのまま出す。
+      warnings: v.warnings,
     };
   });
 }

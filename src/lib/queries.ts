@@ -368,6 +368,58 @@ export async function listForms(companyId: string, cycleId?: string) {
     .orderBy(desc(s.forms.cycleId), asc(s.grades.displayOrder));
 }
 
+/**
+ * アンケートごとに「そのアンケートが実績を聞いているKPI項目」と
+ * 「いまの評価セットがその等級区分で選んでいるKPI項目」を並べて返す。
+ *
+ * アンケートは作った時点の評価セットを焼き付けたもの（form-build.ts）なので、
+ * あとから項目を選び直すと静かにズレる。判定は src/lib/domain/form-sync.ts で行う。
+ *
+ * 有効な評価セットが無い会社では比較のしようがないため、scheme を null で返し、
+ * 呼び出し側は何も表示しない（無いことを「ズレ」と言わない）。
+ */
+export async function listFormKpiCoverage(companyId: string, cycleId: string) {
+  const db = await getDb();
+  const schemes = await db
+    .select({ id: s.evaluationSchemes.id })
+    .from(s.evaluationSchemes)
+    .where(and(eq(s.evaluationSchemes.companyId, companyId), eq(s.evaluationSchemes.status, "active")))
+    .limit(1);
+  const scheme = schemes[0] ?? null;
+  if (!scheme) return null;
+
+  const [schemeItems, asked, itemNames] = await Promise.all([
+    db
+      .select({ pointGroup: s.schemeItems.pointGroup, kpiItemId: s.schemeItems.kpiItemId })
+      .from(s.schemeItems)
+      .where(and(eq(s.schemeItems.companyId, companyId), eq(s.schemeItems.schemeId, scheme.id))),
+    db
+      .select({ formId: s.formQuestions.formId, kpiItemId: s.formQuestions.kpiItemId })
+      .from(s.formQuestions)
+      .innerJoin(s.forms, eq(s.forms.id, s.formQuestions.formId))
+      .where(and(eq(s.forms.companyId, companyId), eq(s.forms.cycleId, cycleId))),
+    db
+      .select({ id: s.kpiItems.id, name: s.kpiItems.name })
+      .from(s.kpiItems)
+      .where(eq(s.kpiItems.companyId, companyId)),
+  ]);
+
+  const selectedByGroup = new Map<string, string[]>();
+  for (const r of schemeItems) {
+    selectedByGroup.set(r.pointGroup, [...(selectedByGroup.get(r.pointGroup) ?? []), r.kpiItemId]);
+  }
+  const askedByForm = new Map<string, string[]>();
+  for (const r of asked) {
+    if (!r.kpiItemId) continue; // 等級要件・行動指針の設問はKPI項目に紐づかない
+    askedByForm.set(r.formId, [...(askedByForm.get(r.formId) ?? []), r.kpiItemId]);
+  }
+  return {
+    selectedByGroup,
+    askedByForm,
+    nameOf: (id: string) => itemNames.find((x) => x.id === id)?.name ?? id,
+  };
+}
+
 export async function getForm(companyId: string, formId: string) {
   const db = await getDb();
   const r = await db

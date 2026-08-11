@@ -5,9 +5,12 @@ import { pointsForSlot, type GradePointRule } from "./grade-points";
 /**
  * 等級区分ごとの評価セットの検証。
  *
- * 「その等級区分で選べる項目」は kpi_reference_points に行があるかどうかが正で、
- * 実測値は Beginner=1 / Regular=10 / Chief=26 / AM=32 / Manager=33 項目。
- * ここではその関係だけを再現した最小のダミーで固定する（項目Noは実データに合わせている）。
+ * 2026-08-11 に項目選択を自由化した。
+ * 「どの項目を選べるか」「どの分類から選ぶか」「どの項目を重い枠に置くか」は制限しない。
+ * 残っている制約は、枠の数・配点・固定枠・重複の4つだけ。
+ *
+ * このファイルは「外した制約が戻っていないこと」も含めて固定する。
+ * 制限を復活させたくなったときは、まずここのテストが赤くなる。
  */
 
 const RULES: Record<string, GradePointRule> = {
@@ -18,31 +21,19 @@ const RULES: Record<string, GradePointRule> = {
   Manager: { pointGroup: "Manager", totalPoints: 100, fixedSlotPoints: 20, majorSlotPoints: 20, majorSlotCount: 1, minorSlotPoints: 10, minorSlotCount: 6 },
 };
 
-/** 固定枠は No.1、金銭系は No.6 単価率 / No.9 売上達成率 / No.24 利益率 */
+/** 固定枠になれるのは No.1 等級要件達成率だけ。ここは自由化後も変わらない。 */
 const FIXED = ["k1"];
-const MONETARY = ["k6", "k9", "k24"];
-
-/** その等級区分で選べる項目（実データの件数に合わせた一覧。No.24 は Chief では対象外） */
-const SELECTABLE: Record<string, string[]> = {
-  Beginner: ["k1"],
-  Regular: ["k1", "k2", "k3", "k5", "k7", "k10", "k11", "k13", "k16", "k27"],
-  Chief: ["k1", "k2", "k3", "k5", "k6", "k7", "k9", "k10", "k11", "k13", "k16", "k27"],
-  AM: ["k1", "k2", "k3", "k5", "k6", "k7", "k9", "k10", "k11", "k13", "k16", "k24", "k27"],
-  Manager: ["k1", "k2", "k3", "k5", "k6", "k7", "k9", "k10", "k11", "k13", "k16", "k24", "k27"],
-};
 
 function opts(group: string, over?: Partial<ValidateSchemeOptions>): ValidateSchemeOptions {
   return {
     rule: RULES[group],
-    selectableItemIds: SELECTABLE[group],
     fixedSlotItemIds: FIXED,
-    monetaryItemIds: MONETARY,
     ...over,
   };
 }
 
 /** 正しい選び方を組み立てる。配点は等級区分の型から入れる（画面と同じ考え方）。 */
-function build(group: string, majorId: string | null, minorIds: string[]): SchemeSelection[] {
+function build(group: string, majorId: string | null, minorIds: string[], categoryId = "other"): SchemeSelection[] {
   const rule = RULES[group];
   const rows: SchemeSelection[] = [
     { kpiItemId: "k1", categoryId: null, weight: pointsForSlot(rule, "fixed"), isFixedSlot: true, isMajorSlot: false },
@@ -51,7 +42,7 @@ function build(group: string, majorId: string | null, minorIds: string[]): Schem
     rows.push({ kpiItemId: majorId, categoryId: "sales", weight: pointsForSlot(rule, "major"), isFixedSlot: false, isMajorSlot: true });
   }
   for (const id of minorIds) {
-    rows.push({ kpiItemId: id, categoryId: "other", weight: pointsForSlot(rule, "minor"), isFixedSlot: false, isMajorSlot: false });
+    rows.push({ kpiItemId: id, categoryId, weight: pointsForSlot(rule, "minor"), isFixedSlot: false, isMajorSlot: false });
   }
   return rows;
 }
@@ -82,6 +73,36 @@ describe("validateScheme — 等級区分ごとの正しい組み合わせ", () 
       ["AM", 7],
       ["Manager", 8],
     ]);
+  });
+});
+
+describe("validateScheme — 項目の選び方は自由", () => {
+  it("どの項目でも選べる（元の配点表にその等級区分の行が無かった項目も含む）", () => {
+    // k24 利益率は移行前の配点表では Chief 対象外だった。自由化後は選べる。
+    const r = validateScheme(build("Chief", "k24", ["k30", "k31", "k32", "k33"]), opts("Chief"));
+    expect(r.errors).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("金銭系でない項目も重い枠（20点枠）に置ける", () => {
+    const rows = VALID.Manager.map((x, i) => (i === 1 ? { ...x, kpiItemId: "k13", categoryId: "quality" } : x));
+    const r = validateScheme(rows, opts("Manager", { itemNameOf: () => "支援計画期限遵守率" }));
+    expect(r.errors).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("同じ分類から何項目でも選べる（分類の網羅は求めない）", () => {
+    const rows = build("Manager", "k6", ["k2", "k3", "k5", "k7", "k10", "k11"], "sales");
+    const r = validateScheme(rows, opts("Manager"));
+    expect(r.errors).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("分類が無い項目（categoryId が null）でも選べる", () => {
+    const rows = build("Regular", null, ["k2", "k3"]).map((x) => ({ ...x, categoryId: null }));
+    const r = validateScheme(rows, opts("Regular"));
+    expect(r.errors).toEqual([]);
+    expect(r.ok).toBe(true);
   });
 });
 
@@ -116,23 +137,16 @@ describe("validateScheme — 固定枠", () => {
   });
 });
 
-describe("validateScheme — 20点枠（金銭系）", () => {
-  it("Chief以上は金銭系をちょうど1件選ぶ", () => {
+describe("validateScheme — 重い枠（20点枠）の数", () => {
+  it("Chief以上はちょうど1件選ぶ", () => {
     const rows = VALID.Chief.map((x) => ({ ...x, isMajorSlot: false, weight: x.isFixedSlot ? x.weight : 10 }));
     const r = validateScheme(rows, opts("Chief"));
     expect(r.ok).toBe(false);
-    expect(r.errors.some((e) => e.includes("20点枠（金銭系）はちょうど1件"))).toBe(true);
-  });
-
-  it("金銭系でない項目を20点枠にできない", () => {
-    const rows = VALID.Manager.map((x, i) => (i === 1 ? { ...x, kpiItemId: "k13" } : x));
-    const r = validateScheme(rows, opts("Manager", { itemNameOf: () => "支援計画期限遵守率" }));
-    expect(r.errors.some((e) => e.includes("20点枠に置けるのは金銭系"))).toBe(true);
+    expect(r.errors.some((e) => e.includes("20点枠はちょうど1件"))).toBe(true);
   });
 
   it("Beginner・Regular に20点枠は無い", () => {
     for (const group of ["Beginner", "Regular"]) {
-      // 20点枠を1件ねじ込む（Beginner は固定枠しか無いので足す形になる）
       const rows = [
         ...VALID[group],
         { kpiItemId: "k9", categoryId: "sales", weight: 20, isFixedSlot: false, isMajorSlot: true },
@@ -142,23 +156,9 @@ describe("validateScheme — 20点枠（金銭系）", () => {
       expect(r.errors.some((e) => e.includes("点枠はありません")), group).toBe(true);
     }
   });
-
-  it("No.24 利益率は Chief では選べない（AM・Manager では選べる）", () => {
-    const chief = validateScheme(build("Chief", "k24", ["k2", "k3", "k5", "k7"]), opts("Chief", { itemNameOf: () => "利益率" }));
-    expect(chief.ok).toBe(false);
-    expect(chief.errors.some((e) => e.includes("利益率") && e.includes("Chief") && e.includes("評価対象ではない"))).toBe(true);
-    expect(validateScheme(VALID.AM, opts("AM")).ok).toBe(true);
-  });
 });
 
-describe("validateScheme — 選択可否と配点", () => {
-  it("その等級区分で評価対象でない項目は選べない", () => {
-    const rows = build("Regular", null, ["k2", "k9"]);
-    const r = validateScheme(rows, opts("Regular", { itemNameOf: () => "売上達成率" }));
-    expect(r.ok).toBe(false);
-    expect(r.errors.some((e) => e.includes("Regular の評価対象ではない"))).toBe(true);
-  });
-
+describe("validateScheme — 配点と重複", () => {
   it("配点が等級区分の型と違えば弾く（ユーザー入力は信用しない）", () => {
     const rows = VALID.Manager.map((x, i) => (i === 0 ? { ...x, weight: 40 } : x));
     const r = validateScheme(rows, opts("Manager", { itemNameOf: () => "等級要件達成率" }));
@@ -176,5 +176,48 @@ describe("validateScheme — 選択可否と配点", () => {
     const rows = build("Regular", null, ["k2", "k2"]);
     const r = validateScheme(rows, opts("Regular"));
     expect(r.errors.some((e) => e.includes("重複"))).toBe(true);
+  });
+});
+
+describe("validateScheme — ランク基準が未設定の項目", () => {
+  it("ratedItemIds を渡さなければ判定しない（未対応の呼び出し元で誤警告を出さない）", () => {
+    const r = validateScheme(VALID.Manager, opts("Manager"));
+    expect(r.warnings).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("すべての項目に基準があれば何も言わない", () => {
+    const ids = VALID.Manager.map((x) => x.kpiItemId);
+    const r = validateScheme(VALID.Manager, opts("Manager", { ratedItemIds: ids }));
+    expect(r.warnings).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  /* 基準が無くても保存は通す（errors ではなく warnings）。
+     「まず選んでから基準を作る」順序を塞がないため。ここを errors に変えると赤くなる。 */
+  it("基準が未設定でも保存は通し、項目名・等級区分名・閾値が厳しすぎうることを警告で伝える", () => {
+    const ids = VALID.Manager.map((x) => x.kpiItemId).filter((id) => id !== "k11");
+    const r = validateScheme(
+      VALID.Manager,
+      opts("Manager", { ratedItemIds: ids, itemNameOf: (id) => (id === "k11" ? "利用率" : id) }),
+    );
+    expect(r.errors).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(r.warnings).toHaveLength(1);
+    expect(r.warnings[0]).toContain("利用率");
+    expect(r.warnings[0]).toContain("Manager");
+    /* 「点が付かない」ではない。採点は target_grades を見ないため点は付く。
+       付いたうえで上位等級向けの閾値が当たる、という事実のほうを伝える。 */
+    expect(r.warnings[0]).toContain("厳しすぎる可能性");
+  });
+
+  it("未設定が複数あれば1つの警告にまとめて全項目名を出す", () => {
+    const r = validateScheme(
+      VALID.Chief,
+      opts("Chief", { ratedItemIds: ["k1", "k9"], itemNameOf: (id) => `項目${id}` }),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.warnings).toHaveLength(1);
+    for (const id of ["k2", "k3", "k5", "k7"]) expect(r.warnings[0]).toContain(`項目${id}`);
   });
 });

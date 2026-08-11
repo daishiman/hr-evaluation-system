@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/session";
-import { listCycles, listForms, listGrades } from "@/lib/queries";
+import { listCycles, listFormKpiCoverage, listForms, listGrades } from "@/lib/queries";
+import { describeFormKpiDiff, diffFormKpiItems } from "@/lib/domain/form-sync";
 import { ActionButton } from "@/components/ActionButton";
 import { Badge, Card, EmptyState, LinkButton, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
@@ -32,7 +33,26 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
 
   const sp = await searchParams;
   const selected = cycles.find((c) => c.id === sp.cycle) ?? cycles.find((c) => c.status === "open") ?? cycles[0];
-  const [forms, grades] = await Promise.all([listForms(companyId, selected.id), listGrades(companyId)]);
+  const [forms, grades, coverage] = await Promise.all([
+    listForms(companyId, selected.id),
+    listGrades(companyId),
+    listFormKpiCoverage(companyId, selected.id),
+  ]);
+
+  /* このアンケートが聞いている項目と、いま選んでいる項目のズレ。
+     ズレていても自動では直さない（回答済みのアンケートを書き換えないため）。
+     直すかどうかは回答状況を見て人が決めることなので、事実だけを出す。 */
+  const mismatchOf = (formId: string, gradeId: string | null): string | null => {
+    if (!coverage) return null;
+    const pointGroup = grades.find((g) => g.id === gradeId)?.pointGroup;
+    if (!pointGroup) return null;
+    const selectedItems = coverage.selectedByGroup.get(pointGroup);
+    if (!selectedItems) return null; // この等級区分の項目がまだ選ばれていない
+    return describeFormKpiDiff(
+      diffFormKpiItems(selectedItems, coverage.askedByForm.get(formId) ?? []),
+      coverage.nameOf,
+    );
+  };
 
   return (
     <>
@@ -135,6 +155,14 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                 )}
               </div>
 
+              {mismatchOf(f.id, f.gradeId) && (
+                <div className="mt-3">
+                  <ReasonNote>
+                    いま選んでいる評価項目と、このアンケートが聞いている項目が食い違っています。{" "}
+                    {mismatchOf(f.id, f.gradeId)}
+                  </ReasonNote>
+                </div>
+              )}
               {Number(f.questionCount ?? 0) === 0 && (
                 <div className="mt-3">
                   <ReasonNote>設問が1問もないため公開できません。「設問を見る」から設問を追加してください。</ReasonNote>

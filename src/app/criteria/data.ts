@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
+import { targetsPointGroup } from "@/lib/domain/grade-points";
 
 /**
  * 「採点基準」画面だけが使う読み取り。
@@ -37,9 +38,11 @@ export function slotCountOf(rule: GradePointRule): number {
   return 1 + rule.majorSlotCount + rule.minorSlotCount;
 }
 
-/* ───────────────── その等級区分で選べる項目 ───────────────── */
+/* ───────────────── 等級区分ごとの項目一覧 ───────────────── */
 
 export interface SelectableItem {
+  /** その等級区分でランク基準（A〜E）が定義されているか。false でも選ぶことはできる。 */
+  hasCriteria: boolean;
   kpiItemId: string;
   no: number;
   name: string;
@@ -50,6 +53,14 @@ export interface SelectableItem {
   intent: string | null;
   aStandard: string | null;
   measureType: string;
+  /* 定義書（KPI基準定義_項目マスタ）の各列。画面に出さないと
+     「なぜこの水準がAなのか」を管理者が説明できない。 */
+  dataSource: string | null;
+  judgeTiming: string | null;
+  aType: string | null;
+  controllability: string | null;
+  aRationale: string | null;
+  remarks: string | null;
   categoryName: string | null;
   isFixedSlot: boolean;
   isMonetary: boolean;
@@ -57,48 +68,65 @@ export interface SelectableItem {
 }
 
 /**
- * 等級区分ごとの「選べる項目」。
+ * 等級区分ごとの項目一覧。
  *
- * 何が選べるかは kpi_reference_points（元の配点表の写し）に行があるかどうかが正。
- * 元の表で「-」だった組み合わせは行を作っていないので、行の有無がそのまま
- * 「この等級区分ではこの項目を評価しない」を表す。
- * 参考配点の点数そのものは計算に使わないため、ここでは読まない（行の有無だけを見る）。
+ * 2026-08-11 の自由化まではここで候補を絞っていた（kpi_reference_points に行がある項目だけ）。
+ * いまはどの等級区分でも全項目を選べるため、一覧は全項目を返し、
+ * 「その等級区分でランク基準が定義済みか」を hasCriteria で添える。
+ *
+ * 絞らずに添えるだけにしたのは、基準が未設定の項目を一覧から消すと
+ * 「なぜ出てこないのか」が画面のどこにも書かれない状態になるため。
+ * 見えないものは直せない。
  */
 export async function listSelectableItemsByGroup(companyId: string): Promise<Map<string, SelectableItem[]>> {
   const db = await getDb();
-  const rows = await db
-    .select({
-      pointGroup: s.kpiReferencePoints.pointGroup,
-      kpiItemId: s.kpiItems.id,
-      no: s.kpiItems.no,
-      name: s.kpiItems.name,
-      unit: s.kpiItems.unit,
-      direction: s.kpiItems.direction,
-      formula: s.kpiItems.formula,
-      formulaNote: s.kpiItems.formulaNote,
-      intent: s.kpiItems.intent,
-      aStandard: s.kpiItems.aStandard,
-      measureType: s.kpiItems.measureType,
-      categoryName: s.kpiCategories.name,
-      isFixedSlot: s.kpiItems.isFixedSlot,
-      isMonetary: s.kpiItems.isMonetary,
-      isProvisional: s.kpiItems.isProvisional,
-    })
-    .from(s.kpiReferencePoints)
-    .innerJoin(s.kpiItems, eq(s.kpiItems.id, s.kpiReferencePoints.kpiItemId))
-    .leftJoin(s.kpiCategories, eq(s.kpiCategories.id, s.kpiItems.categoryId))
-    .where(eq(s.kpiReferencePoints.companyId, companyId))
-    .orderBy(asc(s.kpiItems.no));
+  const [items, criteria, rules] = await Promise.all([
+    db
+      .select({
+        kpiItemId: s.kpiItems.id,
+        no: s.kpiItems.no,
+        name: s.kpiItems.name,
+        unit: s.kpiItems.unit,
+        direction: s.kpiItems.direction,
+        formula: s.kpiItems.formula,
+        formulaNote: s.kpiItems.formulaNote,
+        intent: s.kpiItems.intent,
+        aStandard: s.kpiItems.aStandard,
+        measureType: s.kpiItems.measureType,
+        dataSource: s.kpiItems.dataSource,
+        judgeTiming: s.kpiItems.judgeTiming,
+        aType: s.kpiItems.aType,
+        controllability: s.kpiItems.controllability,
+        aRationale: s.kpiItems.aRationale,
+        remarks: s.kpiItems.remarks,
+        categoryName: s.kpiCategories.name,
+        isFixedSlot: s.kpiItems.isFixedSlot,
+        isMonetary: s.kpiItems.isMonetary,
+        isProvisional: s.kpiItems.isProvisional,
+      })
+      .from(s.kpiItems)
+      .leftJoin(s.kpiCategories, eq(s.kpiCategories.id, s.kpiItems.categoryId))
+      .where(and(eq(s.kpiItems.companyId, companyId), eq(s.kpiItems.isActive, true)))
+      .orderBy(asc(s.kpiItems.no)),
+    db
+      .select({ kpiItemId: s.kpiRankCriteria.kpiItemId, targetGrades: s.kpiRankCriteria.targetGrades })
+      .from(s.kpiRankCriteria)
+      .where(eq(s.kpiRankCriteria.companyId, companyId)),
+    db
+      .select({ pointGroup: s.gradePointRules.pointGroup })
+      .from(s.gradePointRules)
+      .where(eq(s.gradePointRules.companyId, companyId)),
+  ]);
 
-  // 1項目あたりA〜Eの5行が返るので、等級区分ごとに項目単位へまとめ直す
   const byGroup = new Map<string, SelectableItem[]>();
-  for (const r of rows) {
-    const list = byGroup.get(r.pointGroup) ?? [];
-    if (!list.some((x) => x.kpiItemId === r.kpiItemId)) {
-      const { pointGroup: _pointGroup, ...item } = r;
-      list.push(item);
-    }
-    byGroup.set(r.pointGroup, list);
+  for (const { pointGroup } of rules) {
+    const rated = new Set(
+      criteria.filter((c) => targetsPointGroup(c.targetGrades, pointGroup)).map((c) => c.kpiItemId),
+    );
+    byGroup.set(
+      pointGroup,
+      items.map((i) => ({ ...i, hasCriteria: rated.has(i.kpiItemId) })),
+    );
   }
   return byGroup;
 }
