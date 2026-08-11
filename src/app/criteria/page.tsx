@@ -31,7 +31,7 @@ export const dynamic = "force-dynamic";
  *
  * ここに出る数値（等級区分ごとの配点・ランク基準・昇格に必要な点数・昇給額）は
  * すべてDBのマスタから読んでいる。制度を変えるとこの画面の表示も変わる。
- * 評価される方には、この画面も、この画面が読む値も一切渡さない。
+ * 一般（EMPLOYEE）には、この画面も、この画面が読む値も一切渡さない。
  *
  * 画面の並びは「どの等級を見るか → 満点の内訳 → 選べる項目 → 1項目ずつの採点の流れ」。
  * 情報量が多いので、項目ごとの細かい話は既定で畳んでおき、見たいものだけ開く。
@@ -42,7 +42,7 @@ export default async function CriteriaPage({
   searchParams: Promise<{ grade?: string; item?: string }>;
 }) {
   const viewer = await requireRole("MANAGER");
-  // 配点・閾値・必要点数は評価される側に出さない（明示要件）。
+  // 配点・閾値・必要点数は一般の方に出さない（明示要件）。
   // requireRole と canSeeCriteria の二重で止めるのは、見せてよいロールの定義が
   // 変わったときにこの画面だけ取り残されないようにするため。
   if (!canSeeCriteria(viewer.role)) redirect(`${homePathFor(viewer.role)}?denied=1`);
@@ -123,7 +123,7 @@ export default async function CriteriaPage({
       <PageTitle
         sticky
         title="評価の基準"
-        lede="等級ごとの配点・選べる項目・ランクの決め方・昇格に必要な点数を確認できます。この画面は評価される方には表示されません。"
+        lede="等級ごとの配点・選べる項目・ランクの決め方・昇格に必要な点数を確認できます。この画面は一般の方には表示されません。"
         tags={grade ? <span className="tag">表示中の等級 {grade.name}</span> : undefined}
       />
 

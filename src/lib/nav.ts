@@ -70,8 +70,26 @@ const COMPANY_GROUPS: NavGroup[] = [
 ];
 
 /**
+ * 自分自身が評価を受ける立場としてのメニュー。
+ *
+ * マネージャーも会社の管理者も、自分の上長から評価を受ける（アンケートの配布は
+ * 役割ではなく等級で決まる: src/lib/form-build.ts）。評価する側のメニューしか
+ * 出していなかったため、権限の上では回答も結果の閲覧もできるのに、画面から
+ * たどり着けない状態だった。同じ2項目を一般の方と同じ言い方で出す。
+ *
+ * 会社に属さないシステム全体管理者には出さない（評価を受ける立場を持たない）。
+ */
+const MY_EVALUATION_GROUP: NavGroup = {
+  title: "自分の評価",
+  items: [
+    { href: "/me/forms", label: "実績を報告する" },
+    { href: "/me/results", label: "評価の結果を見る" },
+  ],
+};
+
+/**
  * ロールごとのメニュー。
- * 評価される方（EMPLOYEE）には、制度の設定と評価基準を一切出さない。
+ * 一般（EMPLOYEE）には、制度の設定と評価基準を一切出さない。
  */
 export function navGroupsFor(role: Role): NavGroup[] {
   switch (role) {
@@ -91,6 +109,7 @@ export function navGroupsFor(role: Role): NavGroup[] {
       return [
         { title: null, items: [{ href: "/admin", label: "ホーム", exact: true }] },
         ...COMPANY_GROUPS,
+        MY_EVALUATION_GROUP,
       ];
     case "MANAGER":
       return [
@@ -103,6 +122,7 @@ export function navGroupsFor(role: Role): NavGroup[] {
           title: "人を見る",
           items: [{ href: "/manager/members", label: "メンバー" }],
         },
+        MY_EVALUATION_GROUP,
         {
           title: "基準を確認する",
           items: [

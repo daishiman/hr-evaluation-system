@@ -487,7 +487,7 @@ export async function getForm(companyId: string, formId: string) {
 
 /**
  * アンケートの設問。
- * 評価される側に返すときは、配点・ランク基準につながる列を落とす
+ * 一般の方に返すときは、配点・ランク基準につながる列を落とす
  * （設問文と入力欄だけ返す）。
  */
 export async function listFormQuestions(companyId: string, formId: string, viewerRole: Viewer["role"]) {
@@ -656,7 +656,7 @@ export async function listEvaluations(
       requirementAchieved: s.evaluations.requirementAchieved,
       requirementTotal: s.evaluations.requirementTotal,
       behaviorTotal: s.evaluations.behaviorTotal,
-      /* 個人Pt・賞与額はここでは読まない。この一覧は評価される側の画面
+      /* 個人Pt・賞与額はここでは読まない。この一覧は一般の方の画面
          （/me・/me/results）でも使っており、個人Pt ÷ 達成係数 で、
          隠しているKPI評価点合計が逆算できてしまうため。
          賞与の欄が要るのは評価票1枚の詳細だけ（getEvaluationDetail）。 */
@@ -687,7 +687,7 @@ export type EvaluationRow = Awaited<ReturnType<typeof listEvaluations>>[number];
 
 /**
  * 評価の中身。
- * 評価される側には、昇格に必要な点数と各項目の閾値を返さない
+ * 一般の方には、昇格に必要な点数と各項目の閾値を返さない
  * （画面にもレスポンスにも出さない、という要件の実装箇所）。
  */
 export async function getEvaluationDetail(companyId: string, evaluationId: string, viewerRole: Viewer["role"]) {
@@ -696,7 +696,7 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
   if (!head) return null;
 
   /* 賞与と理由文は評価票1枚を開いたときだけ読む。
-     一覧（listEvaluations）は評価される側の画面でも使うため、そちらには載せない。 */
+     一覧（listEvaluations）は一般の方の画面でも使うため、そちらには載せない。 */
   const extra = (
     await db
       .select({
@@ -749,7 +749,7 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
 
   const full = canSeeCriteria(viewerRole);
 
-  /* 評価される側には、配点・閾値・昇格に必要な点数を「空」にして返す。
+  /* 一般の方には、配点・閾値・昇格に必要な点数を「空」にして返す。
      ランクと実績値と判定理由は本人にも見せる（なぜその評価かは説明できる必要がある）が、
      根拠文は本人向けの1本だけに差し替える（scopeEvaluationItem 参照）。 */
   const items = rawItems.map((i) => scopeEvaluationItem(i, full));
@@ -766,7 +766,7 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
   return {
     head: {
       ...head,
-      /* 個人Pt・賞与額も評価される側には返さない。
+      /* 個人Pt・賞与額も一般の方には返さない。
          個人Pt ＝ KPI評価点合計 × 達成係数 なので、係数（管理画面で誰でも見られる表）と
          突き合わせると、隠しているはずのKPI評価点合計が逆算できてしまうため。 */
       responseId: extra.responseId,
