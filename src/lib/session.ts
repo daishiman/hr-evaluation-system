@@ -168,6 +168,32 @@ export function canSeeCriteria(role: Role): boolean {
   return atLeast(role, "MANAGER");
 }
 
+/**
+ * アンケートの中身（設問文・補足・選択肢・答え方）を読んでよいか。
+ *
+ * すべてのロールに開く。「この聞き方で適切か」を配る前に確かめられる人が
+ * 作った本人だけだと、設問の誤りが配布後まで誰にも気づかれないため。
+ * 読めるのは自社のアンケートだけで、会社の絞り込みは呼び出し側の companyId が担う。
+ */
+export function canSeeFormContent(_role: Role): boolean {
+  return true;
+}
+
+/**
+ * 誰がどう答えたか（回答データ）を見てよいか。
+ *
+ * 中身の確認とは別物として扱う。設問は「これから配る文面」だが、
+ * 回答は個人の評価そのものなので、これまでどおり会社の管理者だけにする。
+ */
+export function canSeeFormResponses(role: Role): boolean {
+  return atLeast(role, "COMPANY_ADMIN");
+}
+
+/** アンケートを作る・設問を直す・公開する・締め切ってよいか。閲覧を開いても書き込みは広げない。 */
+export function canEditForm(role: Role): boolean {
+  return atLeast(role, "COMPANY_ADMIN");
+}
+
 /** 評価される側の情報（プロフィール・評価メモ）を変更してよいか。 */
 export function canEditEmployee(role: Role): boolean {
   return atLeast(role, "COMPANY_ADMIN");
