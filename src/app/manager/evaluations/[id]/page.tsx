@@ -6,6 +6,7 @@ import { ActionButton } from "@/components/ActionButton";
 import { EvaluationDetail } from "@/components/EvaluationDetail";
 import { EvaluatorPanel } from "@/components/EvaluatorPanel";
 import { Card, ReasonNote, SectionHeading } from "@/components/ui";
+import { isOwnEvaluation, SELF_EVALUATION_BLOCK_REASON } from "@/lib/domain/evaluation-authority";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ export default async function ManagerEvaluation({ params }: { params: Promise<{ 
   if (!detail) notFound();
   const stale = await isEvaluationStale(viewer.companyId, id);
   const finalized = detail.head.status === "finalized";
+  // 自分自身の評価は、見るのは自由だが手は入れられない（自己承認になるため）。
+  const own = isOwnEvaluation(viewer.id, detail.head.employeeId);
 
   return (
     <>
@@ -32,7 +35,9 @@ export default async function ManagerEvaluation({ params }: { params: Promise<{ 
 
       <SectionHeading>この人だけ集計し直す</SectionHeading>
       <Card className="card-pad">
-        {finalized ? (
+        {own ? (
+          <ReasonNote>{SELF_EVALUATION_BLOCK_REASON}</ReasonNote>
+        ) : finalized ? (
           <ReasonNote>
             確定済みのため、集計し直せません。確定した評価は、判定した当時の基準・配点のまま据え置きます。
             内容を変えるときは、いったん確認中に戻してください。
@@ -68,6 +73,7 @@ export default async function ManagerEvaluation({ params }: { params: Promise<{ 
         status={detail.head.status}
         comment={detail.head.evaluatorComment ?? ""}
         employeeName={detail.head.employeeName ?? ""}
+        blockedReason={own ? SELF_EVALUATION_BLOCK_REASON : null}
       />
     </>
   );

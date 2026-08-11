@@ -14,11 +14,14 @@ export function EvaluatorPanel({
   status,
   comment,
   employeeName,
+  blockedReason = null,
 }: {
   evaluationId: string;
   status: string;
   comment: string;
   employeeName: string;
+  /** 手を入れられない理由。渡されたら操作は出さず、理由だけを出す（自分自身の評価など）。 */
+  blockedReason?: string | null;
 }) {
   const router = useRouter();
   const [text, setText] = useState(comment);
@@ -49,6 +52,19 @@ export function EvaluatorPanel({
       setBusy(false);
     }
   };
+
+  if (blockedReason) {
+    return (
+      <Card className="card-pad">
+        <ReasonNote>{blockedReason}</ReasonNote>
+        <p className="footnote m-0 mt-2">
+          {status === "finalized"
+            ? "この評価は確定済みです。内容は上の欄でそのまま確認できます。"
+            : "この評価はまだ確認中です。確定されると、あなたの「自分の評価」の画面に結果が出ます。"}
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <Card className="card-pad">

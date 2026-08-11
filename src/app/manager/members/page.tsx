@@ -58,6 +58,7 @@ export default async function ManagerMembers() {
                   )
                 }
                 marks={!m.isActive ? <Badge tone="closed">利用停止</Badge> : undefined}
+                off={!m.isActive}
               />
             );
           })}

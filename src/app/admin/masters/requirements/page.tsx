@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import { listGradeRequirements, listGrades } from "@/lib/queries";
+import { getDb } from "@/lib/db";
+import { gradeRequirementUsage } from "@/lib/master-usage";
 import { EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 import { GradeRequirementEditor } from "@/components/GradeRequirementEditor";
 
@@ -22,6 +24,8 @@ export default async function AdminGradeRequirements({
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
   const [grades, reqs] = await Promise.all([listGrades(viewer.companyId), listGradeRequirements(viewer.companyId)]);
+  /* 「完全に消せるか」を画面で出し分けるための材料。判定そのものは API 側でも必ず行う。 */
+  const usage = await gradeRequirementUsage(await getDb(), viewer.companyId);
   const sp = await searchParams;
   const grade = grades.find((g) => g.id === sp.grade) ?? grades[0] ?? null;
 
@@ -71,6 +75,7 @@ export default async function AdminGradeRequirements({
         gradeId={grade.id}
         gradeName={grade.name}
         rows={reqs.filter((r) => r.gradeId === grade.id)}
+        usage={usage}
       />
 
       <p className="footnote mt-5">

@@ -67,7 +67,13 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
       ) : (
         <Card>
           {scoped.map((u) => (
-            <Link key={u.id} href={`/system/users/${u.id}`} className="user-row no-underline">
+            <Link
+              key={u.id}
+              href={`/system/users/${u.id}`}
+              className="user-row no-underline"
+              /* 利用停止の方は、札だけでなく行の面と枠でも分かるようにする（全画面共通の作法） */
+              data-off={u.isActive ? undefined : "true"}
+            >
               <Avatar name={u.name} seed={u.id} size={36} />
               <div className="min-w-0 flex-1">
                 <p className="m-0 truncate text-body font-semibold text-[var(--ink)]">

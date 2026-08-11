@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { canEditForm, canSeeCriteria, requireViewer } from "@/lib/session";
 import { getForm, listFormQuestions } from "@/lib/queries";
 import { toContentQuestions } from "@/lib/domain/form-visibility";
+import { canAnswerForm } from "@/lib/domain/form-entry";
 import { FormPreview } from "@/components/FormPreview";
 import { Badge, Card, LinkButton, PageTitle, ReasonNote } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
@@ -30,6 +31,11 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
   const questions = await listFormQuestions(viewer.companyId, form.id, viewer.role);
   const previewQuestions = toContentQuestions(questions, canSeeCriteria(viewer.role));
 
+  // 回答できる人には回答画面への入口を出す。できない人には、その理由をここで伝える
+  // （回答用のURLを踏んだ人もこの画面に着くため、行き止まりにしない）。
+  const canAnswer = canAnswerForm(viewer.gradeId, form.gradeId) && form.status === "published";
+  const otherGrade = viewer.gradeId !== null && !canAnswerForm(viewer.gradeId, form.gradeId);
+
   return (
     <>
       <PageTitle
@@ -49,11 +55,14 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
           </>
         }
         actions={
-          canEditForm(viewer.role) ? (
-            <LinkButton href={`/admin/forms/${form.id}`} variant="secondary">
-              このアンケートを設定する
-            </LinkButton>
-          ) : undefined
+          <>
+            {canAnswer && <LinkButton href={`/me/forms/${form.id}`}>このアンケートに回答する</LinkButton>}
+            {canEditForm(viewer.role) && (
+              <LinkButton href={`/admin/forms/${form.id}`} variant="secondary">
+                このアンケートを設定する
+              </LinkButton>
+            )}
+          </>
         }
       />
 
@@ -61,6 +70,15 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
         <div className="mb-4">
           <ReasonNote>
             まだ配っていない下書きです。公開までに設問が変わることがあります。この画面から回答することはできません。
+          </ReasonNote>
+        </div>
+      )}
+
+      {otherGrade && (
+        <div className="mb-4">
+          <ReasonNote action={<LinkButton href="/me/forms">自分のアンケートを見る</LinkButton>}>
+            このアンケートは別の等級（{form.gradeName ?? "—"}）の方向けです。中身は確認できますが、回答はできません。
+            ご自身の等級のアンケートは「実績を報告する」から開けます。
           </ReasonNote>
         </div>
       )}

@@ -5,6 +5,7 @@ import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
 import { judgeFormDeadline } from "@/lib/domain/form-deadline";
+import { canAnswerForm } from "@/lib/domain/form-entry";
 import { isAnswered, questionSnapshot } from "@/lib/domain/answer-snapshot";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +53,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
         .limit(1)
     )[0];
     if (!form) throw new HttpError(404, "アンケートが見つかりませんでした。");
-    if (form.gradeId !== viewer.gradeId) throw new HttpError(403, "この等級向けのアンケートではありません。");
+    // 中身は誰でも読めるが、書けるのは自分の等級のアンケートだけ。
+    // 画面で入力欄を出さないことは制御ではないので、ここで必ず弾く（下書きの自動保存も同じ扱い）。
+    if (!canAnswerForm(viewer.gradeId, form.gradeId)) {
+      throw new HttpError(403, "この等級向けのアンケートではないため、回答できません。内容の確認のみできます。");
+    }
 
     // この人にだけ与えられた期限の延長（取り消されていないもの）
     const extensions = await db

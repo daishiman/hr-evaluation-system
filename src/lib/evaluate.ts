@@ -17,6 +17,7 @@ import {
   type ScoringMode,
 } from "@/lib/domain/scoring";
 import { computeBonus, type KgiCoefficientRow } from "@/lib/domain/kgi";
+import { FINALIZED_SKIP_MESSAGE } from "@/lib/domain/build-summary";
 import { newId } from "@/lib/id";
 
 /**
@@ -149,7 +150,7 @@ export async function buildEvaluationsForCycle(
           employeeId: res.employeeId,
           employeeName: user.name,
           ok: false,
-          message: "確定済みのため作り直しませんでした。",
+          message: FINALIZED_SKIP_MESSAGE,
         });
         continue;
       }

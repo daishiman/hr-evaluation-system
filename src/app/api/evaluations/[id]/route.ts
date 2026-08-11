@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb, schema as s } from "@/lib/db";
 import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
+import { isOwnEvaluation, SELF_EVALUATION_BLOCK_REASON } from "@/lib/domain/evaluation-authority";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         .limit(1)
     )[0];
     if (!row) throw new HttpError(404, "評価が見つかりませんでした。");
+
+    // 自己承認を止める。画面でボタンを隠すだけだと、URLを直接叩けば通ってしまう。
+    // 役割では判定しない（会社の管理者も自分自身の評価は同じく触れない）。
+    if (isOwnEvaluation(viewer.id, row.employeeId)) throw new HttpError(403, SELF_EVALUATION_BLOCK_REASON);
 
     if (body.action === "comment") {
       await db.update(s.evaluations).set({ evaluatorComment: body.comment ?? null }).where(eq(s.evaluations.id, id));

@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { requestMasterDelete } from "@/components/master-delete-request";
+import { DELETE_LABEL, deleteBlockedReason, deleteConfirmText } from "@/lib/domain/master-delete";
+import type { UsageMap } from "@/lib/master-usage";
 
 /**
  * 昇格要件（受講して報告書を提出／独学してテストに合格）の編集。
@@ -33,10 +36,13 @@ export function PromotionRequirementEditor({
   gradeId,
   gradeName,
   rows,
+  usage,
 }: {
   gradeId: string;
   gradeName: string;
   rows: PromotionRow[];
+  /** 項目ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
+  usage: UsageMap;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -70,6 +76,24 @@ export function PromotionRequirementEditor({
       setBusy(false);
     }
   };
+
+  /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
+  const remove = async (id: string) => {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const result = await requestMasterDelete("promotionRequirement", id);
+    if (result.ok) {
+      setMessage(result.message);
+      router.refresh();
+    } else {
+      setError(result.message);
+    }
+    setBusy(false);
+  };
+
+  /** 使っている場所があるなら消させない。理由はその場で読めるようにする。 */
+  const blockedOf = (id: string) => deleteBlockedReason(usage[id] ?? []);
 
   const activeOf = (kind: PromoKind) => rows.filter((r) => r.kind === kind && r.isActive).sort((a, b) => a.seq - b.seq);
   const unused = rows.filter((r) => !r.isActive);
@@ -107,6 +131,7 @@ export function PromotionRequirementEditor({
                 <>
                   <p className="m-0 text-sub">{r.text}</p>
                   {r.transitionLabel && <p className="footnote m-0">{r.transitionLabel}</p>}
+                  {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
                 </>
               ) : (
                 <>
@@ -198,6 +223,15 @@ export function PromotionRequirementEditor({
                     })
                   }
                 />
+                {blockedOf(r.id) === null && (
+                  <ConfirmButton
+                    label={DELETE_LABEL}
+                    variant="danger-outline"
+                    busy={busy}
+                    confirm={deleteConfirmText(r.text)}
+                    onConfirm={() => void remove(r.id)}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -281,10 +315,11 @@ export function PromotionRequirementEditor({
           </summary>
           <Card className="mt-2">
             {unused.map((r) => (
-              <div key={r.id} className="card-row items-center">
+              <div key={r.id} className="card-row items-center" data-off="true">
                 <div className="row-main">
-                  <p className="m-0 text-sub text-[var(--ink-muted)]">{r.text}</p>
+                  <p className="m-0 text-sub">{r.text}</p>
                   <p className="footnote m-0">{KIND_LABEL[r.kind as PromoKind] ?? r.kind}</p>
+                  {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
                 </div>
                 <Badge tone="closed">使わない</Badge>
                 <Button
@@ -304,6 +339,15 @@ export function PromotionRequirementEditor({
                 >
                   戻す
                 </Button>
+                {blockedOf(r.id) === null && (
+                  <ConfirmButton
+                    label={DELETE_LABEL}
+                    variant="danger-outline"
+                    busy={busy}
+                    confirm={deleteConfirmText(r.text)}
+                    onConfirm={() => void remove(r.id)}
+                  />
+                )}
               </div>
             ))}
           </Card>

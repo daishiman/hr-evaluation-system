@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { requireViewer } from "@/lib/session";
 import { getForm, getResponse, listFormQuestions } from "@/lib/queries";
@@ -9,14 +9,16 @@ import { Card, DefList, PageTitle, ReasonNote } from "@/components/ui";
 import { formatDate, formatPeriod } from "@/lib/view";
 import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
 import { parseMulti, toAnswerRows } from "@/lib/domain/answer-snapshot";
+import { judgeFormEntry } from "@/lib/domain/form-entry";
 
 export const dynamic = "force-dynamic";
 
 /**
  * アンケートの回答画面。
  *
- * 開ける条件は「いまの等級のアンケート」または「自分が回答した実績があるアンケート」。
+ * 回答できるのは「いまの等級のアンケート」または「自分が回答した実績があるアンケート」。
  * 昇格して等級が変わっても、当時答えたアンケートは当時の版のまま開けるようにする。
+ * それ以外（別の等級向け）は中身の確認画面 /forms/[id] へ送る。読むことは妨げない。
  * 提出済みの回答は、回答時点の設問文で読む（form_answers に写した内容が正）。
  * 回答できる・できないはサーバー側の締切判定に合わせ、理由を日本語で書く。
  */
@@ -29,15 +31,10 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
   if (!form) notFound();
 
   const response = await getResponse(viewer.companyId, id, viewer.id);
-  if (form.gradeId !== viewer.gradeId && !response) {
-    return (
-      <>
-        <PageTitle title="このアンケートは開けません" />
-        <ReasonNote>
-          ご自身の等級に割り当てられたアンケートではなく、回答した記録もありません。「実績を報告する」から、ご自身のアンケートを開いてください。
-        </ReasonNote>
-      </>
-    );
+  // 対象等級が違う人は、閉ざさずに「中身だけの画面」へ送る。
+  // 読むだけの画面はここに二重に作らず、/forms/[id] の1本に集約する。
+  if (judgeFormEntry({ viewerGradeId: viewer.gradeId, formGradeId: form.gradeId, hasResponse: !!response }) === "content-only") {
+    redirect(`/forms/${form.id}`);
   }
   if (form.status === "draft") {
     return (
