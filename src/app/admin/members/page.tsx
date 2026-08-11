@@ -110,7 +110,7 @@ export default async function AdminMembers() {
               <Link key={m.id} href={`/admin/members/${m.id}`} className="user-row no-underline" data-muted="true">
                 <Avatar name={m.name} seed={m.id} size={36} />
                 <div className="min-w-0 flex-1">
-                  <p className="m-0 truncate text-[14px] font-semibold text-[var(--ink-muted)]">{m.name}</p>
+                  <p className="m-0 truncate text-[14px] font-semibold">{m.name}</p>
                   <p className="m-0 truncate text-[12px] text-[var(--ink-muted)]">
                     ログインできません。過去の評価は残っています。
                   </p>

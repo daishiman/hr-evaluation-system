@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { copiedBandSetName } from "@/lib/domain/behavior";
+import { DELETE_LABEL, bandSetBlockedReason, deleteConfirmText } from "@/lib/domain/master-delete";
+import { requestMasterDelete } from "@/components/master-delete-request";
 
 /**
  * 行動指針の「基準セット」を作る・呼び名を直す・使用を止める。
@@ -15,9 +17,12 @@ import { copiedBandSetName } from "@/lib/domain/behavior";
  * 作り方は「既存を複製する」を先に出す。ゼロから作ると観点5つ × 5段階の文章を
  * 全部書き起こすことになり、実際にはまず使われない。
  *
- * 消す操作は用意しない。物理削除にすると、すでに公開したアンケートや確定済みの
- * 評価がぶら下げている観点まで巻き込む。使わなくなったセットは「使用を止める」で
- * 選択肢から外し、あとから戻せるようにする（等級要件・昇格要件と同じ作法）。
+ * 止め方は2段階にしている（等級要件・昇格要件と同じ作法）。
+ *   - 「使わない」: 選択肢から外すだけ。中身は残り、あとからもう一度使える。
+ *   - 「完全に消す」: 一度もアンケートに出しておらず、評価の記録にも無いときだけ出す。
+ *     試しに作ったセットが一覧に残り続けないようにするための操作。
+ * 一度でも使ったセットに「完全に消す」は出さない。消すと、公開したアンケートと
+ * 確定済みの評価がぶら下げている観点まで巻き込むため。判定はサーバー側で行う。
  */
 
 export interface BehaviorBandSetRow {
@@ -29,6 +34,10 @@ export interface BehaviorBandSetRow {
   aspectCount: number;
   /** そのセットを出す設定になっている等級名 */
   usedByGradeNames: string[];
+  /** そのセットの観点を使っている場所（アンケート・評価）。空なら完全に消せる。 */
+  usedBy: string[];
+  /** 一緒に消えることになる観点の数（使わない設定のものも含む） */
+  totalAspectCount: number;
 }
 
 export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBandSetRow[]; currentBand: string | null }) {
@@ -64,6 +73,21 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
     } finally {
       setBusy(false);
     }
+  };
+
+  /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
+  const remove = async (id: string) => {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const result = await requestMasterDelete("behaviorBandSet", id);
+    if (result.ok) {
+      setMessage(result.message);
+      router.refresh();
+    } else {
+      setError(result.message);
+    }
+    setBusy(false);
   };
 
   const openDraft = () => {
@@ -156,8 +180,13 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
         {sets.map((set) => {
           const nameDraft = editingName[set.id];
           const inUse = set.usedByGradeNames.length > 0;
+          const blocked = bandSetBlockedReason(set.usedByGradeNames, set.usedBy);
           return (
-            <div key={set.id} className="card-row items-start rounded-lg border border-[var(--line)]">
+            <div
+              key={set.id}
+              className="card-row items-start rounded-lg border border-[var(--line)]"
+              data-off={set.isActive ? undefined : "true"}
+            >
               <div className="row-main">
                 {nameDraft === undefined ? (
                   <>
@@ -166,6 +195,8 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       観点{set.aspectCount}件・
                       {inUse ? `${set.usedByGradeNames.join("／")}に出します` : "どの等級にも出していません"}
                     </p>
+                    {/* 止められない・消せないときは、その理由と直す順番をここで読めるようにする */}
+                    {blocked !== null && <p className="footnote m-0 mt-1">{blocked}</p>}
                   </>
                 ) : (
                   <label className="block text-[12px] text-[var(--ink-muted)]">
@@ -210,13 +241,9 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     呼び名を直す
                   </Button>
                   {set.isActive ? (
-                    inUse ? (
-                      /* 使用中は押せる形にしない。押してから断るより、
-                         なぜ止められないかを先に読めるほうが早い。 */
-                      <span className="footnote">
-                        {set.usedByGradeNames.join("／")}に出しているため、使用を止められません
-                      </span>
-                    ) : (
+                    /* 使用中（どれかの等級に出している）ときは押せる形にしない。
+                       押してから断るより、なぜ止められないかを左で先に読めるほうが早い。 */
+                    inUse ? null : (
                       <ConfirmButton
                         label="使わない"
                         variant="danger-outline"
@@ -229,6 +256,18 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     <Button variant="secondary" disabled={busy} onClick={() => void send({ id: set.id, isActive: true })}>
                       もう一度使う
                     </Button>
+                  )}
+                  {blocked === null && (
+                    <ConfirmButton
+                      label={DELETE_LABEL}
+                      variant="danger-outline"
+                      busy={busy}
+                      confirm={deleteConfirmText(
+                        set.name,
+                        set.totalAspectCount > 0 ? `中に入っている観点${set.totalAspectCount}件も一緒に消えます。` : undefined,
+                      )}
+                      onConfirm={() => void remove(set.id)}
+                    />
                   )}
                 </div>
               )}

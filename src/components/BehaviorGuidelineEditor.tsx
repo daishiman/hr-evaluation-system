@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { requestMasterDelete } from "@/components/master-delete-request";
 import { behaviorBandLabel, type BehaviorBandSetRow } from "@/lib/domain/behavior";
+import { DELETE_LABEL, deleteBlockedReason, deleteConfirmText } from "@/lib/domain/master-delete";
+import type { UsageMap } from "@/lib/master-usage";
 
 /**
  * 行動指針（観点 × 5段階の文言）の編集。
@@ -41,10 +44,13 @@ export function BehaviorGuidelineEditor({
   band,
   bandSets,
   rows,
+  usage,
 }: {
   band: string;
   bandSets: readonly BehaviorBandSetRow[];
   rows: BehaviorGuidelineRow[];
+  /** 観点ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
+  usage: UsageMap;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -82,6 +88,21 @@ export function BehaviorGuidelineEditor({
     }
   };
 
+  /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
+  const remove = async (id: string) => {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const result = await requestMasterDelete("behaviorGuideline", id);
+    if (result.ok) {
+      setMessage(result.message);
+      router.refresh();
+    } else {
+      setError(result.message);
+    }
+    setBusy(false);
+  };
+
   const list = rows.filter((r) => r.band === band).sort((a, b) => a.seq - b.seq);
 
   return (
@@ -96,8 +117,10 @@ export function BehaviorGuidelineEditor({
         </ReasonNote>
       )}
 
-      {list.map((g) => (
-        <Card key={g.id} className="card-pad">
+      {list.map((g) => {
+        const blocked = deleteBlockedReason(usage[g.id] ?? []);
+        return (
+        <Card key={g.id} className="card-pad" off={!g.isActive}>
           <CardHead
             title={
               editingName[g.id] === undefined ? (
@@ -161,9 +184,21 @@ export function BehaviorGuidelineEditor({
                     </Button>
                   </>
                 )}
+                {editingName[g.id] === undefined && blocked === null && (
+                  <ConfirmButton
+                    label={DELETE_LABEL}
+                    variant="danger-outline"
+                    busy={busy}
+                    confirm={deleteConfirmText(g.aspectName, `5段階の文章${g.levels.length}件も一緒に消えます。`)}
+                    onConfirm={() => void remove(g.id)}
+                  />
+                )}
               </>
             }
           />
+
+          {/* 消せないときは、押せないボタンを置くより、なぜ消せないかを先に読めるようにする */}
+          {blocked !== null && <p className="footnote m-0 mt-2">{blocked}</p>}
 
           <div className="mt-3 grid gap-2">
             {[...g.levels]
@@ -244,7 +279,8 @@ export function BehaviorGuidelineEditor({
               })}
           </div>
         </Card>
-      ))}
+        );
+      })}
 
       <Card className="card-pad">
         {newAspectName === null ? (
