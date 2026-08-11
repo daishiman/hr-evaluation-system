@@ -10,7 +10,7 @@ import {
   listRaiseSettings,
 } from "@/lib/queries";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, Disclosure, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, Disclosure, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { formatDate } from "@/lib/view";
 
@@ -255,13 +255,12 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
           ) : (
             <Card className="mt-3">
               {exceptions.map((e) => (
-                <div key={e.id} className="card-row">
-                  <div className="row-main">
-                    <p className="todo-row-title m-0">{e.caseText}</p>
-                    <p className="todo-row-sub m-0">{e.handling}</p>
-                  </div>
-                  {e.excludesJudgement && <Badge tone="required">判定の対象外</Badge>}
-                </div>
+                <CardRow
+                  key={e.id}
+                  title={e.caseText}
+                  sub={e.handling}
+                  marks={e.excludesJudgement ? <Badge tone="required">判定の対象外</Badge> : undefined}
+                />
               ))}
             </Card>
           )}

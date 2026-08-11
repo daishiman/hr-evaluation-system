@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { canViewEmployee, requireRole, ROLE_LABEL, type Role } from "@/lib/session";
 import { getMember, listEvaluations, listNotes } from "@/lib/queries";
-import { Badge, Card, DefList, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, DefList, EmptyState, Num, PageTitle, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { TrendChart } from "@/components/LazyCharts";
 import { NoteForm } from "@/components/NoteForm";
 import { formatDate, formatPeriod } from "@/lib/view";
@@ -83,27 +83,30 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
       ) : (
         <Card>
           {evals.map((e) => (
-            <div key={e.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">
-                  <Link href={`/manager/evaluations/${e.id}`} className="text-[var(--brand-deep)]">
-                    {e.cycleName}
-                  </Link>
-                </p>
-                <p className="todo-row-sub m-0">
+            <CardRow
+              key={e.id}
+              title={
+                <Link href={`/manager/evaluations/${e.id}`} className="text-[var(--brand-deep)]">
+                  {e.cycleName}
+                </Link>
+              }
+              sub={
+                <>
                   {formatPeriod(e.periodStart, e.periodEnd)} ／ 等級要件の達成{" "}
                   <Num value={e.requirementAchieved} />/<Num value={e.requirementTotal} /> 項目
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <Num value={e.totalScore} display />
-                <span className="unit">点</span>
-                <p className="m-0 text-[11px] text-[var(--ink-muted)]">
-                  満点 <Num value={e.maxScore} unit="点" />
-                </p>
-              </div>
-              {e.status === "finalized" ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
-            </div>
+                </>
+              }
+              value={
+                <>
+                  <Num value={e.totalScore} display />
+                  <span className="unit">点</span>
+                  <p className="m-0 text-[11px] text-[var(--ink-muted)]">
+                    満点 <Num value={e.maxScore} unit="点" />
+                  </p>
+                </>
+              }
+              marks={e.status === "finalized" ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
+            />
           ))}
         </Card>
       )}
@@ -113,19 +116,17 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
       {notes.length === 0 ? (
         <p className="footnote mt-2">メモはまだありません。面談で気づいたことを残しておくと、次の評価のときに役立ちます。</p>
       ) : (
-        <Card className="mt-3">
-          {notes.map((n) => (
-            <div key={n.id} className="card-row items-start">
-              <div className="row-main">
-                <p className="m-0 text-[13px] leading-relaxed">{n.body}</p>
-                <p className="todo-row-sub m-0 mt-1">
-                  {n.authorName ?? "—"} ／ {formatDate(n.createdAt ? new Date(n.createdAt) : null)}
-                </p>
-              </div>
-              {n.visibility === "admin" && <Badge tone="closed">管理者のみ</Badge>}
-            </div>
-          ))}
-        </Card>
+        <div className="mt-3">
+          {/* メモは長い文章が主役なので、行（CardRow）ではなくカード（RecordList）で出す（§5-5）。 */}
+          <RecordList
+            items={notes.map((n) => ({
+              key: n.id,
+              title: `${n.authorName ?? "—"} ／ ${formatDate(n.createdAt ? new Date(n.createdAt) : null)}`,
+              marks: n.visibility === "admin" ? <Badge tone="closed">管理者のみ</Badge> : undefined,
+              note: n.body,
+            }))}
+          />
+        </div>
       )}
     </>
   );

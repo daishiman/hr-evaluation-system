@@ -1,4 +1,4 @@
-import { Badge, Card, Num } from "@/components/ui";
+import { Badge, Card, CardRow, Num } from "@/components/ui";
 import type { SelectableItem } from "./data";
 
 /**
@@ -22,25 +22,30 @@ function ItemRow({
   href: string;
 }) {
   return (
-    <div className="card-row items-start">
-      <div className="row-main">
-        <p className="todo-row-title m-0">
+    <CardRow
+      alignTop
+      title={
+        <>
           <a href={href} className="underline">
             No.{item.no} {item.name}
           </a>{" "}
           {adopted && <Badge tone="active">この等級で採用中</Badge>}
           {item.isProvisional && <Badge tone="dropped">仮置き</Badge>}
-        </p>
-        <p className="todo-row-sub m-0">
+        </>
+      }
+      sub={
+        <>
           {item.categoryName ?? "カテゴリ未設定"} ／ {item.measureType} ／ 単位 {item.unit} ／{" "}
           {item.direction === "lower" ? "低いほど良い（逆転指標）" : "高いほど良い"}
-        </p>
-      </div>
-      <div className="shrink-0 text-right">
-        <Num value={points} display />
-        <span className="unit">点</span>
-      </div>
-    </div>
+        </>
+      }
+      value={
+        <>
+          <Num value={points} display />
+          <span className="unit">点</span>
+        </>
+      }
+    />
   );
 }
 

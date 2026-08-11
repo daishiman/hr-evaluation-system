@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireViewer } from "@/lib/session";
 import { listMyForms, type MyFormRow } from "@/lib/response-access";
-import { Badge, Card, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { formatPeriod, RESPONSE_STATUS_LABEL } from "@/lib/view";
 import { daysUntilDeadline, formatJpDate } from "@/lib/domain/form-deadline";
 
@@ -75,48 +75,54 @@ export default async function MyForms() {
 function FormRow({ row }: { row: MyFormRow }) {
   const remain = daysUntilDeadline(row.deadline.effectiveUntil, new Date());
   return (
-    <div className="card-row">
-      <div className="row-main">
-        <p className="todo-row-title m-0">
-          <Link href={`/me/forms/${row.formId}`} className="text-[var(--brand-deep)]">
-            {row.title}
-          </Link>
-        </p>
-        <p className="todo-row-sub m-0">
+    <CardRow
+      title={
+        <Link href={`/me/forms/${row.formId}`} className="text-[var(--brand-deep)]">
+          {row.title}
+        </Link>
+      }
+      sub={
+        <>
           {row.cycleName ?? "—"} ／ 対象期間 {formatPeriod(row.periodStart, row.periodEnd)} ／ 全{row.questionCount}問
           {row.gradeName ? ` ／ ${row.gradeName}` : ""}
-        </p>
-        {row.submittedAt ? (
-          <p className="footnote m-0">提出日 {formatJpDate(jstDay(row.submittedAt))}</p>
-        ) : row.deadline.canAnswer && row.deadline.effectiveUntil ? (
-          <p className="footnote m-0">
-            {formatJpDate(row.deadline.effectiveUntil)}まで
-            {remain !== null && remain <= 7 ? `（あと${remain === 0 ? "今日" : `${remain}日`}）` : ""}
-            {row.deadline.extended ? "・期限を延ばしてもらっています" : ""}
-          </p>
+        </>
+      }
+      detail={
+        <>
+          {row.submittedAt ? (
+            <p className="footnote m-0">提出日 {formatJpDate(jstDay(row.submittedAt))}</p>
+          ) : row.deadline.canAnswer && row.deadline.effectiveUntil ? (
+            <p className="footnote m-0">
+              {formatJpDate(row.deadline.effectiveUntil)}まで
+              {remain !== null && remain <= 7 ? `（あと${remain === 0 ? "今日" : `${remain}日`}）` : ""}
+              {row.deadline.extended ? "・期限を延ばしてもらっています" : ""}
+            </p>
+          ) : (
+            <p className="footnote m-0">{row.deadline.message}</p>
+          )}
+          {row.supersededBy && (
+            <p className="footnote m-0">
+              このアンケートは新しい版に差し替わりました。入力途中の内容はこのまま残ります。回答は
+              <Link href={`/me/forms/${row.supersededBy.formId}`} className="text-[var(--brand-deep)]">
+                新しい版
+              </Link>
+              からお願いします。
+            </p>
+          )}
+        </>
+      }
+      marks={
+        row.responseStatus === "submitted" ? (
+          <Badge tone="done">{RESPONSE_STATUS_LABEL.submitted}</Badge>
+        ) : !row.deadline.canAnswer ? (
+          <Badge tone="closed">締め切り済み</Badge>
+        ) : row.responseStatus === "draft" ? (
+          <Badge tone="active">入力途中</Badge>
         ) : (
-          <p className="footnote m-0">{row.deadline.message}</p>
-        )}
-        {row.supersededBy && (
-          <p className="footnote m-0">
-            このアンケートは新しい版に差し替わりました。入力途中の内容はこのまま残ります。回答は
-            <Link href={`/me/forms/${row.supersededBy.formId}`} className="text-[var(--brand-deep)]">
-              新しい版
-            </Link>
-            からお願いします。
-          </p>
-        )}
-      </div>
-      {row.responseStatus === "submitted" ? (
-        <Badge tone="done">{RESPONSE_STATUS_LABEL.submitted}</Badge>
-      ) : !row.deadline.canAnswer ? (
-        <Badge tone="closed">締め切り済み</Badge>
-      ) : row.responseStatus === "draft" ? (
-        <Badge tone="active">入力途中</Badge>
-      ) : (
-        <Badge tone="required">未着手</Badge>
-      )}
-    </div>
+          <Badge tone="required">未着手</Badge>
+        )
+      }
+    />
   );
 }
 

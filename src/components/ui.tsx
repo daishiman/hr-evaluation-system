@@ -232,11 +232,12 @@ export function Bar({ value, max, label }: { value: number; max: number; label?:
  * 狭い画面で横スクロールを生むだけになる。判断基準は docs/product/spec.md §5-5。
  * 見た目（ラベル幅・区切り・狭い画面での縦積み）は .def-list に集約している。
  */
-export function DefList({ rows }: { rows: { label: string; value: ReactNode }[] }) {
+export function DefList({ rows }: { rows: { label: string; value: ReactNode; key?: string }[] }) {
   return (
     <dl className="def-list">
       {rows.map((r) => (
-        <div key={r.label}>
+        // ラベルが重なりうる用途（同じ設問文が2つある等）は key を明示して渡す
+        <div key={r.key ?? r.label}>
           <dt>{r.label}</dt>
           <dd>{r.value}</dd>
         </div>
@@ -298,6 +299,92 @@ export function RecordList({ items }: { items: RecordItem[] }) {
         </div>
       ))}
     </Card>
+  );
+}
+
+/**
+ * 一覧の1行（1件＝1行、読むだけの行）。
+ *
+ * RecordList との使い分け（docs/product/spec.md §5-5）:
+ * - 1件を「名前＋補足1行＋状態」で言い切れる → CardRow（ホーム・一覧の既定）
+ * - ラベル付きの値が複数ある／長い文章が入る／行ごとに操作が違う → RecordList
+ *
+ * 並びは上から（横並びのときは左から）**見出し → 補足 → 右の数値 → 状態の札** で固定する。
+ * 画面ごとに順番を入れ替えない。狭い画面では .card-row 側で自動的に折り返す。
+ */
+export function CardRow({
+  lead,
+  title,
+  sub,
+  detail,
+  value,
+  marks,
+  alignTop,
+  className,
+}: {
+  /** 行の先頭に置く小さな印（ランク・色見本）。文章は入れない。 */
+  lead?: ReactNode;
+  title: ReactNode;
+  sub?: ReactNode;
+  /** 締切・提出日など、補足のさらに下に添える短い注記（.footnote の段落を渡す）。 */
+  detail?: ReactNode;
+  value?: ReactNode;
+  marks?: ReactNode;
+  /** 補足が数行になる（本文・回答など）ときだけ true。既定は上下中央。 */
+  alignTop?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={clsx("card-row", alignTop && "items-start", className)}>
+      {lead}
+      <div className="row-main">
+        <p className="todo-row-title m-0">{title}</p>
+        {sub && <p className="todo-row-sub m-0">{sub}</p>}
+        {detail}
+      </div>
+      {value && <div className="shrink-0 text-right">{value}</div>}
+      {marks}
+    </div>
+  );
+}
+
+/**
+ * カード1枚の頭（名前＋状態の札／補足／そのカードから出ていく操作）。
+ *
+ * 1件＝カード1枚で、中に編集フォームや明細を抱える画面（評価期間・アンケート・
+ * 会社など）はこの頭を必ず使う。左に読むもの、右に押すものを固定し、
+ * 画面ごとに flex の並べ方を書き起こさない。
+ */
+export function CardHead({
+  lead,
+  title,
+  heading,
+  sub,
+  detail,
+  actions,
+}: {
+  /** 名前の左に置く小さな印（手順番号など）。文章は入れない。 */
+  lead?: ReactNode;
+  title: ReactNode;
+  /** そのカードが画面の節そのものであるときだけ true（見出しとして読み上げさせる）。 */
+  heading?: boolean;
+  sub?: ReactNode;
+  detail?: ReactNode;
+  actions?: ReactNode;
+}) {
+  const Title = heading ? "h2" : "p";
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-0 items-start gap-3">
+        {lead}
+        <div className="min-w-0">
+          <Title className="todo-row-title m-0">{title}</Title>
+          {sub && <p className="todo-row-sub m-0">{sub}</p>}
+          {detail}
+        </div>
+      </div>
+      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+    </div>
   );
 }
 

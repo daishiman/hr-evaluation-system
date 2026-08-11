@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/session";
 import { getActiveScheme, listCycles, listForms } from "@/lib/queries";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardHead, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -65,9 +65,9 @@ export default async function AdminCycles() {
             const responses = my.reduce((sum, f) => sum + Number(f.responseCount ?? 0), 0);
             return (
               <Card key={c.id} className="card-pad">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="todo-row-title m-0">
+                <CardHead
+                  title={
+                    <>
                       {c.name}{" "}
                       {c.status === "open" ? (
                         <Badge tone="active">回答受付中</Badge>
@@ -76,26 +76,26 @@ export default async function AdminCycles() {
                       ) : (
                         <Badge tone="done">準備中</Badge>
                       )}
-                    </p>
-                    <p className="todo-row-sub m-0">
-                      {formatPeriod(c.periodStart, c.periodEnd)} ／ アンケート{my.length}件（公開中 {published}件） ／ 回答{responses}件
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link href={`/admin/forms?cycle=${c.id}`} className="btn btn-tertiary">
-                      アンケートを見る
-                    </Link>
-                    <Link href={`/manager/cycles?cycle=${c.id}`} className="btn btn-tertiary">
-                      進行状況を見る
-                    </Link>
-                    <a href={`/api/export?type=results&cycleId=${c.id}`} className="btn btn-tertiary">
-                      評価結果をCSVに書き出す
-                    </a>
-                    <a href={`/api/export?type=kpi&cycleId=${c.id}`} className="btn btn-tertiary">
-                      KPI明細をCSVに書き出す
-                    </a>
-                  </div>
-                </div>
+                    </>
+                  }
+                  sub={`${formatPeriod(c.periodStart, c.periodEnd)} ／ アンケート${my.length}件（公開中 ${published}件） ／ 回答${responses}件`}
+                  actions={
+                    <>
+                      <Link href={`/admin/forms?cycle=${c.id}`} className="btn btn-tertiary">
+                        アンケートを見る
+                      </Link>
+                      <Link href={`/manager/cycles?cycle=${c.id}`} className="btn btn-tertiary">
+                        進行状況を見る
+                      </Link>
+                      <a href={`/api/export?type=results&cycleId=${c.id}`} className="btn btn-tertiary">
+                        評価結果をCSVに書き出す
+                      </a>
+                      <a href={`/api/export?type=kpi&cycleId=${c.id}`} className="btn btn-tertiary">
+                        KPI明細をCSVに書き出す
+                      </a>
+                    </>
+                  }
+                />
 
                 <div className="mt-3 flex flex-wrap gap-3">
                   {c.status !== "open" && c.status !== "closed" && (

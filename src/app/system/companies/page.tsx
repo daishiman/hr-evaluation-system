@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/session";
 import { getTemplateSummary, listCompanies } from "@/lib/queries";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, EmptyState, Num, PageTitle, SectionHeading, StatGrid } from "@/components/ui";
+import { Badge, Card, CardHead, EmptyState, Num, PageTitle, SectionHeading, StatGrid } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -69,19 +69,19 @@ export default async function SystemCompanies() {
         <div className="stack">
           {companies.map((c) => (
             <Card key={c.id} className="card-pad">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="todo-row-title m-0">
+              <CardHead
+                title={
+                  <>
                     {c.name} {c.isActive ? <Badge tone="active">利用中</Badge> : <Badge tone="closed">停止中</Badge>}
-                  </p>
-                  <p className="todo-row-sub m-0">
-                    会社ID：{c.slug} ／ {c.businessType}
-                  </p>
-                </div>
-                <Link href={`/system/users?company=${c.id}`} className="btn btn-tertiary">
-                  利用者を見る
-                </Link>
-              </div>
+                  </>
+                }
+                sub={`会社ID：${c.slug} ／ ${c.businessType}`}
+                actions={
+                  <Link href={`/system/users?company=${c.id}`} className="btn btn-tertiary">
+                    利用者を見る
+                  </Link>
+                }
+              />
 
               <div className="card-grid mt-3">
                 <RecordForm

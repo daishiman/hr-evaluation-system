@@ -4,7 +4,7 @@ import { listCycles, listEvaluations } from "@/lib/queries";
 import { listPendingRespondents } from "@/lib/evaluate";
 import { detectStaleCycles } from "@/lib/impact";
 import { ActionButton } from "@/components/ActionButton";
-import { Badge, Card, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -111,15 +111,12 @@ export default async function ManagerCycles({
       ) : (
         <Card>
           {notSubmitted.map((p) => (
-            <div key={p.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">{p.name}</p>
-                <p className="todo-row-sub m-0">
-                  {p.status === "draft" ? "入力途中です。提出まで進んでいません。" : "まだ入力を始めていません。"}
-                </p>
-              </div>
-              <Badge tone="required">未提出</Badge>
-            </div>
+            <CardRow
+              key={p.id}
+              title={p.name}
+              sub={p.status === "draft" ? "入力途中です。提出まで進んでいません。" : "まだ入力を始めていません。"}
+              marks={<Badge tone="required">未提出</Badge>}
+            />
           ))}
         </Card>
       )}
@@ -167,24 +164,27 @@ export default async function ManagerCycles({
       ) : (
         <Card>
           {evals.map((e) => (
-            <div key={e.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">
-                  <Link href={`/manager/evaluations/${e.id}`} className="text-[var(--brand-deep)]">
-                    {e.employeeName}
-                  </Link>
-                </p>
-                <p className="todo-row-sub m-0">
+            <CardRow
+              key={e.id}
+              title={
+                <Link href={`/manager/evaluations/${e.id}`} className="text-[var(--brand-deep)]">
+                  {e.employeeName}
+                </Link>
+              }
+              sub={
+                <>
                   {e.gradeName} ／ {e.raiseEligible ? "昇給の要件を満たしています" : "昇給は見送り"}
                   {e.promotionEligible ? " ／ 昇格の要件も満たしています" : ""}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <Num value={e.totalScore} display />
-                <span className="unit">点</span>
-              </div>
-              {e.status === "finalized" ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
-            </div>
+                </>
+              }
+              value={
+                <>
+                  <Num value={e.totalScore} display />
+                  <span className="unit">点</span>
+                </>
+              }
+              marks={e.status === "finalized" ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
+            />
           ))}
         </Card>
       )}

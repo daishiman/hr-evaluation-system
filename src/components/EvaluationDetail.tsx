@@ -1,5 +1,5 @@
 import { getEvaluationDetail, listEvaluations } from "@/lib/queries";
-import { Badge, Bar, Card, DefList, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardRow, DefList, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { EightAxisRadar } from "@/components/LazyCharts";
 import { PrintButton } from "@/components/PrintButton";
 import { formatPeriod } from "@/lib/view";
@@ -189,47 +189,57 @@ export async function EvaluationDetail({
       <SectionHeading>項目ごとの判定と理由</SectionHeading>
       <Card>
         {items.map((i) => (
-          <div key={i.id} className="card-row items-start">
-            <div className="pt-0.5">
-              <RankMark rank={i.rank} />
-            </div>
-            <div className="row-main">
-              <p className="todo-row-title m-0">
+          <CardRow
+            key={i.id}
+            alignTop
+            lead={
+              <div className="pt-0.5">
+                <RankMark rank={i.rank} />
+              </div>
+            }
+            title={
+              <>
                 {i.itemName}
                 {i.rank === null ? <> <Badge tone="alert">判定外</Badge></> : null}
                 {i.isProvisional ? <> <ProvisionalMark /></> : null}
-              </p>
-              <p className="todo-row-sub m-0">
+              </>
+            }
+            sub={
+              <>
                 {i.categoryName} ／ 実績値 <Num value={i.actualValue} unit={i.unit ?? undefined} />
-              </p>
-              <p className="m-0 mt-1 text-[12px] leading-relaxed text-[var(--ink-muted)]">{i.rationale}</p>
-              {showsCriteria && i.calcNote && (
-                <p className="m-0 mt-1 text-[11px] text-[var(--ink-muted)]">計算式：{i.calcNote}</p>
-              )}
-              {/* 得点バーと判定範囲は配点そのものなので評価者だけに出す */}
-              {showsCriteria && (
-                <ScoreBar points={i.points} maxPoints={i.maxPoints} />
-              )}
-              {showsCriteria && (
-                <ThresholdBand
-                  criteria={rankCriteria.filter((c) => c.kpiItemId === i.kpiItemId)}
-                  actualValue={i.actualValue}
-                  rank={i.rank}
-                  unit={i.unit}
-                  snapshotLabel={i.thresholdLabel}
-                />
-              )}
-            </div>
-            {showsCriteria && (
-              <div className="shrink-0 text-right">
-                <Num value={i.points} display />
-                <span className="unit">点</span>
-                <p className="m-0 text-[11px] text-[var(--ink-muted)]">
-                  配点 <Num value={i.maxPoints} unit="点" />
-                </p>
-              </div>
-            )}
-          </div>
+              </>
+            }
+            detail={
+              <>
+                <p className="m-0 mt-1 text-[12px] leading-relaxed text-[var(--ink-muted)]">{i.rationale}</p>
+                {showsCriteria && i.calcNote && (
+                  <p className="m-0 mt-1 text-[11px] text-[var(--ink-muted)]">計算式：{i.calcNote}</p>
+                )}
+                {/* 得点バーと判定範囲は配点そのものなので評価者だけに出す */}
+                {showsCriteria && <ScoreBar points={i.points} maxPoints={i.maxPoints} />}
+                {showsCriteria && (
+                  <ThresholdBand
+                    criteria={rankCriteria.filter((c) => c.kpiItemId === i.kpiItemId)}
+                    actualValue={i.actualValue}
+                    rank={i.rank}
+                    unit={i.unit}
+                    snapshotLabel={i.thresholdLabel}
+                  />
+                )}
+              </>
+            }
+            value={
+              showsCriteria ? (
+                <>
+                  <Num value={i.points} display />
+                  <span className="unit">点</span>
+                  <p className="m-0 text-[11px] text-[var(--ink-muted)]">
+                    配点 <Num value={i.maxPoints} unit="点" />
+                  </p>
+                </>
+              ) : undefined
+            }
+          />
         ))}
       </Card>
       {unrated.length > 0 && (
@@ -360,13 +370,12 @@ export async function EvaluationDetail({
       ) : (
         <Card>
           {gates.map((g) => (
-            <div key={g.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">{g.text}</p>
-                <p className="todo-row-sub m-0">{g.kind === "report" ? "受講して報告書を提出" : "独学してテストに合格"}</p>
-              </div>
-              {g.achieved ? <Badge tone="active">提出済み</Badge> : <Badge tone="alert">未提出</Badge>}
-            </div>
+            <CardRow
+              key={g.id}
+              title={g.text}
+              sub={g.kind === "report" ? "受講して報告書を提出" : "独学してテストに合格"}
+              marks={g.achieved ? <Badge tone="active">提出済み</Badge> : <Badge tone="alert">未提出</Badge>}
+            />
           ))}
         </Card>
       )}
@@ -398,17 +407,13 @@ export async function EvaluationDetail({
           </SectionHeading>
           <Card>
             {behaviors.map((b) => (
-              <div key={b.id} className="card-row items-start">
-                <div className="row-main">
-                  <p className="todo-row-title m-0">{b.aspectName}</p>
-                  <p className="m-0 text-[12px] text-[var(--ink-muted)]">{b.levelLabel}</p>
-                </div>
-                {showsCriteria && (
-                  <div className="shrink-0">
-                    <Num value={b.score} unit="点" />
-                  </div>
-                )}
-              </div>
+              <CardRow
+                key={b.id}
+                alignTop
+                title={b.aspectName}
+                sub={b.levelLabel}
+                value={showsCriteria ? <Num value={b.score} unit="点" /> : undefined}
+              />
             ))}
           </Card>
           {!showsCriteria && (

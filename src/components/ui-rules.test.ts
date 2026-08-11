@@ -37,6 +37,32 @@ describe("画面の器の作法", () => {
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
 
+  it("一覧の1行は CardRow に集約する（title と sub を画面で組み立て直さない）", () => {
+    const owner = join(SRC, "components", "ui.tsx");
+    // .row-main（見出し＋補足の入れ物）を自前で書いている画面を検出する。
+    // 入力欄が並ぶ編集画面は行の中身が画面ごとに違うため、下の許可リストで除く。
+    const editors = new Set(
+      ["FormAnswer.tsx", "GradeRequirementEditor.tsx", "PromotionRequirementEditor.tsx", "PointDesign.tsx"].map((n) => n),
+    );
+    const offenders = sourceFiles.filter(
+      (p) => p !== owner && !editors.has(p.split("/").pop() ?? "") && readFileSync(p, "utf8").includes('className="row-main"'),
+    );
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("カード1枚の頭は CardHead に集約する（左に読むもの・右に押すものの並べ方を書き起こさない）", () => {
+    const owner = join(SRC, "components", "ui.tsx");
+    // SchemeEditor だけは、カードの頭ではなく「カードの中の節見出し」に同じ並びを使っている
+    const allowed = new Set(["SchemeEditor.tsx"]);
+    const offenders = sourceFiles.filter(
+      (p) =>
+        p !== owner &&
+        !allowed.has(p.split("/").pop() ?? "") &&
+        readFileSync(p, "utf8").includes("flex flex-wrap items-start justify-between gap-3"),
+    );
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
   it("固定した列見出しの位置は、固定ヘッダーの高さと対で保つ", () => {
     const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
     // 列見出しを固定していること

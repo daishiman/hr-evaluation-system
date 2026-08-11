@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireRole, ROLE_LABEL, type Role } from "@/lib/session";
 import { listEvaluations, listMembers } from "@/lib/queries";
-import { Badge, Card, EmptyState, Num, PageTitle } from "@/components/ui";
+import { Badge, Card, CardRow, EmptyState, Num, PageTitle } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -34,32 +34,31 @@ export default async function ManagerMembers() {
           {members.map((m) => {
             const last = latestOf(m.id);
             return (
-              <div key={m.id} className="card-row">
-                <div className="row-main">
-                  <p className="todo-row-title m-0">
+              <CardRow
+                key={m.id}
+                title={
+                  <>
                     <Link href={`/manager/members/${m.id}`} className="text-[var(--brand-deep)]">
                       {m.name}
                     </Link>
                     {m.role !== "EMPLOYEE" && (
                       <span className="footnote"> （{ROLE_LABEL[m.role as Role] ?? m.role}）</span>
                     )}
-                  </p>
-                  <p className="todo-row-sub m-0">
-                    {m.gradeName ?? "等級未設定"} ／ {m.department ?? "所属未設定"} ／ 社員番号 {m.employeeCode ?? "—"}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  {last ? (
+                  </>
+                }
+                sub={`${m.gradeName ?? "等級未設定"} ／ ${m.department ?? "所属未設定"} ／ 社員番号 ${m.employeeCode ?? "—"}`}
+                value={
+                  last ? (
                     <>
                       <Num value={last.requirementRate} unit="%" />
                       <p className="m-0 text-[11px] text-[var(--ink-muted)]">{last.cycleName} の等級要件達成率</p>
                     </>
                   ) : (
                     <span className="footnote">確定した評価なし</span>
-                  )}
-                </div>
-                {!m.isActive && <Badge tone="closed">利用停止</Badge>}
-              </div>
+                  )
+                }
+                marks={!m.isActive ? <Badge tone="closed">利用停止</Badge> : undefined}
+              />
             );
           })}
         </Card>
