@@ -9,8 +9,17 @@ describe("サイドバーのメニュー", () => {
     expect(hrefs.some((h) => h.startsWith("/admin"))).toBe(false);
     expect(hrefs.some((h) => h.startsWith("/system"))).toBe(false);
     expect(hrefs).not.toContain("/criteria");
-    // 自分の実績報告と結果だけが見える
-    expect(hrefs).toEqual(["/me", "/me/forms", "/me/results"]);
+    // 自分の実績報告と結果、それにアンケートの中身（確認専用）だけが見える
+    expect(hrefs).toEqual(["/me", "/me/forms", "/me/results", "/forms"]);
+  });
+
+  it("アンケートの中身は、どのロールからも同じ入口で読める", () => {
+    for (const role of ["EMPLOYEE", "MANAGER", "COMPANY_ADMIN", "SUPER_ADMIN"] as const) {
+      const items = navGroupsFor(role).flatMap((g) => g.items);
+      const entry = items.find((i) => i.href === "/forms");
+      expect(entry, `${role} にアンケートの中身が出ていない`).toBeDefined();
+      expect(entry?.label).toBe("アンケートの中身");
+    }
   });
 
   it("自分のアカウントはサイドバーに出さない（右上のアイコンにまとめる）", () => {
