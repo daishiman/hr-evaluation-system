@@ -1,137 +1,157 @@
-import { and, asc, eq } from "drizzle-orm";
 import { requireRole } from "@/lib/session";
-import { getDb, schema as s } from "@/lib/db";
-import { getActiveScheme, listGrades, listKpiCategories, listKpiItems } from "@/lib/queries";
-import { EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
-import { SchemeEditor, type GroupSetup } from "@/components/SchemeEditor";
-import { RankCriteriaPanel } from "@/components/RankCriteriaPanel";
-import { targetsPointGroup } from "@/lib/domain/grade-points";
+import { Badge, Bar, EmptyState, LinkButton, Num, PageTitle, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { detectStaleCycles } from "@/lib/impact";
 import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
+import { checkGradePointRule } from "@/lib/domain/grade-points";
+import { overallProgress, schemeStepPath, stepTitle } from "@/lib/domain/scheme-steps";
+import { loadSchemeSetup } from "./data";
+import { SchemeCommonSettings } from "@/components/SchemeCommonSettings";
 
 export const dynamic = "force-dynamic";
 
 /**
- * 評価セット（等級区分ごとの項目）の設定。会社の管理者のみ。
- * 選べる項目・項目数・配点はすべてDBから読む。ここに点数を書かない。
+ * KPI・評価セットの入口。会社の管理者のみ。
+ *
+ * この画面の目的は1つだけ：**どの等級区分を設定するかを選ぶ**。
+ * 実際の設定（使うKPIを選ぶ／基準を決める）は等級区分ごとの手順画面で行う。
+ *
+ * 以前はこの1画面で「等級区分の切り替え・配点の確認・項目の選択・基準の編集・KPIの比較」を
+ * 同時にやらせていて、何をする画面なのか分からなくなっていた（2026-08-11 の指摘）。
  */
 export default async function AdminSchemePage() {
   const viewer = await requireRole("COMPANY_ADMIN");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
-  const companyId = viewer.companyId;
 
-  const [scheme, categories, kpiItems, grades, staleCycles] = await Promise.all([
-    getActiveScheme(companyId),
-    listKpiCategories(companyId),
-    listKpiItems(companyId),
-    listGrades(companyId),
-    detectStaleCycles(companyId),
-  ]);
+  const [setup, staleCycles] = await Promise.all([loadSchemeSetup(viewer.companyId), detectStaleCycles(viewer.companyId)]);
 
-  if (!scheme) {
+  if (!setup.scheme) {
     return (
       <>
         <PageTitle title="KPI・評価セット" />
         <StaleCyclesNotice cycles={staleCycles} />
-        <ReasonNote>
-          有効な評価セットが登録されていません。初期データの投入が済んでいるかご確認ください。
-        </ReasonNote>
+        <ReasonNote>有効な評価セットが登録されていません。初期データの投入が済んでいるかご確認ください。</ReasonNote>
       </>
     );
   }
 
-  const db = await getDb();
-  /* scheme_items は等級区分と20点枠のフラグまで要るので、ここで直接読む。
-     選択肢は絞らない（どの項目も、どの分類からも選べる）。
-     ランク基準（kpi_rank_criteria）は「その等級区分で点が付く項目か」を画面で知らせるために引く。
-     ここに無い項目を選ぶとアンケートに設問が出ないため、選べないのではなく注意を出す。 */
-  const [rules, items, criteria] = await Promise.all([
-    db
-      .select()
-      .from(s.gradePointRules)
-      .where(eq(s.gradePointRules.companyId, companyId))
-      .orderBy(asc(s.gradePointRules.displayOrder)),
-    db
-      .select({
-        kpiItemId: s.schemeItems.kpiItemId,
-        pointGroup: s.schemeItems.pointGroup,
-        isFixedSlot: s.schemeItems.isFixedSlot,
-        isMajorSlot: s.schemeItems.isMajorSlot,
-      })
-      .from(s.schemeItems)
-      .where(and(eq(s.schemeItems.companyId, companyId), eq(s.schemeItems.schemeId, scheme.id)))
-      .orderBy(asc(s.schemeItems.displayOrder)),
-    db
-      .select({ kpiItemId: s.kpiRankCriteria.kpiItemId, targetGrades: s.kpiRankCriteria.targetGrades })
-      .from(s.kpiRankCriteria)
-      .where(eq(s.kpiRankCriteria.companyId, companyId)),
-  ]);
+  if (setup.groups.length === 0) {
+    return (
+      <>
+        <PageTitle title="KPI・評価セット" />
+        <StaleCyclesNotice cycles={staleCycles} />
+        <ReasonNote>等級区分ごとの配点ルールが登録されていません。初期データの投入をご確認ください。</ReasonNote>
+      </>
+    );
+  }
 
-  // AMⅠ/Ⅱ・ManagerⅠ/Ⅱ は同じ等級区分なので、等級名をまとめて1タブにする
-  const groups: GroupSetup[] = rules.map((r) => ({
-    pointGroup: r.pointGroup,
-    gradeLabel:
-      grades
-        .filter((g) => g.pointGroup === r.pointGroup)
-        .map((g) => g.name)
-        .join("・") || "この等級区分の等級は未登録",
-    rule: {
-      pointGroup: r.pointGroup,
-      totalPoints: r.totalPoints,
-      fixedSlotPoints: r.fixedSlotPoints,
-      majorSlotPoints: r.majorSlotPoints,
-      majorSlotCount: r.majorSlotCount,
-      minorSlotPoints: r.minorSlotPoints,
-      minorSlotCount: r.minorSlotCount,
-    },
-    ratedItemIds: [
-      ...new Set(criteria.filter((x) => targetsPointGroup(x.targetGrades, r.pointGroup)).map((x) => x.kpiItemId)),
-    ],
-    initial: items
-      .filter((i) => i.pointGroup === r.pointGroup)
-      .map((i) => ({ kpiItemId: i.kpiItemId, isFixedSlot: i.isFixedSlot, isMajorSlot: i.isMajorSlot })),
-  }));
+  const overall = overallProgress(setup.groups.map((g) => g.progress));
+
+  /* 配点の型そのものが壊れていると、どう選んでも保存できない状態になる。
+     「保存できない」とだけ出すと画面の不具合に見えるため、原因をここで名指しする。 */
+  const ruleErrors = setup.groups.flatMap((g) => checkGradePointRule(g.rule));
 
   return (
     <>
       <PageTitle
-        sticky
         title="KPI・評価セット"
-        lede="等級区分ごとに、評価に使うKPIを選びます。選ぶ項目数と配点は等級区分ごとに決まっているため、この画面では変更できません。ここで決めた内容が、次に作るアンケートと集計に使われます。"
+        lede="等級区分ごとに、評価に使うKPIと、その項目の基準を決めます。1つの等級区分につき2つの手順に分かれています。設定した内容は、次に作るアンケートと集計に使われます。"
       />
       <StaleCyclesNotice cycles={staleCycles} />
-      <SchemeEditor
-        schemeId={scheme.id}
-        categories={categories.map((c) => ({ id: c.id, name: c.name, description: c.description }))}
-        kpiItems={kpiItems.map((k) => ({
-          id: k.id,
-          no: k.no,
-          name: k.name,
-          unit: k.unit,
-          categoryId: k.categoryId,
-          isFixedSlot: k.isFixedSlot,
-          isMonetary: k.isMonetary,
-          isProvisional: k.isProvisional,
-          intent: k.intent,
-          aStandard: k.aStandard,
-        }))}
-        groups={groups}
-        raiseRequiresAllA={scheme.raiseRequiresAllA}
+
+      {ruleErrors.length > 0 && (
+        <ReasonNote>
+          <p className="m-0 font-bold">配点の決まりに食い違いがあります（このままでは保存できません）</p>
+          <ul className="m-0 list-disc pl-5">
+            {ruleErrors.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        </ReasonNote>
+      )}
+
+      <div className="mt-3">
+        <Bar value={overall.done} max={overall.total} label="等級区分の設定が完了" />
+        <p className="mt-2 text-[13px]">{overall.summary}</p>
+        {overall.nextGroup && (
+          <p className="m-0 mt-2">
+            <LinkButton variant="primary" href={schemeStepPath(overall.nextGroup, "select")}>
+              {overall.nextGroup} の設定を始める
+            </LinkButton>
+          </p>
+        )}
+      </div>
+
+      <SectionHeading help="上から順に設定します。設定済みの等級区分も、押せばいつでも見直せます。">
+        等級区分ごとの設定
+      </SectionHeading>
+
+      <RecordList
+        items={setup.groups.map((g) => {
+          const p = g.progress;
+          const step = p.nextStep ?? "select";
+          return {
+            key: g.pointGroup,
+            title: (
+              <>
+                {g.pointGroup}
+                <span className="unit"> （{g.gradeLabel}）</span>
+              </>
+            ),
+            marks: p.done ? <Badge tone="done">設定済み</Badge> : <Badge tone="required">設定が未完了</Badge>,
+            rows: [
+              {
+                label: "使うKPI",
+                value: (
+                  <>
+                    <Num value={p.selectedCount} unit="件" /> / {p.expectedCount}件
+                    {p.selectionDone ? "" : "（選び終わっていません）"}
+                  </>
+                ),
+              },
+              {
+                label: "配点の合計",
+                value: (
+                  <>
+                    <Num value={p.totalPoints} unit="点" /> / {p.maxPoints}点
+                  </>
+                ),
+              },
+              {
+                label: "基準（A〜E）",
+                value:
+                  !p.selectionDone ? (
+                    "項目を選んでから設定します"
+                  ) : p.unratedCount > 0 ? (
+                    <>
+                      未設定 <Num value={p.unratedCount} unit="件" />
+                    </>
+                  ) : (
+                    "設定済み"
+                  ),
+              },
+            ],
+            note: <>次にやること：{p.nextAction}</>,
+            action: (
+              <LinkButton
+                variant={overall.nextGroup === g.pointGroup ? "primary" : "secondary"}
+                href={schemeStepPath(g.pointGroup, step)}
+              >
+                {p.done ? `${g.pointGroup} の設定を見直す` : `${g.pointGroup} の${stepTitle(step)}`}
+              </LinkButton>
+            ),
+          };
+        })}
       />
 
-      {/* A〜Eの線引きは「どのKPIを使うか」と同じ持ち場の話なので、この画面に置く。
-          等級ごとの設定ではないため、等級の画面には出さない */}
-      <SectionHeading>KPIのランク基準（会社全体）</SectionHeading>
-      {items.length === 0 ? (
-        <ReasonNote>評価セットに項目がないため、ランク基準を表示できません。</ReasonNote>
-      ) : (
-        <>
-          <p className="footnote">
-            選んだKPIごとに、実績値がどこからどこまでならA〜Eのどれになるかを決めます。開いたときに読み込むため、直したいときだけ開いてください。
-          </p>
-          <RankCriteriaPanel itemCount={items.length} />
-        </>
-      )}
+      <SectionHeading help="等級区分ごとではなく、会社全体で1つだけ決める設定です。">
+        全等級区分に共通の設定
+      </SectionHeading>
+      <SchemeCommonSettings schemeId={setup.scheme.id} raiseRequiresAllA={setup.scheme.raiseRequiresAllA} />
+
+      <p className="footnote mt-4">
+        確定済みの評価は判定した当時の配点・基準のまま残ります。ここでの変更は、次に作るアンケートと、
+        まだ確定していない評価にだけ反映されます。
+      </p>
     </>
   );
 }

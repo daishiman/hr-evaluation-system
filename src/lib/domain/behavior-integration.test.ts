@@ -26,7 +26,51 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     expect(editor).toContain("selectGrade(event.target.value)");
     expect(editor).toContain("behaviorBandForGrade(grades, nextGradeId)");
     expect(editor).toContain("availableBands.includes(band)");
-    expect(editor).toContain("行動指針が未登録");
+    expect(editor).toContain("いまは選べません");
+  });
+
+  it("基準セットは会社の設定を正本にし、コードに固定しない", () => {
+    const page = read("src/app/admin/behavior/page.tsx");
+    const domain = read("src/lib/domain/behavior.ts");
+    const bodySchema = read("src/app/api/masters/body-schema.ts");
+    const apply = read("src/app/api/masters/apply-master-update.ts");
+
+    // 選べる基準は DB（behavior_band_sets）から来る。定数の総当たりに戻さない。
+    expect(page).toContain("listBehaviorBandSets(companyId)");
+    expect(page).toContain("bandSets.map((set) => set.code)");
+    expect(domain).not.toContain("export const BEHAVIOR_BANDS");
+    // 等級への割り当ては「自社に実在し、使用中の基準か」をサーバー側で確かめる。
+    expect(bodySchema).not.toContain("z.enum(BEHAVIOR_BANDS)");
+    expect(apply).toContain("s.behaviorBandSets.code, body.behaviorBand");
+    // 空の基準は等級に割り当てさせない（設問0件のアンケートができるため）。
+    expect(page).toContain("guidelines.some((g) => g.band === set.code && g.isActive)");
+  });
+
+  it("基準セットの操作は必ず自社の中だけで解決する", () => {
+    const apply = read("src/app/api/masters/apply-master-update.ts");
+    const branch = apply.slice(apply.indexOf('case "behaviorBandSet"'), apply.indexOf('case "rankCriteria"'));
+
+    /* 会社の基準を一度だけ読み、その中から id / code を探す形にしている。
+       id で直接 DB を引く形に戻すと、他社の基準を指す id を送られたときに通る。 */
+    expect(branch).toContain("eq(s.behaviorBandSets.companyId, companyId)");
+    expect(branch).toContain("sets.find((set) => set.id === body.id)");
+    expect(branch).toContain("sets.find((set) => set.code === body.copyFromBand)");
+    // 複製元の観点・段階も自社スコープで読む
+    expect(branch).toContain("eq(s.behaviorGuidelines.companyId, companyId), eq(s.behaviorGuidelines.band, source.code)");
+    // 観点の追加先も「自社にあるセットか」を確かめてから作る
+    expect(branch).toContain("eq(s.behaviorBandSets.companyId, companyId), eq(s.behaviorBandSets.code, band)");
+  });
+
+  it("使用中の基準セットは止められず、消す操作そのものを作らない", () => {
+    const apply = read("src/app/api/masters/apply-master-update.ts");
+    const setEditor = read("src/components/BehaviorBandSetEditor.tsx");
+
+    expect(apply).toContain("先に「どの等級に出すか」でほかの基準か「適用しない」に変えてから、使用を止めてください。");
+    // 物理削除はしない。公開済みアンケート・確定済み評価がぶら下げている観点を巻き込むため。
+    expect(apply).not.toContain("db.delete(s.behaviorBandSets)");
+    expect(apply).not.toContain("db.delete(s.behaviorGuidelines)");
+    expect(setEditor).toContain('from "@/components/ConfirmButton"');
+    expect(setEditor).toContain("すでに公開したアンケートと確定済みの評価はそのまま残ります");
   });
 
   it("等級切替時は昇格フォームと下書き状態を作り直す", () => {
@@ -49,6 +93,21 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     expect(editor).toContain('isActive: false');
     expect(editor).toContain('isActive: true');
     expect(editor).toContain("すでに公開したアンケートと確定済みの評価はそのまま残ります");
+  });
+
+  it("アンケートの中身を見る画面は公開済みの設問だけを読む（基準を直しても動かない）", () => {
+    const list = read("src/app/forms/page.tsx");
+    const detail = read("src/app/forms/[id]/page.tsx");
+
+    /* 基準セットを作る・複製する・呼び名を変えても、すでに公開したアンケートは
+       1文字も変わらないこと。設問は公開したときの写し（form_questions）なので、
+       この画面が行動指針のマスタを直接読み始めたらその保証が崩れる。 */
+    for (const source of [list, detail]) {
+      expect(source).not.toContain("behaviorGuidelines");
+      expect(source).not.toContain("behaviorBandSets");
+      expect(source).not.toContain("listBehaviorGuidelines");
+    }
+    expect(detail).toContain("listFormQuestions(");
   });
 
   it("評価の観点名は現在のマスタではなく公開済み設問の写しを使う", () => {

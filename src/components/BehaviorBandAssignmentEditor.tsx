@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { behaviorBandForGrade, behaviorBandLabel, behaviorBandPayloadValue, BEHAVIOR_BANDS } from "@/lib/domain/behavior";
+import { behaviorBandForGrade, behaviorBandLabel, behaviorBandPayloadValue, type BehaviorBandSetRow } from "@/lib/domain/behavior";
 import { Button, Card, ReasonNote } from "@/components/ui";
 
 export interface BehaviorAssignmentGradeRow {
@@ -20,10 +20,13 @@ export interface BehaviorAssignmentGradeRow {
  */
 export function BehaviorBandAssignmentEditor({
   grades,
+  bandSets,
   availableBands,
 }: {
   grades: BehaviorAssignmentGradeRow[];
-  /** 実際に行動指針が登録されている等級帯だけを選択肢にする。 */
+  /** 会社が持っている基準セット（呼び名の正本）。 */
+  bandSets: readonly BehaviorBandSetRow[];
+  /** 実際に行動指針が登録されていて、いま使う設定になっている基準だけを選択肢にする。 */
   availableBands: readonly string[];
 }) {
   const router = useRouter();
@@ -35,7 +38,7 @@ export function BehaviorBandAssignmentEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const selectableBands = BEHAVIOR_BANDS.filter((band) => availableBands.includes(band));
+  const selectableBands = bandSets.map((set) => set.code).filter((band) => availableBands.includes(band));
   const currentBandUnavailable = behaviorBand !== "" && !selectableBands.some((band) => band === behaviorBand);
 
   /* router.refresh() で保存後の割り当てが届いたら、現在値の控えも同期する。
@@ -112,12 +115,12 @@ export function BehaviorBandAssignmentEditor({
             <option value="">適用しない</option>
             {currentBandUnavailable && (
               <option value={behaviorBand} disabled>
-                {behaviorBandLabel(behaviorBand)}（行動指針が未登録）
+                {behaviorBandLabel(bandSets, behaviorBand)}（いまは選べません）
               </option>
             )}
             {selectableBands.map((band) => (
               <option key={band} value={band}>
-                {behaviorBandLabel(band)}
+                {behaviorBandLabel(bandSets, band)}
               </option>
             ))}
           </select>

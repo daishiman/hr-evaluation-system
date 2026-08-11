@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/session";
-import { listBehaviorGuidelines, listGrades } from "@/lib/queries";
+import { listBehaviorBandSets, listBehaviorGuidelines, listGrades } from "@/lib/queries";
 import { BehaviorBandAssignmentEditor } from "@/components/BehaviorBandAssignmentEditor";
+import { BehaviorBandSetEditor } from "@/components/BehaviorBandSetEditor";
 import { BehaviorGuidelineEditor } from "@/components/BehaviorGuidelineEditor";
-import { behaviorBandLabel } from "@/lib/domain/behavior";
+import { behaviorBandLabel, gradesUsingBand } from "@/lib/domain/behavior";
 import { Card, CardRow, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -23,11 +24,22 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  const [guidelines, grades] = await Promise.all([listBehaviorGuidelines(companyId), listGrades(companyId)]);
+  const [guidelines, grades, bandSets] = await Promise.all([
+    listBehaviorGuidelines(companyId),
+    listGrades(companyId),
+    listBehaviorBandSets(companyId),
+  ]);
 
-  const bands = [...new Set(guidelines.map((g) => g.band))];
+  /* 画面に出す基準は会社の設定（behavior_band_sets）が正本。
+     観点が1件も無いセットも出さないと、作った直後のセットが画面から消える。 */
+  const bands = bandSets.map((set) => set.code);
   const sp = await searchParams;
   const band = bands.includes(sp.band ?? "") ? (sp.band as string) : (bands[0] ?? null);
+  /* 等級に割り当てられるのは「使う設定になっていて、問う内容が1件以上ある」基準だけ。
+     空のセットを割り当てると、行動指針の設問が黙って0件のアンケートができる。 */
+  const assignableBands = bandSets
+    .filter((set) => set.isActive && guidelines.some((g) => g.band === set.code && g.isActive))
+    .map((set) => set.code);
 
   const rows = guidelines.map((g) => ({
     id: g.id,
@@ -56,7 +68,7 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
           <>
             <p className="m-0 text-[13px]">
               いま行動指針の基準を割り当てている等級は <b>{applied.length}件</b>
-              {applied.length > 0 && `（${applied.map((g) => `${g.name}：${behaviorBandLabel(g.behaviorBand)}`).join(" / ")}）`}
+              {applied.length > 0 && `（${applied.map((g) => `${g.name}：${behaviorBandLabel(bandSets, g.behaviorBand)}`).join(" / ")}）`}
               です。
             </p>
             <div className="mt-2 grid gap-2">
@@ -64,7 +76,7 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
                 <CardRow
                   key={g.id}
                   title={g.name}
-                  sub={g.behaviorBand ? behaviorBandLabel(g.behaviorBand) : "行動指針を出さない"}
+                  sub={g.behaviorBand ? behaviorBandLabel(bandSets, g.behaviorBand) : "行動指針を出さない"}
                 />
               ))}
             </div>
@@ -76,7 +88,8 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
         <div className="mt-3">
           <BehaviorBandAssignmentEditor
             grades={grades.map((grade) => ({ id: grade.id, name: grade.name, behaviorBand: grade.behaviorBand }))}
-            availableBands={bands}
+            bandSets={bandSets}
+            availableBands={assignableBands}
           />
         </div>
       )}
@@ -90,14 +103,38 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
       </div>
 
       <SectionHeading>何を問うか</SectionHeading>
+
+      <div className="mb-3">
+        <BehaviorBandSetEditor
+          sets={bandSets.map((set) => ({
+            id: set.id,
+            code: set.code,
+            name: set.name,
+            isActive: set.isActive,
+            aspectCount: guidelines.filter((g) => g.band === set.code && g.isActive).length,
+            usedByGradeNames: gradesUsingBand(grades, set.code).map((g) => g.name),
+          }))}
+          currentBand={band}
+        />
+      </div>
+
       {band === null ? (
-        <EmptyState title="行動指針が登録されていません" body="初期データの投入が済んでいるかご確認ください。" />
+        <EmptyState
+          title="行動指針の基準がまだありません"
+          body="上の「基準を新しく作る」から作ると、この下で問う内容を決められます。"
+        />
       ) : (
         <>
           <div className="mb-4 flex flex-wrap gap-2">
-            {bands.map((b) => (
-              <Link key={b} href={`/admin/behavior?band=${b}`} className="chip" aria-current={b === band ? "true" : undefined}>
-                {behaviorBandLabel(b)}
+            {bandSets.map((set) => (
+              <Link
+                key={set.code}
+                href={`/admin/behavior?band=${set.code}`}
+                className="chip"
+                aria-current={set.code === band ? "true" : undefined}
+              >
+                {set.name}
+                {!set.isActive && "（使用しない）"}
               </Link>
             ))}
           </div>
@@ -108,7 +145,7 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
             </Link>
             で決めます。
           </p>
-          <BehaviorGuidelineEditor band={band} rows={rows} />
+          <BehaviorGuidelineEditor key={band} band={band} bandSets={bandSets} rows={rows} />
         </>
       )}
     </>
