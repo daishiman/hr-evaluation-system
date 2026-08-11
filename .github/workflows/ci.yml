@@ -91,6 +91,16 @@ jobs:
       - name: テスト
         run: ${{ steps.pm.outputs.run }} test
 
+      # 【一時】CLOUDFLARE_API_TOKEN が実際に効くかを、本番に触らずに確かめる。
+      # whoami は読み取りだけで、配布もDBの変更もしない。
+      # トークンの値そのものは出力されない（出るのはアカウント名と権限の一覧）。
+      # 確認が取れたらこのステップは削除する。
+      - name: 【一時】Cloudflare の資格情報の確認
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: ${{ steps.pm.outputs.run }} exec wrangler whoami
+
 # 意図的に入れていないもの（入れたくなったら理由を書いてから入れること）
 #
 # - 本番ビルド
