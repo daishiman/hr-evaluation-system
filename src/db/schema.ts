@@ -755,7 +755,7 @@ export const evaluations = sqliteTable(
     promotionEligible: integer("promotion_eligible", { mode: "boolean" }).notNull().default(false),
     /**
      * 昇格できない理由（評価者向け）。必須ゲート未達・必要点数への不足などを日本語で保存。
-     * 必要点数が入るため、評価される側にはこの列を返さない。
+     * 必要点数が入るため、一般の方にはこの列を返さない。
      */
     promotionBlockedReason: text("promotion_blocked_reason"),
     /** 昇格できない理由（本人向け・必要点数と獲得点数を含まない言い換え） */
@@ -813,7 +813,7 @@ export const evaluationItems = sqliteTable(
     thresholdUpper: real("threshold_upper"),
     /**
      * 「なぜこのランクか・何点になったか」を日本語で保存（評価者向け）。
-     * 配点と獲得点数が文中に入るため、評価される側にはこの列を返さない。
+     * 配点と獲得点数が文中に入るため、一般の方にはこの列を返さない。
      */
     rationale: text("rationale"),
     /**

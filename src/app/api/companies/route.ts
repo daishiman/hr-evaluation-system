@@ -19,7 +19,7 @@ const createSchema = z.object({
   businessType: z.string().max(40).optional(),
   adminName: z.string().min(1).max(60),
   adminEmail: z.string().email("メールアドレスの形式を確認してください"),
-  adminPassword: z.string().min(8, "パスワードは8文字以上にしてください").max(72),
+  adminPassword: z.string().min(10, "パスワードは10文字以上にしてください").max(72),
 });
 
 /**

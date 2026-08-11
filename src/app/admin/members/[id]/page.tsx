@@ -7,7 +7,8 @@ import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
-import { Card, Disclosure, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { PasswordReissue } from "@/components/PasswordReissue";
+import { Card, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
 import { formatDate } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -143,17 +144,7 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
       />
 
       <SectionHeading>パスワードの再発行</SectionHeading>
-      <Disclosure summary="パスワードを再発行する" meta="ログインできなくなったときに使います">
-        <RecordForm
-          url="/api/members"
-          method="PATCH"
-          fixed={{ userId: member.id }}
-          submitLabel="パスワードを再発行する"
-          description="新しいパスワードをご本人にお伝えください。"
-          resetAfterSubmit
-          fields={[{ name: "password", label: "新しいパスワード", type: "password", required: true, help: "8文字以上" }]}
-        />
-      </Disclosure>
+      <PasswordReissue url="/api/members" userId={member.id} name={member.name} />
 
       <SectionHeading>利用の停止と再開</SectionHeading>
       <Card className="card-pad">

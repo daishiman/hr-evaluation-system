@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole, ROLE_LABEL, ROLES, type Role } from "@/lib/session";
 import { getAnyUser, listAllUsers, listCompanies, listGrades } from "@/lib/queries";
-import { Card, Disclosure, PageTitle, SectionHeading } from "@/components/ui";
+import { Card, PageTitle, SectionHeading } from "@/components/ui";
+import { PasswordReissue } from "@/components/PasswordReissue";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
@@ -136,17 +137,7 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
       />
 
       <SectionHeading>パスワードの再発行</SectionHeading>
-      <Disclosure summary="パスワードを再発行する" meta="ログインできなくなったときに使います">
-        <RecordForm
-          url="/api/system/users"
-          method="PATCH"
-          fixed={{ userId: user.id }}
-          submitLabel="パスワードを再発行する"
-          description="再発行したパスワードは仮のものとして扱われ、本人の画面に変更のお願いが出ます。"
-          resetAfterSubmit
-          fields={[{ name: "password", label: "新しいパスワード", type: "password", required: true, help: "8文字以上" }]}
-        />
-      </Disclosure>
+      <PasswordReissue url="/api/system/users" userId={user.id} name={user.name} />
 
       <SectionHeading>利用の停止と再開</SectionHeading>
       <Card className="card-pad">
