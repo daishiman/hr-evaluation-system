@@ -137,11 +137,15 @@ body {
   letter-spacing: -0.015em; /* 大型数字は詰めすぎない */
   font-weight: 700;
 }
-.unit { font-size: 58%; font-weight: 600; margin-left: 2px; letter-spacing: 0; }
+/* 単位・桁区切り・通貨記号は、数字に対する割合で小さくする。
+   ただし下限（--text-note）を下回らせない。
+   割合だけにすると、本文の中に混ざったとき（例: 15pxの見出しの中の「配点」）に
+   9px 前後まで落ちて読めなくなる。大きな数字の脇では、これまでどおり割合が効く。 */
+.unit { font-size: max(58%, var(--text-note)); font-weight: 600; margin-left: 2px; letter-spacing: 0; }
 /* 大型数字の桁区切りは脇役に: サイズを一段下げる(透明度では調整しない) */
-.num-sep { font-size: 0.8em; font-weight: 400; }
+.num-sep { font-size: max(0.8em, var(--text-note)); font-weight: 400; }
 /* 通貨記号は「単位」扱い: 数字(変数)と見分けが付くよう小さく+間隔 */
-.currency { font-size: 62%; font-weight: 600; margin-right: 0.15em; letter-spacing: 0; }
+.currency { font-size: max(62%, var(--text-note)); font-weight: 600; margin-right: 0.15em; letter-spacing: 0; }
 
 /* キーキャップUI(ショートカットを隠し機能にしない) */
 .kbd {
@@ -651,6 +655,22 @@ main {
    これだけだと隣に幅の広い箱が来たとき 0 まで潰れる。 */
 .row-main { flex: 1 1 16rem; min-width: 0; }
 .row-grow { flex: 1 1 auto; }
+
+/* 行の右端にまとまる操作（札・ボタン・止められない理由の一文）。
+   まとまり自体は縮んで折り返し、中のボタンだけは潰さない。
+   まとまりを縮まないようにすると、中に長い一文が入ったとき
+   （例:「〇〇／〇〇に出しているため、使用を止められません」）に
+   まとまりの幅がそのまま画面をはみ出し、ページ全体が横に動く。 */
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+.row-actions > .btn,
+.row-actions > .badge { flex-shrink: 0; }
 
 @media (max-width: 639px) {
   .card-row .row-main { flex-basis: 100%; }

@@ -151,7 +151,7 @@ export function PageTitle({
         {lede && <p className="page-lede">{lede}</p>}
         {tags && <div className="page-head-tags">{tags}</div>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="row-actions gap-2">{actions}</div>}
     </div>
   );
 }
@@ -435,7 +435,7 @@ export function CardHead({ lead, title, heading, sub, detail, actions, pinned }:
           {detail}
         </div>
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="row-actions gap-2">{actions}</div>}
     </div>
   );
 }

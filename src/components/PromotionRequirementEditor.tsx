@@ -143,7 +143,7 @@ export function PromotionRequirementEditor({
               )}
             </div>
             {editing[r.id] === undefined && (
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+              <div className="row-actions">
                 {r.isGate ? <Badge tone="alert">必須</Badge> : <Badge tone="done">任意</Badge>}
                 <Button
                   variant="tertiary"

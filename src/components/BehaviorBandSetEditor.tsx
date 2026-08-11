@@ -200,7 +200,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                 )}
               </div>
               {nameDraft === undefined && (
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                <div className="row-actions">
                   <Badge tone={set.isActive ? "active" : "dropped"}>{set.isActive ? "使用中" : "使用しない"}</Badge>
                   <Button
                     variant="tertiary"

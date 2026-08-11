@@ -231,7 +231,7 @@ export function BehaviorGuidelineEditor({
                       )}
                     </div>
                     {draft === undefined && (
-                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                      <div className="row-actions">
                         <Badge tone={lv.score >= 1 ? "done" : "dropped"}>{lv.score}点</Badge>
                         <Button
                           variant="tertiary"

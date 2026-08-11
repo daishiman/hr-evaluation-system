@@ -154,7 +154,7 @@ export function GradeRequirementEditor({
               )}
             </div>
             {editing[r.id] === undefined && (
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+              <div className="row-actions">
                 <Button
                   variant="tertiary"
                   disabled={busy || i === 0}

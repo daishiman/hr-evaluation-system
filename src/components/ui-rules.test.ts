@@ -147,6 +147,33 @@ describe("画面の器の作法", () => {
     expect(px("hero") / px("body")).toBeGreaterThanOrEqual(2.5); // 主役の数字:本文 = 2.5倍以上
   });
 
+  it("割合で小さくする文字（単位・桁区切り・通貨記号）にも下限を付ける", () => {
+    // 単位は「大きな数字の脇では小さく」が正しいが、割合だけで指定すると
+    // 15px の見出しに混ざったときに 9px 前後まで落ちて読めなくなる（実測で確認）。
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    for (const selector of [".unit {", ".num-sep {", ".currency {"]) {
+      const block = css.slice(css.indexOf(selector));
+      const body = block.slice(0, block.indexOf("}"));
+      expect(body).toMatch(/font-size: max\([^)]*var\(--text-note\)\)/);
+    }
+  });
+
+  it("行の右端の操作は、縮んで折り返す（ページを横に広げない）", () => {
+    // まとまりを縮まないようにすると、中に長い一文（止められない理由など）が入ったとき
+    // まとまりの幅がそのまま画面をはみ出し、ページ全体が横スクロールする（実測で確認）。
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".row-actions {"));
+    const body = block.slice(0, block.indexOf("}"));
+    expect(body).toContain("flex-wrap: wrap");
+    expect(body).toContain("min-width: 0");
+    expect(body).not.toContain("flex-shrink: 0");
+    // 中のボタン・札だけは潰さない
+    expect(css).toContain(".row-actions > .btn");
+    // 画面側で「縮まない操作のまとまり」を書き起こしていないこと
+    const offenders = sourceFiles.filter((p) => /shrink-0[^"]*flex-wrap|flex-wrap[^"]*shrink-0/.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
   it("グラフの中の文字も下限を守る（SVGはクラスが効かないので数値で確認する）", () => {
     const source = readFileSync(join(SRC, "components", "Charts.tsx"), "utf8");
     const sizes = [...source.matchAll(/const CHART_FS_\w+ = (\d+);/g)].map((m) => Number(m[1]));
