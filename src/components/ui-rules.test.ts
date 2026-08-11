@@ -139,6 +139,28 @@ describe("画面の器の作法", () => {
     expect(block.slice(0, block.indexOf("}"))).toContain("min-height: 44px");
   });
 
+  it("数値を入れる欄は NumberField に集約する（画面ごとに書き起こさない）", () => {
+    /* 数値欄を画面ごとに書くと、全角→半角の変換・貼り付けの正しさ・
+       スマートフォンの数字キーボード・空欄と0の区別が、その画面だけ抜け落ちる
+       （実際に、アンケートの回答欄と設問の最小値欄でそうなっていた）。 */
+    const owner = join(SRC, "components", "NumberField.tsx");
+    const offenders = sourceFiles.filter((p) => {
+      if (p === owner) return false;
+      const src = readFileSync(p, "utf8");
+      // 数字専用の見た目（input-num）を <input> に直接当てている画面を検出する
+      return /<input[^>]*input-num/s.test(src);
+    });
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("数字キーボードの出し分けは NumberField だけが決める", () => {
+    const allowed = new Set([join(SRC, "components", "NumberField.tsx"), join(SRC, "app", "login", "LoginForm.tsx")]);
+    const offenders = sourceFiles.filter(
+      (p) => !allowed.has(p) && /inputMode=["{]/.test(readFileSync(p, "utf8")),
+    );
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
   it("固定した列見出しの位置は、固定ヘッダーの高さと対で保つ", () => {
     const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
     // 列見出しを固定していること

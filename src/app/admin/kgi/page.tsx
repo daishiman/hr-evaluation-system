@@ -175,6 +175,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
                       defaultValue: current?.achievementRate ?? null,
                       unit: "%",
                       help: "実績 ÷ 目標 × 100。小数も入力できます（例：99.5）",
+                      policy: { min: 0, max: 1000 },
                     },
                     {
                       name: "reason",
@@ -262,7 +263,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
                   title={kgiRangeLabel(k)}
                   description={k.isProvisional ? "いまの値は叩き台の初期値です。" : undefined}
                   fields={[
-                    { name: "coefficient", label: "係数", type: "number", required: true, defaultValue: k.coefficient },
+                    { name: "coefficient", label: "係数", type: "number", required: true, defaultValue: k.coefficient, policy: { min: 0, max: 5 } },
                   ]}
                 />
               ))}

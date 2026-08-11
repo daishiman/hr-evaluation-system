@@ -6,7 +6,9 @@ import { newId } from "@/lib/id";
 import { BEHAVIOR_LEVEL_TEMPLATE, defaultLevelText, nextDisplayOrder } from "@/lib/domain/behavior";
 import { GRADE_REQUIREMENT_MAX, swapForMove } from "@/lib/domain/grade-requirements";
 import { checkKgiCoverage, checkRangeCoverage } from "@/lib/domain/kgi";
-import { rangeLabel } from "@/lib/domain/scoring";
+import { rangeLabel, type Direction } from "@/lib/domain/scoring";
+import { checkBounds } from "@/lib/domain/number-input";
+import { checkRankBoundaries } from "@/lib/domain/rank-bounds";
 import type { MasterUpdateBody } from "./body-schema";
 
 type Db = Awaited<ReturnType<typeof getDb>>;
@@ -525,10 +527,33 @@ export async function applyMasterUpdate(args: {
         const merged = (
           await db.select().from(s.kpiRankCriteria).where(eq(s.kpiRankCriteria.id, body.id)).limit(1)
         )[0];
+        const mergedLower = next.lowerBound !== undefined ? next.lowerBound : merged.lowerBound;
+        const mergedUpper = next.upperBound !== undefined ? next.upperBound : merged.upperBound;
+
+        /* 下限が上限より大きい（または同じ）組は、当てはまる値が1つも無い空の範囲になる。
+           保存してしまうと、そのランクに誰も入らないことに気づけないので、ここで断る。
+           画面でも同じ判定をしているが、画面を通さずに送られたときに素通りしないよう受け口でも見る。 */
+        const bounds = checkBounds(mergedLower, mergedUpper);
+        if (!bounds.ok) throw new HttpError(400, bounds.message);
+
+        /* 1つのランクの中だけを見ても、ランク同士の重なり・隙間は防げない。
+           保存したあとの姿でA〜E全体を見て、繋がらなくなるなら書き込む前に断る。
+           （画面はA〜Eをまとめて保存するので、ここに来るのは画面を通さない呼び出しだけ） */
+        const direction: Direction = item?.direction === "lower" ? "lower" : "higher";
+        const beforeRows = await db
+          .select()
+          .from(s.kpiRankCriteria)
+          .where(and(eq(s.kpiRankCriteria.companyId, companyId), eq(s.kpiRankCriteria.kpiItemId, current[0].kpiItemId)));
+        const afterRows = beforeRows.map((r) =>
+          r.id === body.id ? { rank: r.rank, lowerBound: mergedLower, upperBound: mergedUpper } : r,
+        );
+        const whole = checkRankBoundaries(afterRows, direction);
+        if (!whole.ok) throw new HttpError(400, whole.issues.map((x) => x.message).join(" "));
+
         const displayLabel = rangeLabel(
           {
-            lowerBound: next.lowerBound !== undefined ? next.lowerBound : merged.lowerBound,
-            upperBound: next.upperBound !== undefined ? next.upperBound : merged.upperBound,
+            lowerBound: mergedLower,
+            upperBound: mergedUpper,
           },
           item?.unit ?? null,
           item?.direction === "lower" ? "lower" : "higher",
@@ -543,34 +568,67 @@ export async function applyMasterUpdate(args: {
           })
           .where(eq(s.kpiRankCriteria.id, body.id));
 
-        /* 保存後に、その項目のA〜Eが数直線を隙間なく・重なりなく覆えているかを見る。
-           1行ずつ直す途中では必ず一時的にずれるため、保存自体は止めない。
-           そのかわり「どこが抜けたか／重なったか」を日本語で返し、直し忘れを防ぐ。 */
-        const target = current[0];
+        /* 以前はここで保存後に全体を見て「警告」を返していた。いまは書き込む前に断るので、
+           保存できた時点でA〜Eは必ず繋がっている（警告という中途半端な状態を残さない）。 */
+        return { message: "ランク基準を保存しました。" };
+      }
+      /**
+       * ランクA〜Eをまとめて保存する。
+       *
+       * 1ランクずつ保存する作りだと、直している途中は必ずどこかが繋がらない。
+       * そのため「保存はできるが警告だけ出す」という中途半端な状態が必要になり、
+       * 結局は矛盾したまま運用できてしまっていた。まとめて受け取れば、
+       * **繋がっているものしか保存できない**と言い切れる。
+       */
+      case "rankCriteriaSet": {
+        const item = (
+          await db
+            .select({ id: s.kpiItems.id, unit: s.kpiItems.unit, direction: s.kpiItems.direction })
+            .from(s.kpiItems)
+            .where(and(eq(s.kpiItems.id, body.kpiItemId), eq(s.kpiItems.companyId, companyId)))
+            .limit(1)
+        )[0];
+        if (!item) throw new HttpError(404, "KPI項目が見つかりませんでした。");
+        const direction: Direction = item.direction === "lower" ? "lower" : "higher";
+
         const siblings = await db
           .select()
           .from(s.kpiRankCriteria)
-          .where(and(eq(s.kpiRankCriteria.companyId, companyId), eq(s.kpiRankCriteria.kpiItemId, target.kpiItemId)));
-        const problems = checkRangeCoverage(
-          siblings
-            .sort((a, b) => a.rank.localeCompare(b.rank))
-            .map((r) => ({
-              label: `${r.rank}（${rangeLabel(r, item?.unit ?? null, item?.direction === "lower" ? "lower" : "higher")}）`,
-              lowerBound: r.lowerBound,
-              upperBound: r.upperBound,
-            })),
-          "実績値",
-        );
-        if (problems.length > 0) {
-          return {
-            message:
-              "ランク基準を保存しました。ただし、この項目の基準に次の問題があります。" +
-              problems.map((p) => p.message).join(" ") +
-              " このままだと、あてはまるランクが決まらない実績値や、2つのランクに同時にあてはまる実績値が出ます。",
-            warnings: problems.map((p) => p.message),
-          };
+          .where(and(eq(s.kpiRankCriteria.companyId, companyId), eq(s.kpiRankCriteria.kpiItemId, item.id)));
+        if (siblings.length === 0) throw new HttpError(404, "この項目にはランク基準がありません。");
+
+        /* 送られてきた行が、すべてこの項目のものか確かめる（他社・他項目の行を混ぜられない）。 */
+        const byId = new Map(siblings.map((r) => [r.id, r]));
+        for (const row of body.rows) {
+          if (!byId.has(row.id)) throw new HttpError(400, "この項目のランク基準ではないものが含まれています。");
         }
-        return { message: "ランク基準を保存しました。" };
+
+        const sent = new Map(body.rows.map((r) => [r.id, r]));
+        const afterRows = siblings.map((r) => {
+          const x = sent.get(r.id);
+          return x ? { ...r, lowerBound: x.lowerBound, upperBound: x.upperBound } : r;
+        });
+
+        const whole = checkRankBoundaries(afterRows, direction);
+        if (!whole.ok) throw new HttpError(400, whole.issues.map((x) => x.message).join(" "));
+
+        await db.batch(
+          afterRows.map((r) =>
+            db
+              .update(s.kpiRankCriteria)
+              .set({
+                lowerBound: r.lowerBound,
+                upperBound: r.upperBound,
+                displayLabel: rangeLabel(r, item.unit, direction),
+              })
+              .where(and(eq(s.kpiRankCriteria.id, r.id), eq(s.kpiRankCriteria.companyId, companyId))),
+          ) as unknown as Parameters<typeof db.batch>[0],
+        );
+
+        return {
+          message:
+            "ランクA〜Eの基準を保存しました。次に集計する評価から反映されます（確定済みの評価は当時の基準のまま残ります）。",
+        };
       }
       case "kgi": {
         await ensure(
