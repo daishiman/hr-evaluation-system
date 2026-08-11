@@ -76,8 +76,17 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
                 required: true,
                 defaultValue: policy.requiredACount,
                 unit: `項目 / ${policy.selectedItemCount}項目中`,
+                policy: { allowDecimal: false, min: 0, max: 20 },
               },
-              { name: "chancesPerYear", label: "年間の昇給機会", type: "number", required: true, defaultValue: policy.chancesPerYear, unit: "回" },
+              {
+                name: "chancesPerYear",
+                label: "年間の昇給機会",
+                type: "number",
+                required: true,
+                defaultValue: policy.chancesPerYear,
+                unit: "回",
+                policy: { allowDecimal: false, min: 0, max: 12 },
+              },
               { name: "reflectUpperNote", label: "上期評価の反映時期", type: "text", defaultValue: policy.reflectUpperNote ?? "" },
               { name: "reflectLowerNote", label: "下期評価の反映時期", type: "text", defaultValue: policy.reflectLowerNote ?? "" },
               { name: "targetNote", label: "対象者の範囲", type: "text", defaultValue: policy.targetNote ?? "" },
@@ -129,8 +138,24 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
                   raise.capNote ? `／${raise.capNote}` : ""
                 }`}
                 fields={[
-                  { name: "monthlyAmount", label: "月額", type: "number", required: true, defaultValue: raise.monthlyAmount, unit: "円" },
-                  { name: "months", label: "支給の月数", type: "number", required: true, defaultValue: raise.months, unit: "ヶ月" },
+                  {
+                    name: "monthlyAmount",
+                    label: "月額",
+                    type: "number",
+                    required: true,
+                    defaultValue: raise.monthlyAmount,
+                    unit: "円",
+                    policy: { allowDecimal: false, min: 0, max: 10_000_000 },
+                  },
+                  {
+                    name: "months",
+                    label: "支給の月数",
+                    type: "number",
+                    required: true,
+                    defaultValue: raise.months,
+                    unit: "ヶ月",
+                    policy: { allowDecimal: false, min: 1, max: 24 },
+                  },
                   {
                     name: "maxCount",
                     label: "同じ等級での昇給回数の上限",
@@ -138,6 +163,7 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
                     required: true,
                     defaultValue: raise.maxCount,
                     unit: "回",
+                    policy: { allowDecimal: false, min: 1, max: 50 },
                   },
                   {
                     name: "effectiveFrom",
@@ -212,7 +238,15 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
                   }
                   fields={[
                     { name: "name", label: "事業所名", type: "text", required: true, defaultValue: o.name },
-                    { name: "raiseAdjustRate", label: "調整率", type: "number", required: true, defaultValue: o.raiseAdjustRate, unit: "倍" },
+                    {
+                      name: "raiseAdjustRate",
+                      label: "調整率",
+                      type: "number",
+                      required: true,
+                      defaultValue: o.raiseAdjustRate,
+                      unit: "倍",
+                      policy: { min: 0, max: 3 },
+                    },
                   ]}
                 />
               ))
