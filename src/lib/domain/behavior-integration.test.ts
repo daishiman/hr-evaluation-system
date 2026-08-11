@@ -95,6 +95,21 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     expect(editor).toContain("すでに公開したアンケートと確定済みの評価はそのまま残ります");
   });
 
+  it("アンケートの中身を見る画面は公開済みの設問だけを読む（基準を直しても動かない）", () => {
+    const list = read("src/app/forms/page.tsx");
+    const detail = read("src/app/forms/[id]/page.tsx");
+
+    /* 基準セットを作る・複製する・呼び名を変えても、すでに公開したアンケートは
+       1文字も変わらないこと。設問は公開したときの写し（form_questions）なので、
+       この画面が行動指針のマスタを直接読み始めたらその保証が崩れる。 */
+    for (const source of [list, detail]) {
+      expect(source).not.toContain("behaviorGuidelines");
+      expect(source).not.toContain("behaviorBandSets");
+      expect(source).not.toContain("listBehaviorGuidelines");
+    }
+    expect(detail).toContain("listFormQuestions(");
+  });
+
   it("評価の観点名は現在のマスタではなく公開済み設問の写しを使う", () => {
     const evaluate = read("src/lib/evaluate.ts");
     expect(evaluate).toContain("aspectName: q.title");
