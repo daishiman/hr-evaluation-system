@@ -268,6 +268,55 @@ describe("画面の器の作法", () => {
     }
   });
 
+  it("確認の窓は画面の中央に出す（左上に貼り付かせない）", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".confirm-dialog {"));
+    const body = block.slice(0, block.indexOf("}"));
+    // Tailwind の初期化が dialog の margin を 0 にするため、
+    // 指定しないと画面の左上に出る（実際にそうなっていた）。
+    expect(body).toContain("margin: auto");
+    // 窓の高さは画面内に収める
+    expect(body).toContain("max-height:");
+  });
+
+  it("確認の窓が縦に長くても、ボタンは窓の中に残る（本文だけがスクロールする）", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    // 窓ごとスクロールさせるとボタンが下に隠れ、「押せない窓」に見える
+    const win = css.slice(css.indexOf(".confirm-dialog {"));
+    expect(win.slice(0, win.indexOf("}"))).toContain("overflow: hidden");
+    // 本文とボタンを縦に積み、あふれるのは本文だけにする
+    const box = css.slice(css.indexOf(".confirm-dialog-body {"));
+    expect(box.slice(0, box.indexOf("}"))).toContain("grid-template-rows:");
+    const text = css.slice(css.indexOf(".confirm-dialog-text {"));
+    expect(text.slice(0, text.indexOf("}"))).toContain("overflow-y: auto");
+    // 部品側でも本文だけを包んでいること
+    expect(readFileSync(join(SRC, "components", "ConfirmButton.tsx"), "utf8")).toContain("confirm-dialog-text");
+  });
+
+  it("確認の窓は ConfirmButton に集約する（画面ごとに窓を書き起こさない）", () => {
+    const owner = join(SRC, "components", "ConfirmButton.tsx");
+    const offenders = sourceFiles.filter((p) => {
+      if (p === owner) return false;
+      const s = readFileSync(p, "utf8");
+      return s.includes("showModal(") || s.includes('role="dialog"');
+    });
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("入力項目が少ない画面の幅は .narrow-form 1つで決める", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".narrow-form {"));
+    expect(block.slice(0, block.indexOf("}"))).toContain("max-width:");
+    // 狭い画面では上限を外す（絞ると窮屈になる）
+    expect(css).toMatch(/@media \(max-width: 639px\) \{\s*\.narrow-form \{ max-width: none; \}/);
+    // 画面ごとに max-w-* を書かない（幅の正本を1箇所に保つ）
+    for (const rel of ["app/login/page.tsx", "app/account/password/page.tsx"]) {
+      const s = readFileSync(join(SRC, ...rel.split("/")), "utf8");
+      expect(s).toContain("narrow-form");
+      expect(s).not.toMatch(/max-w-(xs|sm|md|lg|xl)/);
+    }
+  });
+
   it("固定した列見出しの位置は、固定ヘッダーの高さと対で保つ", () => {
     const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
     // 列見出しを固定していること

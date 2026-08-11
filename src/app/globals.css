@@ -942,6 +942,22 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 /* ============================================================
    フォーム (§5)
    ============================================================ */
+/* ------------------------------------------------------------
+   入力項目が数個しかない画面（ログイン・パスワードの変更）の幅。
+
+   なぜ要るか: 幅いっぱいに伸ばすのが親切とは限らない。
+   メールアドレスは40文字も入れば足りるので、欄を画面幅まで伸ばしても
+   打ちやすくはならず、ラベルと入力位置の間で視線が横に長く動くだけになる。
+
+   守ること:
+   - 画面ごとに max-w-* を書かず、このクラス1つを使う（幅の正本をここに置く）。
+   - 狭い画面では上限を外して幅いっぱいに戻す。絞ると逆に窮屈になる。
+   ------------------------------------------------------------ */
+.narrow-form { width: 100%; max-width: 24rem; }
+@media (max-width: 639px) {
+  .narrow-form { max-width: none; }
+}
+
 .field { display: grid; gap: 6px; }
 .field label {
   font-size: var(--text-note);
@@ -1046,12 +1062,46 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   background: var(--caution-soft);
   box-shadow: 0 12px 40px rgba(22, 25, 29, .2);
   width: min(420px, calc(100vw - 32px));
-  max-height: calc(100dvh - 40px);
-  overflow-y: auto;
   color: inherit;
+
+  /* 画面の中央に出す。
+     ブラウザ標準の <dialog> は margin: auto で中央に来るが、
+     Tailwind の初期化（preflight）が全要素の margin を 0 にするため、
+     指定しないと画面の左上に貼り付く。ここが唯一の指定箇所。 */
+  margin: auto;
+
+  /* 中身が画面より縦に長いとき（文字を大きくした後は起きやすい）、
+     はみ出して「やめる」に手が届かなくなるのを防ぐ。
+     窓自体の高さを画面内に収める。 */
+  max-height: calc(100dvh - 40px);
+  /* 窓ごとスクロールさせると、ボタンが下に隠れたままになり
+     「押せない窓」に見える。ボタンは常に見える位置に置き、
+     長い文章のときは本文だけをスクロールさせる（下の .confirm-dialog-body）。 */
+  overflow: hidden;
+}
+@media (max-width: 639px) {
+  /* 狭い画面でも中央のまま。確認文は2〜3行と短く、下から出す形にすると
+     親指の位置に「使わない」が来て誤操作が増える。左右の余白だけ詰める。 */
+  .confirm-dialog {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+  }
 }
 .confirm-dialog::backdrop { background: rgba(22, 25, 29, .45); }
-.confirm-dialog-body { padding: 16px 18px; line-height: 1.9; }
+/* 本文とボタンを縦に積み、あふれるのは本文だけにする。
+   ボタン（やめる／実行）は窓の中に必ず残る。 */
+.confirm-dialog-body {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  max-height: inherit;
+  padding: 16px 18px;
+  line-height: 1.9;
+}
+.confirm-dialog-text {
+  overflow-y: auto;
+  /* 背面のページがつられて動かないようにする */
+  overscroll-behavior: contain;
+}
 
 /* 下書き復元バー(復元は黙ってやらない: 通知+破棄) */
 .restore-note {

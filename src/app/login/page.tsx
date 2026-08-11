@@ -12,7 +12,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (viewer) redirect(safeNext ?? homePathFor(viewer.role));
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-10">
+    <main className="narrow-form mx-auto flex min-h-screen flex-col justify-center px-5 py-10">
       <div className="mb-6">
         <h1 className="page-title text-num-s">人事評価管理システム</h1>
         <p className="page-lede">
