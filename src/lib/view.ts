@@ -1,9 +1,14 @@
 /** 画面表示用の小さな変換。ここを1箇所にして表記ゆれを防ぐ。 */
 
-export const RANK_RATIO: Record<string, number> = { A: 100, B: 80, C: 60, D: 40, E: 0 };
+/* ランク→形の大きさ の換算は domain/evaluation-view.ts に置いた。
+   レーダーの軸をどう作るか（実点数で描くか、ランクで描くか、判定外をどう扱うか）は
+   閲覧者のロールで変わる判断であり、テストを書ける純関数側に集めたいため。
+   既存の呼び出しのために、ここからも同じものを見えるようにしておく。 */
+export { RANK_RATIO } from "@/lib/domain/evaluation-view";
+import { RANK_RATIO as RATIO } from "@/lib/domain/evaluation-view";
 
 export function rankToPercent(rank: string): number {
-  return RANK_RATIO[rank] ?? 0;
+  return RATIO[rank] ?? 0;
 }
 
 export function formatDate(v: string | Date | null | undefined): string {

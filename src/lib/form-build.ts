@@ -2,6 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDb, schema as s } from "@/lib/db";
 import { newId } from "@/lib/id";
 import { HttpError } from "@/lib/session";
+import { targetsPointGroup } from "@/lib/domain/grade-points";
 
 /**
  * 制度マスタからアンケートの下書きを組み立てる。
@@ -148,7 +149,7 @@ export async function buildFormDraft(opts: {
     }
   }
 
-  // 評価セットに入っている8項目に紐づく設問だけを載せる
+  // 評価セットに入っている項目に紐づく設問だけを載せる
   const scheme = (
     await db
       .select()
@@ -167,10 +168,13 @@ export async function buildFormDraft(opts: {
     )[0];
 
   if (activeScheme) {
+    /* この等級の等級区分ぶんだけを載せる。
+       等級区分で選ぶ項目が違う（Beginner は等級要件達成率のみ、Manager は8項目）ため、
+       全等級区分ぶんを載せると、その等級では評価されない項目の実績まで聞くことになる。 */
     const items = await db
       .select()
       .from(s.schemeItems)
-      .where(eq(s.schemeItems.schemeId, activeScheme.id))
+      .where(and(eq(s.schemeItems.schemeId, activeScheme.id), eq(s.schemeItems.pointGroup, grade.pointGroup)))
       .orderBy(asc(s.schemeItems.displayOrder));
     const kpiIds = items.map((i) => i.kpiItemId);
     const questions = kpiIds.length
@@ -183,8 +187,31 @@ export async function buildFormDraft(opts: {
     const kpiNames = kpiIds.length
       ? await db.select().from(s.kpiItems).where(inArray(s.kpiItems.id, kpiIds))
       : [];
+    /* 「その等級ではランク基準が定義されていない項目」を落とすための一覧。
+       kpi_rank_criteria.target_grades は元シートの「対象等級」欄そのままで、
+       ここまで一度も参照されていなかった（デッド列）。
+       基準が無い項目を出題しても、集計時にランクを付けられず判定外になるだけなので、
+       設問の時点で外す。 */
+    const rankTargets = kpiIds.length
+      ? await db
+          .select({ kpiItemId: s.kpiRankCriteria.kpiItemId, targetGrades: s.kpiRankCriteria.targetGrades })
+          .from(s.kpiRankCriteria)
+          .where(and(eq(s.kpiRankCriteria.companyId, companyId), inArray(s.kpiRankCriteria.kpiItemId, kpiIds)))
+      : [];
+    const ratedHere = (kpiItemId: string) => {
+      const rows = rankTargets.filter((r) => r.kpiItemId === kpiItemId);
+      // 基準行そのものが無い項目は判断材料が無いので落とさない（設定漏れを設問の消失にしない）
+      if (rows.length === 0) return true;
+      return rows.some((r) => targetsPointGroup(r.targetGrades, grade.pointGroup));
+    };
+
     for (const i of items) {
-      for (const q of questions.filter((x) => x.kpiItemId === i.kpiItemId)) {
+      if (!ratedHere(i.kpiItemId)) continue;
+      for (const q of questions.filter(
+        // kpi_questions.target_grades もデッド列だった。この列を見ないと、
+        // Beginner のアンケートに Chief 以上限定の設問（q4_1 昇給率・q6_1 単価率など）が出てしまう。
+        (x) => x.kpiItemId === i.kpiItemId && targetsPointGroup(x.targetGrades, grade.pointGroup),
+      )) {
         push({
           section: "kpi",
           questionType: q.inputType === "select" ? "single" : "number",

@@ -29,10 +29,10 @@ export default async function ManagerHome() {
   const pending = openCycle ? await listPendingRespondents(companyId, openCycle.id) : [];
   const notSubmitted = pending.filter((p) => p.status !== "submitted");
 
-  const evals = openCycle ? await listEvaluations(companyId, { cycleId: openCycle.id }) : [];
+  const evals = openCycle ? await listEvaluations(companyId, viewer.role, { cycleId: openCycle.id }) : [];
   const drafts = evals.filter((e) => e.status !== "finalized");
 
-  const lastEvals = latestClosed ? await listEvaluations(companyId, { cycleId: latestClosed.id }) : [];
+  const lastEvals = latestClosed ? await listEvaluations(companyId, viewer.role, { cycleId: latestClosed.id }) : [];
   const raise = lastEvals.filter((e) => e.raiseEligible).length;
   const promo = lastEvals.filter((e) => e.promotionEligible).length;
 

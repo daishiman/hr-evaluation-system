@@ -3,14 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
-import { useLazyJson } from "@/components/useLazyJson";
-import { suggestWeights, validateScheme } from "@/lib/domain/scheme";
-import {
-  formatByRank,
-  indexReferencePoints,
-  referenceFor,
-  type ReferencePointRow,
-} from "@/lib/domain/reference-points";
+import { validateScheme, type SchemeSelection } from "@/lib/domain/scheme";
+import { describeRule, expectedItemCount, pointsForSlot, type GradePointRule } from "@/lib/domain/grade-points";
 
 export interface KpiOption {
   id: string;
@@ -19,6 +13,8 @@ export interface KpiOption {
   unit: string;
   categoryId: string | null;
   isFixedSlot: boolean;
+  /** 金銭系（20点枠に置ける項目）。No.6 単価率 / No.9 売上達成率 / No.24 利益率 */
+  isMonetary: boolean;
   isProvisional: boolean;
   intent: string | null;
   aStandard: string | null;
@@ -30,148 +26,150 @@ export interface CategoryOption {
   description: string | null;
 }
 
+/** 等級区分1つぶんの設定（持ち点の型・選べる項目・いまの選択） */
+export interface GroupSetup {
+  pointGroup: string;
+  /** その等級区分に属する等級名（「等級４：AM Ⅰ・等級４：AM Ⅱ」のような表示用の文字列） */
+  gradeLabel: string;
+  rule: GradePointRule;
+  /** その等級区分で選べる項目のID（kpi_reference_points に行がある項目） */
+  selectableItemIds: string[];
+  initial: { kpiItemId: string; isFixedSlot: boolean; isMajorSlot: boolean }[];
+}
+
+interface Pick {
+  /** 20点枠に選んだ金銭系の項目。20点枠を持たない等級区分では null */
+  majorId: string | null;
+  /** 10点枠に選んだ項目 */
+  minorIds: string[];
+}
+
 /**
- * 8項目の選択と配点。
+ * 等級区分ごとの項目選択。
  *
- * 1画面1目的にするため、この画面は「どの項目を何点にするか」だけを扱う。
- * カテゴリごとに1つだけ選べるようにし、合計が満点でないときは
- * 「あと何点」をその場に出して、保存を押す前に気づけるようにする。
+ * 選ぶ項目数も配点も等級区分で変わるため、タブで等級区分を切り替えて1つずつ設定する。
+ * 配点はこの画面では編集できない（等級区分から決まる）。編集できない理由が分からないと
+ * 「壊れている」と受け取られるため、タブごとに1行で理由を出している。
+ *
+ * 1画面1目的にするため、この画面は「どの項目を評価対象にするか」だけを扱う。
+ * 保存はタブ（等級区分）単位で、ほかの等級区分の設定には触らない。
  */
 export function SchemeEditor({
   schemeId,
-  totalPoints,
   categories,
   kpiItems,
-  initial,
+  groups,
   raiseRequiresAllA,
-  scoringMode,
-  pointGroups,
 }: {
   schemeId: string;
-  totalPoints: number;
   categories: CategoryOption[];
   kpiItems: KpiOption[];
-  initial: { kpiItemId: string; categoryId: string | null; weight: number; isFixedSlot: boolean }[];
+  groups: GroupSetup[];
   raiseRequiresAllA: boolean;
-  /** ランクを点数に直すやり方。"ratio"＝一律割合 / "absolute"＝項目別の点数表 */
-  scoringMode: "ratio" | "absolute";
-  /** 元の配点表の等級区分（Beginner / Regular / Chief / AM / Manager） */
-  pointGroups: string[];
 }) {
   const router = useRouter();
   const fixedItem = kpiItems.find((k) => k.isFixedSlot) ?? null;
-  const fixedInitial = initial.find((i) => i.isFixedSlot);
 
-  const [fixedWeight, setFixedWeight] = useState(fixedInitial?.weight ?? 16);
-  const [picked, setPicked] = useState<Record<string, { kpiItemId: string; weight: number }>>(() =>
+  const [active, setActive] = useState(groups[0]?.pointGroup ?? "");
+  const [picks, setPicks] = useState<Record<string, Pick>>(() =>
     Object.fromEntries(
-      categories.map((c) => {
-        const row = initial.find((i) => !i.isFixedSlot && i.categoryId === c.id);
-        const fallback = kpiItems.find((k) => k.categoryId === c.id);
-        return [c.id, { kpiItemId: row?.kpiItemId ?? fallback?.id ?? "", weight: row?.weight ?? 12 }];
-      }),
+      groups.map((g) => [
+        g.pointGroup,
+        {
+          majorId: g.initial.find((i) => i.isMajorSlot && !i.isFixedSlot)?.kpiItemId ?? null,
+          minorIds: g.initial.filter((i) => !i.isFixedSlot && !i.isMajorSlot).map((i) => i.kpiItemId),
+        },
+      ]),
     ),
   );
   const [allA, setAllA] = useState(raiseRequiresAllA);
-  const [mode, setMode] = useState<"ratio" | "absolute">(scoringMode);
-  const [refGroup, setRefGroup] = useState(pointGroups[0] ?? "");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const selections = useMemo(
-    () => [
-      ...(fixedItem
-        ? [{ kpiItemId: fixedItem.id, categoryId: null, weight: fixedWeight, isFixedSlot: true }]
-        : []),
-      ...categories
-        .filter((c) => picked[c.id]?.kpiItemId)
-        .map((c) => ({
-          kpiItemId: picked[c.id].kpiItemId,
-          categoryId: c.id,
-          weight: picked[c.id].weight,
-          isFixedSlot: false,
-        })),
-    ],
-    [fixedItem, fixedWeight, categories, picked],
-  );
+  const group = groups.find((g) => g.pointGroup === active) ?? groups[0] ?? null;
+  const pick: Pick = (group && picks[group.pointGroup]) || { majorId: null, minorIds: [] };
+  const itemOf = (id: string) => kpiItems.find((k) => k.id === id) ?? null;
 
-  const v = validateScheme(selections, {
-    totalPoints,
-    categoryIds: categories.map((c) => c.id),
-    categoryNameOf: (id) => categories.find((c) => c.id === id)?.name ?? id,
-  });
+  /** その等級区分の選択を、検証と保存に使う形に直す。配点は等級区分の型から入れる。 */
+  const selectionsOf = (g: GroupSetup, p: Pick): SchemeSelection[] => {
+    const rows: SchemeSelection[] = [];
+    if (fixedItem) {
+      rows.push({
+        kpiItemId: fixedItem.id,
+        categoryId: fixedItem.categoryId,
+        weight: pointsForSlot(g.rule, "fixed"),
+        isFixedSlot: true,
+        isMajorSlot: false,
+      });
+    }
+    if (p.majorId) {
+      rows.push({
+        kpiItemId: p.majorId,
+        categoryId: itemOf(p.majorId)?.categoryId ?? null,
+        weight: pointsForSlot(g.rule, "major"),
+        isFixedSlot: false,
+        isMajorSlot: true,
+      });
+    }
+    for (const id of p.minorIds) {
+      rows.push({
+        kpiItemId: id,
+        categoryId: itemOf(id)?.categoryId ?? null,
+        weight: pointsForSlot(g.rule, "minor"),
+        isFixedSlot: false,
+        isMajorSlot: false,
+      });
+    }
+    return rows;
+  };
 
-  /* 元の配点表は 33項目 × 5等級区分 × 5ランクで800件を超える。全部を画面に
-     埋め込むと、参考にしない人にも毎回数十KBを送ることになるため、
-     「参考にする」を押したときに、選んでいる等級区分のぶんだけ読みに行く。 */
-  const [refOn, setRefOn] = useState(false);
-  const refUrl = refGroup ? `/api/reference-points?group=${encodeURIComponent(refGroup)}` : null;
-  const {
-    data: refData,
-    loading: refLoading,
-    error: refError,
-  } = useLazyJson<{ group: string; rows: ReferencePointRow[] }>(refUrl, refOn);
-  /* 等級区分を切り替えた直後は、まだ前の区分の内容が残っている。
-     取り違えて配点を入れてしまわないよう、区分が一致するときだけ使う。 */
-  const refRows = refData && refData.group === refGroup ? refData.rows : null;
-  const refReady = refOn && refRows !== null;
-
-  const refIndex = useMemo(() => indexReferencePoints(refRows ?? []), [refRows]);
-  const refOf = (kpiItemId: string | undefined) =>
-    kpiItemId && refGroup && refReady ? referenceFor(refIndex, kpiItemId, refGroup) : null;
-
-  /** 選んでいる項目すべてに、元の配点を入れる（対象外だった項目はそのまま） */
-  const loadReference = () => {
-    if (!refReady) return; // 読み込めていないうちは何も入れない（0点で埋めてしまわないように）
-    const fixedRef = refOf(fixedItem?.id);
-    if (fixedRef) setFixedWeight(Math.round(fixedRef.maxPoints));
-    setPicked((prev) =>
+  /** タブの見出しに「あと何項目」を出すため、全タブぶんの検証結果を持っておく */
+  const results = useMemo(
+    () =>
       Object.fromEntries(
-        categories.map((c) => {
-          const r = refOf(prev[c.id]?.kpiItemId);
-          return [c.id, r ? { ...prev[c.id], weight: Math.round(r.maxPoints) } : prev[c.id]];
+        groups.map((g) => {
+          const p = picks[g.pointGroup] ?? { majorId: null, minorIds: [] };
+          const sel = selectionsOf(g, p);
+          return [
+            g.pointGroup,
+            {
+              selections: sel,
+              validation: validateScheme(sel, {
+                rule: g.rule,
+                selectableItemIds: g.selectableItemIds,
+                fixedSlotItemIds: kpiItems.filter((k) => k.isFixedSlot).map((k) => k.id),
+                monetaryItemIds: kpiItems.filter((k) => k.isMonetary).map((k) => k.id),
+                itemNameOf: (id) => itemOf(id)?.name ?? id,
+              }),
+            },
+          ];
         }),
       ),
-    );
+    // 選択（picks）が変わったときだけ作り直す。groups / kpiItems はこの画面が開いている間は変わらない
+    [picks, groups, kpiItems],
+  );
+
+  if (!group) {
+    return <ReasonNote>等級区分ごとの配点ルールが登録されていません。初期データの投入をご確認ください。</ReasonNote>;
+  }
+
+  const { selections, validation: v } = results[group.pointGroup];
+  const rule = group.rule;
+  const selectable = new Set(group.selectableItemIds);
+  const monetaryOptions = kpiItems.filter((k) => k.isMonetary && selectable.has(k.id) && !k.isFixedSlot);
+  const minorRemaining = rule.minorSlotCount - pick.minorIds.length;
+
+  const setPick = (next: Partial<Pick>) => {
+    setPicks((prev) => ({ ...prev, [group.pointGroup]: { ...prev[group.pointGroup], ...next } }));
     setMessage(null);
+    setError(null);
   };
 
-
-  /** 元の配点の参考表示。参考値であることが分かる言い方に統一する */
-  const ReferenceHint = ({ kpiItemId, onApply }: { kpiItemId?: string; onApply: (points: number) => void }) => {
-    if (pointGroups.length === 0) return null;
-    // 「参考にする」を押すまでは何も出さない（そのぶん画面を軽くしている）
-    if (!refOn) return null;
-    if (refLoading || !refReady) {
-      return <p className="footnote m-0 mt-2">元の配点表を読み込んでいます…</p>;
-    }
-    const r = refOf(kpiItemId);
-    if (!r) {
-      return (
-        <p className="footnote m-0 mt-2">
-          元の配点表では、この項目は「{refGroup}」の対象外でした（参考にできる点数がありません）。
-        </p>
-      );
-    }
-    return (
-      <p className="footnote m-0 mt-2 flex flex-wrap items-center gap-2">
-        <Badge tone="done">参考</Badge>
-        元の配点表（{refGroup}）では <Num value={r.maxPoints} unit="点" />
-        <span className="text-[var(--ink-muted)]">（{formatByRank(r)}）</span>
-        <button type="button" className="btn btn-tertiary" onClick={() => onApply(Math.round(r.maxPoints))}>
-          この点数を入れる
-        </button>
-      </p>
-    );
-  };
-
-  const evenOut = () => {
-    const w = suggestWeights(categories.length + 1, totalPoints);
-    setFixedWeight(w[0]);
-    setPicked((prev) =>
-      Object.fromEntries(categories.map((c, i) => [c.id, { ...prev[c.id], weight: w[i + 1] }])),
-    );
+  const toggleMinor = (id: string) => {
+    const has = pick.minorIds.includes(id);
+    if (!has && minorRemaining <= 0) return; // 上限に達したら足せない（先に外してもらう）
+    setPick({ minorIds: has ? pick.minorIds.filter((x) => x !== id) : [...pick.minorIds, id] });
   };
 
   const save = async () => {
@@ -182,7 +180,17 @@ export function SchemeEditor({
       const res = await fetch("/api/scheme", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ schemeId, items: selections, raiseRequiresAllA: allA, scoringMode: mode }),
+        body: JSON.stringify({
+          schemeId,
+          pointGroup: group.pointGroup,
+          items: selections.map((x) => ({
+            kpiItemId: x.kpiItemId,
+            categoryId: x.categoryId,
+            isFixedSlot: x.isFixedSlot,
+            isMajorSlot: x.isMajorSlot,
+          })),
+          raiseRequiresAllA: allA,
+        }),
       });
       const json = (await res.json()) as { ok: boolean; message?: string };
       if (!res.ok || !json.ok) {
@@ -200,15 +208,55 @@ export function SchemeEditor({
 
   return (
     <>
-      <Card className="card-pad hero-tint">
-        <p className="m-0 text-[12px] text-[var(--ink-muted)]">配点の合計</p>
+      {/* 等級区分のタブ。区分ごとに項目数も配点も違うので、1つずつ設定して1つずつ保存する */}
+      <div className="mt-1 flex flex-wrap gap-2" role="tablist" aria-label="等級区分">
+        {groups.map((g) => {
+          const r = results[g.pointGroup].validation;
+          return (
+            <button
+              key={g.pointGroup}
+              type="button"
+              role="tab"
+              aria-selected={g.pointGroup === group.pointGroup}
+              onClick={() => setActive(g.pointGroup)}
+              className={
+                g.pointGroup === group.pointGroup
+                  ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-[13px]"
+                  : "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-[13px] hover:border-[var(--brand)]"
+              }
+            >
+              <span className="block font-bold">{g.pointGroup}</span>
+              <span className="block text-[11px] text-[var(--ink-muted)]">
+                {r.ok ? "設定できています" : "設定が未完了"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <Card className="card-pad hero-tint mt-3">
+        <p className="m-0 text-[12px] text-[var(--ink-muted)]">
+          {group.pointGroup}（{group.gradeLabel}）の配点
+        </p>
         <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
           {v.total}
-          <span className="unit"> / {totalPoints} 点</span>
+          <span className="unit"> / {rule.totalPoints} 点</span>
         </p>
-        <p className="m-0 mt-2 text-[13px]">
-          {v.ok ? "この内容で保存できます。" : "保存する前に、下の指摘を解消してください。"}
-        </p>
+        <p className="footnote m-0 mt-2">{describeRule(rule)}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-4 text-[13px]">
+          <span>
+            選んだ項目 <Num value={selections.length} unit="件" /> / {expectedItemCount(rule)}件
+          </span>
+          {rule.majorSlotCount > 0 && (
+            <span>
+              {rule.majorSlotPoints}点枠（金銭系）{" "}
+              {pick.majorId ? <Badge tone="done">選択済み</Badge> : <Badge tone="required">未選択</Badge>}
+            </span>
+          )}
+          <span>
+            {rule.minorSlotPoints}点の項目 あと <Num value={Math.max(0, minorRemaining)} unit="件" />
+          </span>
+        </div>
       </Card>
 
       {!v.ok && (
@@ -225,96 +273,6 @@ export function SchemeEditor({
       {error && <ReasonNote>{error}</ReasonNote>}
       {message && <p className="m-0 mt-3 text-[13px] text-[var(--brand-deep)]">{message}</p>}
 
-      <Card className="card-pad mt-4">
-        <p className="section-heading m-0">
-          ランクを点数に直すやり方 <ProvisionalMark />
-        </p>
-        <p className="footnote m-0">
-          A〜Eのランクが決まったあと、それを何点にするかの決め方です。どちらか一方を選んでください。
-          いまは「一律の割合」を初期値にしています。すでに確定した評価は、確定した当時のやり方のまま残ります。
-        </p>
-        <div className="mt-3 grid gap-2">
-          {[
-            {
-              value: "ratio" as const,
-              title: "一律の割合で決める（おすすめ・いまの設定）",
-              body:
-                "どの項目も同じ割合で点数にします（A＝満点の100% / B＝80% / C＝60% / D＝40% / E＝0点）。" +
-                "項目の重みは配点だけで決まるので、説明しやすく、項目を入れ替えても点数表を作り直す必要がありません。" +
-                "割合そのものは仮の値で、あとから変えられます。",
-            },
-            {
-              value: "absolute" as const,
-              title: "項目ごとの点数表で決める（移行前のやり方）",
-              body:
-                "項目ごとに違う点数表を使います（例：ある項目は100/85/70/55/0点、別の項目は10/8/7/5/0点）。" +
-                "移行前の配点表をそのまま再現できますが、項目を1つ変えるたびに等級ごとの点数表を作り直す必要があります。" +
-                "点数表が未登録の項目は、これまでどおり一律の割合で計算します。",
-            },
-          ].map((o) => (
-            <label
-              key={o.value}
-              className={`flex cursor-pointer gap-3 rounded-[10px] border p-3 ${
-                mode === o.value ? "border-[var(--accent)] bg-[var(--tint)]" : "border-[var(--line)]"
-              }`}
-            >
-              <input
-                type="radio"
-                name="scoringMode"
-                className="mt-1"
-                checked={mode === o.value}
-                onChange={() => setMode(o.value)}
-              />
-              <span className="min-w-0">
-                <span className="block text-[13px] font-semibold">{o.title}</span>
-                <span className="footnote m-0 block">{o.body}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </Card>
-
-      {pointGroups.length > 0 && (
-        <Card className="card-pad mt-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="section-heading m-0">移行前の配点を参考にする</p>
-              <p className="footnote m-0">
-                移行前は等級ごとに配点が決まっていました。その点数を参考として表示します。読み込むまで配点は変わりません。
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-2 text-[12px]">
-                等級
-                <select
-                  className="input h-9 w-36 py-0 text-[13px]"
-                  value={refGroup}
-                  onChange={(e) => setRefGroup(e.target.value)}
-                >
-                  {pointGroups.map((g) => (
-                    <option key={g} value={g}>
-                      {g}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {!refOn ? (
-                <Button onClick={() => setRefOn(true)}>元の配点を表示する</Button>
-              ) : (
-                <Button onClick={loadReference} disabled={!refReady}>
-                  {refReady ? "選んだ項目にまとめて入れる" : "読み込んでいます…"}
-                </Button>
-              )}
-            </div>
-          </div>
-          {refError && (
-            <div className="mt-3">
-              <ReasonNote>{refError}</ReasonNote>
-            </div>
-          )}
-        </Card>
-      )}
-
       {fixedItem && (
         <Card className="card-pad mt-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -322,110 +280,154 @@ export function SchemeEditor({
               <p className="todo-row-title m-0">
                 {fixedItem.name} <Badge tone="done">固定枠</Badge>
               </p>
-              <p className="todo-row-sub m-0">この枠は差し替えできません。配点だけ変更できます。</p>
+              <p className="todo-row-sub m-0">
+                この枠はどの等級区分でも必ず入り、差し替えできません。等級が上がるほど配点は小さくなります。
+              </p>
             </div>
-            <label className="flex items-center gap-2 text-[12px]">
-              配点
-              <input
-                className="input input-num w-20"
-                inputMode="numeric"
-                value={fixedWeight}
-                onChange={(e) => setFixedWeight(Number(e.target.value.replace(/[^0-9]/g, "")) || 0)}
-              />
-              <span className="unit">点</span>
-            </label>
+            <p className="m-0">
+              <Num value={pointsForSlot(rule, "fixed")} unit="点" />
+            </p>
           </div>
-          <ReferenceHint kpiItemId={fixedItem.id} onApply={(p) => setFixedWeight(p)} />
         </Card>
       )}
 
-      {categories.map((c) => {
-        const options = kpiItems.filter((k) => k.categoryId === c.id);
-        const cur = picked[c.id];
-        const chosen = options.find((o) => o.id === cur?.kpiItemId) ?? null;
-        return (
-          <Card key={c.id} className="card-pad mt-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="section-heading m-0">{c.name}</p>
-                {c.description && <p className="footnote m-0">{c.description}</p>}
-              </div>
-              <label className="flex items-center gap-2 text-[12px]">
-                配点
-                <input
-                  className="input input-num w-20"
-                  inputMode="numeric"
-                  value={cur?.weight ?? 0}
-                  onChange={(e) =>
-                    setPicked((p) => ({
-                      ...p,
-                      [c.id]: { ...p[c.id], weight: Number(e.target.value.replace(/[^0-9]/g, "")) || 0 },
-                    }))
-                  }
-                />
-                <span className="unit">点</span>
-              </label>
+      {rule.majorSlotCount > 0 && (
+        <Card className="card-pad mt-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="section-heading m-0">
+                {rule.majorSlotPoints}点枠（金銭系から1つ） <Badge tone="required">必須</Badge>
+              </p>
+              <p className="footnote m-0">
+                単価率・売上達成率・利益率のうち1つを、ほかより重い{rule.majorSlotPoints}点の枠として選びます。
+                {group.pointGroup === "Chief" && " Chief では利益率を選べません（この等級区分の評価対象外のため）。"}
+              </p>
             </div>
+            <p className="m-0">
+              <Num value={rule.majorSlotPoints} unit="点" />
+            </p>
+          </div>
+          <div className="field-grid mt-3">
+            {monetaryOptions.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                aria-pressed={pick.majorId === o.id}
+                onClick={() =>
+                  setPick({ majorId: o.id, minorIds: pick.minorIds.filter((x) => x !== o.id) })
+                }
+                className={
+                  pick.majorId === o.id
+                    ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-[13px]"
+                    : "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-[13px] hover:border-[var(--brand)]"
+                }
+              >
+                <span className="block font-bold">{o.name}</span>
+                <span className="block text-[11px] text-[var(--ink-muted)]">
+                  単位 {o.unit}
+                  {o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}
+                </span>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
 
-            <div className="field-grid mt-3">
-              {options.map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  aria-pressed={cur?.kpiItemId === o.id}
-                  onClick={() => setPicked((p) => ({ ...p, [c.id]: { ...p[c.id], kpiItemId: o.id } }))}
-                  className={
-                    cur?.kpiItemId === o.id
-                      ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-[13px]"
-                      : "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-[13px] hover:border-[var(--brand)]"
-                  }
-                >
-                  <span className="block font-bold">
-                    {o.name}
-                    {o.isProvisional && (
-                      <>
-                        {" "}
-                        <ProvisionalMark note="制度として未確定の項目です（叩き台）。" />
-                      </>
-                    )}
-                  </span>
-                  <span className="block text-[11px] text-[var(--ink-muted)]">
-                    単位 {o.unit}
-                    {o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {chosen?.intent && <p className="footnote m-0 mt-2">ねらい：{chosen.intent}</p>}
-            <ReferenceHint
-              kpiItemId={cur?.kpiItemId}
-              onApply={(p) => setPicked((prev) => ({ ...prev, [c.id]: { ...prev[c.id], weight: p } }))}
-            />
-          </Card>
-        );
-      })}
+      {rule.minorSlotCount > 0 ? (
+        categories.map((c) => {
+          const options = kpiItems.filter(
+            (k) => k.categoryId === c.id && selectable.has(k.id) && !k.isFixedSlot && k.id !== pick.majorId,
+          );
+          if (options.length === 0) return null;
+          return (
+            <Card key={c.id} className="card-pad mt-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="section-heading m-0">{c.name}</p>
+                  {c.description && <p className="footnote m-0">{c.description}</p>}
+                </div>
+                <p className="footnote m-0">1項目 {rule.minorSlotPoints}点</p>
+              </div>
+              <div className="field-grid mt-3">
+                {options.map((o) => {
+                  const on = pick.minorIds.includes(o.id);
+                  const full = !on && minorRemaining <= 0;
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      aria-pressed={on}
+                      disabled={full}
+                      title={full ? "選べる項目数の上限です。ほかの項目を外してから選んでください。" : undefined}
+                      onClick={() => toggleMinor(o.id)}
+                      className={
+                        on
+                          ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-[13px]"
+                          : `rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-[13px] ${
+                              full ? "opacity-50" : "hover:border-[var(--brand)]"
+                            }`
+                      }
+                    >
+                      <span className="block font-bold">
+                        {o.name}
+                        {o.isProvisional && (
+                          <>
+                            {" "}
+                            <ProvisionalMark note="制度として未確定の項目です（叩き台）。" />
+                          </>
+                        )}
+                      </span>
+                      <span className="block text-[11px] text-[var(--ink-muted)]">
+                        単位 {o.unit}
+                        {o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
+          );
+        })
+      ) : (
+        <Card className="card-pad mt-4">
+          <p className="section-heading m-0">選ぶ項目はありません</p>
+          <p className="footnote m-0">
+            {group.pointGroup} は等級要件達成率だけで{rule.totalPoints}点です。
+            ほかのKPIはこの等級区分では評価しません（0点として数えるのではなく、評価の対象にしません）。
+          </p>
+        </Card>
+      )}
 
       <Card className="card-pad mt-4">
         <label className="flex items-center gap-2 text-[13px]">
           <input type="checkbox" checked={allA} onChange={(e) => setAllA(e.target.checked)} />
-          昇給の条件を「選んだ8項目がすべてA」にする
+          昇給の条件を「選んだ項目がすべてA」にする
         </label>
         <p className="footnote m-0 mt-1">
-          外すと「配点の満点と同じ点数を取ったとき」が昇給の条件になります。
+          外すと「配点の満点と同じ点数を取ったとき」が昇給の条件になります。この設定は全等級区分に共通です。
+        </p>
+      </Card>
+
+      <Card className="card-pad mt-4">
+        <p className="section-heading m-0">ランクを点数に直すやり方</p>
+        <p className="footnote m-0">
+          A〜Eのランクは、等級区分ごとの配点に割合を掛けて点数にします（A＝満点の100% / B＝80% / C＝60% / D＝40% / E＝0点）。
+          移行前の「項目ごとの点数表」は、等級区分ごとに配点が決まるようになったため使いません。
+          すでに確定した評価は、確定した当時のやり方のまま残ります。
         </p>
       </Card>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button variant="primary" onClick={save} disabled={busy || !v.ok}>
-          {busy ? "保存しています…" : "この内容で保存する"}
+          {busy ? "保存しています…" : `${group.pointGroup} の内容を保存する`}
         </Button>
-        <Button onClick={evenOut}>配点を均等に割り振る</Button>
         <span className="footnote">
-          残り <Num value={totalPoints - v.total} unit="点" />
+          残り <Num value={rule.totalPoints - v.total} unit="点" />
         </span>
       </div>
       <p className="footnote mt-2">
-        保存しても、確定済みの評価は判定当時の配点のまま残ります。過去の結果は変わりません。
+        保存は表示している等級区分だけに反映されます。ほかの等級区分はタブを切り替えて保存してください。
+        確定済みの評価は判定当時の配点のまま残るため、過去の結果は変わりません。
       </p>
     </>
   );

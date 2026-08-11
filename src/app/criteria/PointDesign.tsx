@@ -1,0 +1,209 @@
+import { Card, Num } from "@/components/ui";
+import { slotCountOf, type GradePointRule } from "./data";
+
+/**
+ * 等級区分ごとの「持ち点の型」。
+ *
+ * 数字は1つも書かず、すべて grade_point_rules から読んだ値を並べている。
+ * 制度を変えたらこの画面の表示も自動で変わる。
+ */
+
+/** 100点の内訳を1本の帯で見せる。合計が100点ちょうどであることが一目で分かるようにするため。 */
+function CompositionBar({ rule }: { rule: GradePointRule }) {
+  const total = rule.totalPoints;
+  const segments = [
+    { key: "fixed", points: rule.fixedSlotPoints, color: "var(--brand-deep)" },
+    { key: "major", points: rule.majorSlotPoints * rule.majorSlotCount, color: "var(--brand)" },
+    { key: "minor", points: rule.minorSlotPoints * rule.minorSlotCount, color: "var(--brand-soft)" },
+  ].filter((seg) => seg.points > 0);
+
+  return (
+    <div
+      className="mt-3 flex h-3 overflow-hidden rounded-full border border-[var(--line)]"
+      role="img"
+      aria-label={`満点${total}点の内訳`}
+    >
+      {segments.map((seg) => (
+        <div
+          key={seg.key}
+          style={{ width: `${(seg.points / total) * 100}%`, background: seg.color }}
+          className="h-full"
+        />
+      ))}
+    </div>
+  );
+}
+
+/** 内訳の1行（枠の名前・1つあたりの配点・個数・小計）。 */
+function SlotRow({
+  swatch,
+  title,
+  detail,
+  subtotal,
+}: {
+  swatch: string;
+  title: string;
+  detail: string;
+  subtotal: number;
+}) {
+  return (
+    <div className="card-row items-start">
+      <span
+        aria-hidden="true"
+        className="mt-[5px] inline-block h-3 w-3 shrink-0 rounded-sm border border-[var(--line)]"
+        style={{ background: swatch }}
+      />
+      <div className="row-main">
+        <p className="todo-row-title m-0">{title}</p>
+        <p className="todo-row-sub m-0">{detail}</p>
+      </div>
+      <div className="shrink-0 text-right">
+        <Num value={subtotal} display />
+        <span className="unit">点</span>
+      </div>
+    </div>
+  );
+}
+
+export function PointDesign({
+  rule,
+  gradeName,
+  selectableCount,
+  monetaryNames,
+}: {
+  rule: GradePointRule | null;
+  gradeName: string;
+  selectableCount: number;
+  monetaryNames: string[];
+}) {
+  if (!rule) {
+    return (
+      <Card className="card-pad">
+        <p className="m-0 text-[13px]">
+          {gradeName} の配点の型がまだ登録されていません。会社の管理者に「等級区分ごとの配点」の登録を依頼してください。
+        </p>
+      </Card>
+    );
+  }
+
+  const slots = slotCountOf(rule);
+  const sum =
+    rule.fixedSlotPoints + rule.majorSlotPoints * rule.majorSlotCount + rule.minorSlotPoints * rule.minorSlotCount;
+
+  return (
+    <>
+      <Card className="card-pad hero-tint">
+        <p className="m-0 text-[12px] text-[var(--ink-muted)]">{gradeName} の満点と、その内訳</p>
+        <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
+          <Num value={rule.totalPoints} />
+          <span className="unit">点満点</span>
+        </p>
+        <p className="m-0 mt-1 text-[13px]">
+          この等級では <Num value={slots} unit="項目" /> を評価します（選べる項目は{" "}
+          <Num value={selectableCount} unit="件" />）。
+        </p>
+        <CompositionBar rule={rule} />
+        {sum !== rule.totalPoints && (
+          <p className="m-0 mt-2 text-[12px] text-[var(--danger)]">
+            内訳の合計が <Num value={sum} unit="点" /> で満点と合いません。会社の管理者に配点の見直しを依頼してください。
+          </p>
+        )}
+      </Card>
+
+      <Card>
+        <SlotRow
+          swatch="var(--brand-deep)"
+          title="等級要件達成率（固定枠）"
+          detail="どの等級でも必ず入る。差し替えできない"
+          subtotal={rule.fixedSlotPoints}
+        />
+        {rule.majorSlotCount > 0 && (
+          <SlotRow
+            swatch="var(--brand)"
+            title={`${rule.majorSlotPoints}点枠（金銭に関わる項目）`}
+            detail={`${rule.majorSlotPoints}点 × ${rule.majorSlotCount}つ。${
+              monetaryNames.length > 0 ? `${monetaryNames.join("・")} から1つだけ選ぶ` : "選べる候補が登録されていません"
+            }`}
+            subtotal={rule.majorSlotPoints * rule.majorSlotCount}
+          />
+        )}
+        {rule.minorSlotCount > 0 && (
+          <SlotRow
+            swatch="var(--brand-soft)"
+            title={`${rule.minorSlotPoints}点枠`}
+            detail={`${rule.minorSlotPoints}点 × ${rule.minorSlotCount}つ。下の「選べる項目」から選ぶ`}
+            subtotal={rule.minorSlotPoints * rule.minorSlotCount}
+          />
+        )}
+      </Card>
+
+      {rule.note && <p className="footnote mt-2">{rule.note}</p>}
+
+      <p className="footnote mt-2">
+        等級が上がるほど等級要件の配点が下がり、そのぶん売上や利益などの成果を見る項目の配点が上がります。
+        上の等級ほど自分の判断で動かせる範囲が広く、決められたことを満たしたかよりも、出した成果で見るほうが実態に合うためです。
+      </p>
+    </>
+  );
+}
+
+/** 全等級区分の配点をならべた比較表。「自分の等級だけ特別ではない」ことを確かめるために置く。 */
+export function PointRuleComparison({ rules, currentGroup }: { rules: GradePointRule[]; currentGroup: string | null }) {
+  return (
+    <div className="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>等級区分</th>
+            <th className="col-num">満点</th>
+            <th className="col-num">等級要件</th>
+            <th className="col-num">20点枠</th>
+            <th className="col-num">10点枠</th>
+            <th className="col-num">選ぶ項目数</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rules.map((r) => (
+            <tr key={r.id}>
+              <td>
+                {r.pointGroup}
+                {r.pointGroup === currentGroup && <span className="footnote"> ← いま見ている等級</span>}
+              </td>
+              <td className="col-num">
+                <Num value={r.totalPoints} />
+              </td>
+              <td className="col-num">
+                <Num value={r.fixedSlotPoints} />
+              </td>
+              <td className="col-num">
+                {r.majorSlotCount > 0 ? (
+                  <>
+                    <Num value={r.majorSlotPoints} />
+                    <span className="unit">点 ×</span>
+                    <Num value={r.majorSlotCount} />
+                  </>
+                ) : (
+                  <span className="text-[var(--ink-muted)]">—</span>
+                )}
+              </td>
+              <td className="col-num">
+                {r.minorSlotCount > 0 ? (
+                  <>
+                    <Num value={r.minorSlotPoints} />
+                    <span className="unit">点 ×</span>
+                    <Num value={r.minorSlotCount} />
+                  </>
+                ) : (
+                  <span className="text-[var(--ink-muted)]">—</span>
+                )}
+              </td>
+              <td className="col-num">
+                <Num value={slotCountOf(r)} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

@@ -1,6 +1,12 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { canSeeCriteria, type Viewer } from "@/lib/session";
+import {
+  employeePromotionBlockedReason,
+  employeeRaiseReason,
+  scopeEvaluationItem,
+  scopeEvaluationRow,
+} from "@/lib/domain/evaluation-view";
 
 /**
  * 読み取り。すべての関数が company_id での絞り込みを前提にする。
@@ -520,13 +526,25 @@ export async function listNotes(companyId: string, employeeId: string) {
 
 /* ───────────────── 評価結果 ───────────────── */
 
-export async function listEvaluations(companyId: string, opts?: { employeeId?: string; cycleId?: string }) {
+/**
+ * 評価の一覧。
+ *
+ * viewerRole を必ず受け取る。以前は合計点・満点・昇格に必要な点数・昇格できない理由を
+ * 誰にでも返しており、画面が描いていないだけでレスポンスには載っていた。
+ * 引数を省略できるようにすると渡し忘れが起きるため、位置引数の必須にして
+ * 呼び出し漏れを型で検出できるようにしている。
+ */
+export async function listEvaluations(
+  companyId: string,
+  viewerRole: Viewer["role"],
+  opts?: { employeeId?: string; cycleId?: string },
+) {
   const db = await getDb();
   const conds = [eq(s.evaluations.companyId, companyId)];
   if (opts?.employeeId) conds.push(eq(s.evaluations.employeeId, opts.employeeId));
   if (opts?.cycleId) conds.push(eq(s.evaluations.cycleId, opts.cycleId));
 
-  return db
+  const rows = await db
     .select({
       id: s.evaluations.id,
       cycleId: s.evaluations.cycleId,
@@ -567,6 +585,11 @@ export async function listEvaluations(companyId: string, opts?: { employeeId?: s
     .leftJoin(s.grades, eq(s.grades.id, s.evaluations.gradeId))
     .where(and(...conds))
     .orderBy(desc(s.evaluationCycles.periodStart), asc(s.grades.displayOrder), asc(s.users.name));
+
+  /* 配点・必要点数・評価者向けの理由文は、ここで落としてから返す。
+     画面に出さないだけでは、APIの返り値として残ってしまうため。 */
+  const full = canSeeCriteria(viewerRole);
+  return rows.map((r) => scopeEvaluationRow(r, full));
 }
 
 export type EvaluationRow = Awaited<ReturnType<typeof listEvaluations>>[number];
@@ -578,12 +601,12 @@ export type EvaluationRow = Awaited<ReturnType<typeof listEvaluations>>[number];
  */
 export async function getEvaluationDetail(companyId: string, evaluationId: string, viewerRole: Viewer["role"]) {
   const db = await getDb();
-  const head = (await listEvaluations(companyId)).find((e) => e.id === evaluationId);
+  const head = (await listEvaluations(companyId, viewerRole)).find((e) => e.id === evaluationId);
   if (!head) return null;
 
-  /* 賞与の欄は評価票1枚を開いたときだけ読む。
+  /* 賞与と理由文は評価票1枚を開いたときだけ読む。
      一覧（listEvaluations）は評価される側の画面でも使うため、そちらには載せない。 */
-  const bonus = (
+  const extra = (
     await db
       .select({
         officeAchievementRate: s.evaluations.officeAchievementRate,
@@ -591,11 +614,29 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
         personalPoints: s.evaluations.personalPoints,
         bonusYen: s.evaluations.bonusYen,
         bonusRationale: s.evaluations.bonusRationale,
+        raiseReason: s.evaluations.raiseReason,
+        raiseReasonEmployee: s.evaluations.raiseReasonEmployee,
+        promotionBlockedReason: s.evaluations.promotionBlockedReason,
+        promotionBlockedReasonEmployee: s.evaluations.promotionBlockedReasonEmployee,
+        /* この評価のもとになったアンケート回答。本人にも返してよい（自分が書いたもの）。
+           これが無いと「なぜこの実績値なのか」を回答まで遡って確かめられない。 */
+        responseId: s.evaluations.responseId,
       })
       .from(s.evaluations)
       .where(and(eq(s.evaluations.companyId, companyId), eq(s.evaluations.id, evaluationId)))
       .limit(1)
-  )[0] ?? { officeAchievementRate: null, kgiCoefficient: null, personalPoints: null, bonusYen: null, bonusRationale: null };
+  )[0] ?? {
+    officeAchievementRate: null,
+    kgiCoefficient: null,
+    personalPoints: null,
+    bonusYen: null,
+    bonusRationale: null,
+    raiseReason: null,
+    raiseReasonEmployee: null,
+    promotionBlockedReason: null,
+    promotionBlockedReasonEmployee: null,
+    responseId: null,
+  };
 
   const rawItems = await db
     .select()
@@ -617,35 +658,47 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
 
   const full = canSeeCriteria(viewerRole);
 
-  // 評価される側には、配点・閾値・昇格に必要な点数を「空」にして返す。
-  // ランクと実績値と判定理由は本人にも見せる（なぜその評価かは説明できる必要がある）。
-  const items = rawItems.map((i) => ({
-    ...i,
-    points: full ? i.points : null,
-    maxPoints: full ? i.maxPoints : null,
-    thresholdLabel: full ? i.thresholdLabel : null,
-    thresholdLower: full ? i.thresholdLower : null,
-    thresholdUpper: full ? i.thresholdUpper : null,
-  }));
+  /* 評価される側には、配点・閾値・昇格に必要な点数を「空」にして返す。
+     ランクと実績値と判定理由は本人にも見せる（なぜその評価かは説明できる必要がある）が、
+     根拠文は本人向けの1本だけに差し替える（scopeEvaluationItem 参照）。 */
+  const items = rawItems.map((i) => scopeEvaluationItem(i, full));
+
+  /* 判定範囲（A〜Eの閾値）は評価者だけが見る。保存済みのスナップショットは
+     「当たったランクの範囲」しか持っていないため、帯として並べるぶんは基準表から読む。 */
+  const rankCriteria = full
+    ? await listRankCriteria(companyId, [...new Set(rawItems.map((i) => i.kpiItemId))])
+    : [];
+
+  // 行動指針の点数も本人には出さない（水準ラベルだけ見せる）。理由は scopeEvaluationRow のコメント。
+  const scopedBehaviors = behaviors.map((b) => ({ ...b, score: full ? b.score : null }));
 
   return {
     head: {
       ...head,
-      totalScore: full ? head.totalScore : null,
-      maxScore: full ? head.maxScore : null,
-      requiredKpiPointsSnapshot: full ? head.requiredKpiPointsSnapshot : null,
-      requiredBehaviorPointsSnapshot: full ? head.requiredBehaviorPointsSnapshot : null,
       /* 個人Pt・賞与額も評価される側には返さない。
          個人Pt ＝ KPI評価点合計 × 達成係数 なので、係数（管理画面で誰でも見られる表）と
          突き合わせると、隠しているはずのKPI評価点合計が逆算できてしまうため。 */
-      officeAchievementRate: full ? bonus.officeAchievementRate : null,
-      kgiCoefficient: full ? bonus.kgiCoefficient : null,
-      personalPoints: full ? bonus.personalPoints : null,
-      bonusYen: full ? bonus.bonusYen : null,
-      bonusRationale: full ? bonus.bonusRationale : null,
+      responseId: extra.responseId,
+      officeAchievementRate: full ? extra.officeAchievementRate : null,
+      kgiCoefficient: full ? extra.kgiCoefficient : null,
+      personalPoints: full ? extra.personalPoints : null,
+      bonusYen: full ? extra.bonusYen : null,
+      bonusRationale: full ? extra.bonusRationale : null,
+      /* 昇給・昇格の理由は、評価者には点数入りの原文を、本人には数値を含まない言い換えを返す。
+         本人向けの列が空でも評価者向けの文へは落とさない（それが漏洩の元だった）。 */
+      raiseReason: full
+        ? extra.raiseReason
+        : employeeRaiseReason(extra.raiseReasonEmployee, head.raiseEligible),
+      promotionBlockedReason: full
+        ? extra.promotionBlockedReason
+        : employeePromotionBlockedReason(
+            extra.promotionBlockedReasonEmployee,
+            Boolean(extra.promotionBlockedReason),
+          ),
     },
     items,
-    behaviors,
+    rankCriteria,
+    behaviors: scopedBehaviors,
     requirements,
     gates,
     showsCriteria: full,

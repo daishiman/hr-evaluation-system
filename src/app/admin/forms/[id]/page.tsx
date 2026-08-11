@@ -6,7 +6,7 @@ import { getDb, schema as s } from "@/lib/db";
 import { getForm, listFormQuestions, listKpiItems } from "@/lib/queries";
 import { FormBuilder, type BuilderQuestion } from "@/components/FormBuilder";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, PageTitle, SectionHeading } from "@/components/ui";
+import { Badge, Card, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -94,14 +94,44 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
       </Card>
 
       <SectionHeading>タイトルと説明</SectionHeading>
+      {editable ? (
+        <RecordForm
+          url="/api/forms"
+          method="PATCH"
+          fixed={{ formId: form.id }}
+          submitLabel="保存する"
+          fields={[
+            { name: "title", label: "タイトル", type: "text", required: true, defaultValue: form.title },
+            { name: "description", label: "冒頭の説明文", type: "textarea", defaultValue: form.description ?? "" },
+          ]}
+        />
+      ) : (
+        /* 設問と同じ理由でタイトル・説明文も変えられない。
+           入力欄を出しておいて保存時に断ると徒労になるため、理由を先に出す。 */
+        <>
+          <ReasonNote>
+            このアンケートにはすでに{responses.length}
+            件の回答があるため、タイトルと説明文は変更できません。回答した方が読んだ文面をあとから変えると、何に対する回答か分からなくなるためです。内容を変えるときは、アンケート一覧から新しい版を作ってください。
+          </ReasonNote>
+          <Card className="card-pad mt-2">
+            <p className="m-0 text-[13px] font-bold">{form.title}</p>
+            {form.description && <p className="m-0 mt-1 text-[13px] whitespace-pre-wrap">{form.description}</p>}
+          </Card>
+        </>
+      )}
+
+      <SectionHeading>回答期間</SectionHeading>
+      <p className="footnote mb-2">
+        締切日を過ぎると回答できなくなります（締切日は当日いっぱいまで回答できます）。回答があっても、この期間はあとから直せます。個別に期限を延ばしたいときは「回答一覧を見る」から設定してください。
+      </p>
       <RecordForm
         url="/api/forms"
         method="PATCH"
         fixed={{ formId: form.id }}
-        submitLabel="保存する"
+        submitLabel="回答期間を保存する"
         fields={[
-          { name: "title", label: "タイトル", type: "text", required: true, defaultValue: form.title },
-          { name: "description", label: "冒頭の説明文", type: "textarea", defaultValue: form.description ?? "" },
+          { name: "opensAt", label: "受付の開始日", type: "date", defaultValue: form.opensAt ?? "" },
+          { name: "closesAt", label: "締切日", type: "date", defaultValue: form.closesAt ?? "" },
         ]}
       />
 

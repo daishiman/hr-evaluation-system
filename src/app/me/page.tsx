@@ -23,7 +23,7 @@ export default async function MyHome() {
 
   const [openCycle, evaluations, cycles] = await Promise.all([
     getOpenCycle(viewer.companyId),
-    listEvaluations(viewer.companyId, { employeeId: viewer.id }),
+    listEvaluations(viewer.companyId, viewer.role, { employeeId: viewer.id }),
     listCycles(viewer.companyId),
   ]);
 

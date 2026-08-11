@@ -1,0 +1,225 @@
+import { Badge, Card, Num } from "@/components/ui";
+import type { SelectableItem } from "./data";
+
+/**
+ * 1項目ぶんの採点の流れを、上から下へ1本で追えるようにする画面部品。
+ *
+ *   ① 何を聞くか（kpi_questions）
+ *   ② どう実績値にするか（kpi_items.formula）
+ *   ③ どのランクになるか（kpi_rank_criteria の下限・上限）
+ *   ④ 何点になるか（配点 × ランクの割合）
+ *
+ * ここに出る数字（閾値・割合・配点）はすべてDBのマスタから読んでいる。
+ * 項目が33件あるため、既定は畳んでおき、見たい項目だけ開く。
+ */
+
+export interface RankCriterionRow {
+  id: string;
+  kpiItemId: string;
+  rank: string;
+  displayLabel: string;
+  lowerBound: number | null;
+  upperBound: number | null;
+  meaning: string | null;
+  isProvisional: boolean;
+}
+
+export interface QuestionRow {
+  id: string;
+  kpiItemId: string | null;
+  questionKey: string;
+  text: string;
+  unit: string | null;
+  role: string;
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  numerator: "分子",
+  denominator: "分母",
+  direct: "そのまま実績値",
+  identify: "識別のため",
+};
+
+const RANK_ORDER = ["A", "B", "C", "D", "E"];
+
+/** 配点とランクの割合から点数を出す（評価の計算 src/lib/domain/scoring.ts と同じ丸め方）。 */
+function scoreOf(weight: number, ratio: number): number {
+  return Math.round(weight * ratio * 10) / 10;
+}
+
+/**
+ * 下限・上限を日本語の範囲に直す。
+ * 逆転指標（低いほど良い）は「上限以下・下限超」で見るので、書き方が入れ替わる。
+ */
+function boundText(c: RankCriterionRow, direction: string): string {
+  const lower = c.lowerBound;
+  const upper = c.upperBound;
+  if (direction === "lower") {
+    if (upper !== null && lower !== null) return `${lower} 超 ${upper} 以下`;
+    if (upper !== null) return `${upper} 以下`;
+    if (lower !== null) return `${lower} 超`;
+    return "範囲の指定なし";
+  }
+  if (lower !== null && upper !== null) return `${lower} 以上 ${upper} 未満`;
+  if (lower !== null) return `${lower} 以上`;
+  if (upper !== null) return `${upper} 未満`;
+  return "範囲の指定なし";
+}
+
+function ItemFlow({
+  item,
+  weight,
+  slotLabel,
+  adopted,
+  questions,
+  criteria,
+  ratios,
+}: {
+  item: SelectableItem;
+  weight: number;
+  slotLabel: string;
+  adopted: boolean;
+  questions: QuestionRow[];
+  criteria: RankCriterionRow[];
+  ratios: { rank: string; ratio: number }[];
+}) {
+  const sorted = [...criteria].sort((a, b) => RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank));
+
+  return (
+    <details className="card card-pad">
+      <summary className="cursor-pointer list-item text-[13px]">
+        <span className="font-semibold">
+          No.{item.no} {item.name}
+        </span>{" "}
+        <span className="footnote">／ {slotLabel}</span>{" "}
+        <span className="num font-bold">{weight}</span>
+        <span className="unit">点</span>
+        {adopted && <> <Badge tone="active">この等級で採用中</Badge></>}
+      </summary>
+
+      <div className="mt-3 grid gap-4">
+        <div>
+          <p className="m-0 mb-1 text-[12px] font-semibold text-[var(--ink-muted)]">① 本人に聞くこと</p>
+          {questions.length === 0 ? (
+            <p className="m-0 text-[13px]">
+              この項目の設問が登録されていません。実績値を出せないため、評価する側が値を入れる必要があります。
+            </p>
+          ) : (
+            <ul className="m-0 list-none space-y-1 p-0 text-[13px]">
+              {questions.map((q) => (
+                <li key={q.id}>
+                  <span className="num font-bold">{q.questionKey}</span>{" "}
+                  <span className="footnote">（{ROLE_LABEL[q.role] ?? q.role}）</span>
+                  <br />
+                  {q.text}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <p className="m-0 mb-1 text-[12px] font-semibold text-[var(--ink-muted)]">② 実績値の出し方</p>
+          <p className="m-0 text-[13px]">{item.formula ?? "計算式が登録されていません（回答した数値をそのまま使います）。"}</p>
+          {item.formulaNote && <p className="footnote m-0 mt-1">{item.formulaNote}</p>}
+          <p className="footnote m-0 mt-1">
+            単位は {item.unit}。{item.direction === "lower" ? "低いほど良い項目です。" : "高いほど良い項目です。"}
+          </p>
+        </div>
+
+        <div>
+          <p className="m-0 mb-1 text-[12px] font-semibold text-[var(--ink-muted)]">
+            ③ 実績値からランクを決める ／ ④ 何点になるか
+          </p>
+          {sorted.length === 0 ? (
+            <p className="m-0 text-[13px]">この項目のランク基準が登録されていません。会社の管理者に登録を依頼してください。</p>
+          ) : (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ランク</th>
+                    <th>この範囲なら</th>
+                    <th>数式で書くと</th>
+                    <th className="col-num">割合</th>
+                    <th className="col-num">点数</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((c) => {
+                    const ratio = ratios.find((r) => r.rank === c.rank)?.ratio ?? 0;
+                    return (
+                      <tr key={c.id}>
+                        <td className="num font-bold">{c.rank}</td>
+                        <td>
+                          {c.displayLabel}
+                          {c.meaning && <span className="footnote"> ／ {c.meaning}</span>}
+                        </td>
+                        <td className="footnote">{boundText(c, item.direction)}</td>
+                        <td className="col-num">
+                          <Num value={Math.round(ratio * 100)} unit="%" />
+                        </td>
+                        <td className="col-num">
+                          <Num value={scoreOf(weight, ratio)} unit="点" />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="footnote mt-2">
+            {item.direction === "lower"
+              ? "この項目は低いほど良いので「上限以下・下限超」で見ます。境目の値はどちらか一方のランクにしか入りません。"
+              : "この項目は高いほど良いので「下限以上・上限未満」で見ます。境目の値はどちらか一方のランクにしか入りません。"}
+          </p>
+          {item.aStandard && <p className="footnote m-0 mt-1">Aの水準の考え方：{item.aStandard}</p>}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+export function ScoringFlow({
+  items,
+  weightOf,
+  slotLabelOf,
+  adoptedIds,
+  questions,
+  criteria,
+  ratios,
+}: {
+  items: SelectableItem[];
+  weightOf: (item: SelectableItem) => number;
+  slotLabelOf: (item: SelectableItem) => string;
+  adoptedIds: Set<string>;
+  questions: QuestionRow[];
+  criteria: RankCriterionRow[];
+  ratios: { rank: string; ratio: number }[];
+}) {
+  if (items.length === 0) {
+    return (
+      <Card className="card-pad">
+        <p className="m-0 text-[13px]">この等級区分で評価する項目がありません。</p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="stack-tight">
+      {items.map((item) => (
+        <ItemFlow
+          key={item.kpiItemId}
+          item={item}
+          weight={weightOf(item)}
+          slotLabel={slotLabelOf(item)}
+          adopted={adoptedIds.has(item.kpiItemId)}
+          questions={questions.filter((q) => q.kpiItemId === item.kpiItemId)}
+          criteria={criteria.filter((c) => c.kpiItemId === item.kpiItemId)}
+          ratios={ratios}
+        />
+      ))}
+    </div>
+  );
+}

@@ -2,7 +2,8 @@ import { getEvaluationDetail, listEvaluations } from "@/lib/queries";
 import { Badge, Bar, Card, DefList, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { EightAxisRadar } from "@/components/LazyCharts";
 import { PrintButton } from "@/components/PrintButton";
-import { formatPeriod, rankToPercent } from "@/lib/view";
+import { formatPeriod } from "@/lib/view";
+import { buildRadarValues, buildThresholdScale, RANK_LEGEND } from "@/lib/domain/evaluation-view";
 import type { Role } from "@/lib/session";
 
 /**
@@ -26,26 +27,25 @@ export async function EvaluationDetail({
     return <ReasonNote>この評価は見つかりませんでした。一覧からもう一度お選びください。</ReasonNote>;
   }
 
-  const { head, items, behaviors, requirements, gates, showsCriteria } = detail;
+  const { head, items, behaviors, requirements, gates, rankCriteria, showsCriteria } = detail;
 
   // 前回の評価（同じ人の1つ前のサイクル）をレーダーの比較に使う
-  const history = (await listEvaluations(companyId, { employeeId: head.employeeId })).filter(
+  const history = (await listEvaluations(companyId, role, { employeeId: head.employeeId })).filter(
     (e) => e.status === "finalized",
   );
   const myIndex = history.findIndex((e) => e.id === evaluationId);
   const prev = myIndex >= 0 ? history[myIndex + 1] : undefined;
   const prevDetail = prev ? await getEvaluationDetail(companyId, prev.id, role) : null;
 
-  const radar = items.map((i) => ({
-    item: i.itemName,
-    value: rankToPercent(i.rank ?? "E"),
-    rank: i.rank,
-  }));
-  const radarPrev = prevDetail?.items.map((i) => ({
-    item: i.itemName,
-    value: rankToPercent(i.rank ?? "E"),
-    rank: i.rank,
-  }));
+  /* レーダーの軸の作り方はロールで変える。
+     評価者には実際の「獲得点 ÷ 配点」、本人には配点を出せないのでランク由来の形。
+     判定外（実績が未入力）はどちらでも欠損として扱う（0点として描かない）。 */
+  const radar = buildRadarValues(items, showsCriteria);
+  const radarPrev = prevDetail ? buildRadarValues(prevDetail.items, showsCriteria) : undefined;
+  const sameAxes =
+    radarPrev !== undefined &&
+    radarPrev.length === radar.length &&
+    radar.every((r, idx) => radarPrev[idx]?.item === r.item);
 
   const gateFail = gates.filter((g) => !g.achieved);
   // 実績が入力されておらずランクを付けられなかった項目（移行元のGASでいう「判定外」）
@@ -70,6 +70,13 @@ export async function EvaluationDetail({
         lede={`${head.gradeName} ／ 対象期間 ${formatPeriod(head.periodStart, head.periodEnd)}`}
         actions={
           <>
+            {/* 実績値の出どころ（このとき提出したアンケート）へ辿れるようにする。
+                回答は当時の版・当時の設問文で表示される（/me/responses/[id]）。 */}
+            {head.responseId && (
+              <a href={`/me/responses/${head.responseId}`} className="btn btn-tertiary no-print">
+                このときの回答を見る
+              </a>
+            )}
             <PrintButton />
             <a href={backHref} className="btn btn-tertiary no-print">
               一覧に戻る
@@ -103,6 +110,16 @@ export async function EvaluationDetail({
         </div>
       </Card>
 
+      {/* 昇給・昇格の理由。評価者には点数入りの原文、本人には数値を含まない言い換えが
+          queries.getEvaluationDetail から返る（このコンポーネントは出し分けをしない）。 */}
+      {head.raiseReason && (
+        <div className="mt-4">
+          <ReasonNote>
+            <strong>この判定になった理由：</strong>
+            {head.raiseReason}
+          </ReasonNote>
+        </div>
+      )}
       {head.promotionBlockedReason && (
         <div className="mt-4">
           <ReasonNote>
@@ -112,16 +129,47 @@ export async function EvaluationDetail({
         </div>
       )}
 
-      <SectionHeading aside={<span className="footnote">8項目の達成度（外側ほど良い）</span>}>
+      <SectionHeading
+        aside={<span className="footnote">{items.length}項目の達成度（外側ほど良い）</span>}
+      >
         評価の全体像
       </SectionHeading>
       <Card className="card-pad">
         <EightAxisRadar
           data={radar}
-          compare={radarPrev && radarPrev.length === radar.length ? radarPrev : undefined}
+          compare={sameAxes ? radarPrev : undefined}
           compareLabel={prev?.cycleName ?? "前回"}
           label={head.cycleName ?? "今回"}
+          valueLabel={showsCriteria ? "獲得点 / 配点" : "ランクをもとにした大きさ"}
         />
+        <p className="footnote m-0 mt-2">
+          {showsCriteria
+            ? "軸の長さは、その項目の「獲得点 ÷ 配点」です。配点の重い項目ほど、へこみが合計点に効きます。"
+            : "軸の長さは、その項目のランク（A〜E）をもとにした形です。配点は上長・管理者のみが確認できるため、点数そのものは反映していません。"}
+          {unrated.length > 0 && " ※ の軸は実績が入力されておらず判定できていない項目です（0点ではありません。形が欠けて見えます）。"}
+        </p>
+      </Card>
+
+      {/* ランクの意味は本人にも出す。A〜Eだけ見せて意味を伏せると、
+          「なぜこの結果か」が伝わらないため。配点は書かない。 */}
+      <Card className="card-pad mt-3">
+        <p className="section-heading m-0 mb-2">ランクの意味</p>
+        <ul className="m-0 list-none space-y-1 p-0">
+          {RANK_LEGEND.map((r) => (
+            <li key={r.rank} className="flex items-start gap-2 text-[13px]">
+              <span className="shrink-0">
+                <RankMark rank={r.rank} />
+              </span>
+              <span className="min-w-0">{r.meaning}</span>
+            </li>
+          ))}
+          <li className="flex items-start gap-2 text-[13px]">
+            <span className="shrink-0">
+              <RankMark rank={null} />
+            </span>
+            <span className="min-w-0">実績が入力されておらず判定できていない項目（判定外）</span>
+          </li>
+        </ul>
       </Card>
 
       <SectionHeading>項目ごとの判定と理由</SectionHeading>
@@ -144,6 +192,19 @@ export async function EvaluationDetail({
               {showsCriteria && i.calcNote && (
                 <p className="m-0 mt-1 text-[11px] text-[var(--ink-muted)]">計算式：{i.calcNote}</p>
               )}
+              {/* 得点バーと判定範囲は配点そのものなので評価者だけに出す */}
+              {showsCriteria && (
+                <ScoreBar points={i.points} maxPoints={i.maxPoints} />
+              )}
+              {showsCriteria && (
+                <ThresholdBand
+                  criteria={rankCriteria.filter((c) => c.kpiItemId === i.kpiItemId)}
+                  actualValue={i.actualValue}
+                  rank={i.rank}
+                  unit={i.unit}
+                  snapshotLabel={i.thresholdLabel}
+                />
+              )}
             </div>
             {showsCriteria && (
               <div className="shrink-0 text-right">
@@ -160,7 +221,9 @@ export async function EvaluationDetail({
       {unrated.length > 0 && (
         <p className="footnote mt-2">
           {unrated.map((i) => i.itemName).join("、")} は実績が入力されていないため判定できていません（判定外）。
-          配点は合計に残しているので、回答をそろえて集計し直すと点数が上がることがあります。
+          {showsCriteria
+            ? "配点は合計に残しているので、回答をそろえて集計し直すと点数が上がることがあります。"
+            : "0という評価ではありません。実績をそろえて集計し直すと、判定が付きます。"}
         </p>
       )}
       {!showsCriteria && (
@@ -310,7 +373,14 @@ export async function EvaluationDetail({
               ) : undefined
             }
           >
-            行動指針（合計 <Num value={head.behaviorTotal} unit="点" />）
+            {/* 本人には点数を出さず水準ラベルだけにする。KPI側の配点を伏せているのに
+                行動指針だけ裸の点数を出すのは非対称で、しかも「昇格に必要な点数」と直結しており
+                何回か並べれば必要点数の位置が推測できてしまうため、伏せる側に揃えた。 */}
+            {showsCriteria ? (
+              <>行動指針（合計 <Num value={head.behaviorTotal} unit="点" />）</>
+            ) : (
+              <>行動指針</>
+            )}
           </SectionHeading>
           <Card>
             {behaviors.map((b) => (
@@ -319,12 +389,20 @@ export async function EvaluationDetail({
                   <p className="todo-row-title m-0">{b.aspectName}</p>
                   <p className="m-0 text-[12px] text-[var(--ink-muted)]">{b.levelLabel}</p>
                 </div>
-                <div className="shrink-0">
-                  <Num value={b.score} unit="点" />
-                </div>
+                {showsCriteria && (
+                  <div className="shrink-0">
+                    <Num value={b.score} unit="点" />
+                  </div>
+                )}
               </div>
             ))}
           </Card>
+          {!showsCriteria && (
+            <p className="footnote mt-2">
+              行動指針は、観点ごとに当てはまる水準を選んで判定しています。点数と昇格に必要な点数は、
+              上長・管理者のみが確認できます。
+            </p>
+          )}
         </>
       )}
 
@@ -353,5 +431,86 @@ export async function EvaluationDetail({
         />
       </Card>
     </>
+  );
+}
+
+/**
+ * 項目ごとの「獲得点 / 配点」の帯（評価者向け）。
+ * 数字だけだと、100点のうちどの項目がどれだけ効いたかが読み取れないため、
+ * 配点を全体の幅、獲得点を塗りで示す。数値も必ず添える（帯だけで値を読ませない）。
+ */
+function ScoreBar({ points, maxPoints }: { points: number | null; maxPoints: number | null }) {
+  if (points === null || maxPoints === null || maxPoints <= 0) return null;
+  const pct = Math.min(100, Math.max(0, (points / maxPoints) * 100));
+  return (
+    <div className="mt-2">
+      <div
+        className="bar-track"
+        role="img"
+        aria-label={`配点${maxPoints}点のうち${points}点`}
+      >
+        <div className="bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      {/* 数値は同じ行の右側に出しているので、ここでは重ねて書かない（バーは量の比較だけを担う） */}
+    </div>
+  );
+}
+
+/**
+ * A〜Eの判定範囲と、実績値がその中のどこに落ちたかの帯（評価者向け）。
+ *
+ * 判定に使った範囲は evaluation_items のスナップショット（当たったランクぶん）が正で、
+ * 帯として並べる A〜E は現在の基準表から読んでいる。両方を並べて出し、
+ * 食い違う可能性がある旨は基準表側の注記で伝える。配点情報なので本人には出さない。
+ */
+function ThresholdBand({
+  criteria,
+  actualValue,
+  rank,
+  unit,
+  snapshotLabel,
+}: {
+  criteria: { rank: string; displayLabel: string; lowerBound: number | null; upperBound: number | null }[];
+  actualValue: number | null;
+  rank: string | null;
+  unit: string | null;
+  snapshotLabel: string | null;
+}) {
+  const scale = buildThresholdScale(criteria, actualValue, rank);
+  if (!scale) return null;
+
+  return (
+    <div className="mt-2">
+      <div className="relative h-5 w-full" role="img" aria-label={`判定範囲。実績値 ${actualValue ?? "未入力"}`}>
+        {scale.segments.map((sg) => (
+          <div
+            key={sg.rank}
+            title={`${sg.rank}：${sg.label}`}
+            className="absolute top-0 flex h-5 items-center justify-center overflow-hidden text-[10px]"
+            style={{
+              left: `${sg.left}%`,
+              /* 隣の区間と2px空けて、境目を線ではなく余白で見せる */
+              width: `calc(${sg.width}% - 2px)`,
+              background: sg.hit ? "var(--brand-soft)" : "var(--subtle)",
+              color: sg.hit ? "var(--brand-deep)" : "var(--ink-muted)",
+              borderRadius: 3,
+            }}
+          >
+            {sg.width >= 8 ? sg.rank : ""}
+          </div>
+        ))}
+        {scale.markerLeft !== null && (
+          <div
+            className="absolute top-0 h-5 w-0.5"
+            style={{ left: `${scale.markerLeft}%`, background: "var(--ink)" }}
+          />
+        )}
+      </div>
+      <p className="m-0 mt-1 text-[11px] text-[var(--ink-muted)]">
+        判定範囲 {snapshotLabel ?? "—"}
+        {rank ? `（ランク${rank}）` : "（判定外）"} ／ 実績値 <Num value={actualValue} unit={unit ?? undefined} />
+        。帯は現在の基準表のA〜Eです（確定時の基準は上の判定範囲が正）。
+      </p>
+    </div>
   );
 }

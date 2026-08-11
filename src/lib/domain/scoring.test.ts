@@ -358,3 +358,172 @@ describe("scoreItem — 項目別絶対点方式（元の配点表）", () => {
     expect(r.note).toContain("元の配点表がない");
   });
 });
+
+/* ─────────── 本人向けの根拠文（配点・点数・閾値を出さない） ───────────
+ *
+ * 本人向けの文は evaluation_items.rationale_employee /
+ * evaluations.raise_reason_employee / promotion_blocked_reason_employee に保存され、
+ * 本人の画面にそのまま出る。表示側で数字を消すのではなく、
+ * ここで数字を含まない文を作り切る（消し忘れが本人に見える事故になるため）。
+ */
+
+import {
+  rankLevelLabel,
+  UNRATED_RATIONALE_EMPLOYEE,
+  UNRATED_REQUIREMENT_RATIONALE_EMPLOYEE,
+} from "./scoring";
+
+/** 文字列に「数字」が含まれないこと。実績値を含む文ではこの関数を使わない。 */
+const hasDigit = (s: string) => /[0-9０-９]/.test(s);
+
+describe("judgeRank — 本人向けの根拠文", () => {
+  it("閾値の表示文（80%以上 100%未満 など）を本人向けには出さない", () => {
+    const j = judgeRank(92, requirementRate, "higher", { unit: "%" });
+    expect(j.rank).toBe("B");
+    expect(j.rationale).toContain("80%以上 100%未満"); // 評価者向けは従来どおり
+    expect(j.rationaleEmployee).not.toContain("80%以上 100%未満");
+    expect(j.rationaleEmployee).not.toContain("100");
+    // 実績値とランクは本人に見せてよい
+    expect(j.rationaleEmployee).toContain("92%");
+    expect(j.rationaleEmployee).toContain("上から2番目の水準");
+    expect(j.rationaleEmployee).toContain("B");
+  });
+
+  it("Aは「もっとも高い水準」、Eは「もっとも下の水準」と言い換える", () => {
+    expect(rankLevelLabel("A")).toBe("もっとも高い水準");
+    expect(rankLevelLabel("C")).toBe("上から3番目の水準");
+    expect(rankLevelLabel("E")).toBe("もっとも下の水準");
+    expect(judgeRank(100, requirementRate, "higher").rationaleEmployee).toContain("もっとも高い水準");
+  });
+
+  it("逆転指標でも本人向けに閾値を出さない", () => {
+    const j = judgeRank(97, overtimeRate, "lower", { unit: "%" });
+    expect(j.rank).toBe("B");
+    expect(j.rationaleEmployee).not.toContain("95");
+    expect(j.rationaleEmployee).toContain("97%");
+  });
+
+  it("基準表に穴があった事実は本人にも伏せない（黙ってEにしない）", () => {
+    const holed: RankCriterion[] = [{ rank: "A", displayLabel: "100%以上", lowerBound: 100, upperBound: null }];
+    const j = judgeRank(50, holed, "higher", { unit: "%" });
+    expect(j.rationaleEmployee).toContain("評価基準の見直し");
+    expect(j.rationaleEmployee).not.toContain("100%以上");
+  });
+
+  it("判定外の項目にも本人向けの文がある（数字を含まない）", () => {
+    expect(hasDigit(UNRATED_RATIONALE_EMPLOYEE)).toBe(false);
+    expect(hasDigit(UNRATED_REQUIREMENT_RATIONALE_EMPLOYEE)).toBe(false);
+    expect(UNRATED_RATIONALE_EMPLOYEE).toContain("判定外");
+    expect(UNRATED_REQUIREMENT_RATIONALE_EMPLOYEE).toContain("等級要件");
+  });
+});
+
+describe("scoreItem — 本人向けの説明に配点・点数・割合が入らない", () => {
+  it("一律割合方式でも項目別絶対点方式でも、数字はランクの文字だけ", () => {
+    for (const r of [
+      scoreItem({ rank: "B", weight: 20, mode: "ratio", ratios }),
+      scoreItem({ rank: "C", weight: 100, mode: "absolute", ratios, absolute: item1Absolute }),
+      scoreItem({ rank: "D", weight: 10, mode: "absolute", ratios, absolute: null }),
+    ]) {
+      expect(hasDigit(r.noteEmployee), r.noteEmployee).toBe(false);
+      expect(r.noteEmployee).not.toContain("配点");
+      expect(r.noteEmployee).not.toContain("満点");
+      expect(r.noteEmployee).not.toContain("%");
+    }
+    expect(scoreItem({ rank: "B", weight: 20, mode: "ratio", ratios }).noteEmployee).toContain("B");
+  });
+});
+
+describe("judgeOverall — 本人向けの昇給・昇格理由", () => {
+  const items = [
+    { kpiItemId: "k1", itemName: "等級要件達成率", rank: "B" as const, points: 16, maxPoints: 20 },
+    { kpiItemId: "k9", itemName: "売上達成率", rank: "A" as const, points: 20, maxPoints: 20 },
+  ];
+
+  it("昇給が見送りのとき、点数を出さずに足りない項目名とランクだけを伝える", () => {
+    const res = judgeOverall({
+      items,
+      raiseRequiresAllA: true,
+      requiredKpiPoints: 100,
+      requiredBehaviorPoints: null,
+      behaviorTotal: null,
+      gates: [],
+    });
+    expect(res.raiseReasonEmployee).toContain("等級要件達成率（B）");
+    expect(res.raiseReasonEmployee).toContain("見送り");
+    expect(res.raiseReasonEmployee).not.toContain("点");
+  });
+
+  it("昇給の要件を満たすときも項目数や点数を出さない", () => {
+    const res = judgeOverall({
+      items: items.map((i) => ({ ...i, rank: "A" as const, points: i.maxPoints })),
+      raiseRequiresAllA: true,
+      requiredKpiPoints: 100,
+      requiredBehaviorPoints: null,
+      behaviorTotal: null,
+      gates: [],
+    });
+    expect(res.raiseEligible).toBe(true);
+    expect(hasDigit(res.raiseReasonEmployee)).toBe(false);
+    expect(res.raiseReason).toContain("2項目"); // 評価者向けは従来どおり件数を出す
+  });
+
+  it("「すべてA」を条件にしない会社でも、本人向けには合計点を出さない", () => {
+    const res = judgeOverall({
+      items,
+      raiseRequiresAllA: false,
+      requiredKpiPoints: null,
+      requiredBehaviorPoints: null,
+      behaviorTotal: null,
+      gates: [],
+    });
+    expect(res.raiseReason).toContain("36点");
+    expect(hasDigit(res.raiseReasonEmployee)).toBe(false);
+  });
+
+  it("昇格できない理由から必要点数・獲得点数を消す（昇格要件の文言は残す）", () => {
+    const res = judgeOverall({
+      items,
+      raiseRequiresAllA: true,
+      requiredKpiPoints: 100,
+      requiredBehaviorPoints: 12,
+      behaviorTotal: 7,
+      gates: [{ text: "IT機器基礎研修（本部）", achieved: false }],
+    });
+    expect(res.promotionBlockedReason).toContain("必要な100点");
+    expect(res.promotionBlockedReason).toContain("行動指針の評価が7点");
+    const emp = res.promotionBlockedReasonEmployee!;
+    expect(emp).toContain("IT機器基礎研修（本部）");
+    expect(emp).toContain("KPI評価が、昇格に必要な水準に達していません。");
+    expect(emp).toContain("行動指針の評価が、昇格に必要な水準に達していません。");
+    expect(emp).not.toContain("100点");
+    expect(emp).not.toContain("36点");
+    expect(emp).not.toContain("7点");
+  });
+
+  it("昇格できるときは本人向けの理由も null", () => {
+    const res = judgeOverall({
+      items,
+      raiseRequiresAllA: true,
+      requiredKpiPoints: 10,
+      requiredBehaviorPoints: null,
+      behaviorTotal: null,
+      gates: [],
+    });
+    expect(res.promotionEligible).toBe(true);
+    expect(res.promotionBlockedReasonEmployee).toBeNull();
+  });
+
+  it("判定外の項目は本人向けにも「判定できていません」と伝える", () => {
+    const res = judgeOverall({
+      items: [items[0], { kpiItemId: "k2", itemName: "ヒヤリ報告件数", rank: null, points: 0, maxPoints: 10 }],
+      raiseRequiresAllA: true,
+      requiredKpiPoints: null,
+      requiredBehaviorPoints: null,
+      behaviorTotal: null,
+      gates: [],
+    });
+    expect(res.raiseReasonEmployee).toContain("ヒヤリ報告件数");
+    expect(res.raiseReasonEmployee).toContain("判定できていません");
+  });
+});

@@ -1,16 +1,24 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { requireViewer } from "@/lib/session";
 import { getForm, getResponse, listFormQuestions } from "@/lib/queries";
+import { listActiveExtensions } from "@/lib/response-access";
 import { FormAnswer } from "@/components/FormAnswer";
-import { PageTitle, ReasonNote } from "@/components/ui";
-import { formatPeriod } from "@/lib/view";
+import { ResponseSnapshot } from "@/components/ResponseSnapshot";
+import { Card, DefList, PageTitle, ReasonNote } from "@/components/ui";
+import { formatDate, formatPeriod } from "@/lib/view";
+import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
+import { parseMulti, toAnswerRows } from "@/lib/domain/answer-snapshot";
 
 export const dynamic = "force-dynamic";
 
 /**
  * アンケートの回答画面。
- * 自分の等級のアンケートしか開けない。設問は queries 側で
- * 評価される方向けに絞ったものだけが渡る（配点・ゲート情報は含まれない）。
+ *
+ * 開ける条件は「いまの等級のアンケート」または「自分が回答した実績があるアンケート」。
+ * 昇格して等級が変わっても、当時答えたアンケートは当時の版のまま開けるようにする。
+ * 提出済みの回答は、回答時点の設問文で読む（form_answers に写した内容が正）。
+ * 回答できる・できないはサーバー側の締切判定に合わせ、理由を日本語で書く。
  */
 export default async function AnswerForm({ params }: { params: Promise<{ id: string }> }) {
   const viewer = await requireViewer();
@@ -19,12 +27,14 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
 
   const form = await getForm(viewer.companyId, id);
   if (!form) notFound();
-  if (form.gradeId !== viewer.gradeId) {
+
+  const response = await getResponse(viewer.companyId, id, viewer.id);
+  if (form.gradeId !== viewer.gradeId && !response) {
     return (
       <>
         <PageTitle title="このアンケートは開けません" />
         <ReasonNote>
-          ご自身の等級に割り当てられたアンケートではありません。「実績を報告する」から、ご自身のアンケートを開いてください。
+          ご自身の等級に割り当てられたアンケートではなく、回答した記録もありません。「実績を報告する」から、ご自身のアンケートを開いてください。
         </ReasonNote>
       </>
     );
@@ -38,17 +48,60 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
     );
   }
 
-  const [questions, response] = await Promise.all([
+  const [questions, extensions] = await Promise.all([
     listFormQuestions(viewer.companyId, id, viewer.role),
-    getResponse(viewer.companyId, id, viewer.id),
+    listActiveExtensions(id, viewer.id),
   ]);
+
+  const judgement = judgeFormDeadline({
+    status: form.status,
+    opensAt: form.opensAt,
+    closesAt: form.closesAt,
+    extensions,
+    now: new Date(),
+  });
+
+  const header = (
+    <PageTitle
+      title={form.title}
+      lede={`${form.cycleName ?? ""} ／ ${form.gradeName ?? ""} ／ 回答期間 ${formatPeriod(form.opensAt, form.closesAt)}`}
+    />
+  );
+
+  // 提出済みは「回答したときの姿」で読ませる。入力欄を出しても押せないだけで意味がないため。
+  if (response?.status === "submitted") {
+    const rows = toAnswerRows(response.answers, questions);
+    return (
+      <>
+        {header}
+        <div className="mb-4">
+          <Card>
+            <DefList
+              rows={[
+                { label: "提出した日", value: formatDate(response.submittedAt) },
+                { label: "状態", value: "提出済み（内容は変更できません）" },
+                ...(response.respondentNote ? [{ label: "ひとこと", value: response.respondentNote }] : []),
+              ]}
+            />
+          </Card>
+        </div>
+        <ResponseSnapshot rows={rows} />
+        <p className="footnote mt-3">
+          内容を直す必要がある場合は、会社の管理者にご連絡ください。提出済みの回答はこの画面からは書き換えられません。
+        </p>
+      </>
+    );
+  }
+
+  const deadlineNote = judgement.canAnswer
+    ? judgement.effectiveUntil
+      ? `${formatJpDate(judgement.effectiveUntil)}まで回答できます${judgement.extended ? "（期限を延ばしてもらっています）" : ""}`
+      : "回答期限は設けられていません"
+    : null;
 
   return (
     <>
-      <PageTitle
-        title={form.title}
-        lede={`${form.cycleName ?? ""} ／ ${form.gradeName ?? ""} ／ 回答期間 ${formatPeriod(form.opensAt, form.closesAt)}`}
-      />
+      {header}
       {form.description && <p className="mb-4 text-[13px] leading-relaxed">{form.description}</p>}
 
       <FormAnswer
@@ -70,11 +123,25 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
           questionId: a.questionId,
           valueNumber: a.valueNumber,
           valueText: a.valueText,
+          valueChoices: a.valueJson ? parseMulti(a.valueJson) : null,
         }))}
-        submitted={response?.status === "submitted"}
-        closed={form.status === "closed"}
+        submitted={false}
+        lockedReason={
+          judgement.canAnswer
+            ? null
+            : `${judgement.message}${response ? "入力した内容は消えずに残っています。" : ""}事情があって今から提出したい場合は、上長または会社の管理者にご相談ください。個別に期限を延ばすことができます。`
+        }
+        deadlineNote={deadlineNote}
         note={response?.respondentNote ?? null}
       />
+
+      <p className="footnote mt-3">
+        ほかの回では答えた内容も見返せます。
+        <Link href="/me/forms" className="text-[var(--brand-deep)]">
+          実績を報告する
+        </Link>
+        の一覧から開いてください。
+      </p>
     </>
   );
 }

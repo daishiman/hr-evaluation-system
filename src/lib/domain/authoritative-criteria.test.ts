@@ -3,6 +3,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { judgeRank, matchesCriterion, type Direction, type Rank, type RankCriterion } from "./scoring";
 import { checkRangeCoverage } from "./kgi";
+import { checkGradePointRule, expectedItemCount } from "./grade-points";
+/* 初期データが「制度の数値をどこから作っているか」まで含めて突き合わせるため、
+   シードの組み立て部品をそのまま読み込む。SQLの文字列ではなく元の値で確かめる。 */
+import {
+  COMPANIES,
+  GRADE_POINT_RULES,
+  MONETARY_ITEMS,
+  chosenItemsFor,
+} from "../../../scripts/seed-data.mjs";
 
 /**
  * 正本（data/_authoritative-kpi-criteria.tsv）のランク基準165行を読み込み、
@@ -183,4 +192,99 @@ describe("A水準の代表値が正本どおりAと判定される", () => {
     expect(j.rationale).toContain("80%以上 100%未満");
     expect(j.fellThrough).toBe(false);
   });
+});
+
+/* ───────────────── 等級別配点（群1）が正本どおりか ─────────────────
+ * 初期データ（scripts/seed-data.mjs）が組み立てる配点の型と項目の選び方を、
+ * 正本 data/kpi-points.json のランクA行と突き合わせる。
+ * 「制度を変えた」ときは必ずここが落ちるので、変更に気づかず出荷することを防ぐ。
+ */
+
+const POINTS: Record<string, string>[] = JSON.parse(
+  readFileSync(join(process.cwd(), "data", "kpi-points.json"), "utf-8"),
+);
+const GROUPS = ["Beginner", "Regular", "Chief", "AM", "Manager"];
+const isTarget = (row: Record<string, string>, group: string) =>
+  !["", "-", "－"].includes(String(row[group] ?? "").trim());
+/** その等級区分で評価対象になる項目No（正本で「-」でないもの） */
+const targetItems = (group: string) =>
+  POINTS.filter((p) => p["ランク"] === "A" && isTarget(p, group)).map((p) => Number(p["項目No"]));
+const ruleOf = (group: string) => GRADE_POINT_RULES.find((r) => r.pointGroup === group)!;
+
+describe("等級区分ごとの持ち点の型が正本と一致する", () => {
+  it("固定枠（等級要件達成率）の配点は Beginner100 / Regular80 / Chief40 / AM30 / Manager20", () => {
+    expect(GROUPS.map((g) => ruleOf(g).fixedSlotPoints)).toEqual([100, 80, 40, 30, 20]);
+    for (const g of GROUPS) {
+      const authoritative = Number(POINTS.find((p) => p["ランク"] === "A" && Number(p["項目No"]) === 1)![g]);
+      expect(ruleOf(g).fixedSlotPoints, g).toBe(authoritative);
+    }
+  });
+
+  it("どの等級区分も 固定枠 + 20点枠 + 10点枠 = 100点ちょうど", () => {
+    for (const r of GRADE_POINT_RULES) {
+      expect(checkGradePointRule(r), r.pointGroup).toEqual([]);
+      expect(r.totalPoints, r.pointGroup).toBe(100);
+    }
+  });
+
+  it("選ぶ項目数は Beginner1 / Regular3 / Chief6 / AM7 / Manager8", () => {
+    expect(GROUPS.map((g) => expectedItemCount(ruleOf(g)))).toEqual([1, 3, 6, 7, 8]);
+  });
+
+  it("20点枠を持つのは Chief 以上だけで、1つだけ", () => {
+    expect(GROUPS.map((g) => ruleOf(g).majorSlotCount)).toEqual([0, 0, 1, 1, 1]);
+    for (const g of ["Chief", "AM", "Manager"]) expect(ruleOf(g).majorSlotPoints, g).toBe(20);
+  });
+
+  it("正本で評価対象になる項目数は 1 / 10 / 26 / 32 / 33 件", () => {
+    expect(GROUPS.map((g) => targetItems(g).length)).toEqual([1, 10, 26, 32, 33]);
+  });
+});
+
+describe("金銭系（20点枠に置ける項目）", () => {
+  it("単価率(6)・売上達成率(9)・利益率(24) の3つだけ", () => {
+    expect([...MONETARY_ITEMS].sort((a, b) => a - b)).toEqual([6, 9, 24]);
+  });
+
+  it("Chief では利益率(24) が評価対象になっていない（正本の「-」）", () => {
+    expect(targetItems("Chief")).not.toContain(24);
+    expect(targetItems("Chief")).toEqual(expect.arrayContaining([6, 9]));
+    for (const g of ["AM", "Manager"]) expect(targetItems(g), g).toEqual(expect.arrayContaining([6, 9, 24]));
+  });
+});
+
+describe("初期データが選ぶ項目が制度に収まっている", () => {
+  for (const co of COMPANIES) {
+    for (const rule of GRADE_POINT_RULES) {
+      it(`${co.name} / ${rule.pointGroup}`, () => {
+        const rows = chosenItemsFor(co, rule);
+        const label = `${co.key} ${rule.pointGroup}`;
+        const selectable = targetItems(rule.pointGroup);
+
+        expect(rows, label).toHaveLength(expectedItemCount(rule));
+        expect(rows.reduce((s, x) => s + x.weight, 0), label).toBe(rule.totalPoints);
+        expect(new Set(rows.map((x) => x.no)).size, label).toBe(rows.length);
+
+        // 固定枠は必ず等級要件達成率(No.1)で、その等級区分の固定枠配点
+        const fixed = rows.filter((x) => x.fixed === 1);
+        expect(fixed, label).toHaveLength(1);
+        expect(fixed[0].no, label).toBe(1);
+        expect(fixed[0].weight, label).toBe(rule.fixedSlotPoints);
+
+        // 20点枠は金銭系だけ。持たない等級区分では1つも無い
+        const major = rows.filter((x) => x.major === 1);
+        expect(major.length, label).toBe(rule.majorSlotCount);
+        for (const m of major) {
+          expect(MONETARY_ITEMS, label).toContain(m.no);
+          expect(m.weight, label).toBe(rule.majorSlotPoints);
+        }
+
+        // 残りは10点。その等級区分で評価対象の項目だけを選んでいる
+        for (const r of rows.filter((x) => x.fixed !== 1 && x.major !== 1)) {
+          expect(r.weight, label).toBe(rule.minorSlotPoints);
+        }
+        for (const r of rows) expect(selectable, `${label} No.${r.no}`).toContain(r.no);
+      });
+    }
+  }
 });

@@ -15,7 +15,7 @@ export default async function ManagerMembers() {
 
   const [members, evals] = await Promise.all([
     listMembers(viewer.companyId),
-    listEvaluations(viewer.companyId),
+    listEvaluations(viewer.companyId, viewer.role),
   ]);
 
   const latestOf = (userId: string) => evals.find((e) => e.employeeId === userId && e.status === "finalized") ?? null;

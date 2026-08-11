@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireViewer } from "@/lib/session";
+import { canSeeCriteria, requireViewer } from "@/lib/session";
 import { listEvaluations } from "@/lib/queries";
 import { Badge, Card, EmptyState, Num, PageTitle, SectionHeading } from "@/components/ui";
 import { TrendChart } from "@/components/LazyCharts";
@@ -12,10 +12,22 @@ export default async function MyResults() {
   const viewer = await requireViewer();
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="会社の管理者にご確認ください。" />;
 
-  const all = (await listEvaluations(viewer.companyId, { employeeId: viewer.id })).filter((e) => e.status === "finalized");
+  const all = (await listEvaluations(viewer.companyId, viewer.role, { employeeId: viewer.id })).filter((e) => e.status === "finalized");
+
+  // 行動指針の点数は「昇格に必要な点数」が逆算できるため、評価される側には返していない。
+  // 返ってこない系列をグラフに置くと空の折れ線と凡例だけが残るので、見える人にだけ足す。
+  const canSeePoints = canSeeCriteria(viewer.role);
   const trend = [...all]
     .reverse()
-    .map((e) => ({ cycle: e.cycleName ?? "", 等級要件の達成率: e.requirementRate ?? null, 行動指針の点数: e.behaviorTotal ?? null }));
+    .map((e) => ({
+      cycle: e.cycleName ?? "",
+      等級要件の達成率: e.requirementRate ?? null,
+      ...(canSeePoints ? { 行動指針の点数: e.behaviorTotal ?? null } : {}),
+    }));
+  const trendSeries = [
+    { key: "等級要件の達成率", label: "等級要件の達成率（%）" },
+    ...(canSeePoints ? [{ key: "行動指針の点数", label: "行動指針の点数（点）" }] : []),
+  ];
 
   return (
     <>
@@ -27,13 +39,7 @@ export default async function MyResults() {
         <>
           <SectionHeading>これまでの推移</SectionHeading>
           <Card className="card-pad">
-            <TrendChart
-              data={trend}
-              series={[
-                { key: "等級要件の達成率", label: "等級要件の達成率（%）" },
-                { key: "行動指針の点数", label: "行動指針の点数（点）" },
-              ]}
-            />
+            <TrendChart data={trend} series={trendSeries} />
           </Card>
 
           <SectionHeading>評価期間ごとの結果</SectionHeading>

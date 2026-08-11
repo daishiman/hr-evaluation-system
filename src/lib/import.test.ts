@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeKey } from "./import";
+import { matchMultiChoices, normalizeKey } from "./import";
 
 /**
  * 見出しの突き合わせは、外れても「列が見つかりません」としか出ないため原因が見えにくい。
@@ -28,5 +28,36 @@ describe("normalizeKey", () => {
   it("表記ゆれのある見出し同士が同じキーになる", () => {
     expect(normalizeKey("メールアドレス")).toBe(normalizeKey("メール アドレス"));
     expect(normalizeKey("社員番号")).toBe(normalizeKey("社員 番号"));
+  });
+});
+
+/**
+ * 複数選択の取り込み。1つのセルに複数の答えが並ぶため、
+ * 区切り記号の揺れで丸ごと「読めなかった」になると、取り込みのたびに手作業が生まれる。
+ */
+describe("matchMultiChoices", () => {
+  const options = JSON.stringify([
+    { value: "a", label: "研修A" },
+    { value: "b", label: "研修B" },
+    { value: "c", label: "研修C" },
+  ]);
+
+  it("読点・カンマ・中黒のどれでも区切れる", () => {
+    expect(matchMultiChoices("研修A、研修C", options)).toEqual(["a", "c"]);
+    expect(matchMultiChoices("研修A, 研修B", options)).toEqual(["a", "b"]);
+    expect(matchMultiChoices("研修B・研修C", options)).toEqual(["b", "c"]);
+  });
+
+  it("選択肢のvalueでも拾える", () => {
+    expect(matchMultiChoices("a/c", options)).toEqual(["a", "c"]);
+  });
+
+  it("同じものが二度書かれても1つにする", () => {
+    expect(matchMultiChoices("研修A、研修A", options)).toEqual(["a"]);
+  });
+
+  it("当てはまらない値は拾わない（読めなかったとして画面に報告される）", () => {
+    expect(matchMultiChoices("研修Z", options)).toEqual([]);
+    expect(matchMultiChoices("研修A", null)).toEqual([]);
   });
 });

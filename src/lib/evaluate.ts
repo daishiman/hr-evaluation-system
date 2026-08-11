@@ -6,6 +6,8 @@ import {
   judgeOverall,
   judgeRank,
   scoreItem,
+  UNRATED_RATIONALE_EMPLOYEE,
+  UNRATED_REQUIREMENT_RATIONALE_EMPLOYEE,
   type Direction,
   type Rank,
   type RankCriterion,
@@ -14,7 +16,6 @@ import {
   type ScoringMode,
 } from "@/lib/domain/scoring";
 import { computeBonus, type KgiCoefficientRow } from "@/lib/domain/kgi";
-import { indexReferencePoints, referenceKey } from "@/lib/domain/reference-points";
 import { newId } from "@/lib/id";
 
 /**
@@ -58,8 +59,10 @@ export async function buildEvaluationsForCycle(
     schemes.find((x) => x.id === cycle.schemeId) ?? schemes.find((x) => x.status === "active") ?? schemes[0];
   if (!scheme) return [];
 
-  const [items, ratios, kpiItems, criteria, grades, thresholds, responses, refPoints, kgiRows, raisePolicy, officeKgiRows] =
+  const [allSchemeItems, ratios, kpiItems, criteria, grades, thresholds, responses, kgiRows, raisePolicy, officeKgiRows] =
     await Promise.all([
+    /* 評価セットは等級区分ごとに項目も配点も違う。人ごとに読みに行くとN+1になるため、
+       全等級区分ぶんをここでまとめて読み、ループの中でその人の等級区分で絞る。 */
     db.select().from(s.schemeItems).where(eq(s.schemeItems.schemeId, scheme.id)).orderBy(s.schemeItems.displayOrder),
     db.select().from(s.schemeRankRatios).where(eq(s.schemeRankRatios.schemeId, scheme.id)),
     db.select().from(s.kpiItems).where(eq(s.kpiItems.companyId, companyId)),
@@ -76,8 +79,6 @@ export async function buildEvaluationsForCycle(
           eq(s.formResponses.status, "submitted"),
         ),
       ),
-    // 項目別絶対点方式を選んだときに使う、移行前の配点表
-    db.select().from(s.kpiReferencePoints).where(eq(s.kpiReferencePoints.companyId, companyId)),
     // 事業所KGI達成係数（個人Pt・賞与額の算出に使う）
     db.select().from(s.kgiCoefficients).where(eq(s.kgiCoefficients.companyId, companyId)),
     db.select().from(s.raisePolicies).where(eq(s.raisePolicies.companyId, companyId)).limit(1),
@@ -101,16 +102,12 @@ export async function buildEvaluationsForCycle(
 
   const rankRatios: RankRatio[] = ratios.map((r) => ({ rank: r.rank as Rank, ratio: r.ratio }));
 
-  /* ランク→点数の換算方式。会社が管理画面で選ぶ（既定は一律割合方式＝仮）。 */
-  const scoringMode: ScoringMode = scheme.scoringMode === "absolute" ? "absolute" : "ratio";
-  const refIndex = indexReferencePoints(
-    refPoints.map((r) => ({
-      kpiItemId: r.kpiItemId,
-      pointGroup: r.pointGroup,
-      rank: r.rank,
-      points: r.points,
-    })),
-  );
+  /* ランク→点数の換算方式は「等級別配点 × ランク割合」に一本化した（2026-08-11）。
+     配点そのものが等級区分ごとに決まる（grade_point_rules）ようになり、
+     項目別絶対点方式が担っていた「等級ごとに重みを変える」役目がなくなったため。
+     evaluation_schemes.scoring_mode は過去の評価の表示用に残っているだけで、
+     新しく作る評価は必ず ratio で計算し、使った方式を scoring_mode_snapshot に写す。 */
+  const scoringMode: ScoringMode = "ratio";
 
   const kgiCoefficients: KgiCoefficientRow[] = kgiRows.map((k) => ({
     label: k.label,
@@ -152,6 +149,22 @@ export async function buildEvaluationsForCycle(
           employeeName: user.name,
           ok: false,
           message: "確定済みのため作り直しませんでした。",
+        });
+        continue;
+      }
+
+      /* ── この人の等級区分の評価セットを取り出す ──
+         項目も配点も等級区分ごとに違う。0件のまま進めると、
+         全項目が無い＝合計0点／満点0点の評価ができあがり、
+         「設定がない」ことが「成績が0点だった」に化ける。手前で止めて理由を返す。 */
+      const items = allSchemeItems.filter((si) => si.pointGroup === grade.pointGroup);
+      if (items.length === 0) {
+        out.push({
+          evaluationId: existing?.id ?? "",
+          employeeId: res.employeeId,
+          employeeName: user.name,
+          ok: false,
+          message: `等級区分「${grade.pointGroup}」の評価セットが未設定です。評価セットの画面で ${grade.pointGroup} の項目を選んでから集計してください。`,
         });
         continue;
       }
@@ -246,10 +259,15 @@ export async function buildEvaluationsForCycle(
            （ランクEに落とさない＝実績が無いのに未達と断定しない）。 */
         let actual: number | null;
         let unratedReason: string | null = null;
+        /* 本人向けの文は、評価者向けの文をそのまま出さない。
+           評価者向けには「アンケートに等級要件を追加してください」のような
+           運用側への指示が入っており、本人が読んでも行動につながらないため。 */
+        let unratedReasonEmployee = UNRATED_RATIONALE_EMPLOYEE;
         if (si.isFixedSlot) {
           actual = requirementRate;
           unratedReason =
             "このアンケートに等級要件の設問が1件も含まれていないため、達成率を出せませんでした（判定外）。アンケートに等級要件を追加してください。";
+          unratedReasonEmployee = UNRATED_REQUIREMENT_RATIONALE_EMPLOYEE;
         } else {
           try {
             actual = computeActualValue(m.formula ?? "", vars);
@@ -281,6 +299,7 @@ export async function buildEvaluationsForCycle(
             rationale:
               unratedReason ??
               "計算に必要な回答が不足しているため、実績値を出せませんでした（判定外）。回答を確認してください。",
+            rationaleEmployee: unratedReasonEmployee,
             calcNote: m.formula,
             isProvisional: m.isProvisional,
             displayOrder: idx + 1,
@@ -290,15 +309,14 @@ export async function buildEvaluationsForCycle(
           return;
         }
 
-        const j = judgeRank(actual, crits, direction);
-        /* 会社が選んだ換算方式で点数にする。
-           絶対点方式のときは、この人の等級区分（point_group）の列を元の配点表から引く。 */
+        // 本人向けの文に単位を付けるため、実績値の単位を渡す（「実績値 92%」）
+        const j = judgeRank(actual, crits, direction, { unit: m.unit });
+        /* 等級区分ごとの配点（scheme_items.weight）にランクの割合を掛ける。 */
         const sc = scoreItem({
           rank: j.rank,
           weight: si.weight,
           mode: scoringMode,
           ratios: rankRatios,
-          absolute: refIndex.get(referenceKey(m.id, grade.pointGroup)) ?? null,
         });
         const points = sc.points;
         scored.push({ kpiItemId: m.id, itemName: m.name, rank: j.rank, points, maxPoints: sc.maxPoints });
@@ -321,6 +339,10 @@ export async function buildEvaluationsForCycle(
           thresholdUpper: j.criterion?.upperBound ?? null,
           // 「どのランク行に当たったか」に加えて「その点数がどう決まったか」も残す
           rationale: `${j.rationale}${sc.note}`,
+          /* 本人向けは配点・獲得点数・満点・閾値を出さない（実績値とランクだけ）。
+             表示側で数字を消す作りにすると、消し忘れがそのまま本人に見えるため、
+             ここで数字を含まない文を作り切って保存する。 */
+          rationaleEmployee: `${j.rationaleEmployee}${sc.noteEmployee}`,
           calcNote: m.formula,
           isProvisional: m.isProvisional,
           displayOrder: idx + 1,
@@ -389,10 +411,14 @@ export async function buildEvaluationsForCycle(
         personalPoints: bonus.result.personalPoints,
         bonusYen: bonus.result.bonusYen,
         bonusRationale: bonus.result.rationale,
+        // 実際に使った方式を写す（会社の設定ではなく、この評価を計算した方式）
         scoringModeSnapshot: scoringMode,
         raiseEligible: overall.raiseEligible,
+        raiseReason: overall.raiseReason,
+        raiseReasonEmployee: overall.raiseReasonEmployee,
         promotionEligible: overall.promotionEligible,
         promotionBlockedReason: overall.promotionBlockedReason,
+        promotionBlockedReasonEmployee: overall.promotionBlockedReasonEmployee,
         requiredKpiPointsSnapshot: th?.requiredKpiPoints ?? null,
         requiredBehaviorPointsSnapshot: hasBehavior ? (th?.requiredBehaviorPoints ?? null) : null,
         evaluatorId,
