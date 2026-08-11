@@ -87,36 +87,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
       throw new HttpError(400, "すでに提出済みのため、内容を変更できません。修正が必要な場合は上長にご連絡ください。");
     }
 
-    const responseId = existing?.id ?? newId("res");
-    if (!existing) {
-      // 回答時点の所属事業所を写し取る。
-      // 期中に異動すると、いまの所属で賞与の事業所KGI係数が決まってしまい、
-      // 「実績を出した事業所」と「係数を借りた事業所」がずれるため（CSV取込では以前から写している）。
-      const me = (
-        await db.select({ officeId: s.users.officeId }).from(s.users).where(eq(s.users.id, viewer.id)).limit(1)
-      )[0];
-      await db.insert(s.formResponses).values({
-        id: responseId,
-        companyId: form.companyId,
-        formId,
-        cycleId: form.cycleId,
-        employeeId: viewer.id,
-        gradeId: form.gradeId,
-        officeId: me?.officeId ?? null,
-        status: body.status,
-        respondentNote: body.note ?? null,
-        submittedAt: body.status === "submitted" ? new Date() : null,
-      });
-    } else {
-      await db
-        .update(s.formResponses)
-        .set({
-          status: body.status,
-          respondentNote: body.note ?? null,
-          submittedAt: body.status === "submitted" ? new Date() : null,
-        })
-        .where(eq(s.formResponses.id, responseId));
-    }
+    /* 設問の読み込みと検査は、回答の状態を書き換える前に済ませる。
+       順番が逆だと、断られた提出でも「提出済み」の印だけが残り、
+       その人は二度と自分で直せなくなる（実際にそうなっていた）。 */
 
     // 設問は同じフォームのものだけ受け付ける（他フォームのIDを混ぜられないようにする）
     const questions = await db
@@ -163,6 +136,37 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
           `未入力の項目が${missing.length}件あります（例：${missing[0].title}）。入力してから提出してください。`,
         );
       }
+    }
+
+    const responseId = existing?.id ?? newId("res");
+    if (!existing) {
+      // 回答時点の所属事業所を写し取る。
+      // 期中に異動すると、いまの所属で賞与の事業所KGI係数が決まってしまい、
+      // 「実績を出した事業所」と「係数を借りた事業所」がずれるため（CSV取込では以前から写している）。
+      const me = (
+        await db.select({ officeId: s.users.officeId }).from(s.users).where(eq(s.users.id, viewer.id)).limit(1)
+      )[0];
+      await db.insert(s.formResponses).values({
+        id: responseId,
+        companyId: form.companyId,
+        formId,
+        cycleId: form.cycleId,
+        employeeId: viewer.id,
+        gradeId: form.gradeId,
+        officeId: me?.officeId ?? null,
+        status: body.status,
+        respondentNote: body.note ?? null,
+        submittedAt: body.status === "submitted" ? new Date() : null,
+      });
+    } else {
+      await db
+        .update(s.formResponses)
+        .set({
+          status: body.status,
+          respondentNote: body.note ?? null,
+          submittedAt: body.status === "submitted" ? new Date() : null,
+        })
+        .where(eq(s.formResponses.id, responseId));
     }
 
     await db.delete(s.formAnswers).where(eq(s.formAnswers.responseId, responseId));
