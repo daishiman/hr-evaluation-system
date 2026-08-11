@@ -54,7 +54,7 @@ export function FormPreview({ questions }: { questions: PreviewQuestion[] }) {
             <div className="space-y-5">
               {g.rows.map((q) => (
                 <div key={q.id}>
-                  <p className="m-0 text-[13px] font-bold">
+                  <p className="m-0 text-sub font-bold">
                     {q.title}
                     <span className="footnote"> {q.required ? "（必須）" : "（任意）"}</span>
                   </p>

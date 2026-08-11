@@ -231,7 +231,7 @@ export function FormAnswer({
       <StickyActionBar
         status={
           <>
-            <span className="text-[13px] text-[var(--ink)]">
+            <span className="text-sub text-[var(--ink)]">
               入力できた項目 <span className="num font-bold">{answeredCount}</span>
               <span className="unit"> / {questions.length}</span>
             </span>
@@ -327,8 +327,8 @@ function QuestionField({
                   key={o.value}
                   className={
                     on
-                      ? "flex w-full items-center gap-2 rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-[13px]"
-                      : "flex w-full items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] hover:border-[var(--brand)]"
+                      ? "flex w-full items-center gap-2 rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-sub"
+                      : "flex w-full items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sub hover:border-[var(--brand)]"
                   }
                 >
                   <input
@@ -396,8 +396,8 @@ function QuestionField({
               type="button"
               className={
                 current === (o.score ?? Number(o.value))
-                  ? "block w-full rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-[13px]"
-                  : "block w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-[13px] hover:border-[var(--brand)]"
+                  ? "block w-full rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-sub"
+                  : "block w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
               }
               aria-pressed={current === (o.score ?? Number(o.value))}
               onClick={() => onChange({ valueNumber: o.score ?? Number(o.value), valueText: o.label, valueChoices: null })}
@@ -433,7 +433,7 @@ function QuestionField({
 
   return (
     <div>
-      <label className="m-0 block text-[13px] font-bold" htmlFor={`f_${q.id}`}>
+      <label className="m-0 block text-sub font-bold" htmlFor={`f_${q.id}`}>
         {q.title}
         {!q.required && <span className="footnote"> （任意）</span>}
       </label>
@@ -478,7 +478,7 @@ function AnswerReadOnly({
                     ) : (
                       /* 札（Badge）は折り返さない決まりなので、選んだ選択肢の文には使わない。
                          行動指針のように1行で収まらない選択肢がある。 */
-                      <span className="text-[13px] font-semibold">{shown}</span>
+                      <span className="text-sub font-semibold">{shown}</span>
                     )}
                   </div>
                 </div>

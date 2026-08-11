@@ -34,11 +34,11 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
 
       {/* 全体像は数字だけ。誰が何人いるかを一行で掴ませる */}
       <Card className="card-pad hero-tint">
-        <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
+        <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
           {scoped.filter((u) => u.isActive).length}
           <span className="unit"> / {scoped.length} 人が利用中</span>
         </p>
-        <p className="m-0 mt-2 text-[13px] text-[var(--ink-muted)]">
+        <p className="m-0 mt-2 text-sub text-[var(--ink-muted)]">
           {countLabel("SUPER_ADMIN")}人 ／ {countLabel("COMPANY_ADMIN")}人 ／ {countLabel("MANAGER")}人 ／{" "}
           {countLabel("EMPLOYEE")}人
         </p>
@@ -70,11 +70,11 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
             <Link key={u.id} href={`/system/users/${u.id}`} className="user-row no-underline">
               <Avatar name={u.name} seed={u.id} size={36} />
               <div className="min-w-0 flex-1">
-                <p className="m-0 truncate text-[14px] font-semibold text-[var(--ink)]">
+                <p className="m-0 truncate text-body font-semibold text-[var(--ink)]">
                   {u.name}
                   {!u.isActive && <span className="ml-2 badge badge-closed">利用停止</span>}
                 </p>
-                <p className="m-0 truncate text-[12px] text-[var(--ink-muted)]">{u.email}</p>
+                <p className="m-0 truncate text-note text-[var(--ink-muted)]">{u.email}</p>
               </div>
               <span className="user-row-tags">
                 <span className="tag">

@@ -71,7 +71,7 @@ export default async function AdminSchemePage() {
 
       <div className="mt-3">
         <Bar value={overall.done} max={overall.total} label="等級区分の設定が完了" />
-        <p className="mt-2 text-[13px]">{overall.summary}</p>
+        <p className="mt-2 text-sub">{overall.summary}</p>
         {overall.nextGroup && (
           <p className="m-0 mt-2">
             <LinkButton variant="primary" href={schemeStepPath(overall.nextGroup, "select")}>

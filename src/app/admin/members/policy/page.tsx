@@ -43,7 +43,7 @@ export default async function ProfilePolicyPage() {
 
       <SectionHeading>ここでは変えられない項目</SectionHeading>
       <Card className="card-pad">
-        <p className="m-0 mb-3 text-[13px]">
+        <p className="m-0 mb-3 text-sub">
           次の項目は、設定にかかわらず本人には開放しません。本人が自分の権限や評価の土台を書き換えられる状態を作らないためです。
         </p>
         <div className="flex flex-wrap gap-2">

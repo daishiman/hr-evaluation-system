@@ -69,7 +69,7 @@ export function ConfirmButton({
         }}
       >
         <div className="confirm-dialog-body">
-          <p className="m-0 text-[13px]">{confirm}</p>
+          <p className="m-0 text-sub">{confirm}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button type="button" autoFocus onClick={() => setAsking(false)}>
               やめる

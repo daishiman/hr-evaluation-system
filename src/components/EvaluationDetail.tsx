@@ -102,11 +102,11 @@ export async function EvaluationDetail({
       {/* 視覚的主役: 結論を1つだけ大きく出す */}
       <Card className="hero-tint">
         <div className="hero-number">
-          <p className="m-0 text-[12px] text-[var(--ink-muted)]">この期の判定</p>
-          <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
+          <p className="m-0 text-note text-[var(--ink-muted)]">この期の判定</p>
+          <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
             {head.raiseEligible ? "昇給の要件を満たしています" : "昇給は見送りです"}
           </p>
-          <p className="m-0 mt-2 text-[13px]">
+          <p className="m-0 mt-2 text-sub">
             {head.promotionEligible ? (
               <>昇格の要件も満たしています。</>
             ) : (
@@ -114,7 +114,7 @@ export async function EvaluationDetail({
             )}
           </p>
           {showsCriteria && (
-            <p className="m-0 mt-3 text-[13px] text-[var(--ink-muted)]">
+            <p className="m-0 mt-3 text-sub text-[var(--ink-muted)]">
               KPI評価点 <Num value={head.totalScore} unit="点" /> / <Num value={head.maxScore} unit="点" />
               {head.requiredKpiPointsSnapshot !== null && (
                 <>（昇格に必要な点数 <Num value={head.requiredKpiPointsSnapshot} unit="点" />）</>
@@ -170,14 +170,14 @@ export async function EvaluationDetail({
         <p className="section-heading m-0 mb-2">ランクの意味</p>
         <ul className="m-0 list-none space-y-1 p-0">
           {RANK_LEGEND.map((r) => (
-            <li key={r.rank} className="flex items-start gap-2 text-[13px]">
+            <li key={r.rank} className="flex items-start gap-2 text-sub">
               <span className="shrink-0">
                 <RankMark rank={r.rank} />
               </span>
               <span className="min-w-0">{r.meaning}</span>
             </li>
           ))}
-          <li className="flex items-start gap-2 text-[13px]">
+          <li className="flex items-start gap-2 text-sub">
             <span className="shrink-0">
               <RankMark rank={null} />
             </span>
@@ -211,9 +211,9 @@ export async function EvaluationDetail({
             }
             detail={
               <>
-                <p className="m-0 mt-1 text-[12px] leading-relaxed text-[var(--ink-muted)]">{i.rationale}</p>
+                <p className="m-0 mt-1 text-note leading-relaxed text-[var(--ink-muted)]">{i.rationale}</p>
                 {showsCriteria && i.calcNote && (
-                  <p className="m-0 mt-1 text-[12px] text-[var(--ink-muted)]">計算式：{i.calcNote}</p>
+                  <p className="m-0 mt-1 text-note text-[var(--ink-muted)]">計算式：{i.calcNote}</p>
                 )}
                 {/* 得点バーと判定範囲は配点そのものなので評価者だけに出す */}
                 {showsCriteria && <ScoreBar points={i.points} maxPoints={i.maxPoints} />}
@@ -233,7 +233,7 @@ export async function EvaluationDetail({
                 <>
                   <Num value={i.points} display />
                   <span className="unit">点</span>
-                  <p className="m-0 text-[12px] text-[var(--ink-muted)]">
+                  <p className="m-0 text-note text-[var(--ink-muted)]">
                     配点 <Num value={i.maxPoints} unit="点" />
                   </p>
                 </>
@@ -294,7 +294,7 @@ export async function EvaluationDetail({
               ) : (
                 <ul className="m-0 list-none space-y-1 p-0">
                   {g.rows.map((r) => (
-                    <li key={r.id} className="flex items-start gap-2 text-[13px]">
+                    <li key={r.id} className="flex items-start gap-2 text-sub">
                       <span className="shrink-0">
                         {r.achieved ? <Badge tone="active">達成</Badge> : <Badge tone="dropped">未達</Badge>}
                       </span>
@@ -330,12 +330,12 @@ export async function EvaluationDetail({
             ) : (
               <>
                 <div className="hero-number">
-                  <p className="m-0 text-[12px] text-[var(--ink-muted)]">個人Pt</p>
-                  <p className="num-display m-0 text-[28px] leading-tight">
+                  <p className="m-0 text-note text-[var(--ink-muted)]">個人Pt</p>
+                  <p className="num-display m-0 text-num-l leading-tight">
                     <Num value={head.personalPoints} unit="Pt" display />
                   </p>
                   {head.bonusYen !== null && (
-                    <p className="m-0 mt-2 text-[13px]">
+                    <p className="m-0 mt-2 text-sub">
                       賞与額（仮） <Num value={head.bonusYen} unit="円" />
                     </p>
                   )}
@@ -350,7 +350,7 @@ export async function EvaluationDetail({
                   ]}
                 />
                 {head.bonusRationale && (
-                  <p className="m-0 mt-2 text-[12px] leading-relaxed text-[var(--ink-muted)]">{head.bonusRationale}</p>
+                  <p className="m-0 mt-2 text-note leading-relaxed text-[var(--ink-muted)]">{head.bonusRationale}</p>
                 )}
                 <p className="footnote m-0 mt-2">
                   {head.status === "finalized"
@@ -429,7 +429,7 @@ export async function EvaluationDetail({
         <>
           <SectionHeading>上長からのコメント</SectionHeading>
           <Card className="card-pad">
-            <p className="m-0 text-[13px] leading-relaxed">{head.evaluatorComment}</p>
+            <p className="m-0 text-sub leading-relaxed">{head.evaluatorComment}</p>
           </Card>
         </>
       )}
@@ -505,7 +505,7 @@ function ThresholdBand({
           <div
             key={sg.rank}
             title={`${sg.rank}：${sg.label}`}
-            className="absolute top-0 flex h-6 items-center justify-center overflow-hidden text-[12px]"
+            className="absolute top-0 flex h-6 items-center justify-center overflow-hidden text-note"
             style={{
               left: `${sg.left}%`,
               /* 隣の区間と2px空けて、境目を線ではなく余白で見せる */
@@ -525,7 +525,7 @@ function ThresholdBand({
           />
         )}
       </div>
-      <p className="m-0 mt-1 text-[12px] text-[var(--ink-muted)]">
+      <p className="m-0 mt-1 text-note text-[var(--ink-muted)]">
         判定範囲 {snapshotLabel ?? "—"}
         {rank ? `（ランク${rank}）` : "（判定外）"} ／ 実績値 <Num value={actualValue} unit={unit ?? undefined} />
         。帯は現在の基準表のA〜Eです（確定時の基準は上の判定範囲が正）。

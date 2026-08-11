@@ -77,7 +77,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
       </div>
 
       <Card className="card-pad">
-        <p className="m-0 text-[13px]">
+        <p className="m-0 text-sub">
           {selected.name}（{formatPeriod(selected.periodStart, selected.periodEnd)}）のアンケートを、
           等級{grades.length}段階ぶんまとめて下書きで作ります。作ったあとに1つずつ内容を確認して公開してください。
         </p>

@@ -191,7 +191,7 @@ export function RecordForm({
         >
           {fields.map((f) => (
           <label key={f.name} className={f.type === "textarea" ? "md:col-span-2" : undefined}>
-            <span className="block text-[12px] text-[var(--ink-muted)]">
+            <span className="block text-note text-[var(--ink-muted)]">
               {f.label}
               {"required" in f && f.required && <span className="ml-1 text-[var(--danger)]">必須</span>}
             </span>
@@ -206,7 +206,7 @@ export function RecordForm({
                 ))}
               </select>
             ) : f.type === "checkbox" ? (
-              <span className="mt-1 flex items-center gap-2 text-[13px]">
+              <span className="mt-1 flex items-center gap-2 text-sub">
                 <input type="checkbox" name={f.name} defaultChecked={f.defaultValue ?? false} />
                 {f.help}
               </span>
@@ -290,7 +290,7 @@ export function RecordForm({
           </div>
           {Object.entries(issuedGenerated).map(([name, value]) => (
             <label key={name}>
-              <span className="block text-[12px] text-[var(--ink-muted)]">
+              <span className="block text-note text-[var(--ink-muted)]">
                 {fields.find((field) => field.name === name)?.label ?? name}
               </span>
               <span className="mt-1 flex flex-wrap items-center gap-2">
@@ -321,7 +321,7 @@ export function RecordForm({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 mt-3 text-sub text-[var(--brand-deep)]">{message}</p>}
     </Card>
   );
 }

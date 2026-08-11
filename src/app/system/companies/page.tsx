@@ -23,7 +23,7 @@ export default async function SystemCompanies() {
         <>
           <SectionHeading>会社を追加したときに写される標準の制度</SectionHeading>
           <Card className="card-pad">
-            <p className="m-0 text-[13px] text-ink-muted">
+            <p className="m-0 text-sub text-ink-muted">
               現行の運用（評価基準シート）から取り込んだ内容です。ここを直接使う会社はなく、新しい会社を作るときの下敷きになります。
             </p>
             {/* 同じ粒度の件数を並べるサマリー。組み方は StatGrid の1箇所に集約している。 */}
@@ -102,7 +102,7 @@ export default async function SystemCompanies() {
                   ]}
                 />
                 <Card className="card-pad">
-                  <p className="m-0 text-[13px]">
+                  <p className="m-0 text-sub">
                     {c.isActive
                       ? "利用を停止すると、この会社の方は全員ログインできなくなります。データは消えません。"
                       : "この会社はいま停止中です。再開しても、社員の利用再開は1人ずつ行う必要があります。"}

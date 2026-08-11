@@ -100,7 +100,7 @@ export function BehaviorBandAssignmentEditor({
       </p>
       <div className="field-grid">
         <label>
-          <span className="block text-[12px] text-[var(--ink-muted)]">等級</span>
+          <span className="block text-note text-[var(--ink-muted)]">等級</span>
           <select value={gradeId} onChange={(event) => selectGrade(event.target.value)} className="input mt-1 w-full">
             {grades.map((grade) => (
               <option key={grade.id} value={grade.id}>
@@ -110,7 +110,7 @@ export function BehaviorBandAssignmentEditor({
           </select>
         </label>
         <label>
-          <span className="block text-[12px] text-[var(--ink-muted)]">出す基準</span>
+          <span className="block text-note text-[var(--ink-muted)]">出す基準</span>
           <select value={behaviorBand} onChange={(event) => setBehaviorBand(event.target.value)} className="input mt-1 w-full">
             <option value="">適用しない</option>
             {currentBandUnavailable && (
@@ -139,7 +139,7 @@ export function BehaviorBandAssignmentEditor({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 mt-3 text-sub text-[var(--brand-deep)]">{message}</p>}
     </Card>
   );
 }

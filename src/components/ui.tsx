@@ -243,7 +243,7 @@ export function Bar({ value, max, label }: { value: number; max: number; label?:
       <div className="bar-track" role="img" aria-label={`${label ?? "達成度"} ${max}中 ${value}`}>
         <div className="bar-fill" style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
+      <p className="mt-1 text-note text-[var(--ink-muted)]">
         <Num value={value} /> / <Num value={max} />
         {label ? ` ${label}` : ""}
       </p>
@@ -382,27 +382,51 @@ export function CardRow({
  * 1件＝カード1枚で、中に編集フォームや明細を抱える画面（評価期間・アンケート・
  * 会社など）はこの頭を必ず使う。左に読むもの、右に押すものを固定し、
  * 画面ごとに flex の並べ方を書き起こさない。
+ *
+ * `pinned` を付けると、この頭がカードの中でスクロールしても消えなくなる。
+ * 使う条件と、帯に何を載せてよいかは下の pinned の説明を読むこと。
  */
-export function CardHead({
-  lead,
-  title,
-  heading,
-  sub,
-  detail,
-  actions,
-}: {
+interface CardHeadBase {
   /** 名前の左に置く小さな印（手順番号など）。文章は入れない。 */
   lead?: ReactNode;
   title: ReactNode;
   /** そのカードが画面の節そのものであるときだけ true（見出しとして読み上げさせる）。 */
   heading?: boolean;
   sub?: ReactNode;
-  detail?: ReactNode;
   actions?: ReactNode;
-}) {
+}
+
+/**
+ * 固定表示にすると `detail`（注記の段落）を渡せなくなる、を型で縛る。
+ *
+ * 帯に載せてよいのは「操作しながら参照し続けるもの」だけ（単位・配点・上限下限の
+ * 判定ルール・合計）。一度読めば済む説明文を帯に足していくと帯が厚くなり、
+ * 肝心の入力欄が画面から押し出されて逆効果になる。
+ * 注意書きはカードの本文側（帯の下）に普通の段落として置くこと。
+ */
+type CardHeadProps = CardHeadBase &
+  (
+    | {
+        /**
+         * カードの中身が縦に長く、頭にある情報を見ながら下のほうを操作する画面だけ true。
+         * 前提: 親の Card に `card-pad` が付いていること
+         * （帯を幅いっぱいに広げるため、カードの内側の余白を打ち消している）。
+         */
+        pinned: true;
+        detail?: never;
+      }
+    | { pinned?: false; detail?: ReactNode }
+  );
+
+export function CardHead({ lead, title, heading, sub, detail, actions, pinned }: CardHeadProps) {
   const Title = heading ? "h2" : "p";
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
+    <div
+      className={clsx(
+        "flex flex-wrap items-start justify-between gap-3",
+        pinned && "card-head-sticky",
+      )}
+    >
       <div className="flex min-w-0 items-start gap-3">
         {lead}
         <div className="min-w-0">
@@ -422,7 +446,7 @@ export function RankMark({ rank }: { rank: string | null }) {
   return (
     <span
       className={clsx(
-        "num inline-flex h-6 w-6 items-center justify-center rounded-full border text-[12px] font-bold",
+        "num inline-flex h-6 w-6 items-center justify-center rounded-full border text-note font-bold",
         strong
           ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]"
           : "border-[var(--line)] bg-[var(--subtle)] text-[var(--ink-muted)]",

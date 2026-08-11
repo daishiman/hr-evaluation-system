@@ -116,7 +116,7 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
   return (
     <>
       {header}
-      {form.description && <p className="mb-4 text-[13px] leading-relaxed">{form.description}</p>}
+      {form.description && <p className="mb-4 text-sub leading-relaxed">{form.description}</p>}
 
       <FormAnswer
         formId={form.id}

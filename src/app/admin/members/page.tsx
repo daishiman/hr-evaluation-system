@@ -44,12 +44,12 @@ export default async function AdminMembers() {
 
       {/* 名簿の全体像と、いま本人に開放している項目。文で書かず、数と札で見せる */}
       <Card className="card-pad hero-tint">
-        <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
+        <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
           {active.length}
           <span className="unit"> / {members.length} 人が在籍中</span>
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="text-[12px] text-[var(--ink-muted)]">本人が自分で変えられる項目</span>
+          <span className="text-note text-[var(--ink-muted)]">本人が自分で変えられる項目</span>
           {selfEditableLabels.length === 0 ? (
             <span className="tag">
               <Icon name="lock" size={13} />
@@ -80,8 +80,8 @@ export default async function AdminMembers() {
             <Link key={m.id} href={`/admin/members/${m.id}`} className="user-row no-underline">
               <Avatar name={m.name} seed={m.id} size={36} />
               <div className="min-w-0 flex-1">
-                <p className="m-0 truncate text-[14px] font-semibold text-[var(--ink)]">{m.name}</p>
-                <p className="m-0 truncate text-[12px] text-[var(--ink-muted)]">{m.email}</p>
+                <p className="m-0 truncate text-body font-semibold text-[var(--ink)]">{m.name}</p>
+                <p className="m-0 truncate text-note text-[var(--ink-muted)]">{m.email}</p>
               </div>
               <span className="user-row-tags">
                 <span className="tag">
@@ -110,8 +110,8 @@ export default async function AdminMembers() {
               <Link key={m.id} href={`/admin/members/${m.id}`} className="user-row no-underline" data-muted="true">
                 <Avatar name={m.name} seed={m.id} size={36} />
                 <div className="min-w-0 flex-1">
-                  <p className="m-0 truncate text-[14px] font-semibold text-[var(--ink-muted)]">{m.name}</p>
-                  <p className="m-0 truncate text-[12px] text-[var(--ink-muted)]">
+                  <p className="m-0 truncate text-body font-semibold text-[var(--ink-muted)]">{m.name}</p>
+                  <p className="m-0 truncate text-note text-[var(--ink-muted)]">
                     ログインできません。過去の評価は残っています。
                   </p>
                 </div>

@@ -6,6 +6,7 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { AppSidebar, SIDEBAR_INIT_SCRIPT } from "@/components/AppSidebar";
 import { homeItemFor, navGroupsFor } from "@/lib/nav";
 import { LinkButton, ReasonNote } from "@/components/ui";
+import { StickyOffset } from "@/components/StickyOffset";
 
 /**
  * 画面の骨格。
@@ -23,6 +24,9 @@ export async function AppShell({ viewer, children }: { viewer: Viewer; children:
     <div className="app-layout">
       {/* 前回閉じていた人の画面で、一瞬メニューが開いて見えるのを防ぐ */}
       <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
+
+      {/* 固定した見出しの帯の高さを実測して、その下に貼り付く位置を全画面に配る */}
+      <StickyOffset />
 
       <AppSidebar
         groups={groups}

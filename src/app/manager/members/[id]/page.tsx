@@ -100,7 +100,7 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
                 <>
                   <Num value={e.totalScore} display />
                   <span className="unit">点</span>
-                  <p className="m-0 text-[12px] text-[var(--ink-muted)]">
+                  <p className="m-0 text-note text-[var(--ink-muted)]">
                     満点 <Num value={e.maxScore} unit="点" />
                   </p>
                 </>

@@ -78,7 +78,7 @@ export function PointDesign({
   if (!rule) {
     return (
       <Card className="card-pad">
-        <p className="m-0 text-[13px]">
+        <p className="m-0 text-sub">
           {gradeName} の配点の型がまだ登録されていません。会社の管理者に「等級区分ごとの配点」の登録を依頼してください。
         </p>
       </Card>
@@ -92,18 +92,18 @@ export function PointDesign({
   return (
     <>
       <Card className="card-pad hero-tint">
-        <p className="m-0 text-[12px] text-[var(--ink-muted)]">{gradeName} の満点と、その内訳</p>
-        <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
+        <p className="m-0 text-note text-[var(--ink-muted)]">{gradeName} の満点と、その内訳</p>
+        <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
           <Num value={rule.totalPoints} />
           <span className="unit">点満点</span>
         </p>
-        <p className="m-0 mt-1 text-[13px]">
+        <p className="m-0 mt-1 text-sub">
           この等級では <Num value={slots} unit="項目" /> を評価します（選べる項目は{" "}
           <Num value={selectableCount} unit="件" />）。
         </p>
         <CompositionBar rule={rule} />
         {sum !== rule.totalPoints && (
-          <p className="m-0 mt-2 text-[12px] text-[var(--danger)]">
+          <p className="m-0 mt-2 text-note text-[var(--danger)]">
             内訳の合計が <Num value={sum} unit="点" /> で満点と合いません。会社の管理者に配点の見直しを依頼してください。
           </p>
         )}

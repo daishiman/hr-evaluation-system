@@ -80,7 +80,7 @@ export function SystemDashboard({
             {selected ? (
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="todo-row-title m-0 text-[15px]">{selected.name}</p>
+                  <p className="todo-row-title m-0 text-strong">{selected.name}</p>
                   <CompanyState company={selected} />
                 </div>
                 <p className="todo-row-sub m-0 mt-1">
@@ -96,7 +96,7 @@ export function SystemDashboard({
                 </div>
               </div>
             ) : (
-              <p className="m-0 text-[13px] text-[var(--ink-muted)]">
+              <p className="m-0 text-sub text-[var(--ink-muted)]">
                 利用中の会社がありません。会社一覧で利用状態を確認してください。
               </p>
             )}

@@ -46,9 +46,55 @@
   --pad-card: 20px;      /* カードの内側 */
   --pad-page-x: 20px;    /* 本文の左右 */
 
-  --sidebar-w: 232px;    /* メニューの幅 */
+  --sidebar-w: 248px;    /* メニューの幅（本文16px化に合わせて16px広げた） */
   --header-h: 56px;
   --content-max: 1120px; /* 本文の最大幅(これ以上は広げない) */
+}
+
+/* ============================================================
+   文字の大きさ（このアプリで使ってよい段はこれだけ）
+
+   ここが文字サイズの唯一の正本。画面側は text-note / text-body …の
+   ユーティリティを使い、px を直接書かない（ui-rules.test.ts で固定）。
+   全体を大きく・小さくしたくなったら、この表の値だけを動かす。
+
+   2026-08 に「全体的に文字が小さい」という指摘を受けて、
+   本文 14px → 16px を基準に、文字の段すべてを一律 +2px 引き上げた。
+   一律に足しているので、見出しと本文の差（＝情報の階層）は元のまま保たれる。
+   主役の数字（36px / 44px）だけは既に十分大きいので据え置き。
+   本文16px に対して 44/16 = 2.75倍で、主役:本文 2.5倍以上の規律も満たす。
+
+   段      新    旧   用途
+   note    14px  12px 補足文・状態の札・単位・注記・パンくず
+   sub     15px  13px 表のセル・定義リストの値・節見出し・リード文・入力欄
+   body    16px  14px 本文（body の既定）
+   strong  17px  15px 一段強い本文（アプリ名・カードの見出し）
+   head    18px  16px 固定した帯の中のページ見出し
+   title   21px  18px ページ見出し
+   name    22px  20px 氏名の大見出し
+   num-s   24px  22px KPI の数値
+   num-m   28px  26px 比較の数値
+   num-l   30px  28px 副次的な大きい数値
+   hero-sp 36px  36px 主役の数字（狭い画面）※据え置き
+   hero    44px  44px 主役の数字 ※据え置き
+
+   ここは @theme（inline ではない）で定義する。
+   inline にすると :root へ変数が出力されず、この CSS の中から
+   var(--text-*) で参照できなくなる。
+   ============================================================ */
+@theme {
+  --text-note: 14px;
+  --text-sub: 15px;
+  --text-body: 16px;
+  --text-strong: 17px;
+  --text-head: 18px;
+  --text-title: 21px;
+  --text-name: 22px;
+  --text-num-s: 24px;
+  --text-num-m: 28px;
+  --text-num-l: 30px;
+  --text-hero-sp: 36px;
+  --text-hero: 44px;
 }
 
 * { box-sizing: border-box; }
@@ -57,10 +103,11 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  /* 固定ヘッダー（56px）＋見出し帯（約48px）と固定操作バー（約72px）の下に
-     アンカー先や次のフォーカスが潜り込まないようにする。
-     この2値は --header-h と .action-bar の高さと必ず対で保つ。 */
-  scroll-padding-top: 112px;
+  /* 上の固定物（ヘッダー＋見出し帯＝--sticky-top、さらにカードの頭の帯）と、
+     下の固定操作バーの下に、アンカー先や次のフォーカスが潜り込まないようにする。
+     Tab で入力欄を送っていったときに、いま入った欄が帯に隠れないための余白。
+     上は --sticky-top（実測値）＋カードの頭の帯のぶん、下は .action-bar の高さと対で保つ。 */
+  scroll-padding-top: calc(var(--sticky-top) + 96px);
   scroll-padding-bottom: 96px;
 }
 
@@ -71,7 +118,7 @@ body {
   /* 欧文を先に置き、数字・ラテン文字を和文フォントに落とさない */
   font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif;
   font-feature-settings: "palt";
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
 }
@@ -104,12 +151,12 @@ body {
   border-radius: 4px;
   background: #fff;
   padding: 0 5px;
-  font-size: 12px;
+  font-size: var(--text-note);
   font-family: var(--font-num);
   color: var(--ink-muted);
   line-height: 1.6;
 }
-.kbd-hint { font-size: 12px; color: var(--ink-muted); display: inline-flex; align-items: center; gap: 3px; }
+.kbd-hint { font-size: var(--text-note); color: var(--ink-muted); display: inline-flex; align-items: center; gap: 3px; }
 
 /* フォーカス可視化 (§9) */
 :where(a, button, input, select, textarea, summary):focus-visible {
@@ -238,7 +285,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 .sidebar-group-title {
   margin: 0 0 4px;
   padding: 0 10px;
-  font-size: 12px;
+  font-size: var(--text-note);
   font-weight: 700;
   color: var(--ink-muted);
   letter-spacing: 0.04em;
@@ -247,7 +294,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
   display: block;
   padding: 8px 10px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--text-sub);
   color: var(--ink);
   min-height: 36px;
   line-height: 1.5;
@@ -272,7 +319,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
   background: #fff;
   border-radius: 6px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-note);
   color: var(--ink-muted);
   padding: 5px 10px;
   cursor: pointer;
@@ -336,7 +383,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
   border: none;
   background: none;
   font-family: inherit;
-  font-size: 15px;
+  font-size: var(--text-strong);
   font-weight: 700;
   color: var(--ink);
   white-space: nowrap;
@@ -347,7 +394,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 }
 .app-name:hover { background: var(--subtle); }
 .app-name .app-name-sub {
-  font-size: 12px;
+  font-size: var(--text-note);
   font-weight: 400;
   color: var(--ink-muted);
   margin-left: 8px;
@@ -388,8 +435,8 @@ main {
   gap: var(--space-block);
   margin-bottom: var(--space-block);
 }
-.page-title { font-size: 18px; font-weight: 700; margin: 0 0 4px; line-height: 1.5; }
-.page-lede { font-size: 13px; color: var(--ink-muted); margin: 0; line-height: 1.7; }
+.page-title { font-size: var(--text-title); font-weight: 700; margin: 0 0 4px; line-height: 1.5; }
+.page-lede { font-size: var(--text-sub); color: var(--ink-muted); margin: 0; line-height: 1.7; }
 
 /* ---- 見出しの上のパンくず（いまどこにいるか・どこへ戻れるか）----
    画面の中に「一覧に戻る」ボタンを置く代わりに、全画面で同じ位置に出す。 */
@@ -401,7 +448,7 @@ main {
   margin: 0 0 4px;
   padding: 0;
   list-style: none;
-  font-size: 12px;
+  font-size: var(--text-note);
   color: var(--ink-muted);
   line-height: 1.5;
 }
@@ -437,7 +484,7 @@ main {
 /* 本文の先頭にあるときだけ、上の余白を食べて固定ヘッダーに接するようにする。
    パスワード変更の呼びかけなどが上にある画面では、そのぶん下にずれる。 */
 .app-main > .page-head[data-sticky="true"]:first-child { margin-top: -24px; }
-.page-head[data-sticky="true"] .page-title { font-size: 16px; margin-bottom: 0; }
+.page-head[data-sticky="true"] .page-title { font-size: var(--text-head); margin-bottom: 0; }
 .page-head[data-sticky="true"] .page-lede { display: none; }
 
 /* ---- 主要な操作を画面下に固定する帯 ----
@@ -461,7 +508,7 @@ main {
   max-width: var(--content-max);
   margin: 0 auto;
 }
-.action-bar-status { font-size: 12px; color: var(--ink-muted); min-width: 0; }
+.action-bar-status { font-size: var(--text-note); color: var(--ink-muted); min-width: 0; }
 .action-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-tight); }
 @media (max-width: 639px) {
   /* 狭い画面では、押すものを1行いっぱいに広げて親指で押せるようにする */
@@ -480,14 +527,14 @@ main {
 }
 .page-head + .section-head { margin-top: var(--space-tight); }
 .section-heading {
-  font-size: 13px;
+  font-size: var(--text-sub);
   font-weight: 700;
   margin: 0;
   display: flex;
   align-items: baseline;
   gap: var(--space-tight);
 }
-.section-heading .count { font-weight: 400; color: var(--ink-muted); font-size: 12px; }
+.section-heading .count { font-weight: 400; color: var(--ink-muted); font-size: var(--text-note); }
 
 /* ------------------------------------------------------------
    カードを並べる箱。
@@ -534,6 +581,55 @@ main {
 }
 .card-pad { padding: var(--pad-card); }
 
+/* ------------------------------------------------------------
+   カードの中で固定する見出し（.card-pad のカードとの対で使う）。
+
+   なぜ要るか: 中身が縦に長いカード（KPI1件のカードにランクA〜Eの
+   入力欄が続くなど）では、下のほうを入力しているときに、カードの頭にある
+   「単位・配点・下限上限の判定ルール」が画面の外へ出てしまう。
+   いま打ち込んでいる「80」が何の単位なのかを確かめるために、
+   毎回スクロールで上へ戻ることになる。
+
+   守ること:
+   1. 帯に載せるのは「入力しながら参照し続けるもの」だけ。
+      一度読めば済む説明文は帯に入れない（帯が厚いと入力欄が見えない）。
+   2. 貼り付く位置は --sticky-top（固定ヘッダー＋あれば見出し帯の下端）。
+      画面上部の固定物に潜り込ませない。
+   3. 親に overflow: hidden を作らない。作ると position: sticky が
+      無言で効かなくなる（見た目だけ普通の見出しに戻る）。
+   4. 実装は CardHead の pinned だけ。画面ごとに書き起こさない。
+   ------------------------------------------------------------ */
+.card-head-sticky {
+  position: sticky;
+  top: var(--sticky-top);
+  /* 表の列見出し（4）より上、見出し帯（15）より下。
+     カードの頭が画面上部の帯を覆い隠さないための順番。 */
+  z-index: 5;
+  background: #fff;
+  padding: 12px var(--pad-card);
+  border-bottom: 1px solid var(--line);
+  border-radius: 11px 11px 0 0;
+}
+/* 内側に余白のあるカードでは、その余白を打ち消して帯を幅いっぱいに広げる。
+   余白のないカード（行を並べるカード）はそのままで幅いっぱいになる。 */
+.card-pad > .card-head-sticky {
+  margin: calc(var(--pad-card) * -1) calc(var(--pad-card) * -1) var(--space-tight);
+}
+@media (max-width: 639px) {
+  /* 狭い画面では固定をやめる。
+     実測（375×700）で、上の固定ヘッダー＋見出し帯だけで約195px、
+     下の操作バーが約116px を使う。ここにカードの帯（約93px）を足すと、
+     肝心の入力欄に残るのが画面の半分以下になり、
+     「参照しながら打つ」ための帯が、打つ場所を奪ってしまう。
+     狭い画面では見出し帯が現在地を持っているので、そちらに任せる。 */
+  .card-head-sticky { position: static; padding: 8px var(--pad-card); }
+}
+/* 縦幅が足りない環境（横向きのスマホ・小さいノート）では固定をやめる。
+   帯を残すより、入力欄が見えることを優先する。 */
+@media (max-height: 560px) {
+  .card-head-sticky { position: static; }
+}
+
 /* 視覚的主役の面(1画面1箇所): 白→brand-softの微グラデ */
 .card.hero-tint {
   background: linear-gradient(180deg, #fff 20%, var(--brand-soft) 130%);
@@ -568,7 +664,7 @@ main {
    「1件の中身を並べる」ときの標準形。表にしない（列が1本しかない表は表ではない）。
    広い画面はラベルと値を横に、狭い画面は縦積みにする。
    ------------------------------------------------------------ */
-.def-list { font-size: 13px; }
+.def-list { font-size: var(--text-sub); }
 .def-list > div {
   display: flex;
   flex-wrap: wrap;
@@ -577,7 +673,10 @@ main {
   border-bottom: 1px solid var(--line);
 }
 .def-list > div:last-child { border-bottom: none; }
-.def-list dt { flex: 0 0 8rem; color: var(--ink-muted); font-size: 12px; }
+/* ラベルの幅は 9rem（144px）。文字を 12px → 14px にしたとき 8rem では
+   「事業所KGI達成率」のような8〜9字のラベルが2行に折れたため、同じ字数が
+   1行に収まる幅へ広げた。文字の段を動かすときはこの幅も対で見直す。 */
+.def-list dt { flex: 0 0 9rem; color: var(--ink-muted); font-size: var(--text-note); }
 .def-list dd { flex: 1 1 12rem; margin: 0; min-width: 0; }
 @media (max-width: 480px) {
   /* 狭い画面ではラベルを値の上に置く（8rem を削り合って値が2文字幅になるのを防ぐ） */
@@ -598,7 +697,7 @@ main {
   .stat-grid { grid-template-columns: repeat(var(--stat-cols, 4), minmax(0, 1fr)); }
 }
 .stat-grid > div { min-width: 0; }
-.stat-grid dt { margin: 0; font-size: 12px; color: var(--ink-muted); }
+.stat-grid dt { margin: 0; font-size: var(--text-note); color: var(--ink-muted); }
 .stat-grid dd { margin: 2px 0 0; }
 
 /* ============================================================
@@ -607,7 +706,7 @@ main {
 .btn {
   appearance: none;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sub);
   border-radius: 6px;
   padding: 8px 16px;
   cursor: pointer;
@@ -687,7 +786,7 @@ main {
   border-radius: 999px;
   border: 1px solid transparent;
   padding: 2px 10px;
-  font-size: 12px;
+  font-size: var(--text-note);
   font-weight: 500;
   line-height: 1.6;
 }
@@ -700,14 +799,14 @@ main {
   color: var(--ink-muted);
   border-radius: 4px;
   padding: 1px 6px;
-  font-size: 12px;
+  font-size: var(--text-note);
 }
 .badge-alert {
   background: var(--danger-soft);
   color: var(--danger);
   border-radius: 4px;
   padding: 1px 8px;
-  font-size: 12px;
+  font-size: var(--text-note);
   font-weight: 600;
 }
 
@@ -717,10 +816,10 @@ main {
 /* 表は「同じ属性の行を見比べる」ときだけ使う。判断基準は docs/product/spec.md §5-5。
    表を出すかカードに落とすかは容器の幅で切り替える（.data-table / DataTable が唯一の実装）。 */
 .table-scroll { border-radius: 12px; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sub); }
 thead th {
   text-align: left;
-  font-size: 12px;
+  font-size: var(--text-note);
   font-weight: 500;
   color: var(--ink-muted);
   border-bottom: 1px solid var(--line);
@@ -739,9 +838,20 @@ tbody tr:hover { background: var(--subtle); }
 th.col-num, td.col-num { text-align: right; font-variant-numeric: tabular-nums; }
 tr.row-excluded td { color: var(--ink-muted); }
 
-/* 見出し帯を固定している画面では、その帯のぶんだけ列見出しを下げる。
-   帯の高さ（約52px）を変えたらこの値も対で直す。 */
-body:has(.page-head[data-sticky="true"]) { --table-head-top: calc(var(--header-h) + 52px); }
+/* --sticky-top ＝「固定ヘッダー（＋あれば見出し帯）の下端」の唯一の正本。
+   表の列見出し（--table-head-top）と、カードの中の固定見出し（.card-head-sticky）の
+   両方がこの値に貼り付く。
+
+   見出し帯の高さは画面ごとに違う（パンくずの有無・札の行数・折返し・文字サイズ）ため、
+   ここに書く値はあくまで画面が出た直後の初期値。
+   実際の高さは components/StickyOffset.tsx が測って上書きする。
+   ここを決め打ちのままにすると、帯が見出しの下に潜り込んで読めなくなる。
+
+   置き場所は html（:root）。scroll-padding-top もこの値を読むため、
+   body に置くと html から読めない。 */
+:root { --sticky-top: var(--header-h); }
+html:has(.page-head[data-sticky="true"]) { --sticky-top: calc(var(--header-h) + 96px); }
+body { --table-head-top: var(--sticky-top); }
 
 input[type="checkbox"] {
   width: 18px;
@@ -779,14 +889,14 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 600;
 }
 .list-card .def-list { margin-top: 6px; }
 .list-card .def-list > div { padding: 4px 0; border-bottom: none; }
 .list-card .def-list dt { flex-basis: 7rem; }
 /* 長い文章（理由・補足）は値の対にせず、1段落として置く */
-.list-card-note { margin: 6px 0 0; font-size: 13px; line-height: 1.7; }
+.list-card-note { margin: 6px 0 0; font-size: var(--text-sub); line-height: 1.7; }
 .list-card-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: var(--space-tight); }
 
 /* ============================================================
@@ -794,7 +904,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
    ============================================================ */
 .field { display: grid; gap: 6px; }
 .field label {
-  font-size: 12px;
+  font-size: var(--text-note);
   font-weight: 500;
   display: flex;
   align-items: baseline;
@@ -807,7 +917,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .field select,
 .field textarea {
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sub);
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -816,15 +926,15 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   color: var(--ink);
 }
 .field input::placeholder { color: color-mix(in srgb, var(--ink-muted) 60%, transparent); }
-.field .hint { font-size: 12px; color: var(--ink-muted); margin: 0; }
-.field .error-msg { font-size: 12px; color: var(--danger); margin: 0; }
+.field .hint { font-size: var(--text-note); color: var(--ink-muted); margin: 0; }
+.field .error-msg { font-size: var(--text-note); color: var(--danger); margin: 0; }
 .field.has-error input { border-color: var(--danger); }
 
 /* パスワード欄の「表示する / 隠す」。
    目のアイコンだけのボタンにはしない（何が起きるかを文字で言う）。 */
 .field-toggle {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--text-note);
   font-weight: 500;
   color: var(--brand-deep);
   background: none;
@@ -838,7 +948,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 /* 満たすべき条件の一覧。打ち込む前から見えていること（打ってから怒られない）。
    満たしたかどうかは色だけでなく印と読み上げ用の文字でも伝える。 */
 .rule-list { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
-.rule-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-muted); }
+.rule-item { display: flex; align-items: center; gap: 6px; font-size: var(--text-note); color: var(--ink-muted); }
 .rule-item[data-met="true"] { color: var(--ink); }
 .rule-mark {
   flex: none;
@@ -868,15 +978,15 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   text-align: center;
   background: #fff;
 }
-.empty-state .es-title { font-size: 13px; font-weight: 600; margin: 0; }
-.empty-state .es-body { font-size: 13px; color: var(--ink-muted); margin: 4px 0 16px; }
+.empty-state .es-title { font-size: var(--text-sub); font-weight: 600; margin: 0; }
+.empty-state .es-body { font-size: var(--text-sub); color: var(--ink-muted); margin: 4px 0 16px; }
 
 .caution-panel {
   border: 1px solid var(--caution-border);
   background: var(--caution-soft);
   border-radius: 6px;
   padding: 10px 14px;
-  font-size: 12px;
+  font-size: var(--text-note);
   line-height: 1.8;
 }
 
@@ -913,7 +1023,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   background: var(--subtle);
   border-radius: 8px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--text-note);
   margin-bottom: 14px;
 }
 .restore-note button {
@@ -921,7 +1031,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   border: none;
   background: none;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-note);
   font-weight: 600;
   color: var(--brand-deep);
   cursor: pointer;
@@ -929,7 +1039,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   white-space: nowrap;
 }
 .draft-status {
-  font-size: 12px;
+  font-size: var(--text-note);
   color: var(--ink-muted);
   margin: 10px 0 0;
   min-height: 1.2em;
@@ -938,7 +1048,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .mail-preview {
   border: 1px solid var(--line);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--text-note);
 }
 .mail-preview .mp-meta {
   padding: 10px 14px;
@@ -969,20 +1079,20 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(22, 25, 29, .12);
   padding: 12px 16px;
-  font-size: 13px;
+  font-size: var(--text-sub);
   display: flex;
   align-items: flex-start;
   gap: 12px;
 }
 .toast.toast-error { border-color: var(--danger); }
 .toast .toast-msg { flex: 1; }
-.toast .toast-msg .t-sub { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+.toast .toast-msg .t-sub { font-size: var(--text-note); color: var(--ink-muted); margin-top: 2px; }
 .toast button.toast-action {
   appearance: none;
   border: none;
   background: none;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-note);
   font-weight: 600;
   color: var(--brand-deep);
   cursor: pointer;
@@ -1003,9 +1113,9 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   margin-top: var(--space-section);
 }
 .kpi { text-align: center; padding: 8px; }
-.kpi .kpi-label { font-size: 12px; color: var(--ink-muted); }
+.kpi .kpi-label { font-size: var(--text-note); color: var(--ink-muted); }
 .kpi .kpi-value {
-  font-size: 22px;
+  font-size: var(--text-num-s);
   font-weight: 700;
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
@@ -1014,16 +1124,16 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .kpi + .kpi { border-left: 1px solid var(--line); }
 @media (max-width: 479px) { .kpi + .kpi { border-left: none; border-top: 1px solid var(--line); } }
 
-.todo-row-title { font-size: 13px; font-weight: 600; }
-.todo-row-sub { font-size: 12px; color: var(--ink-muted); }
+.todo-row-title { font-size: var(--text-sub); font-weight: 600; }
+.todo-row-sub { font-size: var(--text-note); color: var(--ink-muted); }
 
 /* ============================================================
    結果・レポート (jp-web-design §10)
    ============================================================ */
 .hero-number { text-align: center; padding: 36px 20px 28px; }
-.hero-number .hn-label { font-size: 12px; color: var(--ink-muted); }
+.hero-number .hn-label { font-size: var(--text-note); color: var(--ink-muted); }
 .hero-number .hn-value {
-  font-size: 44px;
+  font-size: var(--text-hero);
   font-weight: 700;
   color: var(--accent);
   line-height: 1.2;
@@ -1031,8 +1141,8 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.015em; /* ほんの少しだけ空ける(詰めすぎは窮屈) */
 }
-.hero-number .hn-note { font-size: 12px; color: var(--ink-muted); margin-top: 4px; }
-@media (max-width: 480px) { .hero-number .hn-value { font-size: 36px; } }
+.hero-number .hn-note { font-size: var(--text-note); color: var(--ink-muted); margin-top: 4px; }
+@media (max-width: 480px) { .hero-number .hn-value { font-size: var(--text-hero-sp); } }
 
 .compare-block { display: grid; gap: 14px; }
 .compare-item { display: grid; gap: 4px; }
@@ -1040,7 +1150,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 12px;
+  font-size: var(--text-note);
   gap: 8px;
 }
 .compare-item .ci-head .ci-label { color: var(--ink-muted); }
@@ -1061,15 +1171,15 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   padding: 8px 0 4px;
 }
 .delta-compare .dc-item { text-align: center; }
-.delta-compare .dc-label { font-size: 12px; color: var(--ink-muted); }
+.delta-compare .dc-label { font-size: var(--text-note); color: var(--ink-muted); }
 .delta-compare .dc-value {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   font-weight: 700;
-  font-size: 26px;
+  font-size: var(--text-num-m);
 }
-.delta-compare .dc-arrow { color: var(--ink-muted); font-size: 14px; }
+.delta-compare .dc-arrow { color: var(--ink-muted); font-size: var(--text-body); }
 .delta-chip {
   display: inline-flex;
   align-items: center;
@@ -1079,7 +1189,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--text-sub);
   padding: 3px 12px;
   white-space: nowrap;
 }
@@ -1092,7 +1202,7 @@ details.disclosure { border: 1px solid var(--line); border-radius: 10px; backgro
 details.disclosure summary {
   cursor: pointer;
   padding: 14px var(--pad-card);
-  font-size: 13px;
+  font-size: var(--text-sub);
   font-weight: 700;
   list-style: none;
   display: flex;
@@ -1111,25 +1221,25 @@ details.disclosure .disclosure-body > :first-child { margin-top: 0; }
 details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
 .disclosure-meta {
   color: var(--ink-muted);
-  font-size: 12px;
+  font-size: var(--text-note);
   font-weight: 400;
   margin-left: auto;
   text-align: right;
 }
 
-.footnote { font-size: 12px; color: var(--ink-muted); }
+.footnote { font-size: var(--text-note); color: var(--ink-muted); }
 
 /* ============================================================
    カタログページ用
    ============================================================ */
 .catalog-section { margin: 36px 0; }
 .catalog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-.spec-note { font-size: 12px; color: var(--ink-muted); margin: 6px 0 14px; }
+.spec-note { font-size: var(--text-note); color: var(--ink-muted); margin: 6px 0 14px; }
 .swatch-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 .swatch { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
 .swatch .sw-color { height: 48px; }
-.swatch .sw-meta { padding: 8px 10px; font-size: 12px; line-height: 1.6; }
-.swatch .sw-meta code { font-size: 12px; color: var(--ink-muted); }
+.swatch .sw-meta { padding: 8px 10px; font-size: var(--text-note); line-height: 1.6; }
+.swatch .sw-meta code { font-size: var(--text-note); color: var(--ink-muted); }
 .demo-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 
 .chip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -1139,7 +1249,7 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   background: #fff;
   border-radius: 6px;
   padding: 8px 4px;
-  font-size: 12px;
+  font-size: var(--text-note);
   text-align: center;
   cursor: pointer;
   font-family: inherit;
@@ -1192,7 +1302,7 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   border-radius: 999px;
   background: #fff;
   padding: 2px 10px;
-  font-size: 12px;
+  font-size: var(--text-note);
   color: var(--ink);
   white-space: nowrap;
   max-width: 100%;
@@ -1236,7 +1346,7 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   top: calc(100% + 8px);
   right: 0;
   z-index: 30;
-  width: 268px;
+  width: 292px; /* 文字を大きくしたぶん、氏名と札が折り返さない幅へ広げた */
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -1252,7 +1362,7 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   background: var(--caution-soft);
   border-radius: 6px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: var(--text-note);
   line-height: 1.6;
 }
 .account-pop-links { display: grid; gap: 2px; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
@@ -1266,7 +1376,7 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   border-radius: 6px;
   padding: 8px 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sub);
   color: var(--ink);
   text-align: left;
   cursor: pointer;
@@ -1327,21 +1437,21 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   background: transparent;
   padding: 0;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-note);
   color: var(--ink-muted);
   cursor: pointer;
 }
 .profile-row-label > svg { transition: transform 120ms; }
 .rot-180 { transform: rotate(180deg); }
-.profile-row-value { margin: 2px 0 0; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.profile-row-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.7; color: var(--ink-muted); }
+.profile-row-value { margin: 2px 0 0; font-size: var(--text-body); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.profile-row-hint { margin: 6px 0 0; font-size: var(--text-note); line-height: 1.7; color: var(--ink-muted); }
 .profile-row-action,
 .profile-row-lock {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--text-note);
   border-radius: 6px;
   padding: 4px 10px;
 }
@@ -1354,14 +1464,14 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
 }
 .profile-row-action:hover { background: var(--brand-soft); border-color: var(--brand); }
 .profile-row-lock { border: 1px dashed var(--line); color: var(--ink-muted); }
-.profile-saved { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--brand-deep); }
+.profile-saved { display: inline-flex; align-items: center; gap: 3px; font-size: var(--text-note); color: var(--brand-deep); }
 .profile-error {
   margin: 12px var(--pad-card);
   border: 1px solid var(--danger);
   background: var(--danger-soft);
   border-radius: 6px;
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--text-sub);
 }
 
 /* ---- 2択のスイッチ（そのまま状態表示になる）---- */
@@ -1374,7 +1484,7 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   background: #fff;
   padding: 5px 12px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--text-note);
   color: var(--ink-muted);
   cursor: pointer;
 }
@@ -1408,7 +1518,7 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
    ============================================================ */
 .input {
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sub);
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #fff;

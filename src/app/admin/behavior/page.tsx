@@ -63,10 +63,10 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
       <SectionHeading>どの等級に出すか</SectionHeading>
       <Card className="card-pad">
         {grades.length === 0 ? (
-          <p className="m-0 text-[13px]">等級が登録されていません。</p>
+          <p className="m-0 text-sub">等級が登録されていません。</p>
         ) : (
           <>
-            <p className="m-0 text-[13px]">
+            <p className="m-0 text-sub">
               いま行動指針の基準を割り当てている等級は <b>{applied.length}件</b>
               {applied.length > 0 && `（${applied.map((g) => `${g.name}：${behaviorBandLabel(bandSets, g.behaviorBand)}`).join(" / ")}）`}
               です。

@@ -53,7 +53,7 @@ export function ResponseSnapshot({ rows }: { rows: AnswerReadRow[] }) {
                     ) : r.questionType === "number" ? (
                       <span className="num font-bold">{shown}</span>
                     ) : r.questionType === "text" ? (
-                      <span className="text-[13px] whitespace-pre-wrap">{shown}</span>
+                      <span className="text-sub whitespace-pre-wrap">{shown}</span>
                     ) : (
                       <Badge tone="done">{shown}</Badge>
                     ),

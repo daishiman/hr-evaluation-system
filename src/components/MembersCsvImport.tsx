@@ -96,7 +96,7 @@ export function MembersCsvImport() {
 
   return (
     <Card className="card-pad">
-      <p className="m-0 text-[13px]">
+      <p className="m-0 text-sub">
         1行目に「氏名」「メールアドレス」「社員番号」「役割」「等級」「事業所」「所属」「上長」「入社日」「利用状態」の見出しを入れ、2行目から社員を並べてください。
         この画面の「社員一覧を書き出す」で作ったCSVは、そのまま取り込めます。
       </p>
@@ -105,12 +105,12 @@ export function MembersCsvImport() {
       </p>
 
       <div className="mt-3 grid gap-3">
-        <label className="block text-[13px] font-bold">
+        <label className="block text-sub font-bold">
           社員一覧のファイル（CSV）
           <input
             type="file"
             accept=".csv,text/csv"
-            className="mt-1 block w-full text-[13px] font-normal"
+            className="mt-1 block w-full text-sub font-normal"
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
@@ -122,10 +122,10 @@ export function MembersCsvImport() {
           {fileName && <span className="footnote block">選択中：{fileName}</span>}
         </label>
 
-        <label className="block text-[13px] font-bold">
+        <label className="block text-sub font-bold">
           または、表をそのまま貼り付ける
           <textarea
-            className="input mt-1 w-full font-mono text-[12px]"
+            className="input mt-1 w-full font-mono text-note"
             rows={4}
             value={text}
             onChange={(e) => {
@@ -156,7 +156,7 @@ export function MembersCsvImport() {
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="mt-3 m-0 text-[13px] font-bold">{message}</p>}
+      {message && <p className="mt-3 m-0 text-sub font-bold">{message}</p>}
 
       {credentials.length > 0 && (
         <div className="mt-3">
@@ -199,7 +199,7 @@ export function MembersCsvImport() {
               { key: "name", header: "氏名", role: "title", cell: (r) => r.name || "（空欄）" },
               { key: "status", header: "結果", role: "mark", cell: (r) => r.status },
               { key: "row", header: "行", num: true, cell: (r) => <span className="num">{r.row}</span> },
-              { key: "email", header: "メールアドレス", cell: (r) => <span className="text-[12px]">{r.email}</span> },
+              { key: "email", header: "メールアドレス", cell: (r) => <span className="text-note">{r.email}</span> },
               { key: "reason", header: "内容", cell: (r) => r.reason ?? "" },
             ]}
           />

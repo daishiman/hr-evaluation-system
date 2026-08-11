@@ -66,8 +66,8 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
       )}
 
       <Card className="card-pad">
-        <p className="m-0 text-[13px]">回答期間 {formatPeriod(form.opensAt, form.closesAt)}</p>
-        {form.description && <p className="m-0 mt-2 whitespace-pre-wrap text-[13px] leading-relaxed">{form.description}</p>}
+        <p className="m-0 text-sub">回答期間 {formatPeriod(form.opensAt, form.closesAt)}</p>
+        {form.description && <p className="m-0 mt-2 whitespace-pre-wrap text-sub leading-relaxed">{form.description}</p>}
         <p className="footnote m-0 mt-2">
           設問文・補足・必須／任意・答え方を、保存されているとおりに表示します。入力欄はないので、開いても回答や下書きは作られません。
           誰がどう答えたかは、この画面には表示されません。

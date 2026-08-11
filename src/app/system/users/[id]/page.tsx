@@ -44,7 +44,7 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
         <div className="identity-head">
           <Avatar name={user.name} seed={user.id} size={56} />
           <div className="min-w-0">
-            <p className="m-0 flex items-center gap-1 truncate text-[13px] text-[var(--ink-muted)]">
+            <p className="m-0 flex items-center gap-1 truncate text-sub text-[var(--ink-muted)]">
               <Icon name="mail" size={13} />
               {user.email}
             </p>
@@ -141,7 +141,7 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
 
       <SectionHeading>利用の停止と再開</SectionHeading>
       <Card className="card-pad">
-        <p className="m-0 text-[13px]">
+        <p className="m-0 text-sub">
           {user.isActive
             ? "利用停止にするとログインできなくなりますが、これまでの回答と評価はそのまま残ります。"
             : "この方はいま利用停止中です。再開するとログインできるようになります。"}

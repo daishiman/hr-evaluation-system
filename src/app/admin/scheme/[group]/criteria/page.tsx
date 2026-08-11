@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
-import { Badge, Card, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { Badge, Card, CardHead, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote } from "@/components/ui";
 import { RecordForm } from "@/components/RecordForm";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { targetsPointGroup } from "@/lib/domain/grade-points";
@@ -116,36 +116,46 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
       <div className="stack mt-3">
         {items.map((i) => (
           <Card key={i.kpiItemId} className="card-pad">
-            <p className="todo-row-title m-0">
-              {i.name}
-              {i.isProvisional && (
+            {/* ランクA〜Eの入力欄が縦に続くので、頭は固定表示にする。
+                帯に載せるのは、数値を打ちながら参照し続けるものだけ
+                ＝項目名・配点・単位・良い向き・下限上限のどちらを含むか。
+                実績値の出し方や「空欄＝制限なし」の説明は一度読めば済むので
+                帯には載せず、下の本文に置く（帯が厚いと入力欄が見えなくなる）。 */}
+            <CardHead
+              pinned
+              title={
                 <>
-                  {" "}
-                  <ProvisionalMark note="制度として未確定の項目です（叩き台）。" />
+                  {i.name}
+                  {i.isProvisional && (
+                    <>
+                      {" "}
+                      <ProvisionalMark note="制度として未確定の項目です（叩き台）。" />
+                    </>
+                  )}{" "}
+                  <span className="unit">配点 </span>
+                  <Num value={i.weight} unit="点" />
+                  {i.isFixedSlot && (
+                    <>
+                      {" "}
+                      <Badge tone="done">固定枠</Badge>
+                    </>
+                  )}
                 </>
-              )}{" "}
-              <span className="unit">配点 </span>
-              <Num value={i.weight} unit="点" />
-              {i.isFixedSlot && (
+              }
+              sub={
                 <>
-                  {" "}
-                  <Badge tone="done">固定枠</Badge>
+                  単位 {i.unit} ／ {i.direction === "lower" ? "低いほど良い" : "高いほど良い"} ／{" "}
+                  {i.direction === "lower" ? "下限＝含まない・上限＝含む" : "下限＝含む・上限＝含まない"}
                 </>
-              )}
-            </p>
-            <p className="todo-row-sub m-0">
-              単位 {i.unit} ／ {i.direction === "lower" ? "低いほど良い" : "高いほど良い"}
+              }
+            />
+            <p className="footnote m-0">
               {i.isFixedSlot
-                ? " ／ 実績値は「アンケートで出した等級要件のうち達成した数 ÷ 出した数 × 100」で出します"
+                ? "実績値は「アンケートで出した等級要件のうち達成した数 ÷ 出した数 × 100」で出します。"
                 : i.formula
-                  ? ` ／ 計算式 ${i.formula}`
+                  ? `計算式 ${i.formula}。`
                   : ""}
-            </p>
-            <p className="footnote m-0 mt-1">
-              {i.direction === "lower"
-                ? "下限は「その値を含まない」、上限は「その値を含む」で判定します。"
-                : "下限は「その値を含む」、上限は「その値を含まない」で判定します。"}
-              空欄にすると、その側の制限なし（青天井）になります。
+              上限・下限を空欄にすると、その側の制限なし（青天井）になります。
             </p>
             {i.criteria.length === 0 ? (
               <div className="mt-3">
