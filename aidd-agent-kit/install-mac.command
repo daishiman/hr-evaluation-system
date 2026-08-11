@@ -4,11 +4,11 @@
 #  ダブルクリックするだけでインストールされます
 #  既に導入済みの場合は「このキットの内容が正」として
 #  上書き更新し、廃止された古いスキルは自動で整理します
-#  v1.6.0
+#  v1.7.0
 # =====================================================
 cd "$(dirname "$0")"
 
-KIT_VERSION="1.6.0"
+KIT_VERSION="1.7.0"
 CLAUDE_DIR="$HOME/.claude"
 STAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_DIR="$CLAUDE_DIR/backup-$STAMP"
