@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import { listBehaviorBandSets, listBehaviorGuidelines, listGrades } from "@/lib/queries";
+import { getDb } from "@/lib/db";
+import { bandSetUsedBy, behaviorGuidelineUsage } from "@/lib/master-usage";
 import { BehaviorBandAssignmentEditor } from "@/components/BehaviorBandAssignmentEditor";
 import { BehaviorBandSetEditor } from "@/components/BehaviorBandSetEditor";
 import { BehaviorGuidelineEditor } from "@/components/BehaviorGuidelineEditor";
@@ -29,6 +31,9 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
     listGrades(companyId),
     listBehaviorBandSets(companyId),
   ]);
+
+  /* 「完全に消せるか」を画面で出し分けるための材料。判定そのものは API 側でも必ず行う。 */
+  const usage = await behaviorGuidelineUsage(await getDb(), companyId);
 
   /* 画面に出す基準は会社の設定（behavior_band_sets）が正本。
      観点が1件も無いセットも出さないと、作った直後のセットが画面から消える。 */
@@ -113,6 +118,11 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
             isActive: set.isActive,
             aspectCount: guidelines.filter((g) => g.band === set.code && g.isActive).length,
             usedByGradeNames: gradesUsingBand(grades, set.code).map((g) => g.name),
+            usedBy: bandSetUsedBy(
+              guidelines.filter((g) => g.band === set.code).map((g) => g.id),
+              usage,
+            ),
+            totalAspectCount: guidelines.filter((g) => g.band === set.code).length,
           }))}
           currentBand={band}
         />
@@ -145,7 +155,7 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
             </Link>
             で決めます。
           </p>
-          <BehaviorGuidelineEditor key={band} band={band} bandSets={bandSets} rows={rows} />
+          <BehaviorGuidelineEditor key={band} band={band} bandSets={bandSets} rows={rows} usage={usage} />
         </>
       )}
     </>

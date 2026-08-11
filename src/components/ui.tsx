@@ -94,8 +94,20 @@ export function Num({
 
 /* ───────────────────────── 面・見出し ───────────────────────── */
 
-export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={clsx("card", className)}>{children}</div>;
+/**
+ * 1件ぶんの箱。
+ *
+ * `off` は「いまは使わない設定にしてあるもの」（使用しない・利用停止・締め切り済み）。
+ * 面を沈ませて枠を破線にし、ひと目で仲間外れに見えるようにする。
+ * 見分けを色だけに頼らないため、使う側は必ず札（使用しない／利用停止）も一緒に出す。
+ * 文字色は変えない（薄くすると読めなくなる。読みやすさの下限は守る）。
+ */
+export function Card({ className, off, children }: { className?: string; off?: boolean; children: ReactNode }) {
+  return (
+    <div className={clsx("card", className)} data-off={off ? "true" : undefined}>
+      {children}
+    </div>
+  );
 }
 
 /**
@@ -349,6 +361,7 @@ export function CardRow({
   marks,
   alignTop,
   className,
+  off,
 }: {
   /** 行の先頭に置く小さな印（ランク・色見本）。文章は入れない。 */
   lead?: ReactNode;
@@ -361,9 +374,11 @@ export function CardRow({
   /** 補足が数行になる（本文・回答など）ときだけ true。既定は上下中央。 */
   alignTop?: boolean;
   className?: string;
+  /** いまは使わない設定にしてある行（使用しない・利用停止）。面と枠で沈ませる。 */
+  off?: boolean;
 }) {
   return (
-    <div className={clsx("card-row", alignTop && "items-start", className)}>
+    <div className={clsx("card-row", alignTop && "items-start", className)} data-off={off ? "true" : undefined}>
       {lead}
       <div className="row-main">
         <p className="todo-row-title m-0">{title}</p>
