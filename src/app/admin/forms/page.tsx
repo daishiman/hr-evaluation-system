@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import { listCycles, listFormKpiCoverage, listForms, listGrades } from "@/lib/queries";
-import { describeFormKpiDiff, diffFormKpiItems } from "@/lib/domain/form-sync";
+import { describeFormKpiDiff, diffFormKpiItems, effectiveAskedItems } from "@/lib/domain/form-sync";
 import { ActionButton } from "@/components/ActionButton";
 import { CopyUrl } from "@/components/CopyUrl";
 import { appOrigin, formUrl } from "@/lib/origin";
@@ -53,17 +53,18 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
     if (!pointGroup) return null;
     const selectedItems = coverage.selectedByGroup.get(pointGroup);
     if (!selectedItems) return null; // この等級区分の項目がまだ選ばれていない
-    return describeFormKpiDiff(
-      diffFormKpiItems(selectedItems, coverage.askedByForm.get(formId) ?? []),
-      coverage.nameOf,
-    );
+    const asked = effectiveAskedItems(coverage.askedByForm.get(formId) ?? [], {
+      fixedSlotItemIds: coverage.fixedSlotItemIds,
+      hasRequirementQuestions: coverage.hasRequirementQuestions(formId),
+    });
+    return describeFormKpiDiff(diffFormKpiItems(selectedItems, asked), coverage.nameOf);
   };
 
   return (
     <>
       <PageTitle
         title="アンケート"
-        lede="等級ごとに1つのアンケートを配ります。設問は制度マスタから自動で作られ、公開前に自由に足し引きできます。"
+        lede="等級ごとに1つのアンケートを配ります。公開前に、設問文だけでなく選択肢や答え方まで確認できます。"
       />
 
       <SectionHeading>評価期間を選ぶ</SectionHeading>
@@ -85,7 +86,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
             url="/api/forms"
             body={{ cycleId: selected.id }}
             label="等級ごとの下書きをまとめて作る"
-            confirm="制度マスタの内容から、等級ごとにアンケートの下書きを作ります。すでにあるアンケートはそのまま残り、新しい版として追加されます。よろしいですか？"
+            confirm="等級要件・昇格要件・行動指針・評価セットから、等級ごとのアンケート下書きを作ります。既存のアンケートは残し、新しい版として追加します。よろしいですか？"
           />
         </div>
       </Card>
@@ -125,7 +126,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                     回答一覧を見る
                   </Link>
                   <Link href={`/admin/forms/${f.id}`} className="btn btn-tertiary">
-                    設問を見る
+                    内容を確認・編集
                   </Link>
                 </div>
               </div>
@@ -150,28 +151,33 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                     confirm={`「${f.title}」を締め切ります。以後は回答できません。提出済みの回答は残ります。よろしいですか？`}
                   />
                 )}
-                {f.status === "closed" && Number(f.responseCount ?? 0) === 0 && (
-                  <ActionButton
-                    url="/api/forms"
-                    method="PATCH"
-                    body={{ formId: f.id, status: "draft" }}
-                    label="下書きに戻す"
-                    variant="tertiary"
-                  />
-                )}
               </div>
 
               {mismatchOf(f.id, f.gradeId) && (
                 <div className="mt-3">
-                  <ReasonNote>
+                  <ReasonNote
+                    action={
+                      Number(f.responseCount ?? 0) === 0 && f.status === "draft" ? (
+                        <ActionButton
+                          url={`/api/forms/${f.id}/questions`}
+                          body={{}}
+                          label="いまの評価項目に合わせて設問を作り直す"
+                          variant="secondary"
+                          confirm={`「${f.title}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ公開前で、回答は1件もありません。よろしいですか？`}
+                        />
+                      ) : undefined
+                    }
+                  >
                     いま選んでいる評価項目と、このアンケートが聞いている項目が食い違っています。{" "}
                     {mismatchOf(f.id, f.gradeId)}
+                    {(Number(f.responseCount ?? 0) > 0 || f.status !== "draft") &&
+                      "公開後のアンケートは、回答が0件でも読まれている可能性があるため設問を差し替えません。いまの内容で聞き直す場合は、新しい版を作って公開してください。"}
                   </ReasonNote>
                 </div>
               )}
               {Number(f.questionCount ?? 0) === 0 && (
                 <div className="mt-3">
-                  <ReasonNote>設問が1問もないため公開できません。「設問を見る」から設問を追加してください。</ReasonNote>
+                  <ReasonNote>設問が1問もないため公開できません。「内容を確認・編集」から設問を追加してください。</ReasonNote>
                 </div>
               )}
               {Number(f.responseCount ?? 0) > 0 && f.status !== "closed" && (

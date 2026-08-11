@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getDb, schema as s } from "@/lib/db";
 import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
-import { buildFormDraft } from "@/lib/form-build";
+import { assertFormContentEditable, buildFormDraft } from "@/lib/form-build";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +72,16 @@ export async function PATCH(req: Request) {
     )[0];
     if (!form) throw new HttpError(404, "アンケートが見つかりませんでした。");
 
+    // 公開した版は、回答が0件でもすでに読まれている可能性がある。
+    // 同じ版を下書きに戻して文面を変えると「何を配った版か」が残らないため、
+    // 内容を変える場合は既存の版作成フローで新しい下書きを作る。
+    if (body.status === "draft" && form.status !== "draft") {
+      throw new HttpError(
+        400,
+        "公開済みのアンケートは下書きに戻せません。内容を変えるときは、新しい版を作って公開してください。",
+      );
+    }
+
     /*
      * 回答が1件でもあるアンケートは、タイトル・説明文も変えられないようにする。
      * 設問は同じ理由ですでに守られていたのに、ここだけ素通りだった。
@@ -81,6 +91,7 @@ export async function PATCH(req: Request) {
      */
     const editingText = body.title !== undefined || body.description !== undefined;
     if (editingText) {
+      assertFormContentEditable(form);
       const answered = await db
         .select({ id: s.formResponses.id })
         .from(s.formResponses)

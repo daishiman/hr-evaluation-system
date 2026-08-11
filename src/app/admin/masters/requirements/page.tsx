@@ -29,7 +29,7 @@ export default async function AdminGradeRequirements({
     return (
       <>
         <PageTitle title="等級要件の設定" />
-        <EmptyState title="等級が登録されていません" body="先に制度マスタで等級を登録してください。" />
+        <EmptyState title="等級が登録されていません" body="先に「等級・昇格・行動指針」で等級を登録してください。" />
       </>
     );
   }
@@ -66,7 +66,7 @@ export default async function AdminGradeRequirements({
       <p className="footnote mt-5">
         等級そのものの設定（名前・昇格の条件・昇給額など）は
         <Link href={`/admin/masters?grade=${grade.id}`} className="mx-1 text-[var(--brand-deep)]">
-          制度マスタ
+          等級・昇格・行動指針
         </Link>
         で行います。
       </p>

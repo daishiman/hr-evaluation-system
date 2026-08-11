@@ -1,11 +1,32 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { getDb, schema as s } from "@/lib/db";
+import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
 import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
+import { assertFormContentEditable, syncFormQuestions } from "@/lib/form-build";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * 設問を、いまの制度マスタ・評価セットから作り直す。
+ *
+ * アンケートは作った時点の制度の写しなので、評価項目を選び直すと静かにズレる。
+ * ズレたまま集計すると、聞いていない項目が判定外になり配点ぶんの点が付かない。
+ * 「制度が正・アンケートは写し」という向きを保つため、直すのは常にこちら側にする。
+ */
+export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  return handle(async () => {
+    const viewer = await apiViewer("COMPANY_ADMIN");
+    if (!viewer.companyId) throw new HttpError(400, "所属会社が設定されていません。");
+    const { id: formId } = await ctx.params;
+    const r = await syncFormQuestions({ companyId: viewer.companyId, formId });
+    return {
+      ...r,
+      message: `いまの評価項目に合わせて設問を作り直しました（${r.questionCount}問）。内容を確認してから公開してください。`,
+    };
+  });
+}
 
 const questionSchema = z.object({
   /** 既存の設問はIDを付けて送る。新規は省略する。 */
@@ -54,6 +75,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
         .limit(1)
     )[0];
     if (!form) throw new HttpError(404, "アンケートが見つかりませんでした。");
+    assertFormContentEditable(form);
 
     const responses = await db
       .select({ id: s.formResponses.id })
@@ -84,29 +106,34 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       }
     }
 
-    await db.delete(s.formQuestions).where(eq(s.formQuestions.formId, form.id));
-    await db.insert(s.formQuestions).values(
-      q.map((x, i) => ({
-        id: x.id ?? newId("fq"),
-        companyId,
-        formId: form.id,
-        section: x.section,
-        questionType: x.questionType,
-        title: x.title.trim(),
-        helpText: x.helpText ?? null,
-        unit: x.unit ?? null,
-        required: x.required,
-        validationMin: x.validationMin ?? null,
-        validationMax: x.validationMax ?? null,
-        optionsJson: x.options && x.options.length > 0 ? JSON.stringify(x.options) : null,
-        displayOrder: i + 1,
-        gradeRequirementId: x.gradeRequirementId ?? null,
-        promotionRequirementId: x.promotionRequirementId ?? null,
-        behaviorGuidelineId: x.behaviorGuidelineId ?? null,
-        kpiItemId: x.kpiItemId ?? null,
-        kpiQuestionKey: x.kpiQuestionKey ?? null,
-        isGate: x.isGate ?? false,
-      })),
+    const rows = q.map((x, i) => ({
+      id: x.id ?? newId("fq"),
+      companyId,
+      formId: form.id,
+      section: x.section,
+      questionType: x.questionType,
+      title: x.title.trim(),
+      helpText: x.helpText ?? null,
+      unit: x.unit ?? null,
+      required: x.required,
+      validationMin: x.validationMin ?? null,
+      validationMax: x.validationMax ?? null,
+      optionsJson: x.options && x.options.length > 0 ? JSON.stringify(x.options) : null,
+      displayOrder: i + 1,
+      gradeRequirementId: x.gradeRequirementId ?? null,
+      promotionRequirementId: x.promotionRequirementId ?? null,
+      behaviorGuidelineId: x.behaviorGuidelineId ?? null,
+      kpiItemId: x.kpiItemId ?? null,
+      kpiQuestionKey: x.kpiQuestionKey ?? null,
+      isGate: x.isGate ?? false,
+    }));
+
+    // D1の1query 100 bind上限内に分けつつ、DELETEと全INSERTは1つのbatchで原子的に行う。
+    await db.batch(
+      [
+        db.delete(s.formQuestions).where(eq(s.formQuestions.formId, form.id)),
+        ...chunkRowsForD1(rows).map((chunk) => db.insert(s.formQuestions).values(chunk)),
+      ] as unknown as Parameters<typeof db.batch>[0],
     );
 
     return { message: `設問を保存しました（${q.length}問）。` };

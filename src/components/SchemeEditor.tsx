@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, Disclosure, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
 import { validateScheme, type SchemeSelection } from "@/lib/domain/scheme";
 import { describeRule, expectedItemCount, pointsForSlot, type GradePointRule } from "@/lib/domain/grade-points";
 
@@ -89,6 +89,7 @@ export function SchemeEditor({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
 
   const group = groups.find((g) => g.pointGroup === active) ?? groups[0] ?? null;
   const pick: Pick = (group && picks[group.pointGroup]) || { majorId: null, minorIds: [] };
@@ -163,6 +164,12 @@ export function SchemeEditor({
   const rated = new Set(group.ratedItemIds);
   const majorOptions = kpiItems.filter((k) => !k.isFixedSlot);
   const minorRemaining = rule.minorSlotCount - pick.minorIds.length;
+
+  const toggleComparison = (id: string) => {
+    setCompareIds((current) =>
+      current.includes(id) ? current.filter((x) => x !== id) : current.length < 5 ? [...current, id] : current,
+    );
+  };
 
   const setPick = (next: Partial<Pick>) => {
     setPicks((prev) => ({ ...prev, [group.pointGroup]: { ...prev[group.pointGroup], ...next } }));
@@ -291,6 +298,65 @@ export function SchemeEditor({
       )}
       {error && <ReasonNote>{error}</ReasonNote>}
       {message && <p className="m-0 mt-3 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+
+      <div className="mt-4">
+        <Disclosure summary="KPIの違いを比較する" meta={`選択 ${compareIds.length} / 5件`}>
+          <p className="footnote">
+            気になるKPIを最大5件選ぶと、目的・単位・Aの目安を同じ並びで比べられます。比較しても評価セットには追加されません。
+          </p>
+          <div className="card-grid card-grid-3 mt-3" aria-label="比較するKPIを選ぶ">
+            {kpiItems.filter((item) => !item.isFixedSlot).map((item) => {
+              const checked = compareIds.includes(item.id);
+              const disabled = !checked && compareIds.length >= 5;
+              return (
+                <label
+                  key={item.id}
+                  className={`flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--line)] bg-white p-4 text-[13px] ${
+                    checked ? "border-[var(--brand)] bg-[var(--brand-soft)]" : ""
+                  } ${disabled ? "opacity-50" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => toggleComparison(item.id)}
+                  />
+                  <span>
+                    <span className="block font-bold">{item.name}</span>
+                    <span className="block text-[11px] text-[var(--ink-muted)]">単位 {item.unit}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+
+          {compareIds.length > 0 && (
+            <div className="card-grid card-grid-3 mt-4" aria-label="KPIの比較結果">
+              {compareIds.map((id) => {
+                const item = itemOf(id);
+                if (!item) return null;
+                const category = categories.find((c) => c.id === item.categoryId);
+                return (
+                  <Card key={item.id} className="card-pad">
+                    <p className="m-0 text-[13px] font-bold">{item.name}</p>
+                    <p className="footnote m-0 mt-1">{category?.name ?? "分類なし"} ／ 単位 {item.unit}</p>
+                    <dl className="mt-3 grid gap-2 text-[12px]">
+                      <div>
+                        <dt className="text-[var(--ink-muted)]">評価する目的</dt>
+                        <dd className="m-0">{item.intent ?? "説明は未設定です"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[var(--ink-muted)]">Aの目安</dt>
+                        <dd className="m-0">{item.aStandard ?? "基準は未設定です"}</dd>
+                      </div>
+                    </dl>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </Disclosure>
+      </div>
 
       {fixedItem && (
         <Card className="card-pad mt-4">

@@ -125,7 +125,7 @@
 |---|---|---|---|
 | 「フォーム管理」シートのA列チェック＝等級別フォームを作成・同期 | `/admin/forms`（アンケートの発行・公開） | `POST /api/forms`／`POST /api/forms/{id}/questions` | `src/lib/form-build.ts` |
 | 等級ごとに7本あるGoogleフォーム | 同上（1画面でサイクル×等級を一覧） | 同上 | `forms` テーブル。等級は `grade_id` という属性にして、フォームの分散をやめた |
-| フォームの回答用URL（Googleフォーム） | `/f/{公開トークン}`（ログイン不要の回答画面） | `POST /api/responses/{formId}` | `src/app/f/[token]/` |
+| フォームの回答用URL（Googleフォーム） | `/f/{公開トークン}`（ログイン後、自分の等級の回答画面へ案内） | `POST /api/responses/{formId}` | `src/app/f/[token]/` |
 | 回答一覧スプレッドシート | `/admin/forms/{id}/responses`（未回答者も並ぶ） | `GET /api/export?type=responses` | `src/lib/export.ts` |
 | 回答一覧の手動貼り付け・過去分の持ち込み | 同画面の「回答をまとめて取り込む」 | `POST /api/import/responses` | `src/lib/import.ts` |
 | 社員名簿シート（手入力・コピー） | `/admin/members`（名簿をまとめて取り込む／書き出す） | `POST /api/import/members`／`GET /api/export?type=members` | `src/lib/import.ts`・`src/lib/export.ts` |
@@ -458,4 +458,3 @@
 → 下限以上・上限未満で連続させる形に補完した（`111〜120%` は `111 ≦ x < 121` として持つ）。
 補完したことは画面に注記として出す。テスト（`kgi.test.ts`）で、元シートのままの表なら穴として検出され、
 補完後の表なら問題なしになることを固定している。
-

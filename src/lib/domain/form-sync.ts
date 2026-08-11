@@ -36,6 +36,23 @@ export function isFormInSync(diff: FormKpiDiff): boolean {
 }
 
 /**
+ * 「このアンケートが実績を聞いている項目」を、集計の実態に合わせて数え直す。
+ *
+ * 固定枠（等級要件達成率）だけは、KPI設問ではなく支援・運営の「はい／いいえ」から
+ * 達成率を出す（evaluate.ts）。同じことを2回聞かないため、アンケートには
+ * 固定枠のKPI設問を載せない。その状態を「聞いていない＝欠落」と数えると、
+ * 実際には点が付く項目に警告を出し続けることになるので、ここで補う。
+ */
+export function effectiveAskedItems(
+  askedKpiItemIds: Iterable<string>,
+  opts: { fixedSlotItemIds: Iterable<string>; hasRequirementQuestions: boolean },
+): string[] {
+  const asked = new Set(askedKpiItemIds);
+  if (opts.hasRequirementQuestions) for (const id of opts.fixedSlotItemIds) asked.add(id);
+  return [...asked];
+}
+
+/**
  * ズレを日本語1文にする。nameOf は項目名の引き当て。
  * 「作り直してください」まで書くのは、読んだ人が次に何をすればよいか分かるようにするため。
  */

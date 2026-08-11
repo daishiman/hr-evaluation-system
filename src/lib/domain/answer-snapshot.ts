@@ -97,6 +97,23 @@ export function parseOptions(optionsJson: string | null | undefined): OptionLike
 }
 
 /**
+ * 段階選択（scale）に表示する数値。
+ *
+ * 回答画面と管理者プレビューで同じ段階を見せるため、表示側に計算を重複させない。
+ * 範囲が未設定・逆転・広すぎる場合は、回答画面の安全な既定値 1〜5 に戻す。
+ */
+export function scaleSteps(q: { validationMin: number | null; validationMax: number | null }): number[] {
+  const min = q.validationMin ?? 1;
+  const max = q.validationMax ?? 5;
+  if (max <= min || max - min > 10) {
+    return [1, 2, 3, 4, 5];
+  }
+  const steps: number[] = [];
+  for (let n = min; n <= max; n++) steps.push(n);
+  return steps;
+}
+
+/**
  * 過去の回答を読むときの1行分。
  *
  * スナップショットがある行はそれを正として描く（設問が将来変わっても当時の文面で読める）。

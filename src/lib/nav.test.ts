@@ -21,15 +21,34 @@ describe("サイドバーのメニュー", () => {
   });
 
   it("会社の管理者には制度の設定が出て、システム管理は出ない", () => {
-    const hrefs = hrefsOf(navGroupsFor("COMPANY_ADMIN"));
+    const groups = navGroupsFor("COMPANY_ADMIN");
+    const hrefs = hrefsOf(groups);
+    expect(hrefs).toContain("/admin/setup");
     expect(hrefs).toContain("/admin/masters/requirements");
     expect(hrefs).toContain("/admin/scheme");
     expect(hrefs.some((h) => h.startsWith("/system"))).toBe(false);
+
+    // 設定元から成果まで、依存する順番で迷わずたどれる
+    const ordered = [
+      "/admin/setup",
+      "/admin/masters/requirements",
+      "/admin/masters",
+      "/admin/scheme",
+      "/admin/cycles",
+      "/admin/forms",
+      "/manager/cycles",
+    ];
+    expect(ordered.map((href) => hrefs.indexOf(href))).toEqual([...ordered.keys()].map((_, i) => i + 1));
+
+    const labels = groups.flatMap((g) => g.items.map((i) => i.label));
+    expect(labels).not.toContain("制度マスタ");
+    expect(labels).toContain("等級・昇格・行動指針");
   });
 
   it("システム全体管理者にはシステム管理と会社ごとの運用の両方が出る", () => {
     const hrefs = hrefsOf(navGroupsFor("SUPER_ADMIN"));
     expect(hrefs).toContain("/system/companies");
+    expect(hrefs).toContain("/admin/setup");
     expect(hrefs).toContain("/admin/masters");
   });
 

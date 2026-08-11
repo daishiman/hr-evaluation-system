@@ -1,17 +1,13 @@
-import Link from "next/link";
-import { requireRole } from "@/lib/session";
-import { getOpenCycle, listCycles, listEvaluations, listMembers } from "@/lib/queries";
+import { ManagerDashboard, type TeamMemberSummary } from "@/app/manager/ManagerDashboard";
+import { EmptyState } from "@/components/ui";
+import { daysUntilDeadline, formatJpDate, jstDateString } from "@/lib/domain/form-deadline";
 import { listPendingRespondents } from "@/lib/evaluate";
-import { Badge, Card, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
-import { formatPeriod } from "@/lib/view";
+import { getOpenCycle, listEvaluations, listForms, listMembers } from "@/lib/queries";
+import { requireRole } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-/**
- * マネージャーのホーム。
- * 並びは「いま要対応 → 次のアクション → 最近の動き → キー数字」。
- * マネージャーは制度の設定（等級要件・配点）を変更できない。閲覧だけ。
- */
+/** マネージャーのホーム。未確定評価、締切、担当チームの順に次の作業を示す。 */
 export default async function ManagerHome() {
   const viewer = await requireRole("MANAGER");
   if (!viewer.companyId) {
@@ -19,123 +15,80 @@ export default async function ManagerHome() {
   }
   const companyId = viewer.companyId;
 
-  const [openCycle, cycles, members] = await Promise.all([
+  const [openCycle, team] = await Promise.all([
     getOpenCycle(companyId),
-    listCycles(companyId),
-    listMembers(companyId),
+    listMembers(companyId, { managerId: viewer.id }),
   ]);
-  const latestClosed = cycles.find((c) => c.status === "closed") ?? null;
+  const activeTeam = team.filter((member) => member.isActive);
 
-  const pending = openCycle ? await listPendingRespondents(companyId, openCycle.id) : [];
-  const notSubmitted = pending.filter((p) => p.status !== "submitted");
+  if (!openCycle) {
+    return (
+      <ManagerDashboard
+        viewerName={viewer.name}
+        cycle={null}
+        draftEvaluations={[]}
+        readyToBuild={0}
+        team={activeTeam.map((member) => ({
+          id: member.id,
+          name: member.name,
+          gradeName: member.gradeName,
+          department: member.department,
+          responseStatus: null,
+        }))}
+      />
+    );
+  }
 
-  const evals = openCycle ? await listEvaluations(companyId, viewer.role, { cycleId: openCycle.id }) : [];
-  const drafts = evals.filter((e) => e.status !== "finalized");
-
-  const lastEvals = latestClosed ? await listEvaluations(companyId, viewer.role, { cycleId: latestClosed.id }) : [];
-  const raise = lastEvals.filter((e) => e.raiseEligible).length;
-  const promo = lastEvals.filter((e) => e.promotionEligible).length;
+  const [pending, evaluations, forms] = await Promise.all([
+    listPendingRespondents(companyId, openCycle.id),
+    listEvaluations(companyId, viewer.role, { cycleId: openCycle.id }),
+    listForms(companyId, openCycle.id),
+  ]);
+  // ホームは担当チームの判断面。会社全体の件数を混ぜると、自分が対応できない作業が「次の一手」になる。
+  const teamIds = new Set(activeTeam.map((member) => member.id));
+  const teamPendingRows = pending.filter((respondent) => teamIds.has(respondent.id));
+  const teamEvaluations = evaluations.filter((evaluation) => teamIds.has(evaluation.employeeId));
+  const draftEvaluations = teamEvaluations.filter((evaluation) => evaluation.status !== "finalized");
+  const evaluatedEmployees = new Set(teamEvaluations.map((evaluation) => evaluation.employeeId));
+  const readyToBuild = teamPendingRows.filter(
+    (respondent) => respondent.status === "submitted" && !evaluatedEmployees.has(respondent.id),
+  ).length;
+  const teamPending = new Map(teamPendingRows.map((respondent) => [respondent.id, respondent.status]));
+  const teamRows: TeamMemberSummary[] = activeTeam.map((member) => ({
+    id: member.id,
+    name: member.name,
+    gradeName: member.gradeName,
+    department: member.department,
+    responseStatus: teamPending.get(member.id) ?? null,
+  }));
+  const now = new Date();
+  const deadlines = forms
+    .filter((form) => form.status === "published" && form.closesAt)
+    .map((form) => form.closesAt as string)
+    .sort();
+  const deadline =
+    deadlines.find((day) => daysUntilDeadline(day, now) !== null) ?? deadlines.at(-1) ?? openCycle.periodEnd;
+  const deadlineDays = daysUntilDeadline(deadline, now);
+  const deadlineLabel = `${formatJpDate(deadline)}${deadline < jstDateString(now) ? "（期限経過）" : ""}`;
 
   return (
-    <>
-      <PageTitle
-        title={`${viewer.name} さんの管理ページ`}
-        lede={
-          openCycle
-            ? `進行中の評価期間は「${openCycle.name}」（${formatPeriod(openCycle.periodStart, openCycle.periodEnd)}）です。`
-            : "いま進行中の評価期間はありません。"
-        }
-      />
-
-      <SectionHeading>いま対応すること</SectionHeading>
-      {!openCycle ? (
-        <EmptyState
-          title="進行中の評価期間がありません"
-          body="会社の管理者が新しい評価期間を開始すると、ここに回答状況が並びます。"
-        />
-      ) : (
-        <div className="card-grid">
-          <Card className="card-pad">
-            <p className="todo-row-title m-0">アンケートが未提出の方</p>
-            <p className="hero-number num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
-              {notSubmitted.length}
-              <span className="unit">人</span>
-            </p>
-            <p className="todo-row-sub m-0 mt-1">
-              {notSubmitted.length === 0
-                ? "全員の提出が終わっています。評価を作成できます。"
-                : notSubmitted
-                    .slice(0, 4)
-                    .map((p) => p.name)
-                    .join("、") + (notSubmitted.length > 4 ? " ほか" : "")}
-            </p>
-          </Card>
-          <Card className="card-pad">
-            <p className="todo-row-title m-0">確認待ちの評価</p>
-            <p className="hero-number num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
-              {drafts.length}
-              <span className="unit">件</span>
-            </p>
-            <p className="todo-row-sub m-0 mt-1">
-              内容を確認して確定すると、本人の画面に結果が表示されます。
-            </p>
-            <div className="mt-3">
-              <LinkButton href="/manager/cycles" variant="primary">
-                評価を作成・確認する
-              </LinkButton>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      <SectionHeading aside={<Link href="/manager/members" className="footnote">すべて見る</Link>}>
-        メンバー
-      </SectionHeading>
-      {members.length === 0 ? (
-        <EmptyState title="メンバーが登録されていません" body="会社の管理者に社員の登録を依頼してください。" />
-      ) : (
-        <Card>
-          {members.slice(0, 6).map((m) => (
-            <div key={m.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">
-                  <Link href={`/manager/members/${m.id}`} className="text-[var(--brand-deep)]">
-                    {m.name}
-                  </Link>
-                </p>
-                <p className="todo-row-sub m-0">
-                  {m.gradeName ?? "等級未設定"} ／ {m.department ?? "所属未設定"}
-                </p>
-              </div>
-              {!m.isActive && <Badge tone="closed">利用停止</Badge>}
-            </div>
-          ))}
-        </Card>
-      )}
-
-      <div className="kpi-strip">
-        <div className="kpi">
-          <div className="kpi-label">担当メンバー</div>
-          <div className="kpi-value">
-            <Num value={members.filter((m) => m.role === "EMPLOYEE").length} unit="人" />
-          </div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">前期に昇給要件を満たした方</div>
-          <div className="kpi-value">
-            <Num value={raise} unit="人" />
-          </div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">前期に昇格要件を満たした方</div>
-          <div className="kpi-value">
-            <Num value={promo} unit="人" />
-          </div>
-        </div>
-      </div>
-      <p className="footnote mt-3">
-        等級要件・配点・昇格に必要な点数の変更は、会社の管理者のみが行えます。マネージャーは「評価基準を確認する」から内容を確認できます。
-      </p>
-    </>
+    <ManagerDashboard
+      viewerName={viewer.name}
+      cycle={{
+        id: openCycle.id,
+        name: openCycle.name,
+        periodStart: openCycle.periodStart,
+        periodEnd: openCycle.periodEnd,
+        deadlineLabel,
+        daysUntilDeadline: deadlineDays,
+      }}
+      draftEvaluations={draftEvaluations.map((evaluation) => ({
+        id: evaluation.id,
+        employeeName: evaluation.employeeName,
+        gradeName: evaluation.gradeName,
+      }))}
+      readyToBuild={readyToBuild}
+      team={teamRows}
+    />
   );
 }

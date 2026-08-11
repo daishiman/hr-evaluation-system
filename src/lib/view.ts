@@ -52,10 +52,10 @@ export const SECTION_LABEL: Record<string, string> = {
 export const SECTION_ORDER = ["support", "operation", "training", "test", "behavior", "kpi"];
 
 export const SECTION_HELP: Record<string, string> = {
-  support: "半期のあいだに満たせた項目に「はい」を選んでください。",
-  operation: "運営面で満たせた項目に「はい」を選んでください。",
-  training: "受講して報告書を提出したものに「はい」を選んでください。",
-  test: "独学してテストに合格したものに「はい」を選んでください。",
-  behavior: "普段の行動にもっとも近いものを1つ選んでください。",
+  support: "この半期に自分の担当として行ったものに「はい」を選んでください。行っていないものは「いいえ」です。",
+  operation: "この半期に自分の担当として行ったものに「はい」を選んでください。行っていないものは「いいえ」です。",
+  training: "受講して報告書まで提出したものに「はい」を選んでください。受講しただけのものは「いいえ」です。",
+  test: "テストに合格したものに「はい」を選んでください。受けていない・不合格のものは「いいえ」です。",
+  behavior: "この半期のふだんの行動に、もっとも近いものを1つだけ選んでください。",
   kpi: "半期の実績を数値で入力してください。分からない欄は空のままにしてください。",
 };

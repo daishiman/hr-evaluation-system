@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAnswer, isAnswered, parseMulti, questionSnapshot, toAnswerRows } from "./answer-snapshot";
+import { formatAnswer, isAnswered, parseMulti, questionSnapshot, scaleSteps, toAnswerRows } from "./answer-snapshot";
 
 const q = {
   id: "fq_1",
@@ -53,6 +53,18 @@ describe("parseMulti", () => {
     expect(parseMulti("{壊れ")).toEqual([]);
     expect(parseMulti('"文字列"')).toEqual([]);
     expect(parseMulti('["a",1,"b"]')).toEqual(["a", "b"]);
+  });
+});
+
+describe("scaleSteps", () => {
+  it("設定された整数範囲を回答画面とプレビューで共有できる形にする", () => {
+    expect(scaleSteps({ validationMin: 2, validationMax: 4 })).toEqual([2, 3, 4]);
+  });
+
+  it("未設定・逆転・広すぎる範囲は安全な1〜5に戻す", () => {
+    expect(scaleSteps({ validationMin: null, validationMax: null })).toEqual([1, 2, 3, 4, 5]);
+    expect(scaleSteps({ validationMin: 5, validationMax: 2 })).toEqual([1, 2, 3, 4, 5]);
+    expect(scaleSteps({ validationMin: 1, validationMax: 20 })).toEqual([1, 2, 3, 4, 5]);
   });
 });
 
