@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { requireRole, ROLE_LABEL } from "@/lib/session";
-import { listGrades, listMembers } from "@/lib/queries";
-import { Badge, Card, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+import { listGrades, listMembers, listProfileFieldPolicies } from "@/lib/queries";
+import { resolveSelfEditMap, CONFIGURABLE_FIELDS } from "@/lib/domain/profile-fields";
+import { Card, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+import { Avatar } from "@/components/Avatar";
+import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
 import { MembersCsvImport } from "@/components/MembersCsvImport";
 
@@ -9,6 +12,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * 社員の一覧と新規登録。
+ *
+ * 最初に見えるのは名簿そのもの（誰がいるか）。
+ * アカウントの発行と名簿の取り込みは、必要になったときだけ開く。
  * 一覧には「名前・等級・役割・状態」だけを出し、細かい情報は個人のページに置く。
  */
 export default async function AdminMembers() {
@@ -16,10 +22,18 @@ export default async function AdminMembers() {
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  const [members, grades] = await Promise.all([listMembers(companyId), listGrades(companyId)]);
+  const [members, grades, policies] = await Promise.all([
+    listMembers(companyId),
+    listGrades(companyId),
+    listProfileFieldPolicies(companyId),
+  ]);
   const managers = members.filter((m) => m.role !== "EMPLOYEE" && m.isActive);
   const active = members.filter((m) => m.isActive);
   const inactive = members.filter((m) => !m.isActive);
+  const selfEdit = resolveSelfEditMap(policies);
+  const selfEditableLabels = CONFIGURABLE_FIELDS.filter((f) => selfEdit[f.key as keyof typeof selfEdit]).map(
+    (f) => f.label,
+  );
 
   return (
     <>
@@ -28,7 +42,96 @@ export default async function AdminMembers() {
         lede="アカウントの発行と、等級・上長の設定を行います。退職した方は削除せず「利用停止」にしてください（過去の評価が残ります）。"
       />
 
-      <SectionHeading>アカウントを発行する</SectionHeading>
+      {/* 名簿の全体像と、いま本人に開放している項目。文で書かず、数と札で見せる */}
+      <Card className="card-pad hero-tint">
+        <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
+          {active.length}
+          <span className="unit"> / {members.length} 人が在籍中</span>
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="text-[12px] text-[var(--ink-muted)]">本人が自分で変えられる項目</span>
+          {selfEditableLabels.length === 0 ? (
+            <span className="tag">
+              <Icon name="lock" size={13} />
+              なし（すべて会社の管理者のみ）
+            </span>
+          ) : (
+            selfEditableLabels.map((label) => (
+              <span key={label} className="tag">
+                <Icon name="pencil" size={13} />
+                {label}
+              </span>
+            ))
+          )}
+          <Link href="/admin/members/policy" className="btn btn-tertiary">
+            変更できる範囲を決める
+          </Link>
+        </div>
+      </Card>
+
+      <SectionHeading aside={<span className="footnote">名前を押すと詳細を確認できます</span>}>
+        在籍中（{active.length}人）
+      </SectionHeading>
+      {active.length === 0 ? (
+        <EmptyState title="社員がまだ登録されていません" body="下の「アカウントを発行する」から追加してください。" />
+      ) : (
+        <Card>
+          {active.map((m) => (
+            <Link key={m.id} href={`/admin/members/${m.id}`} className="user-row no-underline">
+              <Avatar name={m.name} seed={m.id} size={36} />
+              <div className="min-w-0 flex-1">
+                <p className="m-0 truncate text-[14px] font-semibold text-[var(--ink)]">{m.name}</p>
+                <p className="m-0 truncate text-[12px] text-[var(--ink-muted)]">{m.email}</p>
+              </div>
+              <span className="user-row-tags">
+                <span className="tag">
+                  <Icon name="shield" size={13} />
+                  {ROLE_LABEL[m.role as keyof typeof ROLE_LABEL] ?? m.role}
+                </span>
+                <span className="tag">
+                  <Icon name="layers" size={13} />
+                  {m.gradeName ?? "等級 未設定"}
+                </span>
+                <span className="tag">
+                  <Icon name="building" size={13} />
+                  {m.department ?? "所属 未設定"}
+                </span>
+              </span>
+            </Link>
+          ))}
+        </Card>
+      )}
+
+      {inactive.length > 0 && (
+        <>
+          <SectionHeading>利用停止中（{inactive.length}人）</SectionHeading>
+          <Card>
+            {inactive.map((m) => (
+              <Link key={m.id} href={`/admin/members/${m.id}`} className="user-row no-underline" data-muted="true">
+                <Avatar name={m.name} seed={m.id} size={36} />
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 truncate text-[14px] font-semibold text-[var(--ink-muted)]">{m.name}</p>
+                  <p className="m-0 truncate text-[12px] text-[var(--ink-muted)]">
+                    ログインできません。過去の評価は残っています。
+                  </p>
+                </div>
+                <span className="badge badge-closed">利用停止</span>
+              </Link>
+            ))}
+          </Card>
+        </>
+      )}
+
+      <SectionHeading
+        aside={
+          <a href="/api/export?type=members" className="btn btn-tertiary">
+            社員一覧を書き出す
+          </a>
+        }
+      >
+        人を増やす・まとめて取り込む
+      </SectionHeading>
+      <Disclosure summary="アカウントを発行する" meta="1人ずつ登録します">
       <RecordForm
         url="/api/members"
         method="POST"
@@ -58,65 +161,13 @@ export default async function AdminMembers() {
           { name: "hiredAt", label: "入社日", type: "date" },
         ]}
       />
+      </Disclosure>
 
-      <SectionHeading
-        aside={
-          <a href="/api/export?type=members" className="btn btn-tertiary">
-            社員一覧を書き出す
-          </a>
-        }
-      >
-        名簿をまとめて取り込む
-      </SectionHeading>
-      <MembersCsvImport />
-
-      <SectionHeading aside={<span className="footnote">名前を押すと詳細を確認できます</span>}>
-        在籍中（{active.length}人）
-      </SectionHeading>
-      {active.length === 0 ? (
-        <EmptyState title="社員がまだ登録されていません" body="上のフォームからアカウントを発行してください。" />
-      ) : (
-        <Card>
-          {active.map((m) => (
-            <div key={m.id} className="card-row">
-              <div className="row-main">
-                <p className="todo-row-title m-0">
-                  <Link href={`/admin/members/${m.id}`} className="text-[var(--brand-deep)]">
-                    {m.name}
-                  </Link>
-                </p>
-                <p className="todo-row-sub m-0">
-                  {m.gradeName ?? "等級 未設定"} ／ {m.department ?? "所属 未設定"} ／ {m.email}
-                </p>
-              </div>
-              <Badge tone={m.role === "EMPLOYEE" ? "done" : "active"}>
-                {ROLE_LABEL[m.role as keyof typeof ROLE_LABEL] ?? m.role}
-              </Badge>
-            </div>
-          ))}
-        </Card>
-      )}
-
-      {inactive.length > 0 && (
-        <>
-          <SectionHeading>利用停止中（{inactive.length}人）</SectionHeading>
-          <Card>
-            {inactive.map((m) => (
-              <div key={m.id} className="card-row">
-                <div className="row-main">
-                  <p className="todo-row-title m-0">
-                    <Link href={`/admin/members/${m.id}`} className="text-[var(--brand-deep)]">
-                      {m.name}
-                    </Link>
-                  </p>
-                  <p className="todo-row-sub m-0">ログインできません。過去の評価は残っています。</p>
-                </div>
-                <Badge tone="closed">利用停止</Badge>
-              </div>
-            ))}
-          </Card>
-        </>
-      )}
+      <div className="mt-3">
+        <Disclosure summary="名簿をまとめて取り込む" meta="CSVから一括で登録します">
+          <MembersCsvImport />
+        </Disclosure>
+      </div>
     </>
   );
 }

@@ -50,6 +50,13 @@
       "when": 1786404344961,
       "tag": "0009_grade_point_scheme",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1786426582179,
+      "tag": "0010_profile_field_policies",
+      "breakpoints": true
     }
   ]
 }
