@@ -534,6 +534,26 @@ main {
 }
 .card-pad { padding: var(--pad-card); }
 
+/* 「いまは使わない設定にしてあるもの」の見た目。
+   使用しない・利用停止・締め切り済みは、どの画面でもこの1組で表す
+   （画面ごとに薄い文字色や独自の背景を作らない）。
+   ・面を沈ませる（--subtle）
+   ・枠を破線にする（色を見分けられなくても、線の形で分かる）
+   ・文字色は変えない（薄くすると読めなくなる。読みやすさの下限は守る）
+   色だけに頼らないため、使う側は「使用しない」等の札も必ず一緒に出す。 */
+.card[data-off="true"],
+.card-row[data-off="true"],
+.user-row[data-off="true"],
+.user-row[data-muted="true"] {
+  background: var(--subtle);
+  border-style: dashed;
+}
+/* 行は下の罫線だけが見えるので、破線は行全体を囲む形にして気づけるようにする */
+.card-row[data-off="true"] {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+
 /* 視覚的主役の面(1画面1箇所): 白→brand-softの微グラデ */
 .card.hero-tint {
   background: linear-gradient(180deg, #fff 20%, var(--brand-soft) 130%);
