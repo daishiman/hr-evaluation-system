@@ -1,6 +1,13 @@
 import { and, asc, eq } from "drizzle-orm";
 import { getDb, schema as s } from "@/lib/db";
-import { getActiveScheme, listGrades, listKpiCategories, listKpiItems } from "@/lib/queries";
+import {
+  getActiveScheme,
+  listGrades,
+  listKpiCategories,
+  listKpiItems,
+  listRankCriteria,
+  listRankRatios,
+} from "@/lib/queries";
 import { targetsPointGroup, type GradePointRule } from "@/lib/domain/grade-points";
 import { computeGroupProgress, type GroupProgress } from "@/lib/domain/scheme-steps";
 
@@ -96,6 +103,66 @@ export async function loadSchemeSetup(companyId: string): Promise<SchemeSetup> {
     scheme: scheme ? { id: scheme.id, raiseRequiresAllA: scheme.raiseRequiresAllA } : null,
     groups,
     order: groups.map((g) => g.pointGroup),
+  };
+}
+
+/**
+ * 手順2で読む「その等級区分で選んだ項目だけ」の基準。
+ *
+ * ここで pointGroup による絞り込みを必ず掛ける。掛け忘れると、5つの等級区分ぶんの
+ * 行が並び、同じ項目の同じ基準を編集するカードが5枚出る（実際にそうなっていた）。
+ */
+export async function loadGroupCriteria(companyId: string, schemeId: string, pointGroup: string) {
+  const db = await getDb();
+  const items = await db
+    .select({
+      kpiItemId: s.schemeItems.kpiItemId,
+      weight: s.schemeItems.weight,
+      isFixedSlot: s.schemeItems.isFixedSlot,
+      isMajorSlot: s.schemeItems.isMajorSlot,
+      displayOrder: s.schemeItems.displayOrder,
+      name: s.kpiItems.name,
+      unit: s.kpiItems.unit,
+      direction: s.kpiItems.direction,
+      formula: s.kpiItems.formula,
+      isProvisional: s.kpiItems.isProvisional,
+    })
+    .from(s.schemeItems)
+    .innerJoin(s.kpiItems, eq(s.kpiItems.id, s.schemeItems.kpiItemId))
+    .where(
+      and(
+        eq(s.schemeItems.companyId, companyId),
+        eq(s.schemeItems.schemeId, schemeId),
+        eq(s.schemeItems.pointGroup, pointGroup),
+      ),
+    )
+    .orderBy(asc(s.schemeItems.displayOrder));
+
+  const [criteria, ratios] = await Promise.all([
+    items.length > 0 ? listRankCriteria(companyId, [...new Set(items.map((i) => i.kpiItemId))]) : Promise.resolve([]),
+    listRankRatios(companyId, schemeId),
+  ]);
+
+  return {
+    ratios: ratios.map((r) => ({ rank: r.rank, ratio: r.ratio, isProvisional: r.isProvisional })),
+    items: items.map((i) => ({
+      ...i,
+      /* 固定枠（等級要件達成率）は計算式を通らない。実績は「アンケートで出した等級要件のうち
+         達成した数 ÷ 出した数」で出す（src/lib/evaluate.ts）。
+         マスタに残っている旧計算式を出すと、実装と食い違う説明になる。 */
+      formula: i.isFixedSlot ? null : i.formula,
+      criteria: criteria
+        .filter((c) => c.kpiItemId === i.kpiItemId)
+        .sort((a, b) => a.rank.localeCompare(b.rank))
+        .map((c) => ({
+          id: c.id,
+          rank: c.rank,
+          lowerBound: c.lowerBound,
+          upperBound: c.upperBound,
+          displayLabel: c.displayLabel,
+          targetGrades: c.targetGrades,
+        })),
+    })),
   };
 }
 

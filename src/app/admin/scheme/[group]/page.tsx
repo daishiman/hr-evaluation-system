@@ -26,7 +26,7 @@ export default async function SchemeSelectPage({ params }: { params: Promise<{ g
   const head = (
     <PageTitle
       breadcrumb={[
-        { label: "制度を順番に設定する", href: "/admin/guide" },
+        { label: "制度設定ガイド", href: "/admin/setup" },
         { label: "KPI・評価セット", href: "/admin/scheme" },
         { label: `${pointGroup}（${group.gradeLabel}）` },
       ]}
