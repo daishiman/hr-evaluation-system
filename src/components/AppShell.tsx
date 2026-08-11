@@ -5,7 +5,7 @@ import { listCompanies } from "@/lib/queries";
 import { AccountMenu } from "@/components/AccountMenu";
 import { AppSidebar, SIDEBAR_INIT_SCRIPT } from "@/components/AppSidebar";
 import { homeItemFor, navGroupsFor } from "@/lib/nav";
-import { ReasonNote } from "@/components/ui";
+import { LinkButton, ReasonNote } from "@/components/ui";
 
 /**
  * 画面の骨格。
@@ -59,9 +59,9 @@ export async function AppShell({ viewer, children }: { viewer: Viewer; children:
             <div className="no-print" style={{ marginBottom: "var(--space-block)" }}>
               <ReasonNote
                 action={
-                  <Link href="/account/password" className="btn btn-primary no-underline">
+                  <LinkButton href="/account/password" variant="primary" className="no-underline">
                     パスワードを変更する
-                  </Link>
+                  </LinkButton>
                 }
               >
                 <strong>パスワードの変更をお願いします。</strong>

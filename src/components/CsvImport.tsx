@@ -112,7 +112,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
       {preview.length > 0 && (
         <div className="mt-3">
           <p className="footnote m-0">取り込む内容の先頭（確認用）</p>
-          <pre className="mt-1 max-h-32 overflow-auto rounded bg-subtle p-2 text-[11px] leading-5">{preview.join("\n")}</pre>
+          <pre className="mt-1 max-h-32 overflow-auto rounded bg-subtle p-2 text-[12px] leading-5">{preview.join("\n")}</pre>
         </div>
       )}
 

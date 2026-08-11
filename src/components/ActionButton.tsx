@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ReasonNote } from "@/components/ui";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 /**
  * サーバーに1回だけ送る操作のボタン。
@@ -32,7 +33,6 @@ export function ActionButton({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [asking, setAsking] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +51,6 @@ export function ActionButton({
         return;
       }
       setResult(onDoneMessage ?? json.message ?? "完了しました。");
-      setAsking(false);
       router.refresh();
     } catch {
       setError("通信できませんでした。時間をおいてもう一度お試しください。");
@@ -64,19 +63,13 @@ export function ActionButton({
     <div>
       {error && <ReasonNote>{error}</ReasonNote>}
       {result && <p className="m-0 mb-2 text-[12px] text-[var(--brand-deep)]">{result}</p>}
-      {asking ? (
-        <div className="rounded-lg border border-[var(--caution-border)] bg-[var(--caution-soft)] p-3">
-          <p className="m-0 text-[13px]">{confirm}</p>
-          <div className="mt-2 flex gap-2">
-            <Button variant={variant} onClick={run} disabled={busy}>
-              {busy ? "実行しています…" : label}
-            </Button>
-            <Button onClick={() => setAsking(false)}>やめる</Button>
-          </div>
-        </div>
+      {confirm ? (
+        <ConfirmButton label={label} confirm={confirm} variant={variant} busy={busy} onConfirm={() => void run()}>
+          {children}
+        </ConfirmButton>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant={variant} disabled={busy} onClick={() => (confirm ? setAsking(true) : run())}>
+          <Button variant={variant} disabled={busy} onClick={() => void run()}>
             {busy ? "実行しています…" : label}
           </Button>
           {children}

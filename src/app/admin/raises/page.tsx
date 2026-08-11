@@ -223,7 +223,7 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
 
       <div className="mt-4">
         <Disclosure summary="判定ルールと特例を確認する" meta={`判定${patterns.length}件・特例${exceptions.length}件`}>
-          <h2 className="section-heading">ランクの組み合わせと扱い</h2>
+          <SectionHeading>ランクの組み合わせと扱い</SectionHeading>
           {patterns.length === 0 ? (
             <ReasonNote>判定パターンが登録されていません。</ReasonNote>
           ) : (
@@ -249,7 +249,7 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
             </div>
           )}
 
-          <h2 className="section-heading mt-5">特例の扱い（{exceptions.length}件）</h2>
+          <SectionHeading>特例の扱い（{exceptions.length}件）</SectionHeading>
           {exceptions.length === 0 ? (
             <ReasonNote>特例が登録されていません。</ReasonNote>
           ) : (

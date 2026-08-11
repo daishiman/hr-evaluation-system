@@ -4,7 +4,7 @@ import { listCycles, listEvaluations } from "@/lib/queries";
 import { listPendingRespondents } from "@/lib/evaluate";
 import { detectStaleCycles } from "@/lib/impact";
 import { ActionButton } from "@/components/ActionButton";
-import { Badge, Card, CardRow, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -145,12 +145,12 @@ export default async function ManagerCycles({
         aside={
           evals.length > 0 ? (
             <span className="flex flex-wrap gap-2">
-              <a href={`/api/export?type=results&cycleId=${selected.id}`} className="btn btn-tertiary">
+              <DownloadButton href={`/api/export?type=results&cycleId=${selected.id}`} variant="tertiary">
                 評価結果をCSVに書き出す
-              </a>
-              <a href={`/api/export?type=kpi&cycleId=${selected.id}`} className="btn btn-tertiary">
+              </DownloadButton>
+              <DownloadButton href={`/api/export?type=kpi&cycleId=${selected.id}`} variant="tertiary">
                 KPI明細をCSVに書き出す
-              </a>
+              </DownloadButton>
             </span>
           ) : (
             <span className="footnote">確認して確定すると本人に公開されます</span>

@@ -127,12 +127,12 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                 }
                 actions={
                   <>
-                    <Link href={`/admin/forms/${f.id}/responses`} className="btn btn-secondary">
+                    <LinkButton href={`/admin/forms/${f.id}/responses`} variant="secondary">
                       回答一覧を見る
-                    </Link>
-                    <Link href={`/admin/forms/${f.id}`} className="btn btn-tertiary">
+                    </LinkButton>
+                    <LinkButton href={`/admin/forms/${f.id}`} variant="tertiary">
                       内容を確認・編集
-                    </Link>
+                    </LinkButton>
                   </>
                 }
               />

@@ -8,7 +8,7 @@ import { FormBuilder, type BuilderQuestion } from "@/components/FormBuilder";
 import { FormPreview } from "@/components/FormPreview";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -103,9 +103,9 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
           </>
         }
         actions={
-          <Link href={`/admin/forms/${form.id}/responses`} className="btn btn-secondary">
+          <LinkButton href={`/admin/forms/${form.id}/responses`} variant="secondary">
             回答一覧を見る
-          </Link>
+          </LinkButton>
         }
       />
 

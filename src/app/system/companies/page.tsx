@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/session";
 import { getTemplateSummary, listCompanies } from "@/lib/queries";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, CardHead, EmptyState, Num, PageTitle, SectionHeading, StatGrid } from "@/components/ui";
+import { Badge, Card, CardHead, EmptyState, LinkButton, Num, PageTitle, SectionHeading, StatGrid } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -77,9 +77,9 @@ export default async function SystemCompanies() {
                 }
                 sub={`会社ID：${c.slug} ／ ${c.businessType}`}
                 actions={
-                  <Link href={`/system/users?company=${c.id}`} className="btn btn-tertiary">
+                  <LinkButton href={`/system/users?company=${c.id}`} variant="tertiary">
                     利用者を見る
-                  </Link>
+                  </LinkButton>
                 }
               />
 

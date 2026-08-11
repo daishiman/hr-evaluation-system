@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/session";
 import { getActiveScheme, listCycles, listForms } from "@/lib/queries";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, CardHead, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardHead, DownloadButton, EmptyState, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export default async function AdminCycles() {
 
       {!scheme && (
         <div className="mb-4">
-          <ReasonNote action={<Link href="/admin/scheme" className="btn btn-secondary">評価セットを設定する</Link>}>
+          <ReasonNote action={<LinkButton href="/admin/scheme" variant="secondary">評価セットを設定する</LinkButton>}>
             有効な評価セット（KPIの項目と配点）がないため、評価期間を作れません。
           </ReasonNote>
         </div>
@@ -81,18 +81,18 @@ export default async function AdminCycles() {
                   sub={`${formatPeriod(c.periodStart, c.periodEnd)} ／ アンケート${my.length}件（公開中 ${published}件） ／ 回答${responses}件`}
                   actions={
                     <>
-                      <Link href={`/admin/forms?cycle=${c.id}`} className="btn btn-tertiary">
+                      <LinkButton href={`/admin/forms?cycle=${c.id}`} variant="tertiary">
                         アンケートを見る
-                      </Link>
-                      <Link href={`/manager/cycles?cycle=${c.id}`} className="btn btn-tertiary">
+                      </LinkButton>
+                      <LinkButton href={`/manager/cycles?cycle=${c.id}`} variant="tertiary">
                         進行状況を見る
-                      </Link>
-                      <a href={`/api/export?type=results&cycleId=${c.id}`} className="btn btn-tertiary">
+                      </LinkButton>
+                      <DownloadButton href={`/api/export?type=results&cycleId=${c.id}`} variant="tertiary">
                         評価結果をCSVに書き出す
-                      </a>
-                      <a href={`/api/export?type=kpi&cycleId=${c.id}`} className="btn btn-tertiary">
+                      </DownloadButton>
+                      <DownloadButton href={`/api/export?type=kpi&cycleId=${c.id}`} variant="tertiary">
                         KPI明細をCSVに書き出す
-                      </a>
+                      </DownloadButton>
                     </>
                   }
                 />
@@ -132,9 +132,9 @@ export default async function AdminCycles() {
                   <div className="mt-3">
                     <ReasonNote
                       action={
-                        <Link href={`/admin/forms?cycle=${c.id}`} className="btn btn-secondary">
+                        <LinkButton href={`/admin/forms?cycle=${c.id}`} variant="secondary">
                           アンケートを作る
-                        </Link>
+                        </LinkButton>
                       }
                     >
                       この期間のアンケートがまだありません。等級ごとのアンケートを作ると、対象の方が回答できます。

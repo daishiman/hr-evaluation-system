@@ -11,7 +11,7 @@ import {
 } from "@/lib/queries";
 import { matchKgiCoefficient } from "@/lib/domain/kgi";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
+import { Badge, Card, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { formatDate, formatPeriod, CYCLE_STATUS_LABEL } from "@/lib/view";
 
@@ -51,9 +51,9 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
           title="評価期間がまだありません"
           body="達成率は評価期間ごとに登録します。先に評価期間を作ってください。"
           action={
-            <Link href="/admin/cycles" className="btn btn-primary">
+            <LinkButton href="/admin/cycles" variant="primary">
               評価期間を作る
-            </Link>
+            </LinkButton>
           }
         />
       </>
@@ -87,9 +87,9 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
         <div className="mb-4">
           <ReasonNote
             action={
-              <Link href="/admin/masters" className="btn btn-secondary">
+              <LinkButton href="/admin/masters" variant="secondary">
                 達成係数を設定する
-              </Link>
+              </LinkButton>
             }
           >
             達成係数の表が登録されていないため、達成率を入れても個人Pt・賞与額を出せません。
@@ -100,9 +100,9 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
         <div className="mb-4">
           <ReasonNote
             action={
-              <Link href="/admin/raises" className="btn btn-secondary">
+              <LinkButton href="/admin/raises" variant="secondary">
                 昇給の設定を開く
-              </Link>
+              </LinkButton>
             }
           >
             個人Pt 1点あたりの金額が未設定のため、個人Ptまでは出せますが賞与額は出せません。
@@ -138,9 +138,9 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
       {offices.length === 0 ? (
         <ReasonNote
           action={
-            <Link href="/admin/masters" className="btn btn-secondary">
+            <LinkButton href="/admin/masters" variant="secondary">
               事業所を確認する
-            </Link>
+            </LinkButton>
           }
         >
           事業所が登録されていません。先に事業所を登録してください。

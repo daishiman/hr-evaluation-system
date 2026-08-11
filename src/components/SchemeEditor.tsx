@@ -238,7 +238,7 @@ export function SchemeEditor({
               }
             >
               <span className="block font-bold">{g.pointGroup}</span>
-              <span className="block text-[11px] text-[var(--ink-muted)]">
+              <span className="block text-[12px] text-[var(--ink-muted)]">
                 {r.ok ? "設定できています" : "設定が未完了"}
               </span>
             </button>
@@ -324,7 +324,7 @@ export function SchemeEditor({
                   />
                   <span>
                     <span className="block font-bold">{item.name}</span>
-                    <span className="block text-[11px] text-[var(--ink-muted)]">単位 {item.unit}</span>
+                    <span className="block text-[12px] text-[var(--ink-muted)]">単位 {item.unit}</span>
                   </span>
                 </label>
               );
@@ -415,7 +415,7 @@ export function SchemeEditor({
                     </>
                   )}
                 </span>
-                <span className="block text-[11px] text-[var(--ink-muted)]">
+                <span className="block text-[12px] text-[var(--ink-muted)]">
                   単位 {o.unit}
                   {o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}
                 </span>
@@ -473,7 +473,7 @@ export function SchemeEditor({
                           </>
                         )}
                       </span>
-                      <span className="block text-[11px] text-[var(--ink-muted)]">
+                      <span className="block text-[12px] text-[var(--ink-muted)]">
                         単位 {o.unit}
                         {o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}
                       </span>

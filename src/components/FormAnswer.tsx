@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, ReasonNote, SectionHeading } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { normalizeNumeric } from "@/lib/ux-patterns";
@@ -176,8 +176,7 @@ export function FormAnswer({
 
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
-          <h2 className="section-heading mb-1">{SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}</h2>
-          {SECTION_HELP[g.section] && <p className="footnote m-0 mb-2">{SECTION_HELP[g.section]}</p>}
+          <SectionHeading help={SECTION_HELP[g.section]}>{SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}</SectionHeading>
           <Card className="card-pad">
             <div className="space-y-5">
               {g.rows.map((q) => (
@@ -195,8 +194,7 @@ export function FormAnswer({
       ))}
 
       <section className="mb-6">
-        <h2 className="section-heading mb-1">補足（任意）</h2>
-        <p className="footnote m-0 mb-2">数字だけでは伝わらない事情があれば書いてください。上長が読みます。</p>
+        <SectionHeading help="数字だけでは伝わらない事情があれば書いてください。上長が読みます。">補足（任意）</SectionHeading>
         <Card className="card-pad">
           <textarea
             className="input min-h-[96px] w-full"
@@ -456,7 +454,7 @@ function AnswerReadOnly({
     <>
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
-          <h2 className="section-heading mb-1">{SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}</h2>
+          <SectionHeading>{SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}</SectionHeading>
           <Card>
             {g.rows.map((q) => {
               const v = values[q.id];

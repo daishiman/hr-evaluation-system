@@ -14,6 +14,10 @@
   /* 主要CTA + 結果のキー数字(この2用途のみ) */
   --accent: #e8590c;
   --accent-deep: #c74e0b;
+  /* 白文字を載せる面はここを使う。--accent に白文字だと 3.58:1 で本文の基準（4.5:1）に届かない。
+     --accent は「大きい数字の文字色」専用（36px以上の太字なので 3:1 の基準で足りる）。 */
+  --accent-on-white-bg: #c74e0b;
+  --accent-on-white-bg-hover: #a84209;
 
   /* テキストと構造(画面の90%) */
   --ink: #16191d;
@@ -100,7 +104,7 @@ body {
   border-radius: 4px;
   background: #fff;
   padding: 0 5px;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-num);
   color: var(--ink-muted);
   line-height: 1.6;
@@ -112,6 +116,21 @@ body {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* 指で押す端末では、押せるものを 44px 以上にする。
+   マウス環境まで太らせると一覧の密度が落ちるため、pointer: coarse のときだけ効かせる。 */
+@media (pointer: coarse) {
+  .btn,
+  .sidebar-link,
+  .sidebar-close,
+  .sidebar-close-sp,
+  .sidebar-open-pc,
+  .sidebar-open-sp,
+  .input,
+  .account-trigger {
+    min-height: 44px;
+  }
 }
 
 /* ============================================================
@@ -213,7 +232,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 .sidebar-group-title {
   margin: 0 0 4px;
   padding: 0 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--ink-muted);
   letter-spacing: 0.04em;
@@ -322,7 +341,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 }
 .app-name:hover { background: var(--subtle); }
 .app-name .app-name-sub {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--ink-muted);
   margin-left: 8px;
@@ -592,13 +611,16 @@ main {
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
 .btn-primary {
-  background: var(--accent);
-  border: 1px solid var(--accent);
+  background: var(--accent-on-white-bg);
+  border: 1px solid var(--accent-on-white-bg);
   color: #fff;
   font-weight: 600;
   padding: 8px 20px;
 }
-.btn-primary:hover:not(:disabled) { background: var(--accent-deep); border-color: var(--accent-deep); }
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-on-white-bg-hover);
+  border-color: var(--accent-on-white-bg-hover);
+}
 
 .btn-secondary {
   background: #fff;
@@ -654,7 +676,7 @@ main {
   border-radius: 999px;
   border: 1px solid transparent;
   padding: 2px 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.6;
 }
@@ -667,14 +689,14 @@ main {
   color: var(--ink-muted);
   border-radius: 4px;
   padding: 1px 6px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .badge-alert {
   background: var(--danger-soft);
   color: var(--danger);
   border-radius: 4px;
   padding: 1px 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -998,7 +1020,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   padding: 8px 0 4px;
 }
 .delta-compare .dc-item { text-align: center; }
-.delta-compare .dc-label { font-size: 11px; color: var(--ink-muted); }
+.delta-compare .dc-label { font-size: 12px; color: var(--ink-muted); }
 .delta-compare .dc-value {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
@@ -1065,8 +1087,8 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
 .swatch-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 .swatch { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
 .swatch .sw-color { height: 48px; }
-.swatch .sw-meta { padding: 8px 10px; font-size: 11px; line-height: 1.6; }
-.swatch .sw-meta code { font-size: 10px; color: var(--ink-muted); }
+.swatch .sw-meta { padding: 8px 10px; font-size: 12px; line-height: 1.6; }
+.swatch .sw-meta code { font-size: 12px; color: var(--ink-muted); }
 .demo-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 
 .chip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui";
+
 /**
  * この画面をそのままA4で印刷する。
  * 移行元（Googleフォーム＋GAS）では「A4 HTML評価票を開く」ボタンから
@@ -8,8 +10,8 @@
  */
 export function PrintButton({ label = "この評価票を印刷する" }: { label?: string }) {
   return (
-    <button type="button" className="btn btn-tertiary no-print" onClick={() => window.print()}>
+    <Button type="button" variant="tertiary" className="no-print" onClick={() => window.print()}>
       {label}
-    </button>
+    </Button>
   );
 }

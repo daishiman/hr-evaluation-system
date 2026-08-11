@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, ReasonNote } from "@/components/ui";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 /**
  * 昇格要件（受講して報告書を提出／独学してテストに合格）の編集。
@@ -177,11 +178,12 @@ export function PromotionRequirementEditor({
                 >
                   {r.isGate ? "任意にする" : "必須にする"}
                 </Button>
-                <Button
+                <ConfirmButton
+                  label="使わない"
                   variant="danger-outline"
-                  disabled={busy}
-                  onClick={() => {
-                    if (!window.confirm(`「${r.text}」を今後のアンケートに出さないようにします。よろしいですか？\n（すでに公開したアンケートと確定済みの評価はそのまま残ります）`)) return;
+                  busy={busy}
+                  confirm={`「${r.text}」を今後のアンケートに出さないようにします。すでに公開したアンケートと、確定済みの評価はそのまま残ります。`}
+                  onConfirm={() =>
                     void send({
                       kind: "promotionRequirement",
                       id: r.id,
@@ -190,11 +192,9 @@ export function PromotionRequirementEditor({
                       text: r.text,
                       transitionLabel: r.transitionLabel,
                       isActive: false,
-                    });
-                  }}
-                >
-                  使わない
-                </Button>
+                    })
+                  }
+                />
               </div>
             )}
           </div>

@@ -3,15 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "@/lib/auth-client";
+import { Button } from "@/components/ui";
 
 export function SignOutButton() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   return (
-    <button
+    <Button
       type="button"
-      className="btn btn-tertiary"
+      variant="tertiary"
       disabled={busy}
       onClick={async () => {
         setBusy(true);
@@ -21,6 +22,6 @@ export function SignOutButton() {
       }}
     >
       {busy ? "ログアウト中…" : "ログアウト"}
-    </button>
+    </Button>
   );
 }

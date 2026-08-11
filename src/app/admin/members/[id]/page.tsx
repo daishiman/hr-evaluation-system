@@ -7,7 +7,7 @@ import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
-import { Card, Disclosure, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { Card, Disclosure, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
 import { formatDate } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -44,9 +44,9 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
         title={`${member.name} さん`}
         lede={`${ROLE_LABEL[member.role as Role] ?? member.role} ／ ${member.email}`}
         actions={
-          <Link href={`/manager/members/${member.id}`} className="btn btn-secondary">
+          <LinkButton href={`/manager/members/${member.id}`} variant="secondary">
             評価の履歴を見る
-          </Link>
+          </LinkButton>
         }
       />
 
@@ -94,9 +94,9 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
 
       <SectionHeading
         aside={
-          <Link href="/admin/members/policy" className="btn btn-tertiary">
+          <LinkButton href="/admin/members/policy" variant="tertiary">
             本人が変更できる範囲
-          </Link>
+          </LinkButton>
         }
       >
         登録内容を変える

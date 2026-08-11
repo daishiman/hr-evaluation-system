@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { hasIcon, Icon } from "@/components/Icon";
+import { Button } from "@/components/ui";
 
 /**
  * 自分の登録内容の一覧と、その場での書き換え。
@@ -126,12 +127,12 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
                       }
                     }}
                   />
-                  <button type="submit" className="btn btn-primary" disabled={busy}>
+                  <Button type="submit" variant="primary" disabled={busy}>
                     {busy ? "保存しています…" : "保存"}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="btn btn-tertiary"
+                    variant="tertiary"
                     disabled={busy}
                     onClick={() => {
                       setEditing(null);
@@ -139,7 +140,7 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
                     }}
                   >
                     やめる
-                  </button>
+                  </Button>
                 </form>
               ) : (
                 <p className="profile-row-value">

@@ -9,7 +9,7 @@ import { listFormExtensions } from "@/lib/response-access";
 import { CsvImport } from "@/components/CsvImport";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, EmptyState, Num, PageTitle, ReasonNote, RecordList, SectionHeading, StatGrid } from "@/components/ui";
+import { Badge, Card, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, RecordList, SectionHeading, StatGrid } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { FORM_STATUS_LABEL, formatDate } from "@/lib/view";
 import { formatJpDate, judgeFormDeadline, jstDateString } from "@/lib/domain/form-deadline";
@@ -79,9 +79,9 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
           </>
         }
         actions={
-          <a href={`/api/export?type=responses&formId=${form.id}`} className="btn btn-secondary">
+          <DownloadButton href={`/api/export?type=responses&formId=${form.id}`} variant="secondary">
             CSVに書き出す
-          </a>
+          </DownloadButton>
         }
       />
 

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
+import { Button } from "@/components/ui";
 
 /**
  * ログイン。
@@ -92,9 +93,9 @@ export function LoginForm({ next }: { next?: string }) {
         </p>
       )}
 
-      <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
+      <Button type="submit" variant="primary" block disabled={busy}>
         {busy ? "確認中…" : "ログイン"}
-      </button>
+      </Button>
 
       <p className="footnote m-0">
         パスワードが分からない場合は、会社の管理者に再発行を依頼してください。

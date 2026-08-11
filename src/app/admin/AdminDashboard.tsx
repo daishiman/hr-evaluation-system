@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Badge, Bar, Card, DefList, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardHead, DefList, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export interface AdminDashboardSnapshot {
@@ -224,6 +224,8 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <Badge tone="active">次の一手</Badge>
+              {/* この画面で唯一の「視覚的な主役」。節見出し（SectionHeading・13px）ではなく
+                  本文より大きい文字で出す意図的な例外。ほかの画面に増やさない。 */}
               <h2 id="admin-next-action" className="m-0 mt-2 text-[18px] font-bold">
                 {model.nextAction.title}
               </h2>
@@ -388,14 +390,14 @@ function StageCard({
 }) {
   return (
     <Card className="card-pad">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="m-0 text-[14px] font-bold">
-          <span className="num mr-2 text-[var(--ink-muted)]">{number}</span>
-          {title}
-        </h3>
-        <Badge tone={badgeTone}>{badge}</Badge>
-      </div>
-      {children}
+      {/* 手順の札つきカードの頭。制度設定ガイド（SetupGuide）と同じ組み方にそろえている。 */}
+      <CardHead
+        heading
+        lead={<span className="num text-[var(--ink-muted)]">{number}</span>}
+        title={title}
+        actions={<Badge tone={badgeTone}>{badge}</Badge>}
+      />
+      <div className="mt-3">{children}</div>
     </Card>
   );
 }

@@ -24,6 +24,21 @@ export function LinkButton({
   return <Link className={clsx("btn", `btn-${variant}`, block && "btn-block", className)} {...rest} />;
 }
 
+/**
+ * 画面遷移ではないリンク（CSVの書き出しなど、サーバーがファイルを返すURL）用のボタン。
+ *
+ * Next.js の Link は画面遷移を先読みしてしまうため、ダウンロードには使えない。
+ * とはいえ見た目・タップ領域はボタンと同じでなければならないので、素の <a> に
+ * `btn` を書き散らさずここに集約する。
+ */
+export function DownloadButton({
+  variant = "tertiary",
+  className,
+  ...rest
+}: ComponentProps<"a"> & { variant?: ButtonVariant }) {
+  return <a className={clsx("btn", `btn-${variant}`, className)} {...rest} />;
+}
+
 /* ───────────────────────── バッジ ─────────────────────────
  * 色相を増やさず、塗り・罫線・打消し線の違いで状態を表す。
  */
@@ -142,12 +157,25 @@ export function PageTitle({
 }
 
 /** セクションの見出し。上下の余白は .section-head に集約している。 */
-export function SectionHeading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
+export function SectionHeading({
+  children,
+  aside,
+  help,
+}: {
+  children: ReactNode;
+  /** 見出しの右に置く補助リンク（「すべて見る」など）。 */
+  aside?: ReactNode;
+  /** 見出しのすぐ下に添える1行の説明。段落を画面ごとに書き起こさないためのスロット。 */
+  help?: ReactNode;
+}) {
   return (
-    <div className="section-head">
-      <h2 className="section-heading">{children}</h2>
-      {aside}
-    </div>
+    <>
+      <div className="section-head">
+        <h2 className="section-heading">{children}</h2>
+        {aside}
+      </div>
+      {help && <p className="footnote m-0 -mt-1.5 mb-2">{help}</p>}
+    </>
   );
 }
 

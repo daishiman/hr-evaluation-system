@@ -52,7 +52,7 @@ export default async function MyResults() {
                 value={
                   <>
                     <Num value={e.requirementRate} unit="%" />
-                    <p className="m-0 text-[11px] text-[var(--ink-muted)]">等級要件の達成率</p>
+                    <p className="m-0 text-[12px] text-[var(--ink-muted)]">等級要件の達成率</p>
                   </>
                 }
                 marks={e.raiseEligible ? <Badge tone="active">昇給の要件を満たす</Badge> : <Badge tone="done">継続</Badge>}

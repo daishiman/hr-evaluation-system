@@ -1,5 +1,5 @@
 import { getEvaluationDetail, listEvaluations } from "@/lib/queries";
-import { Badge, Bar, Card, CardRow, DefList, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardRow, DefList, LinkButton, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { EightAxisRadar } from "@/components/LazyCharts";
 import { PrintButton } from "@/components/PrintButton";
 import { formatPeriod } from "@/lib/view";
@@ -90,9 +90,9 @@ export async function EvaluationDetail({
             {/* 実績値の出どころ（このとき提出したアンケート）へ辿れるようにする。
                 回答は当時の版・当時の設問文で表示される（/me/responses/[id]）。 */}
             {head.responseId && (
-              <a href={`/me/responses/${head.responseId}`} className="btn btn-tertiary no-print">
+              <LinkButton href={`/me/responses/${head.responseId}`} variant="tertiary" className="no-print">
                 このときの回答を見る
-              </a>
+              </LinkButton>
             )}
             <PrintButton />
           </>
@@ -213,7 +213,7 @@ export async function EvaluationDetail({
               <>
                 <p className="m-0 mt-1 text-[12px] leading-relaxed text-[var(--ink-muted)]">{i.rationale}</p>
                 {showsCriteria && i.calcNote && (
-                  <p className="m-0 mt-1 text-[11px] text-[var(--ink-muted)]">計算式：{i.calcNote}</p>
+                  <p className="m-0 mt-1 text-[12px] text-[var(--ink-muted)]">計算式：{i.calcNote}</p>
                 )}
                 {/* 得点バーと判定範囲は配点そのものなので評価者だけに出す */}
                 {showsCriteria && <ScoreBar points={i.points} maxPoints={i.maxPoints} />}
@@ -233,7 +233,7 @@ export async function EvaluationDetail({
                 <>
                   <Num value={i.points} display />
                   <span className="unit">点</span>
-                  <p className="m-0 text-[11px] text-[var(--ink-muted)]">
+                  <p className="m-0 text-[12px] text-[var(--ink-muted)]">
                     配点 <Num value={i.maxPoints} unit="点" />
                   </p>
                 </>
@@ -319,9 +319,9 @@ export async function EvaluationDetail({
             {head.personalPoints === null ? (
               <ReasonNote
                 action={
-                  <a href="/admin/kgi" className="btn btn-secondary no-print">
+                  <LinkButton href="/admin/kgi" variant="secondary" className="no-print">
                     達成率を登録する
-                  </a>
+                  </LinkButton>
                 }
               >
                 {head.bonusRationale ??
@@ -500,12 +500,12 @@ function ThresholdBand({
 
   return (
     <div className="mt-2">
-      <div className="relative h-5 w-full" role="img" aria-label={`判定範囲。実績値 ${actualValue ?? "未入力"}`}>
+      <div className="relative h-6 w-full" role="img" aria-label={`判定範囲。実績値 ${actualValue ?? "未入力"}`}>
         {scale.segments.map((sg) => (
           <div
             key={sg.rank}
             title={`${sg.rank}：${sg.label}`}
-            className="absolute top-0 flex h-5 items-center justify-center overflow-hidden text-[10px]"
+            className="absolute top-0 flex h-6 items-center justify-center overflow-hidden text-[12px]"
             style={{
               left: `${sg.left}%`,
               /* 隣の区間と2px空けて、境目を線ではなく余白で見せる */
@@ -520,12 +520,12 @@ function ThresholdBand({
         ))}
         {scale.markerLeft !== null && (
           <div
-            className="absolute top-0 h-5 w-0.5"
+            className="absolute top-0 h-6 w-0.5"
             style={{ left: `${scale.markerLeft}%`, background: "var(--ink)" }}
           />
         )}
       </div>
-      <p className="m-0 mt-1 text-[11px] text-[var(--ink-muted)]">
+      <p className="m-0 mt-1 text-[12px] text-[var(--ink-muted)]">
         判定範囲 {snapshotLabel ?? "—"}
         {rank ? `（ランク${rank}）` : "（判定外）"} ／ 実績値 <Num value={actualValue} unit={unit ?? undefined} />
         。帯は現在の基準表のA〜Eです（確定時の基準は上の判定範囲が正）。
