@@ -151,6 +151,7 @@ export function SystemDashboard({
             {companies.map((company) => (
               <CardRow
                 key={company.id}
+                off={!company.isActive}
                 className="text-[var(--ink)]"
                 title={
                   <Link href={`/system/users?company=${company.id}`} className="text-[var(--brand-deep)]">

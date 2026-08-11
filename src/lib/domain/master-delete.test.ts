@@ -14,8 +14,9 @@ describe("消せない理由の文章", () => {
   it("使っている場所を名指しし、代わりの操作を示す", () => {
     const reason = deleteBlockedReason(["アンケート「2026年上期」"]);
     expect(reason).toContain("アンケート「2026年上期」");
-    expect(reason).toContain("公開したアンケートと確定済みの評価をそのまま残すためです");
-    expect(reason).toContain("「使わない」を押してください");
+    expect(reason).toContain("「使わない」なら次のアンケートから外せます");
+    // 1件ずつ出る文なので、1行で読み切れる長さに保つ（一覧が説明で埋まらないように）
+    expect(reason!.length).toBeLessThan(70);
   });
 
   it("使っている場所が多いときは2件だけ挙げて残りは件数にする", () => {

@@ -52,7 +52,7 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
       />
 
       {/* いまの姿は札で1枚に。読む文章を増やさず、目で拾えるようにする */}
-      <Card className="card-pad hero-tint">
+      <Card className="card-pad hero-tint" off={!member.isActive}>
         <div className="identity-head">
           <Avatar name={member.name} seed={member.id} size={56} />
           <div className="min-w-0">

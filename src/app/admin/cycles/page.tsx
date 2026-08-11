@@ -64,7 +64,7 @@ export default async function AdminCycles() {
             const published = my.filter((f) => f.status === "published").length;
             const responses = my.reduce((sum, f) => sum + Number(f.responseCount ?? 0), 0);
             return (
-              <Card key={c.id} className="card-pad">
+              <Card key={c.id} className="card-pad" off={c.status === "closed"}>
                 <CardHead
                   title={
                     <>
