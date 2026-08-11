@@ -14,20 +14,25 @@ vi.mock("next/headers", () => ({
 
 const { appOrigin, formUrl } = await import("./origin");
 
+/* cf-typegen が wrangler.jsonc の vars から型を作るため、process.env.APP_ORIGIN は
+   「本番のURLという1つの文字列」型になる。テストでは別の値を入れたい（本番のURLが
+   たまたま正しいから通った、という状態にしたくない）ので、ここだけ緩めて扱う。 */
+const env = process.env as Record<string, string | undefined>;
+
 afterEach(() => {
   headerMap.clear();
-  delete process.env.APP_ORIGIN;
+  delete env.APP_ORIGIN;
 });
 
 describe("appOrigin", () => {
   it("APP_ORIGIN があればそれを使う（Host ヘッダーは呼び出し側が細工できるため）", async () => {
-    process.env.APP_ORIGIN = "https://hr.example.com";
+    env.APP_ORIGIN = "https://hr.example.com";
     headerMap.set("host", "attacker.example.net");
     expect(await appOrigin()).toBe("https://hr.example.com");
   });
 
   it("APP_ORIGIN の末尾の / は落とす（// で始まると別ホストへのURLになるため）", async () => {
-    process.env.APP_ORIGIN = "https://hr.example.com//";
+    env.APP_ORIGIN = "https://hr.example.com//";
     expect(formUrl(await appOrigin(), "abc")).toBe("https://hr.example.com/f/abc");
   });
 
