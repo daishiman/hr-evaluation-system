@@ -10,8 +10,14 @@
     "binding": "ASSETS"
   },
   "observability": { "enabled": true },
-  // 公開アドレス。ログインの折り返し先に使う（秘密の値ではない）
-  "vars": { "BETTER_AUTH_URL": "https://hr-evaluation-system.daishimanju.workers.dev" },
+  // 公開アドレス。秘密の値ではない。
+  //   BETTER_AUTH_URL … ログインの折り返し先
+  //   APP_ORIGIN       … 画面に出す配布用URLの組み立て元。設定しないと Host ヘッダー（呼び出し側が
+  //                      自由に付けられる）から作ることになるため、本番では必ず固定しておく
+  "vars": {
+    "BETTER_AUTH_URL": "https://hr-evaluation-system.daishimanju.workers.dev",
+    "APP_ORIGIN": "https://hr-evaluation-system.daishimanju.workers.dev"
+  },
   // 版ごとの下見用URLは作らない（本番と同じデータに別の入口を増やさないため）
   "preview_urls": false,
   "upload_source_maps": true,

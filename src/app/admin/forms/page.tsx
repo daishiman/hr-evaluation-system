@@ -3,6 +3,8 @@ import { requireRole } from "@/lib/session";
 import { listCycles, listFormKpiCoverage, listForms, listGrades } from "@/lib/queries";
 import { describeFormKpiDiff, diffFormKpiItems } from "@/lib/domain/form-sync";
 import { ActionButton } from "@/components/ActionButton";
+import { CopyUrl } from "@/components/CopyUrl";
+import { appOrigin, formUrl } from "@/lib/origin";
 import { Badge, Card, EmptyState, LinkButton, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
@@ -32,6 +34,9 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
   }
 
   const sp = await searchParams;
+  /* 配布用URLは実行時に組み立てる（本番・プレビュー・ローカルでホストが違うため、
+     ドメインを書き込むと必ずどこかで間違ったURLを配ることになる）。 */
+  const origin = await appOrigin();
   const selected = cycles.find((c) => c.id === sp.cycle) ?? cycles.find((c) => c.status === "open") ?? cycles[0];
   const [forms, grades, coverage] = await Promise.all([
     listForms(companyId, selected.id),
@@ -110,7 +115,8 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                   </p>
                   {f.status === "published" && (
                     <p className="footnote m-0 mt-1">
-                      配布用のURL：<code className="text-[11px]">/f/{f.publicToken}</code>（開くにはログインが必要です）
+                      <CopyUrl url={formUrl(origin, f.publicToken)} />
+                      <span className="ml-1">（開くにはログインが必要です）</span>
                     </p>
                   )}
                 </div>
