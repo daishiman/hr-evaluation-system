@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, CardRow, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
+import { NumberField } from "@/components/NumberField";
 import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 
 /**
@@ -25,6 +26,7 @@ export interface BuilderQuestion {
   required: boolean;
   validationMin: number | null;
   validationMax: number | null;
+  validationInteger: boolean;
   options: { value: string; label: string; score?: number }[];
   isGate: boolean;
   linkLabel: string | null;
@@ -88,6 +90,9 @@ export function FormBuilder({
         required: true,
         validationMin: questionType === "number" ? 0 : null,
         validationMax: null,
+        /* 単位が決まっていない新しい設問は、まず小数を許す側にしておく。
+           分からないものを止めると、打てるはずの値が打てなくなる。 */
+        validationInteger: false,
         options:
           questionType === "single" || questionType === "multi"
             ? [
@@ -130,6 +135,7 @@ export function FormBuilder({
             required: r.required,
             validationMin: r.validationMin,
             validationMax: r.validationMax,
+            validationInteger: r.validationInteger,
             options: r.options.length > 0 ? r.options : undefined,
             isGate: r.isGate,
             gradeRequirementId: r.gradeRequirementId,
@@ -251,12 +257,31 @@ export function FormBuilder({
                     </label>
                     <label>
                       <span className="block text-[12px] text-[var(--ink-muted)]">入力できる最小値</span>
-                      <input
+                      {/* 回答画面と同じ部品を使う。空欄のままにできる（＝下限を決めない）。
+                          以前はここで打った文字をそのまま数値にしていたため、全角で打つと
+                          「決めたつもりなのに決まっていない」状態になっていた。 */}
+                      <NumberField
                         className="input input-num mt-1 w-24"
-                        inputMode="decimal"
-                        value={r.validationMin ?? ""}
-                        onChange={(e) => patch(i, { validationMin: e.target.value === "" ? null : Number(e.target.value) })}
+                        name={`validationMin_${i}`}
+                        ariaLabel="入力できる最小値"
+                        defaultValue={r.validationMin ?? null}
+                        policy={{ allowNegative: true }}
+                        onValueChange={(value) => patch(i, { validationMin: value })}
                       />
+                    </label>
+                    <label>
+                      <span className="block text-[12px] text-[var(--ink-muted)]">小数の扱い</span>
+                      {/* 「件」「人」のように数え上げるものは小数が意味を持たない。
+                          止めるかどうかは設問ごとに決める（単位だけで決めると、%のように
+                          小数が要るものまで巻き込む）。 */}
+                      <span className="mt-1 flex items-center gap-2 text-[13px]">
+                        <input
+                          type="checkbox"
+                          checked={r.validationInteger}
+                          onChange={(e) => patch(i, { validationInteger: e.target.checked })}
+                        />
+                        整数だけにする（小数を受け付けない）
+                      </span>
                     </label>
                   </>
                 )}

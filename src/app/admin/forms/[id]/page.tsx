@@ -48,6 +48,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
     required: q.required,
     validationMin: q.validationMin,
     validationMax: q.validationMax,
+    validationInteger: q.validationInteger,
     options: q.optionsJson ? (JSON.parse(q.optionsJson) as { value: string; label: string; score?: number }[]) : [],
     isGate: q.isGate,
     linkLabel: q.kpiItemId
@@ -78,6 +79,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
     required: q.required,
     validationMin: q.validationMin,
     validationMax: q.validationMax,
+    validationInteger: q.validationInteger,
     optionsJson: q.optionsJson,
     displayOrder: q.displayOrder,
   }));

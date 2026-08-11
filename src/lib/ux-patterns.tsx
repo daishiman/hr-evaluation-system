@@ -263,7 +263,13 @@ export function applyWithUndo<S>(
  * §4 入力の正規化 — ポステルの法則(入力に寛容・出力は厳格)
  * ============================================================ */
 
-/** 全角数字・全角/半角カンマ・空白入りの文字列を数値に。不正は null(勝手に推測しない) */
+/**
+ * 全角数字・全角/半角カンマ・空白入りの文字列を数値に。不正は null(勝手に推測しない)
+ *
+ * @deprecated このアプリでは使わない。数値の欄は `@/components/NumberField` と
+ * `@/lib/domain/number-input` に集約している。ここの実装はマイナスを黙って null にする
+ * （＝未入力と同じ扱いになる）ため、行動指針の -1 点のような欄には使えない。
+ */
 export function normalizeNumeric(raw: string): number | null {
   const half = raw.replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
   const digits = half.replace(/[,，、\s　]/g, '')
