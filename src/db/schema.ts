@@ -617,6 +617,12 @@ export const formQuestions = sqliteTable(
     required: integer("required", { mode: "boolean" }).notNull().default(true),
     validationMin: real("validation_min"),
     validationMax: real("validation_max"),
+    /**
+     * 小数を受け付けない設問か（「件」「人」のように数え上げるもの）。
+     * 制度マスタ側の「入力チェック」の文言には、もともと「0以上の整数」と書かれていたが、
+     * 文章として書かれていただけで入力を止める力を持っていなかった。ここで印として持つ。
+     */
+    validationInteger: integer("validation_integer", { mode: "boolean" }).notNull().default(false),
     /** 単一選択・複数選択の選択肢 [{value,label,score}] */
     optionsJson: text("options_json"),
     displayOrder: integer("display_order").notNull(),

@@ -5,6 +5,7 @@ import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
 import { assertFormContentEditable, syncFormQuestions } from "@/lib/form-build";
+import { defaultIntegerFlag } from "@/lib/domain/number-input";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,8 @@ const questionSchema = z.object({
   required: z.boolean(),
   validationMin: z.number().nullable().optional(),
   validationMax: z.number().nullable().optional(),
+  /** 小数を受け付けない設問か（「件」「人」のように数え上げるもの） */
+  validationInteger: z.boolean().optional(),
   options: z.array(z.object({ value: z.string().min(1), label: z.string().min(1), score: z.number().optional() })).optional(),
   isGate: z.boolean().optional(),
   // 集計に使う紐づけ（画面では自動で引き継ぎ、手では作らない）
@@ -118,6 +121,12 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       required: x.required,
       validationMin: x.validationMin ?? null,
       validationMax: x.validationMax ?? null,
+      /* 指定が無いときは単位から推し量る（数え上げる単位なら整数だけ）。
+         数値以外の設問には意味が無いので付けない。 */
+      validationInteger:
+        x.questionType === "number"
+          ? (x.validationInteger ?? defaultIntegerFlag({ unit: x.unit }))
+          : false,
       optionsJson: x.options && x.options.length > 0 ? JSON.stringify(x.options) : null,
       displayOrder: i + 1,
       gradeRequirementId: x.gradeRequirementId ?? null,

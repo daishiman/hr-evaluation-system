@@ -124,6 +124,21 @@ export const bodySchema = z.discriminatedUnion("kind", [
     upperBound: z.number().nullable().optional(),
   }),
   z.object({
+    /** ランクA〜Eをまとめて保存する（重なり・隙間はまとめて見ないと判定できない） */
+    kind: z.literal("rankCriteriaSet"),
+    kpiItemId: z.string().min(1),
+    rows: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          lowerBound: z.number().nullable(),
+          upperBound: z.number().nullable(),
+        }),
+      )
+      .min(1)
+      .max(10),
+  }),
+  z.object({
     kind: z.literal("kgi"),
     id: z.string().min(1),
     coefficient: z.number().min(0).max(5),

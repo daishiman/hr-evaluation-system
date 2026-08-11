@@ -6,7 +6,7 @@ import { Button, Card, ReasonNote, SectionHeading } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { NumberField } from "@/components/NumberField";
-import { questionNumberPolicy } from "@/lib/domain/number-input";
+import { numberInputHint, questionNumberPolicy } from "@/lib/domain/number-input";
 import { isAnswered, parseOptions, scaleSteps, type OptionLike } from "@/lib/domain/answer-snapshot";
 
 export interface AnswerQuestion {
@@ -19,6 +19,8 @@ export interface AnswerQuestion {
   required: boolean;
   validationMin: number | null;
   validationMax: number | null;
+  /** 小数を受け付けない設問か（「件」「人」のように数え上げるもの） */
+  validationInteger: boolean;
   optionsJson: string | null;
   displayOrder: number;
 }
@@ -426,7 +428,8 @@ function QuestionField({
           onValueChange={(value) => onChange({ valueNumber: value, valueText: null, valueChoices: null })}
           onEnter={onEnter}
         />
-        {q.validationMin !== null && <span className="footnote">{q.validationMin}以上の数字を入力してください</span>}
+        {/* 押す前に伝える。整数だけの設問では、そのことも先に出す（あとから叱らない） */}
+        {numberInputHint(q) !== "" && <span className="footnote">{numberInputHint(q)}</span>}
       </div>
     );
   };

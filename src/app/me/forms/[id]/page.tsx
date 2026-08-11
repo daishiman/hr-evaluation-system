@@ -127,6 +127,7 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
           required: q.required,
           validationMin: q.validationMin,
           validationMax: q.validationMax,
+          validationInteger: q.validationInteger,
           optionsJson: q.optionsJson,
           displayOrder: q.displayOrder,
         }))}

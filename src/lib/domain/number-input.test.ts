@@ -7,6 +7,10 @@ import {
   normalizeWhileTyping,
   parseNumberInput,
   questionNumberPolicy,
+  defaultIntegerFlag,
+  integerFromValidation,
+  numberInputHint,
+  unitImpliesInteger,
 } from "@/lib/domain/number-input";
 
 describe("全角で打たれても黙って半角にする", () => {
@@ -211,5 +215,94 @@ describe("受け口の側でも数値の回答を検査する（画面を通さ�
 
   it("決まりの中に収まる値は通る", () => {
     expect(checkAnswerNumbers([q(0, 100, 50), q(1, null, 3)])).toEqual({ ok: true });
+  });
+});
+
+describe("「整数だけ」の印を設問に持たせる", () => {
+  it("制度マスタの入力チェックの文言から読む（もともと文章では決まっていた）", () => {
+    expect(integerFromValidation("0以上の整数")).toBe(true);
+    expect(integerFromValidation("1以上の整数")).toBe(true);
+    expect(integerFromValidation("整数（マイナス可）")).toBe(true);
+    expect(integerFromValidation("0より大きい数値")).toBe(false);
+    expect(integerFromValidation(null)).toBe(null);
+  });
+
+  it("単位だけでは決めない（%は小数が要るので巻き込まない）", () => {
+    expect(defaultIntegerFlag({ validation: "0より大きい数値", unit: "%" })).toBe(false);
+    // 文言が無いときの最後の手段としてだけ単位を見る
+    expect(unitImpliesInteger("件")).toBe(true);
+    expect(unitImpliesInteger("人")).toBe(true);
+    expect(unitImpliesInteger("円")).toBe(true);
+    expect(unitImpliesInteger("%")).toBe(false);
+    expect(unitImpliesInteger("時間")).toBe(false);
+    expect(unitImpliesInteger(null)).toBe(false);
+    expect(defaultIntegerFlag({ validation: null, unit: "件" })).toBe(true);
+    expect(defaultIntegerFlag({ validation: null, unit: null })).toBe(false);
+  });
+
+  it("整数だけの設問では、画面の決まりが小数を断る形になる", () => {
+    const policy = questionNumberPolicy({ validationMin: 0, validationMax: null, validationInteger: true });
+    expect(policy.allowDecimal).toBe(false);
+    expect(parseNumberInput("3.5", policy)).toEqual({
+      kind: "invalid",
+      reason: "小数のない数字（整数）を入力してください。",
+    });
+    expect(parseNumberInput("3", policy)).toEqual({ kind: "ok", value: 3, text: "3" });
+    // 全角で打っても、整数なら黙って半角になって通る
+    expect(parseNumberInput("３", policy)).toEqual({ kind: "ok", value: 3, text: "3" });
+  });
+
+  it("整数だけの設問でも、打っている途中の状態は壊さない", () => {
+    const policy = questionNumberPolicy({ validationMin: 0, validationMax: null, validationInteger: true });
+    // 「3.」まで打った時点では文字を消さない（消すと打ち直しの手がかりが無くなる）
+    expect(normalizeWhileTyping("3.")).toBe("3.");
+    // 欄から離れたときは、打った値と同じ 3 に整う（小数部が無いので値は変わらない）
+    expect(formatOnBlur("3.", policy)).toBe("3");
+    // 小数部があるものは勝手に丸めない。打った文字をそのまま残して理由を出す
+    expect(formatOnBlur("3.5", policy)).toBe("3.5");
+    // 空欄は 0 にしない
+    expect(parseNumberInput("", policy)).toEqual({ kind: "empty" });
+  });
+
+  it("小数が要る設問は巻き込まない", () => {
+    const policy = questionNumberPolicy({ validationMin: 0, validationMax: null, validationInteger: false });
+    expect(parseNumberInput("99.5", policy)).toEqual({ kind: "ok", value: 99.5, text: "99.5" });
+  });
+
+  it("受け口の側でも小数を断る（画面を通さずに送られても素通りしない）", () => {
+    const row = (validationInteger: boolean, value: number) => ({
+      title: "ヒヤリハット報告件数",
+      validationMin: 0,
+      validationMax: null,
+      validationInteger,
+      unit: "件",
+      value,
+    });
+    const r = checkAnswerNumbers([row(true, 3.5)]);
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.message).toContain("整数");
+    expect(!r.ok && r.message).toContain("件");
+    expect(checkAnswerNumbers([row(true, 3)])).toEqual({ ok: true });
+    expect(checkAnswerNumbers([row(false, 3.5)])).toEqual({ ok: true });
+  });
+
+  it("受け口は勝手に丸めない（断るだけ。打った値と保存される値を食い違わせない）", () => {
+    const r = checkAnswerNumbers([
+      { title: "在籍スタッフ数", validationMin: 1, validationMax: null, validationInteger: true, unit: "人", value: 2.4 },
+    ]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("押す前に伝える一言を作る", () => {
+    expect(numberInputHint({ validationMin: 0, validationMax: null, validationInteger: true })).toBe(
+      "0以上の整数を入力してください",
+    );
+    expect(numberInputHint({ validationMin: 1, validationMax: 100, validationInteger: false })).toBe(
+      "1以上100以下の数字を入力してください",
+    );
+    expect(numberInputHint({ validationMin: null, validationMax: null, validationInteger: true })).toBe(
+      "整数を入力してください",
+    );
+    expect(numberInputHint({ validationMin: null, validationMax: null, validationInteger: false })).toBe("");
   });
 });

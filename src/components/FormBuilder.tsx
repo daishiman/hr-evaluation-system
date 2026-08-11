@@ -26,6 +26,7 @@ export interface BuilderQuestion {
   required: boolean;
   validationMin: number | null;
   validationMax: number | null;
+  validationInteger: boolean;
   options: { value: string; label: string; score?: number }[];
   isGate: boolean;
   linkLabel: string | null;
@@ -89,6 +90,9 @@ export function FormBuilder({
         required: true,
         validationMin: questionType === "number" ? 0 : null,
         validationMax: null,
+        /* 単位が決まっていない新しい設問は、まず小数を許す側にしておく。
+           分からないものを止めると、打てるはずの値が打てなくなる。 */
+        validationInteger: false,
         options:
           questionType === "single" || questionType === "multi"
             ? [
@@ -131,6 +135,7 @@ export function FormBuilder({
             required: r.required,
             validationMin: r.validationMin,
             validationMax: r.validationMax,
+            validationInteger: r.validationInteger,
             options: r.options.length > 0 ? r.options : undefined,
             isGate: r.isGate,
             gradeRequirementId: r.gradeRequirementId,
@@ -263,6 +268,20 @@ export function FormBuilder({
                         policy={{ allowNegative: true }}
                         onValueChange={(value) => patch(i, { validationMin: value })}
                       />
+                    </label>
+                    <label>
+                      <span className="block text-[12px] text-[var(--ink-muted)]">小数の扱い</span>
+                      {/* 「件」「人」のように数え上げるものは小数が意味を持たない。
+                          止めるかどうかは設問ごとに決める（単位だけで決めると、%のように
+                          小数が要るものまで巻き込む）。 */}
+                      <span className="mt-1 flex items-center gap-2 text-[13px]">
+                        <input
+                          type="checkbox"
+                          checked={r.validationInteger}
+                          onChange={(e) => patch(i, { validationInteger: e.target.checked })}
+                        />
+                        整数だけにする（小数を受け付けない）
+                      </span>
                     </label>
                   </>
                 )}
