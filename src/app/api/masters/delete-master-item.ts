@@ -3,7 +3,8 @@ import { schema as s } from "@/lib/db";
 import type { getDb } from "@/lib/db";
 import { HttpError } from "@/lib/session";
 import { bandSetBlockedReason, deleteBlockedReason } from "@/lib/domain/master-delete";
-import { versionFamilyDeleteOrder } from "@/lib/domain/versioned-master";
+import { lineageRootId, versionFamilyDeleteOrder } from "@/lib/domain/versioned-master";
+import { recordConstitutionEvent } from "@/lib/domain/constitution-events";
 import {
   bandSetUsedBy,
   behaviorGuidelineUsage,
@@ -26,9 +27,10 @@ type Db = Awaited<ReturnType<typeof getDb>>;
 export async function deleteMasterItem(args: {
   db: Db;
   companyId: string;
+  viewerId: string;
   body: MasterDeleteBody;
 }): Promise<{ message: string }> {
-  const { db, companyId, body } = args;
+  const { db, companyId, viewerId, body } = args;
 
   switch (body.kind) {
     case "behaviorGuideline": {
@@ -49,6 +51,15 @@ export async function deleteMasterItem(args: {
          外部キーの連鎖に任せず自分で消す（D1 は接続ごとに外部キーの設定が変わりうる）。 */
       await db.delete(s.behaviorLevels).where(eq(s.behaviorLevels.guidelineId, row.id));
       await db.delete(s.behaviorGuidelines).where(eq(s.behaviorGuidelines.id, row.id));
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "behaviorGuideline",
+        entityId: row.id,
+        eventType: "deleted",
+        actorId: viewerId,
+        before: row,
+      });
       return { message: `「${row.aspectName}」を消しました。一覧から無くなります。` };
     }
 
@@ -84,6 +95,15 @@ export async function deleteMasterItem(args: {
         await db.delete(s.behaviorGuidelines).where(inArray(s.behaviorGuidelines.id, ids));
       }
       await db.delete(s.behaviorBandSets).where(eq(s.behaviorBandSets.id, set.id));
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "behaviorBandSet",
+        entityId: set.id,
+        eventType: "deleted",
+        actorId: viewerId,
+        before: set,
+      });
       return {
         message:
           `「${set.name}」を消しました` +
@@ -106,6 +126,15 @@ export async function deleteMasterItem(args: {
           typeof db.batch
         >[0],
       );
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "gradeRequirement",
+        entityId: lineageRootId(rows, row.id),
+        eventType: "deleted",
+        actorId: viewerId,
+        before: row,
+      });
       return { message: `「${row.text}」を消しました。一覧から無くなります。` };
     }
 
@@ -124,6 +153,15 @@ export async function deleteMasterItem(args: {
           typeof db.batch
         >[0],
       );
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "promotionRequirement",
+        entityId: lineageRootId(rows, row.id),
+        eventType: "deleted",
+        actorId: viewerId,
+        before: row,
+      });
       return { message: `「${row.text}」を消しました。一覧から無くなります。` };
     }
   }

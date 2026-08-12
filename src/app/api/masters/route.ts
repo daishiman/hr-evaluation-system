@@ -42,6 +42,6 @@ export async function DELETE(req: Request) {
     if (!viewer.companyId) throw new HttpError(400, "所属会社が設定されていません。");
     const body = deleteBodySchema.parse(await req.json());
     const db = await getDb();
-    return deleteMasterItem({ db, companyId: viewer.companyId, body });
+    return deleteMasterItem({ db, companyId: viewer.companyId, viewerId: viewer.id, body });
   });
 }

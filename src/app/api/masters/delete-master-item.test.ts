@@ -63,6 +63,11 @@ const CREATE = `
     id text PRIMARY KEY, company_id text NOT NULL, evaluation_id text NOT NULL, promotion_requirement_id text,
     kind text NOT NULL DEFAULT 'report', text text NOT NULL DEFAULT '', achieved integer NOT NULL DEFAULT 0
   );
+  CREATE TABLE constitution_events (
+    id text PRIMARY KEY, company_id text NOT NULL, entity_type text NOT NULL, entity_id text NOT NULL,
+    event_type text NOT NULL, actor_id text, before_json text, after_json text, seq integer NOT NULL,
+    occurred_at text
+  );
 `;
 
 beforeEach(() => {
@@ -123,7 +128,7 @@ describe("制度設定の項目を完全に消す", () => {
   it("一度も使っていない観点は消せる（5段階の文章も一緒に消える）", async () => {
     seedBandSet();
 
-    const result = await deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "behaviorGuideline", id: "bg_a" } });
+    const result = await deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorGuideline", id: "bg_a" } });
 
     expect(result.message).toContain("創造性について");
     expect(rows("SELECT id FROM behavior_guidelines")).toEqual([]);
@@ -135,13 +140,13 @@ describe("制度設定の項目を完全に消す", () => {
     seedPastRecords();
 
     await expect(
-      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "behaviorGuideline", id: "bg_a" } }),
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorGuideline", id: "bg_a" } }),
     ).rejects.toMatchObject({
       status: 400,
       message: expect.stringContaining("アンケート「2026年上期（Beginner）」"),
     });
     await expect(
-      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "behaviorGuideline", id: "bg_a" } }),
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorGuideline", id: "bg_a" } }),
     ).rejects.toMatchObject({ message: expect.stringContaining("「使わない」") });
   });
 
@@ -157,7 +162,7 @@ describe("制度設定の項目を完全に消す", () => {
     const questionsBefore = rows("SELECT * FROM form_questions");
     const behaviorsBefore = rows("SELECT * FROM evaluation_behaviors");
 
-    await deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "behaviorGuideline", id: "bg_new" } });
+    await deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorGuideline", id: "bg_new" } });
 
     expect(rows("SELECT * FROM form_questions")).toEqual(questionsBefore);
     expect(rows("SELECT * FROM evaluation_behaviors")).toEqual(behaviorsBefore);
@@ -169,7 +174,7 @@ describe("制度設定の項目を完全に消す", () => {
     seedBandSet();
 
     await expect(
-      deleteMasterItem({ db, companyId: "cmp_b", body: { kind: "behaviorGuideline", id: "bg_a" } }),
+      deleteMasterItem({ db, companyId: "cmp_b", viewerId: "u_test", body: { kind: "behaviorGuideline", id: "bg_a" } }),
     ).rejects.toMatchObject({ status: 404 });
     expect(rows("SELECT id FROM behavior_guidelines")).toEqual([{ id: "bg_a" }]);
   });
@@ -179,7 +184,7 @@ describe("制度設定の項目を完全に消す", () => {
     sqlite.exec(`INSERT INTO grades (id, company_id, name, behavior_band) VALUES ('g_1', 'cmp_a', '等級５：Manager Ⅰ', 'band_a');`);
 
     await expect(
-      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "behaviorBandSet", id: "bbs_a" } }),
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorBandSet", id: "bbs_a" } }),
     ).rejects.toMatchObject({
       status: 400,
       message: expect.stringContaining("先に「どの等級に出すか」"),
@@ -190,7 +195,7 @@ describe("制度設定の項目を完全に消す", () => {
   it("どの等級にも出しておらず一度も使っていない基準セットは、中の観点ごと消せる", async () => {
     seedBandSet();
 
-    const result = await deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "behaviorBandSet", id: "bbs_a" } });
+    const result = await deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorBandSet", id: "bbs_a" } });
 
     expect(result.message).toContain("観点1件");
     expect(rows("SELECT id FROM behavior_band_sets")).toEqual([]);
@@ -203,7 +208,7 @@ describe("制度設定の項目を完全に消す", () => {
     seedPastRecords();
 
     await expect(
-      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "behaviorBandSet", id: "bbs_a" } }),
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorBandSet", id: "bbs_a" } }),
     ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("完全には消せません") });
   });
 
@@ -216,11 +221,11 @@ describe("制度設定の項目を完全に消す", () => {
         VALUES ('er_1', 'cmp_a', 'ev_1', 'gr_used');
     `);
 
-    await deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "gradeRequirement", id: "gr_free" } });
+    await deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "gradeRequirement", id: "gr_free" } });
     expect(rows("SELECT id FROM grade_requirements")).toEqual([{ id: "gr_used" }]);
 
     await expect(
-      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "gradeRequirement", id: "gr_used" } }),
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "gradeRequirement", id: "gr_used" } }),
     ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("評価の記録") });
     expect(rows("SELECT id FROM evaluation_requirements")).toEqual([{ id: "er_1" }]);
   });
@@ -236,11 +241,11 @@ describe("制度設定の項目を完全に消す", () => {
     `);
 
     await expect(
-      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "gradeRequirement", id: "gr_v2" } }),
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "gradeRequirement", id: "gr_v2" } }),
     ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("評価の記録") });
 
     sqlite.exec("DELETE FROM evaluation_requirements WHERE id = 'er_v1'");
-    await deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "gradeRequirement", id: "gr_v2" } });
+    await deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "gradeRequirement", id: "gr_v2" } });
     expect(rows("SELECT id FROM grade_requirements WHERE id IN ('gr_v1', 'gr_v2')")).toEqual([]);
   });
 
@@ -253,11 +258,11 @@ describe("制度設定の項目を完全に消す", () => {
         VALUES ('eg_1', 'cmp_a', 'ev_1', 'pr_used');
     `);
 
-    await deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "promotionRequirement", id: "pr_free" } });
+    await deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "promotionRequirement", id: "pr_free" } });
     expect(rows("SELECT id FROM promotion_requirements")).toEqual([{ id: "pr_used" }]);
 
     await expect(
-      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "promotionRequirement", id: "pr_used" } }),
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "promotionRequirement", id: "pr_used" } }),
     ).rejects.toMatchObject({ status: 400 });
     expect(rows("SELECT id FROM evaluation_gates")).toEqual([{ id: "eg_1" }]);
   });
@@ -273,11 +278,11 @@ describe("制度設定の項目を完全に消す", () => {
     `);
 
     await expect(
-      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "promotionRequirement", id: "pr_v2" } }),
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "promotionRequirement", id: "pr_v2" } }),
     ).rejects.toMatchObject({ status: 400 });
 
     sqlite.exec("DELETE FROM evaluation_gates WHERE id = 'eg_v1'");
-    await deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "promotionRequirement", id: "pr_v2" } });
+    await deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "promotionRequirement", id: "pr_v2" } });
     expect(rows("SELECT id FROM promotion_requirements WHERE id IN ('pr_v1', 'pr_v2')")).toEqual([]);
   });
 
@@ -290,7 +295,7 @@ describe("制度設定の項目を完全に消す", () => {
     `);
 
     await expect(
-      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "behaviorGuideline", id: "bg_a" } }),
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorGuideline", id: "bg_a" } }),
     ).rejects.toMatchObject({ message: expect.stringContaining("下書きのアンケート") });
   });
 });

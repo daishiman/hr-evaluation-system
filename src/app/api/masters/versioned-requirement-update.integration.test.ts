@@ -14,6 +14,13 @@ beforeEach(async () => {
     { id: COMPANY, name: "版管理社", slug: "revision" },
     { id: OTHER, name: "他社", slug: "other" },
   ]);
+  await testDb.db.insert(s.users).values({
+    id: "viewer",
+    name: "テスト操作者",
+    email: "viewer@example.com",
+    companyId: COMPANY,
+    role: "COMPANY_ADMIN",
+  });
   await testDb.db.insert(s.grades).values([
     {
       id: GRADE,
