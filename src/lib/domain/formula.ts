@@ -17,12 +17,33 @@ export type FormulaVars = Record<string, number>;
 export class FormulaError extends Error {
   constructor(
     message: string,
-    readonly kind: "syntax" | "missing-var" | "divide-by-zero",
+    readonly kind: "syntax" | "missing-var" | "divide-by-zero" | "too-complex" | "overflow",
   ) {
     super(message);
     this.name = "FormulaError";
   }
 }
+
+/**
+ * 式の複雑さの上限。
+ *
+ * この式の読み取りは括弧の中に入るたびに自分自身を呼び直す作りで、
+ * 括弧が数千重なると計算そのものが続けられなくなる。そのとき出るのは
+ * 計算機の内部事情の言葉で、読んでも直しようがない
+ * （その項目だけ理由の分からない「判定外」になって消えていた）。
+ * 上限を先に置いて、**直せる言葉で断る**ようにする。
+ *
+ * 実際に登録されている式は、いちばん長いもので52文字・括弧は2重までだった。
+ * 下の上限はそのどれより桁違いに大きいので、いまの式が弾かれることはない。
+ */
+export const FORMULA_LIMITS = {
+  /** 式の文字数（登録済みの最長は52文字） */
+  length: 2000,
+  /** 括弧の深さ（登録済みの最深は2重） */
+  depth: 50,
+  /** 数・記号・設問IDの個数（登録済みの最多は20個ほど） */
+  tokens: 500,
+} as const;
 
 type Token =
   | { t: "num"; v: number }
@@ -63,9 +84,16 @@ function normalize(src: string): string {
 }
 
 function tokenize(src: string): Token[] {
+  if (src.length > FORMULA_LIMITS.length) {
+    throw new FormulaError(
+      `計算式が長すぎます（${src.length}文字。${FORMULA_LIMITS.length}文字までです）。式を分けてください。`,
+      "too-complex",
+    );
+  }
   const s = normalize(src);
   const tokens: Token[] = [];
   let i = 0;
+  let depth = 0;
 
   while (i < s.length) {
     const c = s[i];
@@ -75,11 +103,19 @@ function tokenize(src: string): Token[] {
       continue;
     }
     if (c === "(") {
+      depth++;
+      if (depth > FORMULA_LIMITS.depth) {
+        throw new FormulaError(
+          `計算式の括弧が深すぎます（${FORMULA_LIMITS.depth}重までです）。括弧を減らすか、式を分けてください。`,
+          "too-complex",
+        );
+      }
       tokens.push({ t: "lp" });
       i++;
       continue;
     }
     if (c === ")") {
+      depth--;
       tokens.push({ t: "rp" });
       i++;
       continue;
@@ -112,6 +148,12 @@ function tokenize(src: string): Token[] {
       continue;
     }
     throw new FormulaError(`計算式に解釈できない文字があります: 「${c}」（${src}）`, "syntax");
+  }
+  if (tokens.length > FORMULA_LIMITS.tokens) {
+    throw new FormulaError(
+      `計算式の項目が多すぎます（${tokens.length}個。${FORMULA_LIMITS.tokens}個までです）。式を分けてください。`,
+      "too-complex",
+    );
   }
   return tokens;
 }
@@ -202,8 +244,20 @@ export function extractVariables(formula: string): string[] {
   }
 }
 
-/** 計算式を評価して実績値を返す。小数は第2位で丸める。 */
+/**
+ * 計算式を評価して実績値を返す。小数は第2位で丸める。
+ *
+ * 途中の掛け算で計算機の扱える範囲を超えると、結果は「無限大」になる。
+ * 無限大をそのまま実績値として返すと、ランク判定はどの帯にも当たらず、
+ * **理由の分からない判定外**になる。ここで気づいて、値がおかしいことを言葉で返す。
+ */
 export function computeActualValue(formula: string, vars: FormulaVars): number {
   const raw = evaluate(tokenize(formula), vars, formula);
+  if (!Number.isFinite(raw)) {
+    throw new FormulaError(
+      "計算の途中で数が大きくなりすぎました。回答に桁の多すぎる値が入っていないかご確認ください。",
+      "overflow",
+    );
+  }
   return Math.round(raw * 100) / 100;
 }
