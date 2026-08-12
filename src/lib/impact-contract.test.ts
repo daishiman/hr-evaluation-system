@@ -10,12 +10,14 @@ describe("制度設定から評価への影響通知", () => {
     expect(read("src/app/admin/kgi/page.tsx")).toContain("<StaleCyclesNotice cycles={staleCycles} />");
   });
 
-  it("公開時スナップショットの行動指針をstale判定や通知へ混ぜない", () => {
+  it("公開時スナップショットの要件・行動指針をstale判定や通知へ混ぜない", () => {
     const impact = read("src/lib/impact.ts");
     const behaviorPage = read("src/app/admin/behavior/page.tsx");
 
     expect(impact).not.toContain("{ table: s.behaviorLevels");
     expect(impact).not.toContain("{ table: s.behaviorGuidelines");
+    expect(impact).not.toContain("{ table: s.gradeRequirements");
+    expect(impact).not.toContain("{ table: s.promotionRequirements");
     expect(behaviorPage).not.toContain("StaleCyclesNotice");
   });
 

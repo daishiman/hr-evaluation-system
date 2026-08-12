@@ -6,6 +6,7 @@ import { RecordForm } from "@/components/RecordForm";
 import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
 import { behaviorBandLabel } from "@/lib/domain/behavior";
 import { GRADE_REQUIREMENT_MAX } from "@/lib/domain/grade-requirements";
+import { currentVersionRows } from "@/lib/domain/versioned-master";
 import { Card, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
   }
 
   const raise = raises.find((r) => r.gradeId === grade.id) ?? null;
-  const myGradeReqs = gradeReqs.filter((r) => r.gradeId === grade.id && r.isActive);
+  const myGradeReqs = currentVersionRows(gradeReqs).filter((r) => r.gradeId === grade.id && r.isActive);
   const supportCount = myGradeReqs.filter((r) => r.category === "support").length;
   const operationCount = myGradeReqs.filter((r) => r.category === "operation").length;
   const th = thresholds.find((t) => t.fromGradeId === grade.id) ?? null;

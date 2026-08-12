@@ -31,8 +31,6 @@ const WATCHED_TABLES = [
   "scheme_rank_ratios",
   "promotion_thresholds",
   "kpi_items",
-  "grade_requirements",
-  "promotion_requirements",
   "kgi_coefficients",
 ];
 
@@ -177,6 +175,15 @@ describe("基準の変更と、集計し直しの必要性", () => {
   it("評価そのものが無ければ、集計し直しの案内は出ない", async () => {
     await touchCriteria(NEW);
     expect(await detectStaleCycles(IDS.company)).toEqual([]);
+  });
+
+  it("アンケートへ写した等級要件・昇格要件を直しても、既存評価を古い扱いにしない", async () => {
+    const id = await putEvaluation({ computedAt: OLD });
+    current.raw.prepare("update grade_requirements set updated_at = ?").run(NEW.getTime());
+    current.raw.prepare("update promotion_requirements set updated_at = ?").run(NEW.getTime());
+
+    expect(await detectStaleCycles(IDS.company)).toEqual([]);
+    expect(await isEvaluationStale(IDS.company, id)).toBe(false);
   });
 
   it("存在しない評価IDを聞かれても、古いとは言わない", async () => {

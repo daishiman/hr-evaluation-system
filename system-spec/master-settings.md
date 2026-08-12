@@ -1,8 +1,8 @@
 # 制度設定と評価への反映 — システム仕様
 
-- graph_node_id: `feat-master-settings-responsibility-split`
-- beads: `hr-hco`
-- 正本（製品）: `docs/product/spec.md` §3、§5-1、§7
+- graph_node_id: `feat-master-settings-responsibility-split` / `feat-master-definition-revisions`
+- beads: `hr-hco` / `hr-2qk`
+- 正本（製品）: `docs/product/spec.md` §3、§5-1、§7 / `docs/product/spec-master-definition-revisions.md`
 - 実装入口: `src/app/admin/` / `src/app/api/masters/` / `src/lib/impact.ts`
 
 ## 1. 権限と会社境界
@@ -28,7 +28,7 @@
 
 ## 3. 変更の反映とスナップショット
 
-1. KPIランク基準、評価項目・配点、ランク割合、昇格点数、KPI計算式、等級要件、昇格要件、KGI係数は `src/lib/impact.ts` の監視対象とする。更新時刻が評価の `computedAt` より新しい場合、確認中評価を再集計対象として扱う。
+1. KPIランク基準、評価項目・配点、ランク割合、昇格点数、KPI計算式、KGI係数は `src/lib/impact.ts` の監視対象とする。更新時刻が評価の `computedAt` より新しい場合、確認中評価を再集計対象として扱う。等級要件・昇格要件・行動指針はフォームへ写した定義を評価するため、監視対象に含めない。
 2. `evaluations.status = finalized` は再集計しない。判定時の配点・閾値・根拠を保存したまま据え置く。
 3. 再集計可能件数が1件以上なら `/manager/cycles?cycle=...` への導線を出す。0件ならリンクを出さず、確定済みが当時の基準のまま残ることだけを説明する。
 4. 行動指針の観点名・段階文言・選択肢は、アンケート作成時に `form_questions` と選択肢へ写す。評価はその写しを使うため、行動指針の変更を既存評価の stale 判定へ含めない。
@@ -40,3 +40,45 @@
 - 行動指針の `isActive=false` は、次に作るアンケートの設問から除外する。
 - KPIランク基準は `/admin/scheme` から遅延取得し、保存後はキャッシュを破棄して再取得する。
 - KGI係数は `/admin/kgi` で表示・編集する。利用者へ見せる適用範囲は `lowerBound` / `upperBound` から `kgiRangeLabel` で導き、移行互換用の `label` を表示・編集の正本にしない。適用範囲の抜けや重なりは既存の coverage 検査結果を表示する。
+
+## 5. 等級要件・昇格要件の版ライフサイクル
+
+### 5-1. データ不変条件
+
+- `grade_requirements` と `promotion_requirements` は、意味のある内容を直すたびに新しい `id` の行をINSERTする。改訂時は旧行を1列もUPDATEせず、旧版の `is_active` / `seq` も改訂時点の履歴値として残す。
+- 新版の `previous_version_id` は、その時点の現行版を指す。過去版の内容を再採用するときも、過去版をactiveにせず、現行版を `previous_version_id` とする新しい行を作る。
+- `previous_version_id` は一意。1つの版から複数の後続版を作れない。競合はサーバーが `409` として返す。
+- 現行版は、別行の `previous_version_id` から指されていない系譜末尾。過去版は履歴として返すが、future formの候補にはしない。
+- `seq` と現行版の `is_active` は将来フォームの構成値としてUPDATEできる。後続版ができた旧版は値にかかわらず現行候補から外す。現行版の `is_active=false` は可逆で、同じ現行版idを `true` に戻す。
+- 等級要件のactive上限10は `company_id + grade_id + category` で数える。追加・再開と件数確認は同一の原子的保存単位で行う。
+- id指定操作の会社・等級・区分・種類は保存済み行から導出する。リクエスト本文で対象範囲を上書きできない。
+- 完全削除は同じ系譜の全版について利用実績を確認する。`form_questions` または評価スナップショットが1件でも参照する系譜は削除しない。
+
+### 5-2. API command
+
+`PUT /api/masters` は操作の意味を `kind` で分離する。
+
+| 対象 | 新規 | 意味の改訂 | 使用停止・再開 | 過去内容の再採用 | 並べ替え |
+|---|---|---|---|---|---|
+| 等級要件 | `gradeRequirementCreate` | `gradeRequirementRevise` | `gradeRequirementActivation` | `gradeRequirementRestoreContent` | `gradeRequirementOrder` |
+| 昇格要件 | `promotionRequirementCreate` | `promotionRequirementRevise` | `promotionRequirementActivation` | `promotionRequirementRestoreContent` | `promotionRequirementOrder` |
+
+- Createだけが `gradeId` と区分/種類を受け取る。
+- Reviseは `id` と意味フィールド、Activationは `id + isActive`、RestoreContentは `id + sourceVersionId`、Orderは `id + direction` を受け取る。
+- id指定commandは `gradeId` / `category` / `reqKind` を受け取らない。
+- 一覧は `previousVersionId` を含む全版を返す。画面と削除判定は同じ系譜関数で現行・履歴を分類する。
+
+### 5-3. フォーム・評価・stale境界
+
+- 新規フォームはactiveな現行版だけを読み、版idと文言を `form_questions` に保存する。
+- 作成済みフォームは自動更新しない。下書きへの明示同期は、回答なし等の既存安全条件を満たす場合だけ許可する。
+- 評価はフォームの写しを読み、等級要件・昇格要件の新版作成やactive変更をstale理由にしない。
+- 公開済みフォーム、回答、評価、および過去版の行は変更しない。
+
+## 6. 行動指針の等級割当UI
+
+- `/admin/behavior` は、各等級を同じ行またはカードで表示し、その中に `この等級に出す行動指針` のselect、`出さない`、行内保存を置く。
+- 上部の読み取り専用一覧と下部の単一等級編集フォームを併存させない。表示値と編集値の所有場所は1つにする。
+- `適用` という抽象語は使わず、`Beginnerのアンケートにこの行動指針を出す` のように、等級・対象・結果を明記する。
+- 保存後は `次に作るアンケートから反映します。作成済みのアンケートと評価は変わりません` と表示する。
+- 保存APIの権限・会社境界・基準セットの存在/active検査は従来どおりサーバーで行う。

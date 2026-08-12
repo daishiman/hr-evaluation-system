@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
+import { classifyVersionedItems, VersionedMasterSections } from "@/components/VersionedMasterSections";
 import { requestMasterDelete } from "@/components/master-delete-request";
 import {
   BLOCKED_HELP_LABEL,
@@ -39,6 +40,7 @@ export interface PromotionRow {
   transitionLabel: string | null;
   isGate: boolean;
   isActive: boolean;
+  previousVersionId?: string | null;
 }
 
 export function PromotionRequirementEditor({
@@ -108,8 +110,10 @@ export function PromotionRequirementEditor({
   const markOf = (id: string) => blockedMark(usedByOf(id));
   const anyBlocked = rows.some((r) => usedByOf(r.id).length > 0);
 
-  const activeOf = (kind: PromoKind) => rows.filter((r) => r.kind === kind && r.isActive).sort((a, b) => a.seq - b.seq);
-  const unused = rows.filter((r) => !r.isActive);
+  const activeOf = (kind: PromoKind) =>
+    classifyVersionedItems(rows.filter((row) => row.kind === kind))
+      .current.filter((row) => row.isActive)
+      .sort((a, b) => a.seq - b.seq);
 
   const block = (kind: PromoKind) => {
     const list = activeOf(kind);
@@ -150,28 +154,29 @@ export function PromotionRequirementEditor({
                 <>
                   <textarea
                     value={editing[r.id]}
+                    autoFocus
                     onChange={(e) => setEditing((s) => ({ ...s, [r.id]: e.target.value }))}
                     rows={2}
                     className="input w-full"
                     aria-label={`${KIND_LABEL[kind]} ${i + 1}件目の内容`}
                   />
+                  <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
                   <div className="mt-2 flex gap-2">
                     <Button
                       variant="primary"
                       disabled={busy || editing[r.id].trim() === ""}
                       onClick={async () => {
                         const ok = await send({
-                          kind: "promotionRequirement",
+                          kind: "promotionRequirementRevise",
                           id: r.id,
-                          gradeId,
-                          reqKind: kind,
                           text: editing[r.id].trim(),
                           transitionLabel: r.transitionLabel,
+                          isGate: r.isGate,
                         });
                         if (ok) setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; });
                       }}
                     >
-                      保存する
+                      新版として保存
                     </Button>
                     <Button variant="tertiary" disabled={busy} onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}>
                       やめる
@@ -187,7 +192,7 @@ export function PromotionRequirementEditor({
                   variant="tertiary"
                   disabled={busy || i === 0}
                   aria-label="1つ上に移動"
-                  onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, gradeId, reqKind: kind, direction: "up" })}
+                  onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, direction: "up" })}
                 >
                   ↑
                 </Button>
@@ -195,46 +200,34 @@ export function PromotionRequirementEditor({
                   variant="tertiary"
                   disabled={busy || i === list.length - 1}
                   aria-label="1つ下に移動"
-                  onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, gradeId, reqKind: kind, direction: "down" })}
+                  onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, direction: "down" })}
                 >
                   ↓
                 </Button>
                 <Button variant="tertiary" disabled={busy} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
-                  直す
+                  内容を直す
                 </Button>
                 <Button
                   variant="tertiary"
                   disabled={busy}
                   onClick={() =>
                     void send({
-                      kind: "promotionRequirement",
+                      kind: "promotionRequirementRevise",
                       id: r.id,
-                      gradeId,
-                      reqKind: kind,
                       text: r.text,
                       transitionLabel: r.transitionLabel,
                       isGate: !r.isGate,
                     })
                   }
                 >
-                  {r.isGate ? "任意にする" : "必須にする"}
+                  {r.isGate ? "任意の新版にする" : "必須の新版にする"}
                 </Button>
                 <ConfirmButton
-                  label="使わない"
+                  label="今後使わない"
                   variant="danger-outline"
                   busy={busy}
-                  confirm={`「${r.text}」を今後のアンケートに出さないようにします。すでに公開したアンケートと、確定済みの評価はそのまま残ります。`}
-                  onConfirm={() =>
-                    void send({
-                      kind: "promotionRequirement",
-                      id: r.id,
-                      gradeId,
-                      reqKind: kind,
-                      text: r.text,
-                      transitionLabel: r.transitionLabel,
-                      isActive: false,
-                    })
-                  }
+                  confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
+                  onConfirm={() => void send({ kind: "promotionRequirementActivation", id: r.id, isActive: false })}
                 />
                 {markOf(r.id) === null && (
                   <ConfirmButton
@@ -284,7 +277,7 @@ export function PromotionRequirementEditor({
                   disabled={busy || draft.text.trim() === ""}
                   onClick={async () => {
                     const ok = await send({
-                      kind: "promotionRequirement",
+                      kind: "promotionRequirementCreate",
                       gradeId,
                       reqKind: kind,
                       text: draft.text.trim(),
@@ -307,6 +300,38 @@ export function PromotionRequirementEditor({
             </Button>
           )}
         </div>
+
+        <div className="card-pad grid gap-2 border-t border-[var(--line)]">
+          <VersionedMasterSections
+            sectionId={`promotion-${gradeId}-${kind}`}
+            rows={rows.filter((row) => row.kind === kind)}
+            busy={busy}
+            renderDetail={(row) => (
+              <>
+                {row.transitionLabel && <p className="footnote m-0">{row.transitionLabel}</p>}
+                <p className="footnote m-0">{row.isGate ? "必須" : "任意"}</p>
+                {markOf(row.id) !== null && <UsedByDetail mark={markOf(row.id)!} usedBy={usedByOf(row.id)} />}
+              </>
+            )}
+            renderStoppedAction={(row) =>
+              markOf(row.id) === null ? (
+                <ConfirmButton
+                  label={DELETE_LABEL}
+                  variant="danger-outline"
+                  busy={busy}
+                  confirm={deleteConfirmText(row.text)}
+                  onConfirm={() => void remove(row.id)}
+                />
+              ) : null
+            }
+            onReactivate={(row) =>
+              void send({ kind: "promotionRequirementActivation", id: row.id, isActive: true })
+            }
+            onRestoreContent={({ row, currentId }) =>
+              void send({ kind: "promotionRequirementRestoreContent", id: currentId, sourceVersionId: row.id })
+            }
+          />
+        </div>
       </Card>
     );
   };
@@ -317,53 +342,11 @@ export function PromotionRequirementEditor({
         いま編集しているのは <b>{gradeName}</b> の昇格要件です。ここでの変更は次に作るアンケートから反映されます。
         すでに作成・公開したアンケートと確定済みの評価は変わりません。
       </p>
-      {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
+      <p className="footnote m-0">内容を直すと、新版を作ります。</p>
+      {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
+      {message && <p role="status" aria-live="polite" className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
       {block("report")}
       {block("test")}
-      {unused.length > 0 && (
-        <Disclosure summary="使わないことにした項目" meta={`${unused.length}件`}>
-          <div>
-            {unused.map((r) => (
-              <div key={r.id} className="card-row items-center" data-off="true">
-                <div className="row-main">
-                  <p className="m-0 text-sub">{r.text}</p>
-                  <p className="footnote m-0">{KIND_LABEL[r.kind as PromoKind] ?? r.kind}</p>
-                  {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
-                </div>
-                <Badge tone="closed">使わない</Badge>
-                <Button
-                  variant="tertiary"
-                  disabled={busy}
-                  onClick={() =>
-                    void send({
-                      kind: "promotionRequirement",
-                      id: r.id,
-                      gradeId,
-                      reqKind: r.kind,
-                      text: r.text,
-                      transitionLabel: r.transitionLabel,
-                      isActive: true,
-                    })
-                  }
-                >
-                  戻す
-                </Button>
-                {markOf(r.id) === null && (
-                  <ConfirmButton
-                    label={DELETE_LABEL}
-                    variant="danger-outline"
-                    busy={busy}
-                    confirm={deleteConfirmText(r.text)}
-                    onConfirm={() => void remove(r.id)}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </Disclosure>
-      )}
-
       {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。
           「使用中」の行が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
       {anyBlocked && (

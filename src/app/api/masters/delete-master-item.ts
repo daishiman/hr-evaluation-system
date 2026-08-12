@@ -3,6 +3,7 @@ import { schema as s } from "@/lib/db";
 import type { getDb } from "@/lib/db";
 import { HttpError } from "@/lib/session";
 import { bandSetBlockedReason, deleteBlockedReason } from "@/lib/domain/master-delete";
+import { versionFamilyDeleteOrder } from "@/lib/domain/versioned-master";
 import {
   bandSetUsedBy,
   behaviorGuidelineUsage,
@@ -91,38 +92,38 @@ export async function deleteMasterItem(args: {
     }
 
     case "gradeRequirement": {
-      const row = (
-        await db
-          .select({ id: s.gradeRequirements.id, text: s.gradeRequirements.text })
-          .from(s.gradeRequirements)
-          .where(and(eq(s.gradeRequirements.id, body.id), eq(s.gradeRequirements.companyId, companyId)))
-          .limit(1)
-      )[0];
+      const rows = await db.select().from(s.gradeRequirements).where(eq(s.gradeRequirements.companyId, companyId));
+      const row = rows.find((candidate) => candidate.id === body.id);
       if (!row) throw new HttpError(404, "等級要件が見つかりませんでした。");
 
       const usage = await gradeRequirementUsage(db, companyId);
       const blocked = deleteBlockedReason(usage[row.id] ?? []);
       if (blocked) throw new HttpError(400, blocked);
 
-      await db.delete(s.gradeRequirements).where(eq(s.gradeRequirements.id, row.id));
+      const ids = versionFamilyDeleteOrder(rows, row.id);
+      await db.batch(
+        ids.map((id) => db.delete(s.gradeRequirements).where(eq(s.gradeRequirements.id, id))) as unknown as Parameters<
+          typeof db.batch
+        >[0],
+      );
       return { message: `「${row.text}」を消しました。一覧から無くなります。` };
     }
 
     case "promotionRequirement": {
-      const row = (
-        await db
-          .select({ id: s.promotionRequirements.id, text: s.promotionRequirements.text })
-          .from(s.promotionRequirements)
-          .where(and(eq(s.promotionRequirements.id, body.id), eq(s.promotionRequirements.companyId, companyId)))
-          .limit(1)
-      )[0];
+      const rows = await db.select().from(s.promotionRequirements).where(eq(s.promotionRequirements.companyId, companyId));
+      const row = rows.find((candidate) => candidate.id === body.id);
       if (!row) throw new HttpError(404, "昇格要件が見つかりませんでした。");
 
       const usage = await promotionRequirementUsage(db, companyId);
       const blocked = deleteBlockedReason(usage[row.id] ?? []);
       if (blocked) throw new HttpError(400, blocked);
 
-      await db.delete(s.promotionRequirements).where(eq(s.promotionRequirements.id, row.id));
+      const ids = versionFamilyDeleteOrder(rows, row.id);
+      await db.batch(
+        ids.map((id) => db.delete(s.promotionRequirements).where(eq(s.promotionRequirements.id, id))) as unknown as Parameters<
+          typeof db.batch
+        >[0],
+      );
       return { message: `「${row.text}」を消しました。一覧から無くなります。` };
     }
   }

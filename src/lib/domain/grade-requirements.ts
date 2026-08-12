@@ -1,3 +1,5 @@
+import { currentVersionRows } from "@/lib/domain/versioned-master";
+
 /**
  * 等級要件（支援について／運営について）の決まりごと。
  *
@@ -21,6 +23,7 @@ export interface RequirementRow {
   seq: number;
   text: string;
   isActive: boolean;
+  previousVersionId?: string | null;
 }
 
 export const CATEGORY_LABEL: Record<RequirementCategory, string> = {
@@ -33,12 +36,22 @@ export const CATEGORY_LABEL: Record<RequirementCategory, string> = {
  * 区分の値を文字列で受けるのは、同じ形をしている昇格要件（種類 report / test）でも使い回すため。
  */
 export function activeOf(rows: RequirementRow[], category: string): RequirementRow[] {
-  return rows.filter((r) => r.category === category && r.isActive).sort((a, b) => a.seq - b.seq);
+  return currentVersionRows(rows)
+    .filter((r) => r.category === category && r.isActive)
+    .sort((a, b) => a.seq - b.seq || a.id.localeCompare(b.id));
 }
 
-/** 使わない状態にしてある項目（元に戻せるように残してある）。 */
+/** 現在版のうち、使わない状態にしてある項目（元に戻せる）。 */
 export function inactiveOf(rows: RequirementRow[]): RequirementRow[] {
-  return rows.filter((r) => !r.isActive).sort((a, b) => a.seq - b.seq);
+  return currentVersionRows(rows)
+    .filter((r) => !r.isActive)
+    .sort((a, b) => a.seq - b.seq || a.id.localeCompare(b.id));
+}
+
+/** 後続版があるため、再開ではなく履歴としてだけ見せる版。 */
+export function historicalOf(rows: RequirementRow[]): RequirementRow[] {
+  const currentIds = new Set(currentVersionRows(rows).map((row) => row.id));
+  return rows.filter((row) => !currentIds.has(row.id));
 }
 
 /** あと何項目登録できるか。 */

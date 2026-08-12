@@ -6,8 +6,8 @@ import { bandSetUsedBy, behaviorGuidelineUsage } from "@/lib/master-usage";
 import { BehaviorBandAssignmentEditor } from "@/components/BehaviorBandAssignmentEditor";
 import { BehaviorBandSetEditor } from "@/components/BehaviorBandSetEditor";
 import { BehaviorGuidelineEditor } from "@/components/BehaviorGuidelineEditor";
-import { behaviorBandLabel, gradesUsingBand } from "@/lib/domain/behavior";
-import { Card, CardRow, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+import { gradesUsingBand } from "@/lib/domain/behavior";
+import { Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -56,8 +56,6 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
     levels: g.levels.map((l) => ({ id: l.id, score: l.score, label: l.label, text: l.text })),
   }));
 
-  const applied = grades.filter((g) => g.behaviorBand !== null);
-
   return (
     <>
       <PageTitle
@@ -66,31 +64,9 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
       />
 
       <SectionHeading>どの等級に出すか</SectionHeading>
-      <Card className="card-pad">
-        {grades.length === 0 ? (
-          <p className="m-0 text-sub">等級が登録されていません。</p>
-        ) : (
-          <>
-            {/* 「等級名：基準の呼び名」をつないでカッコに詰めると、5等級で130文字を超える
-                1行になる。同じ対応は下の並びがそのまま出しているので、文は件数だけにする。 */}
-            <p className="m-0 text-sub">
-              いま行動指針の基準を割り当てている等級は <b>{applied.length}件</b> です。
-            </p>
-            <p className="footnote m-0 mt-1">等級ごとの割り当ては次のとおりです。</p>
-            <div className="mt-2 grid gap-2">
-              {grades.map((g) => (
-                <CardRow
-                  key={g.id}
-                  title={g.name}
-                  sub={g.behaviorBand ? behaviorBandLabel(bandSets, g.behaviorBand) : "行動指針を出さない"}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </Card>
-
-      {grades.length > 0 && (
+      {grades.length === 0 ? (
+        <EmptyState title="等級が登録されていません" body="先に等級を登録してください。" />
+      ) : (
         <div className="mt-3">
           <BehaviorBandAssignmentEditor
             grades={grades.map((grade) => ({ id: grade.id, name: grade.name, behaviorBand: grade.behaviorBand }))}

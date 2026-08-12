@@ -16,6 +16,7 @@ import {
 } from "@/lib/queries";
 import { listPendingRespondents } from "@/lib/evaluate";
 import { listStalledEvaluations } from "@/lib/stalled";
+import { currentVersionRows } from "@/lib/domain/versioned-master";
 import { EmptyState } from "@/components/ui";
 import { AdminDashboard } from "./AdminDashboard";
 
@@ -78,8 +79,8 @@ export default async function AdminHome() {
         companyName: viewer.companyName ?? "会社",
         memberCount: members.length,
         gradeCount: grades.length,
-        activeGradeRequirementCount: gradeRequirements.filter((row) => row.isActive).length,
-        activePromotionRequirementCount: promotionRequirements.filter((row) => row.isActive).length,
+        activeGradeRequirementCount: currentVersionRows(gradeRequirements).filter((row) => row.isActive).length,
+        activePromotionRequirementCount: currentVersionRows(promotionRequirements).filter((row) => row.isActive).length,
         activeBehaviorGuidelineCount: behaviorGuidelines.filter((row) => row.isActive).length,
         behaviorAppliedGradeCount: grades.filter((row) => row.isActive && Boolean(row.behaviorBand)).length,
         kpiItemCount: kpiItems.length,

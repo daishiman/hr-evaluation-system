@@ -104,12 +104,31 @@ export function createTestDatabase(): TestDatabase {
   const sqlite = new DatabaseSync(":memory:");
   for (const st of migrationStatements()) sqlite.exec(st);
 
+  /* D1 は同じdatabaseへのbatchを直列のtransactionとして扱う。テストでも同時要求を
+     Promise.allしたときにBEGIN同士が衝突せず、本番と同じく先行batchのcommit後に
+     次を判定するよう、短いqueueに載せる。 */
+  let batchTail: Promise<void> = Promise.resolve();
+
   const client = {
     prepare: (sql: string) => new SqlitePrepared(sqlite, sql),
     async batch(stmts: SqlitePrepared[]) {
-      const out = [];
-      for (const s of stmts) out.push(await s.all());
-      return out;
+      const run = batchTail.then(async () => {
+        sqlite.exec("BEGIN");
+        try {
+          const out = [];
+          for (const statement of stmts) out.push(await statement.all());
+          sqlite.exec("COMMIT");
+          return out;
+        } catch (error) {
+          sqlite.exec("ROLLBACK");
+          throw error;
+        }
+      });
+      batchTail = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      return run;
     },
     async exec(sql: string) {
       sqlite.exec(sql);

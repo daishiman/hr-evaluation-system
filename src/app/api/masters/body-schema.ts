@@ -55,39 +55,62 @@ export const bodySchema = z.discriminatedUnion("kind", [
     name: z.string().min(1).max(60).optional(),
   }),
   z.object({
-    kind: z.literal("gradeRequirement"),
-    id: z.string().optional(),
+    kind: z.literal("gradeRequirementCreate"),
     gradeId: z.string().min(1),
     category: z.enum(["support", "operation"]),
     text: z.string().min(1).max(300),
-    seq: z.number().int().min(1).max(99).optional(),
-    isActive: z.boolean().optional(),
+  }),
+  z.object({
+    kind: z.literal("gradeRequirementRevise"),
+    id: z.string().min(1),
+    text: z.string().min(1).max(300),
+  }),
+  z.object({
+    kind: z.literal("gradeRequirementActivation"),
+    id: z.string().min(1),
+    isActive: z.boolean(),
+  }),
+  z.object({
+    /** 過去版の本文を、現在版の次の新しい版として復元する。 */
+    kind: z.literal("gradeRequirementRestoreContent"),
+    id: z.string().min(1),
+    sourceVersionId: z.string().min(1),
   }),
   z.object({
     /** 等級要件の並べ替え（同じ区分の中で1つ上／下と入れ替える） */
     kind: z.literal("gradeRequirementOrder"),
     id: z.string().min(1),
-    gradeId: z.string().min(1),
-    category: z.enum(["support", "operation"]),
     direction: z.enum(["up", "down"]),
   }),
   z.object({
-    kind: z.literal("promotionRequirement"),
-    id: z.string().optional(),
+    kind: z.literal("promotionRequirementCreate"),
     gradeId: z.string().min(1),
     reqKind: z.enum(["report", "test"]),
     text: z.string().min(1).max(300),
     transitionLabel: z.string().max(60).nullable().optional(),
-    seq: z.number().int().min(1).max(99).optional(),
     isGate: z.boolean().optional(),
-    isActive: z.boolean().optional(),
+  }),
+  z.object({
+    kind: z.literal("promotionRequirementRevise"),
+    id: z.string().min(1),
+    text: z.string().min(1).max(300),
+    transitionLabel: z.string().max(60).nullable().optional(),
+    isGate: z.boolean(),
+  }),
+  z.object({
+    kind: z.literal("promotionRequirementActivation"),
+    id: z.string().min(1),
+    isActive: z.boolean(),
+  }),
+  z.object({
+    kind: z.literal("promotionRequirementRestoreContent"),
+    id: z.string().min(1),
+    sourceVersionId: z.string().min(1),
   }),
   z.object({
     /** 昇格要件の並べ替え（同じ種類の中で1つ上／下と入れ替える） */
     kind: z.literal("promotionRequirementOrder"),
     id: z.string().min(1),
-    gradeId: z.string().min(1),
-    reqKind: z.enum(["report", "test"]),
     direction: z.enum(["up", "down"]),
   }),
   z.object({
