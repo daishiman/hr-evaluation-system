@@ -13,8 +13,14 @@ import { getDb, schema as s } from "@/lib/db";
  * 影響があることだけを知らせ、扱いは人が決める。
  */
 
-/** 判定に効くマスタ。ここに載っているものが変わったら再集計の対象になる。 */
-const WATCHED = [
+/**
+ * 判定に効くマスタ。ここに載っているものが変わったら再集計の対象になる。
+ *
+ * ここに載せる表は「更新時刻（updatedAt）を持っていること」が前提。
+ * 持たない表を足すと更新時刻を引けないため、`impact.watched.test.ts` で
+ * 全件そろっているかを検査している（足した時点で検査が赤くなる）。
+ */
+export const WATCHED = [
   { table: s.kpiRankCriteria, label: "KPIのランク基準（A〜Eの線引き）" },
   { table: s.schemeItems, label: "評価項目と配点" },
   { table: s.schemeRankRatios, label: "ランクごとの点数の割合" },
@@ -57,8 +63,6 @@ export async function listMasterChanges(companyId: string): Promise<ChangedMaste
   for (const w of WATCHED) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const t: any = w.table;
-    // 更新時刻を持たない表を足してしまっても画面が落ちないようにする
-    if (!t.updatedAt) continue;
     const r = await db.select({ t: sql<number | null>`max(${t.updatedAt})` }).from(t).where(eq(t.companyId, companyId));
     const at = r[0]?.t;
     if (at) out.push({ label: w.label, updatedAt: new Date(Number(at)) });

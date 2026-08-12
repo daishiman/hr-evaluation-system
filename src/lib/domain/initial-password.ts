@@ -57,7 +57,10 @@ export type IssuedMemberCredential = {
  * （256 を単純に剰余で丸めると、先頭側の文字だけ出やすくなる）。
  */
 export function generateInitialPassword(): string {
-  if (PASSWORD_LENGTH <= 0 || PASSWORD_ALPHABET.length === 0) return "";
+  /* 長さと文字種はこのファイルの定数で、`initial-password.test.ts` が
+     「長さは10文字以上」「文字種は重複なく揃っている」ことを検査している。
+     以前あった「長さ0・文字種0なら空文字を返す」逃げ道は、その検査がある限り
+     通ることが無く、読む人に「空のパスワードが出ることがある」と誤解させるため外した。 */
   const n = PASSWORD_ALPHABET.length;
   const limit = Math.floor(256 / n) * n;
   const out: string[] = [];
