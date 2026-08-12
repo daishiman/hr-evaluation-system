@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card } from "@/components/ui";
+import { Card, InlineDetail } from "@/components/ui";
 
 /**
  * 「基準を変えたのに、集計し直していない評価がある」ことの知らせ。
@@ -46,11 +46,14 @@ export function StaleCyclesNotice({ cycles }: { cycles: StaleCycle[] }) {
           );
         })}
       </ul>
-      <p className="footnote m-0 mt-2">
-        {hasRecomputable
-          ? "確認中の評価だけを現在の基準で集計し直せます。確定済みの評価は、判定した当時の値を控えているため動きません。"
-          : "確定済みの評価は、判定した当時の値を控えているため、現在の基準では集計し直しません。"}
-      </p>
+      {/* いま必要なのは「何ができるか」だけ。動かない理由は押したときに読めればよい。 */}
+      {hasRecomputable && (
+        <p className="footnote m-0 mt-2">確認中の評価だけを、現在の基準で集計し直せます。</p>
+      )}
+      <InlineDetail summary="確定済みの評価が動かない理由">
+        <p className="m-0">確定済みの評価は、判定した当時の値を控えています。</p>
+        <p className="m-0 mt-1">そのため、現在の基準では集計し直しません。</p>
+      </InlineDetail>
     </Card>
   );
 }

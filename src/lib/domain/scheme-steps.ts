@@ -36,7 +36,7 @@ export function stepTitle(step: StepKey): string {
 export function stepLede(step: StepKey, pointGroup: string): string {
   return step === "select"
     ? `${pointGroup} の評価に使うKPIを選びます。ここでは全項目から選べます。`
-    : `${pointGroup} で選んだ項目だけを対象に、実績値がどこからどこまでならA〜Eのどれになるかを決めます。`;
+    : `${pointGroup} で選んだ項目だけが対象です。実績値がどこからどこまでならA〜Eのどれになるかを決めます。`;
 }
 
 /** 手順のURL。パスの組み立てを画面ごとに書き起こさない。 */

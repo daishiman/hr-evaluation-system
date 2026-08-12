@@ -33,7 +33,7 @@ describe("本人に見せてよい形へ削る", () => {
 
   it("実績値はあるが単位が無い項目でも、数値をそのまま添える", () => {
     expect(buildEmployeeItemRationale({ itemName: "件数", rank: "B", actualValue: 12, unit: null })).toContain(
-      "実績値 12 により",
+      "実績値は 12 です。",
     );
   });
 

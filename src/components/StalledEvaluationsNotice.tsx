@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge, Card, CardRow } from "@/components/ui";
+import { Badge, Card, CardRow, InlineDetail } from "@/components/ui";
 import {
   STALLED_KIND_LABEL,
   stalledHeadline,
@@ -49,8 +49,8 @@ export function StalledEvaluationsNotice({
     <Card className="card-pad">
       <p className="todo-row-title m-0 text-head">{stalledHeadline(summary)}</p>
       <p className="todo-row-sub m-0 mt-1">
-        締め切った評価期間は、ふだんのホームには出てきません。ここに残っているものは、
-        誰かが確定するまでご本人に結果が表示されないままになります。
+        締め切った評価期間は、ふだんのホームには出てきません。ここに残っているものは、まだ確定されていません。
+        誰かが確定するまで、ご本人に結果が表示されません。
       </p>
       <p className="m-0 mt-2 text-note text-[var(--ink-muted)]">
         内訳：確定待ち {summary.finalize}件 ／ 集計待ち {summary.build}件
@@ -81,10 +81,14 @@ export function StalledEvaluationsNotice({
         </p>
       )}
 
-      <p className="footnote m-0 mt-2">
-        経過日数は、その評価期間の終了日から数えています。確定済みの評価と公開済みのアンケートは、
-        この知らせでは何も変わりません。
-      </p>
+      {/* 数え方と「この知らせでは何も動かない」ことは、押したときに読めればよい背景 */}
+      <div className="mt-2">
+        <InlineDetail summary="経過日数の数え方">
+          <p className="m-0">経過日数は、その評価期間の終了日から数えています。</p>
+          <p className="m-0 mt-1">この知らせでは、確定済みの評価は何も変わりません。</p>
+          <p className="m-0 mt-1">公開済みのアンケートも変わりません。</p>
+        </InlineDetail>
+      </div>
     </Card>
   );
 }
@@ -109,7 +113,8 @@ export function StalledByCompanyNotice({
         締め切った期間に、確定されていない評価が{total}件あります（{companies.length}社）
       </p>
       <p className="todo-row-sub m-0 mt-1">
-        誰の分かを見るには、上の「操作する会社」でその会社に切り替えてから、会社のホームを開いてください。
+        誰の分かを見るには、上の「操作する会社」でその会社に切り替えます。
+        そのあと、会社のホームを開いてください。
       </p>
       <div className="mt-3">
         {companies.map((company) => (

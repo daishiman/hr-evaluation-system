@@ -8,7 +8,19 @@ import {
   listPromotionThresholds,
   listRaiseSettings,
 } from "@/lib/queries";
-import { Badge, Card, CardRow, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  CardRow,
+  Disclosure,
+  EmptyState,
+  InlineDetail,
+  Num,
+  PageTitle,
+  ProvisionalMark,
+  ReasonNote,
+  SectionHeading,
+} from "@/components/ui";
 import {
   getActiveScheme,
   listGradePointRules,
@@ -111,7 +123,7 @@ export default async function CriteriaPage({
   };
 
   /* 項目名から、その項目のランク基準（A〜E）へ飛ぶリンク。
-     ?item= を付けるのは、飛んだ先の <details> を開いた状態でサーバーが返すため。
+     ?item= を付けるのは、飛んだ先の畳んだ箱を開いた状態でサーバーが返すため。
      この画面はサーバーコンポーネントなので、リンクだけでは開閉を切り替えられない。
      「選んだ項目」と「その項目をどう評価するか」を必ず行き来できるようにしておく。 */
   const criteriaHref = (kpiItemId: string): string =>
@@ -147,15 +159,16 @@ export default async function CriteriaPage({
             selectableCount={selectable.length}
           />
 
-          <details className="card card-pad mt-3">
-            <summary className="cursor-pointer text-sub font-semibold">ほかの等級区分と見くらべる</summary>
-            <div className="mt-3">
+          <div className="mt-3">
+            <Disclosure summary="ほかの等級区分と見くらべる" meta={`全${rules.length}区分`}>
               <PointRuleComparison rules={rules} currentGroup={pointGroup} />
               <p className="footnote mt-2">
-                等級区分は配点をまとめる単位です。AMⅠとAMⅡ、ManagerⅠとManagerⅡは配点が同じで、等級要件の中身だけが違います。
+                等級区分は配点をまとめる単位です。
+                AMⅠとAMⅡ、ManagerⅠとManagerⅡは配点が同じです。
+                違うのは等級要件の中身だけです。
               </p>
-            </div>
-          </details>
+            </Disclosure>
+          </div>
 
           <SectionHeading>昇格・昇給の条件</SectionHeading>
           <Card className="card-pad">
@@ -195,8 +208,14 @@ export default async function CriteriaPage({
             )}
             <p className="footnote m-0 mt-2">
               昇給は{scheme?.raiseRequiresAllA === false ? "満点" : "「選んだ項目がすべてA」"}が条件です。
-              この点数はアンケートの回答画面には表示されません（回答が点数合わせにならないようにするためです）。
+              この点数はアンケートの回答画面には表示されません。
             </p>
+            {/* 「出さない」という事実は残し、その理由だけ畳む */}
+            <div className="mt-1">
+              <InlineDetail summary="回答画面に点数を出さない理由">
+                <p className="m-0 text-sub">回答が点数合わせにならないようにするためです。</p>
+              </InlineDetail>
+            </div>
           </Card>
 
           <SectionHeading>この等級で選べる項目</SectionHeading>
@@ -269,21 +288,29 @@ export default async function CriteriaPage({
           )}
 
           <SectionHeading>1項目ずつの採点の流れ</SectionHeading>
-          <p className="footnote mb-2">
-            聞くこと → 実績値 → ランク → 点数、の順に1項目ぶんを通して見られます。点数は「配点 × ランクの割合」で決まり、
-            割合は{" "}
-            {ratios.length > 0
-              ? ratios.map((r) => `${r.rank}=${Math.round(r.ratio * 100)}%`).join("、")
-              : "まだ登録されていません"}
-            です
-            {ratios.some((r) => r.isProvisional) && (
-              <>
-                {" "}
-                <ProvisionalMark note="ランクごとの割合は制度として未確定のため、叩き台の初期値です。" />
-              </>
-            )}
-            。見たい項目を開いてください。
-          </p>
+          <p className="footnote mb-2">見たい項目を開いてください。</p>
+          {/* 点数の決まり方（式とランクごとの割合）は仕組みの解説。
+              33項目の一覧より前に置くと、毎回そこを読み飛ばすことになる */}
+          <div className="mb-2">
+            <InlineDetail summary="点数の決まり方（配点とランクの割合）">
+              <p className="m-0 text-sub">聞くこと → 実績値 → ランク → 点数、の順に1項目ぶんを通して見られます。</p>
+              <p className="m-0 mt-1 text-sub">点数は「配点 × ランクの割合」で決まります。</p>
+              <p className="m-0 mt-1 text-sub">
+                割合は{" "}
+                {ratios.length > 0
+                  ? ratios.map((r) => `${r.rank}=${Math.round(r.ratio * 100)}%`).join("、")
+                  : "まだ登録されていません"}
+                です
+                {ratios.some((r) => r.isProvisional) && (
+                  <>
+                    {" "}
+                    <ProvisionalMark note="ランクごとの割合は制度として未確定のため、叩き台の初期値です。" />
+                  </>
+                )}
+                。
+              </p>
+            </InlineDetail>
+          </div>
           <ScoringFlow
             items={selectable}
             weightOf={weightOf}
@@ -317,11 +344,18 @@ export default async function CriteriaPage({
               ))}
             </div>
           )}
-          <p className="footnote mt-2">
-            等級要件達成率は「達成した項目数 ÷ この等級のアンケートで聞いた等級要件の項目数」で計算します。
-            未回答の項目は未達として数えます。半期に目標として設定できるのは最大{" "}
-            <Num value={grade.targetCap} unit="件" /> です（達成率の計算には使いません）。
-          </p>
+          {/* 計算式は「知りたくなったときに読む」もの。要件の一覧より前に出す必要はない */}
+          <div className="mt-2">
+            <InlineDetail summary="等級要件達成率の出し方と、目標の上限">
+              <p className="m-0 text-sub">等級要件達成率は「達成した項目数 ÷ 聞いた項目数」で計算します。</p>
+              <p className="m-0 mt-1 text-sub">分母は、この等級のアンケートで聞いた等級要件の項目数です。</p>
+              <p className="m-0 mt-1 text-sub">未回答の項目は未達として数えます。</p>
+              <p className="m-0 mt-1 text-sub">
+                半期に目標として設定できるのは最大 <Num value={grade.targetCap} unit="件" /> です。
+                この上限は達成率の計算には使いません。
+              </p>
+            </InlineDetail>
+          </div>
 
           <SectionHeading>昇格要件（受講後の報告書・テスト）</SectionHeading>
           {myPromo.length === 0 ? (

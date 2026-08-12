@@ -62,7 +62,7 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
     <>
       <PageTitle
         title="行動指針"
-        lede="アンケートで問う行動指針の中身と、どの等級に出すかを決めます。変更は次に作るアンケートから反映され、すでに公開したアンケートと確定済みの評価は動きません。"
+        lede="アンケートで問う行動指針の中身と、どの等級に出すかを決めます。変更は次に作るアンケートから反映されます。すでに公開したアンケートと確定済みの評価は動きません。"
       />
 
       <SectionHeading>どの等級に出すか</SectionHeading>
@@ -71,11 +71,12 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
           <p className="m-0 text-sub">等級が登録されていません。</p>
         ) : (
           <>
+            {/* 「等級名：基準の呼び名」をつないでカッコに詰めると、5等級で130文字を超える
+                1行になる。同じ対応は下の並びがそのまま出しているので、文は件数だけにする。 */}
             <p className="m-0 text-sub">
-              いま行動指針の基準を割り当てている等級は <b>{applied.length}件</b>
-              {applied.length > 0 && `（${applied.map((g) => `${g.name}：${behaviorBandLabel(bandSets, g.behaviorBand)}`).join(" / ")}）`}
-              です。
+              いま行動指針の基準を割り当てている等級は <b>{applied.length}件</b> です。
             </p>
+            <p className="footnote m-0 mt-1">等級ごとの割り当ては次のとおりです。</p>
             <div className="mt-2 grid gap-2">
               {grades.map((g) => (
                 <CardRow
@@ -102,7 +103,8 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
       <div className="mt-3">
         <Disclosure summary="行動指針の初期設定について">
           <p className="footnote m-0">
-            移行元には、AM Ⅰ・AM Ⅱへ行動指針を出さない記録と、実際に出したアンケートがありました。初期値は実際のアンケートを採用しています。会社の制度に合わせて上で切り替えてください。
+            移行元には、AM Ⅰ・AM Ⅱへ行動指針を出さない記録がありました。実際に出したアンケートも残っていました。
+            初期値は実際のアンケートを採用しています。会社の制度に合わせて上で切り替えてください。
           </p>
         </Disclosure>
       </div>

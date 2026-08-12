@@ -1,5 +1,17 @@
 import Link from "next/link";
-import { Badge, Bar, Card, CardHead, CardRow, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
+import {
+  Badge,
+  Bar,
+  Card,
+  CardHead,
+  CardRow,
+  Disclosure,
+  EmptyState,
+  LinkButton,
+  Num,
+  PageTitle,
+  SectionHeading,
+} from "@/components/ui";
 
 export interface MyActionForm {
   formId: string;
@@ -149,37 +161,41 @@ export function MyDashboard({
           </div>
 
           {previous.length > 0 && (
-            <details className="disclosure mt-5">
-              <summary>過去の結果を見る（{previous.length}件）</summary>
-              <div className="disclosure-body p-0 text-[var(--ink)]">
-                {previous.map((result) => (
-                  <CardRow
-                    key={result.id}
-                    title={
-                      <Link href={`/me/results/${result.id}`} className="text-[var(--brand-deep)]">
-                        {result.cycleName ?? "評価結果"}
-                      </Link>
-                    }
-                    sub={
-                      <>
-                        {result.gradeName ?? "等級未設定"} ／ 等級要件の達成率 <Num value={result.requirementRate} unit="%" />
-                      </>
-                    }
-                    marks={<ResultBadges result={result} />}
-                  />
-                ))}
-              </div>
-            </details>
+            <div className="mt-5">
+              <Disclosure summary="過去の結果を見る" meta={`${previous.length}件`}>
+                <div className="p-0 text-[var(--ink)]">
+                  {previous.map((result) => (
+                    <CardRow
+                      key={result.id}
+                      title={
+                        <Link href={`/me/results/${result.id}`} className="text-[var(--brand-deep)]">
+                          {result.cycleName ?? "評価結果"}
+                        </Link>
+                      }
+                      sub={
+                        <>
+                          {result.gradeName ?? "等級未設定"} ／ 等級要件の達成率{" "}
+                          <Num value={result.requirementRate} unit="%" />
+                        </>
+                      }
+                      marks={<ResultBadges result={result} />}
+                    />
+                  ))}
+                </div>
+              </Disclosure>
+            </div>
           )}
         </Card>
       )}
 
-      <details className="disclosure mt-5">
-        <summary>この画面に表示される内容</summary>
-        <div className="disclosure-body">
-          アンケートは入力途中でも自動保存されます。評価結果には結論だけでなく、判定の理由と自分が提出した回答も残ります。評価基準の配点や昇格に必要な点数は表示されません。
-        </div>
-      </details>
+      <div className="mt-5">
+        <Disclosure summary="この画面に表示される内容">
+          <p className="m-0">アンケートは入力途中でも自動保存されます。</p>
+          <p className="m-0 mt-1">評価結果には、結論だけでなく判定の理由も残ります。</p>
+          <p className="m-0 mt-1">自分が提出した回答も、あとから見返せます。</p>
+          <p className="m-0 mt-1">評価基準の配点や、昇格に必要な点数は表示されません。</p>
+        </Disclosure>
+      </div>
     </>
   );
 }

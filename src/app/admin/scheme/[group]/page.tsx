@@ -28,7 +28,9 @@ export default async function SchemeSelectPage({ params }: { params: Promise<{ g
       breadcrumb={[
         { label: "制度設定ガイド", href: "/admin/setup" },
         { label: "KPI・評価セット", href: "/admin/scheme" },
-        { label: `${pointGroup}（${group.gradeLabel}）` },
+        /* 等級名はパンくずに詰めない（5等級ぶんつなぐと1段が130文字を超える）。
+           どの等級が入るかは、下の配点カードに並びで出している。 */
+        { label: pointGroup },
       ]}
       title={`${pointGroup}：${stepTitle("select")}`}
       lede={stepLede("select", pointGroup)}
@@ -61,7 +63,7 @@ export default async function SchemeSelectPage({ params }: { params: Promise<{ g
       <SchemeGroupPicker
         schemeId={setup.scheme.id}
         pointGroup={group.pointGroup}
-        gradeLabel={group.gradeLabel}
+        gradeNames={group.gradeNames}
         rule={group.rule}
         ratedItemIds={group.ratedItemIds}
         initial={group.saved}

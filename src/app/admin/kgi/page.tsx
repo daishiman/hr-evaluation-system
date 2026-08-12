@@ -11,7 +11,7 @@ import {
 } from "@/lib/queries";
 import { kgiRangeLabel, matchKgiCoefficient } from "@/lib/domain/kgi";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, Disclosure, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
+import { Badge, Card, Disclosure, EmptyState, InlineDetail, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { formatDate, formatPeriod, CYCLE_STATUS_LABEL } from "@/lib/view";
 import { detectStaleCycles } from "@/lib/impact";
@@ -104,7 +104,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
               </LinkButton>
             }
           >
-            個人Pt 1点あたりの金額が未設定のため、個人Ptまでは出せますが賞与額は出せません。
+            個人Pt 1点あたりの金額が未設定です。個人Ptまでは出せますが、賞与額は出せません。
           </ReasonNote>
         </div>
       )}
@@ -127,8 +127,8 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
         {counts.unknownOffice > 0 && (
           <p className="footnote m-0 mt-2">
             この期間の評価のうち <Num value={counts.unknownOffice} unit="件" />
-            は、どの事業所の方か分からないため（社員に事業所が設定されていません）達成率を当てられません。
-            社員の画面で事業所を設定してから集計し直してください。
+            は、達成率を当てられません。どの事業所の方か分からないためです。
+            社員に事業所が設定されていません。社員の画面で事業所を設定してから、集計し直してください。
           </p>
         )}
       </Card>
@@ -146,6 +146,13 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
         </ReasonNote>
       ) : (
         <div className="grid gap-3">
+          {/* 「未登録だとどう見えるか」は事業所ごとに同じ文になるため、行から外してここに1つだけ置く。 */}
+          <InlineDetail summary="未登録の事業所はどう表示されますか">
+            <p className="footnote m-0">
+              達成率が未登録の事業所は、個人Pt・賞与額を「まだ出せません」と表示します。
+              0円とは表示しません。0円と書くと、KGIをまったく達成できなかったという別の意味になるためです。
+            </p>
+          </InlineDetail>
           {offices.map((o) => {
             const current = results.find((r) => r.officeId === o.id) ?? null;
             const match = current ? matchKgiCoefficient(current.achievementRate, coefficientRows) : null;
@@ -164,7 +171,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
                       ? `いまの登録：${current.achievementRate}%${
                           match ? `（達成係数 ${match.coefficient}／「${match.row.label}」）` : "（当てはまる達成係数が表にありません）"
                         }。確認中の評価 ${c.draft}件に反映され、確定済み ${c.finalized}件は据え置かれます。`
-                      : `まだ登録されていません。登録すると、この事業所の確認中の評価 ${c.draft}件に個人Pt・賞与額が入ります（確定済み ${c.finalized}件は据え置き）。`
+                      : `まだ登録されていません。登録すると、確認中の評価 ${c.draft}件に個人Pt・賞与額が入ります。確定済み ${c.finalized}件は据え置きです。`
                   }
                   fields={[
                     {
@@ -201,9 +208,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
                       です（賞与額は配点が未確定のため <ProvisionalMark /> 仮の金額です）。
                     </>
                   ) : (
-                    <>
-                      未登録のため、この事業所の方の個人Pt・賞与額は「まだ出せません」と表示されます（0円とは表示しません）。
-                    </>
+                    <>未登録のため、この事業所の方の個人Pt・賞与額は出せません。</>
                   )}
                 </p>
               </div>
@@ -242,10 +247,15 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
               { key: "coefficient", header: "達成係数", num: true, cell: (c) => <Num value={c.coefficient} /> },
             ]}
           />
-          <p className="footnote">
-            元の表は「111〜120%」のように整数で書かれていて、99%と100%の間・110%と111%の間が抜けていました。
-            99.5% のような小数が来てもどこかに必ず当てはまるよう、下限以上・上限未満で連続させています。
-          </p>
+          {/* 区切りかたの理由は、表を読むだけの人には要らない。押したときだけ出す。 */}
+          <InlineDetail summary="達成率の区切りかたの決まり">
+            <p className="footnote m-0">
+              元の表は「111〜120%」のように整数で書かれていました。
+              99%と100%の間・110%と111%の間が抜けていました。
+              99.5% のような小数が来てもどこかに必ず当てはまるようにしています。
+              そのため、下限以上・上限未満で連続させています。
+            </p>
+          </InlineDetail>
           {/* 係数は達成率と同じ持ち場の話なので、直す場所もこの画面に置く。
               普段は見るだけなので、開いたときだけ入力欄を出す */}
           <Disclosure summary="達成係数を変更する" meta={`${coefficients.length}区分`}>
@@ -307,7 +317,8 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
       )}
 
       <p className="footnote">
-        確定済みの評価は、確定した時点の達成率・係数・金額のまま据え置きます（ここで達成率を変えても動きません）。
+        確定済みの評価は据え置きます。確定した時点の達成率・係数・金額のままです。
+        ここで達成率を変えても動きません。
         確定前の評価だけが、保存と同時に個人Pt・賞与額を計算し直します。
       </p>
     </>

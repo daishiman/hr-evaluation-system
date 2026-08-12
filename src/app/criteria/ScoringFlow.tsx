@@ -1,4 +1,4 @@
-import { Badge, Card, Num } from "@/components/ui";
+import { Badge, Card, Disclosure, Num } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import type { SelectableItem } from "./data";
 
@@ -109,18 +109,24 @@ function ItemFlow({
   const sorted = [...criteria].sort((a, b) => RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank));
 
   return (
-    <details className="card card-pad" id={anchorIdOf(item.kpiItemId)} open={open}>
-      <summary className="cursor-pointer list-item text-sub">
-        <span className="font-semibold">
-          No.{item.no} {item.name}
-        </span>{" "}
-        <span className="footnote">／ {slotLabel}</span>{" "}
-        <span className="num font-bold">{weight}</span>
-        <span className="unit">点</span>
-        {adopted && <> <Badge tone="active">この等級で採用中</Badge></>}
-      </summary>
-
-      <div className="mt-3 grid gap-4">
+    /* アンカーは畳む部品の外側に置く。畳む器を共通部品に替えても、
+       一覧からの「#kpi-… へ飛ぶ」と「?item= で開いた状態にする」は変わらない。 */
+    <div id={anchorIdOf(item.kpiItemId)}>
+      <Disclosure
+        defaultOpen={open}
+        summary={
+          <>
+            <span className="font-semibold">
+              No.{item.no} {item.name}
+            </span>{" "}
+            <span className="footnote">／ {slotLabel}</span>{" "}
+            <span className="num font-bold">{weight}</span>
+            <span className="unit">点</span>
+            {adopted && <> <Badge tone="active">この等級で採用中</Badge></>}
+          </>
+        }
+      >
+      <div className="grid gap-4">
         <div>
           <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">⓪ この項目の定義</p>
           <div className="grid gap-1">
@@ -225,7 +231,8 @@ function ItemFlow({
           {item.aStandard && <p className="footnote m-0 mt-1">Aの水準の考え方：{item.aStandard}</p>}
         </div>
       </div>
-    </details>
+      </Disclosure>
+    </div>
   );
 }
 

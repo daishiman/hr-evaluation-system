@@ -127,6 +127,17 @@ body {
   font-size: var(--text-body);
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
+  /* 日本語の折り返し (§22-3)。
+     日本語は語の切れ目が無いため、指定しないとブラウザ任せで
+     行頭に 、。」 が来る・行末に 「 が残る、といった割れ方をする。
+     ・line-break: strict … 禁則を厳格に効かせる
+     ・overflow-wrap: break-word … 入りきらないときだけ折る（保険）
+     ・word-break: normal … 既定。語の途中では折らない
+     break-all を全体に当てると、和文も英単語も真ん中で割れて読み速度が落ちる。
+     長い文への答えは折り返しではなく、文を分けること（ui-rules.test.ts の検査）。 */
+  line-break: strict;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 /* 数値の禁則 (§3-2) */
@@ -1381,6 +1392,43 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   margin-left: auto;
   text-align: right;
 }
+
+/* 行の中に置く、その場で開く短い補足 (§22-4)。
+   一覧の行に長い説明を出すと一覧が読めなくなるので、行には一言だけ残し、
+   列挙や理由はここに畳む。**押せることが見た目で分かること**が条件。
+   畳んだものに開く手がかりが無いのは、消したのと同じ（発注者の指摘の趣旨）。 */
+details.inline-detail { margin-top: 4px; }
+details.inline-detail > summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand);
+  font-size: var(--text-note);
+  /* 短い押し文言は折り返さない（1文字だけ落ちる割れ方を作らない） */
+  white-space: nowrap;
+}
+details.inline-detail > summary::-webkit-details-marker { display: none; }
+details.inline-detail > summary::after { content: "＋"; color: var(--ink-muted); }
+details.inline-detail[open] > summary::after { content: "－"; }
+details.inline-detail > summary:hover { background: var(--subtle); }
+details.inline-detail .inline-detail-body {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--line);
+  color: var(--ink-muted);
+  font-size: var(--text-note);
+}
+details.inline-detail .inline-detail-body > :first-child { margin-top: 0; }
+details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
+
+/* 読むだけの窓の見出し（節見出しではないので SectionHeading は使わない） */
+.detail-dialog-title { font-size: var(--text-sub); font-weight: 700; margin-bottom: 8px; }
 
 .footnote { font-size: var(--text-note); color: var(--ink-muted); }
 

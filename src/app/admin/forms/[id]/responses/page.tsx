@@ -229,7 +229,7 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
               name: "reason",
               label: "理由",
               type: "textarea",
-              help: "あとから「なぜ延ばしたか」を確認できるようにするための記録です（例：長期休暇のため）。",
+              help: "あとから「なぜ延ばしたか」を確認するための記録です。例：長期休暇のため",
             },
           ]}
         />

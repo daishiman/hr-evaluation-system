@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { StalledEvaluationsNotice } from "@/components/StalledEvaluationsNotice";
-import { Badge, Bar, Card, CardHead, DefList, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardHead, DefList, Disclosure, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 import type { StalledRow } from "@/lib/domain/stalled-evaluations";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
@@ -376,9 +376,10 @@ export function AdminDashboard({
         </div>
       )}
 
-      <details className="mt-5 rounded-xl border border-[var(--line)] bg-white px-4 py-3">
-        <summary className="cursor-pointer text-sub font-bold">設定する順番と役割を確認する</summary>
-        <p className="m-0 mt-2 text-note text-[var(--ink-muted)]">
+      {/* 順番と役割の一覧はカード1枚ぶんの長さ。畳む仕組みは共通部品に寄せる。 */}
+      <div className="mt-5">
+        <Disclosure summary="設定する順番と役割を確認する">
+        <p className="m-0 text-note text-[var(--ink-muted)]">
           後の設定は前の設定を使って作られます。迷ったときは上から順に確認してください。
         </p>
         <ol className="m-0 mt-3 grid list-decimal gap-2 pl-5 text-sub">
@@ -402,7 +403,8 @@ export function AdminDashboard({
             <Link href="/admin/forms" className="text-[var(--brand-deep)]">アンケート</Link> — 内容を確認して公開する
           </li>
         </ol>
-      </details>
+        </Disclosure>
+      </div>
     </>
   );
 }

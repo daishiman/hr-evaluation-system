@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { StalledByCompanyNotice } from "@/components/StalledEvaluationsNotice";
-import { Badge, Bar, Card, CardRow, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardRow, Disclosure, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
 
 export interface SystemCompanySummary {
   id: string;
@@ -160,25 +160,26 @@ export function SystemDashboard({
       </div>
 
       {companies.length > 0 && (
-        <details className="disclosure mt-5">
-          <summary>全社の運用状況を見る（{companies.length}社）</summary>
-          <div className="disclosure-body p-0">
-            {companies.map((company) => (
-              <CardRow
-                key={company.id}
-                off={!company.isActive}
-                className="text-[var(--ink)]"
-                title={
-                  <Link href={`/system/users?company=${company.id}`} className="text-[var(--brand-deep)]">
-                    {company.name}
-                  </Link>
-                }
-                sub={`在籍 ${company.activeUsers}/${company.users}人 ／ 評価期間 ${company.cycles}件 ／ 確定済み ${company.finalizedEvaluations}件`}
-                marks={<CompanyState company={company} />}
-              />
-            ))}
-          </div>
-        </details>
+        <div className="mt-5">
+          <Disclosure summary="全社の運用状況を見る" meta={`${companies.length}社`}>
+            <div className="p-0">
+              {companies.map((company) => (
+                <CardRow
+                  key={company.id}
+                  off={!company.isActive}
+                  className="text-[var(--ink)]"
+                  title={
+                    <Link href={`/system/users?company=${company.id}`} className="text-[var(--brand-deep)]">
+                      {company.name}
+                    </Link>
+                  }
+                  sub={`在籍 ${company.activeUsers}/${company.users}人 ／ 評価期間 ${company.cycles}件 ／ 確定済み ${company.finalizedEvaluations}件`}
+                  marks={<CompanyState company={company} />}
+                />
+              ))}
+            </div>
+          </Disclosure>
+        </div>
       )}
     </>
   );

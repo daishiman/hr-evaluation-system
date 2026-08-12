@@ -146,7 +146,8 @@ describe("本人向けの説明", () => {
   });
 
   it("単位が「-」のときは何も付けない", () => {
-    expect(judgeRank(92, higher, "higher", { unit: "-" }).rationaleEmployee).toContain("実績値 92 ");
+    // 「92-」にならないこと（単位の直後が句点であることまで見る）
+    expect(judgeRank(92, higher, "higher", { unit: "-" }).rationaleEmployee).toContain("実績値 92。");
   });
 
   it("ランクは上から何番目かで言い換える", () => {
@@ -243,7 +244,7 @@ describe("項目別絶対点方式（過去の評価の表示のために残し�
     const r = scoreItem({ rank: "B", weight: 20, mode: "absolute", ratios, absolute: null });
     expect(r.points).toBe(16);
     expect(r.fellBackToRatio).toBe(true);
-    expect(r.note).toContain("元の配点表がないため");
+    expect(r.note).toContain("元の配点表がありません");
   });
 
   it("Aの行が無い表も、退避扱いにする（満点が決められないため）", () => {
@@ -377,7 +378,8 @@ describe("総合判定（昇給・昇格）", () => {
       behaviorTotal: null,
       gates: [],
     });
-    expect(r.raiseReason).toContain("項目2 は実績が未入力");
+    // 項目名は文へ詰めず、見出しの下の並び（行頭「- 」）として返る
+    expect(r.raiseReason).toContain("次の項目は実績が未入力のため判定外です。\n- 項目2");
     expect(r.raiseReasonEmployee).toContain("項目2");
     expect(r.raiseReasonEmployee).not.toMatch(/[0-9]+点/);
   });

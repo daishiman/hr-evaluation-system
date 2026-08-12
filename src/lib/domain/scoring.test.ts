@@ -355,7 +355,7 @@ describe("scoreItem — 項目別絶対点方式（元の配点表）", () => {
     expect(r.points).toBe(16);
     expect(r.maxPoints).toBe(20);
     expect(r.fellBackToRatio).toBe(true);
-    expect(r.note).toContain("元の配点表がない");
+    expect(r.note).toContain("元の配点表がありません");
   });
 });
 
@@ -555,5 +555,84 @@ describe("rangeLabel — 表記は下限・上限から必ず導く", () => {
 
   it("小数は末尾の0を落として書く（99.50 とは書かない）", () => {
     expect(rangeLabel({ lowerBound: 99.5, upperBound: null }, "%", "higher")).toBe("99.5%以上");
+  });
+});
+
+/* ─────────── 理由は「結論の1文」と「対象の並び」に分ける ───────────
+ *
+ * 項目名・要件名を文へ詰めると、項目が増えた分だけ1文が伸びる。
+ * 差し込みの数が増えるだけなので、文を分けても直らない。
+ * 判定側は列挙を並び（行頭「- 」）で返し、画面はそれを <ul> で描く。
+ * ここで固定するのは「並びとして返る」ことと「1件も減っていない」こと。
+ */
+describe("昇給・昇格の理由は、列挙を文へ詰めない", () => {
+  const parts = (text: string) => text.split("\n");
+  const listOf = (text: string) => parts(text).filter((l) => l.startsWith("- ")).map((l) => l.slice(2));
+
+  it("A未満の項目は、結論の1文と項目の並びに分かれる（評価者向け・本人向けとも）", () => {
+    const res = judgeOverall({
+      items: [
+        { kpiItemId: "k1", itemName: "等級要件達成率", rank: "B", points: 8, maxPoints: 10 },
+        { kpiItemId: "k2", itemName: "売上達成率", rank: "B", points: 8, maxPoints: 10 },
+        { kpiItemId: "k3", itemName: "スタッフ定着率", rank: "C", points: 6, maxPoints: 10 },
+        { kpiItemId: "k4", itemName: "ヒヤリ報告件数", rank: "A", points: 10, maxPoints: 10 },
+      ],
+      raiseRequiresAllA: true,
+      requiredKpiPoints: null,
+      requiredBehaviorPoints: null,
+      behaviorTotal: null,
+      gates: [],
+    });
+    const names = ["等級要件達成率（B）", "売上達成率（B）", "スタッフ定着率（C）"];
+    expect(parts(res.raiseReason)[0]).toBe("次の項目がA未満のため、昇給は見送りです。");
+    expect(listOf(res.raiseReason)).toEqual(names); // 1件も減らさない・「ほか◯件」で省かない
+    expect(parts(res.raiseReasonEmployee)[0]).toBe("次の項目がAに届いていないため、今回の昇給は見送りです。");
+    expect(listOf(res.raiseReasonEmployee)).toEqual(names);
+    // 「、」で1行に繋ぎ直していないこと
+    expect(res.raiseReason).not.toContain("（B）、");
+  });
+
+  it("判定外の項目も、同じく並びで返す（A未満の並びとは別のまとまり）", () => {
+    const res = judgeOverall({
+      items: [
+        { kpiItemId: "k1", itemName: "等級要件達成率", rank: "B", points: 8, maxPoints: 10 },
+        { kpiItemId: "k2", itemName: "稼働率", rank: null, points: 0, maxPoints: 10 },
+        { kpiItemId: "k3", itemName: "残業率", rank: null, points: 0, maxPoints: 10 },
+      ],
+      raiseRequiresAllA: true,
+      requiredKpiPoints: null,
+      requiredBehaviorPoints: null,
+      behaviorTotal: null,
+      gates: [],
+    });
+    expect(parts(res.raiseReason)).toEqual([
+      "次の項目がA未満のため、昇給は見送りです。",
+      "- 等級要件達成率（B）",
+      "次の項目は実績が入力されておらず、判定できていません（判定外）。",
+      "- 稼働率",
+      "- 残業率",
+    ]);
+  });
+
+  it("未達の昇格要件も、カッコの中へ詰めずに並びで返す", () => {
+    const res = judgeOverall({
+      items: [{ kpiItemId: "k1", itemName: "等級要件達成率", rank: "A", points: 10, maxPoints: 10 }],
+      raiseRequiresAllA: true,
+      requiredKpiPoints: null,
+      requiredBehaviorPoints: null,
+      behaviorTotal: null,
+      gates: [
+        { text: "他法人の見学（県内２ / 県外４ヵ所）", achieved: false },
+        { text: "運営・マネジメントに関する研修参加（３回）", achieved: false },
+        { text: "受講後報告書の提出", achieved: true },
+      ],
+    });
+    const blocked = ["他法人の見学（県内２ / 県外４ヵ所）", "運営・マネジメントに関する研修参加（３回）"];
+    expect(parts(res.promotionBlockedReason!)[0]).toBe("次の昇格要件が未達です。");
+    expect(listOf(res.promotionBlockedReason!)).toEqual(blocked);
+    // 本人向けも同じ並び。そのうえで「次に何をすればよいか」を別のまとまりで添える
+    expect(parts(res.promotionBlockedReasonEmployee!)[0]).toBe("未達の昇格要件があります。");
+    expect(listOf(res.promotionBlockedReasonEmployee!)).toEqual(blocked);
+    expect(res.promotionBlockedReasonEmployee).toContain("まずはこの要件を満たすことが必要です。");
   });
 });

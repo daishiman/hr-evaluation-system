@@ -136,7 +136,7 @@ export async function PUT(req: Request) {
       parts.push(`確定済みの評価 ${applied.skippedFinalized}件は、確定した時点の内容のまま据え置きました（書き換えません）。`);
     }
     if (applied.yenPerPointMissing && applied.unmatched === 0 && applied.updated > 0) {
-      parts.push("1点あたりの金額が未設定のため、個人Ptのみで賞与額は出していません（昇給の設定で登録できます）。");
+      parts.push("1点あたりの金額が未設定です。個人Ptのみで、賞与額は出していません。昇給の設定で登録できます。");
     }
 
     const warnings = [...applied.coverageProblems];

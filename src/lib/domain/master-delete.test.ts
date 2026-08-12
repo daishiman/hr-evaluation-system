@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bandSetBlockedReason, deleteBlockedReason, deleteConfirmText, placesText } from "./master-delete";
+import { bandSetBlockedReason, blockedMark, deleteBlockedReason, deleteConfirmText, placesText } from "./master-delete";
 
 /**
  * 消せないときに画面へ出す文章の決まり。
@@ -14,9 +14,20 @@ describe("消せない理由の文章", () => {
   it("使っている場所を名指しし、代わりの操作を示す", () => {
     const reason = deleteBlockedReason(["アンケート「2026年上期」"]);
     expect(reason).toContain("アンケート「2026年上期」");
-    expect(reason).toContain("「使わない」なら次のアンケートから外せます");
-    // 1件ずつ出る文なので、1行で読み切れる長さに保つ（一覧が説明で埋まらないように）
-    expect(reason!.length).toBeLessThan(70);
+    expect(reason).toContain("「使わない」にすると、次のアンケートから外せます");
+    /* 1文に3つのことを詰めない（2026-08-12 の指摘）。
+       句点で切った1文ずつが40文字以内であること。差し込まれる名前は数えない。 */
+    for (const s of reason!.replace(/アンケート「[^」]*」/g, "").split("。")) {
+      expect(s.length).toBeLessThanOrEqual(40);
+    }
+  });
+
+  it("画面では畳む「使っている場所」も、API の返事には残す（情報を減らさない）", () => {
+    // 画面は行に「使用中（◯件）」だけ出し、場所は押して開く形にした。
+    expect(blockedMark(["A", "B"])).toBe("使用中（2件）");
+    expect(blockedMark([])).toBeNull();
+    // ただし API を直に叩いて断られたときの手がかりは消さない。
+    expect(deleteBlockedReason(["A", "B", "C", "D"])).toContain("A・B ほか2件");
   });
 
   it("使っている場所が多いときは2件だけ挙げて残りは件数にする", () => {

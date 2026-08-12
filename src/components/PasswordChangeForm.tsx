@@ -116,7 +116,8 @@ export function PasswordChangeForm() {
         </p>
         <p className="m-0 text-sub">{done}</p>
         <p className="m-0 text-sub text-[var(--ink-muted)]">
-          この端末はそのまま使えます。ほかの端末やブラウザで開いていた場合は、新しいパスワードでログインし直してください。
+          この端末はそのまま使えます。ほかの端末やブラウザで開いていた場合は、ログインし直してください。
+          そのときは新しいパスワードをお使いください。
         </p>
         <div>
           <LinkButton href="/account" variant="secondary">

@@ -2,10 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { UsedByDetail } from "@/components/UsedByDetail";
 import { copiedBandSetName } from "@/lib/domain/behavior";
-import { DELETE_LABEL, bandSetBlockedReason, deleteConfirmText } from "@/lib/domain/master-delete";
+import {
+  BAND_SET_ASSIGNED_NEXT,
+  BLOCKED_HELP_LABEL,
+  BLOCKED_KEEP,
+  BLOCKED_WHAT,
+  BLOCKED_WHY,
+  DELETE_LABEL,
+  blockedMark,
+  deleteConfirmText,
+} from "@/lib/domain/master-delete";
 import { requestMasterDelete } from "@/components/master-delete-request";
 
 /**
@@ -180,7 +190,14 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
         {sets.map((set) => {
           const nameDraft = editingName[set.id];
           const inUse = set.usedByGradeNames.length > 0;
-          const blocked = bandSetBlockedReason(set.usedByGradeNames, set.usedBy);
+          /* 止められない理由は2種類あり、扱いが違う。
+             ①どれかの等級に出す設定が残っている … 行ごとに内容が違い、直す順番も示すので畳まない
+             ②観点をアンケートに出したことがある … 行には「使用中（◯件）」だけ残し、
+               どこで使っているかは押したら出す。全行で同じになる理由は一番下に1つだけ置く。 */
+          /* 等級名はすぐ上の行に出ているので、理由の文では繰り返さない
+             （繰り返すと、等級が増えたぶんだけ長い1文が行の中に出る）。 */
+          const assignedReason = inUse ? BAND_SET_ASSIGNED_NEXT : null;
+          const mark = blockedMark(set.usedBy);
           return (
             <div
               key={set.id}
@@ -195,8 +212,9 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       観点{set.aspectCount}件・
                       {inUse ? `${set.usedByGradeNames.join("／")}に出します` : "どの等級にも出していません"}
                     </p>
-                    {/* 止められない・消せないときは、その理由と直す順番をここで読めるようにする */}
-                    {blocked !== null && <p className="footnote m-0 mt-1">{blocked}</p>}
+                    {/* 止められないときは、その理由と直す順番をここで読めるようにする */}
+                    {assignedReason !== null && <p className="footnote m-0 mt-1">{assignedReason}</p>}
+                    {mark !== null && <UsedByDetail mark={mark} usedBy={set.usedBy} />}
                   </>
                 ) : (
                   <label className="block text-note text-[var(--ink-muted)]">
@@ -257,7 +275,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       もう一度使う
                     </Button>
                   )}
-                  {blocked === null && (
+                  {assignedReason === null && mark === null && (
                     <ConfirmButton
                       label={DELETE_LABEL}
                       variant="danger-outline"
@@ -275,6 +293,18 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           );
         })}
       </div>
+
+      {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。
+          「使用中」の基準が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
+      {sets.some((set) => set.usedBy.length > 0) && (
+        <div className="mt-3">
+          <Disclosure summary={BLOCKED_HELP_LABEL}>
+            <p className="m-0 text-sub">{BLOCKED_WHY}</p>
+            <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
+            <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
+          </Disclosure>
+        </div>
+      )}
     </Card>
   );
 }

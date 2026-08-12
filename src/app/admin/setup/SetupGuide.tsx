@@ -1,4 +1,4 @@
-import { Badge, Card, CardHead, LinkButton } from "@/components/ui";
+import { Badge, Card, CardHead, InlineDetail, LinkButton } from "@/components/ui";
 
 export interface SetupAction {
   href: string;
@@ -56,12 +56,12 @@ export function SetupGuide({ steps }: { steps: SetupStep[] }) {
               ))}
             </div>
 
-            <details className="mt-3 border-t border-[var(--line)] pt-3">
-              <summary className="cursor-pointer text-note font-semibold text-[var(--ink-muted)]">
-                この順番で進める理由
-              </summary>
-              <p className="footnote m-0 mt-2">{step.detail}</p>
-            </details>
+            {/* 「なぜこの順番か」は進めるのに要らない。押したときだけ出す（畳む仕組みは共通部品に寄せる）。 */}
+            <div className="mt-3 border-t border-[var(--line)] pt-3">
+              <InlineDetail summary="この順番で進める理由">
+                <p className="footnote m-0">{step.detail}</p>
+              </InlineDetail>
+            </div>
           </article>
         </Card>
       ))}

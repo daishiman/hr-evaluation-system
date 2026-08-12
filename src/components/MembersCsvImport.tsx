@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, ReasonNote } from "@/components/ui";
+import { DetailDialogButton } from "@/components/ConfirmButton";
 import { DataTable } from "@/components/DataTable";
 import { toCsv } from "@/lib/csv";
 import type { IssuedMemberCredential } from "@/lib/domain/initial-password";
@@ -32,10 +33,31 @@ function downloadCredentials(credentials: IssuedMemberCredential[]) {
 }
 
 /**
+ * 1行目に入れる見出しと、その並び順。
+ * 画面に置きっぱなしにすると毎回読み飛ばす手間になるので、窓（DetailDialogButton）で出す。
+ * 貼り付け欄の placeholder と同じ並びであること。
+ */
+const CSV_COLUMNS = [
+  "氏名",
+  "メールアドレス",
+  "社員番号",
+  "役割",
+  "等級",
+  "事業所",
+  "所属",
+  "上長",
+  "入社日",
+  "利用状態",
+] as const;
+
+/**
  * 社員一覧のまとめ登録。
  *
  * 表を貼り付けるか、CSVを選んで取り込む。取り込む前に「まず内容を確認する」で
  * 何行目の何が不正かを確かめられる（確認の段階では何も保存しない）。
+ *
+ * 既定で出すのは「取り込むと何が起きるか」だけにする。列の並びのような書式の決まりは
+ * 読み切るものなので窓に畳む（発注者の指摘、2026-08-12。消さずに置き場所を変える）。
  */
 export function MembersCsvImport() {
   const router = useRouter();
@@ -97,12 +119,26 @@ export function MembersCsvImport() {
   return (
     <Card className="card-pad">
       <p className="m-0 text-sub">
-        1行目に「氏名」「メールアドレス」「社員番号」「役割」「等級」「事業所」「所属」「上長」「入社日」「利用状態」の見出しを入れ、2行目から社員を並べてください。
         この画面の「社員一覧を書き出す」で作ったCSVは、そのまま取り込めます。
       </p>
+      {/* 取り込んだ結果を左右する事実なので、これは畳まない */}
       <p className="footnote m-0 mt-1">
-        メールアドレスが同じ方はすでにいる方として情報を更新します。上長は氏名・メールアドレス・社員番号のどれでも指定でき、同じファイルの中の方も指定できます。
+        メールアドレスが同じ方は、すでにいる方として情報を更新します。
       </p>
+      <div className="mt-2">
+        <DetailDialogButton label="CSVの書き方を見る" title="CSVの書き方">
+          <p className="m-0 text-sub">1行目に見出しを入れ、2行目から社員を並べてください。</p>
+          <p className="m-0 mt-2 text-sub">見出しは、この順番で入れます。</p>
+          <ol className="m-0 mt-1 list-decimal pl-5 text-sub">
+            {CSV_COLUMNS.map((column) => (
+              <li key={column}>{column}</li>
+            ))}
+          </ol>
+          <p className="m-0 mt-2 text-sub">上長は氏名・メールアドレス・社員番号のどれでも指定できます。</p>
+          <p className="m-0 mt-1 text-sub">同じファイルの中の方も、上長に指定できます。</p>
+          <p className="m-0 mt-1 text-sub">メールアドレスが同じ方は、すでにいる方として情報を更新します。</p>
+        </DetailDialogButton>
+      </div>
 
       <div className="mt-3 grid gap-3">
         <label className="block text-sub font-bold">

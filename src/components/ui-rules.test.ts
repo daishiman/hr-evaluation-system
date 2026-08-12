@@ -457,3 +457,270 @@ describe("画面の器の作法", () => {
     expect(css).toContain("scroll-padding-top: calc(var(--sticky-top)");
   });
 });
+
+/* ═════════════════════════ 文の長さの作法 ═════════════════════════
+ *
+ * 判断基準は docs/product/spec.md §22。
+ *
+ * 2026-08-12、発注者から「説明文や注意事項が多いと読むのが面倒」という指摘。
+ * 原因は長さそのものより「1文に複数のことを詰めた」書き方だった。実例:
+ *
+ *   アンケート「A」・アンケート「B」ほか2件で使っているため、完全には消せません。
+ *   「使わない」なら次のアンケートから外せます。
+ *
+ * 1文の中に ①使われている場所の列挙 ②消せない理由 ③代わりの手段 が入っている。
+ * これが等級要件9項目すべてに繰り返し出て、一覧が文字で埋まった。
+ *
+ * そこで「1文＝1つのこと」を長さで機械的に縛る。40文字を超えたら、
+ * ほぼ必ず2つ以上のことが入っている（実測: 直した68文すべてがそうだった）。
+ * 折り返しでは解決しない。折り返しは §22-3 の保険で、本筋は文を分けること。
+ */
+
+/** 1文の上限。ここを緩めない（緩めると上の指摘がそのまま戻る）。 */
+const MAX_SENTENCE = 40;
+
+const JP_CHAR = /[ぁ-ゟ゠-ヿ一-鿿]/;
+
+/**
+ * コード・注釈・文字列を1文字ずつ見分ける。
+ *
+ * 注釈（このコメントのような開発者向けの文）は利用者に見えないので数えない。
+ * 正規表現で雑に消すと "https://" の // を注釈と誤認する・
+ * 注釈の中の「」がカッコの対応を壊す、といった取りこぼしが出るため、
+ * 状態を持って端から読む。
+ */
+function splitSource(src: string): { literals: string[]; code: string } {
+  const literals: string[] = [];
+  let code = "";
+  let i = 0;
+  const n = src.length;
+  const blank = (s: string) => { code += s.replace(/[^\n]/g, " "); };
+  while (i < n) {
+    const c = src[i];
+    const d = src[i + 1];
+    if (c === "/" && d === "/") { const j = src.indexOf("\n", i); const e = j < 0 ? n : j; blank(src.slice(i, e)); i = e; continue; }
+    if (c === "/" && d === "*") { const j = src.indexOf("*/", i + 2); const e = j < 0 ? n : j + 2; blank(src.slice(i, e)); i = e; continue; }
+    if (c === '"' || c === "'" || c === "`") {
+      const q = c;
+      let j = i + 1;
+      let buf = "";
+      while (j < n) {
+        if (src[j] === "\\") { buf += src[j] + src[j + 1]; j += 2; continue; }
+        if (src[j] === q) break;
+        if (q !== "`" && src[j] === "\n") break;
+        buf += src[j];
+        j++;
+      }
+      literals.push(buf);
+      blank(src.slice(i, j + 1));
+      i = j + 1;
+      continue;
+    }
+    code += c;
+    i++;
+  }
+  return { literals, code };
+}
+
+/**
+ * 差し込まれる値（`${…}` と JSX の `{…}`）を入れ子ごと落とす。
+ *
+ * ＝ 例外の線引き。アンケート名・会社名・等級名・設問名・件数は
+ * 実行時に決まるので、書き手には長さを制御できない。
+ * 数えるのは「文の骨格（書き手が決められる部分）」だけにする。
+ * 差し込みが長くて行が伸びる問題は、文を分けることでは直せないため
+ * §22-3（折り返しの保証）で受ける。
+ */
+function dropPlaceholders(s: string): string {
+  let out = "";
+  let i = 0;
+  while (i < s.length) {
+    const isTpl = s[i] === "$" && s[i + 1] === "{";
+    if (isTpl || s[i] === "{") {
+      let depth = 0;
+      let j = isTpl ? i + 1 : i;
+      for (; j < s.length; j++) {
+        if (s[j] === "{") depth++;
+        else if (s[j] === "}") { depth--; if (depth === 0) break; }
+      }
+      i = j + 1;
+      continue;
+    }
+    out += s[i];
+    i++;
+  }
+  return out;
+}
+
+const tidy = (s: string) => s.replace(/[ \t]+/g, " ").trim();
+
+/** 文字列リテラルの中の「文」。句点と改行が文の切れ目。 */
+function sentencesOfLiteral(raw: string): string[] {
+  const text = dropPlaceholders(raw).replace(/\\n/g, "\n").replace(/\\(["'`])/g, "$1");
+  return text.split(/[\n。]/).map(tidy).filter((s) => JP_CHAR.test(s));
+}
+
+/**
+ * JSX の地の文（タグとタグの間に直接書いた文）の中の「文」。
+ * 画面のコードでは文字列にせず地の文で書くほうが多いので、ここを外すと
+ * 検査が半分しか見ていないことになる（実測: 68文のうち21文が地の文だった）。
+ *
+ * 開きの `>` から次の `<` までが地の文1つ。`=>` と `>=` は演算子なので外す。
+ * 原文の改行はブラウザ上では空白に潰れるだけなので、文の切れ目にしない。
+ */
+function sentencesOfJsx(code: string): string[] {
+  const out: string[] = [];
+  for (const m of code.matchAll(/(?<![=!])>(?!=)([^<>]*)</g)) {
+    const text = dropPlaceholders(m[1]).replace(/\s+/g, "");
+    if (!JP_CHAR.test(text)) continue;
+    for (const s of text.split("。")) if (JP_CHAR.test(s)) out.push(s);
+  }
+  return out;
+}
+
+function longSentencesOf(src: string, isJsx: boolean): string[] {
+  const { literals, code } = splitSource(src);
+  const all = [...literals.flatMap(sentencesOfLiteral), ...(isJsx ? sentencesOfJsx(code) : [])];
+  return all.filter((s) => s.length > MAX_SENTENCE);
+}
+
+describe("文の長さの作法", () => {
+  it("利用者の目に触れる日本語の1文は40文字以内（画面・API の返事・計算の説明文すべて）", () => {
+    /* 除外している画面・ファイルは1つも無い。
+       「この画面だけ長くてよい」を1つ認めると、次からそこに長い文が溜まる。
+       どうしても要る場合は、ここに「ファイル名 + 理由」を1件ずつ書き足すこと
+       （閾値を上げる・対象を狭めるのは不可）。 */
+    const offenders = sourceFiles.flatMap((p) =>
+      longSentencesOf(readFileSync(p, "utf8"), p.endsWith(".tsx")).map(
+        (s) => `${p.replace(`${SRC}/`, "")}（${s.length}文字）: ${s}`,
+      ),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("検査の網が src 全体に掛かっている（対象を狭めて逃げていない）", () => {
+    /* 「一部しか見ていない検査」を防ぐ。画面・部品・計算のどれかを
+       こっそり対象から外したら、この件数と内訳で気づける。 */
+    expect(sourceFiles.length).toBeGreaterThanOrEqual(180);
+    for (const dir of ["app/", "components/", "lib/domain/"]) {
+      const rel = sourceFiles.map((p) => p.replace(`${SRC}/`, ""));
+      expect(rel.filter((p) => p.startsWith(dir)).length).toBeGreaterThan(10);
+    }
+    // 画面（page.tsx）が1枚残らず入っていること
+    expect(sourceFiles.filter((p) => p.endsWith(`${"page"}.tsx`)).length).toBeGreaterThanOrEqual(41);
+  });
+
+  it("数えるのは文の骨格だけ（差し込まれる名前・件数は長さに数えない）", () => {
+    // 骨格が短ければ、差し込みがどれだけ長くても検査は通る
+    expect(longSentencesOf('const a = `「${veryLongSurveyName}」は使えません。`;', false)).toEqual([]);
+    // 入れ子の差し込みも落とせる
+    expect(dropPlaceholders("保存済み ${d.toLocaleTimeString('ja-JP', { hour: '2-digit' })}")).toBe("保存済み ");
+    // 骨格そのものが長ければ落ちる（差し込みがあっても見逃さない）
+    const skeleton = `const a = \`\${name}は${"あ".repeat(41)}。\`;`;
+    expect(longSentencesOf(skeleton, false)).toHaveLength(1);
+  });
+
+  it("40文字はよくて41文字で落ちる（境目を動かしていない）", () => {
+    expect(longSentencesOf(`const a = "${"あ".repeat(40)}。";`, false)).toEqual([]);
+    expect(longSentencesOf(`const a = "${"あ".repeat(41)}。";`, false)).toHaveLength(1);
+    // 句点で切った1文ずつで見る（合計が長いだけでは落ちない）
+    expect(longSentencesOf(`const a = "${"あ".repeat(30)}。${"い".repeat(30)}。";`, false)).toEqual([]);
+  });
+
+  it("開発者向けの注釈は数えない（利用者に見えないため）", () => {
+    expect(longSentencesOf(`// ${"あ".repeat(60)}\nconst a = 1;`, false)).toEqual([]);
+    expect(longSentencesOf(`/* ${"あ".repeat(60)} */\nconst a = 1;`, false)).toEqual([]);
+    // 注釈の中の // や引用符に釣られて、後ろの本物を見落とさないこと
+    expect(longSentencesOf(`// https://example.com の「注意」\nconst a = "${"あ".repeat(41)}。";`, false)).toHaveLength(1);
+  });
+
+  it("画面に地の文で書いた説明も数える（文字列にしなければ逃げられる、を塞ぐ）", () => {
+    expect(longSentencesOf(`<p>${"あ".repeat(41)}。</p>`, true)).toHaveLength(1);
+    // 原文の改行は表示上ただの空白なので、文の切れ目にしない
+    const wrapped = `<p>\n  ${"あ".repeat(20)}\n  ${"あ".repeat(21)}。\n</p>`;
+    expect(longSentencesOf(wrapped, true)).toHaveLength(1);
+    // 演算子の > を地の文の始まりと読み違えない
+    expect(longSentencesOf(`{list.map((i) => i.name).join("・")}が対象です。`, true)).toEqual([]);
+  });
+});
+
+/* ═════════════════════════ 畳んだものへ必ず手が届く ═════════════════════════
+ *
+ * 判断基準は docs/product/spec.md §22-4。
+ *
+ * 「注意事項はボタンを押したら出す」に応えるにあたり、いちばん危ないのは
+ * **畳んだつもりが消えている**こと。開く手がかりが無い・押せると分からない、は
+ * 利用者から見れば非表示と同じで、発注者が禁じた「削除」に当たる。
+ * そこで畳む仕組みを3つに限定し、そのどれもが押す場所を必ず持つことを固定する。
+ */
+describe("畳んだものへ必ず手が届く", () => {
+  const UI = join(SRC, "components", "ui.tsx");
+  const DIALOG_OWNER = join(SRC, "components", "ConfirmButton.tsx");
+
+  it("畳む仕組みは3つだけ（画面ごとに <details> を書き起こさない）", () => {
+    /* 画面ごとに書くと、開く印（＋）・押せる見た目・狭い画面での余白が
+       そこだけ揃わなくなる。実際、移行前は14箇所が素の <details> で、
+       押せると分かる見た目が付いていないものが混ざっていた。 */
+    const offenders = sourceFiles.filter((p) => p !== UI && /<details[\s>]/.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("畳んだものには必ず押す場所がある（summary / label を省略できない）", () => {
+    const ui = readFileSync(UI, "utf8");
+    // Disclosure・InlineDetail は summary が必須（? を付けない）
+    expect(ui).toMatch(/summary: ReactNode;/);
+    expect(ui).toMatch(/export function InlineDetail\(\{ summary, children \}: \{ summary: string;/);
+    // どちらも <summary> を必ず描く
+    expect(ui.match(/<summary/g) ?? []).toHaveLength(2);
+    // 窓は押すボタンと対で作る（label が必須）
+    const dlg = readFileSync(DIALOG_OWNER, "utf8");
+    const detail = dlg.slice(dlg.indexOf("export function DetailDialogButton"));
+    expect(detail).toContain("label: string;");
+    expect(detail).toContain("title: string;");
+  });
+
+  it("押す場所を見えなくしない（summary を display:none にしない）", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    for (const m of css.matchAll(/([^\n{}]*summary[^\n{}]*)\{([^}]*)\}/g)) {
+      // list-style / ::-webkit-details-marker は既定の三角を消すだけで、押す場所は残る
+      if (m[1].includes("::-webkit-details-marker")) continue;
+      expect(m[2]).not.toMatch(/display: none|visibility: hidden/);
+    }
+    // 押せると分かる見た目（指の形）が両方に付いていること
+    expect(css).toMatch(/details\.disclosure summary \{[^}]*cursor: pointer/);
+    expect(css).toMatch(/details\.inline-detail > summary \{[^}]*cursor: pointer/);
+    // 開いているかの印（＋／－）があること
+    expect(css).toContain('details.inline-detail > summary::after { content: "＋"');
+    expect(css).toContain('details.inline-detail[open] > summary::after { content: "－"');
+  });
+
+  it("読むだけの窓も ConfirmButton.tsx の中だけで作る", () => {
+    const dlg = readFileSync(DIALOG_OWNER, "utf8");
+    expect(dlg).toContain("export function DetailDialogButton");
+    // 閉じる手段が窓の中にあること（開いたら出られない窓を作らない）
+    expect(dlg).toMatch(/<Button type="button" autoFocus onClick=\{\(\) => setOpen\(false\)\}>\s*閉じる/);
+  });
+});
+
+describe("長い文が来ても読める形で折り返る", () => {
+  /* 文を分けても、差し込まれる名前（アンケート名・会社名）は長いままになる。
+     そこだけは表示側で受け止める。ただし折り返しは保険であって、
+     これがあるから長い文を書いてよい、ではない（上の検査が本筋）。 */
+  it("日本語の禁則を効かせ、語の途中では折らない", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const body = css.slice(css.indexOf("body {"));
+    const block = body.slice(0, body.indexOf("}"));
+    // 行頭の 、。」 行末の 「 を防ぐ
+    expect(block).toContain("line-break: strict");
+    // 入りきらないときだけ折る（既定は語の途中で折らない）
+    expect(block).toContain("overflow-wrap: break-word");
+    expect(block).toContain("word-break: normal");
+  });
+
+  it("word-break: break-all を画面全体に当てない（和文も英単語も真ん中で割れる）", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    // 使ってよいのは、連続した英数字だけを出す専用の箱に限る
+    const uses = [...css.matchAll(/([^\n{]*)\{[^}]*word-break: break-all/g)].map((m) => m[1].trim());
+    expect(uses).toEqual([]);
+  });
+});

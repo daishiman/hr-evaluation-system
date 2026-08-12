@@ -92,7 +92,7 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
         method="PATCH"
         fixed={{ userId: user.id }}
         submitLabel="この内容で保存する"
-        description="所属会社を変えると、等級と上長は付け直しになります（会社をまたいだ組み合わせは保存できません）。"
+        description="所属会社を変えると、等級と上長は付け直しになります。会社をまたいだ組み合わせは保存できません。"
         fields={[
           { name: "name", label: "氏名", type: "text", required: true, defaultValue: user.name },
           { name: "email", label: "メールアドレス（ログインID）", type: "email", required: true, defaultValue: user.email },
@@ -143,7 +143,7 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
       <Card className="card-pad">
         <p className="m-0 text-sub">
           {user.isActive
-            ? "利用停止にするとログインできなくなりますが、これまでの回答と評価はそのまま残ります。"
+            ? "利用停止にすると、ログインできなくなります。これまでの回答と評価はそのまま残ります。"
             : "この方はいま利用停止中です。再開するとログインできるようになります。"}
         </p>
         <div className="mt-3">

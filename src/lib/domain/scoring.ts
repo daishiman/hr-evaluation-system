@@ -8,7 +8,7 @@
  *  - 昇給条件は「選択した項目がすべてA」。
  */
 
-import { containsCriteriaLeak } from "@/lib/domain/evaluation-view";
+import { buildReasonText, containsCriteriaLeak, type ReasonBlock } from "@/lib/domain/evaluation-view";
 
 export type Rank = "A" | "B" | "C" | "D" | "E";
 
@@ -56,11 +56,11 @@ export function rankLevelLabel(rank: Rank): string {
 
 /** 実績が出せずランクを付けられなかった項目の、本人向けの説明。 */
 export const UNRATED_RATIONALE_EMPLOYEE =
-  "実績を計算するための回答がそろっていないため、この項目は今回判定していません（判定外）。";
+  "この項目は今回判定していません（判定外）。実績を計算するための回答がそろっていないためです。";
 
 /** 等級要件の設問が1件も無く、固定枠の達成率が出せなかったときの本人向けの説明。 */
 export const UNRATED_REQUIREMENT_RATIONALE_EMPLOYEE =
-  "今回のアンケートに等級要件の設問が含まれていなかったため、この項目は判定していません（判定外）。";
+  "この項目は判定していません（判定外）。今回のアンケートに等級要件の設問が含まれていなかったためです。";
 
 /**
  * 実績値からランクを判定する。
@@ -82,8 +82,10 @@ export function judgeRank(
       return {
         rank: c.rank,
         criterion: c,
-        rationale: `実績値 ${formatValue(value)} が「${c.displayLabel}」に該当するため ${c.rank} と判定しました。`,
-        rationaleEmployee: `実績値 ${shown} は${rankLevelLabel(c.rank)}に該当するため、${c.rank} と判定しました。`,
+        /* 「実績値」「当てはまった範囲」「判定」は別々の事実なので、文も分ける。
+           1文にまとめると、範囲の表記（displayLabel）が差し込まれた時点で長い1文になる。 */
+        rationale: `実績値 ${formatValue(value)}。「${c.displayLabel}」に該当します。そのため ${c.rank} と判定しました。`,
+        rationaleEmployee: `実績値 ${shown}。${rankLevelLabel(c.rank)}に該当します。そのため ${c.rank} と判定しました。`,
         fellThrough: false,
       };
     }
@@ -94,10 +96,10 @@ export function judgeRank(
   return {
     rank: "E",
     criterion: last,
-    rationale: `実績値 ${formatValue(value)} は基準表のどの範囲にも一致しなかったため、最下位の E として扱いました。基準表の見直しが必要です。`,
+    rationale: `実績値 ${formatValue(value)}。基準表のどの範囲にも一致しませんでした。最下位の E として扱いました。基準表の見直しが必要です。`,
     /* 本人向けにも「基準表に穴がある」という事実は伏せない。
        黙ってEにすると、本人には「実績が悪かったからE」としか読めなくなるため。 */
-    rationaleEmployee: `実績値 ${shown} は評価基準のどの水準にも当てはまらなかったため、いったん${rankLevelLabel("E")}（E）として扱っています。評価基準の見直しが必要な状態です。`,
+    rationaleEmployee: `実績値 ${shown}。評価基準のどの水準にも当てはまりませんでした。いったん${rankLevelLabel("E")}（E）として扱っています。評価基準の見直しが必要な状態です。`,
     fellThrough: true,
   };
 }
@@ -246,7 +248,7 @@ export function scoreItem(input: ScoreItemInput): ScoreItemResult {
     return {
       points,
       maxPoints: input.weight,
-      note: `この項目には元の配点表がないため、一律割合方式で計算しました：配点${input.weight}点 × ランク${input.rank}の割合 ＝ ${points}点。`,
+      note: `この項目には元の配点表がありません。そのため一律割合方式で計算しました：配点${input.weight}点 × ランク${input.rank}の割合 ＝ ${points}点。`,
       noteEmployee: `この項目のランク（${input.rank}）は、そのまま全体の評価に反映しています。`,
       fellBackToRatio: true,
     };
@@ -344,46 +346,50 @@ export function judgeOverall(input: OverallInput): OverallResult {
      本人向けには点数・満点を出さない（項目ごとのランクと、何が足りなかったかだけを伝える）。
      表示側で数字を消す作りにすると、消し忘れが本人に見える事故になるため、
      数字を含まない文をここで作り切って保存する。 */
-  const unratedNames = unrated.map((i) => i.itemName).join("、");
-  const raiseReasonParts: string[] = [];
-  const raiseReasonEmployeeParts: string[] = [];
+  /* 項目名の列挙は、文の中ではなく「見出し＋並び」で返す（buildReasonText）。
+     文に詰め込むと、項目が増えるほど1文が伸び、読み手はどこが区切りか分からなくなる。 */
+  const unratedNames = unrated.map((i) => i.itemName);
+  const UNRATED_HEADLINE = "次の項目は実績が入力されておらず、判定できていません（判定外）。";
+  const raiseBlocks: ReasonBlock[] = [];
+  const raiseBlocksEmployee: ReasonBlock[] = [];
   if (input.raiseRequiresAllA) {
     if (raiseEligible) {
-      raiseReasonParts.push(`選択された${input.items.length}項目すべてがAのため、昇給の要件を満たします。`);
-      raiseReasonEmployeeParts.push("評価対象の項目がすべてAのため、昇給の要件を満たしています。");
+      raiseBlocks.push({ headline: `選択された${input.items.length}項目すべてがAのため、昇給の要件を満たします。`, items: [] });
+      raiseBlocksEmployee.push({ headline: "評価対象の項目がすべてAのため、昇給の要件を満たしています。", items: [] });
     } else {
       if (nonA.length > 0) {
-        const names = nonA.map((i) => `${i.itemName}（${i.rank}）`).join("、");
-        raiseReasonParts.push(`${names} がA未満のため、昇給は見送りです。`);
-        raiseReasonEmployeeParts.push(`${names} がAに届いていないため、今回の昇給は見送りです。`);
+        const names = nonA.map((i) => `${i.itemName}（${i.rank}）`);
+        raiseBlocks.push({ headline: "次の項目がA未満のため、昇給は見送りです。", items: names });
+        raiseBlocksEmployee.push({ headline: "次の項目がAに届いていないため、今回の昇給は見送りです。", items: names });
       }
       if (unrated.length > 0) {
-        raiseReasonParts.push(`${unratedNames} は実績が入力されていないため判定できていません（判定外）。`);
-        raiseReasonEmployeeParts.push(`${unratedNames} は実績が入力されていないため判定できていません（判定外）。`);
+        raiseBlocks.push({ headline: UNRATED_HEADLINE, items: unratedNames });
+        raiseBlocksEmployee.push({ headline: UNRATED_HEADLINE, items: unratedNames });
       }
     }
   } else {
-    raiseReasonParts.push(`合計${totalScore}点 / ${maxScore}点。`);
-    raiseReasonEmployeeParts.push(
-      raiseEligible
+    raiseBlocks.push({ headline: `合計${totalScore}点 / ${maxScore}点。`, items: [] });
+    raiseBlocksEmployee.push({
+      headline: raiseEligible
         ? "評価の結果が昇給の要件を満たしています。"
         : "評価の結果が昇給の要件に届かなかったため、今回の昇給は見送りです。下の一覧でランクの低い項目を確認し、次の期の重点にしてください。",
-    );
+      items: [],
+    });
     if (unrated.length > 0) {
-      raiseReasonParts.push(`${unratedNames} は実績が未入力のため判定外です。`);
-      raiseReasonEmployeeParts.push(`${unratedNames} は実績が入力されていないため判定できていません（判定外）。`);
+      raiseBlocks.push({ headline: "次の項目は実績が未入力のため判定外です。", items: unratedNames });
+      raiseBlocksEmployee.push({ headline: UNRATED_HEADLINE, items: unratedNames });
     }
   }
-  const raiseReason = raiseReasonParts.join("");
-  const raiseReasonEmployee = raiseReasonEmployeeParts.join("");
+  const raiseReason = buildReasonText(raiseBlocks);
+  const raiseReasonEmployee = buildReasonText(raiseBlocksEmployee);
 
   // 昇格判定: 必須ゲート → 点数 の順に見る
   const blockedGates = input.gates.filter((g) => !g.achieved);
-  const reasons: string[] = [];
-  const reasonsEmployee: string[] = [];
+  const reasons: ReasonBlock[] = [];
+  const reasonsEmployee: ReasonBlock[] = [];
   if (blockedGates.length > 0) {
-    const names = blockedGates.map((g) => g.text).join("、");
-    reasons.push(`昇格要件が未達です（${names}）。`);
+    // 昇給と同じく、未達の要件名はカッコの中へ詰めず「並び」で返す
+    reasons.push({ headline: "次の昇格要件が未達です。", items: blockedGates.map((g) => g.text) });
     /* 何をすれば昇格に近づくかは本人に伝わったほうがよいので、要件そのものは隠さない。
        ただし昇格要件の文言は管理画面で自由に書けるため、「◯点以上」のように
        基準値そのものが書かれている場合がある。その要件名だけを伏せ、
@@ -391,35 +397,43 @@ export function judgeOverall(input: OverallInput): OverallResult {
     const safeNames = blockedGates.map((g) => g.text).filter((t) => !containsCriteriaLeak(t));
     const hiddenCount = blockedGates.length - safeNames.length;
     if (safeNames.length > 0) {
-      reasonsEmployee.push(
-        `未達の昇格要件があります（${safeNames.join("、")}）。まずはこの要件を満たすことが必要です。`,
-      );
+      reasonsEmployee.push({ headline: "未達の昇格要件があります。", items: safeNames });
+      reasonsEmployee.push({ headline: "まずはこの要件を満たすことが必要です。", items: [] });
     }
     if (hiddenCount > 0) {
-      reasonsEmployee.push(
-        safeNames.length > 0
-          ? "このほかにも未達の昇格要件があります。内容は上長にご確認ください。"
-          : "未達の昇格要件があります。内容は上長にご確認ください。",
-      );
+      reasonsEmployee.push({
+        headline:
+          safeNames.length > 0
+            ? "このほかにも未達の昇格要件があります。内容は上長にご確認ください。"
+            : "未達の昇格要件があります。内容は上長にご確認ください。",
+        items: [],
+      });
     }
   }
   if (input.requiredKpiPoints !== null && totalScore < input.requiredKpiPoints) {
-    reasons.push(`KPI評価点が${totalScore}点で、昇格に必要な${input.requiredKpiPoints}点に達していません。`);
-    reasonsEmployee.push(
-      "KPIの評価が、昇格の目安にまだ届いていません。下の一覧でAに届かなかった項目を確認し、次の期にどこを伸ばすかを上長とご相談ください。",
-    );
+    reasons.push({
+      headline: `KPI評価点が${totalScore}点で、昇格に必要な${input.requiredKpiPoints}点に達していません。`,
+      items: [],
+    });
+    reasonsEmployee.push({
+      headline:
+        "KPIの評価が、昇格の目安にまだ届いていません。下の一覧でAに届かなかった項目を確認してください。次の期にどこを伸ばすかを上長とご相談ください。",
+      items: [],
+    });
   }
   if (
     input.requiredBehaviorPoints !== null &&
     input.behaviorTotal !== null &&
     input.behaviorTotal < input.requiredBehaviorPoints
   ) {
-    reasons.push(
-      `行動指針の評価が${input.behaviorTotal}点で、昇格に必要な${input.requiredBehaviorPoints}点に達していません。`,
-    );
-    reasonsEmployee.push(
-      "行動指針の評価が、昇格の目安にまだ届いていません。どの観点を伸ばすとよいかを上長とご確認ください。",
-    );
+    reasons.push({
+      headline: `行動指針の評価が${input.behaviorTotal}点で、昇格に必要な${input.requiredBehaviorPoints}点に達していません。`,
+      items: [],
+    });
+    reasonsEmployee.push({
+      headline: "行動指針の評価が、昇格の目安にまだ届いていません。どの観点を伸ばすとよいかを上長とご確認ください。",
+      items: [],
+    });
   }
 
   return {
@@ -429,8 +443,8 @@ export function judgeOverall(input: OverallInput): OverallResult {
     raiseReason,
     raiseReasonEmployee,
     promotionEligible: reasons.length === 0,
-    promotionBlockedReason: reasons.length === 0 ? null : reasons.join(""),
-    promotionBlockedReasonEmployee: reasonsEmployee.length === 0 ? null : reasonsEmployee.join(""),
+    promotionBlockedReason: reasons.length === 0 ? null : buildReasonText(reasons),
+    promotionBlockedReasonEmployee: reasonsEmployee.length === 0 ? null : buildReasonText(reasonsEmployee),
     unratedItemNames: unrated.map((i) => i.itemName),
   };
 }

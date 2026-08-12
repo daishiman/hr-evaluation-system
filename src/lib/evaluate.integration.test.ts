@@ -293,7 +293,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
     expect(固定枠.actualValue).toBeNull();
     expect(ev.requirementRate).toBeNull();
     expect(ev.requirementTotal).toBe(0);
-    expect(固定枠.rationale).toContain("等級要件の設問が1件も含まれていない");
+    expect(固定枠.rationale).toContain("等級要件の設問が1件も含まれていません");
   });
 
   it("確定済みの評価は、集計し直しても1文字も変わらない", async () => {

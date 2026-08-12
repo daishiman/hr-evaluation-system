@@ -108,17 +108,59 @@ export function indexRules(rules: GradePointRule[]): Map<string, GradePointRule>
 }
 
 /**
- * 「なぜこの配点なのか」を1行の日本語で説明する。
+ * 満点の内訳を、枠ごとの1件に分ける。
  *
- * 配点を画面から編集できなくする以上、決まっている理由をその場に出さないと
- * 「入力できないのは不具合ではないか」と受け取られるため、画面にそのまま出す文をここで作る。
+ * 以前はこれを1本の文にしていた（「Manager は 等級要件達成率（固定枠）10点 ＋
+ * 5点枠を4項目 ＋ ほかの項目を2点ずつ5項目 ＝ 40点。…」）。
+ * 足し算は文ではないので読むたびに頭の中で分解し直すことになり、しかも
+ * 等級区分名の差し込みぶん伸びて、画面では60文字を超える1行になっていた。
+ * 文にせず、画面が並び（<ul>）として出せる形で返す。
+ *
+ * 配点を画面から編集できなくする以上、決まっている理由も併せて出す必要がある
+ * （出さないと「入力できないのは不具合ではないか」と受け取られる）。それは RULE_NOTES。
  */
-export function describeRule(rule: GradePointRule): string {
-  const parts = [`等級要件達成率（固定枠）${rule.fixedSlotPoints}点`];
-  if (rule.majorSlotCount > 0) parts.push(`${rule.majorSlotPoints}点枠を${rule.majorSlotCount}項目`);
-  if (rule.minorSlotCount > 0) parts.push(`ほかの項目を${rule.minorSlotPoints}点ずつ${rule.minorSlotCount}項目`);
-  return (
-    `${rule.pointGroup} は ${parts.join(" ＋ ")} ＝ ${rule.totalPoints}点。配点は等級区分から決まるため、この画面では変更できません。` +
-    "固定枠を除く枠には、どの分類のどの項目でも入れられます（同じ分類から複数選んでもかまいません）。"
-  );
+export interface RulePart {
+  /** 並びの鍵（枠の種類） */
+  kind: SlotKind;
+  /** 枠の呼び名 */
+  label: string;
+  /** その枠の中身（1つあたりの配点 × 個数）。固定枠は1つしかないので持たない */
+  detail: string | null;
+  /** その枠ぶんの小計 */
+  points: number;
 }
+
+export function ruleBreakdown(rule: GradePointRule): RulePart[] {
+  const parts: RulePart[] = [
+    { kind: "fixed", label: "等級要件達成率（固定枠）", detail: null, points: rule.fixedSlotPoints },
+  ];
+  if (rule.majorSlotCount > 0) {
+    parts.push({
+      kind: "major",
+      label: `${rule.majorSlotPoints}点枠`,
+      detail: `${rule.majorSlotPoints}点 × ${rule.majorSlotCount}項目`,
+      points: rule.majorSlotPoints * rule.majorSlotCount,
+    });
+  }
+  if (rule.minorSlotCount > 0) {
+    parts.push({
+      kind: "minor",
+      label: "ほかの項目",
+      detail: `${rule.minorSlotPoints}点 × ${rule.minorSlotCount}項目`,
+      points: rule.minorSlotPoints * rule.minorSlotCount,
+    });
+  }
+  return parts;
+}
+
+/**
+ * 配点が動かせないことと、枠の使い方の決まり。
+ *
+ * 1文＝1つのことにして並べる。画面はこれをそのまま並びとして出す。
+ */
+export const RULE_NOTES = [
+  "配点は等級区分から決まります。",
+  "この画面では変更できません。",
+  "固定枠を除く枠には、どの分類の項目でも入れられます。",
+  "同じ分類から複数選んでもかまいません。",
+] as const;

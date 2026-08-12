@@ -2,11 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { UsedByDetail } from "@/components/UsedByDetail";
 import { requestMasterDelete } from "@/components/master-delete-request";
 import { behaviorBandLabel, type BehaviorBandSetRow } from "@/lib/domain/behavior";
-import { DELETE_LABEL, deleteBlockedReason, deleteConfirmText } from "@/lib/domain/master-delete";
+import {
+  BLOCKED_HELP_LABEL,
+  BLOCKED_KEEP,
+  BLOCKED_WHAT,
+  BLOCKED_WHY,
+  DELETE_LABEL,
+  blockedMark,
+  deleteConfirmText,
+} from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 
 /**
@@ -105,6 +114,11 @@ export function BehaviorGuidelineEditor({
 
   const list = rows.filter((r) => r.band === band).sort((a, b) => a.seq - b.seq);
 
+  /* 観点ごとに残すのは「使用中（◯件）」の一言だけ。どこで使っているかは押したら出す。
+     全観点で同じになる「なぜ消せないか」は、この部品の一番下に1つだけ置く。 */
+  const usedByOf = (id: string) => usage[id] ?? [];
+  const anyBlocked = list.some((g) => usedByOf(g.id).length > 0);
+
   return (
     <div className="stack">
       {error && <ReasonNote>{error}</ReasonNote>}
@@ -118,7 +132,7 @@ export function BehaviorGuidelineEditor({
       )}
 
       {list.map((g) => {
-        const blocked = deleteBlockedReason(usage[g.id] ?? []);
+        const mark = blockedMark(usedByOf(g.id));
         return (
         <Card key={g.id} className="card-pad" off={!g.isActive}>
           {/* 5段階ぶんの文章を続けて書くので、頭は固定表示にする。
@@ -187,7 +201,7 @@ export function BehaviorGuidelineEditor({
                     </Button>
                   </>
                 )}
-                {editingName[g.id] === undefined && blocked === null && (
+                {editingName[g.id] === undefined && mark === null && (
                   <ConfirmButton
                     label={DELETE_LABEL}
                     variant="danger-outline"
@@ -200,8 +214,9 @@ export function BehaviorGuidelineEditor({
             }
           />
 
-          {/* 消せないときは、押せないボタンを置くより、なぜ消せないかを先に読めるようにする */}
-          {blocked !== null && <p className="footnote m-0 mt-2">{blocked}</p>}
+          {/* 観点ごとに残すのは「使用中（◯件）」だけ。どこで使っているかは押したら出す。
+              全観点で同じになる理由は、この部品の一番下にまとめてある。 */}
+          {mark !== null && <UsedByDetail mark={mark} usedBy={usedByOf(g.id)} />}
 
           <div className="mt-3 grid gap-2">
             {[...g.levels]
@@ -322,6 +337,16 @@ export function BehaviorGuidelineEditor({
           </>
         )}
       </Card>
+
+      {/* 全観点で同じ文になる「なぜ消せないか」は、観点の箱から外してここへ1つだけ置く。
+          「使用中」の観点が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
+      {anyBlocked && (
+        <Disclosure summary={BLOCKED_HELP_LABEL}>
+          <p className="m-0 text-sub">{BLOCKED_WHY}</p>
+          <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
+          <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
+        </Disclosure>
+      )}
     </div>
   );
 }

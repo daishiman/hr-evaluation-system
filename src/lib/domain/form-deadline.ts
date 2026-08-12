@@ -121,7 +121,7 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
       effectiveUntil,
       extended: false,
       message:
-        "このアンケートは締め切られました。提出済みの回答はそのまま残っています。事情があって回答できなかった場合は、上長または会社の管理者にご連絡ください（本人ごとに期限を延ばすことができます）。",
+        "このアンケートは締め切られました。提出済みの回答はそのまま残っています。事情があって回答できなかった場合は、上長または会社の管理者にご連絡ください。本人ごとに期限を延ばすことができます。",
     };
   }
 
@@ -142,7 +142,7 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
       state: "past_deadline",
       effectiveUntil,
       extended: false,
-      message: `回答期限（${formatJpDate(effectiveUntil)}）を過ぎたため、保存できません。事情があって間に合わなかった場合は、上長または会社の管理者にご連絡ください（本人ごとに期限を延ばすことができます）。`,
+      message: `回答期限（${formatJpDate(effectiveUntil)}）を過ぎたため、保存できません。事情があって間に合わなかった場合は、上長または会社の管理者にご連絡ください。本人ごとに期限を延ばすことができます。`,
     };
   }
 

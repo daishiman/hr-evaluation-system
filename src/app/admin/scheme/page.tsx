@@ -91,14 +91,24 @@ export default async function AdminSchemePage() {
           const step = p.nextStep ?? "select";
           return {
             key: g.pointGroup,
-            title: (
-              <>
-                {g.pointGroup}
-                <span className="unit"> （{g.gradeLabel}）</span>
-              </>
-            ),
+            title: g.pointGroup,
             marks: p.done ? <Badge tone="done">設定済み</Badge> : <Badge tone="required">設定が未完了</Badge>,
             rows: [
+              {
+                // 等級名を「・」でつないでカッコに入れると、1行が130文字を超える。
+                // 「どの等級が入るか」は数えるものなので、並びで出す。
+                label: "この区分に入る等級",
+                value:
+                  g.gradeNames.length === 0 ? (
+                    "この等級区分の等級は未登録です"
+                  ) : (
+                    <ul className="m-0 list-disc pl-5">
+                      {g.gradeNames.map((name) => (
+                        <li key={name}>{name}</li>
+                      ))}
+                    </ul>
+                  ),
+              },
               {
                 label: "使うKPI",
                 value: (

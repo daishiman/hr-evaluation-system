@@ -46,7 +46,7 @@ export function chunkRowsForD1<T extends Record<string, unknown>>(
   for (const row of rows) {
     const needed = estimateInsertBoundParameters(row);
     if (needed > limit) {
-      throw new Error(`1行のbound parameter見積もり（${needed}個）がD1の安全上限（${limit}個）を超えています。`);
+      throw new Error(`1行のbound parameter見積もりは${needed}個です。D1の安全上限（${limit}個）を超えています。`);
     }
     if (chunk.length > 0 && used + needed > limit) {
       chunks.push(chunk);
