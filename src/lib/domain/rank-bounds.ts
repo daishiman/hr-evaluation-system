@@ -1,3 +1,4 @@
+import { checkNumberMagnitude } from "@/lib/domain/number-input";
 import { RANK_ORDER, type Direction, type Rank } from "@/lib/domain/scoring";
 
 /**
@@ -71,6 +72,20 @@ export function checkRankBoundaries(rows: RankBoundRow[], direction: Direction):
   const joinOfBetter: "lowerBound" | "upperBound" = direction === "lower" ? "upperBound" : "lowerBound";
   const joinOfWorse: "lowerBound" | "upperBound" = direction === "lower" ? "lowerBound" : "upperBound";
   const sideWord = (f: "lowerBound" | "upperBound") => (f === "lowerBound" ? "下限" : "上限");
+
+  /* いちばん先に、桁が多すぎる値を断る。
+     ここを先に見るのは、言い方の問題。1兆を超える値を1つ置くと、隣のランクと必ず繋がらなくなり、
+     そのままだと「隣とつながっていません」とだけ言われる。本当の原因は桁の打ち間違いなので、
+     直すべき場所（どのランクのどちらの欄か）が伝わる言葉を先に出す。
+     決まりそのものは回答の受け取りと同じ `MAX_ABS_NUMBER`（1兆）で、ここに別の基準は置かない。 */
+  const tooLarge: BoundIssue[] = [];
+  for (const r of sorted) {
+    for (const field of ["lowerBound", "upperBound"] as const) {
+      const m = checkNumberMagnitude(`ランク${r.rank}の${sideWord(field)}（${num(r[field])}）`, r[field]);
+      if (!m.ok) tooLarge.push({ message: m.message, fix: null });
+    }
+  }
+  if (tooLarge.length > 0) return { ok: false, issues: tooLarge };
 
   // 1つの中で逆転していないか（下限 < 上限）
   for (const r of sorted) {
