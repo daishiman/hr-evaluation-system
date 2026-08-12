@@ -119,7 +119,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
       </div>
 
       <Card className="card-pad">
-        <p className="m-0 text-[13px]">
+        <p className="m-0 text-sub">
           {cycle.name}（{formatPeriod(cycle.periodStart, cycle.periodEnd)}／
           {CYCLE_STATUS_LABEL[cycle.status] ?? cycle.status}）の達成率を、
           <Num value={offices.length} unit="事業所" /> 中 <Num value={registered} unit="事業所" /> 登録済みです。

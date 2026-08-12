@@ -227,10 +227,10 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
               <Badge tone="active">次の一手</Badge>
               {/* この画面で唯一の「視覚的な主役」。節見出し（SectionHeading・13px）ではなく
                   本文より大きい文字で出す意図的な例外。ほかの画面に増やさない。 */}
-              <h2 id="admin-next-action" className="m-0 mt-2 text-[18px] font-bold">
+              <h2 id="admin-next-action" className="m-0 mt-2 text-title font-bold">
                 {model.nextAction.title}
               </h2>
-              <p className="m-0 mt-1 text-[13px] text-[var(--ink-muted)]">{model.nextAction.body}</p>
+              <p className="m-0 mt-1 text-sub text-[var(--ink-muted)]">{model.nextAction.body}</p>
             </div>
             <LinkButton href={model.nextAction.href} variant="primary">
               {model.nextAction.label}
@@ -328,11 +328,11 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
 
       {snapshot.cycle && (
         <Card className="card-pad mt-4">
-          <p className="m-0 text-[12px] text-[var(--ink-muted)]">表示中の評価期間</p>
-          <p className="m-0 mt-1 text-[14px] font-bold">
+          <p className="m-0 text-note text-[var(--ink-muted)]">表示中の評価期間</p>
+          <p className="m-0 mt-1 text-body font-bold">
             {snapshot.cycle.name} ／ {formatPeriod(snapshot.cycle.periodStart, snapshot.cycle.periodEnd)}
           </p>
-          <p className="m-0 mt-2 text-[13px]">
+          <p className="m-0 mt-2 text-sub">
             社員 <Num value={snapshot.memberCount} unit="人" /> ／ 公開アンケート{" "}
             <Num value={snapshot.publishedFormCount} unit="件" /> ／ 未確定評価 <Num value={unfinalized} unit="件" />
           </p>
@@ -356,11 +356,11 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
       )}
 
       <details className="mt-5 rounded-xl border border-[var(--line)] bg-white px-4 py-3">
-        <summary className="cursor-pointer text-[13px] font-bold">設定する順番と役割を確認する</summary>
-        <p className="m-0 mt-2 text-[12px] text-[var(--ink-muted)]">
+        <summary className="cursor-pointer text-sub font-bold">設定する順番と役割を確認する</summary>
+        <p className="m-0 mt-2 text-note text-[var(--ink-muted)]">
           後の設定は前の設定を使って作られます。迷ったときは上から順に確認してください。
         </p>
-        <ol className="m-0 mt-3 grid list-decimal gap-2 pl-5 text-[13px]">
+        <ol className="m-0 mt-3 grid list-decimal gap-2 pl-5 text-sub">
           <li>
             <Link href="/admin/masters" className="text-[var(--brand-deep)]">等級の設定</Link> — 制度の土台になる等級と水準を決める
           </li>

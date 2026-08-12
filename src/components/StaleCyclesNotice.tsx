@@ -20,12 +20,12 @@ export function StaleCyclesNotice({ cycles }: { cycles: StaleCycle[] }) {
 
   return (
     <Card className="card-pad">
-      <p className="m-0 text-[13px] font-bold">
+      <p className="m-0 text-sub font-bold">
         {hasRecomputable
           ? "基準を変えたあと、集計し直していない評価があります"
           : "基準を変える前に確定した評価があります"}
       </p>
-      <ul className="m-0 mt-2 list-disc pl-5 text-[13px]">
+      <ul className="m-0 mt-2 list-disc pl-5 text-sub">
         {cycles.map((c) => {
           if (c.recomputable === 0) {
             return (

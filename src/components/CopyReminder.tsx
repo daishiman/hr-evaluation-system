@@ -52,11 +52,11 @@ export function CopyReminder({
       <Button type="button" variant="secondary" onClick={() => void copy()}>
         未回答の方への連絡文をコピーする
       </Button>
-      {copied && <p className="m-0 mt-2 text-[13px] text-[var(--brand-deep)]">コピーしました。メールやチャットに貼り付けてお使いください。</p>}
+      {copied && <p className="m-0 mt-2 text-sub text-[var(--brand-deep)]">コピーしました。メールやチャットに貼り付けてお使いください。</p>}
       {fallback && (
         <div className="mt-2">
           <ReasonNote>この環境では自動でコピーできませんでした。下の文面を選んでコピーしてください。</ReasonNote>
-          <textarea className="input mt-2 w-full font-mono text-[12px]" rows={8} readOnly value={fallback} />
+          <textarea className="input mt-2 w-full font-mono text-note" rows={8} readOnly value={fallback} />
         </div>
       )}
     </div>

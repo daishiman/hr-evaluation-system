@@ -110,12 +110,12 @@ export function PasswordChangeForm() {
   if (done) {
     return (
       <div className="grid gap-3" role="status">
-        <p className="m-0 flex items-center gap-2 text-[15px] font-bold">
+        <p className="m-0 flex items-center gap-2 text-strong font-bold">
           <Icon name="check" size={18} />
           パスワードを変更しました
         </p>
-        <p className="m-0 text-[13px]">{done}</p>
-        <p className="m-0 text-[13px] text-[var(--ink-muted)]">
+        <p className="m-0 text-sub">{done}</p>
+        <p className="m-0 text-sub text-[var(--ink-muted)]">
           この端末はそのまま使えます。ほかの端末やブラウザで開いていた場合は、新しいパスワードでログインし直してください。
         </p>
         <div>

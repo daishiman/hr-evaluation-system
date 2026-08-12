@@ -135,16 +135,16 @@ export function SelectableItems({
         </p>
       ) : (
         <details className="card card-pad">
-          <summary className="cursor-pointer text-[13px] font-semibold">
+          <summary className="cursor-pointer text-sub font-semibold">
             選べる項目をカテゴリごとに見る（<Num value={others.length} unit="件" />）
           </summary>
           <div className="mt-3 grid gap-4">
             {[...byCategory.entries()].map(([category, list]) => (
               <div key={category}>
-                <p className="m-0 mb-1 text-[12px] font-semibold text-[var(--ink-muted)]">
+                <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">
                   {category}（{list.length}件）
                 </p>
-                <ul className="m-0 list-none space-y-1 p-0 text-[13px]">
+                <ul className="m-0 list-none space-y-1 p-0 text-sub">
                   {list.map((i) => (
                     <li key={i.kpiItemId}>
                       <a href={criteriaHref(i.kpiItemId)} className="underline">

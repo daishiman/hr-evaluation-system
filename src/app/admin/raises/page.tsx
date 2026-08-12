@@ -216,7 +216,7 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
 
       <div className="mt-4">
         <Disclosure summary="事業所ごとの調整率" meta={offices.length === 0 ? "事業所なし" : `${offices.length}事業所`}>
-          <p className="m-0 text-[13px]">
+          <p className="m-0 text-sub">
             事業所ごとに金額を変える場合だけ設定します。1.0 のままなら等級の金額をそのまま適用します。
           </p>
           <div className="mt-3 grid gap-3">

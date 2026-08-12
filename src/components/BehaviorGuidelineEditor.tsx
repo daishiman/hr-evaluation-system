@@ -108,7 +108,7 @@ export function BehaviorGuidelineEditor({
   return (
     <div className="stack">
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
 
       {list.length === 0 && (
         <ReasonNote>
@@ -121,7 +121,10 @@ export function BehaviorGuidelineEditor({
         const blocked = deleteBlockedReason(usage[g.id] ?? []);
         return (
         <Card key={g.id} className="card-pad" off={!g.isActive}>
+          {/* 5段階ぶんの文章を続けて書くので、頭は固定表示にする。
+              いま何の観点の文章を書いているかが見えないまま下まで進んでしまう。 */}
           <CardHead
+            pinned
             title={
               editingName[g.id] === undefined ? (
                 g.aspectName
@@ -207,18 +210,18 @@ export function BehaviorGuidelineEditor({
                 const draft = editingLevel[lv.id];
                 return (
                   <div key={lv.id} className="card-row items-start rounded-lg border border-[var(--line)]">
-                    <span className="num w-8 shrink-0 text-[13px] font-bold">{lv.score > 0 ? `+${lv.score}` : lv.score}</span>
+                    <span className="num w-8 shrink-0 text-sub font-bold">{lv.score > 0 ? `+${lv.score}` : lv.score}</span>
                     <div className="row-main">
                       {draft === undefined ? (
                         <>
-                          <p className="m-0 text-[13px]">
+                          <p className="m-0 text-sub">
                             <b>【{lv.label}】</b>
                             {lv.text}
                           </p>
                         </>
                       ) : (
                         <>
-                          <label className="block text-[12px] text-[var(--ink-muted)]">
+                          <label className="block text-note text-[var(--ink-muted)]">
                             この段階の呼び名
                             <input
                               value={draft.label}
@@ -226,7 +229,7 @@ export function BehaviorGuidelineEditor({
                               className="input mt-1 w-full"
                             />
                           </label>
-                          <label className="mt-2 block text-[12px] text-[var(--ink-muted)]">
+                          <label className="mt-2 block text-note text-[var(--ink-muted)]">
                             どういう状態か
                             <textarea
                               value={draft.text}
@@ -263,7 +266,7 @@ export function BehaviorGuidelineEditor({
                       )}
                     </div>
                     {draft === undefined && (
-                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                      <div className="row-actions">
                         <Badge tone={lv.score >= 1 ? "done" : "dropped"}>{lv.score}点</Badge>
                         <Button
                           variant="tertiary"
@@ -292,7 +295,7 @@ export function BehaviorGuidelineEditor({
           </div>
         ) : (
           <>
-            <label className="block text-[12px] text-[var(--ink-muted)]">
+            <label className="block text-note text-[var(--ink-muted)]">
               観点の呼び名（そのまま設問になります）
               <input
                 value={newAspectName}

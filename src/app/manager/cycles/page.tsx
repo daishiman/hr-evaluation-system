@@ -70,10 +70,10 @@ export default async function ManagerCycles({
       </div>
 
       <Card className="card-pad hero-tint">
-        <p className="m-0 text-[12px] text-[var(--ink-muted)]">
+        <p className="m-0 text-note text-[var(--ink-muted)]">
           {formatPeriod(selected.periodStart, selected.periodEnd)} ／ {CYCLE_STATUS_LABEL[selected.status] ?? selected.status}
         </p>
-        <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
+        <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
           {submitted.length}
           <span className="unit"> / {pending.length} 人が提出済み</span>
         </p>
@@ -82,8 +82,8 @@ export default async function ManagerCycles({
       {stale && (
         <div className="mt-4">
           <Card className="card-pad">
-            <p className="m-0 text-[13px] font-bold">この期の評価は、いまの基準より古い可能性があります</p>
-            <p className="m-0 mt-1 text-[13px]">
+            <p className="m-0 text-sub font-bold">この期の評価は、いまの基準より古い可能性があります</p>
+            <p className="m-0 mt-1 text-sub">
               最後に集計したあとに、次のものが変わりました：{stale.changed.slice(0, 3).map((c) => c.label).join("／")}
               {stale.changed.length > 3 ? ` ほか${stale.changed.length - 3}件` : ""}。
             </p>
@@ -123,7 +123,7 @@ export default async function ManagerCycles({
 
       <SectionHeading>評価を作る</SectionHeading>
       <Card className="card-pad">
-        <p className="m-0 text-[13px]">
+        <p className="m-0 text-sub">
           提出済みの{submitted.length}人分について、回答から評価を計算します。すでに確定した評価は作り直しません。
         </p>
         <div className="mt-3">

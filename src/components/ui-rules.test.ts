@@ -116,12 +116,71 @@ describe("画面の器の作法", () => {
     expect(css).toContain(".row-main { flex: 1 1 16rem; min-width: 0; }");
   });
 
-  it("文字は12px未満にしない（画面・共通CSSとも）", () => {
-    // 11px・10px は一見「小さくまとまって」見えるが、補足・状態の札はこの下限を割ると読めなくなる。
+  it("文字の大きさは globals.css の @theme だけで決める（px を直接書かない）", () => {
+    // 「全体的に文字が小さい」と言われたとき、px が画面に散っていると
+    // 200箇所以上を1つずつ直すことになり、必ず取りこぼす（実際にそうなっていた）。
+    // 大きさの正本は @theme の1箇所だけにして、画面は段の名前で指定する。
     const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
-    expect(css.match(/font-size: (\d|1[01])px/g) ?? []).toEqual([]);
-    const offenders = sourceFiles.filter((p) => /text-\[(\d|1[01])px\]/.test(readFileSync(p, "utf8")));
+    const theme = css.slice(css.indexOf("@theme {"), css.indexOf("}", css.indexOf("@theme {")));
+    // @theme の外に font-size: Npx が残っていないこと
+    expect(css.replace(theme, "").match(/font-size: \d+px/g) ?? []).toEqual([]);
+    // 画面側も text-[13px] のような直書きをしないこと
+    const offenders = sourceFiles.filter((p) => /text-\[\d+px\]/.test(readFileSync(p, "utf8")));
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("文字の段は14px未満にしない", () => {
+    // 13px・12px は一見「小さくまとまって」見えるが、補足・状態の札はこの下限を割ると読めなくなる。
+    // 2026-08 に発注者から「全体的に小さい」と指摘され、下限を 12px → 14px に引き上げた。
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const theme = css.slice(css.indexOf("@theme {"), css.indexOf("}", css.indexOf("@theme {")));
+    const sizes = [...theme.matchAll(/--text-[\w-]+: (\d+)px/g)].map((m) => Number(m[1]));
+    expect(sizes.length).toBeGreaterThanOrEqual(10);
+    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(14);
+    // 本文は16px。ここを動かすと画面全体の大きさが動く。
+    expect(theme).toContain("--text-body: 16px;");
+    // 見出しと本文の差（情報の階層）が消えていないこと。
+    // ページ見出し（title）は本文より5px以上大きく、補足（note）は本文より小さい。
+    const px = (name: string) => Number(theme.match(new RegExp(`--text-${name}: (\\d+)px`))?.[1]);
+    expect(px("title") - px("body")).toBeGreaterThanOrEqual(5);
+    expect(px("note")).toBeLessThan(px("body"));
+    expect(px("hero") / px("body")).toBeGreaterThanOrEqual(2.5); // 主役の数字:本文 = 2.5倍以上
+  });
+
+  it("割合で小さくする文字（単位・桁区切り・通貨記号）にも下限を付ける", () => {
+    // 単位は「大きな数字の脇では小さく」が正しいが、割合だけで指定すると
+    // 15px の見出しに混ざったときに 9px 前後まで落ちて読めなくなる（実測で確認）。
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    for (const selector of [".unit {", ".num-sep {", ".currency {"]) {
+      const block = css.slice(css.indexOf(selector));
+      const body = block.slice(0, block.indexOf("}"));
+      expect(body).toMatch(/font-size: max\([^)]*var\(--text-note\)\)/);
+    }
+  });
+
+  it("行の右端の操作は、縮んで折り返す（ページを横に広げない）", () => {
+    // まとまりを縮まないようにすると、中に長い一文（止められない理由など）が入ったとき
+    // まとまりの幅がそのまま画面をはみ出し、ページ全体が横スクロールする（実測で確認）。
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".row-actions {"));
+    const body = block.slice(0, block.indexOf("}"));
+    expect(body).toContain("flex-wrap: wrap");
+    expect(body).toContain("min-width: 0");
+    expect(body).not.toContain("flex-shrink: 0");
+    // 中のボタン・札だけは潰さない
+    expect(css).toContain(".row-actions > .btn");
+    // 画面側で「縮まない操作のまとまり」を書き起こしていないこと
+    const offenders = sourceFiles.filter((p) => /shrink-0[^"]*flex-wrap|flex-wrap[^"]*shrink-0/.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("グラフの中の文字も下限を守る（SVGはクラスが効かないので数値で確認する）", () => {
+    const source = readFileSync(join(SRC, "components", "Charts.tsx"), "utf8");
+    const sizes = [...source.matchAll(/const CHART_FS_\w+ = (\d+);/g)].map((m) => Number(m[1]));
+    expect(sizes.length).toBe(2);
+    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(13);
+    // 数値の直書きが復活していないこと
+    expect(source.match(/fontSize: \d+/g) ?? []).toEqual([]);
   });
 
   it("白文字を載せる主要ボタンは、コントラストを満たす色を使う", () => {
@@ -137,6 +196,125 @@ describe("画面の器の作法", () => {
     expect(css).toContain("@media (pointer: coarse)");
     const block = css.slice(css.indexOf("@media (pointer: coarse)"));
     expect(block.slice(0, block.indexOf("}"))).toContain("min-height: 44px");
+  });
+
+  it("カードの中の固定見出しは CardHead の pinned に集約する", () => {
+    // カードごとに position: sticky を書き始めると、貼り付く位置（固定ヘッダーの下）と
+    // 帯に載せてよい情報の絞り方が、そのカードだけ揃わなくなる。
+    const owner = join(SRC, "components", "ui.tsx");
+    const offenders = sourceFiles.filter((p) => p !== owner && readFileSync(p, "utf8").includes("card-head-sticky"));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+    // 画面側が自前で貼り付けを書いていないこと（固定は共通部品の仕事）。
+    // PageTitle / CardHead に sticky・pinned を渡すのは可。
+    // 貼り付けてよいのは、見出しの帯とカードの頭（ui.tsx）と、下の操作バーだけ。
+    const stickyOwners = new Set([owner, join(SRC, "components", "layout", "StickyActionBar.tsx")]);
+    const rogue = sourceFiles.filter((p) => {
+      if (stickyOwners.has(p)) return false;
+      const s = readFileSync(p, "utf8");
+      return /className=\{?["`][^"`]*\bsticky\b/.test(s) || /position:\s*["']?sticky/.test(s);
+    });
+    expect(rogue.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("固定表示の帯には、一度読めば済む注記を載せられない（型で縛る）", () => {
+    // 帯に説明文を足していくと厚くなり、肝心の入力欄が画面から押し出される。
+    // pinned のときは detail（注記の段落）を渡せない、を型で禁止する。
+    const source = readFileSync(join(SRC, "components", "ui.tsx"), "utf8");
+    expect(source).toMatch(/pinned: true;\s*\n\s*detail\?: never;/);
+  });
+
+  it("カードの中の固定見出しは、画面上部の固定ヘッダーの下に貼り付く", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".card-head-sticky {"));
+    const head = block.slice(0, block.indexOf("}"));
+    expect(head).toContain("position: sticky");
+    // 位置は表の列見出しと同じ1つの変数から取る（2つの固定物がずれない）
+    expect(head).toContain("top: var(--sticky-top)");
+    expect(css).toContain("--table-head-top: var(--sticky-top)");
+    // 見出し帯（z-index: 15）より下に潜る＝上部の帯を覆い隠さない
+    expect(Number(head.match(/z-index: (\d+)/)?.[1])).toBeLessThan(15);
+  });
+
+  it("狭い画面・低い画面では、固定をやめて入力欄の高さを優先する", () => {
+    // 帯は「参照しながら打つ」ためのもの。打つ場所を奪ったら本末転倒。
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    // 固定をやめている箇所それぞれについて、直前の @media が
+    // 「狭い画面」または「低い画面」であること
+    const stops = [...css.matchAll(/\.card-head-sticky \{[^}]*position: static/g)];
+    const conditions = stops.map((m) => css.slice(0, m.index).match(/@media \([^)]*\)(?![\s\S]*@media)/)?.[0]);
+    expect(conditions).toEqual(["@media (max-width: 639px)", "@media (max-height: 560px)"]);
+  });
+
+  it("貼り付く位置は決め打ちにせず、見出し帯の高さを測って決める", () => {
+    // 見出し帯の高さは画面ごとに違う（パンくずの有無・札の行数・折返し・文字サイズ）。
+    // CSSに数値を書き込んだままにすると、帯がその下に潜り込んで読めなくなる。
+    const source = readFileSync(join(SRC, "components", "StickyOffset.tsx"), "utf8");
+    expect(source).toContain('.page-head[data-sticky="true"]');
+    expect(source).toContain("getBoundingClientRect");
+    expect(source).toContain("--sticky-top");
+    // 測り直しの引き金：画面の移動と、帯の高さが変わったとき
+    expect(source).toContain("usePathname");
+    expect(source).toContain("ResizeObserver");
+    // 全画面で効くよう、骨格に1つだけ置く
+    expect(readFileSync(join(SRC, "components", "AppShell.tsx"), "utf8")).toContain("<StickyOffset />");
+  });
+
+  it("固定見出しを包む箱に overflow: hidden を作らない（無言で固定が効かなくなる）", () => {
+    // position: sticky は、祖先に overflow: hidden があると見た目だけ普通の見出しに戻る。
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    for (const selector of [".card {", ".card-pad {", ".stack {"]) {
+      const block = css.slice(css.indexOf(selector));
+      expect(block.slice(0, block.indexOf("}"))).not.toContain("overflow: hidden");
+    }
+  });
+
+  it("確認の窓は画面の中央に出す（左上に貼り付かせない）", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".confirm-dialog {"));
+    const body = block.slice(0, block.indexOf("}"));
+    // Tailwind の初期化が dialog の margin を 0 にするため、
+    // 指定しないと画面の左上に出る（実際にそうなっていた）。
+    expect(body).toContain("margin: auto");
+    // 窓の高さは画面内に収める
+    expect(body).toContain("max-height:");
+  });
+
+  it("確認の窓が縦に長くても、ボタンは窓の中に残る（本文だけがスクロールする）", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    // 窓ごとスクロールさせるとボタンが下に隠れ、「押せない窓」に見える
+    const win = css.slice(css.indexOf(".confirm-dialog {"));
+    expect(win.slice(0, win.indexOf("}"))).toContain("overflow: hidden");
+    // 本文とボタンを縦に積み、あふれるのは本文だけにする
+    const box = css.slice(css.indexOf(".confirm-dialog-body {"));
+    expect(box.slice(0, box.indexOf("}"))).toContain("grid-template-rows:");
+    const text = css.slice(css.indexOf(".confirm-dialog-text {"));
+    expect(text.slice(0, text.indexOf("}"))).toContain("overflow-y: auto");
+    // 部品側でも本文だけを包んでいること
+    expect(readFileSync(join(SRC, "components", "ConfirmButton.tsx"), "utf8")).toContain("confirm-dialog-text");
+  });
+
+  it("確認の窓は ConfirmButton に集約する（画面ごとに窓を書き起こさない）", () => {
+    const owner = join(SRC, "components", "ConfirmButton.tsx");
+    const offenders = sourceFiles.filter((p) => {
+      if (p === owner) return false;
+      const s = readFileSync(p, "utf8");
+      return s.includes("showModal(") || s.includes('role="dialog"');
+    });
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("入力項目が少ない画面の幅は .narrow-form 1つで決める", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".narrow-form {"));
+    expect(block.slice(0, block.indexOf("}"))).toContain("max-width:");
+    // 狭い画面では上限を外す（絞ると窮屈になる）
+    expect(css).toMatch(/@media \(max-width: 639px\) \{\s*\.narrow-form \{ max-width: none; \}/);
+    // 画面ごとに max-w-* を書かない（幅の正本を1箇所に保つ）
+    for (const rel of ["app/login/page.tsx", "app/account/password/page.tsx"]) {
+      const s = readFileSync(join(SRC, ...rel.split("/")), "utf8");
+      expect(s).toContain("narrow-form");
+      expect(s).not.toMatch(/max-w-(xs|sm|md|lg|xl)/);
+    }
   });
 
   it("数値を入れる欄は NumberField に集約する（画面ごとに書き起こさない）", () => {
@@ -166,6 +344,8 @@ describe("画面の器の作法", () => {
     // 列見出しを固定していること
     expect(css).toContain("--table-head-top");
     // 見出しの帯を固定している画面では、その帯のぶんだけ下げていること
-    expect(css).toContain('body:has(.page-head[data-sticky="true"])');
+    expect(css).toContain('html:has(.page-head[data-sticky="true"])');
+    // Tab で送ったフォーカスが固定物の下に潜らないよう、余白も同じ値から取る
+    expect(css).toContain("scroll-padding-top: calc(var(--sticky-top)");
   });
 });

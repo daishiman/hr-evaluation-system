@@ -20,6 +20,10 @@ import { computeBonus, type KgiCoefficientRow } from "@/lib/domain/kgi";
 import { FINALIZED_SKIP_MESSAGE } from "@/lib/domain/build-summary";
 import { newId } from "@/lib/id";
 
+/** 実績値を出せなかったときに、評価者向けに出す既定の理由。 */
+export const UNRATED_RATIONALE =
+  "計算に必要な回答が不足しているため、実績値を出せませんでした（判定外）。回答を確認してください。";
+
 /**
  * 提出されたアンケート回答から評価結果を組み立てる。
  *
@@ -262,7 +266,11 @@ export async function buildEvaluationsForCycle(
            分母0・未回答は「その項目だけ判定外」にするのが制度上の扱い
            （ランクEに落とさない＝実績が無いのに未達と断定しない）。 */
         let actual: number | null;
-        let unratedReason: string | null = null;
+        /* 判定外になったときに必ず理由が出るよう、はじめから既定の理由を入れておく。
+           以前は null 始まりで、出力時に「null なら既定文」と書き足していたが、
+           null のまま出力に届く道が無く（下の2つの枝が必ず理由を入れる）、
+           読む人に「理由なしで表示されうる」と誤解させるだけの分岐になっていた。 */
+        let unratedReason: string = UNRATED_RATIONALE;
         /* 本人向けの文は、評価者向けの文をそのまま出さない。
            評価者向けには「アンケートに等級要件を追加してください」のような
            運用側への指示が入っており、本人が読んでも行動につながらないため。 */
@@ -277,10 +285,13 @@ export async function buildEvaluationsForCycle(
             actual = computeActualValue(m.formula ?? "", vars);
           } catch (e) {
             actual = null;
+            /* 計算式の不備（分母0・未回答・書式の誤り）は FormulaError で理由が分かる。
+               それ以外（例：括弧が極端に深い式で計算そのものが続けられない場合）は
+               中身を画面に出しても読む人の行動につながらないため、既定の理由にする。 */
             unratedReason =
               e instanceof FormulaError
                 ? `${e.message}（この項目は判定外として扱いました）`
-                : "計算に必要な回答が不足しているため、実績値を出せませんでした（判定外）。回答を確認してください。";
+                : UNRATED_RATIONALE;
           }
         }
 
@@ -300,9 +311,7 @@ export async function buildEvaluationsForCycle(
             rank: null,
             points: 0,
             maxPoints: si.weight,
-            rationale:
-              unratedReason ??
-              "計算に必要な回答が不足しているため、実績値を出せませんでした（判定外）。回答を確認してください。",
+            rationale: unratedReason,
             rationaleEmployee: unratedReasonEmployee,
             calcNote: m.formula,
             isProvisional: m.isProvisional,

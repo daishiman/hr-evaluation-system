@@ -174,7 +174,7 @@ export function FormBuilder({
   return (
     <>
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 mb-3 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 mb-3 text-sub text-[var(--brand-deep)]">{message}</p>}
 
       <div className="grid gap-3">
         {rows.map((r, i) => (
@@ -210,11 +210,11 @@ export function FormBuilder({
             {openId === i && (
               <div className="field-grid mt-3 border-t border-[var(--line)] pt-3">
                 <label className="md:col-span-2">
-                  <span className="block text-[12px] text-[var(--ink-muted)]">設問文</span>
+                  <span className="block text-note text-[var(--ink-muted)]">設問文</span>
                   <input className="input mt-1 w-full" value={r.title} onChange={(e) => patch(i, { title: e.target.value })} />
                 </label>
                 <label className="md:col-span-2">
-                  <span className="block text-[12px] text-[var(--ink-muted)]">補足（任意）</span>
+                  <span className="block text-note text-[var(--ink-muted)]">補足（任意）</span>
                   <input
                     className="input mt-1 w-full"
                     value={r.helpText ?? ""}
@@ -222,7 +222,7 @@ export function FormBuilder({
                   />
                 </label>
                 <label>
-                  <span className="block text-[12px] text-[var(--ink-muted)]">まとまり</span>
+                  <span className="block text-note text-[var(--ink-muted)]">まとまり</span>
                   <select className="input mt-1 w-full" value={r.section} onChange={(e) => patch(i, { section: e.target.value })}>
                     {SECTION_ORDER.concat("free").map((sec) => (
                       <option key={sec} value={sec}>
@@ -232,7 +232,7 @@ export function FormBuilder({
                   </select>
                 </label>
                 <label>
-                  <span className="block text-[12px] text-[var(--ink-muted)]">答え方</span>
+                  <span className="block text-note text-[var(--ink-muted)]">答え方</span>
                   <select
                     className="input mt-1 w-full"
                     value={r.questionType}
@@ -248,7 +248,7 @@ export function FormBuilder({
                 {r.questionType === "number" && (
                   <>
                     <label>
-                      <span className="block text-[12px] text-[var(--ink-muted)]">単位</span>
+                      <span className="block text-note text-[var(--ink-muted)]">単位</span>
                       <input
                         className="input mt-1 w-full"
                         value={r.unit ?? ""}
@@ -256,7 +256,7 @@ export function FormBuilder({
                       />
                     </label>
                     <label>
-                      <span className="block text-[12px] text-[var(--ink-muted)]">入力できる最小値</span>
+                      <span className="block text-note text-[var(--ink-muted)]">入力できる最小値</span>
                       {/* 回答画面と同じ部品を使う。空欄のままにできる（＝下限を決めない）。
                           以前はここで打った文字をそのまま数値にしていたため、全角で打つと
                           「決めたつもりなのに決まっていない」状態になっていた。 */}
@@ -270,11 +270,11 @@ export function FormBuilder({
                       />
                     </label>
                     <label>
-                      <span className="block text-[12px] text-[var(--ink-muted)]">小数の扱い</span>
+                      <span className="block text-note text-[var(--ink-muted)]">小数の扱い</span>
                       {/* 「件」「人」のように数え上げるものは小数が意味を持たない。
                           止めるかどうかは設問ごとに決める（単位だけで決めると、%のように
                           小数が要るものまで巻き込む）。 */}
-                      <span className="mt-1 flex items-center gap-2 text-[13px]">
+                      <span className="mt-1 flex items-center gap-2 text-sub">
                         <input
                           type="checkbox"
                           checked={r.validationInteger}
@@ -287,7 +287,7 @@ export function FormBuilder({
                 )}
                 {(r.questionType === "single" || r.questionType === "multi") && (
                   <div className="md:col-span-2">
-                    <span className="block text-[12px] text-[var(--ink-muted)]">選択肢</span>
+                    <span className="block text-note text-[var(--ink-muted)]">選択肢</span>
                     <div className="mt-1 grid gap-2">
                       {r.options.map((o, oi) => (
                         <div key={oi} className="flex items-center gap-2">
@@ -322,7 +322,7 @@ export function FormBuilder({
                     </div>
                   </div>
                 )}
-                <label className="flex items-center gap-2 text-[13px]">
+                <label className="flex items-center gap-2 text-sub">
                   <input type="checkbox" checked={r.required} onChange={(e) => patch(i, { required: e.target.checked })} />
                   回答を必須にする
                 </label>
@@ -353,7 +353,7 @@ export function FormBuilder({
       <StickyActionBar
         status={
           <>
-            <span className="text-[13px] text-[var(--ink)]">
+            <span className="text-sub text-[var(--ink)]">
               設問 <span className="num font-bold">{rows.length}</span>
               <span className="unit"> 問</span>
             </span>

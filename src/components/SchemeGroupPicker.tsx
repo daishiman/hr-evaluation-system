@@ -241,15 +241,15 @@ export function SchemeGroupPicker({
   return (
     <>
       <Card className="card-pad hero-tint mt-1">
-        <p className="m-0 text-[12px] text-[var(--ink-muted)]">
+        <p className="m-0 text-note text-[var(--ink-muted)]">
           {pointGroup}（{gradeLabel}）の配点
         </p>
-        <p className="num-display m-0 text-[36px] leading-tight text-[var(--accent)]">
+        <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
           {v.total}
           <span className="unit"> / {rule.totalPoints} 点</span>
         </p>
         <p className="footnote m-0 mt-2">{describeRule(rule)}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-4 text-[13px]">
+        <div className="mt-3 flex flex-wrap items-center gap-4 text-sub">
           <span>
             選んだ項目 <Num value={selections.length} unit="件" /> / {expectedItemCount(rule)}件
           </span>
@@ -310,7 +310,7 @@ export function SchemeGroupPicker({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 mt-3 text-sub text-[var(--brand-deep)]">{message}</p>}
 
       {fixedItem && (
         <Card className="card-pad mt-4">
@@ -342,11 +342,11 @@ export function SchemeGroupPicker({
               return (
                 <div
                   key={x.kpiItemId}
-                  className="flex items-start justify-between gap-2 rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-[13px]"
+                  className="flex items-start justify-between gap-2 rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-sub"
                 >
                   <span className="min-w-0">
                     <span className="block font-bold">{item?.name ?? x.kpiItemId}</span>
-                    <span className="block text-[12px] text-[var(--ink-muted)]">
+                    <span className="block text-note text-[var(--ink-muted)]">
                       <Num value={x.weight} unit="点" />
                       {x.isMajorSlot ? "（重い枠）" : ""}
                     </span>
@@ -378,14 +378,14 @@ export function SchemeGroupPicker({
               return (
                 <label
                   key={item.id}
-                  className={`flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--line)] bg-white p-4 text-[13px] ${
+                  className={`flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--line)] bg-white p-4 text-sub ${
                     checked ? "border-[var(--brand)] bg-[var(--brand-soft)]" : ""
                   } ${disabled ? "opacity-50" : ""}`}
                 >
                   <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggleComparison(item.id)} />
                   <span>
                     <span className="block font-bold">{item.name}</span>
-                    <span className="block text-[12px] text-[var(--ink-muted)]">単位 {item.unit}</span>
+                    <span className="block text-note text-[var(--ink-muted)]">単位 {item.unit}</span>
                   </span>
                 </label>
               );
@@ -400,7 +400,7 @@ export function SchemeGroupPicker({
                 const category = categories.find((c) => c.id === item.categoryId);
                 return (
                   <Card key={item.id} className="card-pad">
-                    <p className="m-0 text-[13px] font-bold">{item.name}</p>
+                    <p className="m-0 text-sub font-bold">{item.name}</p>
                     <p className="footnote m-0 mt-1">
                       {category?.name ?? "分類なし"} ／ 単位 {item.unit}
                     </p>
@@ -445,8 +445,8 @@ export function SchemeGroupPicker({
                 onClick={() => toggleMajor(o.id)}
                 className={
                   pick.majorId === o.id
-                    ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-[13px]"
-                    : "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-[13px] hover:border-[var(--brand)]"
+                    ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-sub"
+                    : "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
                 }
               >
                 <span className="block font-bold">
@@ -458,7 +458,7 @@ export function SchemeGroupPicker({
                     </>
                   )}
                 </span>
-                <span className="block text-[12px] text-[var(--ink-muted)]">
+                <span className="block text-note text-[var(--ink-muted)]">
                   単位 {o.unit}
                   {o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}
                 </span>
@@ -492,8 +492,8 @@ export function SchemeGroupPicker({
                       onClick={() => toggleMinor(o.id)}
                       className={
                         on
-                          ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-[13px]"
-                          : "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-[13px] hover:border-[var(--brand)]"
+                          ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-sub"
+                          : "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
                       }
                     >
                       <span className="block font-bold">
@@ -517,7 +517,7 @@ export function SchemeGroupPicker({
                           </>
                         )}
                       </span>
-                      <span className="block text-[12px] text-[var(--ink-muted)]">
+                      <span className="block text-note text-[var(--ink-muted)]">
                         単位 {o.unit}
                         {o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}
                       </span>
@@ -547,7 +547,7 @@ export function SchemeGroupPicker({
       <StickyActionBar
         status={
           <>
-            <span className="text-[13px] text-[var(--ink)]">
+            <span className="text-sub text-[var(--ink)]">
               {pointGroup} 合計 <span className="num font-bold">{v.total}</span>
               <span className="unit"> / {rule.totalPoints} 点</span>
             </span>

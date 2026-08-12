@@ -286,11 +286,13 @@ export function buildThresholdScale(
 
   const lo = Math.min(...bounds);
   const hi = Math.max(...bounds);
+  /* 上下に必ず余白を足す。境界が1つしか無い（hi === lo）ときも最低1は足すので、
+     幅は必ず2以上になる。＝幅が0以下になる道は無い（`evaluation-view.test.ts` で
+     この決まりを検査している）。 */
   const pad = hi > lo ? (hi - lo) * 0.15 : Math.max(Math.abs(hi) * 0.15, 1);
   const min = lo - pad;
   const max = hi + pad;
   const span = max - min;
-  if (span <= 0) return null;
 
   const pos = (v: number) => ((v - min) / span) * 100;
 

@@ -101,8 +101,8 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
       <SectionHeading>この等級について、別の画面で決めること</SectionHeading>
       <div className="stack">
         <Card className="card-pad">
-          <p className="m-0 text-[13px] font-bold">等級要件（支援・運営）</p>
-          <p className="m-0 mt-1 text-[13px]">
+          <p className="m-0 text-sub font-bold">等級要件（支援・運営）</p>
+          <p className="m-0 mt-1 text-sub">
             いまは <b>支援について {supportCount}項目</b>・<b>運営について {operationCount}項目</b>（合計{" "}
             <b>{supportCount + operationCount}項目</b>）です。次に作るアンケートでは、この有効な項目の合計が達成率の分母になります。
           </p>
@@ -115,8 +115,8 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         </Card>
 
         <Card className="card-pad">
-          <p className="m-0 text-[13px] font-bold">昇格の条件・要件</p>
-          <p className="m-0 mt-1 text-[13px]">
+          <p className="m-0 text-sub font-bold">昇格の条件・要件</p>
+          <p className="m-0 mt-1 text-sub">
             {th
               ? `${grade.name}から上がるには、KPI評価点 ${th.requiredKpiPoints}点・行動指針 ${th.requiredBehaviorPoints}点が必要です。`
               : "この等級からの昇格条件は登録されていません（最上位の等級の場合は設定不要です）。"}
@@ -129,8 +129,8 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         </Card>
 
         <Card className="card-pad">
-          <p className="m-0 text-[13px] font-bold">行動指針</p>
-          <p className="m-0 mt-1 text-[13px]">
+          <p className="m-0 text-sub font-bold">行動指針</p>
+          <p className="m-0 mt-1 text-sub">
             {grade.behaviorBand
               ? `${grade.name}のアンケートには、${behaviorBandLabel(bandSets, grade.behaviorBand)}を出します。`
               : `${grade.name}のアンケートには、行動指針を出しません。`}
@@ -143,8 +143,8 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         </Card>
 
         <Card className="card-pad">
-          <p className="m-0 text-[13px] font-bold">昇給額</p>
-          <p className="m-0 mt-1 text-[13px]">
+          <p className="m-0 text-sub font-bold">昇給額</p>
+          <p className="m-0 mt-1 text-sub">
             {raise
               ? `${grade.name}のいまの昇給額は 月額 ${raise.monthlyAmount.toLocaleString("ja-JP")}円 です。`
               : "この等級の昇給額はまだ登録されていません。"}

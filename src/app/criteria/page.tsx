@@ -148,7 +148,7 @@ export default async function CriteriaPage({
           />
 
           <details className="card card-pad mt-3">
-            <summary className="cursor-pointer text-[13px] font-semibold">ほかの等級区分と見くらべる</summary>
+            <summary className="cursor-pointer text-sub font-semibold">ほかの等級区分と見くらべる</summary>
             <div className="mt-3">
               <PointRuleComparison rules={rules} currentGroup={pointGroup} />
               <p className="footnote mt-2">
@@ -159,7 +159,7 @@ export default async function CriteriaPage({
 
           <SectionHeading>昇格・昇給の条件</SectionHeading>
           <Card className="card-pad">
-            <p className="m-0 text-[13px]">
+            <p className="m-0 text-sub">
               {th ? (
                 <>
                   {grade.name} から次の等級へ上がるには{" "}
@@ -181,7 +181,7 @@ export default async function CriteriaPage({
               )}
             </p>
             {raise && (
-              <p className="m-0 mt-2 text-[13px]">
+              <p className="m-0 mt-2 text-sub">
                 昇給額は月額 <Num value={raise.monthlyAmount} unit="円" /> ／ 年額{" "}
                 <Num value={raise.annualAmount} unit="円" />
                 {raise.isProvisional && (
@@ -250,7 +250,7 @@ export default async function CriteriaPage({
                           <span className="unit">点</span>
                           {item && (
                             <p className="m-0 mt-1">
-                              <a href={criteriaHref(item.kpiItemId)} className="text-[12px] underline">
+                              <a href={criteriaHref(item.kpiItemId)} className="text-note underline">
                                 評価の基準を見る
                               </a>
                             </p>
@@ -306,7 +306,7 @@ export default async function CriteriaPage({
               ].map((sec) => (
                 <Card key={sec.key} className="card-pad">
                   <p className="section-heading m-0 mb-2">{sec.title}</p>
-                  <ul className="m-0 list-disc space-y-1 pl-5 text-[13px]">
+                  <ul className="m-0 list-disc space-y-1 pl-5 text-sub">
                     {myReqs
                       .filter((r) => r.category === sec.key)
                       .map((r) => (
@@ -349,7 +349,7 @@ export default async function CriteriaPage({
                     alignTop
                     title={b.aspectName}
                     detail={
-                      <ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-[12px] text-[var(--ink-muted)]">
+                      <ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-note text-[var(--ink-muted)]">
                         {b.levels.map((l) => (
                           <li key={l.id}>
                             <span className="num font-bold">{l.score}</span> {l.label}：{l.text}

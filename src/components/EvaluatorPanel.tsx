@@ -70,7 +70,7 @@ export function EvaluatorPanel({
     <Card className="card-pad">
       {error && <ReasonNote>{error}</ReasonNote>}
 
-      <label className="m-0 block text-[13px] font-bold" htmlFor="ev_comment">
+      <label className="m-0 block text-sub font-bold" htmlFor="ev_comment">
         本人に伝えるコメント
       </label>
       <p className="footnote m-0 mb-2">確定すると、この文章が本人の結果画面に表示されます。</p>
@@ -94,7 +94,7 @@ export function EvaluatorPanel({
       <div className="mt-5 border-t border-[var(--line)] pt-4">
         {finalized ? (
           <>
-            <p className="m-0 mb-2 text-[13px]">
+            <p className="m-0 mb-2 text-sub">
               この評価は確定済みです。{employeeName} さんの画面に結果が表示されています。
             </p>
             <ActionButton
@@ -107,7 +107,7 @@ export function EvaluatorPanel({
           </>
         ) : (
           <>
-            <p className="m-0 mb-2 text-[13px]">
+            <p className="m-0 mb-2 text-sub">
               内容を確認したら確定してください。確定すると {employeeName} さんの画面に結果が表示されます。
             </p>
             <ActionButton

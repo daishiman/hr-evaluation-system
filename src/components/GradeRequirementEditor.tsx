@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { requestMasterDelete } from "@/components/master-delete-request";
 import { DELETE_LABEL, deleteBlockedReason, deleteConfirmText } from "@/lib/domain/master-delete";
@@ -110,20 +110,24 @@ export function GradeRequirementEditor({
 
     return (
       <Card key={category}>
-        <div className="card-row items-center bg-[var(--subtle)]">
-          <div className="row-main">
-            <p className="m-0 text-[14px] font-bold">{label}</p>
-            <p className="footnote m-0">
-              {rest === 0
-                ? `${GRADE_REQUIREMENT_MAX}項目まで登録済みです。`
-                : `あと ${rest}項目 登録できます（登録は0項目でもかまいません）。`}
-            </p>
-          </div>
-          <span className="num text-[18px] font-bold">
-            {list.length}
-            <span className="unit"> / {GRADE_REQUIREMENT_MAX}</span>
-          </span>
-        </div>
+        {/* 項目を上から書き足していく画面なので、頭は固定表示にする。
+            帯に載せるのは「いま何の区分を書いているか」と「あと何項目書けるか」だけ。
+            上限に達したことに気づかないまま入力を続ける事故を防ぐ。 */}
+        <CardHead
+          pinned
+          title={label}
+          sub={
+            rest === 0
+              ? `${GRADE_REQUIREMENT_MAX}項目まで登録済みです。`
+              : `あと ${rest}項目 登録できます（登録は0項目でもかまいません）。`
+          }
+          actions={
+            <span className="num text-title font-bold">
+              {list.length}
+              <span className="unit"> / {GRADE_REQUIREMENT_MAX}</span>
+            </span>
+          }
+        />
 
         {list.length === 0 && (
           <div className="card-pad">
@@ -135,11 +139,11 @@ export function GradeRequirementEditor({
 
         {list.map((r, i) => (
           <div key={r.id} className="card-row items-start">
-            <span className="num mt-[2px] w-6 shrink-0 text-[13px] text-[var(--ink-muted)]">{i + 1}</span>
+            <span className="num mt-[2px] w-6 shrink-0 text-sub text-[var(--ink-muted)]">{i + 1}</span>
             <div className="row-main">
               {editing[r.id] === undefined ? (
                 <>
-                  <p className="m-0 text-[13px]">{r.text}</p>
+                  <p className="m-0 text-sub">{r.text}</p>
                   {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
                 </>
               ) : (
@@ -180,7 +184,7 @@ export function GradeRequirementEditor({
               )}
             </div>
             {editing[r.id] === undefined && (
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+              <div className="row-actions">
                 <Button
                   variant="tertiary"
                   disabled={busy || i === 0}
@@ -272,7 +276,7 @@ export function GradeRequirementEditor({
   return (
     <div className="stack">
       <Card className="card-pad">
-        <p className="m-0 text-[13px]">
+        <p className="m-0 text-sub">
           いま編集しているのは <b>{gradeName}</b> の等級要件です。
           この等級のアンケートには <b>支援について {support.length}項目</b>・<b>運営について {operation.length}項目</b>（合計{" "}
           <b>{denominator}項目</b>）が出ます。
@@ -286,21 +290,21 @@ export function GradeRequirementEditor({
       </Card>
 
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
 
       {block("support", support)}
       {block("operation", operation)}
 
       {unused.length > 0 && (
         <details>
-          <summary className="cursor-pointer text-[13px] text-[var(--ink-muted)]">
+          <summary className="cursor-pointer text-sub text-[var(--ink-muted)]">
             使わないことにした項目（{unused.length}件）を見る
           </summary>
           <Card className="mt-2">
             {unused.map((r) => (
               <div key={r.id} className="card-row items-center" data-off="true">
                 <div className="row-main">
-                  <p className="m-0 text-[13px]">{r.text}</p>
+                  <p className="m-0 text-sub">{r.text}</p>
                   <p className="footnote m-0">{CATEGORY_LABEL[r.category as RequirementCategory] ?? r.category}</p>
                   {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
                 </div>
@@ -329,7 +333,7 @@ export function GradeRequirementEditor({
 
       <Card className="card-pad">
         <div className="flex items-center justify-between gap-3">
-          <p className="m-0 text-[13px] font-bold">回答する人にはこう見えます</p>
+          <p className="m-0 text-sub font-bold">回答する人にはこう見えます</p>
           <Button variant="tertiary" onClick={() => setPreview((v) => !v)}>
             {preview ? "閉じる" : "見てみる"}
           </Button>
@@ -350,8 +354,8 @@ export function GradeRequirementEditor({
                     <div className="grid gap-2">
                       {list.map((r) => (
                         <div key={r.id} className="rounded-lg border border-[var(--line)] p-3">
-                          <p className="m-0 text-[13px]">{r.text}</p>
-                          <div className="mt-2 flex gap-3 text-[13px] text-[var(--ink-muted)]">
+                          <p className="m-0 text-sub">{r.text}</p>
+                          <div className="mt-2 flex gap-3 text-sub text-[var(--ink-muted)]">
                             <span>○ できている</span>
                             <span>× まだできていない</span>
                           </div>

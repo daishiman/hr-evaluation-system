@@ -97,9 +97,9 @@ export function RankCriteriaSetForm({
       <div className="stack-tight">
         {values.map((r) => (
           <div key={r.id} className="flex flex-wrap items-center gap-2">
-            <span className="w-24 shrink-0 text-[13px]">ランク{r.rank}</span>
+            <span className="w-24 shrink-0 text-sub">ランク{r.rank}</span>
             <label className="flex items-center gap-1">
-              <span className="text-[12px] text-[var(--ink-muted)]">下限</span>
+              <span className="text-note text-[var(--ink-muted)]">下限</span>
               <NumberField
                 key={`${r.id}-lower-${version}`}
                 name={`lowerBound_${r.id}`}
@@ -112,7 +112,7 @@ export function RankCriteriaSetForm({
               />
             </label>
             <label className="flex items-center gap-1">
-              <span className="text-[12px] text-[var(--ink-muted)]">上限</span>
+              <span className="text-note text-[var(--ink-muted)]">上限</span>
               <NumberField
                 key={`${r.id}-upper-${version}`}
                 name={`upperBound_${r.id}`}
@@ -158,7 +158,7 @@ export function RankCriteriaSetForm({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 mt-3 text-sub text-[var(--brand-deep)]">{message}</p>}
     </div>
   );
 }

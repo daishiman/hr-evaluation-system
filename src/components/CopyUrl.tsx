@@ -25,10 +25,10 @@ export function CopyUrl({ url, label = "配布用のURL" }: { url: string; label
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
       <span className="footnote m-0">{label}：</span>
-      <a href={url} className="text-[12px] underline break-all" target="_blank" rel="noreferrer">
+      <a href={url} className="text-note underline break-all" target="_blank" rel="noreferrer">
         {url}
       </a>
-      <Button type="button" variant="tertiary" className="text-[12px]" onClick={() => void copy()}>
+      <Button type="button" variant="tertiary" className="text-note" onClick={() => void copy()}>
         {copied ? "コピーしました" : "コピー"}
       </Button>
     </span>
