@@ -7,8 +7,9 @@ import { overallProgress, schemeStepPath, stepTitle } from "@/lib/domain/scheme-
 import { loadSchemeSetup } from "./data";
 import { SchemeCommonSettings } from "@/components/SchemeCommonSettings";
 import { KpiCategoryEditor } from "@/components/KpiCategoryEditor";
-import { listKpiCategories } from "@/lib/queries";
-import { kpiCategoryUsage } from "@/lib/master-usage";
+import { KpiItemEditor } from "@/components/KpiItemEditor";
+import { listKpiCategories, listKpiItems } from "@/lib/queries";
+import { kpiCategoryUsage, kpiItemUsage } from "@/lib/master-usage";
 import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +27,35 @@ export default async function AdminSchemePage() {
   const viewer = await requireRole("COMPANY_ADMIN");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
-  const [setup, staleCycles, categories] = await Promise.all([
+  const [setup, staleCycles, categories, kpiItems] = await Promise.all([
     loadSchemeSetup(viewer.companyId),
     detectStaleCycles(viewer.companyId),
     listKpiCategories(viewer.companyId),
+    listKpiItems(viewer.companyId),
   ]);
-  const categoryUsage = await kpiCategoryUsage(await getDb(), viewer.companyId);
+  const db = await getDb();
+  const [categoryUsage, itemUsage] = await Promise.all([
+    kpiCategoryUsage(db, viewer.companyId),
+    kpiItemUsage(db, viewer.companyId),
+  ]);
+  const categoryOptions = categories.map((c) => ({ id: c.id, name: c.name }));
+  const itemRows = kpiItems.map((i) => ({
+    id: i.id,
+    no: i.no,
+    name: i.name,
+    categoryId: i.categoryId,
+    categoryName: categories.find((c) => c.id === i.categoryId)?.name ?? null,
+    measureType: i.measureType,
+    unit: i.unit,
+    direction: i.direction === "lower" ? ("lower" as const) : ("higher" as const),
+    formula: i.formula,
+    formulaNote: i.formulaNote,
+    remarks: i.remarks,
+    isMonetary: i.isMonetary,
+    isProvisional: i.isProvisional,
+    isActive: i.isActive,
+    isFixedSlot: i.isFixedSlot,
+  }));
 
   if (!setup.scheme) {
     return (
@@ -39,6 +63,10 @@ export default async function AdminSchemePage() {
         <PageTitle title="KPI・評価セット" />
         <StaleCyclesNotice cycles={staleCycles} />
         <ReasonNote>有効な評価セットが登録されていません。初期データの投入が済んでいるかご確認ください。</ReasonNote>
+        <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。">
+          KPI項目
+        </SectionHeading>
+        <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} />
         <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
           KPIのカテゴリ
         </SectionHeading>
@@ -53,6 +81,10 @@ export default async function AdminSchemePage() {
         <PageTitle title="KPI・評価セット" />
         <StaleCyclesNotice cycles={staleCycles} />
         <ReasonNote>等級区分ごとの配点ルールが登録されていません。初期データの投入をご確認ください。</ReasonNote>
+        <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。">
+          KPI項目
+        </SectionHeading>
+        <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} />
         <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
           KPIのカテゴリ
         </SectionHeading>
@@ -175,7 +207,12 @@ export default async function AdminSchemePage() {
       </SectionHeading>
       <SchemeCommonSettings schemeId={setup.scheme.id} raiseRequiresAllA={setup.scheme.raiseRequiresAllA} />
 
-      <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。項目自体の追加・付け替えはまだ別の作業が必要です。">
+      <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。使用中は一部の列だけ直せます。">
+        KPI項目
+      </SectionHeading>
+      <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} />
+
+      <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
         KPIのカテゴリ
       </SectionHeading>
       <KpiCategoryEditor categories={categories} usage={categoryUsage} />

@@ -23,7 +23,8 @@ export type ConstitutionEntityType =
   | "office"
   | "kpiRankCriteria"
   | "kgiCoefficient"
-  | "kpiCategory";
+  | "kpiCategory"
+  | "kpiItem";
 
 export type ConstitutionEventType =
   | "created"
