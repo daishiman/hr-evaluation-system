@@ -6,6 +6,8 @@ import {
   deleteConfirmText,
   kpiCategoryBlockedReason,
   kpiCategoryDeleteConfirmText,
+  kpiItemBlockedReason,
+  kpiItemDeleteConfirmText,
   placesText,
 } from "./master-delete";
 
@@ -80,6 +82,24 @@ describe("KPIカテゴリの消せない理由・確認文", () => {
   it("消す前の確認文に、名前と戻せないことを含める", () => {
     const text = kpiCategoryDeleteConfirmText("品質");
     expect(text).toContain("「品質」");
+    expect(text).toContain("元に戻せません");
+  });
+});
+
+describe("KPI項目の消せない理由・確認文", () => {
+  it("一度も使っていなければ理由は無い（＝消せる）", () => {
+    expect(kpiItemBlockedReason([])).toBeNull();
+  });
+
+  it("使っている場所を名指しする", () => {
+    const reason = kpiItemBlockedReason(["アンケート「2026年上期」"]);
+    expect(reason).toContain("完全には消せません");
+    expect(reason).toContain("アンケート「2026年上期」");
+  });
+
+  it("消す前の確認文に、名前と戻せないことを含める", () => {
+    const text = kpiItemDeleteConfirmText("解約率");
+    expect(text).toContain("「解約率」");
     expect(text).toContain("元に戻せません");
   });
 });

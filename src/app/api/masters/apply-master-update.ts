@@ -11,6 +11,8 @@ import type { MasterUpdateBody } from "./body-schema";
 import { applyBehaviorMasterUpdate } from "./apply-behavior-master-update";
 import { applyVersionedRequirementUpdate } from "./versioned-requirement-update";
 import { recordConstitutionEvent } from "@/lib/domain/constitution-events";
+import { kpiItemUsage } from "@/lib/master-usage";
+import { KPI_ITEM_LOCKED_NOTE, KPI_ITEM_STRUCTURAL_FIELDS } from "@/lib/domain/master-delete";
 
 type Db = Awaited<ReturnType<typeof getDb>>;
 
@@ -479,6 +481,132 @@ export async function applyMasterUpdate(args: {
           after: { id, name, displayOrder: nextOrder },
         });
         return { message: `「${name}」を追加しました。次に作るKPI項目からこのカテゴリを選べます。`, id };
+      }
+
+      case "kpiItemCreate": {
+        const name = body.name.trim();
+        if (body.categoryId) {
+          const cat = await db
+            .select({ id: s.kpiCategories.id })
+            .from(s.kpiCategories)
+            .where(and(eq(s.kpiCategories.id, body.categoryId), eq(s.kpiCategories.companyId, companyId)))
+            .limit(1);
+          if (cat.length === 0) throw new HttpError(404, "指定したKPIカテゴリが見つかりませんでした。");
+        }
+        const siblings = await db.select({ no: s.kpiItems.no }).from(s.kpiItems).where(eq(s.kpiItems.companyId, companyId));
+        const nextNo = siblings.reduce((max, i) => Math.max(max, i.no), 0) + 1;
+        const id = newId("kpiitm");
+        const values = {
+          id,
+          companyId,
+          no: nextNo,
+          name,
+          categoryId: body.categoryId ?? null,
+          measureType: body.measureType.trim(),
+          unit: body.unit.trim(),
+          direction: body.direction,
+          formula: body.formula?.trim() || null,
+          formulaNote: body.formulaNote?.trim() || null,
+          remarks: body.remarks?.trim() || null,
+          // 固定枠（等級要件達成率）は初期データにすでに1件あり、ここからは新規作成できない。
+          isFixedSlot: false,
+          isMonetary: body.isMonetary ?? false,
+          isProvisional: body.isProvisional ?? false,
+          isActive: true,
+        };
+        await db.insert(s.kpiItems).values(values);
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "kpiItem",
+          entityId: id,
+          eventType: "created",
+          actorId: viewerId,
+          after: values,
+        });
+        return {
+          message: `「${name}」を追加しました。基準（A〜E）を設定すると評価セットで選べるようになります。`,
+          id,
+        };
+      }
+
+      case "kpiItemUpdate": {
+        const before = (
+          await db
+            .select()
+            .from(s.kpiItems)
+            .where(and(eq(s.kpiItems.id, body.id), eq(s.kpiItems.companyId, companyId)))
+            .limit(1)
+        )[0];
+        if (!before) throw new HttpError(404, "KPI項目が見つかりませんでした。");
+
+        if (body.categoryId) {
+          const cat = await db
+            .select({ id: s.kpiCategories.id })
+            .from(s.kpiCategories)
+            .where(and(eq(s.kpiCategories.id, body.categoryId), eq(s.kpiCategories.companyId, companyId)))
+            .limit(1);
+          if (cat.length === 0) throw new HttpError(404, "指定したKPIカテゴリが見つかりませんでした。");
+        }
+
+        /* 一度でも使われた項目は、計算の意味が変わる列（単位・向き・実績区分・分類・金銭系）を
+           ここで必ず弾く。画面側が該当欄を出さない実装であっても、API を直に叩かれた場合の
+           最後の砦になる。 */
+        const usage = await kpiItemUsage(db, companyId);
+        const usedBy = usage[body.id] ?? [];
+        const locked = usedBy.length > 0;
+
+        const candidate: Record<string, unknown> = {
+          name: body.name?.trim(),
+          unit: body.unit?.trim(),
+          direction: body.direction,
+          measureType: body.measureType?.trim(),
+          categoryId: body.categoryId,
+          formula: body.formula === undefined ? undefined : body.formula?.trim() || null,
+          formulaNote: body.formulaNote === undefined ? undefined : body.formulaNote?.trim() || null,
+          remarks: body.remarks === undefined ? undefined : body.remarks?.trim() || null,
+          isMonetary: body.isMonetary,
+          isProvisional: body.isProvisional,
+          isActive: body.isActive,
+        };
+
+        const patch: Record<string, unknown> = {};
+        const lockedAttempts: string[] = [];
+        const beforeRecord = before as unknown as Record<string, unknown>;
+        for (const [key, value] of Object.entries(candidate)) {
+          if (value === undefined) continue;
+          if (locked && (KPI_ITEM_STRUCTURAL_FIELDS as readonly string[]).includes(key)) {
+            if (value !== beforeRecord[key]) lockedAttempts.push(key);
+            continue;
+          }
+          patch[key] = value;
+        }
+
+        if (Object.keys(patch).length > 0) {
+          await db.update(s.kpiItems).set(patch).where(eq(s.kpiItems.id, body.id));
+          await recordConstitutionEvent({
+            db,
+            companyId,
+            entityType: "kpiItem",
+            entityId: body.id,
+            eventType: "updated",
+            actorId: viewerId,
+            before,
+            after: { ...before, ...patch },
+          });
+        }
+
+        const name = (patch.name as string | undefined) ?? before.name;
+        if (lockedAttempts.length > 0) {
+          return {
+            message: `「${name}」を保存しました。${KPI_ITEM_LOCKED_NOTE}`,
+            warnings: [KPI_ITEM_LOCKED_NOTE],
+          };
+        }
+        if (Object.keys(patch).length === 0) {
+          return { message: "変更はありませんでした。" };
+        }
+        return { message: `「${name}」を保存しました。` };
       }
 
   }
