@@ -26,6 +26,19 @@ export function isCurrentVersion<T extends VersionedMasterRow>(row: T, rows: rea
   return !rows.some((candidate) => candidate.previousVersionId === row.id);
 }
 
+/** 系譜の起点（previous_version_id が null の版）のID。イベントストアの entity_id に使う安定キー。 */
+export function lineageRootId<T extends VersionedMasterRow>(rows: readonly T[], id: string): string {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  let current = byId.get(id);
+  if (!current) return id;
+  const seen = new Set<string>();
+  while (current.previousVersionId && byId.has(current.previousVersionId) && !seen.has(current.id)) {
+    seen.add(current.id);
+    current = byId.get(current.previousVersionId)!;
+  }
+  return current.id;
+}
+
 /** 指定した版と、親子どちら向きでもつながっている版IDをすべて返す。 */
 export function versionFamilyIds<T extends VersionedMasterRow>(rows: readonly T[], id: string): string[] {
   const byId = new Map(rows.map((row) => [row.id, row]));
