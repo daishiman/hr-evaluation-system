@@ -1,8 +1,10 @@
 import { ManagerDashboard, type TeamMemberSummary } from "@/app/manager/ManagerDashboard";
+import type { MyActionForm } from "@/app/me/MyDashboard";
 import { EmptyState } from "@/components/ui";
 import { daysUntilDeadline, formatJpDate, jstDateString } from "@/lib/domain/form-deadline";
 import { listPendingRespondents } from "@/lib/evaluate";
 import { getOpenCycle, listEvaluations, listForms, listMembers } from "@/lib/queries";
+import { listMyForms } from "@/lib/response-access";
 import { requireRole } from "@/lib/session";
 import { listStalledEvaluations } from "@/lib/stalled";
 
@@ -16,14 +18,31 @@ export default async function ManagerHome() {
   }
   const companyId = viewer.companyId;
 
-  const [openCycle, team, stalled] = await Promise.all([
+  const [openCycle, team, stalled, myForms] = await Promise.all([
     getOpenCycle(companyId),
     listMembers(companyId, { managerId: viewer.id }),
     // 締め切った期間に残っている分。開いている期間しか見ない下の集計とは別に読む
     // （締め切った瞬間に画面から消えてしまうのが、放置に気づけなかった原因）。
     listStalledEvaluations(companyId, { managerId: viewer.id }),
+    // マネージャー・会社管理者自身も回答者になりうる。担当チームの集計とは別に、
+    // 一般の方のホーム（/me）と同じ判定関数で「自分の未提出」を読む
+    // （サイドバーから自分で開かない限り誰の画面にも出なかったため）。
+    listMyForms(companyId, viewer.id, viewer.gradeId),
   ]);
   const activeTeam = team.filter((member) => member.isActive);
+  const now = new Date();
+  const ownPendingForms: MyActionForm[] = myForms
+    .filter((form) => form.deadline.canAnswer && form.responseStatus !== "submitted" && !form.supersededBy)
+    .sort((a, b) => (a.deadline.effectiveUntil ?? "9999-12-31").localeCompare(b.deadline.effectiveUntil ?? "9999-12-31"))
+    .map((form) => ({
+      formId: form.formId,
+      title: form.title,
+      cycleName: form.cycleName,
+      questionCount: form.questionCount,
+      responseStatus: form.responseStatus,
+      deadlineLabel: form.deadline.effectiveUntil ? formatJpDate(form.deadline.effectiveUntil) : null,
+      daysUntilDeadline: daysUntilDeadline(form.deadline.effectiveUntil, now),
+    }));
 
   if (!openCycle) {
     return (
@@ -31,6 +50,7 @@ export default async function ManagerHome() {
         viewerName={viewer.name}
         cycle={null}
         stalled={stalled}
+        ownPendingForms={ownPendingForms}
         draftEvaluations={[]}
         readyToBuild={0}
         team={activeTeam.map((member) => ({
@@ -66,7 +86,6 @@ export default async function ManagerHome() {
     department: member.department,
     responseStatus: teamPending.get(member.id) ?? null,
   }));
-  const now = new Date();
   const deadlines = forms
     .filter((form) => form.status === "published" && form.closesAt)
     .map((form) => form.closesAt as string)
@@ -80,6 +99,7 @@ export default async function ManagerHome() {
     <ManagerDashboard
       viewerName={viewer.name}
       stalled={stalled}
+      ownPendingForms={ownPendingForms}
       cycle={{
         id: openCycle.id,
         name: openCycle.name,
