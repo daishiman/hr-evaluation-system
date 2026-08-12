@@ -449,6 +449,37 @@ export async function applyMasterUpdate(args: {
         }
         return { message: "達成係数を保存しました。" };
       }
-    
+      case "kpiCategoryCreate": {
+        const name = body.name.trim();
+        const siblings = await db
+          .select({ name: s.kpiCategories.name, displayOrder: s.kpiCategories.displayOrder })
+          .from(s.kpiCategories)
+          .where(eq(s.kpiCategories.companyId, companyId));
+        if (siblings.some((c) => c.name === name)) {
+          throw new HttpError(400, `「${name}」はすでにあるカテゴリ名です。別の名前にしてください。`);
+        }
+        const id = newId("kpicat");
+        const nextOrder = siblings.reduce((max, c) => Math.max(max, c.displayOrder), 0) + 1;
+        await db.insert(s.kpiCategories).values({
+          id,
+          companyId,
+          // カテゴリの分類コード（code）は他のどこからも参照されない内部識別子。
+          // 表示に使うのは name だけなので、ここでは id をそのまま使う。
+          code: id,
+          name,
+          displayOrder: nextOrder,
+        });
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "kpiCategory",
+          entityId: id,
+          eventType: "created",
+          actorId: viewerId,
+          after: { id, name, displayOrder: nextOrder },
+        });
+        return { message: `「${name}」を追加しました。次に作るKPI項目からこのカテゴリを選べます。`, id };
+      }
+
   }
 }

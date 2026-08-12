@@ -105,3 +105,23 @@ export function deleteConfirmText(name: string, alsoRemoved?: string): string {
 
 /** 消せる状態の項目に付けるボタンの文言（全画面で同じにする）。 */
 export const DELETE_LABEL = "完全に消す";
+
+/**
+ * KPIカテゴリを消せない理由。
+ *
+ * 観点・要件と違って「一度でもアンケートに出した」ではなく「KPI項目の分類として
+ * すでに使われている」が線引きになるため、文言だけ別に持つ。判定そのもの
+ * （使っているかどうかの数え方）は master-usage.ts の kpiCategoryUsage が正本。
+ */
+export const KPI_CATEGORY_BLOCKED_WHY = "すでに使われているカテゴリは、完全には消せません。";
+export const KPI_CATEGORY_BLOCKED_KEEP = "確定済みの評価と、すでに組んだ評価セットを変えないためです。";
+
+export function kpiCategoryBlockedReason(usedBy: readonly string[]): string | null {
+  if (usedBy.length === 0) return null;
+  return `${KPI_CATEGORY_BLOCKED_WHY}使用中：${placesText(usedBy)}。`;
+}
+
+/** KPIカテゴリを消す前の確認文。 */
+export function kpiCategoryDeleteConfirmText(name: string): string {
+  return `「${name}」を完全に消します。元に戻せません。どのKPI項目でも一度も使われていないカテゴリです。`;
+}

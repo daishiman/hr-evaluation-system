@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { bandSetBlockedReason, blockedMark, deleteBlockedReason, deleteConfirmText, placesText } from "./master-delete";
+import {
+  bandSetBlockedReason,
+  blockedMark,
+  deleteBlockedReason,
+  deleteConfirmText,
+  kpiCategoryBlockedReason,
+  kpiCategoryDeleteConfirmText,
+  placesText,
+} from "./master-delete";
 
 /**
  * 消せないときに画面へ出す文章の決まり。
@@ -55,5 +63,23 @@ describe("消す前の確認の文章", () => {
     expect(text).toContain("5段階の文章5件も一緒に消えます。");
     // 消しても過去に影響しないことを、その場で言い切る（不安で手が止まらないように）
     expect(text).toContain("公開したアンケートと確定済みの評価は変わりません");
+  });
+});
+
+describe("KPIカテゴリの消せない理由・確認文", () => {
+  it("一度も使っていなければ理由は無い（＝消せる）", () => {
+    expect(kpiCategoryBlockedReason([])).toBeNull();
+  });
+
+  it("使っている場所を名指しする", () => {
+    const reason = kpiCategoryBlockedReason(["KPI項目「売上」"]);
+    expect(reason).toContain("完全には消せません");
+    expect(reason).toContain("KPI項目「売上」");
+  });
+
+  it("消す前の確認文に、名前と戻せないことを含める", () => {
+    const text = kpiCategoryDeleteConfirmText("品質");
+    expect(text).toContain("「品質」");
+    expect(text).toContain("元に戻せません");
   });
 });
