@@ -3,6 +3,8 @@
 # 個人設定・ローカル実行時の一時ファイルのみ除外する。
 .claude/settings.local.json
 .claude/*.local.json
+.claude/backup-*/
+.codex/backup-*/
 
 # === OS ===
 .DS_Store
