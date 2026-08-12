@@ -6,6 +6,13 @@
 .claude/backup-*/
 .codex/backup-*/
 
+# AI開発エージェントキットのローカル導入結果
+.agents/
+.claude/aidd-agent-kit.manifest
+.claude/aidd-agent-kit.version
+.codex/aidd-agent-kit.manifest
+.codex/aidd-agent-kit.version
+
 # === OS ===
 .DS_Store
 Thumbs.db
