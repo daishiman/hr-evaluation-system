@@ -75,6 +75,36 @@ describe("recordConstitutionEvent / replayConstitutionEntity", () => {
     expect(JSON.parse(secondEvent.afterJson!)).toEqual({ name: "改名後" });
   });
 
+  it("after_json がない非削除イベントは、現在状態を変えずに読み飛ばす", async () => {
+    await recordConstitutionEvent({
+      db: testDb.db,
+      companyId: COMPANY,
+      entityType: "grade",
+      entityId: "g_without_after",
+      eventType: "created",
+      actorId: "actor_1",
+      after: { id: "g_without_after", name: "初期名" },
+    });
+    await testDb.db.insert(s.constitutionEvents).values({
+      id: "cevt_without_after",
+      companyId: COMPANY,
+      entityType: "grade",
+      entityId: "g_without_after",
+      eventType: "updated",
+      actorId: "actor_1",
+      seq: 2,
+    });
+
+    const state = await replayConstitutionEntity({
+      db: testDb.db,
+      companyId: COMPANY,
+      entityType: "grade",
+      entityId: "g_without_after",
+    });
+
+    expect(state).toEqual({ id: "g_without_after", name: "初期名" });
+  });
+
   it("deleted イベントの後は再生結果が null になる", async () => {
     await recordConstitutionEvent({
       db: testDb.db,
@@ -148,5 +178,35 @@ describe("recordConstitutionEvent / replayConstitutionEntity", () => {
       entityId: "g_shared_id",
     });
     expect(state).toBeNull();
+  });
+
+  it("実体種別だけを指定すると、その種別のイベントだけを返す", async () => {
+    await recordConstitutionEvent({
+      db: testDb.db,
+      companyId: COMPANY,
+      entityType: "grade",
+      entityId: "g_filter",
+      eventType: "created",
+      actorId: "actor_1",
+      after: { id: "g_filter", name: "等級" },
+    });
+    await recordConstitutionEvent({
+      db: testDb.db,
+      companyId: COMPANY,
+      entityType: "office",
+      entityId: "o_filter",
+      eventType: "created",
+      actorId: "actor_1",
+      after: { id: "o_filter", name: "事業所" },
+    });
+
+    const events = await listConstitutionEvents({
+      db: testDb.db,
+      companyId: COMPANY,
+      entityType: "grade",
+    });
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ entityType: "grade", entityId: "g_filter" });
   });
 });
