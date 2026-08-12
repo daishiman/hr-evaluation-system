@@ -26,10 +26,10 @@ export function CompanyScopeSwitcher({
   if (companies.length === 0) return null;
 
   return (
-    <label className="grid gap-1 text-[12px] text-[var(--ink-muted)]">
+    <label className="grid gap-1 text-note text-[var(--ink-muted)]">
       操作する会社
       <select
-        className="input h-8 w-full py-0 text-[12px]"
+        className="input h-8 w-full py-0 text-note"
         value={currentId ?? ""}
         disabled={busy}
         onChange={async (e) => {

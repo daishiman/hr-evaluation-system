@@ -26,6 +26,13 @@ const BRAND_SOFT = "#9dbde6";
 const LINE = "#e3e6ea";
 const INK_MUTED = "#545e6b";
 
+/* グラフの中の文字。SVG に描くのでクラスが効かず、数値で渡すしかない。
+   globals.css の文字の段（--text-note = 14px / --text-sub = 15px）と
+   対で保つ。片方だけ動かさないこと。目盛りだけは軸の本数が多く、
+   14px だと隣とぶつかるため一段小さい 13px を下限として許容する。 */
+const CHART_FS_TICK = 13;
+const CHART_FS_TEXT = 14;
+
 export interface RadarPoint {
   /** 項目名（軸のラベル） */
   item: string;
@@ -73,7 +80,7 @@ export function EightAxisRadar({
       <div>
         {data.map((d) => (
           <div key={d.item} style={{ marginBottom: 10 }}>
-            <p style={{ margin: 0, fontSize: 12, color: INK_MUTED }}>
+            <p style={{ margin: 0, fontSize: CHART_FS_TEXT, color: INK_MUTED }}>
               {d.item}
               {unratedNames.has(d.item) ? "（判定外）" : ""}
             </p>
@@ -100,12 +107,12 @@ export function EightAxisRadar({
           <PolarGrid stroke={LINE} />
           <PolarAngleAxis
             dataKey="item"
-            tick={{ fontSize: 11, fill: INK_MUTED }}
+            tick={{ fontSize: CHART_FS_TICK, fill: INK_MUTED }}
             tickFormatter={(v: string) =>
               `${v.length > 9 ? `${v.slice(0, 9)}…` : v}${unratedNames.has(v) ? "※" : ""}`
             }
           />
-          <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10, fill: INK_MUTED }} tickCount={6} />
+          <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: CHART_FS_TICK, fill: INK_MUTED }} tickCount={6} />
           {compare && (
             <Radar
               name={compareLabel ?? "前回"}
@@ -127,9 +134,9 @@ export function EightAxisRadar({
           />
           <Tooltip
             formatter={(v) => [v === null || v === undefined ? "判定外（実績が未入力）" : `${v}%`, valueLabel]}
-            contentStyle={{ fontSize: 12, borderRadius: 8, border: `1px solid ${LINE}` }}
+            contentStyle={{ fontSize: CHART_FS_TEXT, borderRadius: 8, border: `1px solid ${LINE}` }}
           />
-          {compare && <Legend wrapperStyle={{ fontSize: 12 }} />}
+          {compare && <Legend wrapperStyle={{ fontSize: CHART_FS_TEXT }} />}
         </RadarChart>
       </ResponsiveContainer>
     </div>
@@ -154,10 +161,10 @@ export function TrendChart({
       <ResponsiveContainer>
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: -16 }}>
           <CartesianGrid stroke={LINE} vertical={false} />
-          <XAxis dataKey="cycle" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: LINE }} />
-          <YAxis tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
-          <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: `1px solid ${LINE}` }} />
-          {series.length > 1 && <Legend wrapperStyle={{ fontSize: 12 }} />}
+          <XAxis dataKey="cycle" tick={{ fontSize: CHART_FS_TICK, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: LINE }} />
+          <YAxis tick={{ fontSize: CHART_FS_TICK, fill: INK_MUTED }} tickLine={false} axisLine={false} />
+          <Tooltip contentStyle={{ fontSize: CHART_FS_TEXT, borderRadius: 8, border: `1px solid ${LINE}` }} />
+          {series.length > 1 && <Legend wrapperStyle={{ fontSize: CHART_FS_TEXT }} />}
           {series.map((sr, i) => (
             <Line
               key={sr.key}

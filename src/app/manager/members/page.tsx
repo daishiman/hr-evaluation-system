@@ -51,7 +51,7 @@ export default async function ManagerMembers() {
                   last ? (
                     <>
                       <Num value={last.requirementRate} unit="%" />
-                      <p className="m-0 text-[12px] text-[var(--ink-muted)]">{last.cycleName} の等級要件達成率</p>
+                      <p className="m-0 text-note text-[var(--ink-muted)]">{last.cycleName} の等級要件達成率</p>
                     </>
                   ) : (
                     <span className="footnote">確定した評価なし</span>

@@ -114,7 +114,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
       {/* 締め切り済みは一覧でも沈めている。詳細でも同じ見た目にして、
           開いた画面がいまも配っているものか一目で分かるようにする。 */}
       <Card className="card-pad" off={form.status === "closed"}>
-        <p className="m-0 text-[13px]">
+        <p className="m-0 text-sub">
           回答 {responses.length}件{" "}
           {form.status === "published" ? <Badge tone="active">公開中</Badge> : <Badge tone="done">{FORM_STATUS_LABEL[form.status]}</Badge>}
         </p>
@@ -143,9 +143,9 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
         保存済みの設問文・補足・必須／任意・答え方を表示します。ここには入力欄がなく、開いても回答や下書きは作られません。
       </p>
       <details className="card card-pad">
-        <summary className="cursor-pointer text-[13px] font-semibold">アンケートの中身を表示する（{previewQuestions.length}問）</summary>
+        <summary className="cursor-pointer text-sub font-semibold">アンケートの中身を表示する（{previewQuestions.length}問）</summary>
         <div className="mt-4 border-t border-[var(--line)] pt-4">
-          {form.description && <p className="mb-4 whitespace-pre-wrap text-[13px] leading-relaxed">{form.description}</p>}
+          {form.description && <p className="mb-4 whitespace-pre-wrap text-sub leading-relaxed">{form.description}</p>}
           <FormPreview questions={previewQuestions} />
         </div>
       </details>
@@ -173,8 +173,8 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
             内容を変えるときは、アンケート一覧から新しい版を作ってください。
           </ReasonNote>
           <Card className="card-pad mt-2">
-            <p className="m-0 text-[13px] font-bold">{form.title}</p>
-            {form.description && <p className="m-0 mt-1 text-[13px] whitespace-pre-wrap">{form.description}</p>}
+            <p className="m-0 text-sub font-bold">{form.title}</p>
+            {form.description && <p className="m-0 mt-1 text-sub whitespace-pre-wrap">{form.description}</p>}
           </Card>
         </>
       )}

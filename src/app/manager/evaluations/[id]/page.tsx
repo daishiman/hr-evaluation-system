@@ -51,7 +51,7 @@ export default async function ManagerEvaluation({ params }: { params: Promise<{ 
                 </ReasonNote>
               </div>
             )}
-            <p className="m-0 text-[13px]">
+            <p className="m-0 text-sub">
               提出された回答と、いまの基準・配点で、この方の評価だけを計算し直します。他の方の評価は変わりません。
             </p>
             <div className="mt-3">

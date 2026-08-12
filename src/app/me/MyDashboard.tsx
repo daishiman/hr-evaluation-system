@@ -26,7 +26,7 @@ function FormActionCard({ form, primary }: { form: MyActionForm; primary: boolea
   return (
     <Card className={`card-pad${primary ? " hero-tint" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <p className="todo-row-title m-0 text-[15px]">{form.title}</p>
+        <p className="todo-row-title m-0 text-strong">{form.title}</p>
         <Badge tone={form.responseStatus === "draft" ? "active" : "required"}>
           {form.responseStatus === "draft" ? "入力途中" : "未着手"}
         </Badge>
@@ -35,7 +35,7 @@ function FormActionCard({ form, primary }: { form: MyActionForm; primary: boolea
         {form.cycleName ?? "評価期間"} ／ 全{form.questionCount}問
       </p>
       {form.deadlineLabel && (
-        <p className="m-0 mt-3 text-[12px]">
+        <p className="m-0 mt-3 text-note">
           回答締切：<strong>{form.deadlineLabel}</strong>
           {form.daysUntilDeadline !== null && (
             <span className="text-[var(--ink-muted)]">
@@ -130,13 +130,13 @@ export function MyDashboard({
         <Card className="card-pad">
           <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
             <div className="min-w-0">
-              <p className="m-0 text-[12px] text-[var(--ink-muted)]">最新の評価</p>
-              <p className="todo-row-title m-0 mt-1 text-[16px]">{latest.cycleName ?? "評価結果"}</p>
+              <p className="m-0 text-note text-[var(--ink-muted)]">最新の評価</p>
+              <p className="todo-row-title m-0 mt-1 text-head">{latest.cycleName ?? "評価結果"}</p>
               <p className="todo-row-sub m-0">{latest.gradeName ?? "等級未設定"}</p>
               {latest.requirementRate !== null ? (
                 <div className="mt-4 max-w-xl">
                   <Bar value={latest.requirementRate} max={100} label="等級要件の達成率（%）" />
-                  <p className="m-0 mt-1 text-[13px]">
+                  <p className="m-0 mt-1 text-sub">
                     <Num value={latest.requirementAchieved} /> / <Num value={latest.requirementTotal} /> 項目を達成
                   </p>
                 </div>

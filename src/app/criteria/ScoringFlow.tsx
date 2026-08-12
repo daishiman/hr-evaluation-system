@@ -80,7 +80,7 @@ export function anchorIdOf(kpiItemId: string): string {
 function DefRow({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
   return (
-    <p className="m-0 text-[13px]">
+    <p className="m-0 text-sub">
       <span className="footnote">{label}</span> {value}
     </p>
   );
@@ -110,7 +110,7 @@ function ItemFlow({
 
   return (
     <details className="card card-pad" id={anchorIdOf(item.kpiItemId)} open={open}>
-      <summary className="cursor-pointer list-item text-[13px]">
+      <summary className="cursor-pointer list-item text-sub">
         <span className="font-semibold">
           No.{item.no} {item.name}
         </span>{" "}
@@ -122,7 +122,7 @@ function ItemFlow({
 
       <div className="mt-3 grid gap-4">
         <div>
-          <p className="m-0 mb-1 text-[12px] font-semibold text-[var(--ink-muted)]">⓪ この項目の定義</p>
+          <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">⓪ この項目の定義</p>
           <div className="grid gap-1">
             <DefRow label="何を見る項目か" value={item.intent} />
             <DefRow label="実績区分" value={item.measureType} />
@@ -148,13 +148,13 @@ function ItemFlow({
         </div>
 
         <div>
-          <p className="m-0 mb-1 text-[12px] font-semibold text-[var(--ink-muted)]">① 本人に聞くこと</p>
+          <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">① 本人に聞くこと</p>
           {questions.length === 0 ? (
-            <p className="m-0 text-[13px]">
+            <p className="m-0 text-sub">
               この項目の設問が登録されていません。実績値を出せないため、評価する側が値を入れる必要があります。
             </p>
           ) : (
-            <ul className="m-0 list-none space-y-1 p-0 text-[13px]">
+            <ul className="m-0 list-none space-y-1 p-0 text-sub">
               {questions.map((q) => (
                 <li key={q.id}>
                   <span className="num font-bold">{q.questionKey}</span>{" "}
@@ -168,8 +168,8 @@ function ItemFlow({
         </div>
 
         <div>
-          <p className="m-0 mb-1 text-[12px] font-semibold text-[var(--ink-muted)]">② 実績値の出し方</p>
-          <p className="m-0 text-[13px]">{item.formula ?? "計算式が登録されていません（回答した数値をそのまま使います）。"}</p>
+          <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">② 実績値の出し方</p>
+          <p className="m-0 text-sub">{item.formula ?? "計算式が登録されていません（回答した数値をそのまま使います）。"}</p>
           {item.formulaNote && <p className="footnote m-0 mt-1">{item.formulaNote}</p>}
           <p className="footnote m-0 mt-1">
             単位は {item.unit}。{item.direction === "lower" ? "低いほど良い項目です。" : "高いほど良い項目です。"}
@@ -177,11 +177,11 @@ function ItemFlow({
         </div>
 
         <div>
-          <p className="m-0 mb-1 text-[12px] font-semibold text-[var(--ink-muted)]">
+          <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">
             ③ 実績値からランクを決める ／ ④ 何点になるか
           </p>
           {sorted.length === 0 ? (
-            <p className="m-0 text-[13px]">この項目のランク基準が登録されていません。会社の管理者に登録を依頼してください。</p>
+            <p className="m-0 text-sub">この項目のランク基準が登録されていません。会社の管理者に登録を依頼してください。</p>
           ) : (
             /* ランクごとの範囲と点数を上から見比べる表。項目が揃っていて数値を突き合わせるので表のまま
                （docs/product/spec.md §5-5）。 */
@@ -251,7 +251,7 @@ export function ScoringFlow({
   if (items.length === 0) {
     return (
       <Card className="card-pad">
-        <p className="m-0 text-[13px]">この等級区分で評価する項目がありません。</p>
+        <p className="m-0 text-sub">この等級区分で評価する項目がありません。</p>
       </Card>
     );
   }

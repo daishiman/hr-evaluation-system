@@ -75,28 +75,28 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
 
   return (
     <Card className="card-pad">
-      <p className="m-0 text-[13px]">
+      <p className="m-0 text-sub">
         「{formTitle}」の回答として取り込みます。1行目に設問名、2行目から回答を入れてください。
         氏名（または社員番号）でこのシステムの登録者と突き合わせます。
       </p>
 
       <div className="mt-3 grid gap-3">
-        <label className="block text-[13px] font-bold">
+        <label className="block text-sub font-bold">
           回答一覧のファイル（CSV）
           <input
             ref={fileRef}
             type="file"
             accept=".csv,text/csv"
-            className="mt-1 block w-full text-[13px] font-normal"
+            className="mt-1 block w-full text-sub font-normal"
             onChange={(e) => onFile(e.target.files?.[0])}
           />
           {fileName && <span className="footnote block">選択中：{fileName}</span>}
         </label>
 
-        <label className="block text-[13px] font-bold">
+        <label className="block text-sub font-bold">
           または、表をそのまま貼り付ける
           <textarea
-            className="input mt-1 w-full font-mono text-[12px]"
+            className="input mt-1 w-full font-mono text-note"
             rows={4}
             value={text}
             onChange={(e) => {
@@ -112,7 +112,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
       {preview.length > 0 && (
         <div className="mt-3">
           <p className="footnote m-0">取り込む内容の先頭（確認用）</p>
-          <pre className="mt-1 max-h-32 overflow-auto rounded bg-subtle p-2 text-[12px] leading-5">{preview.join("\n")}</pre>
+          <pre className="mt-1 max-h-32 overflow-auto rounded bg-subtle p-2 text-note leading-5">{preview.join("\n")}</pre>
         </div>
       )}
 
@@ -131,7 +131,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="mt-3 m-0 text-[13px] font-bold">{message}</p>}
+      {message && <p className="mt-3 m-0 text-sub font-bold">{message}</p>}
 
       {rows && rows.length > 0 && (
         <div className="mt-3">

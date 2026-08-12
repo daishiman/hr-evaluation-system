@@ -103,9 +103,9 @@ export function ManagerDashboard({
         <Card className="card-pad hero-tint">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <p className="todo-row-title m-0 text-[16px]">{next.title}</p>
+              <p className="todo-row-title m-0 text-head">{next.title}</p>
               <p className="todo-row-sub m-0 mt-1">{next.body}</p>
-              <p className="m-0 mt-3 text-[12px]">
+              <p className="m-0 mt-3 text-note">
                 回答締切：<strong>{cycle.deadlineLabel}</strong>
                 {cycle.daysUntilDeadline !== null && (
                   <span className="text-[var(--ink-muted)]">

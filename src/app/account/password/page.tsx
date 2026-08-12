@@ -22,10 +22,11 @@ export default async function AccountPasswordPage() {
           </ReasonNote>
         </div>
       )}
-      <Card className="card-pad">
+      {/* 項目が3つだけの画面。幅いっぱいに伸ばさず、入力に見合った幅に絞る（.narrow-form） */}
+      <Card className="card-pad narrow-form">
         <PasswordChangeForm />
       </Card>
-      <p className="footnote mt-3">
+      <p className="footnote narrow-form mt-3">
         変更すると、他の端末でのログインは切れます（同じ画面をもう一度開いた場合はログインし直してください）。
       </p>
     </>

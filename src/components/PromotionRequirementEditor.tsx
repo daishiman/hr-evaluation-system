@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { requestMasterDelete } from "@/components/master-delete-request";
 import { DELETE_LABEL, deleteBlockedReason, deleteConfirmText } from "@/lib/domain/master-delete";
@@ -103,16 +103,19 @@ export function PromotionRequirementEditor({
     const draft = drafts[kind] ?? { open: false, text: "", gate: true, label: "" };
     return (
       <Card key={kind}>
-        <div className="card-row items-center bg-[var(--subtle)]">
-          <div className="row-main">
-            <p className="m-0 text-[14px] font-bold">{KIND_LABEL[kind]}</p>
-            <p className="footnote m-0">件数の上限はありません。0項目のままでもかまいません。</p>
-          </div>
-          <span className="num text-[18px] font-bold">
-            {list.length}
-            <span className="unit"> 項目</span>
-          </span>
-        </div>
+        {/* 項目を上から書き足していく画面なので、頭は固定表示にする。
+            帯に載せるのは「いま何の種類を書いているか」と「いま何項目あるか」だけ。 */}
+        <CardHead
+          pinned
+          title={KIND_LABEL[kind]}
+          sub="件数の上限はありません。0項目のままでもかまいません。"
+          actions={
+            <span className="num text-title font-bold">
+              {list.length}
+              <span className="unit"> 項目</span>
+            </span>
+          }
+        />
 
         {list.length === 0 && (
           <div className="card-pad">
@@ -122,11 +125,11 @@ export function PromotionRequirementEditor({
 
         {list.map((r, i) => (
           <div key={r.id} className="card-row items-start">
-            <span className="num mt-[2px] w-6 shrink-0 text-[13px] text-[var(--ink-muted)]">{i + 1}</span>
+            <span className="num mt-[2px] w-6 shrink-0 text-sub text-[var(--ink-muted)]">{i + 1}</span>
             <div className="row-main">
               {editing[r.id] === undefined ? (
                 <>
-                  <p className="m-0 text-[13px]">{r.text}</p>
+                  <p className="m-0 text-sub">{r.text}</p>
                   {r.transitionLabel && <p className="footnote m-0">{r.transitionLabel}</p>}
                   {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
                 </>
@@ -165,7 +168,7 @@ export function PromotionRequirementEditor({
               )}
             </div>
             {editing[r.id] === undefined && (
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+              <div className="row-actions">
                 {r.isGate ? <Badge tone="alert">必須</Badge> : <Badge tone="done">任意</Badge>}
                 <Button
                   variant="tertiary"
@@ -246,7 +249,7 @@ export function PromotionRequirementEditor({
                 aria-label={`${KIND_LABEL[kind]}に追加する項目の内容`}
                 onChange={(e) => setDrafts((s) => ({ ...s, [kind]: { ...draft, open: true, text: e.target.value } }))}
               />
-              <label className="text-[12px] text-[var(--ink-muted)]">
+              <label className="text-note text-[var(--ink-muted)]">
                 対象の昇格（任意。例：Beginner → Regular）
                 <input
                   value={draft.label}
@@ -254,7 +257,7 @@ export function PromotionRequirementEditor({
                   onChange={(e) => setDrafts((s) => ({ ...s, [kind]: { ...draft, open: true, label: e.target.value } }))}
                 />
               </label>
-              <label className="flex items-center gap-2 text-[13px]">
+              <label className="flex items-center gap-2 text-sub">
                 <input
                   type="checkbox"
                   checked={draft.gate}
@@ -302,19 +305,19 @@ export function PromotionRequirementEditor({
         すでに作成・公開したアンケートと確定済みの評価は変わりません。
       </p>
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 text-[13px] text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
       {block("report")}
       {block("test")}
       {unused.length > 0 && (
         <details>
-          <summary className="cursor-pointer text-[13px] text-[var(--ink-muted)]">
+          <summary className="cursor-pointer text-sub text-[var(--ink-muted)]">
             使わないことにした項目（{unused.length}件）を見る
           </summary>
           <Card className="mt-2">
             {unused.map((r) => (
               <div key={r.id} className="card-row items-center" data-off="true">
                 <div className="row-main">
-                  <p className="m-0 text-[13px]">{r.text}</p>
+                  <p className="m-0 text-sub">{r.text}</p>
                   <p className="footnote m-0">{KIND_LABEL[r.kind as PromoKind] ?? r.kind}</p>
                   {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
                 </div>

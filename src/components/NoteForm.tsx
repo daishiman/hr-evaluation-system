@@ -62,7 +62,7 @@ export function NoteForm({ employeeId }: { employeeId: string }) {
         <Button variant="primary" onClick={submit} disabled={busy || !body.trim()}>
           メモを残す
         </Button>
-        <label className="flex items-center gap-2 text-[12px]">
+        <label className="flex items-center gap-2 text-note">
           <input
             type="checkbox"
             checked={visibility === "admin"}

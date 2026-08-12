@@ -69,7 +69,10 @@ export function ConfirmButton({
         }}
       >
         <div className="confirm-dialog-body">
-          <p className="m-0 text-[13px]">{confirm}</p>
+          {/* 長い確認文はここだけがスクロールする。ボタンは窓の中に残す */}
+          <div className="confirm-dialog-text">
+            <p className="m-0 text-sub">{confirm}</p>
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button type="button" autoFocus onClick={() => setAsking(false)}>
               やめる
