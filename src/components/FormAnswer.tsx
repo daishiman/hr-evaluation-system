@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, ReasonNote, SectionHeading } from "@/components/ui";
+import { Button, Card, CardHead, ReasonNote, SectionHeading } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { NumberField } from "@/components/NumberField";
@@ -179,8 +179,19 @@ export function FormAnswer({
 
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
-          <SectionHeading help={SECTION_HELP[g.section]}>{SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}</SectionHeading>
+          {/* まとまり（節）ごとに1枚のカード。設問が多い節は縦に長くなるので、頭は固定表示にする。
+              帯に載せるのは「いまどの節を答えているか」と「その節の答え方の決まり」の2つだけ。
+              後者は一度読めば済む説明ではなく、1問ごとに当てはめて判断する物差しにあたる
+              （「自分の担当として行ったものだけ はい」「受講しただけは いいえ」）。
+              これが画面の外に出ると、下のほうの設問だけ違う基準で答えてしまう。
+              説明文をこれ以上足さないこと（帯が厚くなると回答欄が画面から押し出される）。 */}
           <Card className="card-pad">
+            <CardHead
+              pinned
+              heading
+              title={SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}
+              sub={SECTION_HELP[g.section]}
+            />
             <div className="space-y-5">
               {g.rows.map((q) => (
                 <QuestionField
@@ -197,8 +208,11 @@ export function FormAnswer({
       ))}
 
       <section className="mb-6">
-        <SectionHeading help="数字だけでは伝わらない事情があれば書いてください。上長が読みます。">補足（任意）</SectionHeading>
+        {/* ここだけは欄が1つで、書きながら見返す決まりが無い。
+            案内文は帯ではなく本文に置く（帯に載せるのは判断の物差しだけ）。 */}
         <Card className="card-pad">
+          <CardHead pinned heading title="補足（任意）" />
+          <p className="footnote m-0 mb-3">数字だけでは伝わらない事情があれば書いてください。上長が読みます。</p>
           <textarea
             className="input min-h-[96px] w-full"
             value={memo}

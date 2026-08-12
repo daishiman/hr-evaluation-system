@@ -268,6 +268,36 @@ describe("画面の器の作法", () => {
     }
   });
 
+  it("回答画面は、まとまりごとに頭を固定し、そこへ答え方の決まりを残す", () => {
+    // 「行ったものだけ はい」「受講しただけは いいえ」は、1問ごとに当てはめる物差し。
+    // これが画面の外へ出ると、下のほうの設問だけ違う基準で答えてしまう。
+    const source = readFileSync(join(SRC, "components", "FormAnswer.tsx"), "utf8");
+    expect(source).toMatch(/<CardHead\s+pinned\s+heading\s+title=\{SECTION_LABEL/);
+    expect(source).toMatch(/sub=\{SECTION_HELP\[g\.section\]\}/);
+    // 同じ説明を帯と本文の2箇所に出さない（帯へ移したぶんは節見出しから外す）
+    expect(source).not.toContain("<SectionHeading help=");
+  });
+
+  it("設問の組み立ては、編集を開いているカードだけ頭を固定する", () => {
+    // 閉じているカードは2行しかなく、貼り付く前に流れ去る。
+    // 全部に帯を付けると、設問の一覧としての読みやすさだけが落ちる。
+    const source = readFileSync(join(SRC, "components", "FormBuilder.tsx"), "utf8");
+    expect(source).toMatch(/\{open \? \(\s*<CardHead pinned/);
+  });
+
+  it("読むだけの画面（提出済みの回答・一覧）には帯を作らない", () => {
+    // 帯は「参照しながら打つ」ためのもの。打つ欄が無い画面では場所を取るだけになる。
+    // 一覧の表は DataTable が列見出しを同じ --sticky-top に貼り付けており、そちらが役目を持つ。
+    const readOnly = [
+      join(SRC, "components", "ResponseSnapshot.tsx"),
+      join(SRC, "components", "FormPreview.tsx"),
+      join(SRC, "app", "me", "forms", "page.tsx"),
+      join(SRC, "app", "admin", "forms", "page.tsx"),
+    ];
+    const offenders = readOnly.filter((p) => readFileSync(p, "utf8").includes("pinned"));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
   it("確認の窓は画面の中央に出す（左上に貼り付かせない）", () => {
     const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
     const block = css.slice(css.indexOf(".confirm-dialog {"));
