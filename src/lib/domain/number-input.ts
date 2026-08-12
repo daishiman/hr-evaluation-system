@@ -68,6 +68,25 @@ export function normalizeWhileTyping(raw: string): string {
   return s;
 }
 
+/**
+ * 受け付ける数の大きさの上限（1兆）。**入力・取り込みのどの経路でも同じ値を使う。**
+ *
+ * なぜ上限が要るか。この仕組みの数値はいったん保存されると、あとで計算式にかけられる
+ * （`q1 ÷ q2 × 100` のように掛け算・割り算をする）。桁が極端に大きい値が1つ紛れ込むと、
+ * 掛け算の途中で計算機の扱える範囲を超え、結果が「無限大」になる。
+ * 無限大になった項目は判定外として落ちるだけで、**なぜ落ちたのかが誰にも分からない**。
+ * 落ちる場所を「計算のあと」ではなく「値を受け取るその場」に移すのが、この上限の役目。
+ *
+ * 1兆にした理由。この仕組みで扱うのは件数・人数・金額（円）・達成率（%）で、
+ * いちばん大きい設定でも月額 1000万円、実際に保存されている回答は最大 5515 だった。
+ * 1兆はそのどれより桁違いに大きく、実務で打つ値を拒む心配がない。
+ * いっぽう 1兆どうしを3回掛けても計算機の範囲に十分収まるため、無限大も防げる。
+ */
+export const MAX_ABS_NUMBER = 1_000_000_000_000;
+
+/** 桁が多すぎるときの言い方（どの経路でも同じ文にする） */
+const TOO_LARGE = `1兆（${MAX_ABS_NUMBER}）より大きい数字は受け付けられません。桁を間違えていないかご確認ください。`;
+
 export type NumberFieldPolicy = {
   /** マイナスを許すか（行動指針の点数のように -1 がある欄は true） */
   allowNegative?: boolean;
@@ -100,8 +119,13 @@ export function parseNumberInput(raw: string, policy: NumberFieldPolicy = {}): P
     return { kind: "invalid", reason: "数字で入力してください。" };
   }
 
+  /* ここまで来た文字は数字と小数点だけでできている。それでも数として読めない
+     （＝無限大になる）のは、桁が多すぎるときだけ。400桁のような値がこれにあたるので、
+     「数字で入力してください」ではなく桁の話として伝える。 */
   const value = Number(body);
-  if (!Number.isFinite(value)) return { kind: "invalid", reason: "数字で入力してください。" };
+  if (!Number.isFinite(value) || Math.abs(value) > MAX_ABS_NUMBER) {
+    return { kind: "invalid", reason: TOO_LARGE };
+  }
 
   if (value < 0 && !policy.allowNegative) {
     return { kind: "invalid", reason: "0以上の数字を入力してください。" };
@@ -119,6 +143,28 @@ export function parseNumberInput(raw: string, policy: NumberFieldPolicy = {}): P
   /* 表示に戻す文字。「1.」「01」「.5」のような打ち方を数値として読み直した形にそろえる。
      Number 経由にすると 0.1+0.2 のような誤差は生まれない（文字を読むだけなので）。 */
   return { kind: "ok", value, text: String(value) };
+}
+
+/**
+ * 表計算から貼り付けられたセルに付きがちな単位。取り込みのときだけ黙って落とす。
+ *
+ * 画面の入力欄では落とさない（打っている本人の目の前に欄があるので、
+ * 単位まで打ってしまったなら直してもらえばよい）。
+ * 取り込みは何百行をまとめて扱うため、1セルの「件」で行ごと落とすのは割に合わない。
+ */
+const IMPORT_UNIT_SUFFIX = /[円件人日点回個名台枚冊%％]+$/;
+
+/**
+ * 取り込み（CSV・貼り付け）で受け取った1セルを数値として読む。
+ *
+ * **画面から提出されたときと同じ `parseNumberInput` を通す。**
+ * ここに別の判定を書くと、同じ値が「貼り付けなら通るのに、画面からだと通らない」
+ * （またはその逆）という、原因の説明できない食い違いが生まれる。
+ * 取り込み特有の甘さは「末尾の単位を落とす」ことだけに閉じ込める。
+ */
+export function parseImportedNumber(raw: string, policy: NumberFieldPolicy = {}): ParsedNumber {
+  const stripped = normalizeNumericText(raw).trim().replace(IMPORT_UNIT_SUFFIX, "");
+  return parseNumberInput(stripped, policy);
 }
 
 /**
@@ -242,6 +288,11 @@ export function checkAnswerNumbers(
     if (row.value === null) continue;
     if (!Number.isFinite(row.value)) {
       return { ok: false, message: `「${row.title}」は数字で入力してください。` };
+    }
+    /* 桁が多すぎる値は、あとで計算式にかけたときに無限大になり、
+       「なぜ判定外になったのか分からない項目」を生む。受け取るその場で断る。 */
+    if (Math.abs(row.value) > MAX_ABS_NUMBER) {
+      return { ok: false, message: `「${row.title}」は${TOO_LARGE}` };
     }
     if (row.validationInteger && !Number.isInteger(row.value)) {
       /* 勝手に丸めない。丸めると、打った値と保存される値が食い違い、
