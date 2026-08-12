@@ -4,6 +4,7 @@ import { daysUntilDeadline, formatJpDate, jstDateString } from "@/lib/domain/for
 import { listPendingRespondents } from "@/lib/evaluate";
 import { getOpenCycle, listEvaluations, listForms, listMembers } from "@/lib/queries";
 import { requireRole } from "@/lib/session";
+import { listStalledEvaluations } from "@/lib/stalled";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +16,12 @@ export default async function ManagerHome() {
   }
   const companyId = viewer.companyId;
 
-  const [openCycle, team] = await Promise.all([
+  const [openCycle, team, stalled] = await Promise.all([
     getOpenCycle(companyId),
     listMembers(companyId, { managerId: viewer.id }),
+    // 締め切った期間に残っている分。開いている期間しか見ない下の集計とは別に読む
+    // （締め切った瞬間に画面から消えてしまうのが、放置に気づけなかった原因）。
+    listStalledEvaluations(companyId, { managerId: viewer.id }),
   ]);
   const activeTeam = team.filter((member) => member.isActive);
 
@@ -26,6 +30,7 @@ export default async function ManagerHome() {
       <ManagerDashboard
         viewerName={viewer.name}
         cycle={null}
+        stalled={stalled}
         draftEvaluations={[]}
         readyToBuild={0}
         team={activeTeam.map((member) => ({
@@ -74,6 +79,7 @@ export default async function ManagerHome() {
   return (
     <ManagerDashboard
       viewerName={viewer.name}
+      stalled={stalled}
       cycle={{
         id: openCycle.id,
         name: openCycle.name,

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { StalledEvaluationsNotice } from "@/components/StalledEvaluationsNotice";
 import { Badge, Bar, Card, CardHead, DefList, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import type { StalledRow } from "@/lib/domain/stalled-evaluations";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export interface AdminDashboardSnapshot {
@@ -209,7 +211,14 @@ const REVIEW_LABEL: Record<AdminDashboardModel["reviewState"], string> = {
   complete: "確定済み",
 };
 
-export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot }) {
+export function AdminDashboard({
+  snapshot,
+  stalled = [],
+}: {
+  snapshot: AdminDashboardSnapshot;
+  /** 締め切った期間に残っている、確定されていない評価（自社の全員分） */
+  stalled?: StalledRow[];
+}) {
   const model = buildAdminDashboardModel(snapshot);
   const unfinalized = Math.max(0, snapshot.evaluationCount - snapshot.finalizedEvaluationCount);
 
@@ -219,6 +228,18 @@ export function AdminDashboard({ snapshot }: { snapshot: AdminDashboardSnapshot 
         title={`${snapshot.companyName}の管理`}
         lede="制度を整え、アンケートを配り、評価を確定するまでの現在地です。"
       />
+
+      {/* 「次の一手」は開いている期間（無ければ直近1期）だけを見ている。
+          締め切った期間の置き去りはそこに出てこないので、その上に置く。
+          会社の管理者は、上長が異動・退職したメンバーの分を引き取る立場でもある。 */}
+      {stalled.length > 0 && (
+        <section aria-labelledby="admin-stalled-heading">
+          <SectionHeading>
+            <span id="admin-stalled-heading">締め切った期間に残っている評価</span>
+          </SectionHeading>
+          <StalledEvaluationsNotice rows={stalled} limit={8} moreHref="/admin/cycles" />
+        </section>
+      )}
 
       <section aria-labelledby="admin-next-action">
         <Card className="card-pad hero-tint">

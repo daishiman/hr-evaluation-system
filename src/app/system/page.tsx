@@ -2,8 +2,10 @@ import { sql } from "drizzle-orm";
 import { CompanyScopeSwitcher } from "@/components/CompanyScopeSwitcher";
 import { SystemDashboard, type SystemCompanySummary } from "@/app/system/SystemDashboard";
 import { getDb, schema as s } from "@/lib/db";
+import { groupStalledByCompany } from "@/lib/domain/stalled-evaluations";
 import { listCompanies } from "@/lib/queries";
 import { requireRole } from "@/lib/session";
+import { listStalledAcrossCompanies } from "@/lib/stalled";
 
 export const dynamic = "force-dynamic";
 
@@ -62,11 +64,23 @@ export default async function SystemHome() {
 
   const switchable = companies.filter((company) => company.isActive).map((company) => ({ id: company.id, name: company.name }));
 
+  // 締め切った期間に残っている評価を、会社をまたいで数える。
+  // ここは SUPER_ADMIN しか通らない画面（requireRole で確かめ済み）。
+  const stalledRows = await listStalledAcrossCompanies();
+  const stalledByCompany = groupStalledByCompany(stalledRows).map((group) => ({
+    companyId: group.companyId,
+    companyName: group.companyName,
+    total: group.summary.total,
+    worstDays: group.summary.worstDays,
+    long: group.summary.long,
+  }));
+
   return (
     <SystemDashboard
       companies={summaries}
       selectedCompanyId={viewer.companyId}
       scopeControl={<CompanyScopeSwitcher companies={switchable} currentId={viewer.companyId} />}
+      stalledByCompany={stalledByCompany}
     />
   );
 }

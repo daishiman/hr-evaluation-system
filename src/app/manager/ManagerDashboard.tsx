@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { StalledEvaluationsNotice } from "@/components/StalledEvaluationsNotice";
 import { Badge, Bar, Card, CardRow, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
+import type { StalledRow } from "@/lib/domain/stalled-evaluations";
 import { formatPeriod } from "@/lib/view";
 
 export interface ManagerCycleSummary {
@@ -61,12 +63,15 @@ export function managerNextAction(input: {
 export function ManagerDashboard({
   viewerName,
   cycle,
+  stalled = [],
   draftEvaluations,
   readyToBuild,
   team,
 }: {
   viewerName: string;
   cycle: ManagerCycleSummary | null;
+  /** 締め切った期間に残っている、確定されていない評価（自分が上長のメンバーの分だけ） */
+  stalled?: StalledRow[];
   draftEvaluations: ManagerEvaluationSummary[];
   readyToBuild: number;
   team: TeamMemberSummary[];
@@ -92,6 +97,15 @@ export function ManagerDashboard({
             : "進行中の評価期間が始まると、確認する作業がここに表示されます。"
         }
       />
+
+      {/* 締め切った期間の置き去りは、下の「次にやること」（開いている期間だけを見る）には
+          絶対に出てこない。気づける唯一の場所なので、いちばん上に置く。 */}
+      {stalled.length > 0 && (
+        <>
+          <SectionHeading>締め切った期間に残っている評価</SectionHeading>
+          <StalledEvaluationsNotice rows={stalled} moreHref="/manager/cycles" />
+        </>
+      )}
 
       <SectionHeading>次にやること</SectionHeading>
       {!cycle ? (

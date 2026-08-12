@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { StalledByCompanyNotice } from "@/components/StalledEvaluationsNotice";
 import { Badge, Bar, Card, CardRow, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
 
 export interface SystemCompanySummary {
@@ -38,10 +39,13 @@ export function SystemDashboard({
   companies,
   selectedCompanyId,
   scopeControl,
+  stalledByCompany = [],
 }: {
   companies: SystemCompanySummary[];
   selectedCompanyId: string | null;
   scopeControl: ReactNode;
+  /** 会社ごとの「締め切った期間に残っている評価」の件数。個人名は載せない */
+  stalledByCompany?: { companyId: string; companyName: string; total: number; worstDays: number | null; long: number }[];
 }) {
   const selected = companies.find((company) => company.id === selectedCompanyId) ?? null;
   const activeCompanies = companies.filter((company) => company.isActive);
@@ -61,6 +65,15 @@ export function SystemDashboard({
           </LinkButton>
         }
       />
+
+      {/* 会社をまたいで見えるのはこの画面だけ。締め切った期間の置き去りは
+          会社の中の誰も見ていないことがあるため、全体管理者にも件数だけ届ける。 */}
+      {stalledByCompany.length > 0 && (
+        <>
+          <SectionHeading>締め切った期間に残っている評価</SectionHeading>
+          <StalledByCompanyNotice companies={stalledByCompany} />
+        </>
+      )}
 
       <SectionHeading>操作する会社</SectionHeading>
       {companies.length === 0 ? (
