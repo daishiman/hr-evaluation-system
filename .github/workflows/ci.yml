@@ -32,24 +32,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          # 新規マイグレーション検知のため、比較元コミットまで遡れるようにする。
-          fetch-depth: 0
-
-      # マイグレーションを追加したまま Migrate ワークフローの実行を忘れると、
-      # main への push は通っても Deploy が「未適用マイグレーションあり」で止まる。
-      # ここで早めに気づけるよう警告だけ出す（CI 自体は失敗させない）。
-      - name: 新規マイグレーションの検知
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        run: |
-          base_sha="${{ github.event.pull_request.base.sha || github.event.before }}"
-          if [ -z "$base_sha" ] || ! git cat-file -e "$base_sha" 2>/dev/null; then
-            exit 0
-          fi
-          new_migrations=$(git diff --name-only --diff-filter=A "$base_sha" HEAD -- drizzle/migrations | grep '\.sql$' || true)
-          if [ -n "$new_migrations" ]; then
-            echo "::warning::新しいマイグレーションが追加されています。main にマージ後、必ず Migrate ワークフローを手動実行してください（実行し忘れると Deploy が止まります）: $(echo "$new_migrations" | tr '\n' ' ')"
-          fi
 
       # 判別の根拠は「設定に書いた宣言」ではなく、ロックファイルが実在するかどうか。
       # 宣言は書き換え忘れるが、ロックファイルは実際に入れた事実の痕跡なのでズレない。

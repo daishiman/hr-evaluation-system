@@ -15,8 +15,8 @@
 
 ## 受け入れ条件
 
-1. Deploy は `main` 限定、同一 checkout の `test:coverage` 必須、本番 D1 未適用 migration 0件必須
-2. Migrate は `main` の SQL のみ適用し、適用後に未適用0件を再照会する
+1. Deploy は `main` 限定、同一 checkout の `test:coverage` 必須で、未適用migrationをバックアップ後に自動適用する
+2. 適用後に未適用0件を再照会し、復旧用Migrateとの排他で本番D1変更を直列化する
 3. 複数等級のフォームと設問を1 D1 batch で保存し、版一意制約競合だけ1回再試行する
 4. 現在版判定を `currentVersionRows` / `classifyVersionedRows` に統一する
 5. `constitution_events` を監査ジャーナル契約として正本化する
@@ -53,6 +53,5 @@
 
 ## 非採用
 
-- 本番への自動 migration
 - 監査記録の即時原子化（RELIABILITY-003 として backlog に残す）
 - 全量イベントストア化

@@ -17,8 +17,8 @@ updated_at: 2026-08-13
 
 ## 到達状態
 
-- 本番 Deploy は `main` の同一 checkout だけで、文書検査・型・カバレッジ付きテスト・ビルド・容量・D1 migration 未適用0件を通してから配布する
-- Migrate は `main` の SQL のみを適用し、適用後に同じ本番 DB を再照会して未適用0件を確認する
+- 本番 Deploy は `main` の同一 checkout だけで、文書検査・型・カバレッジ付きテスト・ビルド・容量を確認し、必要ならバックアップ後にD1 migrationを自動適用してから配布する
+- 適用後に同じ本番DBを再照会して未適用0件を確認し、復旧用Migrateと同時実行しない
 - 複数等級のアンケート作成は1つの D1 batch で原子化し、フォーム版の一意制約競合だけ1回再試行する
 - 現在版と履歴の分類は `versioned-master` ドメインだけが正本で、UI はそれを呼ぶ
 - `constitution_events` は監査ジャーナルであり、現在状態の正本でもイベントストアでもない
@@ -28,7 +28,7 @@ updated_at: 2026-08-13
 
 **含む**
 
-- Deploy / Migrate workflow の fail-closed ゲート
+- Deployの自動migrationとMigrate復旧workflowのfail-closedゲート
 - D1 migration list の判定スクリプト
 - フォーム複数等級の原子的保存と版競合再試行
 - 版分類の domain 一本化
@@ -45,8 +45,8 @@ updated_at: 2026-08-13
 
 | # | 条件 |
 |---|---|
-| 1 | Deploy が main 以外・未テスト checkout・未適用 migration を拒否する |
-| 2 | Migrate が main 固定 checkout と適用後再照会を持つ |
+| 1 | Deploy がmain以外・未テストcheckoutを拒否し、未適用migrationをバックアップ後に自動適用する |
+| 2 | 適用後再照会とDeploy/Migrate間の排他で、migration → deployの順序を守る |
 | 3 | 複数等級フォーム作成が部分成功せず、版競合は限定再試行する |
 | 4 | UI と計算が同じ現在版判定を使う |
 | 5 | 監査契約が仕様・schema コメント・実装コメントで一致する |

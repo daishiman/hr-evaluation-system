@@ -10,7 +10,7 @@
 
 1. 本番配布の入口は Deploy workflow のみ。`main` 以外は拒否する。
 2. Deploy は CI 成功を信頼せず、配布する同一 checkout で `check:docs`・typecheck・`test:coverage`・build・bundle・D1 migration parity を再実行する。
-3. migration 未適用がある間は Deploy を fail-closed で止める。Migrate 後も同じ DB を再照会する。
+3. 未適用migrationがあれば、Deployがバックアップ後に自動適用し、同じDBを再照会して未適用0件を確認してから配布する。状態不明・バックアップ失敗・適用失敗はfail-closedで止める。
 4. 複数等級アンケート作成は準備完了後に1 batch で書き、途中失敗で部分成功しない。
 5. フォーム版の一意制約競合だけを1回再試行し、他の一意制約や通信エラーは再試行しない。
 6. 版の現在/履歴分類は domain helper が唯一の正本。
