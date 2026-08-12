@@ -10,6 +10,12 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  /**
+   * 常時HTTPSで通信させる指定（1年間）。今は workers.dev ドメインで
+   * 常時HTTPSのため実害は小さいが、独自ドメインに移した後もそのまま効く。
+   * preload（ブラウザ組み込みリストへの登録）は取り消しにくいため今回は付けない。
+   */
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
   {
     key: "Content-Security-Policy",
     value: [
