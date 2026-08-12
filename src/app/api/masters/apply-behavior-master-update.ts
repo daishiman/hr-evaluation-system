@@ -4,6 +4,7 @@ import type { getDb } from "@/lib/db";
 import { HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
 import { BEHAVIOR_LEVEL_TEMPLATE, defaultLevelText, nextDisplayOrder } from "@/lib/domain/behavior";
+import { recordConstitutionEvent } from "@/lib/domain/constitution-events";
 import type { MasterUpdateBody } from "./body-schema";
 
 type Db = Awaited<ReturnType<typeof getDb>>;
@@ -20,9 +21,10 @@ type BehaviorBody = Extract<
 export async function applyBehaviorMasterUpdate(args: {
   db: Db;
   companyId: string;
+  viewerId: string;
   body: BehaviorBody;
 }): Promise<{ message: string }> {
-  const { db, companyId, body } = args;
+  const { db, companyId, viewerId, body } = args;
 
   const ensure = async (rows: { id: string }[], label: string) => {
     if (rows.length === 0) throw new HttpError(404, `${label}が見つかりませんでした。`);
@@ -62,13 +64,22 @@ export async function applyBehaviorMasterUpdate(args: {
           }
         }
 
-        await db
-          .update(s.behaviorBandSets)
-          .set({
-            ...(renameTo !== undefined ? { name: renameTo } : {}),
-            ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
-          })
-          .where(eq(s.behaviorBandSets.id, current.id));
+        const bandSetPatch = {
+          ...(renameTo !== undefined ? { name: renameTo } : {}),
+          ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
+        };
+        await db.update(s.behaviorBandSets).set(bandSetPatch).where(eq(s.behaviorBandSets.id, current.id));
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "behaviorBandSet",
+          entityId: current.id,
+          eventType:
+            body.isActive === false ? "deactivated" : body.isActive === true ? "activated" : "updated",
+          actorId: viewerId,
+          before: current,
+          after: { ...current, ...bandSetPatch },
+        });
 
         if (body.isActive === false) {
           return {
@@ -89,13 +100,24 @@ export async function applyBehaviorMasterUpdate(args: {
       }
 
       const code = newId("band");
+      const bandSetId = newId("bbs");
+      const bandSetDisplayOrder = nextDisplayOrder(sets);
       await db.insert(s.behaviorBandSets).values({
-        id: newId("bbs"),
+        id: bandSetId,
         companyId,
         code,
         name,
-        displayOrder: nextDisplayOrder(sets),
+        displayOrder: bandSetDisplayOrder,
         isActive: true,
+      });
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "behaviorBandSet",
+        entityId: bandSetId,
+        eventType: "created",
+        actorId: viewerId,
+        after: { id: bandSetId, code, name, displayOrder: bandSetDisplayOrder, isActive: true },
       });
 
       if (!body.copyFromBand) {
@@ -122,7 +144,7 @@ export async function applyBehaviorMasterUpdate(args: {
 
       for (const guideline of sourceGuidelines) {
         const newGuidelineId = newId("bg");
-        await db.insert(s.behaviorGuidelines).values({
+        const guidelinePatch = {
           id: newGuidelineId,
           companyId,
           band: code,
@@ -130,19 +152,39 @@ export async function applyBehaviorMasterUpdate(args: {
           aspectName: guideline.aspectName,
           seq: guideline.seq,
           isActive: guideline.isActive,
+        };
+        await db.insert(s.behaviorGuidelines).values(guidelinePatch);
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "behaviorGuideline",
+          entityId: newGuidelineId,
+          eventType: "created",
+          actorId: viewerId,
+          after: guidelinePatch,
         });
         const levels = sourceLevels.filter((l) => l.guidelineId === guideline.id);
         if (levels.length > 0) {
-          await db.insert(s.behaviorLevels).values(
-            levels.map((level) => ({
-              id: newId("blv"),
+          const newLevels = levels.map((level) => ({
+            id: newId("blv"),
+            companyId,
+            guidelineId: newGuidelineId,
+            score: level.score,
+            label: level.label,
+            text: level.text,
+          }));
+          await db.insert(s.behaviorLevels).values(newLevels);
+          for (const level of newLevels) {
+            await recordConstitutionEvent({
+              db,
               companyId,
-              guidelineId: newGuidelineId,
-              score: level.score,
-              label: level.label,
-              text: level.text,
-            })),
-          );
+              entityType: "behaviorLevel",
+              entityId: level.id,
+              eventType: "created",
+              actorId: viewerId,
+              after: level,
+            });
+          }
         }
       }
 
@@ -173,7 +215,8 @@ export async function applyBehaviorMasterUpdate(args: {
           .where(and(eq(s.behaviorGuidelines.companyId, companyId), eq(s.behaviorGuidelines.band, band)));
 
         const guidelineId = newId("bg");
-        await db.insert(s.behaviorGuidelines).values({
+        const seq = siblings.reduce((m, x) => Math.max(m, x.seq), 0) + 1;
+        const guidelinePatch = {
           id: guidelineId,
           companyId,
           band,
@@ -181,62 +224,96 @@ export async function applyBehaviorMasterUpdate(args: {
              呼び名から作ると同じ名前を2度使えなくなるので、採番した値を入れる。 */
           aspect: newId("aspect"),
           aspectName,
-          seq: siblings.reduce((m, x) => Math.max(m, x.seq), 0) + 1,
+          seq,
           isActive: true,
+        };
+        await db.insert(s.behaviorGuidelines).values(guidelinePatch);
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "behaviorGuideline",
+          entityId: guidelineId,
+          eventType: "created",
+          actorId: viewerId,
+          after: guidelinePatch,
         });
         /* 5段階は制度の骨格なので、追加した観点にも必ず同じ点数で用意する。
            文章は下書きのまま出さないよう、続けて直してもらう前提の文言を入れる。 */
-        await db.insert(s.behaviorLevels).values(
-          BEHAVIOR_LEVEL_TEMPLATE.map((level) => ({
-            id: newId("blv"),
+        const newLevels = BEHAVIOR_LEVEL_TEMPLATE.map((level) => ({
+          id: newId("blv"),
+          companyId,
+          guidelineId,
+          score: level.score,
+          label: level.label,
+          text: defaultLevelText(aspectName, level.label),
+        }));
+        await db.insert(s.behaviorLevels).values(newLevels);
+        for (const level of newLevels) {
+          await recordConstitutionEvent({
+            db,
             companyId,
-            guidelineId,
-            score: level.score,
-            label: level.label,
-            text: defaultLevelText(aspectName, level.label),
-          })),
-        );
+            entityType: "behaviorLevel",
+            entityId: level.id,
+            eventType: "created",
+            actorId: viewerId,
+            after: level,
+          });
+        }
         return {
           message: `「${aspectName}」を追加しました。5段階の文章は下書きのままなので、続けて直してください。`,
         };
       }
 
-      await ensure(
-        await db
-          .select({ id: s.behaviorGuidelines.id })
-          .from(s.behaviorGuidelines)
-          .where(and(eq(s.behaviorGuidelines.id, body.id), eq(s.behaviorGuidelines.companyId, companyId)))
-          .limit(1),
-        "行動指針の観点",
-      );
-      await db
-        .update(s.behaviorGuidelines)
-        .set({
-          ...(body.aspectName !== undefined ? { aspectName: body.aspectName } : {}),
-          ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
-        })
-        .where(eq(s.behaviorGuidelines.id, body.id));
+      const guidelineRows = await db
+        .select()
+        .from(s.behaviorGuidelines)
+        .where(and(eq(s.behaviorGuidelines.id, body.id), eq(s.behaviorGuidelines.companyId, companyId)))
+        .limit(1);
+      await ensure(guidelineRows, "行動指針の観点");
+      const guidelineBefore = guidelineRows[0];
+      const guidelinePatch2 = {
+        ...(body.aspectName !== undefined ? { aspectName: body.aspectName } : {}),
+        ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
+      };
+      await db.update(s.behaviorGuidelines).set(guidelinePatch2).where(eq(s.behaviorGuidelines.id, body.id));
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "behaviorGuideline",
+        entityId: body.id,
+        eventType: "updated",
+        actorId: viewerId,
+        before: guidelineBefore,
+        after: { ...guidelineBefore, ...guidelinePatch2 },
+      });
       return {
         message:
           "行動指針を保存しました。次に作るアンケートから反映されます。すでに公開したアンケートと確定済みの評価は変わりません。",
       };
     }
     case "behaviorLevel": {
-      await ensure(
-        await db
-          .select({ id: s.behaviorLevels.id })
-          .from(s.behaviorLevels)
-          .where(and(eq(s.behaviorLevels.id, body.id), eq(s.behaviorLevels.companyId, companyId)))
-          .limit(1),
-        "行動指針の段階",
-      );
-      await db
-        .update(s.behaviorLevels)
-        .set({
-          ...(body.label !== undefined ? { label: body.label } : {}),
-          ...(body.text !== undefined ? { text: body.text } : {}),
-        })
-        .where(eq(s.behaviorLevels.id, body.id));
+      const levelRows = await db
+        .select()
+        .from(s.behaviorLevels)
+        .where(and(eq(s.behaviorLevels.id, body.id), eq(s.behaviorLevels.companyId, companyId)))
+        .limit(1);
+      await ensure(levelRows, "行動指針の段階");
+      const levelBefore = levelRows[0];
+      const levelPatch = {
+        ...(body.label !== undefined ? { label: body.label } : {}),
+        ...(body.text !== undefined ? { text: body.text } : {}),
+      };
+      await db.update(s.behaviorLevels).set(levelPatch).where(eq(s.behaviorLevels.id, body.id));
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "behaviorLevel",
+        entityId: body.id,
+        eventType: "updated",
+        actorId: viewerId,
+        before: levelBefore,
+        after: { ...levelBefore, ...levelPatch },
+      });
       return {
         message:
           "行動指針を保存しました。次に作るアンケートから反映されます。すでに公開したアンケートと確定済みの評価は変わりません。",

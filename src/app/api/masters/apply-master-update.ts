@@ -10,6 +10,7 @@ import { checkRankBoundaries } from "@/lib/domain/rank-bounds";
 import type { MasterUpdateBody } from "./body-schema";
 import { applyBehaviorMasterUpdate } from "./apply-behavior-master-update";
 import { applyVersionedRequirementUpdate } from "./versioned-requirement-update";
+import { recordConstitutionEvent } from "@/lib/domain/constitution-events";
 
 type Db = Awaited<ReturnType<typeof getDb>>;
 
@@ -54,11 +55,22 @@ export async function applyMasterUpdate(args: {
           if (!set) throw new HttpError(404, "その行動指針の基準が見つかりませんでした。");
           if (!set.isActive) throw new HttpError(400, "その行動指針の基準は使用を止めています。もう一度使う状態にしてから割り当ててください。");
         }
+        const before = (await db.select().from(s.grades).where(eq(s.grades.id, body.id)).limit(1))[0];
         const patch: Record<string, unknown> = {};
         for (const k of ["name", "targetCap", "autonomyLevel", "responsibilityLevel", "deadlineNote", "behaviorBand", "isActive"] as const) {
           if (body[k] !== undefined) patch[k] = body[k];
         }
         await db.update(s.grades).set(patch).where(eq(s.grades.id, body.id));
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "grade",
+          entityId: body.id,
+          eventType: "updated",
+          actorId: viewerId,
+          before,
+          after: { ...before, ...patch },
+        });
         if (Object.keys(patch).length === 1 && body.behaviorBand !== undefined) {
           return {
             message: body.behaviorBand
@@ -69,19 +81,30 @@ export async function applyMasterUpdate(args: {
         return { message: "等級の設定を保存しました。" };
       }
       case "threshold": {
-        await ensure(
-          await db.select({ id: s.promotionThresholds.id }).from(s.promotionThresholds)
-            .where(and(eq(s.promotionThresholds.id, body.id), eq(s.promotionThresholds.companyId, companyId))).limit(1),
-          "昇格の条件",
-        );
+        const before = (
+          await db.select().from(s.promotionThresholds)
+            .where(and(eq(s.promotionThresholds.id, body.id), eq(s.promotionThresholds.companyId, companyId))).limit(1)
+        )[0];
+        await ensure(before ? [before] : [], "昇格の条件");
+        const patch = {
+          requiredKpiPoints: body.requiredKpiPoints,
+          requiredBehaviorPoints: body.requiredBehaviorPoints,
+          isProvisional: false,
+        };
         await db
           .update(s.promotionThresholds)
-          .set({
-            requiredKpiPoints: body.requiredKpiPoints,
-            requiredBehaviorPoints: body.requiredBehaviorPoints,
-            isProvisional: false,
-          })
+          .set(patch)
           .where(eq(s.promotionThresholds.id, body.id));
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "promotionThreshold",
+          entityId: body.id,
+          eventType: "updated",
+          actorId: viewerId,
+          before,
+          after: { ...before, ...patch },
+        });
         return {
           message: "昇格の条件を保存しました。この点数はアンケートの回答画面には表示されません。",
         };
@@ -108,17 +131,28 @@ export async function applyMasterUpdate(args: {
         )[0];
         const chancesPerYear = policy?.chancesPerYear ?? 2;
 
+        const patch = {
+          monthlyAmount: body.monthlyAmount,
+          months: body.months,
+          annualAmount: body.monthlyAmount * chancesPerYear,
+          ...(body.maxCount !== undefined ? { maxCount: body.maxCount } : {}),
+          note: body.note ?? null,
+          isProvisional: false,
+        };
         await db
           .update(s.raiseSettings)
-          .set({
-            monthlyAmount: body.monthlyAmount,
-            months: body.months,
-            annualAmount: body.monthlyAmount * chancesPerYear,
-            ...(body.maxCount !== undefined ? { maxCount: body.maxCount } : {}),
-            note: body.note ?? null,
-            isProvisional: false,
-          })
+          .set(patch)
           .where(eq(s.raiseSettings.id, body.id));
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "raiseSetting",
+          entityId: body.id,
+          eventType: "updated",
+          actorId: viewerId,
+          before: current,
+          after: { ...current, ...patch },
+        });
 
         // 金額が変わったときだけ改定履歴を1行残す。
         // 給与の金額は「いつ・いくらから・いくらに・なぜ変えたか」を後から説明できないと困るため。
@@ -138,39 +172,61 @@ export async function applyMasterUpdate(args: {
         return { message: "昇給額を保存しました。（金額は変わっていないため履歴は増えていません）" };
       }
       case "raisePolicy": {
-        await ensure(
-          await db.select({ id: s.raisePolicies.id }).from(s.raisePolicies)
-            .where(and(eq(s.raisePolicies.id, body.id), eq(s.raisePolicies.companyId, companyId))).limit(1),
-          "昇給ルール",
-        );
+        const before = (
+          await db.select().from(s.raisePolicies)
+            .where(and(eq(s.raisePolicies.id, body.id), eq(s.raisePolicies.companyId, companyId))).limit(1)
+        )[0];
+        await ensure(before ? [before] : [], "昇給ルール");
+        const patch = {
+          requiredACount: body.requiredACount,
+          chancesPerYear: body.chancesPerYear,
+          ...(body.allowDecrease !== undefined ? { allowDecrease: body.allowDecrease } : {}),
+          ...(body.judgeUnit !== undefined ? { judgeUnit: body.judgeUnit } : {}),
+          ...(body.reflectUpperNote !== undefined ? { reflectUpperNote: body.reflectUpperNote } : {}),
+          ...(body.reflectLowerNote !== undefined ? { reflectLowerNote: body.reflectLowerNote } : {}),
+          ...(body.targetNote !== undefined ? { targetNote: body.targetNote } : {}),
+          isProvisional: false,
+        };
         await db
           .update(s.raisePolicies)
-          .set({
-            requiredACount: body.requiredACount,
-            chancesPerYear: body.chancesPerYear,
-            ...(body.allowDecrease !== undefined ? { allowDecrease: body.allowDecrease } : {}),
-            ...(body.judgeUnit !== undefined ? { judgeUnit: body.judgeUnit } : {}),
-            ...(body.reflectUpperNote !== undefined ? { reflectUpperNote: body.reflectUpperNote } : {}),
-            ...(body.reflectLowerNote !== undefined ? { reflectLowerNote: body.reflectLowerNote } : {}),
-            ...(body.targetNote !== undefined ? { targetNote: body.targetNote } : {}),
-            isProvisional: false,
-          })
+          .set(patch)
           .where(eq(s.raisePolicies.id, body.id));
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "raisePolicy",
+          entityId: body.id,
+          eventType: "updated",
+          actorId: viewerId,
+          before,
+          after: { ...before, ...patch },
+        });
         return { message: "昇給ルールを保存しました。" };
       }
       case "office": {
-        await ensure(
-          await db.select({ id: s.offices.id }).from(s.offices)
-            .where(and(eq(s.offices.id, body.id), eq(s.offices.companyId, companyId))).limit(1),
-          "事業所",
-        );
+        const before = (
+          await db.select().from(s.offices)
+            .where(and(eq(s.offices.id, body.id), eq(s.offices.companyId, companyId))).limit(1)
+        )[0];
+        await ensure(before ? [before] : [], "事業所");
+        const patch = {
+          raiseAdjustRate: body.raiseAdjustRate,
+          ...(body.name !== undefined ? { name: body.name } : {}),
+        };
         await db
           .update(s.offices)
-          .set({
-            raiseAdjustRate: body.raiseAdjustRate,
-            ...(body.name !== undefined ? { name: body.name } : {}),
-          })
+          .set(patch)
           .where(eq(s.offices.id, body.id));
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "office",
+          entityId: body.id,
+          eventType: "updated",
+          actorId: viewerId,
+          before,
+          after: { ...before, ...patch },
+        });
         return { message: "事業所の設定を保存しました。" };
       }
       case "gradeRequirementCreate":
@@ -183,11 +239,11 @@ export async function applyMasterUpdate(args: {
       case "promotionRequirementActivation":
       case "promotionRequirementRestoreContent":
       case "promotionRequirementOrder":
-        return applyVersionedRequirementUpdate({ db, companyId, body });
+        return applyVersionedRequirementUpdate({ db, companyId, viewerId, body });
       case "behaviorBandSet":
       case "behaviorGuideline":
       case "behaviorLevel":
-        return applyBehaviorMasterUpdate({ db, companyId, body });
+        return applyBehaviorMasterUpdate({ db, companyId, viewerId, body });
       case "rankCriteria": {
         const current = (
           await db
@@ -257,14 +313,25 @@ export async function applyMasterUpdate(args: {
           item?.direction === "lower" ? "lower" : "higher",
         );
 
+        const rankPatch = {
+          ...(next.lowerBound !== undefined ? { lowerBound: next.lowerBound } : {}),
+          ...(next.upperBound !== undefined ? { upperBound: next.upperBound } : {}),
+          displayLabel,
+        };
         await db
           .update(s.kpiRankCriteria)
-          .set({
-            ...(next.lowerBound !== undefined ? { lowerBound: next.lowerBound } : {}),
-            ...(next.upperBound !== undefined ? { upperBound: next.upperBound } : {}),
-            displayLabel,
-          })
+          .set(rankPatch)
           .where(eq(s.kpiRankCriteria.id, body.id));
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "kpiRankCriteria",
+          entityId: body.id,
+          eventType: "updated",
+          actorId: viewerId,
+          before: merged,
+          after: { ...merged, ...rankPatch },
+        });
 
         /* 以前はここで保存後に全体を見て「警告」を返していた。いまは書き込む前に断るので、
            保存できた時点でA〜Eは必ず繋がっている（警告という中途半端な状態を残さない）。 */
@@ -323,24 +390,50 @@ export async function applyMasterUpdate(args: {
           ) as unknown as Parameters<typeof db.batch>[0],
         );
 
+        const beforeById = new Map(siblings.map((r) => [r.id, r]));
+        for (const r of afterRows) {
+          const displayLabel = rangeLabel(r, item.unit, direction);
+          await recordConstitutionEvent({
+            db,
+            companyId,
+            entityType: "kpiRankCriteria",
+            entityId: r.id,
+            eventType: "updated",
+            actorId: viewerId,
+            before: beforeById.get(r.id) ?? null,
+            after: { ...beforeById.get(r.id), lowerBound: r.lowerBound, upperBound: r.upperBound, displayLabel },
+          });
+        }
+
         return {
           message:
             "ランクA〜Eの基準を保存しました。次に集計する評価から反映されます（確定済みの評価は当時の基準のまま残ります）。",
         };
       }
       case "kgi": {
-        await ensure(
-          await db.select({ id: s.kgiCoefficients.id }).from(s.kgiCoefficients)
-            .where(and(eq(s.kgiCoefficients.id, body.id), eq(s.kgiCoefficients.companyId, companyId))).limit(1),
-          "達成係数",
-        );
+        const before = (
+          await db.select().from(s.kgiCoefficients)
+            .where(and(eq(s.kgiCoefficients.id, body.id), eq(s.kgiCoefficients.companyId, companyId))).limit(1)
+        )[0];
+        await ensure(before ? [before] : [], "達成係数");
+        const kgiPatch = {
+          coefficient: body.coefficient,
+          isProvisional: false,
+        };
         await db
           .update(s.kgiCoefficients)
-          .set({
-            coefficient: body.coefficient,
-            isProvisional: false,
-          })
+          .set(kgiPatch)
           .where(eq(s.kgiCoefficients.id, body.id));
+        await recordConstitutionEvent({
+          db,
+          companyId,
+          entityType: "kgiCoefficient",
+          entityId: body.id,
+          eventType: "updated",
+          actorId: viewerId,
+          before,
+          after: { ...before, ...kgiPatch },
+        });
 
         // 達成係数の表も、達成率の数直線を覆えているかを同じ物差しで見る
         const rows = await db.select().from(s.kgiCoefficients).where(eq(s.kgiCoefficients.companyId, companyId));

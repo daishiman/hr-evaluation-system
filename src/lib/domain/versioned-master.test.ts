@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   currentVersionRows,
   isCurrentVersion,
+  lineageRootId,
   predecessorIds,
   versionFamilyDeleteOrder,
   versionFamilyIds,
@@ -112,6 +113,17 @@ describe("isCurrentVersion（この版は現在版か）", () => {
     for (const row of rows) {
       expect(isCurrentVersion(row, rows)).toBe(currentIds.has(row.id));
     }
+  });
+});
+
+describe("lineageRootId（系譜の起点ID）", () => {
+  it("どの版からでも起点を返し、一覧にないIDは入力値をそのまま返す", () => {
+    const rows = chain("v1", "v2", "v3");
+
+    expect(lineageRootId(rows, "v1")).toBe("v1");
+    expect(lineageRootId(rows, "v2")).toBe("v1");
+    expect(lineageRootId(rows, "v3")).toBe("v1");
+    expect(lineageRootId(rows, "missing")).toBe("missing");
   });
 });
 

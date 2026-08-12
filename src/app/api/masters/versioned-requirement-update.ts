@@ -4,7 +4,8 @@ import type { getDb } from "@/lib/db";
 import { HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
 import { GRADE_REQUIREMENT_MAX, swapForMove } from "@/lib/domain/grade-requirements";
-import { currentVersionRows, versionFamilyIds } from "@/lib/domain/versioned-master";
+import { currentVersionRows, lineageRootId, versionFamilyIds } from "@/lib/domain/versioned-master";
+import { recordConstitutionEvent } from "@/lib/domain/constitution-events";
 import type { MasterUpdateBody } from "./body-schema";
 
 type Db = Awaited<ReturnType<typeof getDb>>;
@@ -83,6 +84,8 @@ async function reviseGrade(
   companyId: string,
   current: Awaited<ReturnType<typeof gradeRows>>[number],
   text: string,
+  actorId: string,
+  allRows: Awaited<ReturnType<typeof gradeRows>>,
 ): Promise<RequirementUpdateResult> {
   const nextText = text.trim();
   if (current.text === nextText) return { message: "内容は変わっていないため、新しい版は作りませんでした。", id: current.id };
@@ -104,6 +107,16 @@ async function reviseGrade(
   } catch (error) {
     translateWriteError(error, "等級要件");
   }
+  await recordConstitutionEvent({
+    db,
+    companyId,
+    entityType: "gradeRequirement",
+    entityId: lineageRootId(allRows, current.id),
+    eventType: "revised",
+    actorId,
+    before: current,
+    after: { ...current, id, text: nextText, previousVersionId: current.id },
+  });
   return {
     message: "等級要件の新しい版を作りました。次に作るアンケートから反映し、作成済みのアンケートと評価は変わりません。",
     id,
@@ -116,6 +129,8 @@ async function revisePromotion(
   companyId: string,
   current: Awaited<ReturnType<typeof promotionRows>>[number],
   values: { text: string; transitionLabel: string | null; isGate: boolean },
+  actorId: string,
+  allRows: Awaited<ReturnType<typeof promotionRows>>,
 ): Promise<RequirementUpdateResult> {
   const next = { ...values, text: values.text.trim(), transitionLabel: cleanOptional(values.transitionLabel) };
   if (
@@ -143,6 +158,16 @@ async function revisePromotion(
   } catch (error) {
     translateWriteError(error, "昇格要件");
   }
+  await recordConstitutionEvent({
+    db,
+    companyId,
+    entityType: "promotionRequirement",
+    entityId: lineageRootId(allRows, current.id),
+    eventType: "revised",
+    actorId,
+    before: current,
+    after: { ...current, id, ...next, previousVersionId: current.id },
+  });
   return {
     message: "昇格要件の新しい版を作りました。次に作るアンケートから反映し、作成済みのアンケートと評価は変わりません。",
     id,
@@ -153,9 +178,10 @@ async function revisePromotion(
 export async function applyVersionedRequirementUpdate(args: {
   db: Db;
   companyId: string;
+  viewerId: string;
   body: RequirementBody;
 }): Promise<RequirementUpdateResult> {
-  const { db, companyId, body } = args;
+  const { db, companyId, viewerId, body } = args;
 
   switch (body.kind) {
     case "gradeRequirementCreate": {
@@ -181,6 +207,15 @@ export async function applyVersionedRequirementUpdate(args: {
       } catch (error) {
         translateWriteError(error, "等級要件");
       }
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "gradeRequirement",
+        entityId: id,
+        eventType: "created",
+        actorId: viewerId,
+        after: { id, gradeId: body.gradeId, category: body.category, text: body.text.trim(), isActive: true },
+      });
       return { message: "等級要件を追加しました。次に作るアンケートから設問に載ります。", id };
     }
 
@@ -190,7 +225,7 @@ export async function applyVersionedRequirementUpdate(args: {
       if (!rows.some((row) => row.id === body.id)) throw new HttpError(404, "等級要件が見つかりませんでした。");
       if (!current) throw new HttpError(409, "この等級要件には新しい版があります。画面を更新してください。");
       if (!current.isActive) throw new HttpError(409, "使わない状態の項目は、もう一度使う状態にしてから内容を変更してください。");
-      return reviseGrade(db, companyId, current, body.text);
+      return reviseGrade(db, companyId, current, body.text, viewerId, rows);
     }
 
     case "gradeRequirementActivation": {
@@ -215,6 +250,16 @@ export async function applyVersionedRequirementUpdate(args: {
       } catch (error) {
         translateWriteError(error, "等級要件");
       }
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "gradeRequirement",
+        entityId: lineageRootId(rows, current.id),
+        eventType: body.isActive ? "activated" : "deactivated",
+        actorId: viewerId,
+        before: current,
+        after: { ...current, isActive: body.isActive },
+      });
       return {
         message: body.isActive
           ? "等級要件をもう一度使う状態にしました。次に作るアンケートから反映し、作成済みのアンケートと評価は変わりません。"
@@ -233,7 +278,7 @@ export async function applyVersionedRequirementUpdate(args: {
         throw new HttpError(404, "同じ項目の変更履歴に、指定された版が見つかりませんでした。");
       }
       const source = rows.find((row) => row.id === body.sourceVersionId)!;
-      return reviseGrade(db, companyId, current, source.text);
+      return reviseGrade(db, companyId, current, source.text, viewerId, rows);
     }
 
     case "gradeRequirementOrder": {
@@ -252,6 +297,16 @@ export async function applyVersionedRequirementUpdate(args: {
       } catch (error) {
         translateWriteError(error, "等級要件");
       }
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "gradeRequirement",
+        entityId: lineageRootId(rows, current.id),
+        eventType: "reordered",
+        actorId: viewerId,
+        before: { seq: current.seq },
+        after: { seq: swap.find((row) => row.id === current.id)?.seq ?? current.seq },
+      });
       return { message: "並び順を変更しました。", id: current.id };
     }
 
@@ -273,6 +328,23 @@ export async function applyVersionedRequirementUpdate(args: {
         isGate: body.isGate ?? true,
         isActive: true,
       });
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "promotionRequirement",
+        entityId: id,
+        eventType: "created",
+        actorId: viewerId,
+        after: {
+          id,
+          gradeId: body.gradeId,
+          kind: body.reqKind,
+          transitionLabel: cleanOptional(body.transitionLabel),
+          text: body.text.trim(),
+          isGate: body.isGate ?? true,
+          isActive: true,
+        },
+      });
       return { message: "昇格要件を追加しました。次に作るアンケートから設問に載ります。", id };
     }
 
@@ -282,11 +354,18 @@ export async function applyVersionedRequirementUpdate(args: {
       if (!rows.some((row) => row.id === body.id)) throw new HttpError(404, "昇格要件が見つかりませんでした。");
       if (!current) throw new HttpError(409, "この昇格要件には新しい版があります。画面を更新してください。");
       if (!current.isActive) throw new HttpError(409, "使わない状態の項目は、もう一度使う状態にしてから内容を変更してください。");
-      return revisePromotion(db, companyId, current, {
-        text: body.text,
-        transitionLabel: body.transitionLabel ?? null,
-        isGate: body.isGate,
-      });
+      return revisePromotion(
+        db,
+        companyId,
+        current,
+        {
+          text: body.text,
+          transitionLabel: body.transitionLabel ?? null,
+          isGate: body.isGate,
+        },
+        viewerId,
+        rows,
+      );
     }
 
     case "promotionRequirementActivation": {
@@ -303,6 +382,16 @@ export async function applyVersionedRequirementUpdate(args: {
       } catch (error) {
         translateWriteError(error, "昇格要件");
       }
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "promotionRequirement",
+        entityId: lineageRootId(rows, current.id),
+        eventType: body.isActive ? "activated" : "deactivated",
+        actorId: viewerId,
+        before: current,
+        after: { ...current, isActive: body.isActive },
+      });
       return {
         message: body.isActive
           ? "昇格要件をもう一度使う状態にしました。次に作るアンケートから反映し、作成済みのアンケートと評価は変わりません。"
@@ -321,11 +410,18 @@ export async function applyVersionedRequirementUpdate(args: {
         throw new HttpError(404, "同じ項目の変更履歴に、指定された版が見つかりませんでした。");
       }
       const source = rows.find((row) => row.id === body.sourceVersionId)!;
-      return revisePromotion(db, companyId, current, {
-        text: source.text,
-        transitionLabel: source.transitionLabel,
-        isGate: source.isGate,
-      });
+      return revisePromotion(
+        db,
+        companyId,
+        current,
+        {
+          text: source.text,
+          transitionLabel: source.transitionLabel,
+          isGate: source.isGate,
+        },
+        viewerId,
+        rows,
+      );
     }
 
     case "promotionRequirementOrder": {
@@ -353,6 +449,16 @@ export async function applyVersionedRequirementUpdate(args: {
       } catch (error) {
         translateWriteError(error, "昇格要件");
       }
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "promotionRequirement",
+        entityId: lineageRootId(rows, current.id),
+        eventType: "reordered",
+        actorId: viewerId,
+        before: { seq: current.seq },
+        after: { seq: swap.find((row) => row.id === current.id)?.seq ?? current.seq },
+      });
       return { message: "並び順を変更しました。", id: current.id };
     }
   }

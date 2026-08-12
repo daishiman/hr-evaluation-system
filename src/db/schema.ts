@@ -1163,3 +1163,44 @@ export const profileFieldPolicies = sqliteTable(
   },
   (t) => [uniqueIndex("uq_pfp_company_field").on(t.companyId, t.field)],
 );
+
+/* ───────────────────────── 制度マスタ イベントストア ─────────────────────────
+ *
+ * 等級・等級要件・昇格要件・行動指針・KPIマスタ・昇給ルール・KGI係数など、
+ * 「制度マスタ」に対する変更はすべてここに不変の行として積む。
+ *
+ * 各テーブル（grades / grade_requirements / kpi_rank_criteria …）は
+ * 「現在の状態のスナップショット」であり続ける（既存の画面・確定/再開フローは
+ * このスナップショットを読むため、挙動を変えない）。真実の記録はこのイベント列であり、
+ * スナップショットは常にイベントの再生結果と一致する。
+ *
+ * 1件のイベントは「誰が・いつ・どの実体の・どの種別の変更で・どの列がどう変わったか」を持つ。
+ * before/after は変更のあった列だけを持つ差分（丸ごとの複製はしない）。
+ */
+export const constitutionEvents = sqliteTable(
+  "constitution_events",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    /** grade | gradeRequirement | promotionRequirement | behaviorBandSet | behaviorGuideline |
+     *  behaviorLevel | promotionThreshold | raiseSetting | raisePolicy | office |
+     *  kpiRankCriteria | kgiCoefficient など。対象テーブルと1対1で対応する。 */
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id").notNull(),
+    /** created | updated | activated | deactivated | revised | restored | reordered | deleted */
+    eventType: text("event_type").notNull(),
+    /** 実行した人。バックフィルした初期イベントや自動処理は null。 */
+    actorId: text("actor_id").references(() => users.id),
+    /** 変更前の値（変わった列だけ）。created では null。 */
+    beforeJson: text("before_json"),
+    /** 変更後の値（変わった列だけ、または削除時は消えた行の全体）。 */
+    afterJson: text("after_json"),
+    /** 同じ実体の中での順序（同一ミリ秒でも並びを一意にするため）。 */
+    seq: integer("seq").notNull(),
+    occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => [
+    index("idx_ce_entity").on(t.companyId, t.entityType, t.entityId, t.seq),
+    index("idx_ce_company_time").on(t.companyId, t.occurredAt),
+  ],
+);

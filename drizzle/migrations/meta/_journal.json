@@ -78,6 +78,13 @@
       "when": 1786586500000,
       "tag": "0013_grade_requirement_revisions",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1786600000000,
+      "tag": "0014_constitution_events",
+      "breakpoints": true
     }
   ]
 }
