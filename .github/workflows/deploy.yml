@@ -80,11 +80,24 @@ jobs:
       - name: 型チェック
         run: ${{ steps.pm.outputs.run }} typecheck
 
+      - name: ビルド
+        run: ${{ steps.pm.outputs.run }} cf:dry-run
+
+      # 無料プランの圧縮後アップロード上限（3,072 KiB）にどれだけ近いかを、
+      # 実際にデプロイする前に確認する。認証情報は不要（--dry-run のため）。
+      #   - 上限を超えている場合だけワークフローを失敗させる（デプロイを止める）
+      #   - 上限の80%を超えた場合は警告のみ（正常なデプロイは止めない）
+      # 詳細: docs/product/backlog.md「E. 性能」、scripts/check-bundle-size.mjs
+      - name: 公開ファイルの容量チェック
+        run: ${{ steps.pm.outputs.run }} check:bundle-size
+
       - name: デプロイ
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: ${{ steps.pm.outputs.run }} deploy
+        # ビルドは上のステップで済んでいるので、ここでは配布だけ行う
+        # （opennextjs-cloudflare deploy は再ビルドしない）。
+        run: ${{ steps.pm.outputs.run }} deploy:worker
 
       # --- ここから配ったあとの確認 ---
       #
