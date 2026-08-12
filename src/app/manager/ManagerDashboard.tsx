@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FormActionCard, type MyActionForm } from "@/app/me/MyDashboard";
 import { StalledEvaluationsNotice } from "@/components/StalledEvaluationsNotice";
 import { Badge, Bar, Card, CardRow, Disclosure, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
 import type { StalledRow } from "@/lib/domain/stalled-evaluations";
@@ -64,6 +65,7 @@ export function ManagerDashboard({
   viewerName,
   cycle,
   stalled = [],
+  ownPendingForms = [],
   draftEvaluations,
   readyToBuild,
   team,
@@ -72,6 +74,8 @@ export function ManagerDashboard({
   cycle: ManagerCycleSummary | null;
   /** 締め切った期間に残っている、確定されていない評価（自分が上長のメンバーの分だけ） */
   stalled?: StalledRow[];
+  /** マネージャー・会社管理者自身が回答すべき未提出アンケート（担当チームの集計とは別枠） */
+  ownPendingForms?: MyActionForm[];
   draftEvaluations: ManagerEvaluationSummary[];
   readyToBuild: number;
   team: TeamMemberSummary[];
@@ -108,6 +112,19 @@ export function ManagerDashboard({
           ) : undefined
         }
       />
+
+      {/* 担当チームの集計にはマネージャー自身が入らないため、放っておくとどの一覧にも出ない。
+          サイドバーから自分で開かない限り気づけなかったので、チームの状況より先に出す。 */}
+      {ownPendingForms.length > 0 && (
+        <>
+          <SectionHeading>自分の未提出アンケート</SectionHeading>
+          <div className="card-grid">
+            {ownPendingForms.map((form, index) => (
+              <FormActionCard key={form.formId} form={form} primary={index === 0} />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* 締め切った期間の置き去りは、下の「次にやること」（開いている期間だけを見る）には
           絶対に出てこない。気づける唯一の場所なので、いちばん上に置く。 */}
