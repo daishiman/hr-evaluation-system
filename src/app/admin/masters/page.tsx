@@ -83,7 +83,15 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         description="「半期の目標設定上限数」は、本人が半期に立てられる目標の件数の目安です。等級要件達成率には使いません。達成率の分母は、そのアンケートを作った時点で実際に出題した等級要件の項目数です。"
         fields={[
           { name: "name", label: "等級の名前", type: "text", required: true, defaultValue: grade.name },
-          { name: "targetCap", label: "半期の目標設定上限数", type: "number", required: true, defaultValue: grade.targetCap, unit: "件" },
+          {
+            name: "targetCap",
+            label: "半期の目標設定上限数",
+            type: "number",
+            required: true,
+            defaultValue: grade.targetCap,
+            unit: "件",
+            policy: { allowDecimal: false, min: 1, max: 50 },
+          },
           { name: "autonomyLevel", label: "自律の水準", type: "text", defaultValue: grade.autonomyLevel ?? "" },
           { name: "responsibilityLevel", label: "責任の水準", type: "text", defaultValue: grade.responsibilityLevel ?? "" },
           { name: "deadlineNote", label: "期限の考え方", type: "text", defaultValue: grade.deadlineNote ?? "" },

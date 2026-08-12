@@ -24,6 +24,12 @@
   --ink-muted: #545e6b;
   --line: #e3e6ea;
   --subtle: #f5f6f8;
+  /* 「いまは使わない設定にしてあるもの」の面と枠（使用しない・利用停止・締め切り済み）。
+     白い面と並べて一目で違うと分かる濃さにする。文字（--ink #16191d）との
+     コントラストは 13:1 以上あり、読みやすさの下限は割らない。 */
+  --off-surface: #e4e7eb;
+  --off-surface-soft: #eef0f3;
+  --off-line: #a8b0bb;
 
   /* 意味を持つ状態色 */
   --danger: #d93025;
@@ -637,26 +643,54 @@ main {
 /* 「いまは使わない設定にしてあるもの」の見た目。
    使用しない・利用停止・締め切り済みは、どの画面でもこの1組で表す
    （画面ごとに薄い文字色や独自の背景を作らない）。
-   ・面を沈ませる（--subtle）
+   ・面を灰色に沈ませる（--off-surface。白い面との差が一目で分かる濃さにする）
    ・枠を破線にする（色を見分けられなくても、線の形で分かる）
+   ・中の色を落とす（grayscale。札やボタンの色が残ると「生きている」ように見えるため）
    ・文字色は変えない（薄くすると読めなくなる。読みやすさの下限は守る）
-   色だけに頼らないため、使う側は「使用しない」等の札も必ず一緒に出す。 */
+   色だけに頼らないため、使う側は「使用しない」等の札も必ず一緒に出す。
+
+   面の濃さは実際の画面で確かめて決めている。--subtle(#f5f6f8) では白との差が
+   2%しかなく、並べても見分けられなかった（2026-08-12 の指摘）。 */
 .card[data-off="true"],
 .card-row[data-off="true"],
 .user-row[data-off="true"],
 .user-row[data-muted="true"] {
-  background: var(--subtle);
+  background: var(--off-surface);
+  border-color: var(--off-line);
   border-style: dashed;
+  /* 色は落とすが明るさは保つ。本文の文字と面のコントラスト比は変わらない。 */
+  filter: grayscale(1);
 }
 /* 行は下の罫線だけが見えるので、破線は行全体を囲む形にして気づけるようにする */
 .card-row[data-off="true"] {
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--off-line);
   border-radius: 8px;
+}
+/* 中に入っている白い面（入力欄・小さなカード・表）も一緒に沈める。
+   ここが白のままだと、外枠だけ灰色で中身は生きて見える。 */
+.card[data-off="true"] :where(.card, .card-row, .input, input, select, textarea, .table-wrap, .panel) {
+  background: var(--off-surface-soft);
+  border-color: var(--off-line);
+}
+/* 一覧の1件（RecordList）と表の1行も同じ扱いにする。
+   カードの中の1件だけが「使わない」になることがあるため、行にも当てられるようにする。 */
+.list-card[data-off="true"],
+tr[data-off="true"] > td {
+  background: var(--off-surface);
+  filter: grayscale(1);
+}
+.list-card[data-off="true"] {
+  border-left: 3px dashed var(--off-line);
 }
 
 /* 視覚的主役の面(1画面1箇所): 白→brand-softの微グラデ */
 .card.hero-tint {
   background: linear-gradient(180deg, #fff 20%, var(--brand-soft) 130%);
+}
+/* 主役の面でも「いまは使わない」が勝つ（利用停止の方の詳細画面など）。
+   この1行が無いと、上の微グラデが後から書いてある分だけ勝って灰色に見えない。 */
+.card.hero-tint[data-off="true"] {
+  background: var(--off-surface);
 }
 
 .card-row {
@@ -1353,6 +1387,15 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
   background: var(--brand-soft);
   color: var(--brand-deep);
   font-weight: 600;
+}
+
+/* いまは使わない設定にしてある選択肢。カード（.card[data-off]）と同じ扱いにする。
+   選択中の見た目より後に書き、選んでいても「使わない」が分かるようにする。 */
+.chip[data-off="true"] {
+  background: var(--off-surface);
+  border-color: var(--off-line);
+  border-style: dashed;
+  filter: grayscale(1);
 }
 
 /* ============================================================

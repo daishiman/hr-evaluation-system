@@ -48,6 +48,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
     required: q.required,
     validationMin: q.validationMin,
     validationMax: q.validationMax,
+    validationInteger: q.validationInteger,
     options: q.optionsJson ? (JSON.parse(q.optionsJson) as { value: string; label: string; score?: number }[]) : [],
     isGate: q.isGate,
     linkLabel: q.kpiItemId
@@ -78,6 +79,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
     required: q.required,
     validationMin: q.validationMin,
     validationMax: q.validationMax,
+    validationInteger: q.validationInteger,
     optionsJson: q.optionsJson,
     displayOrder: q.displayOrder,
   }));
@@ -109,7 +111,9 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
         }
       />
 
-      <Card className="card-pad">
+      {/* 締め切り済みは一覧でも沈めている。詳細でも同じ見た目にして、
+          開いた画面がいまも配っているものか一目で分かるようにする。 */}
+      <Card className="card-pad" off={form.status === "closed"}>
         <p className="m-0 text-sub">
           回答 {responses.length}件{" "}
           {form.status === "published" ? <Badge tone="active">公開中</Badge> : <Badge tone="done">{FORM_STATUS_LABEL[form.status]}</Badge>}

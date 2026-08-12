@@ -142,6 +142,7 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
                 href={`/admin/behavior?band=${set.code}`}
                 className="chip"
                 aria-current={set.code === band ? "true" : undefined}
+                data-off={set.isActive ? undefined : "true"}
               >
                 {set.name}
                 {!set.isActive && "（使用しない）"}

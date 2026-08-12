@@ -19,6 +19,8 @@
  *   - 数値の設問は、単位と入力できる値の範囲を説明文に必ず書く。
  */
 
+import { defaultIntegerFlag } from "@/lib/domain/number-input";
+
 export interface Choice {
   value: string;
   label: string;
@@ -33,6 +35,8 @@ export interface BuiltQuestion {
   options: Choice[] | null;
   validationMin: number | null;
   validationMax: number | null;
+  /** 小数を受け付けない設問か。マスタの「入力チェック」の文言から決まる */
+  validationInteger: boolean;
 }
 
 /** 二重かぎかっこ・句点の重なりを避けて、設定の文言をそのまま引用する。 */
@@ -64,6 +68,7 @@ export function requirementQuestion(category: "support" | "operation", text: str
     options: yesNoChoices("行った", "まだ行っていない"),
     validationMin: null,
     validationMax: null,
+    validationInteger: false,
   };
 }
 
@@ -78,6 +83,7 @@ export function promotionQuestion(kind: "report" | "test", text: string): BuiltQ
       options: yesNoChoices("提出した", "まだ提出していない"),
       validationMin: null,
       validationMax: null,
+      validationInteger: false,
     };
   }
   return {
@@ -88,6 +94,7 @@ export function promotionQuestion(kind: "report" | "test", text: string): BuiltQ
     options: yesNoChoices("合格した", "まだ合格していない"),
     validationMin: null,
     validationMax: null,
+    validationInteger: false,
   };
 }
 
@@ -148,6 +155,7 @@ export function kpiQuestion(
       options: choices.map((n) => ({ value: String(n), label: `${n}`, score: n })),
       validationMin: null,
       validationMax: null,
+      validationInteger: false,
     };
   }
 
@@ -160,6 +168,7 @@ export function kpiQuestion(
       options: null,
       validationMin: null,
       validationMax: null,
+      validationInteger: false,
     };
   }
 
@@ -173,5 +182,8 @@ export function kpiQuestion(
     options: null,
     validationMin: minimumFromValidation(q.validation),
     validationMax: null,
+    /* 「0以上の整数」のように、整数かどうかはマスタの入力チェック欄に前から書かれていた。
+       これまでは説明文に写すだけで入力を止められなかったので、印としても持たせる。 */
+    validationInteger: defaultIntegerFlag({ validation: q.validation, unit }),
   };
 }

@@ -88,8 +88,11 @@ jobs:
       - name: 型チェック
         run: ${{ steps.pm.outputs.run }} typecheck
 
-      - name: テスト
-        run: ${{ steps.pm.outputs.run }} test
+      # 網羅率つきで走らせる。評価の計算・保存・表示のどこかが試験されないまま
+      # 増えたら、その時点で赤くする（下限は vitest.config.mts の thresholds）。
+      # 網羅率は「あとで測る」と必ず下がるので、テストと同じ1回で測りきる。
+      - name: テスト（網羅率の下限つき）
+        run: ${{ steps.pm.outputs.run }} test:coverage
 
 
 # 意図的に入れていないもの（入れたくなったら理由を書いてから入れること）

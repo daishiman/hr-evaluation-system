@@ -39,12 +39,15 @@ export function DataTable<T>({
   rows,
   rowKey,
   caption,
+  rowOff,
 }: {
   columns: Column<T>[];
   rows: T[];
   rowKey: (row: T) => string;
   /** 表が何の一覧かを読み上げに伝える一文（画面には出さない）。 */
   caption?: string;
+  /** いまは使わない設定の行（利用停止・取り消し済み）。表でも折りたたみでも同じ見た目で沈める。 */
+  rowOff?: (row: T) => boolean;
 }) {
   const titleCol = columns.find((c) => c.role === "title") ?? columns[0];
   const markCols = columns.filter((c) => c.role === "mark");
@@ -66,7 +69,7 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={rowKey(r)}>
+              <tr key={rowKey(r)} data-off={rowOff?.(r) ? "true" : undefined}>
                 {columns.map((c) => (
                   <td key={c.key} className={c.num ? "col-num" : undefined}>
                     {c.cell(r)}
@@ -80,7 +83,7 @@ export function DataTable<T>({
 
       <Card className="list-cards">
         {rows.map((r) => (
-          <div key={rowKey(r)} className="list-card">
+          <div key={rowKey(r)} className="list-card" data-off={rowOff?.(r) ? "true" : undefined}>
             <div className="list-card-head">
               <span className="min-w-0">{titleCol.cell(r)}</span>
               {markCols.map((c) => (

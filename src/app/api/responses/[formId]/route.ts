@@ -7,6 +7,7 @@ import { newId } from "@/lib/id";
 import { judgeFormDeadline } from "@/lib/domain/form-deadline";
 import { canAnswerForm } from "@/lib/domain/form-entry";
 import { isAnswered, questionSnapshot } from "@/lib/domain/answer-snapshot";
+import { checkAnswerNumbers } from "@/lib/domain/number-input";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,59 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
       throw new HttpError(400, "すでに提出済みのため、内容を変更できません。修正が必要な場合は上長にご連絡ください。");
     }
 
+    /* 設問の読み込みと検査は、回答の状態を書き換える前に済ませる。
+       順番が逆だと、断られた提出でも「提出済み」の印だけが残り、
+       その人は二度と自分で直せなくなる（実際にそうなっていた）。 */
+
+    // 設問は同じフォームのものだけ受け付ける（他フォームのIDを混ぜられないようにする）
+    const questions = await db
+      .select()
+      .from(s.formQuestions)
+      .where(eq(s.formQuestions.formId, formId));
+    const byId = new Map(questions.map((q) => [q.id, q]));
+
+    const incoming = body.answers
+      .filter((a) => byId.has(a.questionId))
+      .map((a) => {
+        const q = byId.get(a.questionId)!;
+        const choices = a.valueChoices ?? null;
+        return {
+          question: q,
+          valueNumber: q.questionType === "text" || q.questionType === "multi" ? null : (a.valueNumber ?? null),
+          valueText: a.valueText ?? null,
+          // 複数選択だけ value_json を使う（列を空けたまま multi を保存できない状態だった）
+          valueJson: q.questionType === "multi" && choices ? JSON.stringify(choices) : null,
+        };
+      });
+
+    if (body.status === "submitted") {
+      /* 数値の回答が設問の決まり（0以上・1以上・整数だけ、など）に収まっているかを、受け口の側でも見る。
+         画面の制限だけでは、画面を通さずに送られたときに素通りするため。
+         下書きの自動保存には当てない（打っている最中に断ると入力が止まる）。 */
+      const range = checkAnswerNumbers(
+        incoming.map((a) => ({
+          title: a.question.title,
+          validationMin: a.question.validationMin,
+          validationMax: a.question.validationMax,
+          validationInteger: a.question.validationInteger,
+          unit: a.question.unit,
+          value: a.valueNumber,
+        })),
+      );
+      if (!range.ok) throw new HttpError(400, range.message);
+
+      const answeredIds = new Set(
+        incoming.filter((a) => isAnswered(a.question.questionType, a)).map((a) => a.question.id),
+      );
+      const missing = questions.filter((q) => q.required && !answeredIds.has(q.id));
+      if (missing.length > 0) {
+        throw new HttpError(
+          400,
+          `未入力の項目が${missing.length}件あります（例：${missing[0].title}）。入力してから提出してください。`,
+        );
+      }
+    }
+
     const responseId = existing?.id ?? newId("res");
     if (!existing) {
       // 回答時点の所属事業所を写し取る。
@@ -120,40 +174,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
           submittedAt: body.status === "submitted" ? new Date() : null,
         })
         .where(eq(s.formResponses.id, responseId));
-    }
-
-    // 設問は同じフォームのものだけ受け付ける（他フォームのIDを混ぜられないようにする）
-    const questions = await db
-      .select()
-      .from(s.formQuestions)
-      .where(eq(s.formQuestions.formId, formId));
-    const byId = new Map(questions.map((q) => [q.id, q]));
-
-    const incoming = body.answers
-      .filter((a) => byId.has(a.questionId))
-      .map((a) => {
-        const q = byId.get(a.questionId)!;
-        const choices = a.valueChoices ?? null;
-        return {
-          question: q,
-          valueNumber: q.questionType === "text" || q.questionType === "multi" ? null : (a.valueNumber ?? null),
-          valueText: a.valueText ?? null,
-          // 複数選択だけ value_json を使う（列を空けたまま multi を保存できない状態だった）
-          valueJson: q.questionType === "multi" && choices ? JSON.stringify(choices) : null,
-        };
-      });
-
-    if (body.status === "submitted") {
-      const answeredIds = new Set(
-        incoming.filter((a) => isAnswered(a.question.questionType, a)).map((a) => a.question.id),
-      );
-      const missing = questions.filter((q) => q.required && !answeredIds.has(q.id));
-      if (missing.length > 0) {
-        throw new HttpError(
-          400,
-          `未入力の項目が${missing.length}件あります（例：${missing[0].title}）。入力してから提出してください。`,
-        );
-      }
     }
 
     await db.delete(s.formAnswers).where(eq(s.formAnswers.responseId, responseId));

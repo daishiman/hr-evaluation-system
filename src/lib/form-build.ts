@@ -224,6 +224,7 @@ export async function buildQuestionRows(opts: {
           required: q.required,
           validationMin: built.validationMin,
           validationMax: built.validationMax,
+          validationInteger: built.validationInteger,
           optionsJson: built.options ? JSON.stringify(built.options) : null,
           kpiItemId: i.kpiItemId,
           kpiQuestionKey: q.questionKey,

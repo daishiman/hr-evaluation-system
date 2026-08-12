@@ -44,7 +44,7 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
       />
 
       <SectionHeading>基本情報</SectionHeading>
-      <Card className="card-pad">
+      <Card className="card-pad" off={!member.isActive}>
         <DefList
           rows={[
             { label: "社員番号", value: member.employeeCode ?? "—" },

@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, ReasonNote } from "@/components/ui";
+import { NumberField } from "@/components/NumberField";
+import { checkBounds, parseNumberInput, type NumberFieldPolicy } from "@/lib/domain/number-input";
 import { generateInitialPassword } from "@/lib/domain/initial-password";
 
 /**
@@ -29,7 +31,21 @@ export type FieldSpec =
        */
       generate?: boolean;
     }
-  | { name: string; label: string; type: "number"; required?: boolean; help?: string; defaultValue?: number | null; unit?: string }
+  | {
+      name: string;
+      label: string;
+      type: "number";
+      required?: boolean;
+      help?: string;
+      defaultValue?: number | null;
+      unit?: string;
+      /**
+       * 数値の決まり（マイナス・小数を許すか、上下限）。
+       * 指定しない場合は「0以上・小数あり」。欄ごとに決められるようにしているのは、
+       * 一律に禁止すると行動指針の -1 点や達成率の小数が入らなくなるため。
+       */
+      policy?: NumberFieldPolicy;
+    }
   | { name: string; label: string; type: "select"; options: { value: string; label: string }[]; required?: boolean; help?: string; defaultValue?: string }
   | { name: string; label: string; type: "checkbox"; help?: string; defaultValue?: boolean }
   | { name: string; label: string; type: "textarea"; required?: boolean; help?: string; defaultValue?: string };
@@ -44,6 +60,7 @@ export function RecordForm({
   description,
   resetAfterSubmit,
   onSaved,
+  boundsPair,
 }: {
   url: string;
   method?: "POST" | "PUT" | "PATCH";
@@ -56,6 +73,13 @@ export function RecordForm({
   resetAfterSubmit?: boolean;
   /** 保存できたときに呼ぶ。開いたときだけ読む画面で、控えを捨てて読み直すために使う */
   onSaved?: () => void;
+  /**
+   * 「下限の欄」「上限の欄」の名前の組。指定すると、送る前に組み合わせの矛盾を断る。
+   * 関数ではなく欄の名前で渡すのは、この画面を出しているのがサーバー側の部品で、
+   * 関数をそのまま渡せないため。
+   * 同じ判定はサーバー側にも置く（画面を通さずに送られたときに素通りしないため）。
+   */
+  boundsPair?: { lower: string; upper: string };
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -117,19 +141,26 @@ export function RecordForm({
       }
       const str = typeof raw === "string" ? raw.trim() : "";
       if (f.type === "number") {
-        if (str === "") {
-          payload[f.name] = null;
-        } else {
-          const n = Number(str.replace(/[,\s]/g, "").replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
-          if (Number.isNaN(n)) {
-            setError(`「${f.label}」には数字を入力してください。`);
-            return;
-          }
-          payload[f.name] = n;
+        /* 空欄は null のまま送る。0 に置き換えない（空欄と 0 は意味が違う）。 */
+        const parsed = parseNumberInput(str, f.policy);
+        if (parsed.kind === "invalid") {
+          setError(`「${f.label}」：${parsed.reason}`);
+          return;
         }
+        payload[f.name] = parsed.kind === "empty" ? null : parsed.value;
         continue;
       }
       payload[f.name] = str === "" ? null : str;
+    }
+
+    if (boundsPair) {
+      const lower = payload[boundsPair.lower];
+      const upper = payload[boundsPair.upper];
+      const r = checkBounds(typeof lower === "number" ? lower : null, typeof upper === "number" ? upper : null);
+      if (!r.ok) {
+        setError(r.message);
+        return;
+      }
     }
 
     const missing = fields.find((f) => "required" in f && f.required && (payload[f.name] === null || payload[f.name] === ""));
@@ -213,15 +244,8 @@ export function RecordForm({
             ) : f.type === "textarea" ? (
               <textarea name={f.name} defaultValue={f.defaultValue ?? ""} rows={3} className="input mt-1 w-full" />
             ) : f.type === "number" ? (
-              <span className="mt-1 flex items-center gap-2">
-                <input
-                  name={f.name}
-                  defaultValue={f.defaultValue ?? ""}
-                  inputMode="decimal"
-                  enterKeyHint="next"
-                  className="input input-num w-32"
-                />
-                {f.unit && <span className="unit">{f.unit}</span>}
+              <span className="mt-1 block">
+                <NumberField name={f.name} defaultValue={f.defaultValue ?? null} policy={f.policy} unit={f.unit} />
               </span>
             ) : "generate" in f && f.generate ? (
               /* 発行して相手に渡す値。伏せ字にすると渡す側が読めないので、そのまま見せる。

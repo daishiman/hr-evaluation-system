@@ -11,6 +11,7 @@ export interface PreviewQuestion {
   unit: string | null;
   required: boolean;
   validationMin: number | null;
+  validationInteger?: boolean | null;
   validationMax: number | null;
   optionsJson: string | null;
   displayOrder: number;
@@ -143,7 +144,7 @@ function answerShape(q: PreviewQuestion) {
     return (
       <p className="footnote m-0">
         数値で入力します{q.unit ? `（単位：${q.unit}）` : ""}
-        {rule ? `。${rule}の数を入れます` : ""}。
+        {rule ? `。${rule}${q.validationInteger ? "の整数" : "の数"}を入れます` : q.validationInteger ? "。整数だけを入れます" : ""}。
       </p>
     );
   }

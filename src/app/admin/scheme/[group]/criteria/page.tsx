@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
 import { Badge, Card, CardHead, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote } from "@/components/ui";
-import { RecordForm } from "@/components/RecordForm";
+import { RankCriteriaSetForm } from "@/components/RankCriteriaSetForm";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { targetsPointGroup } from "@/lib/domain/grade-points";
 import { groupPosition, nextGroupOf, schemeStepPath, stepLede, stepNumber, STEPS, stepTitle } from "@/lib/domain/scheme-steps";
@@ -155,7 +155,14 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
                 : i.formula
                   ? `計算式 ${i.formula}。`
                   : ""}
+            </p>
+            {/* 下限・上限のどちらを含むかは、打ちながら参照するので上の帯に置いてある。
+                ここには一度読めば済む説明だけを置く（帯を厚くしない）。 */}
+            <p className="footnote m-0 mt-1">
               上限・下限を空欄にすると、その側の制限なし（青天井）になります。
+              いちばん上のランクの外側と、いちばん下のランクの外側は空欄にします（そこに制限を入れると、その外の実績値が
+              どのランクにも当てはまらなくなります）。ランク同士は、隣り合う欄に同じ値を入れるとぴったり繋がります。
+              重なりや隙間があるまま保存はできません（どう直せばよいかはその場に出ます）。
             </p>
             {i.criteria.length === 0 ? (
               <div className="mt-3">
@@ -164,25 +171,18 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
                 </ReasonNote>
               </div>
             ) : (
-              <div className="mt-3 grid gap-2">
-                {i.criteria.map((c) => (
-                  <RecordForm
-                    key={c.id}
-                    url="/api/masters"
-                    method="PUT"
-                    fixed={{ kind: "rankCriteria", id: c.id }}
-                    submitLabel={`ランク${c.rank}の基準を保存`}
-                    /* 画面に出す表記は入力させない。判定に使うのは下限・上限の数値だけなので、
-                       文言を別に書けるようにすると、書いてある範囲と実際に判定される範囲が
-                       食い違う（説明文だけが嘘になる）。表記は保存時に数値から作り直す。 */
-                    description={`ランク${c.rank}のいまの表記：${c.displayLabel}`}
-                    fields={[
-                      { name: "lowerBound", label: `ランク${c.rank} の下限`, type: "number", defaultValue: c.lowerBound, unit: i.unit },
-                      { name: "upperBound", label: `ランク${c.rank} の上限`, type: "number", defaultValue: c.upperBound, unit: i.unit },
-                    ]}
-                  />
-                ))}
-              </div>
+              /* A〜Eをまとめて直してまとめて保存する。1ランクずつ保存する作りでは、
+                 直している途中に必ず境界がずれるため、重なり・隙間を「保存前に断る」ことが
+                 できなかった（警告を出すだけになり、矛盾したまま運用できてしまう）。
+                 画面に出す表記は入力させない。判定に使うのは下限・上限の数値だけで、
+                 文言を別に書けるようにすると、書いてある範囲と実際に判定される範囲が
+                 食い違う（説明文だけが嘘になる）。表記は保存時に数値から作り直す。 */
+              <RankCriteriaSetForm
+                kpiItemId={i.kpiItemId}
+                unit={i.unit}
+                direction={i.direction === "lower" ? "lower" : "higher"}
+                rows={i.criteria}
+              />
             )}
           </Card>
         ))}
