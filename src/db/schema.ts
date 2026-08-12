@@ -1141,45 +1141,6 @@ export const employeeNotes = sqliteTable(
   (t) => [index("idx_en_employee").on(t.employeeId)],
 );
 
-/**
- * 制度マスタの変更を記録する統一イベントストア。
- *
- * 「上書き更新」「previous_version_id の版チェーン」「専用の改定履歴テーブル」という
- * 既存の3方式はそれぞれ残す（画面・API の挙動を変えないため）。このテーブルは
- * それらと並走して追加インサートし、対象（entity_type + entity_id）ごとに
- * イベントを時系列で積み重ねる。現在状態は payload に「そのイベント時点の全内容」を
- * 持たせるスナップショット型イベントなので、entity ごとに最新の1件を読むだけで
- * リプレイ（再構築）できる（→ src/lib/domain/master-events.ts の replayMasterEntity）。
- *
- * entity_id は対象の論理キー:
- *   grade_requirement / promotion_requirement … 版チェーンの起点行の id（lineageRootId）
- *   raise_setting / office_kgi_result          … 本体行の id（UPDATEでも同じidが続く）
- */
-export const masterEvents = sqliteTable(
-  "master_events",
-  {
-    id: id(),
-    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
-    /** grade_requirement | promotion_requirement | raise_setting | office_kgi_result */
-    entityType: text("entity_type").notNull(),
-    entityId: text("entity_id").notNull(),
-    /** created | revised | activated | deactivated | amount_changed | rate_changed */
-    eventType: text("event_type").notNull(),
-    /** そのイベント適用後の全内容（JSON）。差分ではなくスナップショットを持つ。 */
-    payload: text("payload").notNull(),
-    /** 同じ entity の直前のイベント。バックフィルした過去イベントは null のままでよい
-        （リプレイの正しさは occurred_at の順序で決まり、このリンクは系譜表示の補助でしかない）。 */
-    previousEventId: text("previous_event_id").references((): AnySQLiteColumn => masterEvents.id),
-    actorId: text("actor_id").references(() => users.id),
-    reason: text("reason"),
-    occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
-  },
-  (t) => [
-    index("idx_mevt_entity").on(t.companyId, t.entityType, t.entityId),
-    index("idx_mevt_company").on(t.companyId),
-  ],
-);
-
 /* ───────────────────────── 本人が変更してよい項目 ─────────────────────────
  * 「氏名は本人に直させたい。所属と入社日は会社の管理者が管理したい」——
  * この線引きは会社ごとに違うので、コードに埋め込まず会社ごとの行として持つ。
