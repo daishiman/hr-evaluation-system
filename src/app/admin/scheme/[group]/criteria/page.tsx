@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
 import { Badge, Card, CardHead, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { DetailDialogButton } from "@/components/ConfirmButton";
 import { RankCriteriaSetForm } from "@/components/RankCriteriaSetForm";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { targetsPointGroup } from "@/lib/domain/grade-points";
@@ -33,7 +34,8 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
       breadcrumb={[
         { label: "制度設定ガイド", href: "/admin/setup" },
         { label: "KPI・評価セット", href: "/admin/scheme" },
-        { label: `${pointGroup}（${group.gradeLabel}）`, href: schemeStepPath(pointGroup, "select") },
+        /* 等級名はパンくずに詰めない。どの等級が入るかは手順1の配点カードに並びで出る。 */
+        { label: pointGroup, href: schemeStepPath(pointGroup, "select") },
       ]}
       title={`${pointGroup}：${stepTitle("criteria")}`}
       lede={stepLede("criteria", pointGroup)}
@@ -111,6 +113,16 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
           基準（下限・上限）はKPI項目ごとに1組で、すべての等級区分で共通です。ここで直すと、同じ項目を使っている
           ほかの等級区分の判定も同じ基準になります。等級区分ごとに違う線引きにしたい場合は、別のKPI項目として登録してください。
         </p>
+        {/* 数値の書き方は項目ごとに同じ説明になる。カードごとに繰り返さず、ここで1回だけ読めるようにする。 */}
+        <div className="mt-3">
+          <DetailDialogButton label="上限・下限の書き方を見る" title="上限・下限の書き方">
+            <p className="text-sub">上限・下限を空欄にすると、その側は制限なし（青天井）になります。</p>
+            <p className="text-sub">いちばん上のランクの外側は空欄にします。いちばん下のランクの外側も空欄にします。</p>
+            <p className="text-sub">そこに制限を入れると、その外の実績値がどのランクにも当てはまらなくなります。</p>
+            <p className="text-sub">ランク同士は、隣り合う欄に同じ値を入れるとぴったり繋がります。</p>
+            <p className="text-sub">重なりや隙間があるまま保存はできません。どう直せばよいかは、その場に出ます。</p>
+          </DetailDialogButton>
+        </div>
       </Card>
 
       <div className="stack mt-3">
@@ -151,18 +163,10 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
             />
             <p className="footnote m-0">
               {i.isFixedSlot
-                ? "実績値は「アンケートで出した等級要件のうち達成した数 ÷ 出した数 × 100」で出します。"
+                ? "実績値は「達成した等級要件の数 ÷ 出した数 × 100」で出します。分母は、アンケートで出した等級要件の数です。"
                 : i.formula
                   ? `計算式 ${i.formula}。`
                   : ""}
-            </p>
-            {/* 下限・上限のどちらを含むかは、打ちながら参照するので上の帯に置いてある。
-                ここには一度読めば済む説明だけを置く（帯を厚くしない）。 */}
-            <p className="footnote m-0 mt-1">
-              上限・下限を空欄にすると、その側の制限なし（青天井）になります。
-              いちばん上のランクの外側と、いちばん下のランクの外側は空欄にします（そこに制限を入れると、その外の実績値が
-              どのランクにも当てはまらなくなります）。ランク同士は、隣り合う欄に同じ値を入れるとぴったり繋がります。
-              重なりや隙間があるまま保存はできません（どう直せばよいかはその場に出ます）。
             </p>
             {i.criteria.length === 0 ? (
               <div className="mt-3">

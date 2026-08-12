@@ -6,7 +6,7 @@ import { RecordForm } from "@/components/RecordForm";
 import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
 import { behaviorBandLabel } from "@/lib/domain/behavior";
 import { GRADE_REQUIREMENT_MAX } from "@/lib/domain/grade-requirements";
-import { Card, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
+import { Card, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -98,7 +98,9 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         ]}
       />
 
-      <SectionHeading>この等級について、別の画面で決めること</SectionHeading>
+      {/* 等級の名前は見出しと帯（編集中の等級）に出ている。
+          下のカードの文からは等級名を外し、文が差し込みで伸びないようにする。 */}
+      <SectionHeading>{grade.name} について、別の画面で決めること</SectionHeading>
       <div className="stack">
         <Card className="card-pad">
           <p className="m-0 text-sub font-bold">等級要件（支援・運営）</p>
@@ -116,11 +118,26 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
 
         <Card className="card-pad">
           <p className="m-0 text-sub font-bold">昇格の条件・要件</p>
-          <p className="m-0 mt-1 text-sub">
-            {th
-              ? `${grade.name}から上がるには、KPI評価点 ${th.requiredKpiPoints}点・行動指針 ${th.requiredBehaviorPoints}点が必要です。`
-              : "この等級からの昇格条件は登録されていません（最上位の等級の場合は設定不要です）。"}
-          </p>
+          {/* 「KPI評価点◯点・行動指針◯点」は式であって文ではない。
+              1行の文に詰めず、必要な点数を並びにして出す。 */}
+          {th ? (
+            <>
+              <p className="m-0 mt-1 text-sub">次の等級へ上がるには、次の点数が必要です。</p>
+              <ul className="m-0 mt-1 list-disc pl-5 text-sub">
+                <li>
+                  KPI評価点 <Num value={th.requiredKpiPoints} unit="点" />
+                </li>
+                <li>
+                  行動指針 <Num value={th.requiredBehaviorPoints} unit="点" />
+                </li>
+              </ul>
+            </>
+          ) : (
+            <>
+              <p className="m-0 mt-1 text-sub">この等級からの昇格条件は登録されていません。</p>
+              <p className="footnote m-0 mt-1">最上位の等級であれば、設定は要りません。</p>
+            </>
+          )}
           <div className="mt-3">
             <LinkButton variant="secondary" href={`/admin/masters/promotion?grade=${grade.id}`}>
               昇格の条件・要件を編集する
@@ -130,11 +147,15 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
 
         <Card className="card-pad">
           <p className="m-0 text-sub font-bold">行動指針</p>
-          <p className="m-0 mt-1 text-sub">
-            {grade.behaviorBand
-              ? `${grade.name}のアンケートには、${behaviorBandLabel(bandSets, grade.behaviorBand)}を出します。`
-              : `${grade.name}のアンケートには、行動指針を出しません。`}
-          </p>
+          {/* 出す基準セットの呼び名は差し込み。文に混ぜず、値として別の行に置く */}
+          {grade.behaviorBand ? (
+            <>
+              <p className="m-0 mt-1 text-sub">この等級のアンケートに出す行動指針です。</p>
+              <p className="m-0 mt-1 text-sub font-bold">{behaviorBandLabel(bandSets, grade.behaviorBand)}</p>
+            </>
+          ) : (
+            <p className="m-0 mt-1 text-sub">この等級のアンケートには、行動指針を出しません。</p>
+          )}
           <div className="mt-3">
             <LinkButton variant="secondary" href="/admin/behavior">
               行動指針を編集する
@@ -145,9 +166,13 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
         <Card className="card-pad">
           <p className="m-0 text-sub font-bold">昇給額</p>
           <p className="m-0 mt-1 text-sub">
-            {raise
-              ? `${grade.name}のいまの昇給額は 月額 ${raise.monthlyAmount.toLocaleString("ja-JP")}円 です。`
-              : "この等級の昇給額はまだ登録されていません。"}
+            {raise ? (
+              <>
+                いまの昇給額は 月額 <Num value={raise.monthlyAmount} unit="円" /> です。
+              </>
+            ) : (
+              "この等級の昇給額はまだ登録されていません。"
+            )}
           </p>
           <p className="footnote m-0 mt-1">金額・回数の上限・事業所ごとの調整率と、変更したときの記録をまとめて扱います。</p>
           <div className="mt-3">

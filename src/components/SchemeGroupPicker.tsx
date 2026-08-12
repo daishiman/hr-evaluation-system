@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, DefList, Disclosure, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, DefList, Disclosure, InlineDetail, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { validateScheme, type SchemeSelection } from "@/lib/domain/scheme";
-import { describeRule, expectedItemCount, pointsForSlot, type GradePointRule } from "@/lib/domain/grade-points";
+import { RULE_NOTES, expectedItemCount, pointsForSlot, ruleBreakdown, type GradePointRule } from "@/lib/domain/grade-points";
 
 export interface KpiOption {
   id: string;
@@ -46,7 +46,7 @@ interface Pick {
 export function SchemeGroupPicker({
   schemeId,
   pointGroup,
-  gradeLabel,
+  gradeNames,
   rule,
   ratedItemIds,
   initial,
@@ -56,7 +56,8 @@ export function SchemeGroupPicker({
 }: {
   schemeId: string;
   pointGroup: string;
-  gradeLabel: string;
+  /** この等級区分に入る等級の名前。つないだ1行にせず、並びで出す */
+  gradeNames: string[];
   rule: GradePointRule;
   ratedItemIds: string[];
   initial: { kpiItemId: string; isFixedSlot: boolean; isMajorSlot: boolean }[];
@@ -241,14 +242,47 @@ export function SchemeGroupPicker({
   return (
     <>
       <Card className="card-pad hero-tint mt-1">
-        <p className="m-0 text-note text-[var(--ink-muted)]">
-          {pointGroup}（{gradeLabel}）の配点
-        </p>
+        <p className="m-0 text-note text-[var(--ink-muted)]">{pointGroup} の配点</p>
         <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
           {v.total}
           <span className="unit"> / {rule.totalPoints} 点</span>
         </p>
-        <p className="footnote m-0 mt-2">{describeRule(rule)}</p>
+
+        {/* 等級名は文に混ぜない（5等級ぶんつなぐと1行が130文字を超えていた）。
+            どの等級がこの区分に入るかは、数えるものなので並びで出す。 */}
+        <p className="m-0 mt-3 text-note text-[var(--ink-muted)]">この等級区分に入る等級</p>
+        {gradeNames.length === 0 ? (
+          <p className="footnote m-0 mt-1">この等級区分の等級は登録されていません。</p>
+        ) : (
+          <ul className="m-0 mt-1 list-disc pl-5 text-sub">
+            {gradeNames.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+        )}
+
+        {/* 満点の内訳は足し算。1本の文にせず、枠ごとの並びと合計で出す。 */}
+        <p className="m-0 mt-3 text-note text-[var(--ink-muted)]">満点の内訳</p>
+        <ul className="m-0 mt-1 list-none space-y-1 p-0 text-sub">
+          {ruleBreakdown(rule).map((part) => (
+            <li key={part.kind} className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="min-w-0">
+                {part.label}
+                {part.detail && <span className="footnote"> {part.detail}</span>}
+              </span>
+              <Num value={part.points} unit="点" />
+            </li>
+          ))}
+        </ul>
+        <p className="m-0 mt-1 text-sub">
+          合計 <Num value={rule.totalPoints} unit="点" />
+        </p>
+
+        <ul className="footnote m-0 mt-2 list-disc pl-5">
+          {RULE_NOTES.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
         <div className="mt-3 flex flex-wrap items-center gap-4 text-sub">
           <span>
             選んだ項目 <Num value={selections.length} unit="件" /> / {expectedItemCount(rule)}件
@@ -533,16 +567,20 @@ export function SchemeGroupPicker({
           <p className="section-heading m-0">選ぶ項目はありません</p>
           <p className="footnote m-0">
             {pointGroup} は{fixedItem?.name ?? "固定枠の項目"}だけで{rule.totalPoints}点です。
-            ほかのKPIはこの等級区分では評価しません（0点として数えるのではなく、評価の対象にしません）。
+            ほかのKPIは、この等級区分では評価しません。
+            0点として数えるのではなく、評価の対象にしません。
             そのまま下のボタンで次の手順へ進めます。
           </p>
         </Card>
       )}
 
-      <p className="footnote mt-4">
-        保存すると、この等級区分の内容だけが入れ替わります。ほかの等級区分の設定は変わりません。
-        確定済みの評価とすでに公開したアンケートは、当時の設定のまま残ります。
-      </p>
+      <p className="footnote mt-4">保存すると、この等級区分の内容だけが入れ替わります。</p>
+      {/* 「ほかは動かない」の内訳は、保存を決めるうえでは背景。押したときに読めればよい */}
+      <InlineDetail summary="保存しても変わらないもの">
+        <p className="m-0">ほかの等級区分の設定は変わりません。</p>
+        <p className="m-0 mt-1">確定済みの評価は、当時の設定のまま残ります。</p>
+        <p className="m-0 mt-1">すでに公開したアンケートも、当時の設定のままです。</p>
+      </InlineDetail>
 
       <StickyActionBar
         status={

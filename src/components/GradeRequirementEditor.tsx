@@ -2,10 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, Disclosure, InlineDetail, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { UsedByDetail } from "@/components/UsedByDetail";
 import { requestMasterDelete } from "@/components/master-delete-request";
-import { DELETE_LABEL, deleteBlockedReason, deleteConfirmText } from "@/lib/domain/master-delete";
+import {
+  BLOCKED_HELP_LABEL,
+  BLOCKED_KEEP,
+  BLOCKED_WHAT,
+  BLOCKED_WHY,
+  DELETE_LABEL,
+  blockedMark,
+  deleteConfirmText,
+} from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import {
   CATEGORY_LABEL,
@@ -95,8 +104,12 @@ export function GradeRequirementEditor({
     setBusy(false);
   };
 
-  /** 使っている場所があるなら消させない。理由はその場で読めるようにする。 */
-  const blockedOf = (id: string) => deleteBlockedReason(usage[id] ?? []);
+  /* 使っている場所があるなら消させない。
+     行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
+     全行で同じになる「なぜ消せないか」は、この部品の一番下に1つだけ置く。 */
+  const usedByOf = (id: string) => usage[id] ?? [];
+  const markOf = (id: string) => blockedMark(usedByOf(id));
+  const anyBlocked = rows.some((r) => usedByOf(r.id).length > 0);
 
   const support = activeOf(rows, "support");
   const operation = activeOf(rows, "operation");
@@ -144,7 +157,7 @@ export function GradeRequirementEditor({
               {editing[r.id] === undefined ? (
                 <>
                   <p className="m-0 text-sub">{r.text}</p>
-                  {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
+                  {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
                 </>
               ) : (
                 <>
@@ -213,7 +226,7 @@ export function GradeRequirementEditor({
                     void send({ kind: "gradeRequirement", id: r.id, gradeId, category, text: r.text, isActive: false })
                   }
                 />
-                {blockedOf(r.id) === null && (
+                {markOf(r.id) === null && (
                   <ConfirmButton
                     label={DELETE_LABEL}
                     variant="danger-outline"
@@ -282,11 +295,13 @@ export function GradeRequirementEditor({
           <b>{denominator}項目</b>）が出ます。
         </p>
         <p className="footnote m-0 mt-1">
-          等級要件達成率は「達成した項目数 ÷ ここに登録した{denominator}項目」で計算します。項目を増やすと分母も増えます。
-        </p>
-        <p className="footnote m-0 mt-1">
           ここでの変更は<b>次に作るアンケートから反映されます</b>。すでに作成・公開したアンケートと、確定済みの評価は変わりません。
         </p>
+        {/* 達成率の出し方は、いま項目を書くうえでは要らない背景。押したときだけ出す */}
+        <InlineDetail summary="達成率の出し方">
+          <p className="m-0">等級要件達成率は「達成した項目数 ÷ 登録した{denominator}項目」です。</p>
+          <p className="m-0 mt-1">項目を増やすと分母も増えます。</p>
+        </InlineDetail>
       </Card>
 
       {error && <ReasonNote>{error}</ReasonNote>}
@@ -296,17 +311,14 @@ export function GradeRequirementEditor({
       {block("operation", operation)}
 
       {unused.length > 0 && (
-        <details>
-          <summary className="cursor-pointer text-sub text-[var(--ink-muted)]">
-            使わないことにした項目（{unused.length}件）を見る
-          </summary>
-          <Card className="mt-2">
+        <Disclosure summary="使わないことにした項目" meta={`${unused.length}件`}>
+          <div>
             {unused.map((r) => (
               <div key={r.id} className="card-row items-center" data-off="true">
                 <div className="row-main">
                   <p className="m-0 text-sub">{r.text}</p>
                   <p className="footnote m-0">{CATEGORY_LABEL[r.category as RequirementCategory] ?? r.category}</p>
-                  {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
+                  {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
                 </div>
                 <Badge tone="closed">使わない</Badge>
                 <Button
@@ -316,7 +328,7 @@ export function GradeRequirementEditor({
                 >
                   戻す
                 </Button>
-                {blockedOf(r.id) === null && (
+                {markOf(r.id) === null && (
                   <ConfirmButton
                     label={DELETE_LABEL}
                     variant="danger-outline"
@@ -327,8 +339,8 @@ export function GradeRequirementEditor({
                 )}
               </div>
             ))}
-          </Card>
-        </details>
+          </div>
+        </Disclosure>
       )}
 
       <Card className="card-pad">
@@ -372,6 +384,16 @@ export function GradeRequirementEditor({
           </div>
         )}
       </Card>
+
+      {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。
+          「使用中」の行が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
+      {anyBlocked && (
+        <Disclosure summary={BLOCKED_HELP_LABEL}>
+          <p className="m-0 text-sub">{BLOCKED_WHY}</p>
+          <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
+          <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
+        </Disclosure>
+      )}
     </div>
   );
 }

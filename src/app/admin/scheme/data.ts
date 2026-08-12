@@ -21,8 +21,13 @@ import { computeGroupProgress, type GroupProgress } from "@/lib/domain/scheme-st
 
 export interface SchemeGroup {
   pointGroup: string;
-  /** その等級区分に属する等級名（「等級４：AM Ⅰ・等級４：AM Ⅱ」のような表示用の文字列） */
-  gradeLabel: string;
+  /**
+   * その等級区分に属する等級の名前。
+   *
+   * 「・」でつないだ1本の文字列にしない。等級名は差し込みで長く、5等級ぶんを
+   * つなぐと130文字を超える1行になっていた。画面側で並び（<ul>）として出す。
+   */
+  gradeNames: string[];
   rule: GradePointRule;
   /** その等級区分を対象としてランク基準（A〜E）が用意されている項目のID */
   ratedItemIds: string[];
@@ -86,12 +91,8 @@ export async function loadSchemeSetup(companyId: string): Promise<SchemeSetup> {
 
     return {
       pointGroup: r.pointGroup,
-      // AMⅠ/Ⅱ・ManagerⅠ/Ⅱ は同じ等級区分なので、等級名をまとめて1つにする
-      gradeLabel:
-        grades
-          .filter((g) => g.pointGroup === r.pointGroup)
-          .map((g) => g.name)
-          .join("・") || "この等級区分の等級は未登録",
+      // AMⅠ/Ⅱ・ManagerⅠ/Ⅱ は同じ等級区分なので、その区分に入る等級をまとめて渡す
+      gradeNames: grades.filter((g) => g.pointGroup === r.pointGroup).map((g) => g.name),
       rule,
       ratedItemIds,
       saved,

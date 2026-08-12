@@ -6,6 +6,8 @@ import {
   containsCriteriaLeak,
   employeePromotionBlockedReason,
   employeeRaiseReason,
+  buildReasonText,
+  parseReasonText,
   RANK_LEGEND,
   scopeEvaluationItem,
   scopeEvaluationRow,
@@ -128,6 +130,58 @@ describe("scopeEvaluationItem", () => {
     const r = scopeEvaluationItem({ ...evaluatorItem, rank: null, actualValue: null }, false);
     expect(r.rationale).toContain("判定外");
     expect(containsCriteriaLeak(r.rationale)).toBe(false);
+  });
+});
+
+/**
+ * 理由の「見出し＋並び」。
+ *
+ * 画面が並びを <ul> で描けるかどうかは、この読み書きが対で正しいことに掛かっている。
+ * とくに大事なのは、2026-08-12 より前に保存された**1行の文**が
+ * 「見出しだけのまとまり」として今も読めること（過去の評価は書き換えないため）。
+ */
+describe("理由の見出しと並び（buildReasonText / parseReasonText）", () => {
+  it("見出しの下に並びをぶら下げ、行頭の印つきで1本の文字列にする", () => {
+    const text = buildReasonText([
+      { headline: "次の項目がA未満のため、昇給は見送りです。", items: ["売上達成率（B）", "利用率（C）"] },
+    ]);
+    expect(text).toBe("次の項目がA未満のため、昇給は見送りです。\n- 売上達成率（B）\n- 利用率（C）");
+    expect(parseReasonText(text)).toEqual([
+      { headline: "次の項目がA未満のため、昇給は見送りです。", items: ["売上達成率（B）", "利用率（C）"] },
+    ]);
+  });
+
+  it("中身の無いまとまりは落とす（空行だけが残らない）", () => {
+    expect(buildReasonText([{ headline: "", items: [] }, { headline: "見送りです。", items: [] }])).toBe(
+      "見送りです。",
+    );
+  });
+
+  it("見出しの無い並びも書き出せる（並びだけのまとまり）", () => {
+    const text = buildReasonText([{ headline: "", items: ["項目1"] }]);
+    expect(text).toBe("- 項目1");
+    expect(parseReasonText(text)).toEqual([{ headline: "", items: ["項目1"] }]);
+  });
+
+  it("まとまりが2つ以上あっても、並びは直前の見出しにぶら下がる", () => {
+    const blocks = [
+      { headline: "見出し1。", items: ["あ", "い"] },
+      { headline: "見出し2。", items: ["う"] },
+    ];
+    expect(parseReasonText(buildReasonText(blocks))).toEqual(blocks);
+  });
+
+  it("以前に保存した1行の文は、見出しだけのまとまりとして読める", () => {
+    expect(parseReasonText("項目1（B）、項目2（C） がA未満のため、昇給は見送りです。")).toEqual([
+      { headline: "項目1（B）、項目2（C） がA未満のため、昇給は見送りです。", items: [] },
+    ]);
+  });
+
+  it("理由が無いとき・空行が混ざるときも落ちない", () => {
+    expect(parseReasonText(null)).toEqual([]);
+    expect(parseReasonText(undefined)).toEqual([]);
+    expect(parseReasonText("")).toEqual([]);
+    expect(parseReasonText("見出し。\n\n- 項目1\n  \n")).toEqual([{ headline: "見出し。", items: ["項目1"] }]);
   });
 });
 

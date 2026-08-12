@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  RULE_NOTES,
   checkGradePointRule,
-  describeRule,
   expectedItemCount,
   indexRules,
   pointsForSlot,
+  ruleBreakdown,
   slotKindOf,
   targetsPointGroup,
   type GradePointRule,
@@ -120,22 +121,37 @@ describe("targetsPointGroup — 「対象等級」欄の解釈", () => {
   });
 });
 
-describe("indexRules / describeRule", () => {
+describe("indexRules / ruleBreakdown", () => {
   it("等級区分の名前で行を引ける", () => {
     expect(indexRules(RULES).get("AM")?.fixedSlotPoints).toBe(30);
     expect(indexRules(RULES).get("存在しない区分")).toBeUndefined();
   });
 
-  it("配点が決まっている理由を1行の日本語で出せる", () => {
-    const text = describeRule(ruleOf("Chief"));
-    expect(text).toContain("固定枠）40点");
-    expect(text).toContain("20点枠を1項目");
-    expect(text).toContain("10点ずつ4項目");
-    expect(text).toContain("変更できません");
+  it("満点の内訳を、枠ごとの1件に分けて返す（1本の文にしない）", () => {
+    const parts = ruleBreakdown(ruleOf("Chief"));
+    expect(parts.map((p) => p.kind)).toEqual(["fixed", "major", "minor"]);
+    expect(parts[0]).toMatchObject({ label: "等級要件達成率（固定枠）", detail: null, points: 40 });
+    expect(parts[1]).toMatchObject({ label: "20点枠", detail: "20点 × 1項目", points: 20 });
+    expect(parts[2]).toMatchObject({ label: "ほかの項目", detail: "10点 × 4項目", points: 40 });
   });
 
-  it("20点枠を持たない等級区分では20点枠の説明を出さない", () => {
-    expect(describeRule(ruleOf("Regular"))).not.toContain("金銭系");
-    expect(describeRule(ruleOf("Beginner"))).toContain("100点");
+  it("内訳の小計を足すと満点になる（全等級区分）", () => {
+    for (const rule of RULES) {
+      expect(ruleBreakdown(rule).reduce((sum, p) => sum + p.points, 0)).toBe(rule.totalPoints);
+    }
+  });
+
+  it("持っていない枠は内訳に出さない", () => {
+    // Regular は20点枠を持たない
+    expect(ruleBreakdown(ruleOf("Regular")).map((p) => p.kind)).toEqual(["fixed", "minor"]);
+    // Beginner は固定枠だけで満点になる
+    expect(ruleBreakdown(ruleOf("Beginner"))).toEqual([
+      { kind: "fixed", label: "等級要件達成率（固定枠）", detail: null, points: 100 },
+    ]);
+  });
+
+  it("配点が動かせない理由は、1文＝1つのことで並べてある", () => {
+    expect(RULE_NOTES.some((n) => n.includes("変更できません"))).toBe(true);
+    for (const note of RULE_NOTES) expect(note.length).toBeLessThanOrEqual(40);
   });
 });

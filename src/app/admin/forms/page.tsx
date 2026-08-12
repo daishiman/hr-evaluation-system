@@ -86,7 +86,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
             url="/api/forms"
             body={{ cycleId: selected.id }}
             label="等級ごとの下書きをまとめて作る"
-            confirm="等級要件・昇格要件・行動指針・評価セットから、等級ごとのアンケート下書きを作ります。既存のアンケートは残し、新しい版として追加します。よろしいですか？"
+            confirm="等級ごとのアンケート下書きを作ります。もとにするのは、等級要件・昇格要件・行動指針・評価セットです。既存のアンケートは残し、新しい版として追加します。よろしいですか？"
           />
         </div>
       </Card>
@@ -177,7 +177,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                     いま選んでいる評価項目と、このアンケートが聞いている項目が食い違っています。{" "}
                     {mismatchOf(f.id, f.gradeId)}
                     {(Number(f.responseCount ?? 0) > 0 || f.status !== "draft") &&
-                      "公開後のアンケートは、回答が0件でも読まれている可能性があるため設問を差し替えません。いまの内容で聞き直す場合は、新しい版を作って公開してください。"}
+                      "公開後のアンケートは設問を差し替えません。回答が0件でも読まれている可能性があるためです。いまの内容で聞き直す場合は、新しい版を作って公開してください。"}
                   </ReasonNote>
                 </div>
               )}

@@ -1,4 +1,4 @@
-import { Card, Num } from "@/components/ui";
+import { Card, InlineDetail, Num } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { slotCountOf, type GradePointRule } from "./data";
 
@@ -136,10 +136,18 @@ export function PointDesign({
 
       {rule.note && <p className="footnote mt-2">{rule.note}</p>}
 
-      <p className="footnote mt-2">
-        等級が上がるほど等級要件の配点が下がり、そのぶん売上や利益などの成果を見る項目の配点が上がります。
-        上の等級ほど自分の判断で動かせる範囲が広く、決められたことを満たしたかよりも、出した成果で見るほうが実態に合うためです。
-      </p>
+      {/* 配点そのものは上に出ている。ここに書いてあるのは「なぜその配点なのか」という
+          制度の考え方で、見るたびに読む必要はない。消さずに畳んでおく。 */}
+      <div className="mt-2">
+        <InlineDetail summary="等級によって配点が変わる理由">
+          <p className="m-0 text-sub">等級が上がるほど、等級要件の配点は下がります。</p>
+          <p className="m-0 mt-1 text-sub">そのぶん、売上や利益などの成果を見る項目の配点が上がります。</p>
+          <p className="m-0 mt-1 text-sub">上の等級ほど、自分の判断で動かせる範囲が広くなります。</p>
+          <p className="m-0 mt-1 text-sub">
+            決められたことを満たしたかよりも、出した成果で見るほうが実態に合うためです。
+          </p>
+        </InlineDetail>
+      </div>
     </>
   );
 }

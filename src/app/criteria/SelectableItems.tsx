@@ -1,4 +1,4 @@
-import { Badge, Card, CardRow, Num } from "@/components/ui";
+import { Badge, Card, CardRow, Disclosure, InlineDetail, Num } from "@/components/ui";
 import type { SelectableItem } from "./data";
 
 /**
@@ -117,28 +117,46 @@ export function SelectableItems({
         )}
         ）
       </p>
-      <p className="footnote mb-2">
-        どの項目をどの枠に入れるかは自由です。分類はまとめて見るための区切りで、同じ分類から何項目選んでもかまいません。
-        {majorSlotCount > 0 && `${majorSlotPoints}点枠にもこの一覧の項目から選びます。`}
-      </p>
+      {/* 枠と分類の決まりは選ぶときの前提の話。読み直す必要は無いので畳む */}
+      <div className="mb-2">
+        <InlineDetail summary="どの枠にどの項目を入れられるか">
+          <p className="m-0 text-sub">どの項目をどの枠に入れるかは自由です。</p>
+          <p className="m-0 mt-1 text-sub">分類は、まとめて見るための区切りです。</p>
+          <p className="m-0 mt-1 text-sub">同じ分類から何項目選んでもかまいません。</p>
+          {majorSlotCount > 0 && (
+            <p className="m-0 mt-1 text-sub">{majorSlotPoints}点枠にも、この一覧の項目から選びます。</p>
+          )}
+        </InlineDetail>
+      </div>
+      {/* 「選ぶと厳しすぎる閾値が当たる」は選ぶ判断そのものを左右する事実なので畳まない */}
+      {/* 項目名を「・」でつないで1行にすると、33項目のときに200文字を超える1行になる。
+          名前は数えるもの・探すものなので、文ではなく並びで出す。 */}
       {withoutCriteria.length > 0 && (
-        <p className="footnote mb-2">
-          {withoutCriteria.map((i) => i.name).join("・")}のランク基準（A〜E）は、{gradeName}{" "}
-          を対象として想定されていません。選ぶことも採点することもできますが、
-          上位の等級を想定して作られた閾値がそのまま使われるため、{gradeName}{" "}
-          には厳しすぎる可能性があります。項目名から閾値を確認してください。
-        </p>
+        <div className="mb-2">
+          <p className="footnote m-0">次の項目のランク基準（A〜E）についてのご注意です。</p>
+          <ul className="footnote m-0 mt-1 list-disc pl-5">
+            {withoutCriteria.map((i) => (
+              <li key={i.kpiItemId}>
+                <a href={criteriaHref(i.kpiItemId)} className="underline">
+                  No.{i.no} {i.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="footnote m-0 mt-1">これらは {gradeName} を対象として想定されていません。</p>
+          <p className="footnote m-0">選ぶことも採点することもできます。</p>
+          <p className="footnote m-0">ただし、上位の等級を想定した閾値がそのまま使われます。</p>
+          <p className="footnote m-0">{gradeName} には厳しすぎる可能性があります。</p>
+          <p className="footnote m-0">項目名を押すと、その閾値を確認できます。</p>
+        </div>
       )}
       {others.length === 0 ? (
         <p className="footnote">
           この等級区分では、等級要件達成率だけで満点になります。ほかの項目は評価の対象になりません（0点ではなく、そもそも点数を付けません）。
         </p>
       ) : (
-        <details className="card card-pad">
-          <summary className="cursor-pointer text-sub font-semibold">
-            選べる項目をカテゴリごとに見る（<Num value={others.length} unit="件" />）
-          </summary>
-          <div className="mt-3 grid gap-4">
+        <Disclosure summary="選べる項目をカテゴリごとに見る" meta={<Num value={others.length} unit="件" />}>
+          <div className="grid gap-4">
             {[...byCategory.entries()].map(([category, list]) => (
               <div key={category}>
                 <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">
@@ -161,7 +179,7 @@ export function SelectableItems({
               </div>
             ))}
           </div>
-        </details>
+        </Disclosure>
       )}
     </>
   );

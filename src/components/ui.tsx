@@ -191,8 +191,25 @@ export function SectionHeading({
   );
 }
 
+/* ───────────────────────── 畳んで置く ─────────────────────────
+ *
+ * 判断基準は docs/product/spec.md §22-4（何を既定で出し、何を畳むか）。
+ *
+ * 2026-08-12、発注者から「表示する内容が多くなるほど煩わしい。注意事項は
+ * ボタンを押したら出るように」という指摘。ただし**消す・見えなくするのは禁止**で、
+ * 「見せ方を変える」こと。畳んだものには必ず開く手段が要る。
+ *
+ * 情報の性質で3つを使い分ける（1種類に決めつけない）:
+ *   Disclosure         … カードまるごと。まとめて1か所に置く長い節
+ *   InlineDetail       … 行の中の短い補足。その行だけに関わるもの
+ *   DetailDialogButton … 読み切ってほしい長い説明（ConfirmButton.tsx）
+ *
+ * 畳んでよいのは「理由・背景・列挙・書式の説明」。
+ * 取り返しのつかない操作の警告と「できない」という事実そのものは畳まない。
+ */
+
 /**
- * 詳細を必要なときだけ開くための共通パネル。
+ * 詳細を必要なときだけ開くための共通パネル（カード1枚ぶん）。
  * 初期表示では要点（summary / meta）だけにし、長い説明や補助設定で画面を埋めない。
  */
 export function Disclosure({
@@ -201,6 +218,7 @@ export function Disclosure({
   children,
   defaultOpen = false,
 }: {
+  /** 押す場所に出る見出し。空にできない（＝開く手がかりが必ず残る）。 */
   summary: ReactNode;
   meta?: ReactNode;
   children: ReactNode;
@@ -213,6 +231,26 @@ export function Disclosure({
         {meta && <span className="disclosure-meta">{meta}</span>}
       </summary>
       <div className="disclosure-body">{children}</div>
+    </details>
+  );
+}
+
+/**
+ * 行やカードの中に置く、その場で開く短い補足。
+ *
+ * 一覧の1行ごとに長い説明を出すと、一覧そのものが読めなくなる
+ * （2026-08-12、等級要件9項目すべてに同じ3行の説明が出て一覧が埋まった）。
+ * 行に残すのは「どうなっているか」の一言だけにして、
+ * 「どこで使っているか」のような列挙はここへ入れる。
+ *
+ * 同じ中身が3行以上に繰り返されるなら、ここではなく Disclosure で
+ * カードの下に1か所だけ置く（行ごとに畳んだものが並ぶのも煩わしいため）。
+ */
+export function InlineDetail({ summary, children }: { summary: string; children: ReactNode }) {
+  return (
+    <details className="inline-detail">
+      <summary>{summary}</summary>
+      <div className="inline-detail-body">{children}</div>
     </details>
   );
 }

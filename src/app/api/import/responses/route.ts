@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     }
     const unreadable = result.rows.filter((r) => r.unreadable && r.unreadable.length > 0).length;
     if (unreadable > 0) {
-      notes.push(`${unreadable}人ぶんに、受け付けられない値がありました（選択肢と一致しない・桁が多すぎる・整数でない など）。その設問は点数に反映されていません。何行目の何がなぜ受け付けられなかったかは、下の一覧をご確認ください。`);
+      notes.push(`${unreadable}人ぶんに、受け付けられない値がありました。選択肢と一致しない・桁が多すぎる・整数でない、などです。その設問は点数に反映されていません。何行目の何がなぜ受け付けられなかったかは、下の一覧をご確認ください。`);
     }
     if (result.dryRun) {
       return {

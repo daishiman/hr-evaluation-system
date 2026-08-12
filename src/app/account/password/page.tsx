@@ -26,8 +26,11 @@ export default async function AccountPasswordPage() {
       <Card className="card-pad narrow-form">
         <PasswordChangeForm />
       </Card>
+      {/* 「他の端末のログインが切れる」は取り返しのつかない影響なので畳まない。
+          押す前に必ず目に入る場所に、既定で出したままにする。 */}
       <p className="footnote narrow-form mt-3">
-        変更すると、他の端末でのログインは切れます（同じ画面をもう一度開いた場合はログインし直してください）。
+        変更すると、他の端末でのログインは切れます。
+        同じ画面をもう一度開いていた場合は、ログインし直してください。
       </p>
     </>
   );

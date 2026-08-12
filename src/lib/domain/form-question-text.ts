@@ -78,7 +78,7 @@ export function promotionQuestion(kind: "report" | "test", text: string): BuiltQ
     return {
       questionType: "yesno",
       title: `${quoteSetting(text)}を受講し、報告書を提出しましたか？`,
-      helpText: "提出まで終わっていれば「はい」、受講しただけ・まだ受けていない場合は「いいえ」を選んでください。",
+      helpText: "提出まで終わっていれば「はい」を選んでください。受講しただけ・まだ受けていない場合は「いいえ」です。",
       unit: null,
       options: yesNoChoices("提出した", "まだ提出していない"),
       validationMin: null,
@@ -89,7 +89,7 @@ export function promotionQuestion(kind: "report" | "test", text: string): BuiltQ
   return {
     questionType: "yesno",
     title: `${quoteSetting(text)}のテストに合格しましたか？`,
-    helpText: "合格していれば「はい」、受けていない・不合格だった場合は「いいえ」を選んでください。",
+    helpText: "合格していれば「はい」を選んでください。受けていない・不合格だった場合は「いいえ」です。",
     unit: null,
     options: yesNoChoices("合格した", "まだ合格していない"),
     validationMin: null,

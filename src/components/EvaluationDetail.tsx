@@ -1,9 +1,9 @@
 import { getEvaluationDetail, listEvaluations } from "@/lib/queries";
-import { Badge, Bar, Card, CardRow, DefList, LinkButton, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardRow, DefList, Disclosure, InlineDetail, LinkButton, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { EightAxisRadar } from "@/components/LazyCharts";
 import { PrintButton } from "@/components/PrintButton";
 import { formatPeriod } from "@/lib/view";
-import { buildRadarValues, buildThresholdScale, RANK_LEGEND } from "@/lib/domain/evaluation-view";
+import { buildRadarValues, buildThresholdScale, parseReasonText, RANK_LEGEND } from "@/lib/domain/evaluation-view";
 import type { Role } from "@/lib/session";
 
 /**
@@ -129,16 +129,14 @@ export async function EvaluationDetail({
       {head.raiseReason && (
         <div className="mt-4">
           <ReasonNote>
-            <strong>この判定になった理由：</strong>
-            {head.raiseReason}
+            <ReasonBlocks label="この判定になった理由" text={head.raiseReason} />
           </ReasonNote>
         </div>
       )}
       {head.promotionBlockedReason && (
         <div className="mt-4">
           <ReasonNote>
-            <strong>昇格できない理由：</strong>
-            {head.promotionBlockedReason}
+            <ReasonBlocks label="昇格できない理由" text={head.promotionBlockedReason} />
           </ReasonNote>
         </div>
       )}
@@ -156,18 +154,36 @@ export async function EvaluationDetail({
           label={head.cycleName ?? "今回"}
           valueLabel={showsCriteria ? "獲得点 / 配点" : "ランクをもとにした大きさ"}
         />
-        <p className="footnote m-0 mt-2">
-          {showsCriteria
-            ? "軸の長さは、その項目の「獲得点 ÷ 配点」です。配点の重い項目ほど、へこみが合計点に効きます。"
-            : "軸の長さは、その項目のランク（A〜E）をもとにした形です。配点は上長・管理者のみが確認できるため、点数そのものは反映していません。"}
-          {unrated.length > 0 && " ※ の軸は実績が入力されておらず判定できていない項目です（0点ではありません。形が欠けて見えます）。"}
-        </p>
+        {/* 図から読み取れない事実（欠けている軸の意味）は残し、軸の作り方は押したら出す */}
+        {unrated.length > 0 && (
+          <p className="footnote m-0 mt-2">
+            ※ の軸は、実績が入力されておらず判定できていない項目です。
+            0点ではありません（形が欠けて見えます）。
+          </p>
+        )}
+        <div className="mt-2">
+          <InlineDetail summary="この図の見方">
+            {showsCriteria ? (
+              <>
+                <p className="m-0">軸の長さは、その項目の「獲得点 ÷ 配点」です。</p>
+                <p className="m-0 mt-1">配点の重い項目ほど、へこみが合計点に効きます。</p>
+              </>
+            ) : (
+              <>
+                <p className="m-0">軸の長さは、ランク（A〜E）をもとにした形です。</p>
+                <p className="m-0 mt-1">配点は上長・管理者のみが確認できます。</p>
+                <p className="m-0 mt-1">そのため、点数そのものは反映していません。</p>
+              </>
+            )}
+          </InlineDetail>
+        </div>
       </Card>
 
       {/* ランクの意味は本人にも出す。A〜Eだけ見せて意味を伏せると、
-          「なぜこの結果か」が伝わらないため。配点は書かない。 */}
-      <Card className="card-pad mt-3">
-        <p className="section-heading m-0 mb-2">ランクの意味</p>
+          「なぜこの結果か」が伝わらないため。配点は書かない。
+          ただし一度読めば済む早見表なので、開く場所を残したまま畳んでおく。 */}
+      <div className="mt-3">
+        <Disclosure summary="ランクの意味（A〜E）" meta="押すと出ます">
         <ul className="m-0 list-none space-y-1 p-0">
           {RANK_LEGEND.map((r) => (
             <li key={r.rank} className="flex items-start gap-2 text-sub">
@@ -184,7 +200,8 @@ export async function EvaluationDetail({
             <span className="min-w-0">実績が入力されておらず判定できていない項目（判定外）</span>
           </li>
         </ul>
-      </Card>
+        </Disclosure>
+      </div>
 
       <SectionHeading>項目ごとの判定と理由</SectionHeading>
       <Card>
@@ -250,6 +267,15 @@ export async function EvaluationDetail({
             : "0という評価ではありません。実績をそろえて集計し直すと、判定が付きます。"}
         </p>
       )}
+      {/* 全項目に同じ文が付いていた注記。行から外して一覧の下に1か所だけ置く */}
+      {showsCriteria && (
+        <div className="mt-2">
+          <InlineDetail summary="判定範囲の帯について">
+            <p className="m-0">帯は、現在の基準表のA〜Eです。</p>
+            <p className="m-0 mt-1">確定時の基準は、各項目の「判定範囲」が正です。</p>
+          </InlineDetail>
+        </div>
+      )}
       {!showsCriteria && (
         <p className="footnote mt-2">
           配点と基準の数値は、上長・管理者のみが確認できます。判定の理由は上に表示しています。
@@ -274,11 +300,16 @@ export async function EvaluationDetail({
           <Num value={head.requirementTotal} unit="項目" /> 中{" "}
           <Num value={head.requirementAchieved} unit="項目" /> 達成 →{" "}
           <Num value={head.requirementRate} unit="%" />
-          。分母はこのアンケートで実際に聞いた等級要件の項目数です（未回答の項目も未達として数えます）。
         </p>
+        {/* 分母の作り方は、結果を読むうえでは背景。押したときに読めればよい */}
+        <InlineDetail summary="達成率の分母について">
+          <p className="m-0">分母は、このアンケートで実際に聞いた等級要件の項目数です。</p>
+          <p className="m-0 mt-1">未回答の項目も、未達として数えます。</p>
+        </InlineDetail>
         {isLegacyRate && (
           <ReasonNote>
-            この評価は、達成率の分母を「半期の目標設定上限数」としていた以前の決まりで確定済みです。
+            この評価は、以前の決まりで確定済みです。
+            当時の分母は「半期の目標設定上限数」でした。
             そのため上の項目数と達成率の割合が一致していません。確定済みの評価は作り直しません。
           </ReasonNote>
         )}
@@ -325,7 +356,7 @@ export async function EvaluationDetail({
                 }
               >
                 {head.bonusRationale ??
-                  "事業所KGIの達成率が未登録のため、個人Ptと賞与額を算出できません（0円ではありません）。"}
+                  "事業所KGIの達成率が未登録です。個人Ptと賞与額を算出できません（0円ではありません）。"}
               </ReasonNote>
             ) : (
               <>
@@ -454,6 +485,37 @@ export async function EvaluationDetail({
 }
 
 /**
+ * 昇給・昇格の理由を「結論の1文」と「対象の並び」に分けて描く。
+ *
+ * 判定側（scoring.ts）は、項目名・要件名の列挙を文へ詰めず
+ * 「見出し＋並び」の形（行頭が `- ` なら並びの1件）で保存している。
+ * ここで読み戻し、並びは <ul> として出す。1行に「、」で繋ぎ直さない
+ * ＝ 項目が何件あっても、1件ずつが同じ重さで読めるようにする。
+ * 2026-08-12 より前に確定した評価は1行の文なので、見出しだけとして描かれる。
+ */
+function ReasonBlocks({ label, text }: { label: string; text: string }) {
+  const blocks = parseReasonText(text);
+  return (
+    <>
+      {blocks.length === 0 && <strong>{label}：</strong>}
+      {blocks.map((b, idx) => (
+        <div key={`${b.headline}-${idx}`} className={idx === 0 ? "" : "mt-2"}>
+          {idx === 0 && <strong>{label}：</strong>}
+          {b.headline && <span>{b.headline}</span>}
+          {b.items.length > 0 && (
+            <ul className="m-0 mt-1 list-disc space-y-0.5 pl-5">
+              {b.items.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
+/**
  * 項目ごとの「獲得点 / 配点」の帯（評価者向け）。
  * 数字だけだと、100点のうちどの項目がどれだけ効いたかが読み取れないため、
  * 配点を全体の幅、獲得点を塗りで示す。数値も必ず添える（帯だけで値を読ませない）。
@@ -525,10 +587,11 @@ function ThresholdBand({
           />
         )}
       </div>
+      {/* 「帯は現在の基準表のA〜E」は全項目で同じ文になるので、行から外して
+          一覧の下に1か所だけ置いた（項目数ぶん繰り返すと一覧が文字で埋まる）。 */}
       <p className="m-0 mt-1 text-note text-[var(--ink-muted)]">
         判定範囲 {snapshotLabel ?? "—"}
         {rank ? `（ランク${rank}）` : "（判定外）"} ／ 実績値 <Num value={actualValue} unit={unit ?? undefined} />
-        。帯は現在の基準表のA〜Eです（確定時の基準は上の判定範囲が正）。
       </p>
     </div>
   );

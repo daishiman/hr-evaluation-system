@@ -2,10 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { UsedByDetail } from "@/components/UsedByDetail";
 import { requestMasterDelete } from "@/components/master-delete-request";
-import { DELETE_LABEL, deleteBlockedReason, deleteConfirmText } from "@/lib/domain/master-delete";
+import {
+  BLOCKED_HELP_LABEL,
+  BLOCKED_KEEP,
+  BLOCKED_WHAT,
+  BLOCKED_WHY,
+  DELETE_LABEL,
+  blockedMark,
+  deleteConfirmText,
+} from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 
 /**
@@ -92,8 +101,12 @@ export function PromotionRequirementEditor({
     setBusy(false);
   };
 
-  /** 使っている場所があるなら消させない。理由はその場で読めるようにする。 */
-  const blockedOf = (id: string) => deleteBlockedReason(usage[id] ?? []);
+  /* 使っている場所があるなら消させない。
+     行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
+     全行で同じになる「なぜ消せないか」は、この部品の一番下に1つだけ置く。 */
+  const usedByOf = (id: string) => usage[id] ?? [];
+  const markOf = (id: string) => blockedMark(usedByOf(id));
+  const anyBlocked = rows.some((r) => usedByOf(r.id).length > 0);
 
   const activeOf = (kind: PromoKind) => rows.filter((r) => r.kind === kind && r.isActive).sort((a, b) => a.seq - b.seq);
   const unused = rows.filter((r) => !r.isActive);
@@ -131,7 +144,7 @@ export function PromotionRequirementEditor({
                 <>
                   <p className="m-0 text-sub">{r.text}</p>
                   {r.transitionLabel && <p className="footnote m-0">{r.transitionLabel}</p>}
-                  {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
+                  {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
                 </>
               ) : (
                 <>
@@ -223,7 +236,7 @@ export function PromotionRequirementEditor({
                     })
                   }
                 />
-                {blockedOf(r.id) === null && (
+                {markOf(r.id) === null && (
                   <ConfirmButton
                     label={DELETE_LABEL}
                     variant="danger-outline"
@@ -301,7 +314,7 @@ export function PromotionRequirementEditor({
   return (
     <div className="stack">
       <p className="footnote m-0">
-        いま編集しているのは <b>{gradeName}</b> の昇格要件です。ここでの変更は次に作るアンケートから反映され、
+        いま編集しているのは <b>{gradeName}</b> の昇格要件です。ここでの変更は次に作るアンケートから反映されます。
         すでに作成・公開したアンケートと確定済みの評価は変わりません。
       </p>
       {error && <ReasonNote>{error}</ReasonNote>}
@@ -309,17 +322,14 @@ export function PromotionRequirementEditor({
       {block("report")}
       {block("test")}
       {unused.length > 0 && (
-        <details>
-          <summary className="cursor-pointer text-sub text-[var(--ink-muted)]">
-            使わないことにした項目（{unused.length}件）を見る
-          </summary>
-          <Card className="mt-2">
+        <Disclosure summary="使わないことにした項目" meta={`${unused.length}件`}>
+          <div>
             {unused.map((r) => (
               <div key={r.id} className="card-row items-center" data-off="true">
                 <div className="row-main">
                   <p className="m-0 text-sub">{r.text}</p>
                   <p className="footnote m-0">{KIND_LABEL[r.kind as PromoKind] ?? r.kind}</p>
-                  {blockedOf(r.id) !== null && <p className="footnote m-0 mt-1">{blockedOf(r.id)}</p>}
+                  {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
                 </div>
                 <Badge tone="closed">使わない</Badge>
                 <Button
@@ -339,7 +349,7 @@ export function PromotionRequirementEditor({
                 >
                   戻す
                 </Button>
-                {blockedOf(r.id) === null && (
+                {markOf(r.id) === null && (
                   <ConfirmButton
                     label={DELETE_LABEL}
                     variant="danger-outline"
@@ -350,8 +360,18 @@ export function PromotionRequirementEditor({
                 )}
               </div>
             ))}
-          </Card>
-        </details>
+          </div>
+        </Disclosure>
+      )}
+
+      {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。
+          「使用中」の行が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
+      {anyBlocked && (
+        <Disclosure summary={BLOCKED_HELP_LABEL}>
+          <p className="m-0 text-sub">{BLOCKED_WHY}</p>
+          <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
+          <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
+        </Disclosure>
       )}
     </div>
   );

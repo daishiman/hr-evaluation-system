@@ -324,7 +324,7 @@ export async function applyMasterUpdate(args: {
               throw new HttpError(
                 400,
                 `この基準は ${using.map((g) => g.name).join("・")} に出す設定になっています。` +
-                  "先に「どの等級に出すか」でほかの基準か「適用しない」に変えてから、使用を止めてください。",
+                  "先に「どの等級に出すか」で、ほかの基準か「適用しない」に変えてください。そのあとで使用を止められます。",
               );
             }
           }
@@ -479,7 +479,7 @@ export async function applyMasterUpdate(args: {
           .where(eq(s.behaviorGuidelines.id, body.id));
         return {
           message:
-            "行動指針を保存しました。次に作るアンケートから反映されます（すでに公開したアンケートと確定済みの評価は変わりません）。",
+            "行動指針を保存しました。次に作るアンケートから反映されます。すでに公開したアンケートと確定済みの評価は変わりません。",
         };
       }
       case "behaviorLevel": {
@@ -497,7 +497,7 @@ export async function applyMasterUpdate(args: {
           .where(eq(s.behaviorLevels.id, body.id));
         return {
           message:
-            "行動指針を保存しました。次に作るアンケートから反映されます（すでに公開したアンケートと確定済みの評価は変わりません）。",
+            "行動指針を保存しました。次に作るアンケートから反映されます。すでに公開したアンケートと確定済みの評価は変わりません。",
         };
       }
       case "rankCriteria": {

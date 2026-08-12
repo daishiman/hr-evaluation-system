@@ -55,6 +55,64 @@ export function pickEmployeeText(saved: string | null | undefined, fallback: str
   return fallback;
 }
 
+/* ───────────── 理由の「見出し＋並び」 ─────────────
+ *
+ * 「◯◯（B）、△△（B）、□□（C） がA未満のため、昇給は見送りです」のように
+ * 項目名を1文へ詰め込むと、項目が増えた分だけ文が伸びる。
+ * 文を分けても直らない（増えるのは差し込みの数であって、文の数ではない）。
+ * 列挙は文ではなく**並び**で出す、が正しい形。
+ *
+ * ただし理由は evaluations テーブルに文字列で保存済みで、過去の評価は書き換えない。
+ * そこで列の型は文字列のままにして、次の1つだけを決まりとして足した。
+ *
+ *   行の頭が「- 」なら、直前の見出しにぶら下がる並びの1件。それ以外の行は見出し。
+ *
+ * この決まりなら、過去に保存された1行の文も「見出しだけのまとまり」として素直に読める。
+ * 画面は parseReasonText で読み戻し、並びを <ul> として描く（1行に繋ぎ直さない）。
+ */
+
+/** 並びの1件であることを示す行頭の印 */
+export const REASON_ITEM_PREFIX = "- ";
+
+export interface ReasonBlock {
+  /** そのまとまりの結論。空文字なら見出しの無い並びだけのまとまり */
+  headline: string;
+  /** 見出しにぶら下がる並び（項目名・要件名）。無ければ空配列 */
+  items: string[];
+}
+
+/** まとまりの並びを、保存できる1本の文字列にする。 */
+export function buildReasonText(blocks: ReasonBlock[]): string {
+  return blocks
+    .filter((b) => b.headline !== "" || b.items.length > 0)
+    .flatMap((b) => [
+      ...(b.headline === "" ? [] : [b.headline]),
+      ...b.items.map((i) => `${REASON_ITEM_PREFIX}${i}`),
+    ])
+    .join("\n");
+}
+
+/** 保存された理由の文字列を、見出しと並びに読み戻す。 */
+export function parseReasonText(text: string | null | undefined): ReasonBlock[] {
+  if (!text) return [];
+  const blocks: ReasonBlock[] = [];
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed === "") continue;
+    if (!trimmed.startsWith(REASON_ITEM_PREFIX)) {
+      blocks.push({ headline: trimmed, items: [] });
+      continue;
+    }
+    const item = trimmed.slice(REASON_ITEM_PREFIX.length);
+    const last = blocks[blocks.length - 1];
+    // 見出しの無い並びが先に来ることは組み立て側では起きないが、
+    // 保存済みの文が手で書き換えられていても取りこぼさないよう受け皿を用意する。
+    if (last) last.items.push(item);
+    else blocks.push({ headline: "", items: [item] });
+  }
+  return blocks;
+}
+
 /* ───────────── 項目ごとの根拠文（本人向け）───────────── */
 
 export interface EmployeeItemFacts {
@@ -77,12 +135,14 @@ const nf = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 2 });
 export function buildEmployeeItemRationale(item: EmployeeItemFacts, opts?: { legacy?: boolean }): string {
   const value =
     item.actualValue === null ? null : `${nf.format(item.actualValue)}${item.unit ?? ""}`;
+  /* 1文に「項目名」「実績値」「ランク」を詰め込むと、項目名と実績値が差し込まれた時点で
+     読み手の前には長い1文が出る。事実ごとに文を分け、差し込みは1文につき1つまでにする。 */
   const head =
     item.rank === null
-      ? `「${item.itemName}」は実績が入力されていないため、この期は判定できていません（判定外）。`
+      ? `「${item.itemName}」は実績が入力されていません。この期は判定できていません（判定外）。`
       : value === null
         ? `「${item.itemName}」はランク ${item.rank} と判定しました。`
-        : `「${item.itemName}」は実績値 ${value} により、ランク ${item.rank} と判定しました。`;
+        : `「${item.itemName}」の実績値は ${value} です。ランク ${item.rank} と判定しました。`;
   const meaning = item.rank && RANK_MEANING[item.rank] ? `ランク ${item.rank} は「${RANK_MEANING[item.rank]}」です。` : "";
   // 組み立て直したことを黙っていると「説明が薄くなった」と受け取られるため、理由を添える
   const legacy = opts?.legacy
@@ -205,7 +265,7 @@ export function employeePromotionBlockedReason(
      2026-08-12 以降に確定した評価は判定側が作った文がそのまま出るので、
      この文が出るのは、それ以前に確定した評価だけ（過去の評価は書き換えない）。 */
   const fallback =
-    "昇格の要件にまだ届いていません。下の「昇格要件」と項目ごとの判定を確認し、次の期にどこを伸ばすかを上長とご相談ください。";
+    "昇格の要件にまだ届いていません。下の「昇格要件」と項目ごとの判定をご確認ください。次の期にどこを伸ばすかを上長とご相談ください。";
   return pickEmployeeText(saved, fallback);
 }
 

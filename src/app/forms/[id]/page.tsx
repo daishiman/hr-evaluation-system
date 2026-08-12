@@ -4,7 +4,7 @@ import { getForm, listFormQuestions } from "@/lib/queries";
 import { toContentQuestions } from "@/lib/domain/form-visibility";
 import { canAnswerForm } from "@/lib/domain/form-entry";
 import { FormPreview } from "@/components/FormPreview";
-import { Badge, Card, LinkButton, PageTitle, ReasonNote } from "@/components/ui";
+import { Badge, Card, InlineDetail, LinkButton, PageTitle, ReasonNote } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -87,15 +87,23 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
       <Card className="card-pad" off={form.status === "closed"}>
         <p className="m-0 text-sub">回答期間 {formatPeriod(form.opensAt, form.closesAt)}</p>
         {form.description && <p className="m-0 mt-2 whitespace-pre-wrap text-sub leading-relaxed">{form.description}</p>}
-        <p className="footnote m-0 mt-2">
-          設問文・補足・必須／任意・答え方を、保存されているとおりに表示します。入力欄はないので、開いても回答や下書きは作られません。
-          誰がどう答えたかは、この画面には表示されません。
-        </p>
+        {/* 開く前に知っておくべき事実（誰の回答も出ない・点数は出ない）だけを既定で出し、
+            「なぜそうしているか」と画面の読み方は畳む。畳んでも消えないよう InlineDetail に入れる。 */}
+        <p className="footnote m-0 mt-2">誰がどう答えたかは、この画面には表示されません。</p>
         {!canSeeCriteria(viewer.role) && (
-          <p className="footnote m-0 mt-1">
-            配点や昇格に必要な点数は表示されません（回答が点数合わせにならないようにするためです）。
-          </p>
+          <p className="footnote m-0 mt-1">配点や昇格に必要な点数は表示されません。</p>
         )}
+        <div className="mt-2">
+          <InlineDetail summary="この画面の見方">
+            <p className="m-0 text-sub">設問文・補足・必須／任意・答え方を、保存されているとおりに表示します。</p>
+            <p className="m-0 mt-1 text-sub">入力欄はないので、開いても回答や下書きは作られません。</p>
+            {!canSeeCriteria(viewer.role) && (
+              <p className="m-0 mt-1 text-sub">
+                配点などを出さないのは、回答が点数合わせにならないようにするためです。
+              </p>
+            )}
+          </InlineDetail>
+        </div>
       </Card>
 
       <div className="mt-5">

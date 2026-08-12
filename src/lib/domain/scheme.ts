@@ -123,8 +123,9 @@ export function validateScheme(selections: SchemeSelection[], opts: ValidateSche
     if (unrated.length > 0) {
       warnings.push(
         `${unrated.map((x) => `「${nameOf(x.kpiItemId)}」`).join("・")}のランク基準（A〜E）は、` +
-          `${rule.pointGroup} を対象として想定されていません。このまま保存でき、採点も行われますが、` +
-          `上位の等級を想定して作られた基準がそのまま使われるため、${rule.pointGroup} には厳しすぎる可能性があります。` +
+          `${rule.pointGroup} を対象として想定されていません。このまま保存でき、採点も行われます。` +
+          `ただし上位の等級を想定して作られた基準がそのまま使われます。` +
+          `${rule.pointGroup} には厳しすぎる可能性があります。` +
           `「評価基準」で閾値を確認してください。`,
       );
     }

@@ -65,7 +65,9 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     const apply = read("src/app/api/masters/apply-master-update.ts");
     const setEditor = read("src/components/BehaviorBandSetEditor.tsx");
 
-    expect(apply).toContain("先に「どの等級に出すか」でほかの基準か「適用しない」に変えてから、使用を止めてください。");
+    /* 2026-08-12、1文40文字の決まりに合わせて2文に割った。中身（どこを直すか・そのあと何ができるか）は同じ。 */
+    expect(apply).toContain("先に「どの等級に出すか」で、ほかの基準か「適用しない」に変えてください。");
+    expect(apply).toContain("そのあとで使用を止められます。");
     /* 「使わない」を扱うこの経路からは物理削除しない。
        消す操作は delete-master-item.ts に分けてあり、そちらが
        「一度でも使ったか」を数えてから消す（判定の実物は delete-master-item.test.ts）。 */
@@ -82,13 +84,44 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     const promoEditor = read("src/components/PromotionRequirementEditor.tsx");
 
     /* ボタンを消すだけで黙らない。「なぜ消せないか」と「代わりに何をすればよいか」を
-       その場に出す（無言の読み取り専用を作らない）。 */
-    for (const source of [guidelineEditor, gradeEditor, promoEditor]) {
-      expect(source).toContain("deleteBlockedReason");
+       その場に出す（無言の読み取り専用を作らない）。
+
+       2026-08-12、出し方だけを変えた（spec §22-5）。全行に同じ長い1文を並べる代わりに、
+       行には「使用中（◯件）」の印、押すと使っている場所、理由と代わりの手段はカードの下に1か所。
+       情報は1つも減らしていないので、検査は「4つとも画面のどこかに出ている」ことに読み替える。
+
+       同日さらに、押して開いた先の出し方を変えた。placesText は場所の名前を「・」で
+       つないで先頭2件に省く（＝1行が70文字を超え、しかも残りが読めない）。
+       開いた先に省く理由は無いので、画面側は UsedByDetail で全件を並びにする。
+       placesText はサーバーが返す文（deleteBlockedReason）に残っている。 */
+    for (const source of [guidelineEditor, gradeEditor, promoEditor, setEditor]) {
+      // ①消せないという事実（行の印）と、②使っている場所（押すと全件が並びで出る）
+      expect(source).toContain("blockedMark");
+      expect(source).toContain("UsedByDetail");
+      // ③消せない理由 ④代わりの手段（カードの下に1か所・押すと出る）
+      expect(source).toContain("BLOCKED_WHY");
+      expect(source).toContain("BLOCKED_WHAT");
+      expect(source).toContain("BLOCKED_KEEP");
+      // 畳んだものを開く場所が必ずある（畳む＝隠すにしない）
+      expect(source).toContain("BLOCKED_HELP_LABEL");
+      expect(source).toContain("Disclosure");
       expect(source).toContain("DELETE_LABEL");
     }
-    // 基準セットは「等級に出す設定になっていないか」も見るので専用の理由を使う
-    expect(setEditor).toContain("bandSetBlockedReason");
+    /* 開く場所（InlineDetail）と全件の並びは、4つの画面で1つの部品に集約している。
+       ここが省略に戻ったら気づけるよう、部品そのものを見る。 */
+    const usedByDetail = read("src/components/UsedByDetail.tsx");
+    expect(usedByDetail).toContain("InlineDetail");
+    expect(usedByDetail).toContain("usedBy.map");
+    expect(usedByDetail).not.toContain("placesText");
+    expect(usedByDetail).toContain("<ul");
+
+    /* 基準セットは「等級に出す設定になっていないか」も見るので、専用の次の一手を出す。
+       等級名の並びは行の中にすでに出ているので、この文では繰り返さない
+       （繰り返すと、等級が増えたぶんだけ長い1文が行に出る）。
+       名前を含む文はサーバーの返事（bandSetBlockedReason）に残してある。 */
+    expect(setEditor).toContain("BAND_SET_ASSIGNED_NEXT");
+    expect(setEditor).toContain("usedByGradeNames");
+    expect(read("src/app/api/masters/delete-master-item.ts")).toContain("bandSetBlockedReason");
     expect(setEditor).toContain("DELETE_LABEL");
     // 「使わない」「もう一度使う」は消さずに残す（消すのはそれに加えた3つ目の選択肢）
     expect(guidelineEditor).toContain("使わない");

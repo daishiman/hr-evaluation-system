@@ -208,7 +208,7 @@ export async function importMembersCsv(
       (u) => u.companyId === companyId && (normalizeKey(u.name) === key || u.email === raw.toLowerCase() || normalizeKey(u.employeeCode ?? "") === key),
     );
     if (inDb) return { id: inDb.id };
-    return { id: null, error: `上長「${raw}」が見つかりません（この会社の社員か、このファイルの中の方を指定してください）` };
+    return { id: null, error: `上長「${raw}」が見つかりません。この会社の社員か、このファイルの中の方を指定してください` };
   };
 
   const managerPlan = new Map<number, { id: string | null; error?: string }>();

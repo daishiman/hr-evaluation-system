@@ -278,7 +278,7 @@ export async function buildEvaluationsForCycle(
         if (si.isFixedSlot) {
           actual = requirementRate;
           unratedReason =
-            "このアンケートに等級要件の設問が1件も含まれていないため、達成率を出せませんでした（判定外）。アンケートに等級要件を追加してください。";
+            "このアンケートに等級要件の設問が1件も含まれていません。そのため達成率を出せませんでした（判定外）。アンケートに等級要件を追加してください。";
           unratedReasonEmployee = UNRATED_REQUIREMENT_RATIONALE_EMPLOYEE;
         } else {
           try {

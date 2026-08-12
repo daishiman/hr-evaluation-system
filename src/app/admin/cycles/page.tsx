@@ -142,7 +142,7 @@ export default async function AdminCycles() {
                       body={{ cycleId: c.id, status: "open" }}
                       label="受付を再開する"
                       variant="tertiary"
-                      confirm="受付を再開すると、この期間の回答を再び受け付けます（アンケートは個別に公開し直してください）。よろしいですか？"
+                      confirm="受付を再開すると、この期間の回答を再び受け付けます。アンケートは個別に公開し直してください。よろしいですか？"
                     />
                   )}
                 </div>
@@ -158,7 +158,8 @@ export default async function AdminCycles() {
                         </LinkButton>
                       }
                     >
-                      この期間には、まだ確定していない評価が{pending.length}件あります。締め切ることはできますが、締め切ったあとはホームの「締め切った期間に残っている評価」で追いかけることになります。
+                      この期間には、まだ確定していない評価が{pending.length}件あります。締め切ることはできます。
+                      締め切ったあとは、ホームの「締め切った期間に残っている評価」で追いかけます。
                     </ReasonNote>
                   </div>
                 )}

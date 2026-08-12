@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { StalledEvaluationsNotice } from "@/components/StalledEvaluationsNotice";
-import { Badge, Bar, Card, CardRow, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardRow, Disclosure, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
 import type { StalledRow } from "@/lib/domain/stalled-evaluations";
 import { formatPeriod } from "@/lib/view";
 
@@ -89,12 +89,23 @@ export function ManagerDashboard({
 
   return (
     <>
+      {/* 期の名前と日付を1文に詰めない。
+          文は「何を表示しているか」だけにして、どの期か・いつからいつまでかは
+          見出しの脇の札（tags）に出す。情報は減らさず、読む単位を分ける。 */}
       <PageTitle
         title={`${viewerName} さんの管理ページ`}
         lede={
           cycle
-            ? `${cycle.name}（${formatPeriod(cycle.periodStart, cycle.periodEnd)}）の次の作業を表示しています。`
+            ? "いま進行中の評価期間で、次にやることを表示しています。"
             : "進行中の評価期間が始まると、確認する作業がここに表示されます。"
+        }
+        tags={
+          cycle ? (
+            <>
+              <span className="tag">{cycle.name}</span>
+              <span className="tag">{formatPeriod(cycle.periodStart, cycle.periodEnd)}</span>
+            </>
+          ) : undefined
         }
       />
 
@@ -183,42 +194,43 @@ export function ManagerDashboard({
             </div>
           </div>
 
-          <details className="disclosure mt-4">
-            <summary>メンバー別の状況を見る（{team.length}人）</summary>
-            <div className="disclosure-body p-0 text-[var(--ink)]">
-              {team.map((member) => (
-                <CardRow
-                  key={member.id}
-                  title={
-                    <Link href={`/manager/members/${member.id}`} className="text-[var(--brand-deep)]">
-                      {member.name}
-                    </Link>
-                  }
-                  sub={`${member.gradeName ?? "等級未設定"} ／ ${member.department ?? "所属未設定"}`}
-                  marks={
-                    member.responseStatus === "submitted" ? (
-                      <Badge tone="done">提出済み</Badge>
-                    ) : member.responseStatus === "draft" ? (
-                      <Badge tone="active">入力途中</Badge>
-                    ) : member.responseStatus === "none" ? (
-                      <Badge tone="required">未着手</Badge>
-                    ) : (
-                      <Badge tone="closed">対象アンケートなし</Badge>
-                    )
-                  }
-                />
-              ))}
-            </div>
-          </details>
+          <div className="mt-4">
+            <Disclosure summary="メンバー別の状況を見る" meta={`${team.length}人`}>
+              <div className="p-0 text-[var(--ink)]">
+                {team.map((member) => (
+                  <CardRow
+                    key={member.id}
+                    title={
+                      <Link href={`/manager/members/${member.id}`} className="text-[var(--brand-deep)]">
+                        {member.name}
+                      </Link>
+                    }
+                    sub={`${member.gradeName ?? "等級未設定"} ／ ${member.department ?? "所属未設定"}`}
+                    marks={
+                      member.responseStatus === "submitted" ? (
+                        <Badge tone="done">提出済み</Badge>
+                      ) : member.responseStatus === "draft" ? (
+                        <Badge tone="active">入力途中</Badge>
+                      ) : member.responseStatus === "none" ? (
+                        <Badge tone="required">未着手</Badge>
+                      ) : (
+                        <Badge tone="closed">対象アンケートなし</Badge>
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            </Disclosure>
+          </div>
         </Card>
       )}
 
-      <details className="disclosure mt-5">
-        <summary>マネージャーができること</summary>
-        <div className="disclosure-body">
-          回答から評価を作成し、内容を確認して確定できます。等級要件・配点・昇格条件の変更は会社の管理者が行います。
-        </div>
-      </details>
+      <div className="mt-5">
+        <Disclosure summary="マネージャーができること">
+          <p className="m-0">回答から評価を作成し、内容を確認して確定できます。</p>
+          <p className="m-0 mt-1">等級要件・配点・昇格条件の変更は会社の管理者が行います。</p>
+        </Disclosure>
+      </div>
     </>
   );
 }

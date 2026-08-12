@@ -21,6 +21,76 @@ import { Button } from "@/components/ui";
  *
  * 画面ごとに確認の出し方を変えないため、確認つきのボタンはすべてこれを通す。
  */
+/**
+ * 読むだけの窓（押すと開く「詳しく」）。
+ *
+ * 長い説明・手順・書式の決まりは、画面に置きっぱなしにすると
+ * 毎回そこを読み飛ばす手間になる（発注者の指摘、2026-08-12）。
+ * かといって消すことはできない（＝情報は減らさず、見せ方だけ変える）。
+ * そこで「押したら読み切れる場所に出す」形にする。
+ *
+ * その場で開く（InlineDetail）と使い分ける基準は、
+ * **読み切る必要があるか**。手順・書式のように上から順に読むものはこちら。
+ * 行の中の一言で足りるものは InlineDetail。
+ *
+ * 窓（<dialog>）を書いてよいのはこのファイルだけ、という決まりを守るため
+ * ConfirmButton と同じ場所に置く（ui-rules.test.ts の検査）。
+ * Esc で閉じる・背面を触らせない・開いた先へフォーカスを移すはブラウザに任せる。
+ */
+export function DetailDialogButton({
+  label,
+  title,
+  variant = "tertiary",
+  children,
+}: {
+  /** 押す場所の文言。何が出るか分かる言葉にする（「詳しく」だけにしない）。 */
+  label: string;
+  /** 窓の見出し。 */
+  title: string;
+  variant?: "primary" | "secondary" | "tertiary";
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const d = dialogRef.current;
+    if (!d) return;
+    if (open && !d.open) d.showModal();
+    if (!open && d.open) d.close();
+  }, [open]);
+
+  return (
+    <>
+      <Button type="button" variant={variant} onClick={() => setOpen(true)}>
+        {label}
+      </Button>
+      <dialog
+        ref={dialogRef}
+        className="confirm-dialog"
+        aria-label={title}
+        onClose={() => setOpen(false)}
+        onClick={(e) => {
+          if (e.target === dialogRef.current) setOpen(false);
+        }}
+      >
+        <div className="confirm-dialog-body">
+          {/* 長い説明はここだけがスクロールする。閉じるボタンは窓の中に残す */}
+          <div className="confirm-dialog-text">
+            <p className="detail-dialog-title m-0">{title}</p>
+            {children}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" autoFocus onClick={() => setOpen(false)}>
+              閉じる
+            </Button>
+          </div>
+        </div>
+      </dialog>
+    </>
+  );
+}
+
 export function ConfirmButton({
   label,
   confirm,
