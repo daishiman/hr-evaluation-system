@@ -59,4 +59,13 @@ describe("パスワード変更画面", () => {
     // ここが抜けると、この欄だけブラウザ既定の枠になり、隣の欄と揃わない
     expect(CSS).toContain('.field input[type="password"]');
   });
+
+  it("「いまのパスワード」欄にも、ログインと同じ試行回数の制限がかかっている", () => {
+    // ログイン済みの本人しか来ない画面だが、総当たりで現在のパスワードを
+    // 当てにいく攻撃を防ぐため、ログインと同じ仕組み（consumeRateLimit）を使う。
+    expect(ROUTE).toContain("consumeRateLimit");
+    expect(ROUTE).toContain("AUTH_ATTEMPT_RATE_LIMIT");
+    // 詳しい理由（制限に達した）は出さず、通常の「いまのパスワードが違います」に揃える
+    expect(ROUTE).toContain("いまのパスワードが違います。もう一度お試しください。");
+  });
 });
