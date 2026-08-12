@@ -307,9 +307,44 @@ export const DEMO_PASSWORD = "Hyoka2026!demo";
 
 /* ───────────────── 本体 ───────────────── */
 
-export async function buildSeed() {
+/**
+ * 種データを組み立てて SQL 文の配列を返す。
+ *
+ * 引数なしで呼ぶと、これまでどおりデモ3社＋テンプレートを作る（`pnpm run db:seed:*`）。
+ * 引数を渡すと、同じ組み立て方のまま別の会社を作れる。
+ * サンプルデータ投入（scripts/sample-data.mjs）はこちらを使い、
+ * 「制度マスタ・アンケート・回答・確定済み評価の作り方」を1か所に保っている。
+ *
+ * @param {object} [options]
+ * @param {Array}  [options.companies]  作る会社の定義（既定: デモ3社＋テンプレート）
+ * @param {Array}  [options.cycles]     作る期の定義（既定: 2025年度上期〜2026年度上期）
+ * @param {Array}  [options.employees]  作る一般利用者の定義
+ * @param {object} [options.strength]   人ごと・期ごとの「実力の目安」
+ * @param {boolean}[options.includeSuperAdmin] 全体管理者を作るか（既定: 作る）
+ * @param {() => Promise<string>} [options.passwordHashFor] 利用者1人ごとのパスワードハッシュを返す
+ * @param {boolean}[options.mustChangePassword] 作った利用者を「仮パスワードのまま」にするか
+ * @param {(ctx: {employee: object, cycle: object, allA: boolean}) => (string|null)} [options.evaluatorComment]
+ *        上長コメント。null を返すとコメント無しの評価になる。
+ */
+export async function buildSeed(options = {}) {
+  const companyList = options.companies ?? COMPANIES;
+  const cycleList = options.cycles ?? CYCLES;
+  const employeeList = options.employees ?? EMPLOYEES;
+  const strengthMap = options.strength ?? STRENGTH;
+  const includeSuperAdmin = options.includeSuperAdmin ?? true;
+  const mustChangePassword = options.mustChangePassword ? 1 : 0;
+
   const sql = [];
-  const pw = await hashPassword(DEMO_PASSWORD);
+  const defaultPw = await hashPassword(DEMO_PASSWORD);
+  /* パスワードは利用者ごとに作る。既定はデモ用の共通パスワード、
+     サンプルデータでは「誰も知らない仮パスワード」を1人ずつ作って渡す。 */
+  const pwFor = options.passwordHashFor ?? (async () => defaultPw);
+  const commentFor =
+    options.evaluatorComment ??
+    (({ allA }) =>
+      allA
+        ? "全項目Aのため昇給要件を満たしています。次期はチームへの波及を期待します。"
+        : "未達の項目について、期首に分母と行動計画をすり合わせましょう。");
 
   const companies = [];
   const users = [];
@@ -350,19 +385,22 @@ export async function buildSeed() {
   const employeeNotes = [];
 
   // システム全体管理者（会社に属さない）
-  users.push({
-    id: "usr_super", name: "青木 統括", email: "super@hyoka-demo.jp",
-    email_verified: 1, image: null, company_id: null, role: "SUPER_ADMIN", grade_id: null, office_id: null, manager_id: null,
-    employee_code: "SYS-001", department: "システム管理", hired_at: "2015-04-01",
-    profile_note: "全会社の評価状況を横断で確認する担当。", is_active: 1, created_at: NOW, updated_at: NOW,
-  });
-  accounts.push({
-    id: "acc_super", account_id: "usr_super", provider_id: "credential", user_id: "usr_super",
-    access_token: null, refresh_token: null, id_token: null, access_token_expires_at: null,
-    refresh_token_expires_at: null, scope: null, password: pw, created_at: NOW, updated_at: NOW,
-  });
+  if (includeSuperAdmin) {
+    users.push({
+      id: "usr_super", name: "青木 統括", email: "super@hyoka-demo.jp",
+      email_verified: 1, image: null, company_id: null, role: "SUPER_ADMIN", grade_id: null, office_id: null, manager_id: null,
+      employee_code: "SYS-001", department: "システム管理", hired_at: "2015-04-01",
+      profile_note: "全会社の評価状況を横断で確認する担当。", is_active: 1,
+      must_change_password: 0, created_at: NOW, updated_at: NOW,
+    });
+    accounts.push({
+      id: "acc_super", account_id: "usr_super", provider_id: "credential", user_id: "usr_super",
+      access_token: null, refresh_token: null, id_token: null, access_token_expires_at: null,
+      refresh_token_expires_at: null, scope: null, password: await pwFor("usr_super"), created_at: NOW, updated_at: NOW,
+    });
+  }
 
-  for (const co of COMPANIES) {
+  for (const co of companyList) {
     const cid = `cmp_${co.key}`;
     companies.push({
       id: cid, name: co.name, slug: co.key, business_type: "給付事業", is_active: 1,
@@ -641,46 +679,46 @@ export async function buildSeed() {
       id: adminId, name: `${co.name} 管理者`, email: `admin@${co.key}.hyoka-demo.jp`, email_verified: 1, image: null,
       company_id: cid, role: "COMPANY_ADMIN", grade_id: null, office_id: offId("hq"), manager_id: null, employee_code: "ADM-001",
       department: "本部", hired_at: "2017-04-01", profile_note: "制度の設定と評価の確定を担当。", is_active: 1,
-      created_at: NOW, updated_at: NOW,
+      must_change_password: mustChangePassword, created_at: NOW, updated_at: NOW,
     });
     users.push({
       id: managerId, name: `${co.name} マネージャー`, email: `manager@${co.key}.hyoka-demo.jp`, email_verified: 1, image: null,
       company_id: cid, role: "MANAGER", grade_id: gid("manager1"), office_id: offId("hq"), manager_id: adminId, employee_code: "MGR-001",
       department: "本部", hired_at: "2018-04-01", profile_note: "各事業所の評価状況を確認する立場（変更はできない）。", is_active: 1,
-      created_at: NOW, updated_at: NOW,
+      must_change_password: mustChangePassword, created_at: NOW, updated_at: NOW,
     });
-    [adminId, managerId].forEach((uid) => {
+    for (const uid of [adminId, managerId]) {
       accounts.push({
         id: `acc_${uid}`, account_id: uid, provider_id: "credential", user_id: uid, access_token: null,
         refresh_token: null, id_token: null, access_token_expires_at: null, refresh_token_expires_at: null,
-        scope: null, password: pw, created_at: NOW, updated_at: NOW,
+        scope: null, password: await pwFor(uid), created_at: NOW, updated_at: NOW,
       });
-    });
+    }
 
     const empIds = [];
-    EMPLOYEES.forEach((e) => {
+    for (const e of employeeList) {
       const uid = `usr_${co.key}_${e.key}`;
       empIds.push({ ...e, id: uid });
       users.push({
         id: uid, name: e.name, email: `${e.key}@${co.key}.hyoka-demo.jp`, email_verified: 1, image: null,
         company_id: cid, role: "EMPLOYEE", grade_id: gid(e.grade), office_id: offId(deptToOffice(e.dept)), manager_id: managerId,
         employee_code: `EMP-${e.key.slice(1).padStart(3, "0")}`, department: e.dept, hired_at: e.hired,
-        profile_note: null, is_active: 1, created_at: NOW, updated_at: NOW,
+        profile_note: null, is_active: 1, must_change_password: mustChangePassword, created_at: NOW, updated_at: NOW,
       });
       accounts.push({
         id: `acc_${uid}`, account_id: uid, provider_id: "credential", user_id: uid, access_token: null,
         refresh_token: null, id_token: null, access_token_expires_at: null, refresh_token_expires_at: null,
-        scope: null, password: pw, created_at: NOW, updated_at: NOW,
+        scope: null, password: await pwFor(uid), created_at: NOW, updated_at: NOW,
       });
       employeeNotes.push({
         id: `en_${uid}`, company_id: cid, employee_id: uid, author_id: managerId, cycle_id: null,
         body: `${e.name}さんは${e.dept}所属。次のサイクルでは記録の期限管理を重点的に見る。`,
         visibility: "manager", created_at: NOW, updated_at: NOW,
       });
-    });
+    }
 
     /* サイクル・フォーム・回答・評価 */
-    CYCLES.forEach((cy) => {
+    cycleList.forEach((cy) => {
       const cycleId = `cyc_${co.key}_${cy.key}`;
       cycles.push({
         id: cycleId, company_id: cid, name: cy.name, period_start: cy.start, period_end: cy.end,
@@ -771,8 +809,10 @@ export async function buildSeed() {
         });
         formQuestions.push(...fq);
 
-        // 過去サイクルのみ、回答と評価結果を作る
-        if (cy.status !== "closed") return;
+        /* 過去サイクルのみ、回答と評価結果を作る。
+           `withResults: false` を指定した期は、締め済みでも回答・評価を作らない
+           （「締め切ったが誰も出さなかった期」を表せるようにするため）。 */
+        if (cy.status !== "closed" || cy.withResults === false) return;
         empIds.filter((e) => e.grade === g.code).forEach((e) => {
           const r = rng(`${co.key}-${cy.key}-${e.key}`);
           const respId = `res_${co.key}_${cy.key}_${e.key}`;
@@ -785,7 +825,7 @@ export async function buildSeed() {
 
           const gradeDef = gradesDef.find((x) => x.code === g.code);
           // 本人の実力の目安。1.0 は全項目Aで昇給要件を満たす人（デモで判定の両方を見せるため）
-          const strength = STRENGTH[`${e.key}:${cy.key}`] ?? STRENGTH[e.key] ?? 0.5;
+          const strength = strengthMap[`${e.key}:${cy.key}`] ?? strengthMap[e.key] ?? 0.5;
 
           const answersByKey = {};
           const answerRows = [];
@@ -904,6 +944,11 @@ export async function buildSeed() {
               threshold_label: hit.crit?.["基準（表示用）"] ?? null,
               threshold_lower: num(hit.crit?.["下限"]), threshold_upper: num(hit.crit?.["上限"]),
               rationale: `実績値 ${actual}${m["実績値の単位"]} が「${hit.crit?.["基準（表示用）"] ?? "該当なし"}」に当てはまるため ${hit.rank} と判定しました。`,
+              /* 本人向けの言い換えも一緒に作る。これが空だと、本人の画面が
+                 「判定根拠の記録方式を変える前に確定した評価」として説明文を組み立て直し、
+                 見本のつもりで入れたデータが「古い評価」に見えてしまうため。
+                 文の形は src/lib/domain/scoring.ts の judgeRank と同じにしている（配点・閾値は入れない）。 */
+              rationale_employee: `実績値 ${actual}${m["実績値の単位"] === "-" ? "" : m["実績値の単位"]} は${rankLevelLabel(hit.rank)}に該当するため、${hit.rank} と判定しました。`,
               calc_note: m["実績値の計算式（設問IDで表記）"],
               is_provisional: /新規（素案）/.test(m["備考"] ?? "") ? 1 : 0,
               display_order: idx + 1, created_at: NOW,
@@ -914,9 +959,22 @@ export async function buildSeed() {
           const th = { beginner: 10, regular: 8, chief: 12, am1: 12, am2: 12, manager1: 12, manager2: 12 }[g.code];
           const gateFail = gateRows.filter((x) => !x.achieved);
           const reasons = [];
-          if (gateFail.length) reasons.push(`昇格要件が未達です（${gateFail.slice(0, 2).map((x) => x.text).join("、")}${gateFail.length > 2 ? " ほか" : ""}）。`);
-          if (total < 100) reasons.push(`KPI評価点が${Math.round(total * 10) / 10}点で、昇格に必要な100点に達していません。`);
-          if (g.band && behaviorTotal < th) reasons.push(`行動指針の評価が${behaviorTotal}点で、昇格に必要な${th}点に達していません。`);
+          /* 本人向けの理由は、必要点数と獲得点数を出さない言い方にする（評価者向けとは別に持つ）。
+             昇格要件そのものは「何をすれば近づくか」なので本人にも見せる。 */
+          const reasonsEmployee = [];
+          if (gateFail.length) {
+            const names = `${gateFail.slice(0, 2).map((x) => x.text).join("、")}${gateFail.length > 2 ? " ほか" : ""}`;
+            reasons.push(`昇格要件が未達です（${names}）。`);
+            reasonsEmployee.push(`昇格要件が未達です（${names}）。`);
+          }
+          if (total < 100) {
+            reasons.push(`KPI評価点が${Math.round(total * 10) / 10}点で、昇格に必要な100点に達していません。`);
+            reasonsEmployee.push("KPI評価が、昇格に必要な水準に達していません。");
+          }
+          if (g.band && behaviorTotal < th) {
+            reasons.push(`行動指針の評価が${behaviorTotal}点で、昇格に必要な${th}点に達していません。`);
+            reasonsEmployee.push("行動指針の評価が、昇格に必要な水準に達していません。");
+          }
 
           evaluations.push({
             id: evalId, company_id: cid, cycle_id: cycleId, employee_id: e.id, grade_id: gid(g.code),
@@ -927,11 +985,21 @@ export async function buildSeed() {
             requirement_achieved: reqAchieved, requirement_total: reqTotal,
             behavior_total: g.band ? behaviorTotal : null,
             raise_eligible: allA ? 1 : 0,
+            /* 昇給の理由も、評価者向けと本人向けを両方入れておく。
+               結論（昇給できる／できない）だけが出て理由が空の評価は、画面で見比べる見本にならない。
+               文の形は src/lib/domain/scoring.ts の judgeOverall と同じ。 */
+            raise_reason: allA
+              ? `選択された${itemRows.length}項目すべてがAのため、昇給の要件を満たします。`
+              : `${itemRows.filter((x) => x.rank !== "A").map((x) => `${x.item_name}（${x.rank}）`).join("、")} がA未満のため、昇給は見送りです。`,
+            raise_reason_employee: allA
+              ? "評価対象の項目がすべてAのため、昇給の要件を満たしています。"
+              : `${itemRows.filter((x) => x.rank !== "A").map((x) => `${x.item_name}（${x.rank}）`).join("、")} がAに届いていないため、今回の昇給は見送りです。`,
             promotion_eligible: reasons.length === 0 ? 1 : 0,
             promotion_blocked_reason: reasons.length ? reasons.join("") : null,
+            promotion_blocked_reason_employee: reasonsEmployee.length ? reasonsEmployee.join("") : null,
             required_kpi_points_snapshot: 100, required_behavior_points_snapshot: g.band ? th : null,
             evaluator_id: managerId,
-            evaluator_comment: allA ? "全項目Aのため昇給要件を満たしています。次期はチームへの波及を期待します。" : "未達の項目について、期首に分母と行動計画をすり合わせましょう。",
+            evaluator_comment: commentFor({ employee: e, cycle: cy, allA }),
             status: "finalized", finalized_at: T(new Date(`${cy.end}T12:00:00Z`)),
             created_at: NOW, updated_at: NOW,
           });
@@ -957,46 +1025,52 @@ export async function buildSeed() {
     });
   }
 
-  sql.push(...insert("companies", companies));
-  sql.push(...insert("offices", offices));
-  sql.push(...insert("users", users));
-  sql.push(...insert("accounts", accounts));
-  sql.push(...insert("grades", grades));
-  sql.push(...insert("grade_requirements", gradeRequirements));
-  sql.push(...insert("promotion_requirements", promotionRequirements));
-  sql.push(...insert("behavior_band_sets", behaviorBandSets));
-  sql.push(...insert("behavior_guidelines", behaviorGuidelines));
-  sql.push(...insert("behavior_levels", behaviorLevels));
-  sql.push(...insert("promotion_thresholds", promotionThresholds));
-  sql.push(...insert("kpi_categories", kpiCategories));
-  sql.push(...insert("kpi_items", kpiItems));
-  sql.push(...insert("kpi_rank_criteria", kpiRankCriteria));
-  sql.push(...insert("kpi_reference_points", kpiReferencePointRows));
-  sql.push(...insert("kpi_questions", kpiQuestionRows));
-  sql.push(...insert("grade_point_rules", gradePointRules));
-  sql.push(...insert("evaluation_schemes", schemes));
-  sql.push(...insert("scheme_items", schemeItems));
-  sql.push(...insert("scheme_rank_ratios", schemeRankRatios));
-  sql.push(...insert("evaluation_cycles", cycles));
-  sql.push(...insert("forms", forms));
-  sql.push(...insert("form_questions", formQuestions));
-  sql.push(...insert("form_responses", formResponses));
-  sql.push(...insert("form_answers", formAnswers));
-  sql.push(...insert("evaluations", evaluations));
-  sql.push(...insert("evaluation_items", evaluationItems));
-  sql.push(...insert("evaluation_behaviors", evaluationBehaviors));
-  sql.push(...insert("evaluation_requirements", evaluationRequirements));
-  sql.push(...insert("evaluation_gates", evaluationGates));
-  sql.push(...insert("raise_settings", raiseSettings));
-  sql.push(...insert("raise_policies", raisePolicies));
-  sql.push(...insert("raise_patterns", raisePatterns));
-  sql.push(...insert("raise_exceptions", raiseExceptions));
-  sql.push(...insert("raise_revisions", raiseRevisions));
-  sql.push(...insert("kgi_coefficients", kgiCoefficients));
-  sql.push(...insert("employee_notes", employeeNotes));
+  /* 親→子の順に並べる（外部キーの向き）。
+     消すときはこの逆順をたどればよいので、投入と削除の一覧を1か所にまとめている。 */
+  const tableRows = [
+    ["companies", companies],
+    ["offices", offices],
+    ["users", users],
+    ["accounts", accounts],
+    ["grades", grades],
+    ["grade_requirements", gradeRequirements],
+    ["promotion_requirements", promotionRequirements],
+    ["behavior_band_sets", behaviorBandSets],
+    ["behavior_guidelines", behaviorGuidelines],
+    ["behavior_levels", behaviorLevels],
+    ["promotion_thresholds", promotionThresholds],
+    ["kpi_categories", kpiCategories],
+    ["kpi_items", kpiItems],
+    ["kpi_rank_criteria", kpiRankCriteria],
+    ["kpi_reference_points", kpiReferencePointRows],
+    ["kpi_questions", kpiQuestionRows],
+    ["grade_point_rules", gradePointRules],
+    ["evaluation_schemes", schemes],
+    ["scheme_items", schemeItems],
+    ["scheme_rank_ratios", schemeRankRatios],
+    ["evaluation_cycles", cycles],
+    ["forms", forms],
+    ["form_questions", formQuestions],
+    ["form_responses", formResponses],
+    ["form_answers", formAnswers],
+    ["evaluations", evaluations],
+    ["evaluation_items", evaluationItems],
+    ["evaluation_behaviors", evaluationBehaviors],
+    ["evaluation_requirements", evaluationRequirements],
+    ["evaluation_gates", evaluationGates],
+    ["raise_settings", raiseSettings],
+    ["raise_policies", raisePolicies],
+    ["raise_patterns", raisePatterns],
+    ["raise_exceptions", raiseExceptions],
+    ["raise_revisions", raiseRevisions],
+    ["kgi_coefficients", kgiCoefficients],
+    ["employee_notes", employeeNotes],
+  ];
+  for (const [table, rows] of tableRows) sql.push(...insert(table, rows));
 
   return {
     sql,
+    tableRows,
     counts: {
       会社: companies.length, 事業所: offices.length, 利用者: users.length, 等級: grades.length,
       昇給ルール: raisePolicies.length, 判定パターン: raisePatterns.length, 昇給の特例: raiseExceptions.length,
@@ -1021,6 +1095,18 @@ function deptToOffice(dept) {
   if (dept === "第1事業所") return "office1";
   if (dept === "第2事業所") return "office2";
   return "hq";
+}
+
+/**
+ * ランクを「上から何番目の水準か」に言い換える。
+ * 本人向けの説明文に閾値の数字を出さないための言い方で、
+ * src/lib/domain/scoring.ts の rankLevelLabel と同じ言葉にそろえている。
+ */
+function rankLevelLabel(rank) {
+  const idx = ["A", "B", "C", "D", "E"].indexOf(rank);
+  if (idx === 0) return "もっとも高い水準";
+  if (idx === 4) return "もっとも下の水準";
+  return `上から${["", "2", "3", "4"][idx]}番目の水準`;
 }
 
 /** 目標ランクを決める。strength が高いほどAが出やすい。1.0 なら必ずA。 */

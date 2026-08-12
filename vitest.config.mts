@@ -49,7 +49,8 @@ const FULL = { lines: 100, functions: 100, statements: 100, branches: 100 };
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    // scripts/ の種データ生成もテストの対象にする（サンプル投入が既存データに触らないことを固定するため）
+    include: ["src/**/*.test.ts", "scripts/**/*.test.mjs"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary", "json"],
