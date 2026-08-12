@@ -809,8 +809,10 @@ export async function buildSeed(options = {}) {
         });
         formQuestions.push(...fq);
 
-        // 過去サイクルのみ、回答と評価結果を作る
-        if (cy.status !== "closed") return;
+        /* 過去サイクルのみ、回答と評価結果を作る。
+           `withResults: false` を指定した期は、締め済みでも回答・評価を作らない
+           （「締め切ったが誰も出さなかった期」を表せるようにするため）。 */
+        if (cy.status !== "closed" || cy.withResults === false) return;
         empIds.filter((e) => e.grade === g.code).forEach((e) => {
           const r = rng(`${co.key}-${cy.key}-${e.key}`);
           const respId = `res_${co.key}_${cy.key}_${e.key}`;

@@ -62,11 +62,13 @@ describe("既にあるデータに触らないこと", () => {
 });
 
 describe("画面で見えるべきものが入っていること", () => {
-  const closedCycles = SAMPLE_CYCLES.filter((c) => c.status === "closed");
+  /* 評価が付くのは「締め済み かつ 回答を作る」期だけ。
+     締め済みでも `withResults: false` の期（2026年度上期）は評価を作らない。 */
+  const evaluatedCycles = SAMPLE_CYCLES.filter((c) => c.status === "closed" && c.withResults !== false);
 
-  it("確定済みの評価が 利用者数 × 終わった期 の数だけある", () => {
+  it("確定済みの評価が 利用者数 × 評価のある期 の数だけある", () => {
     const evaluations = rowsOf("evaluations");
-    expect(evaluations).toHaveLength(SAMPLE_EMPLOYEES.length * closedCycles.length);
+    expect(evaluations).toHaveLength(SAMPLE_EMPLOYEES.length * evaluatedCycles.length);
     expect(evaluations.every((e) => e.status === "finalized")).toBe(true);
     expect(evaluations.every((e) => e.finalized_at > 0)).toBe(true);
   });
@@ -109,9 +111,16 @@ describe("画面で見えるべきものが入っていること", () => {
     expect(rowsOf("evaluations").every((e) => responseIds.has(e.response_id))).toBe(true);
   });
 
-  it("まだ終わっていない期には評価を作らない", () => {
-    const openCycles = SAMPLE_CYCLES.filter((c) => c.status !== "closed").map((c) => `cyc_sample_${c.key}`);
-    expect(rowsOf("evaluations").some((e) => openCycles.includes(e.cycle_id))).toBe(false);
+  it("回答を作らない期には、評価も回答も作らない", () => {
+    const withoutResults = SAMPLE_CYCLES.filter((c) => c.withResults === false).map((c) => `cyc_sample_${c.key}`);
+    expect(withoutResults.length).toBeGreaterThan(0);
+    expect(rowsOf("evaluations").some((e) => withoutResults.includes(e.cycle_id))).toBe(false);
+    expect(rowsOf("form_responses").some((r) => withoutResults.includes(r.cycle_id))).toBe(false);
+  });
+
+  it("受付中の期は1つも作らない（本番の未回答一覧に見本の方が混ざらないように）", () => {
+    expect(SAMPLE_CYCLES.every((c) => c.status === "closed")).toBe(true);
+    expect(rowsOf("evaluation_cycles").every((c) => c.status === "closed")).toBe(true);
   });
 });
 
