@@ -7,7 +7,7 @@ import { BEHAVIOR_LEVEL_TEMPLATE, defaultLevelText, nextDisplayOrder } from "@/l
 import { GRADE_REQUIREMENT_MAX, swapForMove } from "@/lib/domain/grade-requirements";
 import { checkKgiCoverage, checkRangeCoverage } from "@/lib/domain/kgi";
 import { rangeLabel, type Direction } from "@/lib/domain/scoring";
-import { checkBounds } from "@/lib/domain/number-input";
+import { checkBounds, checkNumberMagnitude } from "@/lib/domain/number-input";
 import { checkRankBoundaries } from "@/lib/domain/rank-bounds";
 import type { MasterUpdateBody } from "./body-schema";
 
@@ -529,6 +529,16 @@ export async function applyMasterUpdate(args: {
         )[0];
         const mergedLower = next.lowerBound !== undefined ? next.lowerBound : merged.lowerBound;
         const mergedUpper = next.upperBound !== undefined ? next.upperBound : merged.upperBound;
+
+        /* 桁が多すぎる値は、先に断る。あとの検査（下限>上限・隣と繋がらない）でも結果的に止まるが、
+           そこで出る言葉は原因を指していない。回答の受け取りと同じ 1兆の決まりを、ここでも当てる。 */
+        for (const [side, v] of [
+          ["下限", mergedLower],
+          ["上限", mergedUpper],
+        ] as const) {
+          const m = checkNumberMagnitude(`ランク基準の${side}（${v}）`, v);
+          if (!m.ok) throw new HttpError(400, m.message);
+        }
 
         /* 下限が上限より大きい（または同じ）組は、当てはまる値が1つも無い空の範囲になる。
            保存してしまうと、そのランクに誰も入らないことに気づけないので、ここで断る。

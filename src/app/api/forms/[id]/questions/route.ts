@@ -5,7 +5,7 @@ import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
 import { assertFormContentEditable, syncFormQuestions } from "@/lib/form-build";
-import { defaultIntegerFlag } from "@/lib/domain/number-input";
+import { checkNumberMagnitude, defaultIntegerFlag } from "@/lib/domain/number-input";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +97,21 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     for (const x of q) {
       if ((x.questionType === "single" || x.questionType === "multi") && (x.options ?? []).length < 2) {
         throw new HttpError(400, `「${x.title}」の選択肢が足りません。2つ以上にしてください。`);
+      }
+      /* 設問に書く下限・上限・選択肢の点数にも、回答を受け取るときと同じ 1兆の決まりを当てる。
+         ここが無制限だと、極端な下限・上限を1つ置いただけで、その設問を通るすべての回答の
+         許容範囲がその値になる（＝提出時の検査が実質効かなくなる）。
+         止まる場所が回答側の1箇所しかない状態をやめ、書き込む前のこの場でも断る。 */
+      for (const [side, v] of [
+        ["下限", x.validationMin],
+        ["上限", x.validationMax],
+      ] as const) {
+        const m = checkNumberMagnitude(`「${x.title}」の${side}（${v}）`, v);
+        if (!m.ok) throw new HttpError(400, m.message);
+      }
+      for (const opt of x.options ?? []) {
+        const m = checkNumberMagnitude(`「${x.title}」の選択肢「${opt.label}」の点数（${opt.score}）`, opt.score);
+        if (!m.ok) throw new HttpError(400, m.message);
       }
       if (
         x.validationMin !== null &&
