@@ -314,6 +314,33 @@ export function checkAnswerNumbers(
 }
 
 /**
+ * 「桁が多すぎる」を、**どの経路でも同じ物差しと同じ言い方で**断るための共通の入口。
+ *
+ * これまで 1兆の上限が当たっていたのは「回答を提出したとき」と「貼り付けの取り込み」だけで、
+ * 設問づくりの下限・上限や、ランク基準の下限・上限は無制限のまま受け付けていた。
+ * そこは別の検査（回答側の上限・ランクの重なり検査）がたまたま防いでいただけで、
+ * **止まる場所が1つしかない**状態だった。その1つが変われば一気に穴が開く。
+ *
+ * ここで新しい基準は作らない。`MAX_ABS_NUMBER` と `TOO_LARGE` をそのまま使い回す。
+ * 経路ごとに違う上限を置くと「画面からは通るのに取り込みでは落ちる」といった、
+ * 誰にも説明できない食い違いが生まれるため。
+ *
+ * `label` には利用者が画面で見ている名前（設問名・ランク名など）を渡す。
+ * 「エラー」ではなく「どの欄が、なぜ受け付けられないか」を伝えるためのもの。
+ * 空欄（null・未指定）は「決めていない」という意味なので、ここでは何も言わない。
+ */
+export function checkNumberMagnitude(
+  label: string,
+  value: number | null | undefined,
+): { ok: true } | { ok: false; message: string } {
+  if (value === null || value === undefined) return { ok: true };
+  if (!Number.isFinite(value) || Math.abs(value) > MAX_ABS_NUMBER) {
+    return { ok: false, message: `${label}は${TOO_LARGE}` };
+  }
+  return { ok: true };
+}
+
+/**
  * 下限・上限の組が矛盾していないか。
  *
  * この仕組みでは「下限はその値を含む／上限はその値を含まない」ため、

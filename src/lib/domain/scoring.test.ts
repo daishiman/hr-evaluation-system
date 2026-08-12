@@ -494,8 +494,12 @@ describe("judgeOverall — 本人向けの昇給・昇格理由", () => {
     expect(res.promotionBlockedReason).toContain("行動指針の評価が7点");
     const emp = res.promotionBlockedReasonEmployee!;
     expect(emp).toContain("IT機器基礎研修（本部）");
-    expect(emp).toContain("KPI評価が、昇格に必要な水準に達していません。");
-    expect(emp).toContain("行動指針の評価が、昇格に必要な水準に達していません。");
+    /* 本人向けの文で「昇格に必要」「評価点」といった言い回しを使わない。
+       本人に基準を出さないための検査（containsCriteriaLeak）がこれらの語を弾き、
+       せっかく保存した文が共通の言い換え文に差し替わってしまうため（残課題 L1）。
+       言い回しと検査の食い違いそのものは employee-text-guard.test.ts で固定している。 */
+    expect(emp).toContain("KPIの評価が、昇格の目安にまだ届いていません。");
+    expect(emp).toContain("行動指針の評価が、昇格の目安にまだ届いていません。");
     expect(emp).not.toContain("100点");
     expect(emp).not.toContain("36点");
     expect(emp).not.toContain("7点");
