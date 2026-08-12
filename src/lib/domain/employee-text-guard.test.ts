@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { containsCriteriaLeak, pickEmployeeText } from "@/lib/domain/evaluation-view";
+import { MY_PENDING_BODY, myPendingHeadline } from "@/lib/domain/stalled-evaluations";
 import {
   judgeOverall,
   judgeRank,
@@ -194,5 +195,33 @@ describe("昇格できない理由は、次に何をすればよいかが伝わ�
     });
     expect(res.promotionBlockedReason).toContain("資格試験で80点以上を取得");
     expect(res.promotionBlockedReason).toContain("昇格に必要な100点");
+  });
+});
+
+/**
+ * Q3 の申し送り（「本人向けの文を新しく増やすときは、必ずこの試験に足すこと」）に従って追加。
+ *
+ * 「まだ確定していません」の知らせ（spec §21）は、評価の集計とは別の場所で作る文だが、
+ * **本人の画面（評価の結果を見る）に出る文**である点は同じ。同じ画面に
+ * 昇格できない理由（§19 で書き直した文）と並ぶため、ふるいは同じものを通す。
+ */
+describe("「まだ確定していません」の知らせも、本人向けの文として同じふるいを通る", () => {
+  const cycles = [{ cycleId: "c1", cycleName: "2025年度 下期", periodEnd: "2026-03-31" }];
+
+  it("1期のときの見出しと説明文", () => {
+    expectDeliveredAsSaved("1期の見出し", myPendingHeadline(cycles));
+    expectDeliveredAsSaved("説明文", MY_PENDING_BODY);
+  });
+
+  it("複数期のときの見出し（期の数を出しても、基準値とは読めない）", () => {
+    const many = [...cycles, { cycleId: "c2", cycleName: "2025年度 上期", periodEnd: "2025-09-30" }];
+    expectDeliveredAsSaved("複数期の見出し", myPendingHeadline(many));
+  });
+
+  it("期の名前に点数が書かれていても、本人に基準値が漏れる形にはならない", () => {
+    // 評価期間の名前は会社の管理者が自由に付けられる。万一そこに数字が入っても、
+    // 見出しは名前をそのまま囲んで出すだけで、点数の意味づけは足さない。
+    const named = [{ cycleId: "c1", cycleName: "2025年度 下期", periodEnd: "2026-03-31" }];
+    expect(myPendingHeadline(named)).toBe("「2025年度 下期」の評価は、まだ確定していません");
   });
 });
