@@ -8,6 +8,8 @@
  *  - 昇給条件は「選択した項目がすべてA」。
  */
 
+import { containsCriteriaLeak } from "@/lib/domain/evaluation-view";
+
 export type Rank = "A" | "B" | "C" | "D" | "E";
 
 export const RANK_ORDER: Rank[] = ["A", "B", "C", "D", "E"];
@@ -236,7 +238,7 @@ export function scoreItem(input: ScoreItemInput): ScoreItemResult {
         points: Math.round(points * 10) / 10,
         maxPoints: Math.round(a.points * 10) / 10,
         note: `項目別絶対点方式：ランク${input.rank}の点数 ${points}点（この項目の満点は${a.points}点）。`,
-        noteEmployee: `この項目は ${input.rank} として評価点に反映しています。`,
+        noteEmployee: `この項目のランク（${input.rank}）は、そのまま全体の評価に反映しています。`,
         fellBackToRatio: false,
       };
     }
@@ -245,7 +247,7 @@ export function scoreItem(input: ScoreItemInput): ScoreItemResult {
       points,
       maxPoints: input.weight,
       note: `この項目には元の配点表がないため、一律割合方式で計算しました：配点${input.weight}点 × ランク${input.rank}の割合 ＝ ${points}点。`,
-      noteEmployee: `この項目は ${input.rank} として評価点に反映しています。`,
+      noteEmployee: `この項目のランク（${input.rank}）は、そのまま全体の評価に反映しています。`,
       fellBackToRatio: true,
     };
   }
@@ -259,7 +261,7 @@ export function scoreItem(input: ScoreItemInput): ScoreItemResult {
     /* 本人向けは「ランクが点数に反映された」ことだけを伝える。
        配点も割合も出さないのは、項目ごとの重みが分かると
        「配点の大きい項目だけ頑張る」方向に働くため（2026-08-11 決定）。 */
-    noteEmployee: `この項目は ${input.rank} として評価点に反映しています。`,
+    noteEmployee: `この項目のランク（${input.rank}）は、そのまま全体の評価に反映しています。`,
     fellBackToRatio: false,
   };
 }
@@ -364,8 +366,8 @@ export function judgeOverall(input: OverallInput): OverallResult {
     raiseReasonParts.push(`合計${totalScore}点 / ${maxScore}点。`);
     raiseReasonEmployeeParts.push(
       raiseEligible
-        ? "評価点が満点に達しているため、昇給の要件を満たしています。"
-        : "評価点が満点に達していないため、今回の昇給は見送りです。",
+        ? "評価の結果が昇給の要件を満たしています。"
+        : "評価の結果が昇給の要件に届かなかったため、今回の昇給は見送りです。下の一覧でランクの低い項目を確認し、次の期の重点にしてください。",
     );
     if (unrated.length > 0) {
       raiseReasonParts.push(`${unratedNames} は実績が未入力のため判定外です。`);
@@ -382,12 +384,30 @@ export function judgeOverall(input: OverallInput): OverallResult {
   if (blockedGates.length > 0) {
     const names = blockedGates.map((g) => g.text).join("、");
     reasons.push(`昇格要件が未達です（${names}）。`);
-    // 何をすれば昇格に近づくかは本人に伝わったほうがよいので、要件そのものは隠さない
-    reasonsEmployee.push(`昇格要件が未達です（${names}）。`);
+    /* 何をすれば昇格に近づくかは本人に伝わったほうがよいので、要件そのものは隠さない。
+       ただし昇格要件の文言は管理画面で自由に書けるため、「◯点以上」のように
+       基準値そのものが書かれている場合がある。その要件名だけを伏せ、
+       残りの要件名は本人に伝える（1件でも危ない文が混ざると全文が差し替わる、を避ける）。 */
+    const safeNames = blockedGates.map((g) => g.text).filter((t) => !containsCriteriaLeak(t));
+    const hiddenCount = blockedGates.length - safeNames.length;
+    if (safeNames.length > 0) {
+      reasonsEmployee.push(
+        `未達の昇格要件があります（${safeNames.join("、")}）。まずはこの要件を満たすことが必要です。`,
+      );
+    }
+    if (hiddenCount > 0) {
+      reasonsEmployee.push(
+        safeNames.length > 0
+          ? "このほかにも未達の昇格要件があります。内容は上長にご確認ください。"
+          : "未達の昇格要件があります。内容は上長にご確認ください。",
+      );
+    }
   }
   if (input.requiredKpiPoints !== null && totalScore < input.requiredKpiPoints) {
     reasons.push(`KPI評価点が${totalScore}点で、昇格に必要な${input.requiredKpiPoints}点に達していません。`);
-    reasonsEmployee.push("KPI評価が、昇格に必要な水準に達していません。");
+    reasonsEmployee.push(
+      "KPIの評価が、昇格の目安にまだ届いていません。下の一覧でAに届かなかった項目を確認し、次の期にどこを伸ばすかを上長とご相談ください。",
+    );
   }
   if (
     input.requiredBehaviorPoints !== null &&
@@ -397,7 +417,9 @@ export function judgeOverall(input: OverallInput): OverallResult {
     reasons.push(
       `行動指針の評価が${input.behaviorTotal}点で、昇格に必要な${input.requiredBehaviorPoints}点に達していません。`,
     );
-    reasonsEmployee.push("行動指針の評価が、昇格に必要な水準に達していません。");
+    reasonsEmployee.push(
+      "行動指針の評価が、昇格の目安にまだ届いていません。どの観点を伸ばすとよいかを上長とご確認ください。",
+    );
   }
 
   return {
