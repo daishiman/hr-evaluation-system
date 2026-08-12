@@ -2,13 +2,14 @@ import { and, eq, inArray } from "drizzle-orm";
 import { schema as s } from "@/lib/db";
 import type { getDb } from "@/lib/db";
 import { HttpError } from "@/lib/session";
-import { bandSetBlockedReason, deleteBlockedReason } from "@/lib/domain/master-delete";
+import { bandSetBlockedReason, deleteBlockedReason, kpiCategoryBlockedReason } from "@/lib/domain/master-delete";
 import { lineageRootId, versionFamilyDeleteOrder } from "@/lib/domain/versioned-master";
 import { recordConstitutionEvent } from "@/lib/domain/constitution-events";
 import {
   bandSetUsedBy,
   behaviorGuidelineUsage,
   gradeRequirementUsage,
+  kpiCategoryUsage,
   promotionRequirementUsage,
 } from "@/lib/master-usage";
 import type { MasterDeleteBody } from "./body-schema";
@@ -163,6 +164,33 @@ export async function deleteMasterItem(args: {
         before: row,
       });
       return { message: `「${row.text}」を消しました。一覧から無くなります。` };
+    }
+
+    case "kpiCategory": {
+      const row = (
+        await db
+          .select({ id: s.kpiCategories.id, name: s.kpiCategories.name })
+          .from(s.kpiCategories)
+          .where(and(eq(s.kpiCategories.id, body.id), eq(s.kpiCategories.companyId, companyId)))
+          .limit(1)
+      )[0];
+      if (!row) throw new HttpError(404, "KPIカテゴリが見つかりませんでした。");
+
+      const usage = await kpiCategoryUsage(db, companyId);
+      const blocked = kpiCategoryBlockedReason(usage[row.id] ?? []);
+      if (blocked) throw new HttpError(400, blocked);
+
+      await db.delete(s.kpiCategories).where(eq(s.kpiCategories.id, row.id));
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "kpiCategory",
+        entityId: row.id,
+        eventType: "deleted",
+        actorId: viewerId,
+        before: row,
+      });
+      return { message: `「${row.name}」を消しました。一覧から無くなります。` };
     }
   }
 }

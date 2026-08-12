@@ -68,6 +68,24 @@ const CREATE = `
     event_type text NOT NULL, actor_id text, before_json text, after_json text, seq integer NOT NULL,
     occurred_at text
   );
+  CREATE TABLE kpi_categories (
+    id text PRIMARY KEY, company_id text NOT NULL, code text NOT NULL, name text NOT NULL,
+    display_order integer NOT NULL DEFAULT 1, created_at text, updated_at text
+  );
+  CREATE TABLE kpi_items (
+    id text PRIMARY KEY, company_id text NOT NULL, no integer NOT NULL DEFAULT 1, name text NOT NULL,
+    category_id text, unit text NOT NULL DEFAULT '%', direction text NOT NULL DEFAULT 'higher'
+  );
+  CREATE TABLE scheme_items (
+    id text PRIMARY KEY, company_id text NOT NULL, scheme_id text NOT NULL DEFAULT '',
+    point_group text NOT NULL DEFAULT '', kpi_item_id text NOT NULL DEFAULT '', category_id text,
+    weight integer NOT NULL DEFAULT 0, display_order integer NOT NULL DEFAULT 1
+  );
+  CREATE TABLE evaluation_items (
+    id text PRIMARY KEY, company_id text NOT NULL, evaluation_id text NOT NULL DEFAULT '',
+    kpi_item_id text NOT NULL DEFAULT '', category_id text, item_name text NOT NULL DEFAULT '',
+    points real NOT NULL DEFAULT 0, max_points real NOT NULL DEFAULT 0
+  );
 `;
 
 beforeEach(() => {
@@ -297,6 +315,60 @@ describe("制度設定の項目を完全に消す", () => {
     await expect(
       deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorGuideline", id: "bg_a" } }),
     ).rejects.toMatchObject({ message: expect.stringContaining("下書きのアンケート") });
+  });
+});
+
+describe("KPIカテゴリを完全に消す", () => {
+  it("どのKPI項目でも一度も使っていないカテゴリは消せる", async () => {
+    sqlite.exec(`INSERT INTO kpi_categories (id, company_id, code, name) VALUES ('cat_free', 'cmp_a', 'cat_free', '品質');`);
+
+    const result = await deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiCategory", id: "cat_free" } });
+
+    expect(result.message).toContain("品質");
+    expect(rows("SELECT id FROM kpi_categories")).toEqual([]);
+  });
+
+  it("KPI項目の分類として使われているカテゴリは消せない", async () => {
+    sqlite.exec(`
+      INSERT INTO kpi_categories (id, company_id, code, name) VALUES ('cat_used', 'cmp_a', 'cat_used', '営業');
+      INSERT INTO kpi_items (id, company_id, name, category_id) VALUES ('ki_1', 'cmp_a', '売上達成率', 'cat_used');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiCategory", id: "cat_used" } }),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("完全には消せません") });
+    expect(rows("SELECT id FROM kpi_categories")).toEqual([{ id: "cat_used" }]);
+  });
+
+  it("評価セットで使われているカテゴリは消せない", async () => {
+    sqlite.exec(`
+      INSERT INTO kpi_categories (id, company_id, code, name) VALUES ('cat_scheme', 'cmp_a', 'cat_scheme', '育成');
+      INSERT INTO scheme_items (id, company_id, category_id) VALUES ('si_1', 'cmp_a', 'cat_scheme');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiCategory", id: "cat_scheme" } }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("確定済みの評価の記録で使われているカテゴリは消せない", async () => {
+    sqlite.exec(`
+      INSERT INTO kpi_categories (id, company_id, code, name) VALUES ('cat_eval', 'cmp_a', 'cat_eval', '安全');
+      INSERT INTO evaluation_items (id, company_id, category_id) VALUES ('ei_1', 'cmp_a', 'cat_eval');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiCategory", id: "cat_eval" } }),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("評価の記録") });
+  });
+
+  it("他社のカテゴリは消せない（見つからない扱いにする）", async () => {
+    sqlite.exec(`INSERT INTO kpi_categories (id, company_id, code, name) VALUES ('cat_a', 'cmp_a', 'cat_a', '既存');`);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_b", viewerId: "u_test", body: { kind: "kpiCategory", id: "cat_a" } }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(rows("SELECT id FROM kpi_categories")).toEqual([{ id: "cat_a" }]);
   });
 });
 

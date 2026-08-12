@@ -6,6 +6,10 @@ import { checkGradePointRule } from "@/lib/domain/grade-points";
 import { overallProgress, schemeStepPath, stepTitle } from "@/lib/domain/scheme-steps";
 import { loadSchemeSetup } from "./data";
 import { SchemeCommonSettings } from "@/components/SchemeCommonSettings";
+import { KpiCategoryEditor } from "@/components/KpiCategoryEditor";
+import { listKpiCategories } from "@/lib/queries";
+import { kpiCategoryUsage } from "@/lib/master-usage";
+import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +26,12 @@ export default async function AdminSchemePage() {
   const viewer = await requireRole("COMPANY_ADMIN");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
-  const [setup, staleCycles] = await Promise.all([loadSchemeSetup(viewer.companyId), detectStaleCycles(viewer.companyId)]);
+  const [setup, staleCycles, categories] = await Promise.all([
+    loadSchemeSetup(viewer.companyId),
+    detectStaleCycles(viewer.companyId),
+    listKpiCategories(viewer.companyId),
+  ]);
+  const categoryUsage = await kpiCategoryUsage(await getDb(), viewer.companyId);
 
   if (!setup.scheme) {
     return (
@@ -30,6 +39,10 @@ export default async function AdminSchemePage() {
         <PageTitle title="KPI・評価セット" />
         <StaleCyclesNotice cycles={staleCycles} />
         <ReasonNote>有効な評価セットが登録されていません。初期データの投入が済んでいるかご確認ください。</ReasonNote>
+        <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
+          KPIのカテゴリ
+        </SectionHeading>
+        <KpiCategoryEditor categories={categories} usage={categoryUsage} />
       </>
     );
   }
@@ -40,6 +53,10 @@ export default async function AdminSchemePage() {
         <PageTitle title="KPI・評価セット" />
         <StaleCyclesNotice cycles={staleCycles} />
         <ReasonNote>等級区分ごとの配点ルールが登録されていません。初期データの投入をご確認ください。</ReasonNote>
+        <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
+          KPIのカテゴリ
+        </SectionHeading>
+        <KpiCategoryEditor categories={categories} usage={categoryUsage} />
       </>
     );
   }
@@ -157,6 +174,11 @@ export default async function AdminSchemePage() {
         全等級区分に共通の設定
       </SectionHeading>
       <SchemeCommonSettings schemeId={setup.scheme.id} raiseRequiresAllA={setup.scheme.raiseRequiresAllA} />
+
+      <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。項目自体の追加・付け替えはまだ別の作業が必要です。">
+        KPIのカテゴリ
+      </SectionHeading>
+      <KpiCategoryEditor categories={categories} usage={categoryUsage} />
 
       <p className="footnote mt-4">
         確定済みの評価は判定した当時の配点・基準のまま残ります。ここでの変更は、次に作るアンケートと、
