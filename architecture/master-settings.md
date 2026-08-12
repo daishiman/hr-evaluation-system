@@ -1,7 +1,7 @@
 # アーキテクチャ: 制度設定の責務分割
 
-graph_node_id: `feat-master-settings-responsibility-split` / `feat-master-definition-revisions`
-beads: `hr-hco` / `hr-2qk`
+graph_node_id: `feat-master-settings-responsibility-split` / `feat-master-definition-revisions` / `chore-release-safety-and-ssot`
+beads: `hr-hco` / `hr-2qk` / `hr-0p4`
 
 ## 層分け
 
@@ -123,6 +123,11 @@ id指定commandに `gradeId` / `category` / `reqKind` を再送させない。
 共通化するのは行/カード内保存という操作規則までとし、行動指針の割当を等級要件の版テーブルへ寄せない。
 すべての制度マスタをイベントストア化することも行わない。
 
+`constitution_events` は現在状態を再構築するイベントストアではなく、変更履歴の表示と障害調査を
+補助する append-only の監査ジャーナルである。現在状態の正本は各制度マスタテーブルに置く。
+本体更新と監査記録は現状同じ D1 batch ではないため、監査の完全性を前提とする機能は作らない。
+原子的な監査が必要になった時点で、更新 command と監査 INSERT を同じ batch へ統合する。
+
 ## 主要ファイル
 
 | 役割 | パス |
@@ -130,7 +135,8 @@ id指定commandに `gradeId` / `category` / `reqKind` を再送させない。
 | ナビ | `src/lib/nav.ts` |
 | 影響検知 | `src/lib/impact.ts` |
 | 更新API | `src/app/api/masters/`（`apply-master-update.ts` / `versioned-requirement-update.ts` / `apply-behavior-master-update.ts`） |
-| 版の系譜 | `src/lib/domain/versioned-master.ts` |
-| 版UI共通 | `src/components/VersionedMasterSections.tsx` |
+| 版の系譜（現在版判定の正本） | `src/lib/domain/versioned-master.ts`（`currentVersionRows` / `classifyVersionedRows`） |
+| 版UI共通（domain を呼ぶだけ） | `src/components/VersionedMasterSections.tsx` |
+| 監査ジャーナル | `src/lib/domain/constitution-events.ts` / `constitution_events` テーブル |
 | 行動指針UI | `src/components/BehaviorBandAssignmentEditor.tsx` / `BehaviorGuidelineEditor.tsx` ほか |
 | 仮パスワード | `src/lib/domain/initial-password.ts` |

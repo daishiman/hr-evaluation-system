@@ -1,0 +1,42 @@
+# 配布・マイグレーション・フォーム作成 — システム仕様
+
+- graph_node_id: `chore-release-safety-and-ssot`
+- beads: `hr-0p4`
+- 正本（運用）: `docs/deploy-notes.md`
+- 実装入口: `.github/workflows/` / `src/lib/form-build.ts` / `src/app/api/forms/route.ts` / `scripts/verify-d1-migrations-list.mjs` / `scripts/check-docs-drift.mjs`
+
+## 1. 本番配布の不変条件
+
+1. Deploy workflow は `refs/heads/main` 以外で開始されたら即失敗する。
+2. 配布対象は GitHub Actions のクリーン checkout であり、ローカル作業ツリーを直接配らない。
+3. 配布前に同じ checkout で少なくとも次を成功させる。
+   - `check:docs`
+   - Cloudflare 型生成
+   - `typecheck`
+   - `test:coverage`
+   - `cf:dry-run`（build）
+   - `check:bundle-size`
+   - 本番 D1 の `migrations list` が「未適用0件」
+4. D1 list の判定は `scripts/verify-d1-migrations-list.mjs` が行う。未知出力・認証失敗・矛盾出力は clear とみなさない。
+
+## 2. マイグレーションの不変条件
+
+1. Migrate workflow は `workflow_dispatch` のみ。push では動かない。
+2. checkout は常に `main` を読む。実行元 branch を選んでも SQL の正本は main。
+3. バックアップ取得に失敗したら適用しない。
+4. 適用後に同じ本番 DB を再照会し、未適用0件を確認する。
+5. 順序は「migration → deploy」。Deploy 側の parity gate が逆順を機械的に止める。
+
+## 3. 複数等級フォーム作成
+
+1. `POST /api/forms` は対象等級すべてを `buildFormDrafts` に渡す。
+2. 各等級のフォーム本体と設問 INSERT は、1つの D1 `batch` にまとめて実行する。
+3. 準備段階（等級不存在など）で1件でも失敗したら、いずれの等級も書き込まない。
+4. 実行時にフォーム版の一意制約（`uq_forms_cycle_grade_ver` / `forms.cycle_id,grade_id,version`）だけを再試行対象とし、最大2試行。
+5. それ以外のエラーは再試行せず呼び出し元へ返す。再試行尽きた版競合は `409`。
+
+## 4. 文書 drift
+
+1. current backlog は未解決事項のみ。完了表現や取消線を置かない。
+2. 安定 ID は一意で、状態は `ready` / `decision` / `observe` / `blocked` のいずれか。
+3. `pnpm run check:docs` が必須文書の存在、README の旧説明、current の完了混在、リンク切れを検査する。

@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 import { Badge, Button, CardRow, Disclosure } from "@/components/ui";
+import {
+  classifyVersionedRows,
+  type HistoricalVersionRow,
+} from "@/lib/domain/versioned-master";
 
 export interface VersionedMasterItem {
   id: string;
@@ -8,43 +12,10 @@ export interface VersionedMasterItem {
   previousVersionId?: string | null;
 }
 
-export interface HistoricalMasterItem<T extends VersionedMasterItem> {
-  row: T;
-  /** 履歴を復元するときに、新版の直前になる現在版。 */
-  currentId: string;
-}
+export type HistoricalMasterItem<T extends VersionedMasterItem> = HistoricalVersionRow<T>;
 
-/**
- * 後続版がない行を現在版、後続版がある行を履歴として分ける。
- * previousVersionId は一本道なので、履歴から現在版までたどれる。
- */
-export function classifyVersionedItems<T extends VersionedMasterItem>(rows: readonly T[]): {
-  current: T[];
-  history: HistoricalMasterItem<T>[];
-} {
-  const ids = new Set(rows.map((row) => row.id));
-  const successorByPreviousId = new Map<string, T>();
-  for (const row of rows) {
-    if (row.previousVersionId && ids.has(row.previousVersionId)) {
-      successorByPreviousId.set(row.previousVersionId, row);
-    }
-  }
-
-  const current = rows.filter((row) => !successorByPreviousId.has(row.id));
-  const history = rows
-    .filter((row) => successorByPreviousId.has(row.id))
-    .map((row) => {
-      let latest = row;
-      const visited = new Set<string>();
-      while (successorByPreviousId.has(latest.id) && !visited.has(latest.id)) {
-        visited.add(latest.id);
-        latest = successorByPreviousId.get(latest.id)!;
-      }
-      return { row, currentId: latest.id };
-    });
-
-  return { current, history };
-}
+/** 既存のUI呼び出しとの互換名。判定の実装はドメイン層だけに置く。 */
+export const classifyVersionedItems = classifyVersionedRows;
 
 export function VersionedMasterSections<T extends VersionedMasterItem>({
   sectionId,
@@ -67,7 +38,7 @@ export function VersionedMasterSections<T extends VersionedMasterItem>({
   onReactivate: (row: T) => void;
   onRestoreContent: (item: HistoricalMasterItem<T>) => void;
 }) {
-  const { current, history } = classifyVersionedItems(rows);
+  const { current, history } = classifyVersionedRows(rows);
   const stopped = current.filter((row) => !row.isActive);
   const activeCount = current.filter((row) => row.isActive).length;
   const reactivationBlocked = maxActive !== undefined && activeCount >= maxActive;

@@ -1,7 +1,7 @@
 # 制度設定と評価への反映 — システム仕様
 
-- graph_node_id: `feat-master-settings-responsibility-split` / `feat-master-definition-revisions`
-- beads: `hr-hco` / `hr-2qk`
+- graph_node_id: `feat-master-settings-responsibility-split` / `feat-master-definition-revisions` / `chore-release-safety-and-ssot`
+- beads: `hr-hco` / `hr-2qk` / `hr-0p4`
 - 正本（製品）: `docs/product/spec.md` §3、§5-1、§7 / `docs/product/spec-master-definition-revisions.md`
 - 実装入口: `src/app/admin/` / `src/app/api/masters/` / `src/lib/impact.ts`
 
@@ -82,3 +82,9 @@
 - `適用` という抽象語は使わず、`Beginnerのアンケートにこの行動指針を出す` のように、等級・対象・結果を明記する。
 - 保存後は `次に作るアンケートから反映します。作成済みのアンケートと評価は変わりません` と表示する。
 - 保存APIの権限・会社境界・基準セットの存在/active検査は従来どおりサーバーで行う。
+
+## 7. 制度マスタの変更監査
+
+- 現在状態の正本は各制度マスタテーブルとし、`constitution_events` は変更履歴表示・障害調査用の append-only 監査ジャーナルとする。
+- 監査記録の再生結果を画面・計算・復旧の正本にしない。監査欠落または同一 `seq` があっても現在状態の読み取りへ波及させない。
+- 現状は本体更新と監査 INSERT が同じ D1 batch ではない。完全な監査証跡を要件化するときは、全更新 command を同一 batch に統合し、同一実体の順序をDB制約で保証してから利用する。

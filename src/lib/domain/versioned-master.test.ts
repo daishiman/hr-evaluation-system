@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  classifyVersionedRows,
   currentVersionRows,
   isCurrentVersion,
   lineageRootId,
@@ -113,6 +114,38 @@ describe("isCurrentVersion（この版は現在版か）", () => {
     for (const row of rows) {
       expect(isCurrentVersion(row, rows)).toBe(currentIds.has(row.id));
     }
+  });
+});
+
+describe("classifyVersionedRows（現在版と履歴の分類）", () => {
+  it("currentVersionRows と同じ現在版を返し、履歴を系譜の末尾へ紐づける", () => {
+    const rows = [...chain("a1", "a2", "a3"), ...chain("b1", "b2"), v("c1")];
+    const result = classifyVersionedRows(rows);
+
+    expect(result.current).toEqual(currentVersionRows(rows));
+    expect(result.history).toEqual([
+      { row: rows[0], currentId: "a3" },
+      { row: rows[1], currentId: "a3" },
+      { row: rows[3], currentId: "b2" },
+    ]);
+  });
+
+  it("親が一覧に無い orphan を現在版から落とさない", () => {
+    const orphan = v("visible", "not-loaded");
+
+    expect(classifyVersionedRows([orphan])).toEqual({ current: [orphan], history: [] });
+  });
+
+  it("親子がcycleになった壊れたデータでも停止し、既存の履歴分類を保つ", () => {
+    const rows = [v("a", "b"), v("b", "a")];
+
+    expect(classifyVersionedRows(rows)).toEqual({
+      current: [],
+      history: [
+        { row: rows[0], currentId: "a" },
+        { row: rows[1], currentId: "b" },
+      ],
+    });
   });
 });
 

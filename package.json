@@ -13,6 +13,7 @@
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview --port 8787",
     "cf:dry-run": "opennextjs-cloudflare build",
     "check:bundle-size": "node scripts/check-bundle-size.mjs",
+    "check:docs": "node scripts/check-docs-drift.mjs",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "deploy:worker": "opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",

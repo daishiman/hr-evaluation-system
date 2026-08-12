@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
 import { newId } from "@/lib/id";
 import { HttpError } from "@/lib/session";
@@ -34,9 +35,11 @@ export const SECTION_LABEL: Record<string, string> = {
 };
 
 type Row = typeof s.formQuestions.$inferInsert;
+type Db = Awaited<ReturnType<typeof getDb>>;
+type SqliteBatchItem = BatchItem<"sqlite">;
 
 /** D1の1query上限内に分けた、設問INSERT statementを作る。実行自体は呼び出し側のbatchで原子的に行う。 */
-function questionInsertStatements(db: Awaited<ReturnType<typeof getDb>>, rows: Row[]) {
+function questionInsertStatements(db: Db, rows: Row[]): SqliteBatchItem[] {
   return chunkRowsForD1(rows).map((chunk) => db.insert(s.formQuestions).values(chunk));
 }
 
@@ -49,9 +52,11 @@ export async function buildQuestionRows(opts: {
   cycleId: string;
   gradeId: string;
   formId: string;
+  /** 複数フォームを1つのbatchへまとめるとき、同じリクエストのDB clientを共有する。 */
+  db?: Db;
 }): Promise<Row[]> {
   const { companyId, cycleId, gradeId, formId } = opts;
-  const db = await getDb();
+  const db = opts.db ?? (await getDb());
 
   const grade = (
     await db
@@ -242,14 +247,52 @@ export async function buildQuestionRows(opts: {
  * 制度マスタからアンケートの下書きを1本作る。
  * 同じサイクル・等級のアンケートは版を上げて作る（過去の回答はそのまま残す）。
  */
-export async function buildFormDraft(opts: {
+export interface FormDraftInput {
   companyId: string;
   cycleId: string;
   gradeId: string;
   title?: string;
-}): Promise<{ formId: string; questionCount: number; version: number }> {
+}
+
+export interface FormDraftResult {
+  formId: string;
+  questionCount: number;
+  version: number;
+}
+
+interface PreparedFormDraft {
+  result: FormDraftResult;
+  statements: [SqliteBatchItem, ...SqliteBatchItem[]];
+}
+
+/**
+ * D1/SQLiteが返す原因チェーンから、フォーム版の一意制約だけを判別する。
+ * public tokenなど別の一意制約や、通信・認証エラーは再試行しない。
+ */
+export function isFormVersionConflict(error: unknown): boolean {
+  const messages: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current !== undefined && current !== null; depth += 1) {
+    if (current instanceof Error) {
+      messages.push(current.message);
+      current = current.cause;
+    } else {
+      messages.push(String(current));
+      break;
+    }
+  }
+  const message = messages.join(" ");
+  return (
+    message.includes("uq_forms_cycle_grade_ver") ||
+    (/unique constraint failed/i.test(message) &&
+      message.includes("forms.cycle_id") &&
+      message.includes("forms.grade_id") &&
+      message.includes("forms.version"))
+  );
+}
+
+async function prepareFormDraft(db: Db, opts: FormDraftInput): Promise<PreparedFormDraft> {
   const { companyId, cycleId, gradeId } = opts;
-  const db = await getDb();
 
   const cycle = (
     await db
@@ -291,17 +334,50 @@ export async function buildFormDraft(opts: {
     closesAt: cycle.periodEnd,
   };
 
-  const rows = await buildQuestionRows({ companyId, cycleId, gradeId, formId });
-  /*
-   * フォーム本体と全設問を1つのD1 batchに入れる。
-   * 設問の途中で上限・制約エラーが起きても、設問0件のフォームだけを残さない。
-   */
-  await db.batch(
-    [db.insert(s.forms).values(formRow), ...questionInsertStatements(db, rows)] as unknown as Parameters<
-      typeof db.batch
-    >[0],
-  );
-  return { formId, questionCount: rows.length, version };
+  const rows = await buildQuestionRows({ companyId, cycleId, gradeId, formId, db });
+  return {
+    result: { formId, questionCount: rows.length, version },
+    statements: [db.insert(s.forms).values(formRow), ...questionInsertStatements(db, rows)],
+  };
+}
+
+/**
+ * 複数等級ぶんのフォーム本体と設問を、1つのD1 batchで原子的に作る。
+ * 同時リクエストが同じ版を採番したときだけ、最新の版を読み直して1回再試行する。
+ */
+export async function buildFormDrafts(inputs: [FormDraftInput, ...FormDraftInput[]]): Promise<FormDraftResult[]> {
+  const db = await getDb();
+  const maxAttempts = 2;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const prepared: PreparedFormDraft[] = [];
+    // 準備中に1件でも入力不整合があれば、DBへ書き込む前に止める。
+    for (const input of inputs) prepared.push(await prepareFormDraft(db, input));
+
+    const statements = prepared.flatMap((draft) => draft.statements);
+    const [first, ...rest] = statements;
+    if (!first) throw new Error("作成するアンケートがありません。");
+
+    try {
+      await db.batch([first, ...rest]);
+      return prepared.map((draft) => draft.result);
+    } catch (error) {
+      if (!isFormVersionConflict(error)) throw error;
+      if (attempt === maxAttempts) {
+        throw new HttpError(
+          409,
+          "同じ等級のアンケートが同時に作成されました。最新の版を確認して、もう一度お試しください。",
+        );
+      }
+    }
+  }
+
+  throw new Error("アンケートの版を確保できませんでした。");
+}
+
+/** 制度マスタからアンケートの下書きを1本作る。 */
+export async function buildFormDraft(opts: FormDraftInput): Promise<FormDraftResult> {
+  return (await buildFormDrafts([opts]))[0];
 }
 
 /**

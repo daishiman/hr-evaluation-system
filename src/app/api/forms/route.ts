@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getDb, schema as s } from "@/lib/db";
 import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
-import { assertFormContentEditable, buildFormDraft } from "@/lib/form-build";
+import { assertFormContentEditable, buildFormDrafts, type FormDraftInput } from "@/lib/form-build";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +29,24 @@ export async function POST(req: Request) {
       : grades.filter((g) => g.isActive);
     if (targets.length === 0) throw new HttpError(400, "対象の等級がありません。");
 
-    const results = [];
-    for (const g of targets) {
-      const r = await buildFormDraft({ companyId, cycleId: body.cycleId, gradeId: g.id, title: body.title });
-      results.push({ gradeId: g.id, gradeName: g.name, ...r });
-    }
+    /* 全等級ぶんを1つのD1 batchで保存する。途中の等級で失敗しても、前半だけ残さない。 */
+    const [firstTarget, ...remainingTargets] = targets;
+    const toDraftInput = (gradeId: string): FormDraftInput => ({
+      companyId,
+      cycleId: body.cycleId,
+      gradeId,
+      title: body.title,
+    });
+    const draftInputs: [FormDraftInput, ...FormDraftInput[]] = [
+      toDraftInput(firstTarget.id),
+      ...remainingTargets.map((target) => toDraftInput(target.id)),
+    ];
+    const drafts = await buildFormDrafts(draftInputs);
+    const results = drafts.map((draft, index) => ({
+      gradeId: targets[index].id,
+      gradeName: targets[index].name,
+      ...draft,
+    }));
     const total = results.reduce((sum, r) => sum + r.questionCount, 0);
     return {
       results,
