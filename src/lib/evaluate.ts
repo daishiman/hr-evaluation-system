@@ -504,7 +504,13 @@ export async function buildEvaluationsForCycle(
   return out;
 }
 
-/** 未提出の人を一覧するための補助（誰の評価がまだ作れないかを画面に出す）。 */
+/**
+ * 未提出の人を一覧するための補助（誰の評価がまだ作れないかを画面に出す）。
+ *
+ * 利用停止中の人は対象から外す。期の途中で利用停止になった人がいても、
+ * 提出済みの回答・すでに作った評価はそのまま残る（ここで除くのは
+ * 「これから提出を促す一覧」への表示だけで、データは一切変更しない）。
+ */
 export async function listPendingRespondents(companyId: string, cycleId: string) {
   const db = await getDb();
   const forms = await db
@@ -516,7 +522,9 @@ export async function listPendingRespondents(companyId: string, cycleId: string)
   const members = await db
     .select({ id: s.users.id, name: s.users.name, gradeId: s.users.gradeId })
     .from(s.users)
-    .where(and(eq(s.users.companyId, companyId), inArray(s.users.gradeId, gradeIds)));
+    .where(
+      and(eq(s.users.companyId, companyId), inArray(s.users.gradeId, gradeIds), eq(s.users.isActive, true)),
+    );
   const responses = await db
     .select()
     .from(s.formResponses)
