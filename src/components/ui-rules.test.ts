@@ -220,7 +220,10 @@ describe("画面の器の作法", () => {
     // 帯に説明文を足していくと厚くなり、肝心の入力欄が画面から押し出される。
     // pinned のときは detail（注記の段落）を渡せない、を型で禁止する。
     const source = readFileSync(join(SRC, "components", "ui.tsx"), "utf8");
-    expect(source).toMatch(/pinned: true;\s*\n\s*detail\?: never;/);
+    // pinned: true の枝（＝固定する側）に detail?: never があること。
+    // 枝の中に narrow などが増えても効き続けるよう、枝の終わり（}）までの間で見る。
+    const pinnedBranch = source.slice(source.indexOf("pinned: true;"));
+    expect(pinnedBranch.slice(0, pinnedBranch.indexOf("\n      }"))).toContain("detail?: never;");
   });
 
   it("カードの中の固定見出しは、画面上部の固定ヘッダーの下に貼り付く", () => {
@@ -266,6 +269,79 @@ describe("画面の器の作法", () => {
       const block = css.slice(css.indexOf(selector));
       expect(block.slice(0, block.indexOf("}"))).not.toContain("overflow: hidden");
     }
+  });
+
+  it("回答画面は、まとまりごとに頭を固定し、そこへ答え方の決まりを残す", () => {
+    // 「行ったものだけ はい」「受講しただけは いいえ」は、1問ごとに当てはめる物差し。
+    // これが画面の外へ出ると、下のほうの設問だけ違う基準で答えてしまう。
+    const source = readFileSync(join(SRC, "components", "FormAnswer.tsx"), "utf8");
+    expect(source).toMatch(/<CardHead\s+pinned\s+narrow\s+heading\s+title=\{SECTION_LABEL/);
+    expect(source).toMatch(/sub=\{SECTION_HELP\[g\.section\]\}/);
+    // 同じ説明を帯と本文の2箇所に出さない（帯へ移したぶんは節見出しから外す）
+    expect(source).not.toContain("<SectionHeading help=");
+  });
+
+  it("スマートフォンで打つ画面（回答）だけは、帯を1行に縮めて狭い画面でも固定する", () => {
+    // 狭い画面の既定は「固定しない」。回答者にスマートフォンの人がいるため、
+    // 回答画面だけ例外にする。ただし帯は名前だけの1行に縮め、
+    // 答え方の決まりは消さずに本文の先頭へ移す（読める場所を変えるだけ）。
+    const ui = readFileSync(join(SRC, "components", "ui.tsx"), "utf8");
+    // 例外にできるのは pinned のときだけ（型で縛る）
+    expect(ui).toMatch(/pinned: true;[\s\S]{0,400}narrow\?: boolean;/);
+    expect(ui).toMatch(/pinned\?: false; narrow\?: never/);
+    expect(ui).toContain('data-narrow={pinned && narrow ? "pin" : undefined}');
+    // 縮めたときの逃がし先が部品の中にある（画面ごとに書き起こさない）
+    expect(ui).toContain("card-head-sub-narrow");
+
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const narrow = css.slice(css.indexOf("@media (max-width: 639px) {\n  /* 狭い画面では、既定は固定をやめる"));
+    const block = narrow.slice(0, narrow.indexOf("\n}"));
+    expect(block).toContain('.card-head-sticky[data-narrow="pin"] { position: sticky;');
+    // 帯の中の説明は隠し、本文側を出す（同じ文が2つ見えない）
+    expect(block).toContain('.card-head-sticky[data-narrow="pin"] .card-head-sub { display: none; }');
+    expect(block).toContain(".card-head-sub-narrow { display: block;");
+
+    // 例外を使ってよいのは、回答画面だけ
+    const users = sourceFiles.filter((p) => /<CardHead[\s\S]{0,40}\bnarrow\b/.test(readFileSync(p, "utf8")));
+    expect(users.map((p) => p.replace(`${SRC}/`, ""))).toEqual(["components/FormAnswer.tsx"]);
+  });
+
+  it("文字盤（スマートフォンのキーボード）が出ている間は、固定を全部やめる", () => {
+    // 文字盤は見える範囲を半分近く奪うのに、CSSの高さ（@media height）は変わらない。
+    // 実測（375×見える高さ380）で、固定ヘッダー＋見出し帯＋操作バーだけで314pxが埋まり、
+    // 打っている欄が下の操作バーに隠れた。打っている間は打つ場所を最優先にする。
+    const sticky = readFileSync(join(SRC, "components", "StickyOffset.tsx"), "utf8");
+    expect(sticky).toContain("window.visualViewport");
+    expect(sticky).toContain('dataset.keyboard = "open"');
+
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    for (const selector of [
+      '.card-head-sticky[data-narrow="pin"]',
+      '.page-head[data-sticky="true"]',
+      ".action-bar",
+    ]) {
+      expect(css).toContain(`html[data-keyboard="open"] ${selector} { position: static; }`);
+    }
+  });
+
+  it("設問の組み立ては、編集を開いているカードだけ頭を固定する", () => {
+    // 閉じているカードは2行しかなく、貼り付く前に流れ去る。
+    // 全部に帯を付けると、設問の一覧としての読みやすさだけが落ちる。
+    const source = readFileSync(join(SRC, "components", "FormBuilder.tsx"), "utf8");
+    expect(source).toMatch(/\{open \? \(\s*<CardHead pinned/);
+  });
+
+  it("読むだけの画面（提出済みの回答・一覧）には帯を作らない", () => {
+    // 帯は「参照しながら打つ」ためのもの。打つ欄が無い画面では場所を取るだけになる。
+    // 一覧の表は DataTable が列見出しを同じ --sticky-top に貼り付けており、そちらが役目を持つ。
+    const readOnly = [
+      join(SRC, "components", "ResponseSnapshot.tsx"),
+      join(SRC, "components", "FormPreview.tsx"),
+      join(SRC, "app", "me", "forms", "page.tsx"),
+      join(SRC, "app", "admin", "forms", "page.tsx"),
+    ];
+    const offenders = readOnly.filter((p) => readFileSync(p, "utf8").includes("pinned"));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
 
   it("確認の窓は画面の中央に出す（左上に貼り付かせない）", () => {

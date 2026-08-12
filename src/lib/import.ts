@@ -5,6 +5,7 @@ import { parseCsv } from "@/lib/csv";
 import { HttpError } from "@/lib/session";
 import { parseOptions, questionSnapshot, type QuestionSnapshot } from "@/lib/domain/answer-snapshot";
 import { normalizeKey } from "@/lib/csv-normalize";
+import { parseImportedNumber, questionNumberPolicy, type NumberFieldPolicy } from "@/lib/domain/number-input";
 export { normalizeKey } from "@/lib/csv-normalize";
 
 /**
@@ -16,12 +17,27 @@ export { normalizeKey } from "@/lib/csv-normalize";
  * 取り込めなかった行は捨てず、理由つきで返す（全部を止めずに、揃った分だけ取り込む）。
  */
 
-/** 「1,200」「１２」などを数値にする。数値でなければ null。 */
-function toNumber(raw: string): number | null {
-  const t = raw.normalize("NFKC").replace(/[,\s円件人日点%％]/g, "");
-  if (t === "") return null;
-  const n = Number(t);
-  return Number.isFinite(n) ? n : null;
+/**
+ * 「1,200」「１２」などを、その設問の決まり（0以上・整数だけ・上限、桁の大きさ）に照らして読む。
+ *
+ * 読めた場合は数値を、読めなかった場合は**なぜ受け付けられないかの一言**を返す。
+ * 判定そのものは画面から提出されたときと同じ `parseImportedNumber` に任せる
+ * （ここに独自の判定を書くと、貼り付けと画面提出で結果が食い違う）。
+ */
+export function readNumberCell(
+  raw: string,
+  policy: NumberFieldPolicy = {},
+): { value: number } | { reason: string } {
+  const parsed = parseImportedNumber(raw, policy);
+  if (parsed.kind === "ok") return { value: parsed.value };
+  if (parsed.kind === "empty") return { reason: "数字が読み取れませんでした" };
+  // 画面には「〜（「-5」は0以上の数字を入力してください）」の形で並ぶので、文末の句点は落とす
+  return { reason: parsed.reason.replace(/。$/, "") };
+}
+
+/** 画面に出す「打たれていた値」。400桁のような極端に長いセルで一覧が埋まらないよう短く切る。 */
+function shortValue(raw: string): string {
+  return raw.length > 20 ? `${raw.slice(0, 20)}…（全${raw.length}文字）` : raw;
 }
 
 /**
@@ -183,27 +199,47 @@ export async function importResponsesCsv(
       if (raw === "") continue;
       let valueNumber: number | null = null;
       let valueJson: string | null = null;
+      // 受け付けられなかった理由（空なら受け付けた）
+      let reason = "";
       const norm = normalizeKey(raw);
       if (q.questionType === "yesno") {
         if (YES.map(normalizeKey).includes(norm)) valueNumber = 1;
         else if (NO.map(normalizeKey).includes(norm)) valueNumber = 0;
+        else reason = "「はい」「いいえ」のどちらとも読み取れませんでした";
       } else if (q.questionType === "single" && q.optionsJson) {
         const opts = parseOptions(q.optionsJson);
         const hit = opts.find((o) => normalizeKey(o.label) === norm || normalizeKey(o.value) === norm);
-        if (hit) valueNumber = hit.score ?? Number(hit.value);
+        if (!hit) reason = "選択肢のどれとも一致しませんでした";
+        else {
+          /* 選択肢に点数が設定されていないときは、選択肢の値を数字として読む。
+             ここを素の Number にしていたため、点数の無い文字の選択肢が
+             「数でないもの（NaN）」のまま保存され、集計で理由なく落ちていた。 */
+          const scored = hit.score ?? null;
+          if (scored !== null) valueNumber = scored;
+          else {
+            const read = parseImportedNumber(hit.value);
+            if (read.kind === "ok") valueNumber = read.value;
+            else reason = `選択肢「${hit.label}」に点数が設定されていません`;
+          }
+        }
       } else if (q.questionType === "multi") {
         // 複数選択は「研修A, 研修C」のように1つのセルに並ぶ。選択肢に当てはまるものだけ拾う
         const picked = matchMultiChoices(raw, q.optionsJson);
         if (picked.length > 0) valueJson = JSON.stringify(picked);
+        else reason = "選択肢のどれとも一致しませんでした";
       } else if (q.questionType === "text") {
         // 自由記述は数値にしない（文字をそのまま残す）
       } else {
-        valueNumber = toNumber(raw);
+        /* 数値の設問は、画面から提出されたときとまったく同じ決まりで見る
+           （0以上・整数だけ・下限上限・桁の大きさ）。
+           貼り付けだけ素通りすると、同じ値が経路によって通ったり通らなかったりする。 */
+        const read = readNumberCell(raw, questionNumberPolicy(q));
+        if ("value" in read) valueNumber = read.value;
+        else reason = read.reason;
       }
       // 意味が取れなかった値は、書かれた文字をそのまま残したうえで画面に報告する
       // （黙って0点として集計すると、原因の分からない低評価になるため）
-      const readable = q.questionType === "text" || (q.questionType === "multi" ? valueJson !== null : valueNumber !== null);
-      if (!readable) unreadable.push(q.title);
+      if (reason !== "") unreadable.push(`${q.title}（「${shortValue(raw)}」は${reason}）`);
       answers.push({ questionId: q.id, valueNumber, valueText: raw, valueJson, snapshot: questionSnapshot(q) });
     }
 

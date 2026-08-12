@@ -625,14 +625,42 @@ main {
 .card-pad > .card-head-sticky {
   margin: calc(var(--pad-card) * -1) calc(var(--pad-card) * -1) var(--space-tight);
 }
+/* 狭い画面用に帯から外した文の置き場所。広い画面では帯の中にあるので出さない。 */
+.card-head-sub-narrow { display: none; }
+
 @media (max-width: 639px) {
-  /* 狭い画面では固定をやめる。
+  /* 狭い画面では、既定は固定をやめる。
      実測（375×700）で、上の固定ヘッダー＋見出し帯だけで約195px、
      下の操作バーが約116px を使う。ここにカードの帯（約93px）を足すと、
      肝心の入力欄に残るのが画面の半分以下になり、
      「参照しながら打つ」ための帯が、打つ場所を奪ってしまう。
      狭い画面では見出し帯が現在地を持っているので、そちらに任せる。 */
   .card-head-sticky { position: static; padding: 8px var(--pad-card); }
+
+  /* 例外: スマートフォンで入力する画面（アンケート回答）だけは固定を戻す。
+     ただし帯は1行（名前だけ）に縮める。載せていた説明は本文の先頭へ回す
+     （文言は消さない。読める場所を変えるだけ）。
+     縮めた帯は実測35px で、入力欄に残る高さは 352px（375×700 で画面の50%）と、
+     半分を上回る（docs/product/spec.md §16 に実測値）。 */
+  .card-head-sticky[data-narrow="pin"] { position: sticky; padding: 4px var(--pad-card); }
+  .card-head-sticky[data-narrow="pin"] .card-head-sub { display: none; }
+  .card-head-sub-narrow { display: block; padding: var(--space-tight) 0 0; }
+
+  /* 画面に文字盤（キーボード）が出ている間は、狭い画面の固定もやめる。
+     文字盤は見える範囲を半分近く奪うが、CSSの高さ（@media height）は変わらないため、
+     ここで止めないと「打っている欄が帯と文字盤に挟まれて見えない」状態になる。
+     開いているかどうかは StickyOffset.tsx が visualViewport で見て data-keyboard に入れる。 */
+  html[data-keyboard="open"] .card-head-sticky[data-narrow="pin"] { position: static; }
+  html[data-keyboard="open"] .card-head-sticky[data-narrow="pin"] .card-head-sub { display: block; }
+  html[data-keyboard="open"] .card-head-sub-narrow { display: none; }
+
+  /* 同じ理由で、上の見出し帯と下の操作バーも文字盤が出ている間は固定をやめる。
+     実測（375×見える高さ380）で、固定ヘッダー56＋見出し帯140＋操作バー118＝314px が
+     先に埋まり、打っている欄が下の操作バーに隠れた。
+     打っている間は「いま打っている欄が見えること」だけを優先し、
+     現在地と提出ボタンは文字盤を閉じれば元の位置に戻る。 */
+  html[data-keyboard="open"] .page-head[data-sticky="true"] { position: static; }
+  html[data-keyboard="open"] .action-bar { position: static; }
 }
 /* 縦幅が足りない環境（横向きのスマホ・小さいノート）では固定をやめる。
    帯を残すより、入力欄が見えることを優先する。 */
