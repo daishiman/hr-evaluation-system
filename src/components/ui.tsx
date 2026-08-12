@@ -430,30 +430,44 @@ type CardHeadProps = CardHeadBase &
          * （帯を幅いっぱいに広げるため、カードの内側の余白を打ち消している）。
          */
         pinned: true;
+        /**
+         * 狭い画面（〜639px）でも固定し続ける。**入力する人がスマートフォンを使う画面だけ** true。
+         *
+         * 狭い画面では帯を1行（名前だけ）に縮める。載せていた `sub` は帯から外し、
+         * カードの本文の先頭へ回す（文言は消さない。読める場所を変えるだけ）。
+         * 縮めないまま固定すると、上下の固定物と合わせて入力欄に残る高さが画面の半分を切る。
+         */
+        narrow?: boolean;
         detail?: never;
       }
-    | { pinned?: false; detail?: ReactNode }
+    | { pinned?: false; narrow?: never; detail?: ReactNode }
   );
 
-export function CardHead({ lead, title, heading, sub, detail, actions, pinned }: CardHeadProps) {
+export function CardHead({ lead, title, heading, sub, detail, actions, pinned, narrow }: CardHeadProps) {
   const Title = heading ? "h2" : "p";
   return (
-    <div
-      className={clsx(
-        "flex flex-wrap items-start justify-between gap-3",
-        pinned && "card-head-sticky",
-      )}
-    >
-      <div className="flex min-w-0 items-start gap-3">
-        {lead}
-        <div className="min-w-0">
-          <Title className="todo-row-title m-0">{title}</Title>
-          {sub && <p className="todo-row-sub m-0">{sub}</p>}
-          {detail}
+    <>
+      <div
+        className={clsx(
+          "flex flex-wrap items-start justify-between gap-3",
+          pinned && "card-head-sticky",
+        )}
+        data-narrow={pinned && narrow ? "pin" : undefined}
+      >
+        <div className="flex min-w-0 items-start gap-3">
+          {lead}
+          <div className="min-w-0">
+            <Title className="todo-row-title m-0">{title}</Title>
+            {sub && <p className="todo-row-sub card-head-sub m-0">{sub}</p>}
+            {detail}
+          </div>
         </div>
+        {actions && <div className="row-actions gap-2">{actions}</div>}
       </div>
-      {actions && <div className="row-actions gap-2">{actions}</div>}
-    </div>
+      {/* 狭い画面用の置き場所。広い画面では出さない（同じ文が2つ見えることはない）。
+          帯から外した文をここへ回すことで、縮めた帯でも文言が消えない。 */}
+      {pinned && narrow && sub && <p className="todo-row-sub card-head-sub-narrow m-0">{sub}</p>}
+    </>
   );
 }
 

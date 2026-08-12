@@ -186,8 +186,11 @@ export function FormAnswer({
               これが画面の外に出ると、下のほうの設問だけ違う基準で答えてしまう。
               説明文をこれ以上足さないこと（帯が厚くなると回答欄が画面から押し出される）。 */}
           <Card className="card-pad">
+            {/* スマートフォンで答える人がいるため、狭い画面でも固定する（narrow）。
+                そのとき帯は名前だけの1行に縮み、答え方の決まりは本文の先頭へ回る。 */}
             <CardHead
               pinned
+              narrow
               heading
               title={SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}
               sub={SECTION_HELP[g.section]}
