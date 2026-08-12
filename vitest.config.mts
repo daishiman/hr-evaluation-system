@@ -34,8 +34,6 @@ const CALC_FILES = [
   "src/lib/domain/grade-requirements.ts",
   // 行動指針の点数の帯
   "src/lib/domain/behavior.ts",
-  // 等級区分×ランクの参考点数
-  "src/lib/domain/reference-points.ts",
   // 保存された値を画面へ渡すときの加工（数字を書き換えていないか）
   "src/lib/domain/evaluation-view.ts",
   // 誰の評価を誰が確定できるか

@@ -801,10 +801,6 @@ export async function getEvaluationDetail(companyId: string, evaluationId: strin
   };
 }
 
-/* 元の配点表（移行前の「KPI基準定義_配点」シートの写し）は、
-   件数が多く参考値としてしか使わないため、ここではまとめて読まない。
-   選んだ等級区分のぶんだけ src/app/api/reference-points/route.ts で読む。 */
-
 /* ───────────────── 本人が変更してよい項目の設定 ───────────────── */
 
 /**
