@@ -32,6 +32,8 @@ const ALLOWED: Record<string, string> = {
   "src/lib/domain/master-delete.ts": "画面ではない",
   "src/app/api/forms/[id]/extensions/route.ts": "画面ではない",
   "src/components/FormAnswer.tsx": "回答画面そのもの。答えられないときは画面全体で理由を出しており、沈める1件が無い",
+  "src/app/admin/forms/[id]/responses/page.tsx":
+    "「取り消し済み」は延長申請の RecordList 行が持つ off プロパティ（オブジェクトリテラルの off: 、data-off ではない）で沈めている。対象者一覧は利用停止中の人をクエリの時点で除外しており（在籍中の人だけを渡す）、沈める行自体が無い",
 };
 
 function walk(dir: string, out: string[] = []): string[] {

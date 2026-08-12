@@ -6,6 +6,11 @@ import { checkGradePointRule } from "@/lib/domain/grade-points";
 import { overallProgress, schemeStepPath, stepTitle } from "@/lib/domain/scheme-steps";
 import { loadSchemeSetup } from "./data";
 import { SchemeCommonSettings } from "@/components/SchemeCommonSettings";
+import { KpiCategoryEditor } from "@/components/KpiCategoryEditor";
+import { KpiItemEditor } from "@/components/KpiItemEditor";
+import { listKpiCategories, listKpiItems } from "@/lib/queries";
+import { kpiCategoryUsage, kpiItemUsage } from "@/lib/master-usage";
+import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +27,35 @@ export default async function AdminSchemePage() {
   const viewer = await requireRole("COMPANY_ADMIN");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
-  const [setup, staleCycles] = await Promise.all([loadSchemeSetup(viewer.companyId), detectStaleCycles(viewer.companyId)]);
+  const [setup, staleCycles, categories, kpiItems] = await Promise.all([
+    loadSchemeSetup(viewer.companyId),
+    detectStaleCycles(viewer.companyId),
+    listKpiCategories(viewer.companyId),
+    listKpiItems(viewer.companyId),
+  ]);
+  const db = await getDb();
+  const [categoryUsage, itemUsage] = await Promise.all([
+    kpiCategoryUsage(db, viewer.companyId),
+    kpiItemUsage(db, viewer.companyId),
+  ]);
+  const categoryOptions = categories.map((c) => ({ id: c.id, name: c.name }));
+  const itemRows = kpiItems.map((i) => ({
+    id: i.id,
+    no: i.no,
+    name: i.name,
+    categoryId: i.categoryId,
+    categoryName: categories.find((c) => c.id === i.categoryId)?.name ?? null,
+    measureType: i.measureType,
+    unit: i.unit,
+    direction: i.direction === "lower" ? ("lower" as const) : ("higher" as const),
+    formula: i.formula,
+    formulaNote: i.formulaNote,
+    remarks: i.remarks,
+    isMonetary: i.isMonetary,
+    isProvisional: i.isProvisional,
+    isActive: i.isActive,
+    isFixedSlot: i.isFixedSlot,
+  }));
 
   if (!setup.scheme) {
     return (
@@ -30,6 +63,14 @@ export default async function AdminSchemePage() {
         <PageTitle title="KPI・評価セット" />
         <StaleCyclesNotice cycles={staleCycles} />
         <ReasonNote>有効な評価セットが登録されていません。初期データの投入が済んでいるかご確認ください。</ReasonNote>
+        <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。">
+          KPI項目
+        </SectionHeading>
+        <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} />
+        <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
+          KPIのカテゴリ
+        </SectionHeading>
+        <KpiCategoryEditor categories={categories} usage={categoryUsage} />
       </>
     );
   }
@@ -40,6 +81,14 @@ export default async function AdminSchemePage() {
         <PageTitle title="KPI・評価セット" />
         <StaleCyclesNotice cycles={staleCycles} />
         <ReasonNote>等級区分ごとの配点ルールが登録されていません。初期データの投入をご確認ください。</ReasonNote>
+        <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。">
+          KPI項目
+        </SectionHeading>
+        <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} />
+        <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
+          KPIのカテゴリ
+        </SectionHeading>
+        <KpiCategoryEditor categories={categories} usage={categoryUsage} />
       </>
     );
   }
@@ -157,6 +206,16 @@ export default async function AdminSchemePage() {
         全等級区分に共通の設定
       </SectionHeading>
       <SchemeCommonSettings schemeId={setup.scheme.id} raiseRequiresAllA={setup.scheme.raiseRequiresAllA} />
+
+      <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。使用中は一部の列だけ直せます。">
+        KPI項目
+      </SectionHeading>
+      <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} />
+
+      <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
+        KPIのカテゴリ
+      </SectionHeading>
+      <KpiCategoryEditor categories={categories} usage={categoryUsage} />
 
       <p className="footnote mt-4">
         確定済みの評価は判定した当時の配点・基準のまま残ります。ここでの変更は、次に作るアンケートと、

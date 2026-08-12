@@ -2,13 +2,15 @@ import { and, eq, inArray } from "drizzle-orm";
 import { schema as s } from "@/lib/db";
 import type { getDb } from "@/lib/db";
 import { HttpError } from "@/lib/session";
-import { bandSetBlockedReason, deleteBlockedReason } from "@/lib/domain/master-delete";
+import { bandSetBlockedReason, deleteBlockedReason, kpiCategoryBlockedReason, kpiItemBlockedReason } from "@/lib/domain/master-delete";
 import { lineageRootId, versionFamilyDeleteOrder } from "@/lib/domain/versioned-master";
 import { recordConstitutionEvent } from "@/lib/domain/constitution-events";
 import {
   bandSetUsedBy,
   behaviorGuidelineUsage,
   gradeRequirementUsage,
+  kpiCategoryUsage,
+  kpiItemUsage,
   promotionRequirementUsage,
 } from "@/lib/master-usage";
 import type { MasterDeleteBody } from "./body-schema";
@@ -163,6 +165,66 @@ export async function deleteMasterItem(args: {
         before: row,
       });
       return { message: `「${row.text}」を消しました。一覧から無くなります。` };
+    }
+
+    case "kpiCategory": {
+      const row = (
+        await db
+          .select({ id: s.kpiCategories.id, name: s.kpiCategories.name })
+          .from(s.kpiCategories)
+          .where(and(eq(s.kpiCategories.id, body.id), eq(s.kpiCategories.companyId, companyId)))
+          .limit(1)
+      )[0];
+      if (!row) throw new HttpError(404, "KPIカテゴリが見つかりませんでした。");
+
+      const usage = await kpiCategoryUsage(db, companyId);
+      const blocked = kpiCategoryBlockedReason(usage[row.id] ?? []);
+      if (blocked) throw new HttpError(400, blocked);
+
+      await db.delete(s.kpiCategories).where(eq(s.kpiCategories.id, row.id));
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "kpiCategory",
+        entityId: row.id,
+        eventType: "deleted",
+        actorId: viewerId,
+        before: row,
+      });
+      return { message: `「${row.name}」を消しました。一覧から無くなります。` };
+    }
+
+    case "kpiItem": {
+      const row = (
+        await db
+          .select()
+          .from(s.kpiItems)
+          .where(and(eq(s.kpiItems.id, body.id), eq(s.kpiItems.companyId, companyId)))
+          .limit(1)
+      )[0];
+      if (!row) throw new HttpError(404, "KPI項目が見つかりませんでした。");
+      if (row.isFixedSlot) throw new HttpError(400, "この項目は固定枠のため消せません。");
+
+      const usage = await kpiItemUsage(db, companyId);
+      const blocked = kpiItemBlockedReason(usage[row.id] ?? []);
+      if (blocked) throw new HttpError(400, blocked);
+
+      /* ランク基準・元の配点表・設問定義はこの項目にぶら下がる写し。
+         外部キーの連鎖に任せず自分で消す（D1 は接続ごとに外部キーの設定が変わりうる）。 */
+      await db.delete(s.kpiRankCriteria).where(eq(s.kpiRankCriteria.kpiItemId, row.id));
+      await db.delete(s.kpiReferencePoints).where(eq(s.kpiReferencePoints.kpiItemId, row.id));
+      await db.delete(s.kpiQuestions).where(eq(s.kpiQuestions.kpiItemId, row.id));
+      await db.delete(s.kpiItems).where(eq(s.kpiItems.id, row.id));
+      await recordConstitutionEvent({
+        db,
+        companyId,
+        entityType: "kpiItem",
+        entityId: row.id,
+        eventType: "deleted",
+        actorId: viewerId,
+        before: row,
+      });
+      return { message: `「${row.name}」を消しました。一覧から無くなります。` };
     }
   }
 }

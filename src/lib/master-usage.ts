@@ -105,6 +105,68 @@ export async function promotionRequirementUsage(db: Db, companyId: string): Prom
 }
 
 /**
+ * KPIカテゴリの使用状況。
+ *
+ * カテゴリ自体は設問やアンケートを直接持たない。KPI項目（kpi_items.category_id）に
+ * 分類として付いているのが唯一の入口で、評価セット（scheme_items）や評価の記録
+ * （evaluation_items）はそのKPI項目を選んだ時点のカテゴリを写しで持っている。
+ * どれか1つでも参照が残っていれば「使用中」とみなし、完全には消せないようにする。
+ */
+export async function kpiCategoryUsage(db: Db, companyId: string): Promise<UsageMap> {
+  const [inItems, inScheme, inEvaluations] = await Promise.all([
+    db
+      .select({ key: s.kpiItems.categoryId, name: s.kpiItems.name })
+      .from(s.kpiItems)
+      .where(and(eq(s.kpiItems.companyId, companyId), isNotNull(s.kpiItems.categoryId))),
+    db
+      .select({ key: s.schemeItems.categoryId })
+      .from(s.schemeItems)
+      .where(and(eq(s.schemeItems.companyId, companyId), isNotNull(s.schemeItems.categoryId))),
+    db
+      .select({ key: s.evaluationItems.categoryId })
+      .from(s.evaluationItems)
+      .where(and(eq(s.evaluationItems.companyId, companyId), isNotNull(s.evaluationItems.categoryId))),
+  ]);
+
+  const map: UsageMap = {};
+  for (const row of inItems) add(map, row.key, `KPI項目「${row.name}」`);
+  for (const row of inScheme) add(map, row.key, "評価セット");
+  for (const row of inEvaluations) add(map, row.key, EVALUATION_LABEL);
+  return map;
+}
+
+/**
+ * KPI項目そのものの使用状況。
+ *
+ * カテゴリと違い、項目は直接アンケートの設問（下書きも含む）・評価セット・評価の記録の
+ * どれからも参照される。どれか1つでも参照が残っていれば、単位・向き・分類・計算式の
+ * 意味が変わる編集や削除はできないようにする（過去の記録の意味を後から変えないため）。
+ */
+export async function kpiItemUsage(db: Db, companyId: string): Promise<UsageMap> {
+  const [inForms, inScheme, inEvaluations] = await Promise.all([
+    db
+      .select({ key: s.formQuestions.kpiItemId, title: s.forms.title })
+      .from(s.formQuestions)
+      .innerJoin(s.forms, eq(s.formQuestions.formId, s.forms.id))
+      .where(and(eq(s.formQuestions.companyId, companyId), isNotNull(s.formQuestions.kpiItemId))),
+    db
+      .select({ key: s.schemeItems.kpiItemId })
+      .from(s.schemeItems)
+      .where(eq(s.schemeItems.companyId, companyId)),
+    db
+      .select({ key: s.evaluationItems.kpiItemId })
+      .from(s.evaluationItems)
+      .where(eq(s.evaluationItems.companyId, companyId)),
+  ]);
+
+  const map: UsageMap = {};
+  for (const row of inForms) add(map, row.key, formLabel(row.title));
+  for (const row of inScheme) add(map, row.key, "評価セット");
+  for (const row of inEvaluations) add(map, row.key, EVALUATION_LABEL);
+  return map;
+}
+
+/**
  * 基準セットの使用状況（そのセットに入っている観点のどれかが使われていれば、セットも使用中）。
  *
  * 基準セットは外部キーではなく code の文字列で結ばれているため、データベースは

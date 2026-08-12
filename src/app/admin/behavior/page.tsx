@@ -21,7 +21,11 @@ export const dynamic = "force-dynamic";
  * 点数の重み（模範3〜悪影響-1）と、昇格に必要な合計点は、ここでは変えられない。
  * 前者は制度の骨格、後者は「昇格の条件」の設定なので、それぞれの持ち場で決める。
  */
-export default async function AdminBehavior({ searchParams }: { searchParams: Promise<{ band?: string }> }) {
+export default async function AdminBehavior({
+  searchParams,
+}: {
+  searchParams: Promise<{ band?: string; grade?: string }>;
+}) {
   const viewer = await requireRole("COMPANY_ADMIN");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
@@ -40,6 +44,8 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
   const bands = bandSets.map((set) => set.code);
   const sp = await searchParams;
   const band = bands.includes(sp.band ?? "") ? (sp.band as string) : (bands[0] ?? null);
+  /* 「昇格の条件・要件」画面（/admin/masters/promotion）と同じ、等級タブで1等級ずつ編集する作法。 */
+  const selectedGrade = grades.find((g) => g.id === sp.grade) ?? grades[0] ?? null;
   /* 等級に割り当てられるのは「使う設定になっていて、問う内容が1件以上ある」基準だけ。
      空のセットを割り当てると、行動指針の設問が黙って0件のアンケートができる。 */
   const assignableBands = bandSets
@@ -61,19 +67,35 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
       <PageTitle
         title="行動指針"
         lede="アンケートで問う行動指針の中身と、どの等級に出すかを決めます。変更は次に作るアンケートから反映されます。すでに公開したアンケートと確定済みの評価は動きません。"
+        tags={selectedGrade && <span className="tag">編集中の等級 {selectedGrade.name}</span>}
       />
 
-      <SectionHeading>どの等級に出すか</SectionHeading>
+      <SectionHeading>等級を選ぶ</SectionHeading>
       {grades.length === 0 ? (
         <EmptyState title="等級が登録されていません" body="先に等級を登録してください。" />
       ) : (
-        <div className="mt-3">
-          <BehaviorBandAssignmentEditor
-            grades={grades.map((grade) => ({ id: grade.id, name: grade.name, behaviorBand: grade.behaviorBand }))}
-            bandSets={bandSets}
-            availableBands={assignableBands}
-          />
-        </div>
+        <>
+          <div className="mb-5 flex flex-wrap gap-2">
+            {grades.map((g) => (
+              <Link
+                key={g.id}
+                href={`/admin/behavior?grade=${g.id}${band ? `&band=${band}` : ""}`}
+                className="chip"
+                aria-current={g.id === selectedGrade?.id ? "true" : undefined}
+              >
+                {g.name}
+              </Link>
+            ))}
+          </div>
+          {selectedGrade && (
+            <BehaviorBandAssignmentEditor
+              key={selectedGrade.id}
+              grade={{ id: selectedGrade.id, name: selectedGrade.name, behaviorBand: selectedGrade.behaviorBand }}
+              bandSets={bandSets}
+              availableBands={assignableBands}
+            />
+          )}
+        </>
       )}
 
       <div className="mt-3">
@@ -117,7 +139,7 @@ export default async function AdminBehavior({ searchParams }: { searchParams: Pr
             {bandSets.map((set) => (
               <Link
                 key={set.code}
-                href={`/admin/behavior?band=${set.code}`}
+                href={`/admin/behavior?band=${set.code}${selectedGrade ? `&grade=${selectedGrade.id}` : ""}`}
                 className="chip"
                 aria-current={set.code === band ? "true" : undefined}
                 data-off={set.isActive ? undefined : "true"}

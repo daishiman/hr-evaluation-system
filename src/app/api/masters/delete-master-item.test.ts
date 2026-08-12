@@ -49,7 +49,7 @@ const CREATE = `
   CREATE TABLE forms (id text PRIMARY KEY, company_id text NOT NULL, title text NOT NULL, status text NOT NULL DEFAULT 'published');
   CREATE TABLE form_questions (
     id text PRIMARY KEY, company_id text NOT NULL, form_id text NOT NULL, title text NOT NULL DEFAULT '',
-    grade_requirement_id text, promotion_requirement_id text, behavior_guideline_id text
+    grade_requirement_id text, promotion_requirement_id text, behavior_guideline_id text, kpi_item_id text
   );
   CREATE TABLE evaluation_behaviors (
     id text PRIMARY KEY, company_id text NOT NULL, evaluation_id text NOT NULL, guideline_id text,
@@ -67,6 +67,45 @@ const CREATE = `
     id text PRIMARY KEY, company_id text NOT NULL, entity_type text NOT NULL, entity_id text NOT NULL,
     event_type text NOT NULL, actor_id text, before_json text, after_json text, seq integer NOT NULL,
     occurred_at text
+  );
+  CREATE TABLE kpi_categories (
+    id text PRIMARY KEY, company_id text NOT NULL, code text NOT NULL, name text NOT NULL,
+    display_order integer NOT NULL DEFAULT 1, created_at text, updated_at text
+  );
+  CREATE TABLE kpi_items (
+    id text PRIMARY KEY, company_id text NOT NULL, no integer NOT NULL DEFAULT 1, name text NOT NULL,
+    category_id text, measure_type text NOT NULL DEFAULT '個人実績', unit text NOT NULL DEFAULT '%',
+    direction text NOT NULL DEFAULT 'higher', formula text, formula_note text, intent text,
+    data_source text, judge_timing text, a_type text, a_standard text, controllability text,
+    a_rationale text, remarks text, is_fixed_slot integer NOT NULL DEFAULT 0,
+    is_monetary integer NOT NULL DEFAULT 0, is_provisional integer NOT NULL DEFAULT 0,
+    provisional_note text, is_active integer NOT NULL DEFAULT 1, created_at text, updated_at text
+  );
+  CREATE TABLE kpi_rank_criteria (
+    id text PRIMARY KEY, company_id text NOT NULL, kpi_item_id text NOT NULL, rank text NOT NULL DEFAULT 'A',
+    display_label text NOT NULL DEFAULT '', lower_bound real, upper_bound real, boundary_expr text,
+    meaning text, target_grades text, is_provisional integer NOT NULL DEFAULT 0, provisional_note text,
+    created_at text, updated_at text
+  );
+  CREATE TABLE kpi_reference_points (
+    id text PRIMARY KEY, company_id text NOT NULL, kpi_item_id text NOT NULL, point_group text NOT NULL DEFAULT '',
+    rank text NOT NULL DEFAULT 'A', points real NOT NULL DEFAULT 0, created_at text, updated_at text
+  );
+  CREATE TABLE kpi_questions (
+    id text PRIMARY KEY, company_id text NOT NULL, kpi_item_id text, question_key text NOT NULL DEFAULT '',
+    text text NOT NULL DEFAULT '', input_type text NOT NULL DEFAULT 'number', unit text,
+    required integer NOT NULL DEFAULT 1, validation text, role text NOT NULL DEFAULT 'direct',
+    target_grades text, display_order integer NOT NULL DEFAULT 0, created_at text, updated_at text
+  );
+  CREATE TABLE scheme_items (
+    id text PRIMARY KEY, company_id text NOT NULL, scheme_id text NOT NULL DEFAULT '',
+    point_group text NOT NULL DEFAULT '', kpi_item_id text NOT NULL DEFAULT '', category_id text,
+    weight integer NOT NULL DEFAULT 0, display_order integer NOT NULL DEFAULT 1
+  );
+  CREATE TABLE evaluation_items (
+    id text PRIMARY KEY, company_id text NOT NULL, evaluation_id text NOT NULL DEFAULT '',
+    kpi_item_id text NOT NULL DEFAULT '', category_id text, item_name text NOT NULL DEFAULT '',
+    points real NOT NULL DEFAULT 0, max_points real NOT NULL DEFAULT 0
   );
 `;
 
@@ -297,6 +336,133 @@ describe("制度設定の項目を完全に消す", () => {
     await expect(
       deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorGuideline", id: "bg_a" } }),
     ).rejects.toMatchObject({ message: expect.stringContaining("下書きのアンケート") });
+  });
+});
+
+describe("KPIカテゴリを完全に消す", () => {
+  it("どのKPI項目でも一度も使っていないカテゴリは消せる", async () => {
+    sqlite.exec(`INSERT INTO kpi_categories (id, company_id, code, name) VALUES ('cat_free', 'cmp_a', 'cat_free', '品質');`);
+
+    const result = await deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiCategory", id: "cat_free" } });
+
+    expect(result.message).toContain("品質");
+    expect(rows("SELECT id FROM kpi_categories")).toEqual([]);
+  });
+
+  it("KPI項目の分類として使われているカテゴリは消せない", async () => {
+    sqlite.exec(`
+      INSERT INTO kpi_categories (id, company_id, code, name) VALUES ('cat_used', 'cmp_a', 'cat_used', '営業');
+      INSERT INTO kpi_items (id, company_id, name, category_id) VALUES ('ki_1', 'cmp_a', '売上達成率', 'cat_used');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiCategory", id: "cat_used" } }),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("完全には消せません") });
+    expect(rows("SELECT id FROM kpi_categories")).toEqual([{ id: "cat_used" }]);
+  });
+
+  it("評価セットで使われているカテゴリは消せない", async () => {
+    sqlite.exec(`
+      INSERT INTO kpi_categories (id, company_id, code, name) VALUES ('cat_scheme', 'cmp_a', 'cat_scheme', '育成');
+      INSERT INTO scheme_items (id, company_id, category_id) VALUES ('si_1', 'cmp_a', 'cat_scheme');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiCategory", id: "cat_scheme" } }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("確定済みの評価の記録で使われているカテゴリは消せない", async () => {
+    sqlite.exec(`
+      INSERT INTO kpi_categories (id, company_id, code, name) VALUES ('cat_eval', 'cmp_a', 'cat_eval', '安全');
+      INSERT INTO evaluation_items (id, company_id, category_id) VALUES ('ei_1', 'cmp_a', 'cat_eval');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiCategory", id: "cat_eval" } }),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("評価の記録") });
+  });
+
+  it("他社のカテゴリは消せない（見つからない扱いにする）", async () => {
+    sqlite.exec(`INSERT INTO kpi_categories (id, company_id, code, name) VALUES ('cat_a', 'cmp_a', 'cat_a', '既存');`);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_b", viewerId: "u_test", body: { kind: "kpiCategory", id: "cat_a" } }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(rows("SELECT id FROM kpi_categories")).toEqual([{ id: "cat_a" }]);
+  });
+});
+
+describe("KPI項目を完全に消す", () => {
+  it("一度も使っていない項目は消せる（ランク基準・元の配点表・設問定義も一緒に消える）", async () => {
+    sqlite.exec(`
+      INSERT INTO kpi_items (id, company_id, no, name) VALUES ('ki_free', 'cmp_a', 9, '新規契約獲得率');
+      INSERT INTO kpi_rank_criteria (id, company_id, kpi_item_id, rank) VALUES ('krc_1', 'cmp_a', 'ki_free', 'A');
+      INSERT INTO kpi_reference_points (id, company_id, kpi_item_id, point_group, rank)
+        VALUES ('krp_1', 'cmp_a', 'ki_free', 'Chief', 'A');
+      INSERT INTO kpi_questions (id, company_id, kpi_item_id, question_key) VALUES ('kq_1', 'cmp_a', 'ki_free', 'q1_1');
+    `);
+
+    const result = await deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiItem", id: "ki_free" } });
+
+    expect(result.message).toContain("新規契約獲得率");
+    expect(rows("SELECT id FROM kpi_items")).toEqual([]);
+    expect(rows("SELECT id FROM kpi_rank_criteria")).toEqual([]);
+    expect(rows("SELECT id FROM kpi_reference_points")).toEqual([]);
+    expect(rows("SELECT id FROM kpi_questions")).toEqual([]);
+  });
+
+  it("アンケートの設問になっている項目は消せない", async () => {
+    sqlite.exec(`
+      INSERT INTO kpi_items (id, company_id, no, name) VALUES ('ki_form', 'cmp_a', 10, '単価率');
+      INSERT INTO forms (id, company_id, title) VALUES ('f_ki', 'cmp_a', '2026年上期（Chief）');
+      INSERT INTO form_questions (id, company_id, form_id, title, kpi_item_id) VALUES ('fq_ki', 'cmp_a', 'f_ki', '単価率', 'ki_form');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiItem", id: "ki_form" } }),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("完全には消せません") });
+    expect(rows("SELECT id FROM kpi_items")).toEqual([{ id: "ki_form" }]);
+  });
+
+  it("評価セットで選ばれている項目は消せない", async () => {
+    sqlite.exec(`
+      INSERT INTO kpi_items (id, company_id, no, name) VALUES ('ki_scheme', 'cmp_a', 11, '利益率');
+      INSERT INTO scheme_items (id, company_id, kpi_item_id) VALUES ('si_ki', 'cmp_a', 'ki_scheme');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiItem", id: "ki_scheme" } }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("確定済みの評価の記録で使われている項目は消せない", async () => {
+    sqlite.exec(`
+      INSERT INTO kpi_items (id, company_id, no, name) VALUES ('ki_eval', 'cmp_a', 12, '加算取得率');
+      INSERT INTO evaluation_items (id, company_id, kpi_item_id) VALUES ('ei_ki', 'cmp_a', 'ki_eval');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiItem", id: "ki_eval" } }),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("評価の記録") });
+  });
+
+  it("固定枠（等級要件達成率）は消せない", async () => {
+    sqlite.exec(`INSERT INTO kpi_items (id, company_id, no, name, is_fixed_slot) VALUES ('ki_fixed', 'cmp_a', 1, '等級要件達成率', 1);`);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiItem", id: "ki_fixed" } }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(rows("SELECT id FROM kpi_items")).toEqual([{ id: "ki_fixed" }]);
+  });
+
+  it("他社の項目は消せない（見つからない扱いにする）", async () => {
+    sqlite.exec(`INSERT INTO kpi_items (id, company_id, no, name) VALUES ('ki_other', 'cmp_a', 13, '既存項目');`);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_b", viewerId: "u_test", body: { kind: "kpiItem", id: "ki_other" } }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(rows("SELECT id FROM kpi_items")).toEqual([{ id: "ki_other" }]);
   });
 });
 

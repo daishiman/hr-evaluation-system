@@ -105,3 +105,54 @@ export function deleteConfirmText(name: string, alsoRemoved?: string): string {
 
 /** 消せる状態の項目に付けるボタンの文言（全画面で同じにする）。 */
 export const DELETE_LABEL = "完全に消す";
+
+/**
+ * KPIカテゴリを消せない理由。
+ *
+ * 観点・要件と違って「一度でもアンケートに出した」ではなく「KPI項目の分類として
+ * すでに使われている」が線引きになるため、文言だけ別に持つ。判定そのもの
+ * （使っているかどうかの数え方）は master-usage.ts の kpiCategoryUsage が正本。
+ */
+export const KPI_CATEGORY_BLOCKED_WHY = "すでに使われているカテゴリは、完全には消せません。";
+export const KPI_CATEGORY_BLOCKED_KEEP = "確定済みの評価と、すでに組んだ評価セットを変えないためです。";
+
+export function kpiCategoryBlockedReason(usedBy: readonly string[]): string | null {
+  if (usedBy.length === 0) return null;
+  return `${KPI_CATEGORY_BLOCKED_WHY}使用中：${placesText(usedBy)}。`;
+}
+
+/** KPIカテゴリを消す前の確認文。 */
+export function kpiCategoryDeleteConfirmText(name: string): string {
+  return `「${name}」を完全に消します。元に戻せません。どのKPI項目でも一度も使われていないカテゴリです。`;
+}
+
+/**
+ * KPI項目そのものを消せない理由。
+ *
+ * カテゴリと同じ「使ったら消せない」だが、KPI項目は最初から `deleteBlockedReason` と
+ * 同じ「一度でもアンケートに出したか」を線引きに使えるため、文言だけこちらに合わせる。
+ */
+export const KPI_ITEM_BLOCKED_WHY = "一度でも使われたKPI項目は、完全には消せません。";
+export const KPI_ITEM_BLOCKED_KEEP = "公開したアンケートと確定済みの評価、組んだ評価セットを変えないためです。";
+
+export function kpiItemBlockedReason(usedBy: readonly string[]): string | null {
+  if (usedBy.length === 0) return null;
+  return `${KPI_ITEM_BLOCKED_WHY}使用中：${placesText(usedBy)}。`;
+}
+
+/** KPI項目を消す前の確認文。 */
+export function kpiItemDeleteConfirmText(name: string): string {
+  return `「${name}」を完全に消します。元に戻せません。一度もアンケート・評価セットで使われていない項目です。`;
+}
+
+/**
+ * KPI項目のうち、使い始めたあとに直すと計算・過去の意味が変わりうる項目
+ * （単位・向き・実績区分・分類・金銭系フラグ）。
+ *
+ * 一度でも使われた項目は、この列を直接上書きしない。名前・計算式の説明文・
+ * 備考・仮フラグ・使用可否だけは、使用中でも直せる（表示や注記であり、
+ * 判定ロジックには関わらないため）。
+ */
+export const KPI_ITEM_STRUCTURAL_FIELDS = ["unit", "direction", "measureType", "categoryId", "isMonetary"] as const;
+
+export const KPI_ITEM_LOCKED_NOTE = "使用中のため、単位・向き・実績区分・分類・金銭系の扱いは変更できません。";

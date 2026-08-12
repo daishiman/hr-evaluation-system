@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { StalledEvaluationsNotice } from "@/components/StalledEvaluationsNotice";
+import { SelfLockedEvaluationsNotice } from "@/components/SelfLockedEvaluationsNotice";
 import { Badge, Bar, Card, CardHead, DefList, Disclosure, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 import type { StalledRow } from "@/lib/domain/stalled-evaluations";
+import type { SelfLockedRow } from "@/lib/domain/self-locked-evaluations";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export interface AdminDashboardSnapshot {
@@ -214,10 +216,13 @@ const REVIEW_LABEL: Record<AdminDashboardModel["reviewState"], string> = {
 export function AdminDashboard({
   snapshot,
   stalled = [],
+  selfLocked = [],
 }: {
   snapshot: AdminDashboardSnapshot;
   /** 締め切った期間に残っている、確定されていない評価（自社の全員分） */
   stalled?: StalledRow[];
+  /** 頼める上長がいないまま確定できていない評価（自社の全員分。期の状態は問わない） */
+  selfLocked?: SelfLockedRow[];
 }) {
   const model = buildAdminDashboardModel(snapshot);
   const unfinalized = Math.max(0, snapshot.evaluationCount - snapshot.finalizedEvaluationCount);
@@ -238,6 +243,18 @@ export function AdminDashboard({
             <span id="admin-stalled-heading">締め切った期間に残っている評価</span>
           </SectionHeading>
           <StalledEvaluationsNotice rows={stalled} limit={8} moreHref="/admin/cycles" />
+        </section>
+      )}
+
+      {/* こちらは締め切りとは無関係。対象者本人が自分の評価を確定できず、
+          かつ上長も設定されていない・本人自身になっているため、頼める先が記録の上に無い分。
+          会社の管理者自身がこの状態にあることもある（管理者が1人だけの会社など）。 */}
+      {selfLocked.length > 0 && (
+        <section aria-labelledby="admin-self-locked-heading">
+          <SectionHeading>
+            <span id="admin-self-locked-heading">確定を頼まれている評価</span>
+          </SectionHeading>
+          <SelfLockedEvaluationsNotice rows={selfLocked} limit={8} />
         </section>
       )}
 

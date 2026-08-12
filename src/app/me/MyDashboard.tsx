@@ -34,7 +34,8 @@ export interface MyResultSummary {
   promotionEligible: boolean;
 }
 
-function FormActionCard({ form, primary }: { form: MyActionForm; primary: boolean }) {
+/** マネージャー・会社管理者のホーム（自分自身の未提出アンケート）でも同じ見え方にするため公開する。 */
+export function FormActionCard({ form, primary }: { form: MyActionForm; primary: boolean }) {
   return (
     <Card className={`card-pad${primary ? " hero-tint" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">

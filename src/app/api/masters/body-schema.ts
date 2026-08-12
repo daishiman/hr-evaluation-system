@@ -166,6 +166,45 @@ export const bodySchema = z.discriminatedUnion("kind", [
     id: z.string().min(1),
     coefficient: z.number().min(0).max(5),
   }),
+  z.object({
+    /** KPIカテゴリの追加。呼び名だけを受け取る（分類コードはサーバー側で自動採番する）。 */
+    kind: z.literal("kpiCategoryCreate"),
+    name: z.string().min(1).max(60),
+  }),
+  z.object({
+    /** KPI項目そのものの追加。No.は自動採番（既存の最大値+1）、固定枠は作れない。 */
+    kind: z.literal("kpiItemCreate"),
+    name: z.string().min(1).max(80),
+    unit: z.string().min(1).max(10),
+    direction: z.enum(["higher", "lower"]),
+    measureType: z.string().min(1).max(40),
+    categoryId: z.string().min(1).nullable().optional(),
+    formula: z.string().max(300).nullable().optional(),
+    formulaNote: z.string().max(300).nullable().optional(),
+    remarks: z.string().max(300).nullable().optional(),
+    isMonetary: z.boolean().optional(),
+    isProvisional: z.boolean().optional(),
+  }),
+  z.object({
+    /**
+     * KPI項目の編集。使用中（アンケート・評価セット・評価の記録のどれかに登場済み）の
+     * 項目は、単位・向き・実績区分・分類・金銭系フラグをサーバー側で必ず無視する
+     * （画面から送られてきても apply-master-update.ts 側で弾く）。
+     */
+    kind: z.literal("kpiItemUpdate"),
+    id: z.string().min(1),
+    name: z.string().min(1).max(80).optional(),
+    unit: z.string().min(1).max(10).optional(),
+    direction: z.enum(["higher", "lower"]).optional(),
+    measureType: z.string().min(1).max(40).optional(),
+    categoryId: z.string().min(1).nullable().optional(),
+    formula: z.string().max(300).nullable().optional(),
+    formulaNote: z.string().max(300).nullable().optional(),
+    remarks: z.string().max(300).nullable().optional(),
+    isMonetary: z.boolean().optional(),
+    isProvisional: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+  }),
 ]);
 
 export type MasterUpdateBody = z.infer<typeof bodySchema>;
@@ -173,12 +212,19 @@ export type MasterUpdateBody = z.infer<typeof bodySchema>;
 /**
  * 制度マスタの削除（完全に消す）の入力スキーマ。
  *
- * 消してよいのは、利用者が自分で足せる4種類だけ。等級・事業所・評価期間のように
+ * 消してよいのは、利用者が自分で足せる6種類だけ。等級・事業所・評価期間のように
  * 過去の記録がぶら下がるものは、ここに入れない（消せる形をそもそも作らない）。
  * 実際に消してよいかは、参照件数を数えたうえでサーバー側で判定する。
  */
 export const deleteBodySchema = z.object({
-  kind: z.enum(["behaviorBandSet", "behaviorGuideline", "gradeRequirement", "promotionRequirement"]),
+  kind: z.enum([
+    "behaviorBandSet",
+    "behaviorGuideline",
+    "gradeRequirement",
+    "promotionRequirement",
+    "kpiCategory",
+    "kpiItem",
+  ]),
   id: z.string().min(1),
 });
 
