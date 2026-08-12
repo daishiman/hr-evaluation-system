@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as s from "@/db/schema";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
 import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
@@ -24,7 +24,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { buildQuestionRows } = await import("@/lib/form-build");
+const { buildFormDrafts, buildQuestionRows } = await import("@/lib/form-build");
 
 beforeEach(() => {
   current = createTestDatabase();
@@ -76,5 +76,49 @@ describe("等級区分がManagerでも、行動指針の帯域を割り当てれ
     });
 
     expect(rows.filter((r) => r.section === "behavior")).toHaveLength(0);
+  });
+});
+
+describe("アンケート下書きの原子性と版競合", () => {
+  it("同じサイクル・等級の同時作成は連番にして両方成功する", async () => {
+    await seedCompany(current);
+    const before = await current.db
+      .select({ version: s.forms.version })
+      .from(s.forms)
+      .where(and(eq(s.forms.cycleId, IDS.cycle), eq(s.forms.gradeId, IDS.gradeFrom)));
+    const nextVersion = Math.max(0, ...before.map((row) => row.version)) + 1;
+    const input = {
+      companyId: IDS.company,
+      cycleId: IDS.cycle,
+      gradeId: IDS.gradeFrom,
+    } as const;
+
+    const [first, second] = await Promise.all([buildFormDrafts([input]), buildFormDrafts([input])]);
+    expect([first[0].version, second[0].version].sort()).toEqual([nextVersion, nextVersion + 1]);
+
+    const saved = await current.db
+      .select({ version: s.forms.version })
+      .from(s.forms)
+      .where(and(eq(s.forms.cycleId, IDS.cycle), eq(s.forms.gradeId, IDS.gradeFrom)));
+    expect(saved.map((row) => row.version).sort()).toEqual([
+      ...before.map((row) => row.version),
+      nextVersion,
+      nextVersion + 1,
+    ].sort());
+  });
+
+  it("複数等級の準備中に1件でも失敗したら、先の等級も保存しない", async () => {
+    await seedCompany(current);
+    const before = await current.db.select({ id: s.forms.id }).from(s.forms);
+
+    await expect(
+      buildFormDrafts([
+        { companyId: IDS.company, cycleId: IDS.cycle, gradeId: IDS.gradeFrom },
+        { companyId: IDS.company, cycleId: IDS.cycle, gradeId: "grade_missing" },
+      ]),
+    ).rejects.toThrow("等級が見つかりませんでした");
+
+    const saved = await current.db.select({ id: s.forms.id }).from(s.forms);
+    expect(saved).toHaveLength(before.length);
   });
 });

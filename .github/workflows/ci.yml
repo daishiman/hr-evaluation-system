@@ -76,6 +76,10 @@ jobs:
       - name: 依存関係のインストール（${{ steps.pm.outputs.name }}）
         run: ${{ steps.pm.outputs.install }}
 
+      # current/history の混在、安定IDの重複、主要文書のリンク切れを早期に止める。
+      - name: 文書 drift 検査
+        run: ${{ steps.pm.outputs.run }} check:docs
+
       # Cloudflare の環境変数の型定義（cloudflare-env.d.ts）を作る。
       # このファイルは .gitignore されているため、CI のまっさらなチェックアウトには存在しない。
       # 生成せずに typecheck すると「Property 'DB' does not exist on type 'CloudflareEnv'」で必ず落ちる。

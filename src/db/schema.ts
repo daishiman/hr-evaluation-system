@@ -1164,15 +1164,14 @@ export const profileFieldPolicies = sqliteTable(
   (t) => [uniqueIndex("uq_pfp_company_field").on(t.companyId, t.field)],
 );
 
-/* ───────────────────────── 制度マスタ イベントストア ─────────────────────────
+/* ─────────────────────── 制度マスタ 変更監査ジャーナル ───────────────────────
  *
  * 等級・等級要件・昇格要件・行動指針・KPIマスタ・昇給ルール・KGI係数など、
  * 「制度マスタ」に対する変更はすべてここに不変の行として積む。
  *
- * 各テーブル（grades / grade_requirements / kpi_rank_criteria …）は
- * 「現在の状態のスナップショット」であり続ける（既存の画面・確定/再開フローは
- * このスナップショットを読むため、挙動を変えない）。真実の記録はこのイベント列であり、
- * スナップショットは常にイベントの再生結果と一致する。
+ * 各テーブル（grades / grade_requirements / kpi_rank_criteria …）が現在状態の正本である。
+ * この列は変更履歴の表示と障害調査を補助する append-only の監査記録であり、状態復元の
+ * 正本ではない。現状は本体更新と同じD1 batchで書いていないため、完全性を仮定しない。
  *
  * 1件のイベントは「誰が・いつ・どの実体の・どの種別の変更で・どの列がどう変わったか」を持つ。
  * before/after は変更のあった列だけを持つ差分（丸ごとの複製はしない）。
@@ -1195,7 +1194,7 @@ export const constitutionEvents = sqliteTable(
     beforeJson: text("before_json"),
     /** 変更後の値（変わった列だけ、または削除時は消えた行の全体）。 */
     afterJson: text("after_json"),
-    /** 同じ実体の中での順序（同一ミリ秒でも並びを一意にするため）。 */
+    /** 同じ実体の中での表示順。現状はDB一意制約を持たないため、復元順序の正本にはしない。 */
     seq: integer("seq").notNull(),
     occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },

@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { classifyVersionedItems, VersionedMasterSections, type VersionedMasterItem } from "./VersionedMasterSections";
+import { VersionedMasterSections, type VersionedMasterItem } from "./VersionedMasterSections";
 
 type Row = VersionedMasterItem & { seq: number };
 
@@ -12,13 +12,6 @@ const rows: Row[] = [
 ];
 
 describe("版を持つ制度マスタの共通表示", () => {
-  it("後続がない行だけを現在版にし、履歴から現在版までたどる", () => {
-    const result = classifyVersionedItems(rows);
-
-    expect(result.current.map((row) => row.id)).toEqual(["current", "stopped"]);
-    expect(result.history).toEqual([{ row: rows[0], currentId: "current" }]);
-  });
-
   it("停止中と履歴を別Disclosureに分け、再開できない理由を関連付ける", () => {
     const html = renderToStaticMarkup(
       createElement(VersionedMasterSections<Row>, {
@@ -60,7 +53,7 @@ describe("版を持つ制度マスタの共通表示", () => {
     expect(html).toContain('aria-describedby="promotion-g1-report-old-restore-reason"');
   });
 
-  it("参照先が一覧に無いpreviousVersionIdを誤って履歴にしない", () => {
+  it("参照先が一覧に無い項目も現在版として表示する", () => {
     const orphan: Row = {
       id: "visible",
       text: "表示できる現在版",
@@ -69,6 +62,18 @@ describe("版を持つ制度マスタの共通表示", () => {
       previousVersionId: "not-loaded",
     };
 
-    expect(classifyVersionedItems([orphan])).toEqual({ current: [orphan], history: [] });
+    const html = renderToStaticMarkup(
+      createElement(VersionedMasterSections<Row>, {
+        sectionId: "orphan",
+        rows: [orphan],
+        busy: false,
+        onReactivate: vi.fn(),
+        onRestoreContent: vi.fn(),
+      }),
+    );
+
+    expect(html).toContain("今後使わない項目はありません。");
+    expect(html).toContain("変更履歴");
+    expect(html).not.toContain("過去版");
   });
 });

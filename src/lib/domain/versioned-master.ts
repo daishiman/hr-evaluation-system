@@ -11,6 +11,12 @@ export interface VersionedMasterRow {
   previousVersionId?: string | null;
 }
 
+export interface HistoricalVersionRow<T extends VersionedMasterRow> {
+  row: T;
+  /** 履歴から新版を作るとき、新版の直前になる現在版。 */
+  currentId: string;
+}
+
 /** 後続版を持つID。ここに無い行が、その系譜の現在版になる。 */
 export function predecessorIds<T extends VersionedMasterRow>(rows: readonly T[]): Set<string> {
   return new Set(rows.flatMap((row) => (row.previousVersionId ? [row.previousVersionId] : [])));
@@ -23,7 +29,45 @@ export function currentVersionRows<T extends VersionedMasterRow>(rows: readonly 
 }
 
 export function isCurrentVersion<T extends VersionedMasterRow>(row: T, rows: readonly T[]): boolean {
-  return !rows.some((candidate) => candidate.previousVersionId === row.id);
+  const scope = rows.some((candidate) => candidate.id === row.id) ? rows : [...rows, row];
+  return currentVersionRows(scope).some((candidate) => candidate.id === row.id);
+}
+
+/**
+ * 各系譜の現在版と履歴を、同じ現在版判定で分ける。
+ *
+ * current の判定は currentVersionRows だけが正本。履歴側は、その補集合から
+ * 後続をたどって現在版IDを求める。親が一覧に無い orphan は画面から
+ * 消さないため現在版とし、壊れた cycle も無限ループせず履歴として返す。
+ */
+export function classifyVersionedRows<T extends VersionedMasterRow>(rows: readonly T[]): {
+  current: T[];
+  history: HistoricalVersionRow<T>[];
+} {
+  const current = currentVersionRows(rows);
+  const currentIds = new Set(current.map((row) => row.id));
+  const ids = new Set(rows.map((row) => row.id));
+  const successorByPreviousId = new Map<string, T>();
+
+  for (const row of rows) {
+    if (row.previousVersionId && ids.has(row.previousVersionId)) {
+      successorByPreviousId.set(row.previousVersionId, row);
+    }
+  }
+
+  const history = rows
+    .filter((row) => !currentIds.has(row.id))
+    .map((row) => {
+      let latest = row;
+      const visited = new Set<string>();
+      while (successorByPreviousId.has(latest.id) && !visited.has(latest.id)) {
+        visited.add(latest.id);
+        latest = successorByPreviousId.get(latest.id)!;
+      }
+      return { row, currentId: latest.id };
+    });
+
+  return { current, history };
 }
 
 /** 系譜の起点（previous_version_id が null の版）のID。イベントストアの entity_id に使う安定キー。 */

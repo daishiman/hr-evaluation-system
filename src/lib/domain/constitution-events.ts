@@ -60,11 +60,13 @@ function diffColumns(before: Snapshot | null, after: Snapshot | null): [Snapshot
 }
 
 /**
- * 制度マスタ1件の変更を、不変のイベントとして記録する。
+ * 制度マスタ1件の変更を、append-only の監査記録として残す。
  *
  * 呼び出し側は「変更前の全体」「変更後の全体」を渡すだけでよい。実際に変わった列だけを
  * このなかで抜き出して保存する（丸ごとの複製は持たない）。before/after のどちらも
  * 変わっていない場合（created/deleted を除く）は、意味のない行を増やさないため何もしない。
+ * 現在状態の正本は各制度マスタテーブルであり、この関数の記録を状態復元の正本にしない。
+ * 呼び出し側の本体更新とこのINSERTは現状同じD1 batchではないため、原子性も保証しない。
  */
 export async function recordConstitutionEvent(args: {
   db: Db;
@@ -112,11 +114,10 @@ export async function recordConstitutionEvent(args: {
 }
 
 /**
- * イベント列を時系列に再生し、現在状態を導出する。
+ * 監査記録を時系列に重ね、記録上の状態を診断用に導出する。
  *
- * 差分イベントを古い順に重ね合わせるだけで、対象の「いま」の内容を組み立てられることを
- * 保証する（＝スナップショットのテーブルを読まずに、イベントだけから状態を再構築できる）。
- * 最後のイベントが `deleted` なら、その実体はもう存在しないとして null を返す。
+ * 監査欠落や同一seqの競合があり得るため、返り値を現在状態の正本や復旧処理には使わない。
+ * 最後の記録が `deleted` なら、記録上は存在しないものとして null を返す。
  */
 export async function replayConstitutionEntity(args: {
   db: Db;
