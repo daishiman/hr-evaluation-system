@@ -17,18 +17,27 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     expect(behaviorPage).not.toContain('BAND_LABEL, BehaviorGuidelineEditor } from "@/components/BehaviorGuidelineEditor"');
   });
 
-  it("等級ごとの現在値と選択欄を同じカードに置く", () => {
+  it("等級ごとの現在値と選択欄を同じカードに置く（等級タブで1件ずつ編集する）", () => {
     const page = read("src/app/admin/behavior/page.tsx");
     const editor = read("src/components/BehaviorBandAssignmentEditor.tsx");
 
     expect(page).toContain("<BehaviorBandAssignmentEditor");
     expect(page).not.toContain("<CardRow");
-    expect(editor).toContain("grades.map((grade)");
-    expect(editor).toContain("drafts[grade.id]");
+    /* 2026-08-12、「昇格の条件・要件」画面と同じ等級タブ切り替えに揃えた。
+       縦に全等級を並べる代わりに、選ばれた1等級分だけを描く。 */
+    expect(page).toMatch(/<BehaviorBandAssignmentEditor\s+key=\{selectedGrade\.id\}/);
+    expect(editor).toContain("grade: BehaviorAssignmentGradeRow");
     expect(editor).toContain("この等級に出す行動指針");
     expect(editor).toContain("行動指針を出さない");
     expect(editor).toContain("現在値へ戻す");
     expect(editor).toContain("いまは選べません");
+  });
+
+  it("行動指針画面も等級タブの切り替えで下書き状態を作り直す（昇格画面と同じ作法）", () => {
+    const page = read("src/app/admin/behavior/page.tsx");
+    expect(page).toContain("等級を選ぶ");
+    expect(page).toMatch(/href=\{`\/admin\/behavior\?grade=\$\{g\.id\}/);
+    expect(page).toContain('<span className="tag">編集中の等級');
   });
 
   it("基準セットは会社の設定を正本にし、コードに固定しない", () => {
