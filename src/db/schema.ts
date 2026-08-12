@@ -1,4 +1,13 @@
-import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import {
+  sqliteTable,
+  text,
+  integer,
+  real,
+  index,
+  uniqueIndex,
+  type AnySQLiteColumn,
+} from "drizzle-orm/sqlite-core";
 
 /**
  * 人事評価管理システム スキーマ（Cloudflare D1 / SQLite）
@@ -173,10 +182,18 @@ export const gradeRequirements = sqliteTable(
     seq: integer("seq").notNull(),
     text: text("text").notNull(),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    /** 本文を変更した直前の版。null は既存データを含む系譜の起点 */
+    previousVersionId: text("previous_version_id").references((): AnySQLiteColumn => gradeRequirements.id),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("idx_greq_grade").on(t.gradeId), index("idx_greq_company").on(t.companyId)],
+  (t) => [
+    index("idx_greq_grade").on(t.gradeId),
+    index("idx_greq_company").on(t.companyId),
+    uniqueIndex("uq_greq_previous_version")
+      .on(t.previousVersionId)
+      .where(sql`${t.previousVersionId} is not null`),
+  ],
 );
 
 /** 昇格要件（受講後報告書提出＝必須ゲート／独学後テスト） */
@@ -194,10 +211,17 @@ export const promotionRequirements = sqliteTable(
     /** true なら「満たさないと次の等級に上がれない」必須ゲート */
     isGate: integer("is_gate", { mode: "boolean" }).notNull().default(true),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    /** 本文・遷移名・必須判定を変更した直前の版 */
+    previousVersionId: text("previous_version_id").references((): AnySQLiteColumn => promotionRequirements.id),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("idx_promreq_grade").on(t.gradeId)],
+  (t) => [
+    index("idx_promreq_grade").on(t.gradeId),
+    uniqueIndex("uq_promreq_previous_version")
+      .on(t.previousVersionId)
+      .where(sql`${t.previousVersionId} is not null`),
+  ],
 );
 
 /* ───────────────────────── 行動指針 ───────────────────────── */

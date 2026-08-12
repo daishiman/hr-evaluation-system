@@ -13,6 +13,7 @@ import {
 } from "@/lib/queries";
 import { requireRole } from "@/lib/session";
 import { SetupGuide, type SetupStep } from "./SetupGuide";
+import { currentVersionRows } from "@/lib/domain/versioned-master";
 
 export const dynamic = "force-dynamic";
 
@@ -49,10 +50,10 @@ export default async function AdminSetupPage() {
   ]);
 
   const activeGrades = grades.filter((grade) => grade.isActive);
-  const activeRequirements = gradeRequirements.filter((requirement) => requirement.isActive);
+  const activeRequirements = currentVersionRows(gradeRequirements).filter((requirement) => requirement.isActive);
   const supportCount = activeRequirements.filter((requirement) => requirement.category === "support").length;
   const operationCount = activeRequirements.filter((requirement) => requirement.category === "operation").length;
-  const promotionCount = promotionRequirements.filter((requirement) => requirement.isActive).length;
+  const promotionCount = currentVersionRows(promotionRequirements).filter((requirement) => requirement.isActive).length;
 
   const activeGuidelines = behaviorGuidelines.filter((guideline) => guideline.isActive);
   const behaviorLevelCount = activeGuidelines.reduce((sum, guideline) => sum + guideline.levels.length, 0);

@@ -8,6 +8,7 @@ import {
   scopeEvaluationRow,
 } from "@/lib/domain/evaluation-view";
 import { rangeLabel } from "@/lib/domain/scoring";
+import { currentVersionRows } from "@/lib/domain/versioned-master";
 
 /**
  * 読み取り。すべての関数が company_id での絞り込みを前提にする。
@@ -40,8 +41,12 @@ export async function getTemplateSummary() {
   return {
     company: co,
     grades: await count(s.grades),
-    gradeRequirements: await count(s.gradeRequirements),
-    promotionRequirements: await count(s.promotionRequirements),
+    gradeRequirements: currentVersionRows(
+      await db.select().from(s.gradeRequirements).where(eq(s.gradeRequirements.companyId, co.id)),
+    ).length,
+    promotionRequirements: currentVersionRows(
+      await db.select().from(s.promotionRequirements).where(eq(s.promotionRequirements.companyId, co.id)),
+    ).length,
     kpiItems: await count(s.kpiItems),
     rankCriteria: await count(s.kpiRankCriteria),
     kpiQuestions: await count(s.kpiQuestions),

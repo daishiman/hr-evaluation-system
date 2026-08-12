@@ -1,6 +1,7 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { schema as s } from "@/lib/db";
 import type { getDb } from "@/lib/db";
+import { versionFamilyIds, type VersionedMasterRow } from "@/lib/domain/versioned-master";
 
 type Db = Awaited<ReturnType<typeof getDb>>;
 
@@ -19,7 +20,8 @@ type Db = Awaited<ReturnType<typeof getDb>>;
 /** 項目のid → 使っている場所の呼び名。載っていない id は「どこでも使っていない」。 */
 export type UsageMap = Record<string, string[]>;
 
-const EVALUATION_LABEL = "確定済みの評価";
+/* evaluation_* は確認中の評価にも作られる。確定済みだけと誤解させない。 */
+const EVALUATION_LABEL = "評価の記録";
 
 function add(map: UsageMap, key: string | null, label: string) {
   if (!key) return;
@@ -28,6 +30,19 @@ function add(map: UsageMap, key: string | null, label: string) {
 }
 
 const formLabel = (title: string) => `アンケート「${title}」`;
+
+/** 版ごとの参照を、同じ論理項目の系譜全体へ広げる。 */
+function usageByVersionFamily<T extends VersionedMasterRow>(rows: T[], exact: UsageMap): UsageMap {
+  const out: UsageMap = {};
+  for (const row of rows) {
+    const labels: string[] = [];
+    for (const id of versionFamilyIds(rows, row.id)) {
+      for (const label of exact[id] ?? []) if (!labels.includes(label)) labels.push(label);
+    }
+    if (labels.length > 0) out[row.id] = labels;
+  }
+  return out;
+}
 
 /** 行動指針の観点の使用状況 */
 export async function behaviorGuidelineUsage(db: Db, companyId: string): Promise<UsageMap> {
@@ -49,38 +64,44 @@ export async function behaviorGuidelineUsage(db: Db, companyId: string): Promise
 
 /** 等級要件の使用状況 */
 export async function gradeRequirementUsage(db: Db, companyId: string): Promise<UsageMap> {
-  const inForms = await db
-    .select({ key: s.formQuestions.gradeRequirementId, title: s.forms.title })
-    .from(s.formQuestions)
-    .innerJoin(s.forms, eq(s.formQuestions.formId, s.forms.id))
-    .where(and(eq(s.formQuestions.companyId, companyId), isNotNull(s.formQuestions.gradeRequirementId)));
-  const inEvaluations = await db
-    .select({ key: s.evaluationRequirements.gradeRequirementId })
-    .from(s.evaluationRequirements)
-    .where(and(eq(s.evaluationRequirements.companyId, companyId), isNotNull(s.evaluationRequirements.gradeRequirementId)));
+  const [rows, inForms, inEvaluations] = await Promise.all([
+    db.select().from(s.gradeRequirements).where(eq(s.gradeRequirements.companyId, companyId)),
+    db
+      .select({ key: s.formQuestions.gradeRequirementId, title: s.forms.title })
+      .from(s.formQuestions)
+      .innerJoin(s.forms, eq(s.formQuestions.formId, s.forms.id))
+      .where(and(eq(s.formQuestions.companyId, companyId), isNotNull(s.formQuestions.gradeRequirementId))),
+    db
+      .select({ key: s.evaluationRequirements.gradeRequirementId })
+      .from(s.evaluationRequirements)
+      .where(and(eq(s.evaluationRequirements.companyId, companyId), isNotNull(s.evaluationRequirements.gradeRequirementId))),
+  ]);
 
-  const map: UsageMap = {};
-  for (const row of inForms) add(map, row.key, formLabel(row.title));
-  for (const row of inEvaluations) add(map, row.key, EVALUATION_LABEL);
-  return map;
+  const exact: UsageMap = {};
+  for (const row of inForms) add(exact, row.key, formLabel(row.title));
+  for (const row of inEvaluations) add(exact, row.key, EVALUATION_LABEL);
+  return usageByVersionFamily(rows, exact);
 }
 
 /** 昇格要件の使用状況 */
 export async function promotionRequirementUsage(db: Db, companyId: string): Promise<UsageMap> {
-  const inForms = await db
-    .select({ key: s.formQuestions.promotionRequirementId, title: s.forms.title })
-    .from(s.formQuestions)
-    .innerJoin(s.forms, eq(s.formQuestions.formId, s.forms.id))
-    .where(and(eq(s.formQuestions.companyId, companyId), isNotNull(s.formQuestions.promotionRequirementId)));
-  const inEvaluations = await db
-    .select({ key: s.evaluationGates.promotionRequirementId })
-    .from(s.evaluationGates)
-    .where(and(eq(s.evaluationGates.companyId, companyId), isNotNull(s.evaluationGates.promotionRequirementId)));
+  const [rows, inForms, inEvaluations] = await Promise.all([
+    db.select().from(s.promotionRequirements).where(eq(s.promotionRequirements.companyId, companyId)),
+    db
+      .select({ key: s.formQuestions.promotionRequirementId, title: s.forms.title })
+      .from(s.formQuestions)
+      .innerJoin(s.forms, eq(s.formQuestions.formId, s.forms.id))
+      .where(and(eq(s.formQuestions.companyId, companyId), isNotNull(s.formQuestions.promotionRequirementId))),
+    db
+      .select({ key: s.evaluationGates.promotionRequirementId })
+      .from(s.evaluationGates)
+      .where(and(eq(s.evaluationGates.companyId, companyId), isNotNull(s.evaluationGates.promotionRequirementId))),
+  ]);
 
-  const map: UsageMap = {};
-  for (const row of inForms) add(map, row.key, formLabel(row.title));
-  for (const row of inEvaluations) add(map, row.key, EVALUATION_LABEL);
-  return map;
+  const exact: UsageMap = {};
+  for (const row of inForms) add(exact, row.key, formLabel(row.title));
+  for (const row of inEvaluations) add(exact, row.key, EVALUATION_LABEL);
+  return usageByVersionFamily(rows, exact);
 }
 
 /**

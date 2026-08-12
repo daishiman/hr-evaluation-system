@@ -19,7 +19,7 @@ describe("再集計の判定で見張っている表", () => {
     }
   });
 
-  it("見張る対象が減っていない（基準・配点・計算式・要件・係数）", () => {
+  it("再計算で結果が変わる基準・配点・計算式・係数を見張る", () => {
     const labels = WATCHED.map((w) => w.label);
     for (const must of [
       "KPIのランク基準（A〜Eの線引き）",
@@ -27,11 +27,15 @@ describe("再集計の判定で見張っている表", () => {
       "ランクごとの点数の割合",
       "昇格に必要な点数",
       "KPI項目の計算式",
-      "等級要件",
-      "昇格要件",
       "達成係数",
     ]) {
       expect(labels).toContain(must);
     }
+  });
+
+  it("アンケート作成時に写す要件は、既存評価のstale判定へ混ぜない", () => {
+    const labels = WATCHED.map((w) => w.label);
+    expect(labels).not.toContain("等級要件");
+    expect(labels).not.toContain("昇格要件");
   });
 });

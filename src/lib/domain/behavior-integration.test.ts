@@ -17,15 +17,17 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     expect(behaviorPage).not.toContain('BAND_LABEL, BehaviorGuidelineEditor } from "@/components/BehaviorGuidelineEditor"');
   });
 
-  it("等級適用は現在値に追随する専用の controlled editor を使う", () => {
+  it("等級ごとの現在値と選択欄を同じカードに置く", () => {
     const page = read("src/app/admin/behavior/page.tsx");
     const editor = read("src/components/BehaviorBandAssignmentEditor.tsx");
 
     expect(page).toContain("<BehaviorBandAssignmentEditor");
-    expect(editor).toContain("value={gradeId}");
-    expect(editor).toContain("selectGrade(event.target.value)");
-    expect(editor).toContain("behaviorBandForGrade(grades, nextGradeId)");
-    expect(editor).toContain("availableBands.includes(band)");
+    expect(page).not.toContain("<CardRow");
+    expect(editor).toContain("grades.map((grade)");
+    expect(editor).toContain("drafts[grade.id]");
+    expect(editor).toContain("この等級に出す行動指針");
+    expect(editor).toContain("行動指針を出さない");
+    expect(editor).toContain("現在値へ戻す");
     expect(editor).toContain("いまは選べません");
   });
 
@@ -47,22 +49,23 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
   });
 
   it("基準セットの操作は必ず自社の中だけで解決する", () => {
-    const apply = read("src/app/api/masters/apply-master-update.ts");
-    const branch = apply.slice(apply.indexOf('case "behaviorBandSet"'), apply.indexOf('case "rankCriteria"'));
+    const route = read("src/app/api/masters/apply-master-update.ts");
+    const apply = read("src/app/api/masters/apply-behavior-master-update.ts");
+    expect(route).toContain("applyBehaviorMasterUpdate");
 
     /* 会社の基準を一度だけ読み、その中から id / code を探す形にしている。
        id で直接 DB を引く形に戻すと、他社の基準を指す id を送られたときに通る。 */
-    expect(branch).toContain("eq(s.behaviorBandSets.companyId, companyId)");
-    expect(branch).toContain("sets.find((set) => set.id === body.id)");
-    expect(branch).toContain("sets.find((set) => set.code === body.copyFromBand)");
+    expect(apply).toContain("eq(s.behaviorBandSets.companyId, companyId)");
+    expect(apply).toContain("sets.find((set) => set.id === body.id)");
+    expect(apply).toContain("sets.find((set) => set.code === body.copyFromBand)");
     // 複製元の観点・段階も自社スコープで読む
-    expect(branch).toContain("eq(s.behaviorGuidelines.companyId, companyId), eq(s.behaviorGuidelines.band, source.code)");
+    expect(apply).toContain("eq(s.behaviorGuidelines.companyId, companyId), eq(s.behaviorGuidelines.band, source.code)");
     // 観点の追加先も「自社にあるセットか」を確かめてから作る
-    expect(branch).toContain("eq(s.behaviorBandSets.companyId, companyId), eq(s.behaviorBandSets.code, band)");
+    expect(apply).toContain("eq(s.behaviorBandSets.companyId, companyId), eq(s.behaviorBandSets.code, band)");
   });
 
   it("使用中の基準セットは止められず、消すのは一度も使っていないものだけ", () => {
-    const apply = read("src/app/api/masters/apply-master-update.ts");
+    const apply = read("src/app/api/masters/apply-behavior-master-update.ts");
     const setEditor = read("src/components/BehaviorBandSetEditor.tsx");
 
     /* 2026-08-12、1文40文字の決まりに合わせて2文に割った。中身（どこを直すか・そのあと何ができるか）は同じ。 */
@@ -125,7 +128,7 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     expect(setEditor).toContain("DELETE_LABEL");
     // 「使わない」「もう一度使う」は消さずに残す（消すのはそれに加えた3つ目の選択肢）
     expect(guidelineEditor).toContain("使わない");
-    expect(promoEditor).toContain("戻す");
+    expect(read("src/components/VersionedMasterSections.tsx")).toContain("もう一度使う");
   });
 
   it("使用しない状態は、カード全体の見た目と札の両方で分かる（色だけに頼らない）", () => {

@@ -8,6 +8,7 @@ import {
   listPromotionThresholds,
   listRaiseSettings,
 } from "@/lib/queries";
+import { currentVersionRows } from "@/lib/domain/versioned-master";
 import {
   Badge,
   Card,
@@ -100,8 +101,12 @@ export default async function CriteriaPage({
 
   const th = grade ? (thresholds.find((t) => t.fromGradeId === grade.id) ?? null) : null;
   const raise = grade ? (raises.find((r) => r.gradeId === grade.id) ?? null) : null;
-  const myReqs = grade ? gradeReqs.filter((r) => r.gradeId === grade.id) : [];
-  const myPromo = grade ? promoReqs.filter((r) => r.gradeId === grade.id) : [];
+  const myReqs = grade
+    ? currentVersionRows(gradeReqs).filter((r) => r.gradeId === grade.id && r.isActive)
+    : [];
+  const myPromo = grade
+    ? currentVersionRows(promoReqs).filter((r) => r.gradeId === grade.id && r.isActive)
+    : [];
   const myBehaviors = grade?.behaviorBand ? behaviors.filter((b) => b.band === grade.behaviorBand) : [];
 
   /* この項目がその等級区分で何点になるか。

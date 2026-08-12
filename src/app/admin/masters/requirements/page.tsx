@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db";
 import { gradeRequirementUsage } from "@/lib/master-usage";
 import { EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 import { GradeRequirementEditor } from "@/components/GradeRequirementEditor";
+import { currentVersionRows } from "@/lib/domain/versioned-master";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function AdminGradeRequirements({
   const usage = await gradeRequirementUsage(await getDb(), viewer.companyId);
   const sp = await searchParams;
   const grade = grades.find((g) => g.id === sp.grade) ?? grades[0] ?? null;
+  const currentReqs = currentVersionRows(reqs);
 
   if (!grade) {
     return (
@@ -52,7 +54,7 @@ export default async function AdminGradeRequirements({
               編集中の等級 {grade.name}
             </span>
             <span className="tag" data-tone="muted">
-              {reqs.filter((r) => r.gradeId === grade.id && r.isActive).length}項目
+              {currentReqs.filter((r) => r.gradeId === grade.id && r.isActive).length}項目
             </span>
           </>
         }
@@ -61,7 +63,7 @@ export default async function AdminGradeRequirements({
       <SectionHeading>編集する等級を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {grades.map((g) => {
-          const n = reqs.filter((r) => r.gradeId === g.id && r.isActive).length;
+          const n = currentReqs.filter((r) => r.gradeId === g.id && r.isActive).length;
           return (
             <Link key={g.id} href={`/admin/masters/requirements?grade=${g.id}`} className="chip" aria-current={g.id === grade.id ? "true" : undefined}>
               {g.name}

@@ -1,4 +1,5 @@
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, vi } from "vitest";
+import { createTestDatabase } from "../src/test-support/sqlite-d1";
 import {
   buildSampleSeed,
   assertSampleOnly,
@@ -8,6 +9,13 @@ import {
   SAMPLE_CYCLES,
   sampleEvaluatorComment,
 } from "./sample-data.mjs";
+
+vi.mock("@/lib/db", async () => {
+  const actual = await vi.importActual("@/lib/db");
+  return { ...actual, getDb: async () => globalThis.__sampleStalledDb };
+});
+
+const { listStalledEvaluations } = await import("@/lib/stalled");
 
 /**
  * サンプルデータの検査。
@@ -121,6 +129,41 @@ describe("画面で見えるべきものが入っていること", () => {
   it("受付中の期は1つも作らない（本番の未回答一覧に見本の方が混ざらないように）", () => {
     expect(SAMPLE_CYCLES.every((c) => c.status === "closed")).toBe(true);
     expect(rowsOf("evaluation_cycles").every((c) => c.status === "closed")).toBe(true);
+  });
+
+  it("5期を締めても、放置評価の一覧には1件も混ざらない", async () => {
+    const current = createTestDatabase();
+    globalThis.__sampleStalledDb = current.db;
+    try {
+      for (const statement of seed.sql) current.raw.exec(statement);
+
+      const evaluatedCycleIds = new Set(
+        current.raw
+          .prepare("SELECT cycle_id FROM evaluations WHERE company_id = ? AND status = 'finalized'")
+          .all(SAMPLE_COMPANY_ID)
+          .map((row) => row.cycle_id),
+      );
+      expect(evaluatedCycleIds.size).toBe(4);
+
+      const emptyCycleId = "cyc_sample_2026h1";
+      const emptyResponses = current.raw
+        .prepare("SELECT count(*) AS count FROM form_responses WHERE company_id = ? AND cycle_id = ?")
+        .get(SAMPLE_COMPANY_ID, emptyCycleId);
+      const emptyEvaluations = current.raw
+        .prepare("SELECT count(*) AS count FROM evaluations WHERE company_id = ? AND cycle_id = ?")
+        .get(SAMPLE_COMPANY_ID, emptyCycleId);
+      expect(emptyResponses.count).toBe(0);
+      expect(emptyEvaluations.count).toBe(0);
+
+      // #38 の問い合わせ本体まで通す。結果あり4期は全件確定済み、空期には提出回答も無い。
+      const stalled = await listStalledEvaluations(SAMPLE_COMPANY_ID, {
+        now: new Date("2027-01-01T00:00:00Z"),
+      });
+      expect(stalled).toEqual([]);
+    } finally {
+      current.close();
+      delete globalThis.__sampleStalledDb;
+    }
   });
 });
 

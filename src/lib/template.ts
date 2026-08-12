@@ -1,6 +1,7 @@
 import { eq, asc } from "drizzle-orm";
 import { schema as s, insertMany, type DB } from "@/lib/db";
 import { newId } from "@/lib/id";
+import { currentVersionRows } from "@/lib/domain/versioned-master";
 
 /**
  * 制度のひな形（システム標準テンプレート）を、新しい会社へ丸ごと複製する。
@@ -76,16 +77,24 @@ export async function copyCompanyMasters(
   counts["等級"] = grades.length;
 
   /* 等級要件 */
-  const greqs = await db.select().from(s.gradeRequirements).where(byCompany(s.gradeRequirements));
-  await copyRows(greqs, "greq", toCompanyId, (r) => ({ gradeId: gradeMap.get(r.gradeId) }), (v) =>
-    db.insert(s.gradeRequirements).values(v as never),
+  const greqs = currentVersionRows(await db.select().from(s.gradeRequirements).where(byCompany(s.gradeRequirements)));
+  await copyRows(
+    greqs,
+    "greq",
+    toCompanyId,
+    (r) => ({ gradeId: gradeMap.get(r.gradeId), previousVersionId: null }),
+    (v) => db.insert(s.gradeRequirements).values(v as never),
   );
   counts["等級要件"] = greqs.length;
 
   /* 昇格要件 */
-  const preqs = await db.select().from(s.promotionRequirements).where(byCompany(s.promotionRequirements));
-  await copyRows(preqs, "preq", toCompanyId, (r) => ({ gradeId: gradeMap.get(r.gradeId) }), (v) =>
-    db.insert(s.promotionRequirements).values(v as never),
+  const preqs = currentVersionRows(await db.select().from(s.promotionRequirements).where(byCompany(s.promotionRequirements)));
+  await copyRows(
+    preqs,
+    "preq",
+    toCompanyId,
+    (r) => ({ gradeId: gradeMap.get(r.gradeId), previousVersionId: null }),
+    (v) => db.insert(s.promotionRequirements).values(v as never),
   );
   counts["昇格要件"] = preqs.length;
 

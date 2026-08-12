@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, CardHead, Disclosure, InlineDetail, ReasonNote } from "@/components/ui";
+import { Button, Card, CardHead, Disclosure, InlineDetail, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
+import { VersionedMasterSections } from "@/components/VersionedMasterSections";
 import { requestMasterDelete } from "@/components/master-delete-request";
 import {
   BLOCKED_HELP_LABEL,
@@ -20,7 +21,6 @@ import {
   CATEGORY_LABEL,
   GRADE_REQUIREMENT_MAX,
   activeOf,
-  inactiveOf,
   remainingSlots,
   type RequirementCategory,
   type RequirementRow,
@@ -113,7 +113,6 @@ export function GradeRequirementEditor({
 
   const support = activeOf(rows, "support");
   const operation = activeOf(rows, "operation");
-  const unused = inactiveOf(rows);
   const denominator = support.length + operation.length;
 
   const block = (category: RequirementCategory, list: RequirementRow[]) => {
@@ -163,27 +162,27 @@ export function GradeRequirementEditor({
                 <>
                   <textarea
                     value={editing[r.id]}
+                    autoFocus
                     onChange={(e) => setEditing((s) => ({ ...s, [r.id]: e.target.value }))}
                     rows={2}
                     className="input w-full"
                     aria-label={`${label} ${i + 1}件目の内容`}
                   />
+                  <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
                   <div className="mt-2 flex gap-2">
                     <Button
                       variant="primary"
                       disabled={busy || editing[r.id].trim() === ""}
                       onClick={async () => {
                         const ok = await send({
-                          kind: "gradeRequirement",
+                          kind: "gradeRequirementRevise",
                           id: r.id,
-                          gradeId,
-                          category,
                           text: editing[r.id].trim(),
                         });
                         if (ok) setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; });
                       }}
                     >
-                      保存する
+                      新版として保存
                     </Button>
                     <Button
                       variant="tertiary"
@@ -202,7 +201,7 @@ export function GradeRequirementEditor({
                   variant="tertiary"
                   disabled={busy || i === 0}
                   aria-label="1つ上に移動"
-                  onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, gradeId, category, direction: "up" })}
+                  onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "up" })}
                 >
                   ↑
                 </Button>
@@ -210,21 +209,19 @@ export function GradeRequirementEditor({
                   variant="tertiary"
                   disabled={busy || i === list.length - 1}
                   aria-label="1つ下に移動"
-                  onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, gradeId, category, direction: "down" })}
+                  onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "down" })}
                 >
                   ↓
                 </Button>
                 <Button variant="tertiary" disabled={busy} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
-                  直す
+                  内容を直す
                 </Button>
                 <ConfirmButton
-                  label="使わない"
+                  label="今後使わない"
                   variant="danger-outline"
                   busy={busy}
-                  confirm={`「${r.text}」を今後のアンケートに出さないようにします。すでに公開したアンケートと、確定済みの評価はそのまま残ります。`}
-                  onConfirm={() =>
-                    void send({ kind: "gradeRequirement", id: r.id, gradeId, category, text: r.text, isActive: false })
-                  }
+                  confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
+                  onConfirm={() => void send({ kind: "gradeRequirementActivation", id: r.id, isActive: false })}
                 />
                 {markOf(r.id) === null && (
                   <ConfirmButton
@@ -257,7 +254,7 @@ export function GradeRequirementEditor({
                   variant="primary"
                   disabled={busy || draft.text.trim() === ""}
                   onClick={async () => {
-                    const ok = await send({ kind: "gradeRequirement", gradeId, category, text: draft.text.trim() });
+                    const ok = await send({ kind: "gradeRequirementCreate", gradeId, category, text: draft.text.trim() });
                     if (ok) setDrafts((s) => ({ ...s, [category]: { open: true, text: "" } }));
                   }}
                 >
@@ -276,11 +273,40 @@ export function GradeRequirementEditor({
               {rest === 0 && (
                 <p className="footnote m-0 mt-2">
                   「{label}」は{GRADE_REQUIREMENT_MAX}項目までのため、これ以上追加できません。
-                  追加したい場合は、いまある項目のどれかを「使わない」にしてください。
+                  追加したい場合は、いまある項目を1つ「今後使わない」にしてください。
                 </p>
               )}
             </>
           )}
+        </div>
+
+        <div className="card-pad grid gap-2 border-t border-[var(--line)]">
+          <VersionedMasterSections
+            sectionId={`grade-${gradeId}-${category}`}
+            rows={rows.filter((row) => row.category === category)}
+            busy={busy}
+            maxActive={GRADE_REQUIREMENT_MAX}
+            renderDetail={(row) =>
+              markOf(row.id) !== null ? <UsedByDetail mark={markOf(row.id)!} usedBy={usedByOf(row.id)} /> : null
+            }
+            renderStoppedAction={(row) =>
+              markOf(row.id) === null ? (
+                <ConfirmButton
+                  label={DELETE_LABEL}
+                  variant="danger-outline"
+                  busy={busy}
+                  confirm={deleteConfirmText(row.text)}
+                  onConfirm={() => void remove(row.id)}
+                />
+              ) : null
+            }
+            onReactivate={(row) =>
+              void send({ kind: "gradeRequirementActivation", id: row.id, isActive: true })
+            }
+            onRestoreContent={({ row, currentId }) =>
+              void send({ kind: "gradeRequirementRestoreContent", id: currentId, sourceVersionId: row.id })
+            }
+          />
         </div>
       </Card>
     );
@@ -297,6 +323,7 @@ export function GradeRequirementEditor({
         <p className="footnote m-0 mt-1">
           ここでの変更は<b>次に作るアンケートから反映されます</b>。すでに作成・公開したアンケートと、確定済みの評価は変わりません。
         </p>
+        <p className="footnote m-0 mt-1">内容を直すと、新版を作ります。</p>
         {/* 達成率の出し方は、いま項目を書くうえでは要らない背景。押したときだけ出す */}
         <InlineDetail summary="達成率の出し方">
           <p className="m-0">等級要件達成率は「達成した項目数 ÷ 登録した{denominator}項目」です。</p>
@@ -304,44 +331,11 @@ export function GradeRequirementEditor({
         </InlineDetail>
       </Card>
 
-      {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
+      {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
+      {message && <p role="status" aria-live="polite" className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
 
       {block("support", support)}
       {block("operation", operation)}
-
-      {unused.length > 0 && (
-        <Disclosure summary="使わないことにした項目" meta={`${unused.length}件`}>
-          <div>
-            {unused.map((r) => (
-              <div key={r.id} className="card-row items-center" data-off="true">
-                <div className="row-main">
-                  <p className="m-0 text-sub">{r.text}</p>
-                  <p className="footnote m-0">{CATEGORY_LABEL[r.category as RequirementCategory] ?? r.category}</p>
-                  {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
-                </div>
-                <Badge tone="closed">使わない</Badge>
-                <Button
-                  variant="tertiary"
-                  disabled={busy}
-                  onClick={() => void send({ kind: "gradeRequirement", id: r.id, gradeId, category: r.category, text: r.text, isActive: true })}
-                >
-                  戻す
-                </Button>
-                {markOf(r.id) === null && (
-                  <ConfirmButton
-                    label={DELETE_LABEL}
-                    variant="danger-outline"
-                    busy={busy}
-                    confirm={deleteConfirmText(r.text)}
-                    onConfirm={() => void remove(r.id)}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </Disclosure>
-      )}
 
       <Card className="card-pad">
         <div className="flex items-center justify-between gap-3">

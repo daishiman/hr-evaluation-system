@@ -2,6 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
 import { newId } from "@/lib/id";
 import { HttpError } from "@/lib/session";
+import { currentVersionRows } from "@/lib/domain/versioned-master";
 import { targetsPointGroup } from "@/lib/domain/grade-points";
 import {
   BEHAVIOR_HELP,
@@ -81,7 +82,7 @@ export async function buildQuestionRows(opts: {
     .where(and(eq(s.gradeRequirements.companyId, companyId), eq(s.gradeRequirements.gradeId, gradeId)))
     .orderBy(asc(s.gradeRequirements.seq));
   for (const cat of ["support", "operation"] as const) {
-    for (const r of gradeReqs.filter((x) => x.category === cat && x.isActive)) {
+    for (const r of currentVersionRows(gradeReqs).filter((x) => x.category === cat && x.isActive)) {
       const q = requirementQuestion(cat, r.text);
       push({
         section: cat,
@@ -103,7 +104,7 @@ export async function buildQuestionRows(opts: {
     .where(and(eq(s.promotionRequirements.companyId, companyId), eq(s.promotionRequirements.gradeId, gradeId)))
     .orderBy(asc(s.promotionRequirements.seq));
   for (const kind of ["report", "test"] as const) {
-    for (const r of promoReqs.filter((x) => x.kind === kind && x.isActive)) {
+    for (const r of currentVersionRows(promoReqs).filter((x) => x.kind === kind && x.isActive)) {
       const q = promotionQuestion(kind, r.text);
       push({
         section: kind === "report" ? "training" : "test",

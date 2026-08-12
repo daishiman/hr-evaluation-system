@@ -38,12 +38,13 @@ const CREATE = `
   CREATE TABLE grade_requirements (
     id text PRIMARY KEY, company_id text NOT NULL, grade_id text NOT NULL, category text NOT NULL,
     seq integer NOT NULL DEFAULT 1, text text NOT NULL, is_active integer NOT NULL DEFAULT 1,
-    created_at text, updated_at text
+    previous_version_id text REFERENCES grade_requirements(id), created_at text, updated_at text
   );
   CREATE TABLE promotion_requirements (
     id text PRIMARY KEY, company_id text NOT NULL, grade_id text NOT NULL, kind text NOT NULL,
     transition_label text, seq integer NOT NULL DEFAULT 1, text text NOT NULL,
-    is_gate integer NOT NULL DEFAULT 1, is_active integer NOT NULL DEFAULT 1, created_at text, updated_at text
+    is_gate integer NOT NULL DEFAULT 1, is_active integer NOT NULL DEFAULT 1,
+    previous_version_id text REFERENCES promotion_requirements(id), created_at text, updated_at text
   );
   CREATE TABLE forms (id text PRIMARY KEY, company_id text NOT NULL, title text NOT NULL, status text NOT NULL DEFAULT 'published');
   CREATE TABLE form_questions (
@@ -67,15 +68,28 @@ const CREATE = `
 beforeEach(() => {
   sqlite = new DatabaseSync(":memory:");
   sqlite.exec(CREATE);
+  const execute = async (sql: string, params: unknown[], method: string) => {
+    const statement = sqlite.prepare(sql);
+    if (method === "run") {
+      statement.run(...(params as never[]));
+      return { rows: [] };
+    }
+    const result = statement.all(...(params as never[])).map((row) => Object.values(row));
+    return { rows: method === "get" ? (result[0] ?? []) : result };
+  };
   db = drizzle(
-    async (sql: string, params: unknown[], method: string) => {
-      const statement = sqlite.prepare(sql);
-      if (method === "run") {
-        statement.run(...(params as never[]));
-        return { rows: [] };
+    execute,
+    async (batch) => {
+      sqlite.exec("BEGIN");
+      try {
+        const result = [];
+        for (const item of batch) result.push(await execute(item.sql, item.params, item.method));
+        sqlite.exec("COMMIT");
+        return result;
+      } catch (error) {
+        sqlite.exec("ROLLBACK");
+        throw error;
       }
-      const rows = statement.all(...(params as never[])).map((row) => Object.values(row));
-      return method === "get" ? { rows: rows[0] ?? [] } : { rows };
     },
     { schema },
   );
@@ -193,7 +207,7 @@ describe("制度設定の項目を完全に消す", () => {
     ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("完全には消せません") });
   });
 
-  it("等級要件は、使っていなければ消せて、確定済みの評価にあれば消せない", async () => {
+  it("等級要件は、使っていなければ消せて、評価の記録にあれば消せない", async () => {
     sqlite.exec(`
       INSERT INTO grade_requirements (id, company_id, grade_id, category, text)
         VALUES ('gr_used', 'cmp_a', 'g_1', 'support', '支援計画を期限内に作れる'),
@@ -207,11 +221,30 @@ describe("制度設定の項目を完全に消す", () => {
 
     await expect(
       deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "gradeRequirement", id: "gr_used" } }),
-    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("確定済みの評価") });
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("評価の記録") });
     expect(rows("SELECT id FROM evaluation_requirements")).toEqual([{ id: "er_1" }]);
   });
 
-  it("昇格要件は、使っていなければ消せて、確定済みの評価にあれば消せない", async () => {
+  it("等級要件は、系譜の旧版が使用済みなら現在版も消せず、全版未使用なら系譜ごと消す", async () => {
+    sqlite.exec(`
+      INSERT INTO grade_requirements (id, company_id, grade_id, category, text)
+        VALUES ('gr_v1', 'cmp_a', 'g_1', 'support', '旧版');
+      INSERT INTO grade_requirements (id, company_id, grade_id, category, text, previous_version_id)
+        VALUES ('gr_v2', 'cmp_a', 'g_1', 'support', '現在版', 'gr_v1');
+      INSERT INTO evaluation_requirements (id, company_id, evaluation_id, grade_requirement_id)
+        VALUES ('er_v1', 'cmp_a', 'ev_1', 'gr_v1');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "gradeRequirement", id: "gr_v2" } }),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("評価の記録") });
+
+    sqlite.exec("DELETE FROM evaluation_requirements WHERE id = 'er_v1'");
+    await deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "gradeRequirement", id: "gr_v2" } });
+    expect(rows("SELECT id FROM grade_requirements WHERE id IN ('gr_v1', 'gr_v2')")).toEqual([]);
+  });
+
+  it("昇格要件は、使っていなければ消せて、評価の記録にあれば消せない", async () => {
     sqlite.exec(`
       INSERT INTO promotion_requirements (id, company_id, grade_id, kind, text)
         VALUES ('pr_used', 'cmp_a', 'g_1', 'report', '新任研修の報告書を出している'),
@@ -227,6 +260,25 @@ describe("制度設定の項目を完全に消す", () => {
       deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "promotionRequirement", id: "pr_used" } }),
     ).rejects.toMatchObject({ status: 400 });
     expect(rows("SELECT id FROM evaluation_gates")).toEqual([{ id: "eg_1" }]);
+  });
+
+  it("昇格要件も系譜単位で利用を判定して削除する", async () => {
+    sqlite.exec(`
+      INSERT INTO promotion_requirements (id, company_id, grade_id, kind, text)
+        VALUES ('pr_v1', 'cmp_a', 'g_1', 'report', '旧版');
+      INSERT INTO promotion_requirements (id, company_id, grade_id, kind, text, previous_version_id)
+        VALUES ('pr_v2', 'cmp_a', 'g_1', 'report', '現在版', 'pr_v1');
+      INSERT INTO evaluation_gates (id, company_id, evaluation_id, promotion_requirement_id)
+        VALUES ('eg_v1', 'cmp_a', 'ev_1', 'pr_v1');
+    `);
+
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "promotionRequirement", id: "pr_v2" } }),
+    ).rejects.toMatchObject({ status: 400 });
+
+    sqlite.exec("DELETE FROM evaluation_gates WHERE id = 'eg_v1'");
+    await deleteMasterItem({ db, companyId: "cmp_a", body: { kind: "promotionRequirement", id: "pr_v2" } });
+    expect(rows("SELECT id FROM promotion_requirements WHERE id IN ('pr_v1', 'pr_v2')")).toEqual([]);
   });
 
   it("下書きのアンケートに出している項目も消せない（設問は作った時点の写しのため）", async () => {

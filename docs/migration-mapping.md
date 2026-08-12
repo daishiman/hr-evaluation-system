@@ -71,6 +71,10 @@
 | 行動指針シート | 観点1つ | `behavior_guidelines` | `bg_{会社キー}_{等級帯}_{観点}` | 10 |
 | 行動指針シート（段階の記述） | 観点×段階 | `behavior_levels` | `blv_{会社キー}_{観点index}_{段階index}` | 50 |
 
+移行で入れた等級要件・昇格要件は、いずれも版系譜の起点であるため `previous_version_id = NULL` とする。
+移行後に本文等を直した場合は元行をUPDATEせず、新しいidと `previous_version_id` を持つ後続版を作る。
+したがって上表の移行時idは変わらず、移行元の行と後から作った版を区別して追跡できる。
+
 ### 1-1. 列レベルの対応（KPI項目マスタ）
 
 | 元の列 | `kpi_items` の列 |
@@ -138,7 +142,7 @@
 | KPI項目の選択・ランク基準の直接編集 | `/admin/scheme`（KPI・評価セット） | `POST /api/scheme`／`PUT /api/masters`（`rankCriteria`） | `scheme_items` / `scheme_rank_ratios` / `kpi_rank_criteria`。変更時刻を記録して再集計の要否を出す |
 | 等級要件の直接編集 | `/admin/masters/requirements`（等級要件） | `PUT /api/masters`（`gradeRequirement*`） | `grade_requirements`。変更時刻を記録して再集計の要否を出す |
 | 昇格条件・昇格要件の直接編集 | `/admin/masters/promotion`（昇格の条件・要件） | `PUT /api/masters`（`threshold` / `promotionRequirement*`） | `promotion_thresholds` / `promotion_requirements`。変更時刻を記録して再集計の要否を出す |
-| 行動指針の直接編集 | `/admin/behavior`（行動指針） | `PUT /api/masters`（`grade` / `behaviorGuideline` / `behaviorLevel`） | 次に作るアンケートへ写す。公開済みアンケート・既存評価は変更しない |
+| 行動指針の直接編集 | `/admin/behavior`（行動指針） | `PUT /api/masters`（`grade` / `behaviorGuideline` / `behaviorLevel`） | 各等級の行で「この等級に出す行動指針」または「出さない」を選ぶ。次に作るアンケートへ写し、作成済み・公開済みアンケート・既存評価は変更しない |
 | 配点表（KPI基準定義_配点）の書き換え | `/admin/scheme`（等級区分ごとの項目・100点の組み替え） | `POST /api/scheme` | `scheme_items` / `scheme_rank_ratios` |
 | 昇給設定シート（管理者） | `/admin/raises` | `POST /api/masters`（`raise_*`） | 金額を変えると改定履歴が1行残る |
 | 半期の開始・締めの手作業 | `/manager/cycles` | `POST /api/cycles` | `evaluation_cycles` |
@@ -395,7 +399,7 @@
 #### 昇格要件・行動指針の点検
 
 - **昇格要件**は `/admin/masters/promotion` へ分離し、#1・#3・#4 と同じ問題を等級要件と同じ作法で解消した（種類ごとの塊・件数表示・「＋ 項目を追加」・↑↓・直す・必須/任意の切り替え・使わない）。件数の上限は制度上ないため上限表示は出さない。
-- **行動指針**は `/admin/behavior` へ分離し、等級ごとの適用帯域、観点の利用状態、レベル名・説明文を編集できるようにした。変更は次に作るアンケートへ写し、公開済みアンケートと既存評価は変更しない。
+- **行動指針**は `/admin/behavior` へ分離し、各等級の行で「この等級に出す行動指針」または「出さない」を選んで保存し、観点の利用状態、レベル名・説明文も編集できるようにした。変更は次に作るアンケートへ写し、作成済み・公開済みアンケートと既存評価は変更しない。
 
 #### 制度設定画面の責務分割と再集計通知（2026-08-11）
 
@@ -404,7 +408,7 @@
 | `/admin/masters` | 等級の名前・水準・半期の目標設定上限数 | 評価結果の確定値は据え置き |
 | `/admin/masters/requirements` | 支援・運営の等級要件 | 影響がある確認中評価は再集計対象、確定済みは据え置き |
 | `/admin/masters/promotion` | 昇格点数・昇格要件 | 影響がある確認中評価は再集計対象、確定済みは据え置き |
-| `/admin/behavior` | 適用帯域・観点・段階文言 | 次に作るアンケートだけに反映。公開済みと既存評価は据え置き |
+| `/admin/behavior` | 等級ごとに出す行動指針・観点・段階文言 | 次に作るアンケートだけに反映。作成済み・公開済みと既存評価は据え置き |
 | `/admin/scheme` | 評価項目・配点・ランク割合・ランク基準 | 影響がある確認中評価は再集計対象、確定済みは据え置き |
 | `/admin/kgi` | 事業所達成率・達成係数 | 達成率は該当事業所の確認中評価の賞与欄だけ即時再計算。係数は再集計対象 |
 | `/admin/raises` | 昇給方針・金額 | 専用の改定履歴を残す |
@@ -475,3 +479,9 @@
 → 下限以上・上限未満で連続させる形に補完した（`111〜120%` は `111 ≦ x < 121` として持つ）。
 補完したことは画面に注記として出す。テスト（`kgi.test.ts`）で、元シートのままの表なら穴として検出され、
 補完後の表なら問題なしになることを固定している。
+
+## 11. 移行後の等級要件・昇格要件を直すとき
+
+版管理・再開・サンプルと放置評価通知の境界は、次の文書に分離した（500行上限）。
+
+→ [`docs/migration-mapping-requirement-revisions.md`](./migration-mapping-requirement-revisions.md)
