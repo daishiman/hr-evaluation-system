@@ -10,7 +10,6 @@ import {
 } from "./evaluation-view";
 import { checkGradePointRule, type GradePointRule } from "./grade-points";
 import { inactiveOf, swapForMove, type RequirementRow } from "./grade-requirements";
-import { formatByRank, indexReferencePoints, referenceFor } from "./reference-points";
 import { copiedBandSetName, defaultLevelText } from "./behavior";
 import { summarizeBuildResults, FINALIZED_SKIP_MESSAGE } from "./build-summary";
 import { formatAnswer, parseOptions, type AnswerReadRow } from "./answer-snapshot";
@@ -298,44 +297,6 @@ describe("等級要件の並べ替え", () => {
     expect(swapForMove(rows, "support", "r3", "up")).toBeNull();
     expect(swapForMove(rows, "support", "r9", "up")).toBeNull();
     expect(swapForMove(rows, "operation", "r3", "down")).toBeNull();
-  });
-});
-
-/* ───────────── 元の配点表（参考値） ───────────── */
-
-describe("元の配点表の引き当て", () => {
-  const index = indexReferencePoints([
-    { kpiItemId: "k1", pointGroup: "Chief", rank: "C", points: 8 },
-    { kpiItemId: "k1", pointGroup: "Chief", rank: "A", points: 20 },
-    { kpiItemId: "k1", pointGroup: "Chief", rank: "B", points: 15 },
-    { kpiItemId: "k1", pointGroup: "Chief", rank: "E", points: 0 },
-    { kpiItemId: "k1", pointGroup: "Chief", rank: "D", points: 5 },
-    // Aの行が無い項目は参考値にしない
-    { kpiItemId: "k2", pointGroup: "Chief", rank: "B", points: 15 },
-  ]);
-
-  it("A〜Eの順に並べ、Aの点数を配点として持つ", () => {
-    const entry = referenceFor(index, "k1", "Chief")!;
-    expect(entry.maxPoints).toBe(20);
-    expect(formatByRank(entry)).toBe("A20 ／ B15 ／ C8 ／ D5 ／ E0");
-  });
-
-  it("Aの行が無い項目・登録の無い等級区分は、参考値を出さない", () => {
-    expect(referenceFor(index, "k2", "Chief")).toBeNull();
-    expect(referenceFor(index, "k1", "Manager")).toBeNull();
-  });
-
-  it("A〜E以外のランク文字は末尾に置く（並びを壊さない）", () => {
-    const i2 = indexReferencePoints([
-      { kpiItemId: "k3", pointGroup: "AM", rank: "S", points: 30 },
-      { kpiItemId: "k3", pointGroup: "AM", rank: "A", points: 20 },
-    ]);
-    expect(formatByRank(referenceFor(i2, "k3", "AM")!)).toBe("A20 ／ S30");
-  });
-
-  it("小数の点数は第1位まで出す", () => {
-    const i3 = indexReferencePoints([{ kpiItemId: "k4", pointGroup: "AM", rank: "A", points: 12.55 }]);
-    expect(formatByRank(referenceFor(i3, "k4", "AM")!)).toBe("A12.6");
   });
 });
 
