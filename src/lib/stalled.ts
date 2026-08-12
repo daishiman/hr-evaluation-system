@@ -25,12 +25,13 @@ const CLOSED = "closed";
  * 締め切られた期間に属し、status が finalized でないもの。
  * 確定済みには一切触れない（読み出しの条件から外しているだけ）。
  */
-async function readAwaitingFinalize(companyId: string, managerId?: string): Promise<StalledSource[]> {
+async function readAwaitingFinalize(companyId: string, managerId?: string, cycleId?: string): Promise<StalledSource[]> {
   const db = await getDb();
   const conds = [
     eq(s.evaluations.companyId, companyId),
     ne(s.evaluations.status, "finalized"),
-    eq(s.evaluationCycles.status, CLOSED),
+    // 期間を名指しするとき（締め切る直前の確認）は、まだ締め切っていないので状態で絞らない。
+    cycleId ? eq(s.evaluations.cycleId, cycleId) : eq(s.evaluationCycles.status, CLOSED),
   ];
   // マネージャーは自分が上長のメンバーだけ。自分で確定できない分を「次の作業」として出さない。
   if (managerId) conds.push(eq(s.users.managerId, managerId));
@@ -60,12 +61,12 @@ async function readAwaitingFinalize(companyId: string, managerId?: string): Prom
  * 本人から見れば「出したのに何も返ってこない」で確定待ちと同じ状態なので、
  * 別の知らせに分けず、同じ一覧に並べる。
  */
-async function readAwaitingBuild(companyId: string, managerId?: string): Promise<StalledSource[]> {
+async function readAwaitingBuild(companyId: string, managerId?: string, cycleId?: string): Promise<StalledSource[]> {
   const db = await getDb();
   const conds = [
     eq(s.formResponses.companyId, companyId),
     eq(s.formResponses.status, "submitted"),
-    eq(s.evaluationCycles.status, CLOSED),
+    cycleId ? eq(s.formResponses.cycleId, cycleId) : eq(s.evaluationCycles.status, CLOSED),
     // 同じ期・同じ人の評価がまだ無いものだけ
     isNull(s.evaluations.id),
   ];
@@ -111,6 +112,31 @@ export async function listStalledEvaluations(
     readAwaitingBuild(companyId, opts.managerId),
   ]);
   return buildStalledRows([...finalize, ...build], opts.now ?? new Date());
+}
+
+/**
+ * ある評価期間に残っている「まだ確定していない分」の名前。締め切る直前の確認に使う。
+ *
+ * まだ締め切っていない期間を見るので、日数（放置何日）は数えない。
+ * 会社の絞り込みはここで行う（画面から渡された cycleId だけを信じない）。
+ * 同じ人が2行出ることがある（アンケートを作り直すと回答が版ごとに残る）ため、
+ * 人ごとにまとめてから返す。
+ */
+export async function listUnfinalizedNamesInCycle(companyId: string, cycleId: string): Promise<(string | null)[]> {
+  const [finalize, build] = await Promise.all([
+    readAwaitingFinalize(companyId, undefined, cycleId),
+    readAwaitingBuild(companyId, undefined, cycleId),
+  ]);
+  const byEmployee = new Map<string, string | null>();
+  for (const row of [...finalize, ...build]) {
+    if (!byEmployee.has(row.employeeId)) byEmployee.set(row.employeeId, row.employeeName);
+  }
+  // 名前のある人を先に出す（確認の窓では、まず誰か分かる人を見せる）
+  return [...byEmployee.values()].sort((a, b) => {
+    if (!a) return b ? 1 : 0;
+    if (!b) return -1;
+    return a.localeCompare(b, "ja");
+  });
 }
 
 export type StalledRowWithCompany = StalledRow & { companyId: string; companyName: string };

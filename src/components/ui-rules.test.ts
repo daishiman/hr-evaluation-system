@@ -339,6 +339,38 @@ describe("画面の器の作法", () => {
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
 
+  it("入力欄・選択欄に固定の高さを付けない（文字を大きくすると下が欠ける）", () => {
+    /* 2026-08 に文字の段を一律 +2px 上げたところ、会社を切り替える選択欄だけ
+       「さくら福祉会」の下が欠けた。原因は h-8（32px）の決め打ちで、
+       上下の余白（8px+8px）と枠（1px+1px）を引いた残りが 14px しかなく、
+       14px の和文がそこに収まらなかったこと。英数字だけなら気づかない。
+       高さは「文字の大きさ＋余白」から決まるままにして、px で止めない。 */
+    const offenders: string[] = [];
+    for (const p of sourceFiles) {
+      for (const m of readFileSync(p, "utf8").matchAll(/className=\{?["`]([^"`]*)["`]/g)) {
+        const classes = m[1].split(/\s+/);
+        if (!classes.includes("input")) continue;
+        // min-h-* は下限なので伸びる。禁止するのは h-8 / h-[32px] のような決め打ちだけ。
+        if (classes.some((c) => /^h-(\d|\[)/.test(c))) offenders.push(p.replace(`${SRC}/`, ""));
+      }
+    }
+    expect(offenders).toEqual([]);
+    // 高さの拠り所となる行の高さを、入力の共通指定に明示していること
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".input {"));
+    expect(block.slice(0, block.indexOf("}"))).toContain("line-height:");
+  });
+
+  it("伸びる棒には既定の色がある（クラスの付け忘れで灰色の帯にならない）", () => {
+    // 色を修飾クラス側にだけ持たせると、付け忘れた棒が「読み込み中の灰色」に見える。
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    // 動きを止める指定（@media prefers-reduced-motion）にも .bar-fill が出るので、
+    // 見た目の定義そのもの（.bar-track の直後）を見る。
+    const after = css.slice(css.indexOf(".bar-track {"));
+    const block = after.slice(after.indexOf(".bar-fill {"));
+    expect(block.slice(0, block.indexOf("}"))).toContain("background:");
+  });
+
   it("固定した列見出しの位置は、固定ヘッダーの高さと対で保つ", () => {
     const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
     // 列見出しを固定していること

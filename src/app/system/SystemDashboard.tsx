@@ -96,8 +96,10 @@ export function SystemDashboard({
                   <p className="todo-row-title m-0 text-strong">{selected.name}</p>
                   <CompanyState company={selected} />
                 </div>
+                {/* 事業の種類（既定は「給付事業」）は会社名と紛らわしいので、必ず見出しを付けて出す。
+                    裸で並べると、選んだ会社と別の会社名が出ているように読める。 */}
                 <p className="todo-row-sub m-0 mt-1">
-                  {selected.businessType} ／ 在籍 {selected.activeUsers}人 ／ 評価期間 {selected.cycles}件
+                  事業の種類 {selected.businessType} ／ 在籍 {selected.activeUsers}人 ／ 評価期間 {selected.cycles}件
                 </p>
                 <div className="mt-3 max-w-xl">
                   <Bar value={selected.activeUsers} max={selected.users} label="利用中のアカウント" />

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildStalledRows,
+  cycleCloseConfirmText,
+  CYCLE_CLOSE_CONFIRM_BASE,
   daysSincePeriodEnd,
   groupStalledByCompany,
   LONG_DAYS,
@@ -11,6 +13,7 @@ import {
   stalledHref,
   stalledLevel,
   summarizeStalled,
+  unfinalizedNamePreview,
   type StalledRow,
   type StalledSource,
 } from "@/lib/domain/stalled-evaluations";
@@ -306,5 +309,46 @@ describe("groupStalledByCompany", () => {
 
   it("1件も無ければ空（放置0件の会社は並べない）", () => {
     expect(groupStalledByCompany([])).toEqual([]);
+  });
+});
+
+describe("unfinalizedNamePreview", () => {
+  it("3人までは全員の名前を並べる", () => {
+    expect(unfinalizedNamePreview(["佐藤 花子", "鈴木 一郎"])).toBe("佐藤 花子、鈴木 一郎");
+  });
+
+  it("4人以上は3人まで出して、残りは人数で言う", () => {
+    expect(unfinalizedNamePreview(["あ", "い", "う", "え", "お"])).toBe("あ、い、う ほか2名");
+  });
+
+  it("名前が未登録でも空欄にせず、そう書く", () => {
+    expect(unfinalizedNamePreview([null, "  ", "鈴木 一郎"])).toBe("名前未設定、名前未設定、鈴木 一郎");
+  });
+
+  it("前後の空白は落とす", () => {
+    expect(unfinalizedNamePreview([" 佐藤 花子 "])).toBe("佐藤 花子");
+  });
+
+  it("1人も居なければ空文字", () => {
+    expect(unfinalizedNamePreview([])).toBe("");
+  });
+});
+
+describe("cycleCloseConfirmText", () => {
+  it("0件のときは、これまでどおりの確認文だけ（余計な手間を増やさない）", () => {
+    expect(cycleCloseConfirmText([])).toBe(CYCLE_CLOSE_CONFIRM_BASE);
+  });
+
+  it("残っているときは、件数と誰かを出したうえで、これまでの確認文につなげる", () => {
+    const text = cycleCloseConfirmText(["佐藤 花子", "鈴木 一郎"]);
+    expect(text).toContain("まだ確定していない評価が2件あります");
+    expect(text).toContain("佐藤 花子、鈴木 一郎");
+    expect(text).toContain(CYCLE_CLOSE_CONFIRM_BASE);
+  });
+
+  it("締め切れないとは書かない（締め切り自体は止めない）", () => {
+    const text = cycleCloseConfirmText(["佐藤 花子"]);
+    expect(text).toContain("締め切っても消えません");
+    expect(text).not.toContain("締め切れません");
   });
 });

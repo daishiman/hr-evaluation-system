@@ -28,8 +28,11 @@ export function CompanyScopeSwitcher({
   return (
     <label className="grid gap-1 text-note text-[var(--ink-muted)]">
       操作する会社
+      {/* 高さは付けない。px で決め打ちすると、文字の段を上げたときに下が欠ける（spec §18）。
+          文字の大きさも指定しない。入力欄の共通の見た目（.input）が正本で、
+          ここで text-note と書いても効かない（効いていないまま残っていた）。 */}
       <select
-        className="input h-8 w-full py-0 text-note"
+        className="input w-full"
         value={currentId ?? ""}
         disabled={busy}
         onChange={async (e) => {
