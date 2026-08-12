@@ -21,6 +21,33 @@ import { usePathname } from "next/navigation";
 export function StickyOffset() {
   const pathname = usePathname();
 
+  /**
+   * 画面に文字盤（スマートフォンのキーボード）が出ている間を見分けて、
+   * html の data-keyboard に入れる（CSS側で固定をやめるため）。
+   *
+   * 文字盤は見える範囲を半分近く奪うのに、CSSの高さ（@media (max-height)）は変わらない。
+   * そのため CSS だけでは「打っている欄が帯と文字盤に挟まれて見えない」状態を防げない。
+   * 実際に見えている高さは visualViewport にしか出ないので、ここで見る。
+   * しきい値は 0.75（見える範囲が1/4以上減ったら出ていると見なす）。
+   * アドレスバーの伸び縮み（数十px）では反応しない大きさにしてある。
+   */
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const root = document.documentElement;
+    const apply = () => {
+      const open = vv.height < window.innerHeight * 0.75;
+      if (open) root.dataset.keyboard = "open";
+      else delete root.dataset.keyboard;
+    };
+    apply();
+    vv.addEventListener("resize", apply);
+    return () => {
+      vv.removeEventListener("resize", apply);
+      delete root.dataset.keyboard;
+    };
+  }, []);
+
   useEffect(() => {
     const head = document.querySelector<HTMLElement>('.page-head[data-sticky="true"]');
     // html に置く。scroll-padding-top（html に効く）もこの値を読むため、

@@ -177,38 +177,54 @@ export function FormBuilder({
       {message && <p className="m-0 mb-3 text-sub text-[var(--brand-deep)]">{message}</p>}
 
       <div className="grid gap-3">
-        {rows.map((r, i) => (
+        {rows.map((r, i) => {
+          const open = openId === i;
+          const title = (
+            <>
+              <span className="num mr-2 text-[var(--ink-muted)]">{i + 1}.</span>
+              {r.title || <span className="text-[var(--ink-muted)]">（設問文が未入力です）</span>}
+            </>
+          );
+          const sub = (
+            <>
+              {SECTION_LABEL[r.section] ?? r.section} ／ {TYPE_LABEL[r.questionType] ?? r.questionType}
+              {r.unit ? ` ／ 単位 ${r.unit}` : ""} ／ {r.required ? "必須" : "任意"}
+            </>
+          );
+          const actions = (
+            <>
+              {r.isGate && <Badge tone="alert">昇格の必須要件</Badge>}
+              <Button onClick={() => move(i, -1)} disabled={i === 0} aria-label="1つ上へ">
+                ↑
+              </Button>
+              <Button onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label="1つ下へ">
+                ↓
+              </Button>
+              <Button onClick={() => setOpenId(open ? null : i)}>{open ? "閉じる" : "編集"}</Button>
+            </>
+          );
+          return (
           <Card key={i} className="card-pad">
-            <CardHead
-              title={
-                <>
-                  <span className="num mr-2 text-[var(--ink-muted)]">{i + 1}.</span>
-                  {r.title || <span className="text-[var(--ink-muted)]">（設問文が未入力です）</span>}
-                </>
-              }
-              sub={
-                <>
-                  {SECTION_LABEL[r.section] ?? r.section} ／ {TYPE_LABEL[r.questionType] ?? r.questionType}
-                  {r.unit ? ` ／ 単位 ${r.unit}` : ""} ／ {r.required ? "必須" : "任意"}
-                </>
-              }
-              detail={r.linkLabel ? <p className="footnote m-0 mt-1">集計との紐づけ：{r.linkLabel}</p> : undefined}
-              actions={
-                <>
-                  {r.isGate && <Badge tone="alert">昇格の必須要件</Badge>}
-                  <Button onClick={() => move(i, -1)} disabled={i === 0} aria-label="1つ上へ">
-                    ↑
-                  </Button>
-                  <Button onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label="1つ下へ">
-                    ↓
-                  </Button>
-                  <Button onClick={() => setOpenId(openId === i ? null : i)}>{openId === i ? "閉じる" : "編集"}</Button>
-                </>
-              }
-            />
+            {/* 頭を固定するのは「編集を開いているカード」だけ。
+                開くと選択肢の並びまで含めて縦に長くなり、下のほうを直しているときに
+                「何問目を・どの答え方で・どの単位で」直しているのかが画面の外へ出てしまう。
+                閉じているカードは2行しかなく、固定しても貼り付く前に流れ去るため付けない
+                （帯の見た目だけが増えて一覧が読みにくくなる）。
+                集計との紐づけは一度読めば済むので帯には載せず、開いた本文の先頭に置く。 */}
+            {open ? (
+              <CardHead pinned title={title} sub={sub} actions={actions} />
+            ) : (
+              <CardHead
+                title={title}
+                sub={sub}
+                detail={r.linkLabel ? <p className="footnote m-0 mt-1">集計との紐づけ：{r.linkLabel}</p> : undefined}
+                actions={actions}
+              />
+            )}
 
-            {openId === i && (
+            {open && (
               <div className="field-grid mt-3 border-t border-[var(--line)] pt-3">
+                {r.linkLabel && <p className="footnote m-0 md:col-span-2">集計との紐づけ：{r.linkLabel}</p>}
                 <label className="md:col-span-2">
                   <span className="block text-note text-[var(--ink-muted)]">設問文</span>
                   <input className="input mt-1 w-full" value={r.title} onChange={(e) => patch(i, { title: e.target.value })} />
@@ -335,7 +351,8 @@ export function FormBuilder({
               </div>
             )}
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-4">
