@@ -55,6 +55,9 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
     now: new Date(),
   });
   const activeExtensions = extensions.filter((e) => !e.revokedAt);
+  /* 利用停止中の人は対象者一覧そのものから外す（表示だけの絞り込みで、
+     すでにある回答・評価のデータは一切変更しない）。期の途中で停止した人が
+     いても、それまでに提出済みだった回答は formResponses に残ったまま。 */
   const active = rows.filter((r) => r.isActive);
   const submitted = active.filter((r) => r.status === "submitted");
   const drafting = active.filter((r) => r.status === "draft");
@@ -123,38 +126,35 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
       )}
 
       <SectionHeading aside={<span className="footnote">氏名の順に並んでいます</span>}>
-        対象者と回答の状況（{rows.length}人）
+        対象者と回答の状況（{active.length}人）
       </SectionHeading>
 
-      {rows.length === 0 ? (
+      {active.length === 0 ? (
         <EmptyState
           title="対象になる人がいません"
-          body={`${form.gradeName ?? "この等級"}に登録されている方がいないため、回答する人がいません。メンバー画面で等級を設定してください。`}
+          body={`${form.gradeName ?? "この等級"}に登録されている在籍中の方がいないため、回答する人がいません。メンバー画面で等級を設定してください。`}
         />
       ) : (
         /* 対象者は「同じ項目を持つ多数の行を上から見比べる」一覧なので表のまま。
-           狭い画面では DataTable が自動でカードに畳む（docs/product/spec.md §5-5）。 */
+           狭い画面では DataTable が自動でカードに畳む（docs/product/spec.md §5-5）。
+           利用停止中の人は対象者一覧から外すため、ここには active（在籍中）だけを渡す。 */
         <DataTable
           caption="対象者と回答の状況"
-          rows={rows}
+          rows={active}
           rowKey={(r) => r.employeeId}
-          rowOff={(r) => !r.isActive}
           columns={[
             {
               key: "name",
               header: "氏名",
               role: "title",
               cell: (r) => (
-                <>
-                  {r.responseId ? (
-                    <Link href={`/me/responses/${r.responseId}`} className="text-[var(--brand-deep)]">
-                      {r.name}
-                    </Link>
-                  ) : (
-                    r.name
-                  )}
-                  {!r.isActive && <span className="footnote"> （利用停止中）</span>}
-                </>
+                r.responseId ? (
+                  <Link href={`/me/responses/${r.responseId}`} className="text-[var(--brand-deep)]">
+                    {r.name}
+                  </Link>
+                ) : (
+                  r.name
+                )
               ),
             },
             {
@@ -201,7 +201,7 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
         締切を過ぎると回答できなくなります。休職・出張などで間に合わなかった方には、ここでその方だけ期限を延ばせます。延ばした期限は本人の回答画面にも表示されます。
       </p>
 
-      {rows.length > 0 && (
+      {active.length > 0 && (
         <RecordForm
           url={`/api/forms/${form.id}/extensions`}
           method="POST"
@@ -212,7 +212,7 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
               label: "対象の方",
               type: "select",
               required: true,
-              options: rows.map((r) => ({
+              options: active.map((r) => ({
                 value: r.employeeId,
                 label: `${r.name}（${r.status === "submitted" ? "提出済み" : r.status === "draft" ? "入力途中" : "未回答"}）`,
               })),

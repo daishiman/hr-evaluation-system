@@ -634,6 +634,21 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
     expect(after[0].status).toBe("none");
   });
 
+  it("利用停止中の人は、未提出の一覧から外れる（提出済みの回答は残ったまま）", async () => {
+    await seedCompany(current);
+    await seedResponse(current, standardQuestions());
+    await current.db.update(s.users).set({ isActive: false }).where(eq(s.users.id, IDS.employee));
+
+    const pending = await listPendingRespondents(IDS.company, IDS.cycle);
+    expect(pending).toEqual([]);
+
+    const response = await current.db
+      .select()
+      .from(s.formResponses)
+      .where(eq(s.formResponses.employeeId, IDS.employee));
+    expect(response).toHaveLength(1);
+  });
+
   it("アンケートが1件も無ければ、未提出者の一覧は空になる", async () => {
     await seedCompany(current);
     await current.db.delete(s.forms);
