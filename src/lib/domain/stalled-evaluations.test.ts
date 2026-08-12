@@ -6,6 +6,9 @@ import {
   daysSincePeriodEnd,
   groupStalledByCompany,
   LONG_DAYS,
+  MY_PENDING_BODY,
+  myPendingCycles,
+  myPendingHeadline,
   OVERDUE_DAYS,
   STALLED_KIND_LABEL,
   STALLED_LEVEL_LABEL,
@@ -350,5 +353,70 @@ describe("cycleCloseConfirmText", () => {
     const text = cycleCloseConfirmText(["佐藤 花子"]);
     expect(text).toContain("締め切っても消えません");
     expect(text).not.toContain("締め切れません");
+  });
+});
+
+describe("myPendingCycles（ご本人の画面に出す分）", () => {
+  const now = jst("2026-08-12T12:00:00");
+
+  it("1期ぶんを、日数も何待ちかも持たない形にして返す", () => {
+    const rows = buildStalledRows([source({ periodEnd: "2026-03-31" })], now);
+    expect(myPendingCycles(rows)).toEqual([{ cycleId: "c1", cycleName: "2025年度 下期", periodEnd: "2026-03-31" }]);
+  });
+
+  it("確定待ちと集計待ちを区別せず、同じ期は1件にまとめる", () => {
+    const rows = buildStalledRows([source({ kind: "finalize" }), source({ kind: "build", evaluationId: null })], now);
+    expect(myPendingCycles(rows).map((c) => c.cycleId)).toEqual(["c1"]);
+  });
+
+  it("期が違えば別の行になり、終了日の新しい順に並ぶ（遅れの大きい順にしない）", () => {
+    const rows = buildStalledRows(
+      [
+        source({ cycleId: "c1", cycleName: "2024年度 下期", periodEnd: "2025-03-31" }),
+        source({ cycleId: "c2", cycleName: "2025年度 上期", periodEnd: "2025-09-30" }),
+      ],
+      now,
+    );
+    expect(myPendingCycles(rows).map((c) => c.cycleName)).toEqual(["2025年度 上期", "2024年度 下期"]);
+  });
+
+  it("1件も無ければ空", () => {
+    expect(myPendingCycles([])).toEqual([]);
+  });
+
+  it("日数・何待ち・氏名・等級は落とす（本人の画面へ持ち出さない）", () => {
+    const [cycle] = myPendingCycles(buildStalledRows([source()], now));
+    expect(Object.keys(cycle).sort()).toEqual(["cycleId", "cycleName", "periodEnd"]);
+  });
+});
+
+describe("myPendingHeadline", () => {
+  const one = [{ cycleId: "c1", cycleName: "2025年度 下期", periodEnd: "2026-03-31" }];
+
+  it("1期なら、その期の名前を言い切る", () => {
+    expect(myPendingHeadline(one)).toBe("「2025年度 下期」の評価は、まだ確定していません");
+  });
+
+  it("複数期なら期の数だけを言う", () => {
+    expect(
+      myPendingHeadline([
+        { cycleId: "c1", cycleName: "2025年度 上期", periodEnd: "2025-09-30" },
+        { cycleId: "c2", cycleName: "2024年度 下期", periodEnd: "2025-03-31" },
+      ]),
+    ).toBe("まだ確定していない評価が、2期ぶんあります");
+  });
+
+  it("0件なら何も言わない（空の知らせを出さない）", () => {
+    expect(myPendingHeadline([])).toBe("");
+  });
+
+  it("日数も、放置・遅れ・催促という言葉も出さない", () => {
+    const text = myPendingHeadline(one) + MY_PENDING_BODY;
+    for (const ng of ["日", "放置", "遅", "催促", "急"]) expect(text).not.toContain(ng);
+  });
+
+  it("説明は「ご本人の提出は届いている」ことから始める", () => {
+    expect(MY_PENDING_BODY).toContain("受け付けられています");
+    expect(MY_PENDING_BODY).toContain("上長の確認が済むと");
   });
 });

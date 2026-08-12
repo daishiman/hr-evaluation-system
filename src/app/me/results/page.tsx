@@ -3,6 +3,8 @@ import { canSeeCriteria, requireViewer } from "@/lib/session";
 import { listEvaluations } from "@/lib/queries";
 import { Badge, Card, CardRow, EmptyState, Num, PageTitle, SectionHeading } from "@/components/ui";
 import { TrendChart } from "@/components/LazyCharts";
+import { MyPendingResultsNotice } from "@/components/MyPendingResultsNotice";
+import { listMyPendingCycles } from "@/lib/stalled";
 import { formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +14,14 @@ export default async function MyResults() {
   const viewer = await requireViewer();
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="会社の管理者にご確認ください。" />;
 
-  const all = (await listEvaluations(viewer.companyId, viewer.role, { employeeId: viewer.id })).filter((e) => e.status === "finalized");
+  /* 確定した結果と並べて、「まだ確定していない期」も出す。
+     ここが本人にとって結果を見に来る場所なので、無いものの説明も同じ画面に置く。
+     絞り込みは listMyPendingCycles の中（サーバー側）で viewer.id により行う。 */
+  const [evaluations, pending] = await Promise.all([
+    listEvaluations(viewer.companyId, viewer.role, { employeeId: viewer.id }),
+    listMyPendingCycles(viewer.companyId, viewer.id),
+  ]);
+  const all = evaluations.filter((e) => e.status === "finalized");
 
   // 行動指針の点数は「昇格に必要な点数」が逆算できるため、一般の方には返していない。
   // 返ってこない系列をグラフに置くと空の折れ線と凡例だけが残るので、見える人にだけ足す。
@@ -33,8 +42,14 @@ export default async function MyResults() {
     <>
       <PageTitle title="評価の結果を見る" lede="半期ごとの評価をすべて残しています。過去と比べて変化を確認できます。" />
 
+      <MyPendingResultsNotice cycles={pending} />
+
       {all.length === 0 ? (
-        <EmptyState title="確定した評価はまだありません" body="評価期間が終わり、上長の確認が済むとここに結果が並びます。" />
+        /* まだ確定していない期がある場合は、上の知らせが「なぜ空か」を言っている。
+           同じことを2回言わない（空の説明が重なると、どちらが自分の話か分からなくなる）。 */
+        pending.length === 0 && (
+          <EmptyState title="確定した評価はまだありません" body="評価期間が終わり、上長の確認が済むとここに結果が並びます。" />
+        )
       ) : (
         <>
           <SectionHeading>これまでの推移</SectionHeading>

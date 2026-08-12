@@ -2,6 +2,8 @@ import { and, eq, isNull, ne } from "drizzle-orm";
 import { getDb, schema as s } from "@/lib/db";
 import {
   buildStalledRows,
+  myPendingCycles,
+  type MyPendingCycle,
   type StalledRow,
   type StalledSource,
 } from "@/lib/domain/stalled-evaluations";
@@ -20,12 +22,28 @@ import {
 const CLOSED = "closed";
 
 /**
+ * 読む範囲の絞り込み。**画面ではなくここで絞る**。
+ *
+ * managerId と employeeId は同時に使わない想定だが、両方渡っても
+ * AND で重なるだけなので、範囲が広がることはない。
+ */
+interface StalledScope {
+  /** その人が上長のメンバーだけ（マネージャーの画面） */
+  managerId?: string;
+  /** その人自身の分だけ（ご本人の画面） */
+  employeeId?: string;
+  /** 期間を名指しするとき（締め切る直前の確認） */
+  cycleId?: string;
+}
+
+/**
  * 確定されていない評価（確定待ち）。
  *
  * 締め切られた期間に属し、status が finalized でないもの。
  * 確定済みには一切触れない（読み出しの条件から外しているだけ）。
  */
-async function readAwaitingFinalize(companyId: string, managerId?: string, cycleId?: string): Promise<StalledSource[]> {
+async function readAwaitingFinalize(companyId: string, scope: StalledScope = {}): Promise<StalledSource[]> {
+  const { managerId, employeeId, cycleId } = scope;
   const db = await getDb();
   const conds = [
     eq(s.evaluations.companyId, companyId),
@@ -35,6 +53,8 @@ async function readAwaitingFinalize(companyId: string, managerId?: string, cycle
   ];
   // マネージャーは自分が上長のメンバーだけ。自分で確定できない分を「次の作業」として出さない。
   if (managerId) conds.push(eq(s.users.managerId, managerId));
+  // ご本人の画面から呼ぶとき。**必ずここで自分の分だけに絞る**。
+  if (employeeId) conds.push(eq(s.evaluations.employeeId, employeeId));
 
   const rows = await db
     .select({
@@ -61,7 +81,8 @@ async function readAwaitingFinalize(companyId: string, managerId?: string, cycle
  * 本人から見れば「出したのに何も返ってこない」で確定待ちと同じ状態なので、
  * 別の知らせに分けず、同じ一覧に並べる。
  */
-async function readAwaitingBuild(companyId: string, managerId?: string, cycleId?: string): Promise<StalledSource[]> {
+async function readAwaitingBuild(companyId: string, scope: StalledScope = {}): Promise<StalledSource[]> {
+  const { managerId, employeeId, cycleId } = scope;
   const db = await getDb();
   const conds = [
     eq(s.formResponses.companyId, companyId),
@@ -71,6 +92,7 @@ async function readAwaitingBuild(companyId: string, managerId?: string, cycleId?
     isNull(s.evaluations.id),
   ];
   if (managerId) conds.push(eq(s.users.managerId, managerId));
+  if (employeeId) conds.push(eq(s.formResponses.employeeId, employeeId));
 
   const rows = await db
     .select({
@@ -105,13 +127,29 @@ async function readAwaitingBuild(companyId: string, managerId?: string, cycleId?
  */
 export async function listStalledEvaluations(
   companyId: string,
-  opts: { managerId?: string; now?: Date } = {},
+  opts: { managerId?: string; employeeId?: string; now?: Date } = {},
 ): Promise<StalledRow[]> {
+  const scope: StalledScope = { managerId: opts.managerId, employeeId: opts.employeeId };
   const [finalize, build] = await Promise.all([
-    readAwaitingFinalize(companyId, opts.managerId),
-    readAwaitingBuild(companyId, opts.managerId),
+    readAwaitingFinalize(companyId, scope),
+    readAwaitingBuild(companyId, scope),
   ]);
   return buildStalledRows([...finalize, ...build], opts.now ?? new Date());
+}
+
+/**
+ * ご本人ぶんの「まだ確定していない期」。一般の方の画面から呼ぶ。
+ *
+ * employeeId には**必ずログイン中ご本人のID**（viewer.id）を渡すこと。
+ * 画面から受け取った値を渡さない（他人のIDを入れれば他人の状況が読めてしまう）。
+ * 返す値には日数も何待ちかも含めない（`myPendingCycles` が落とす）。
+ */
+export async function listMyPendingCycles(
+  companyId: string,
+  employeeId: string,
+  now: Date = new Date(),
+): Promise<MyPendingCycle[]> {
+  return myPendingCycles(await listStalledEvaluations(companyId, { employeeId, now }));
 }
 
 /**
@@ -124,8 +162,8 @@ export async function listStalledEvaluations(
  */
 export async function listUnfinalizedNamesInCycle(companyId: string, cycleId: string): Promise<(string | null)[]> {
   const [finalize, build] = await Promise.all([
-    readAwaitingFinalize(companyId, undefined, cycleId),
-    readAwaitingBuild(companyId, undefined, cycleId),
+    readAwaitingFinalize(companyId, { cycleId }),
+    readAwaitingBuild(companyId, { cycleId }),
   ]);
   const byEmployee = new Map<string, string | null>();
   for (const row of [...finalize, ...build]) {
