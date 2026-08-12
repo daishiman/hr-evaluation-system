@@ -1036,6 +1036,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .field textarea {
   font: inherit;
   font-size: var(--text-sub);
+  line-height: 1.5;
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -1346,7 +1347,9 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   white-space: nowrap;
 }
 .bar-track { background: var(--subtle); border-radius: 4px; height: 10px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 4px; transition: width 700ms cubic-bezier(0.2, 0, 0, 1); }
+/* 伸びる部分には必ず色を置く。色を修飾クラス（is-brand）側にだけ持たせていたため、
+   クラスを付け忘れた全ての棒が「灰色の帯」に見えていた（読み込み中と誤解される）。 */
+.bar-fill { height: 100%; border-radius: 4px; background: var(--brand); transition: width 700ms cubic-bezier(0.2, 0, 0, 1); }
 .bar-fill.is-base { background: #c6ccd4; }
 .bar-fill.is-brand { background: var(--brand); }
 
@@ -1677,9 +1680,16 @@ details.disclosure .disclosure-body > :last-child { margin-bottom: 0; }
    アプリ追加分: 単体で使う入力欄
    （.field はラベル込みのラッパー。ここは入力欄そのものに当てる）
    ============================================================ */
+/* 入力欄・選択欄の高さは「文字の大きさ＋余白」で決まるようにする。
+   高さを px で決め打ちすると、文字の段を引き上げたときに（2026-08 の +2px）
+   文字だけが大きくなって下が欠ける。和文は「福」「祉」のように下に伸びる形が
+   あるため、英数字では気づかないまま日本語で最初に露見する（実際にそうなっていた）。
+   line-height を明示するのは、font: inherit だと親から受け継いだ値に左右され、
+   置き場所によって高さが変わるため。固定の高さを付けない規律は ui-rules.test.ts で見張る。 */
 .input {
   font: inherit;
   font-size: var(--text-sub);
+  line-height: 1.5;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #fff;

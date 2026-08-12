@@ -15,6 +15,7 @@ import {
   listSchemeItems,
 } from "@/lib/queries";
 import { listPendingRespondents } from "@/lib/evaluate";
+import { listStalledEvaluations } from "@/lib/stalled";
 import { EmptyState } from "@/components/ui";
 import { AdminDashboard } from "./AdminDashboard";
 
@@ -61,15 +62,18 @@ export default async function AdminHome() {
   // 開いている期間を運用対象にする。無ければ直近の期間を、履歴の文脈として表示する。
   const openCycle = cycles.find((cycle) => cycle.status === "open") ?? null;
   const shownCycle = openCycle ?? cycles[0] ?? null;
-  const [pending, evaluations, forms, schemeItems] = await Promise.all([
+  const [pending, evaluations, forms, schemeItems, stalled] = await Promise.all([
     shownCycle ? listPendingRespondents(companyId, shownCycle.id) : Promise.resolve([]),
     shownCycle ? listEvaluations(companyId, viewer.role, { cycleId: shownCycle.id }) : Promise.resolve([]),
     shownCycle ? listForms(companyId, shownCycle.id) : Promise.resolve([]),
     scheme ? listSchemeItems(companyId, scheme.id) : Promise.resolve([]),
+    // 締め切った期間に残っている分。上の集計は1期ぶんしか見ないので、別に読む。
+    listStalledEvaluations(companyId),
   ]);
 
   return (
     <AdminDashboard
+      stalled={stalled}
       snapshot={{
         companyName: viewer.companyName ?? "会社",
         memberCount: members.length,

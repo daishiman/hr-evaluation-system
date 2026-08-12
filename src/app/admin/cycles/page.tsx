@@ -5,6 +5,8 @@ import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { Badge, Card, CardHead, DownloadButton, EmptyState, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
+import { listUnfinalizedNamesInCycle } from "@/lib/stalled";
+import { cycleCloseConfirmText } from "@/lib/domain/stalled-evaluations";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,18 @@ export default async function AdminCycles() {
     listForms(companyId),
     getActiveScheme(companyId),
   ]);
+
+  // 受付中の期間だけ、「まだ確定していない人」を先に数えておく。
+  // 放置は締め切った瞬間に生まれるので、締め切る前に見せないと気づくのが1回遅れる。
+  // 締め切りは止めない（期末に締められないほうが業務は困る）。
+  const openCycles = cycles.filter((c) => c.status === "open");
+  const unfinalized = new Map<string, (string | null)[]>(
+    await Promise.all(
+      openCycles.map(
+        async (c) => [c.id, await listUnfinalizedNamesInCycle(companyId, c.id)] as [string, (string | null)[]],
+      ),
+    ),
+  );
 
   const thisYear = new Date().getFullYear();
 
@@ -63,6 +77,8 @@ export default async function AdminCycles() {
             const my = forms.filter((f) => f.cycleId === c.id);
             const published = my.filter((f) => f.status === "published").length;
             const responses = my.reduce((sum, f) => sum + Number(f.responseCount ?? 0), 0);
+            // 受付中の期間だけ数えている。0件のときは何も足さない（余計な確認を挟まない）。
+            const pending = unfinalized.get(c.id) ?? [];
             return (
               <Card key={c.id} className="card-pad" off={c.status === "closed"}>
                 <CardHead
@@ -78,7 +94,10 @@ export default async function AdminCycles() {
                       )}
                     </>
                   }
-                  sub={`${formatPeriod(c.periodStart, c.periodEnd)} ／ アンケート${my.length}件（公開中 ${published}件） ／ 回答${responses}件`}
+                  sub={
+                    `${formatPeriod(c.periodStart, c.periodEnd)} ／ アンケート${my.length}件（公開中 ${published}件） ／ 回答${responses}件` +
+                    (pending.length > 0 ? ` ／ 未確定 ${pending.length}件` : "")
+                  }
                   actions={
                     <>
                       <LinkButton href={`/admin/forms?cycle=${c.id}`} variant="tertiary">
@@ -113,7 +132,7 @@ export default async function AdminCycles() {
                       body={{ cycleId: c.id, status: "closed" }}
                       label="受付を締め切る"
                       variant="secondary"
-                      confirm="締め切ると、この期間のアンケートに回答できなくなります。提出済みの回答と作成済みの評価はそのまま残ります。よろしいですか？"
+                      confirm={cycleCloseConfirmText(pending)}
                     />
                   )}
                   {c.status === "closed" && (
@@ -127,6 +146,22 @@ export default async function AdminCycles() {
                     />
                   )}
                 </div>
+
+                {/* 確認の窓を開かなくても「誰が残っているか」まで辿れるようにする。
+                    窓の中だけに書くと、押す気のない人には最後まで見えない。 */}
+                {pending.length > 0 && (
+                  <div className="mt-3">
+                    <ReasonNote
+                      action={
+                        <LinkButton href={`/manager/cycles?cycle=${c.id}`} variant="secondary">
+                          残っている方を見る
+                        </LinkButton>
+                      }
+                    >
+                      この期間には、まだ確定していない評価が{pending.length}件あります。締め切ることはできますが、締め切ったあとはホームの「締め切った期間に残っている評価」で追いかけることになります。
+                    </ReasonNote>
+                  </div>
+                )}
 
                 {my.length === 0 && (
                   <div className="mt-3">
