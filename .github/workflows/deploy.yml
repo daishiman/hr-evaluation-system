@@ -17,8 +17,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # デプロイの途中で打ち切ると配布が中途半端に残りうるので、待たせる（打ち切らない）
-  group: deploy-production
+  # D1変更・デプロイの途中で打ち切ったり、復旧用Migrateと重ねたりしない。
+  group: production-d1-and-deploy
   cancel-in-progress: false
 
 permissions:
@@ -111,9 +111,9 @@ jobs:
         run: ${{ steps.pm.outputs.run }} check:bundle-size
 
       # migrations list は未適用ファイルだけを返すが JSON 出力を持たない。
-      # コマンド成功に加え、専用スクリプトで「未適用なし」を確認できた場合だけ配布する。
-      # 認証・通信失敗や未知の出力は、推測で通さず fail-closed にする。
+      # 専用スクリプトで clear / pending を分類し、未知の出力は fail-closed にする。
       - name: 本番 D1 の未適用マイグレーション確認
+        id: migration_plan
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -123,6 +123,54 @@ jobs:
           if ! ${{ steps.pm.outputs.exec }} wrangler d1 migrations list hr-evaluation-db --remote >"$report" 2>&1; then
             cat "$report"
             echo "::error::本番 D1 の未適用マイグレーション確認を実行できませんでした。"
+            exit 1
+          fi
+          cat "$report"
+          if ! status=$(node scripts/verify-d1-migrations-list.mjs "$report" --print-status); then
+            exit 1
+          fi
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" = "pending" ]; then
+            echo "::notice::未適用マイグレーションを検出したため、バックアップ後に自動適用します。"
+          fi
+
+      # 未適用がある場合だけ、変更前の本番DBを退避する。
+      # バックアップに失敗したら以降の適用・デプロイは実行されない。
+      - name: 本番 D1 のバックアップ取得
+        if: steps.migration_plan.outputs.status == 'pending'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: ${{ steps.pm.outputs.run }} db:backup
+
+      - name: 本番 D1 のバックアップを保管
+        if: always() && steps.migration_plan.outputs.status == 'pending'
+        uses: actions/upload-artifact@v4
+        with:
+          name: d1-backup-${{ github.run_id }}
+          path: backup.sql
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: 本番 D1 のマイグレーション適用
+        if: steps.migration_plan.outputs.status == 'pending'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: ${{ steps.pm.outputs.run }} db:migrate:remote
+
+      # apply の終了コードだけで完了とみなさず、同じ本番DBを再照会する。
+      # 未適用が元から0件だった場合も、配布直前の最終確認として実行する。
+      - name: 適用後の未適用マイグレーション確認
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          report="$RUNNER_TEMP/d1-migrations-after-apply.txt"
+          if ! ${{ steps.pm.outputs.exec }} wrangler d1 migrations list hr-evaluation-db --remote >"$report" 2>&1; then
+            cat "$report"
+            echo "::error::マイグレーション適用後の本番 D1 を再確認できませんでした。"
             exit 1
           fi
           cat "$report"
@@ -169,7 +217,6 @@ jobs:
           echo "『本当に壊れている』のか『まだ古いプロセスが残っているだけ』なのかを"
           echo "機械は区別できないため、ロールバックは自動実行していません。"
 
-# 注意: マイグレーション（DBの形の変更）はこのワークフローに含めない。
-# 壊せる範囲が違うものを同じ引き金にまとめないため。migrate.yml を手動で先に流すこと。
-# デプロイ直前にも、本番 D1 の未適用が 0 件であることを検査して順序を強制する。
-# 順番は「マイグレーション → デプロイ」で固定。
+# マイグレーションは、検査・テスト・ビルドがすべて成功した後にだけ自動適用する。
+# 未適用検出 → バックアップ → 適用 → 未適用0件の再確認 → デプロイの順を固定し、
+# D1操作とデプロイを同じconcurrency groupで直列化する。

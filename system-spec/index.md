@@ -9,7 +9,7 @@
 |---|---|
 | [account-and-users.md](./account-and-users.md) | 本人プロフィール・編集ポリシー・利用者管理の不変条件 |
 | [master-settings.md](./master-settings.md) | 制度設定画面の責務・会社境界・スナップショット・再集計・等級/昇格要件の版ライフサイクル・監査ジャーナル契約 |
-| [release-and-forms.md](./release-and-forms.md) | 本番 Deploy/Migrate の fail-closed ゲート、複数等級フォームの原子的作成 |
+| [release-and-forms.md](./release-and-forms.md) | 本番Deployの自動migrationとfail-closedゲート、複数等級フォームの原子的作成 |
 
 ## 更新ルール
 

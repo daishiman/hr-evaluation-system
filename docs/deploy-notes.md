@@ -7,12 +7,12 @@
 新しいコードが古い DB を読む状態を作らないため、次の順序を固定します。
 
 1. migration と、その追加列がなくても動く後方互換なコードを `main` へ入れる。
-2. 自動の [Deploy workflow](../.github/workflows/deploy.yml) が未適用 migration を検出して、配布前に停止したことを確認する。
-3. [Migration workflow](../.github/workflows/migrate.yml) を `APPLY` 確認付きで手動実行する。このworkflowがバックアップを先に取得し、適用後に未適用0件を再確認する。
-4. 停止した Deploy workflow を再実行し、文書・型・テスト・ビルド・容量・migration の各ゲートを通して配布する。
+2. 自動の [Deploy workflow](../.github/workflows/deploy.yml) が文書・型・テスト・ビルド・容量の各ゲートを通す。
+3. 未適用 migration があれば、本番DBのバックアップを取得して14日間Artifactに保管する。バックアップできなければ停止する。
+4. migrationを自動適用し、同じ本番DBを再照会して未適用0件を確認してから配布する。
 5. 自動スモークを確認し、必要な認証付き操作を人が確認する。
 
-migration がない変更は手順 2〜3 を通らずそのまま配布できます。migration だけを先に安全に出す場合も、migration ファイルを含むcommitを先に `main` へ入れて同じ手順を使います。Deploy workflow は配布直前に本番 D1 を照会し、未適用または判定不能なら fail-closed で停止します。
+migration がない変更はバックアップと適用をスキップしてそのまま配布します。通常運用で手動操作は不要です。[Migration workflow](../.github/workflows/migrate.yml) は、Deployのmigration適用後に別工程で失敗した場合の復旧確認や、後方互換なmigrationだけを先行適用したい場合に使います。DeployとMigrateは同じconcurrency groupで直列化し、未適用状態が判定不能ならfail-closedで停止します。
 
 ## 2. ローカルで Workers 相当を確認する
 
@@ -55,4 +55,4 @@ pnpm run check:bundle-size
 
 ## 5. 失敗時
 
-自動ロールバックは行いません。migration の互換性、旧 isolate、認証・設定不備を切り分けてから、GitHub Actions の再実行または `wrangler rollback` を選びます。DB を戻す必要がある場合は、コードだけを先に戻さず、バックアップと migration の互換性を確認してください。
+自動ロールバックは行いません。migration適用後にDeployだけが失敗した場合は、まず同じDeploy workflowを再実行します。適用済みmigrationは再適用されず、未適用0件の確認後に配布から再開します。旧 isolate、認証・設定不備を切り分けてから `wrangler rollback` を選び、DBを戻す必要がある場合はArtifactのバックアップとmigrationの互換性を確認してください。

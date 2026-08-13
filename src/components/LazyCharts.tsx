@@ -29,5 +29,6 @@ export const EightAxisRadar = dynamic<ComponentProps<typeof Radar>>(
 
 export const TrendChart = dynamic<ComponentProps<typeof Trend>>(
   () => import("@/components/Charts").then((m) => m.TrendChart),
-  { ssr: false, loading: () => <Placeholder height={260} /> },
+  // 高さは Charts.tsx の TREND_HEIGHT と対で保つ（ずれると出た瞬間に下が飛び跳ねる）
+  { ssr: false, loading: () => <Placeholder height={220} /> },
 );

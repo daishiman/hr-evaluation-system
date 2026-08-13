@@ -1,5 +1,6 @@
-# マイグレーション: データベースの「入れ物の形」を変える。
-# 3本の中で唯一、失敗したときにデータを失いうる。だから自動では絶対に走らせない。
+# 復旧・先行適用用の手動マイグレーション。
+# 通常は Deploy workflow がバックアップ取得後に自動適用するため、このworkflowの実行は不要。
+# Deployが適用後に失敗した場合の再確認や、互換migrationだけを先行適用したい場合に使う。
 #
 # 設計方針:
 #   - 引き金は手動のみ（workflow_dispatch）。push では絶対に動かさない。
@@ -26,8 +27,8 @@ on:
         required: true
 
 concurrency:
-  # マイグレーションの同時実行は絶対に避ける。走行中は待たせる（打ち切らない）。
-  group: migrate-production
+  # 自動Deploy内のD1変更とも重ねない。走行中は待たせる（打ち切らない）。
+  group: production-d1-and-deploy
   cancel-in-progress: false
 
 permissions:
@@ -107,6 +108,7 @@ jobs:
         with:
           name: d1-backup-${{ github.run_id }}
           path: backup.sql
+          if-no-files-found: error
           retention-days: 14
 
       - name: 未適用のマイグレーションを表示
@@ -138,10 +140,10 @@ jobs:
           cat "$report"
           node scripts/verify-d1-migrations-list.mjs "$report"
 
-# このあと必ず Deploy を実行すること。
+# 手動で適用した場合は、このあと必ず Deploy を実行すること。
 # 順番は「マイグレーション → デプロイ」で固定。逆にすると、新しいアプリが
 # まだ存在しない列を読みにいって本番が落ちる。
 #
-# 逆に「マイグレーションだけ済んで、アプリは古いまま」は安全な状態。
+# 「マイグレーションだけ済んで、アプリは古いまま」はexpand migrationなら安全な状態。
 # 列が増えただけなら古いアプリはその列を知らないだけで動き続ける。
 # 途中で止まったときは、この状態で止めておけばよい。

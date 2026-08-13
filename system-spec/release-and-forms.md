@@ -16,16 +16,17 @@
    - `test:coverage`
    - `cf:dry-run`（build）
    - `check:bundle-size`
-   - 本番 D1 の `migrations list` が「未適用0件」
-4. D1 list の判定は `scripts/verify-d1-migrations-list.mjs` が行う。未知出力・認証失敗・矛盾出力は clear とみなさない。
+   - 本番 D1 のmigration自動適用後、`migrations list` が「未適用0件」
+4. D1 list の判定は `scripts/verify-d1-migrations-list.mjs` が行う。未知出力・認証失敗・矛盾出力はclearとみなさず、適用・配布を止める。
 
 ## 2. マイグレーションの不変条件
 
-1. Migrate workflow は `workflow_dispatch` のみ。push では動かない。
-2. checkout は常に `main` を読む。実行元 branch を選んでも SQL の正本は main。
-3. バックアップ取得に失敗したら適用しない。
-4. 適用後に同じ本番 DB を再照会し、未適用0件を確認する。
-5. 順序は「migration → deploy」。Deploy 側の parity gate が逆順を機械的に止める。
+1. Deploy workflow は検査・テスト・ビルド・容量確認がすべて成功した後に、本番D1の未適用状態を照会する。
+2. 未適用がある場合だけバックアップを取得し、取得に失敗したら適用しない。
+3. migrationを自動適用した後に同じ本番DBを再照会し、未適用0件を確認する。
+4. 順序は「検査・ビルド → バックアップ → migration → parity確認 → deploy」で固定する。
+5. 手動Migrate workflowは復旧・先行適用用とし、常に`main`をcheckoutして`APPLY`確認を要求する。
+6. Deployと手動Migrateは同じconcurrency groupを使い、本番D1変更と配布を同時実行しない。
 
 ## 3. 複数等級フォーム作成
 

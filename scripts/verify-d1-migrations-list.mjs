@@ -59,6 +59,7 @@ function fail(message) {
 
 async function main() {
   const reportPath = process.argv[2];
+  const mode = process.argv[3] ?? "--verify-clear";
   if (!reportPath) {
     fail("Wrangler の migrations list 出力ファイルを指定してください。");
     return;
@@ -73,6 +74,22 @@ async function main() {
   }
 
   const result = classifyMigrationListOutput(output);
+  if (mode === "--print-status") {
+    if (result.status === "unknown") {
+      fail(
+        "Wrangler の出力からマイグレーション状態を判定できません。認証・通信状態または Wrangler の出力変更を確認してください。",
+      );
+      return;
+    }
+    console.log(result.status);
+    return;
+  }
+
+  if (mode !== "--verify-clear") {
+    fail(`未知の実行モードです: ${mode}`);
+    return;
+  }
+
   if (result.status === "clear") {
     console.log("D1 の未適用マイグレーションはありません。");
     return;
@@ -86,7 +103,7 @@ async function main() {
       ? " 出力内に矛盾するシグナルもあったため、安全側で停止しました。"
       : "";
     fail(
-      `D1 に未適用のマイグレーションがあります${names}。先に Migrate ワークフローを実行してください。${contradiction}`,
+      `D1 に未適用のマイグレーションがあります${names}。適用処理が完了していないためデプロイを停止します。${contradiction}`,
     );
     return;
   }
