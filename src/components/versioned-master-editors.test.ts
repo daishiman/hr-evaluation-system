@@ -60,4 +60,16 @@ describe("等級要件・昇格要件の版管理UI", () => {
     expect(promotion).toContain('send({ kind: "promotionRequirementOrder", id: r.id, direction: "up" })');
     expect(promotion).toContain('send({ kind: "promotionRequirementActivation", id: r.id, isActive: false })');
   });
+
+  it("等級要件・昇格要件のどちらも先頭・末尾へ移動する指示を送れる", () => {
+    const grade = read("GradeRequirementEditor.tsx");
+    const promotion = read("PromotionRequirementEditor.tsx");
+
+    for (const editor of [grade, promotion]) {
+      expect(editor).toContain('direction: "top"');
+      expect(editor).toContain('direction: "bottom"');
+      expect(editor).toContain('aria-label="先頭に移動"');
+      expect(editor).toContain('aria-label="末尾に移動"');
+    }
+  });
 });

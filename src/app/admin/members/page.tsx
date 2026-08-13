@@ -7,6 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
 import { MembersCsvImport } from "@/components/MembersCsvImport";
+import { MembersFilter } from "@/components/MembersFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -75,31 +76,16 @@ export default async function AdminMembers() {
       {active.length === 0 ? (
         <EmptyState title="社員がまだ登録されていません" body="下の「アカウントを発行する」から追加してください。" />
       ) : (
-        <Card>
-          {active.map((m) => (
-            <Link key={m.id} href={`/admin/members/${m.id}`} className="user-row no-underline">
-              <Avatar name={m.name} seed={m.id} size={36} />
-              <div className="min-w-0 flex-1">
-                <p className="m-0 truncate text-body font-semibold text-[var(--ink)]">{m.name}</p>
-                <p className="m-0 truncate text-note text-[var(--ink-muted)]">{m.email}</p>
-              </div>
-              <span className="user-row-tags">
-                <span className="tag">
-                  <Icon name="shield" size={13} />
-                  {ROLE_LABEL[m.role as keyof typeof ROLE_LABEL] ?? m.role}
-                </span>
-                <span className="tag">
-                  <Icon name="layers" size={13} />
-                  {m.gradeName ?? "等級 未設定"}
-                </span>
-                <span className="tag">
-                  <Icon name="building" size={13} />
-                  {m.department ?? "所属 未設定"}
-                </span>
-              </span>
-            </Link>
-          ))}
-        </Card>
+        <MembersFilter
+          members={active.map((m) => ({
+            id: m.id,
+            name: m.name,
+            email: m.email,
+            roleLabel: ROLE_LABEL[m.role as keyof typeof ROLE_LABEL] ?? m.role,
+            gradeName: m.gradeName,
+            department: m.department,
+          }))}
+        />
       )}
 
       {inactive.length > 0 && (

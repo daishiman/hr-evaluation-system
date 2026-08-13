@@ -64,9 +64,11 @@
 | 昇格要件 | `promotionRequirementCreate` | `promotionRequirementRevise` | `promotionRequirementActivation` | `promotionRequirementRestoreContent` | `promotionRequirementOrder` |
 
 - Createだけが `gradeId` と区分/種類を受け取る。
-- Reviseは `id` と意味フィールド、Activationは `id + isActive`、RestoreContentは `id + sourceVersionId`、Orderは `id + direction` を受け取る。
+- Reviseは `id` と意味フィールド、Activationは `id + isActive`、RestoreContentは `id + sourceVersionId`、Orderは `id + direction` を受け取る。Order の `direction` は `up` / `down` / `top` / `bottom` の4値だけを許す。
 - id指定commandは `gradeId` / `category` / `reqKind` を受け取らない。
 - 一覧は `previousVersionId` を含む全版を返す。画面と削除判定は同じ系譜関数で現行・履歴を分類する。
+- Order は対象idから同じ会社・等級・区分/種類の使用中の現行版を導き、`up` / `down` は隣と交換、`top` / `bottom` は間を詰めて先頭/末尾へ移す。別区分・別種類・過去版を更新しない。
+- 先頭で `up` / `top`、末尾で `down` / `bottom` は `400` とし、DBへ変更を残さない。旧データに重複 `seq` がある場合は同じ並び替え単位を1始まりへ正規化する。
 
 ### 5-3. フォーム・評価・stale境界
 

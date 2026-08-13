@@ -35,11 +35,14 @@ describe("ManagerDashboard", () => {
     );
 
     expect(html).toContain("未確定の評価が1件あります");
+    expect(html).toContain('href="/manager/evaluations/evaluation-1"');
     expect(html).toContain("2026年9月30日");
     expect(html).toContain("あと4日");
     expect(html).toContain('aria-label="チームの提出 2中 1"');
     expect(html).toContain("メンバー別の状況を見る");
-    expect(html.indexOf("次にやること")).toBeLessThan(html.indexOf("チームの状況"));
+    expect(html.indexOf("次にやること")).toBeLessThan(html.indexOf("担当チームの状況"));
+    expect(html).toContain("メンバー（全社員）");
+    expect(html).not.toContain("確認待ち");
     // 自分の未提出アンケートが無いときは、余計な見出しを出さない
     expect(html).not.toContain("自分の未提出アンケート");
   });
@@ -76,9 +79,9 @@ describe("ManagerDashboard", () => {
     expect(html).toContain("自分の未提出アンケート");
     expect(html).toContain("上期の実績報告");
     expect(html).toContain("未着手");
-    expect(html.indexOf("自分の未提出アンケート")).toBeLessThan(html.indexOf("チームの状況"));
+    expect(html.indexOf("自分の未提出アンケート")).toBeLessThan(html.indexOf("担当チームの状況"));
     // 担当チームの表示は従来どおり残る
-    expect(html).toContain("チームの状況");
+    expect(html).toContain("担当チームの状況");
     expect(html).toContain("佐藤");
   });
 });

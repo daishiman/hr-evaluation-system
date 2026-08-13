@@ -24,7 +24,7 @@ export default async function ManagerMembers() {
     <>
       <PageTitle
         title="メンバー"
-        lede="等級・所属・直近の評価を確認できます。名前を選ぶと、その方の評価の履歴が見られます。"
+        lede="会社に所属する全員を表示しています（担当チームに限りません）。等級・所属・直近の評価を確認でき、名前を選ぶとその方の評価の履歴が見られます。"
       />
 
       {members.length === 0 ? (

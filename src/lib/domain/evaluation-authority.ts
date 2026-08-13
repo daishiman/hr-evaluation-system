@@ -17,3 +17,46 @@ export const SELF_EVALUATION_BLOCK_REASON =
 export function isOwnEvaluation(viewerId: string, employeeId: string): boolean {
   return viewerId === employeeId;
 }
+
+type EvaluationActionRole = "SUPER_ADMIN" | "COMPANY_ADMIN" | "MANAGER" | "EMPLOYEE";
+
+interface ActionableEvaluation {
+  id: string;
+  employeeId: string;
+  status: string;
+}
+
+/**
+ * 確定後に案内してよい、次の評価を1件だけ返す。
+ *
+ * 一覧の取得範囲だけに頼ると、マネージャーが担当外や自分自身の評価へ進めてしまう。
+ * 画面遷移も確定操作と同じ担当範囲に揃え、本人評価と確定済みを除外する。
+ */
+export function selectNextActionableEvaluation<T extends ActionableEvaluation>(
+  rows: T[],
+  scope: {
+    currentId: string;
+    viewerId: string;
+    viewerRole: EvaluationActionRole;
+    assignedEmployeeIds: ReadonlySet<string>;
+  },
+): T | null {
+  return (
+    rows.find((row) => {
+      if (
+        row.id === scope.currentId ||
+        row.status === "finalized" ||
+        isOwnEvaluation(scope.viewerId, row.employeeId)
+      ) {
+        return false;
+      }
+      if (scope.viewerRole === "SUPER_ADMIN" || scope.viewerRole === "COMPANY_ADMIN") {
+        return true;
+      }
+      if (scope.viewerRole === "MANAGER") {
+        return scope.assignedEmployeeIds.has(row.employeeId);
+      }
+      return false;
+    }) ?? null
+  );
+}

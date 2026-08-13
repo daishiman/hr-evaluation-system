@@ -63,3 +63,14 @@
 
 - アカウント操作はサイドバーに置かない（`src/lib/nav.ts`）
 - 右上 `AccountMenu` に集約
+
+## 6. 評価確定後の次候補
+
+- 確定済み評価から出す「次の未確定評価」は、現在の評価、確定済み、操作者本人の評価を除外する。
+- MANAGER は `users.manager_id = viewer.id` の有効な直属メンバーだけを候補にする。COMPANY_ADMIN / SUPER_ADMIN は操作対象会社の候補を扱える。
+- 候補選択は `selectNextActionableEvaluation` に集約し、画面ごとに `id/status` だけで会社全体から選ばない。
+
+## 7. 操作対象会社の切り替え
+
+- SUPER_ADMIN の会社選択欄は明示的な `label` と `select` の関連付けを持つ。`label` の内側へエラー表示用のブロック要素を入れない。
+- 切り替え失敗は現在の会社を維持し、`role=alert` / `aria-live=assertive` で理由と再試行を伝える。

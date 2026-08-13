@@ -157,37 +157,75 @@ export default async function ManagerCycles({
           )
         }
       >
-        この期の評価（{evals.length}件・うち確認中 {drafts.length}件）
+        この期の評価（{evals.length}件）
       </SectionHeading>
       {evals.length === 0 ? (
         <EmptyState title="この期の評価はまだありません" body="上の「提出済みの回答から評価を作る」を押してください。" />
       ) : (
-        <Card>
-          {evals.map((e) => (
-            <CardRow
-              key={e.id}
-              title={
-                <Link href={`/manager/evaluations/${e.id}`} className="text-[var(--brand-deep)]">
-                  {e.employeeName}
-                </Link>
-              }
-              sub={
-                <>
-                  {e.gradeName} ／ {e.raiseEligible ? "昇給の要件を満たしています" : "昇給は見送り"}
-                  {e.promotionEligible ? " ／ 昇格の要件も満たしています" : ""}
-                </>
-              }
-              value={
-                <>
-                  <Num value={e.totalScore} display />
-                  <span className="unit">点</span>
-                </>
-              }
-              marks={e.status === "finalized" ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
-            />
-          ))}
-        </Card>
+        <>
+          {/* 確認中を先に、確定済みをあとに分ける。混ぜて並べると、
+              件数が増えたときにどれがまだ手つかずか一覧から探す羽目になる。 */}
+          {drafts.length > 0 && (
+            <>
+              <p className="footnote m-0 mb-2">確認中（{drafts.length}件）</p>
+              <Card className="mb-4">
+                {drafts.map((e) => (
+                  <EvaluationRow key={e.id} evaluation={e} />
+                ))}
+              </Card>
+            </>
+          )}
+          {evals.length > drafts.length && (
+            <>
+              <p className="footnote m-0 mb-2">確定済み（{evals.length - drafts.length}件）</p>
+              <Card>
+                {evals
+                  .filter((e) => e.status === "finalized")
+                  .map((e) => (
+                    <EvaluationRow key={e.id} evaluation={e} />
+                  ))}
+              </Card>
+            </>
+          )}
+        </>
       )}
     </>
+  );
+}
+
+function EvaluationRow({
+  evaluation: e,
+}: {
+  evaluation: {
+    id: string;
+    employeeName: string | null;
+    gradeName: string | null;
+    raiseEligible: boolean | null;
+    promotionEligible: boolean | null;
+    totalScore: number | null;
+    status: string;
+  };
+}) {
+  return (
+    <CardRow
+      title={
+        <Link href={`/manager/evaluations/${e.id}`} className="text-[var(--brand-deep)]">
+          {e.employeeName}
+        </Link>
+      }
+      sub={
+        <>
+          {e.gradeName} ／ {e.raiseEligible ? "昇給の要件を満たしています" : "昇給は見送り"}
+          {e.promotionEligible ? " ／ 昇格の要件も満たしています" : ""}
+        </>
+      }
+      value={
+        <>
+          <Num value={e.totalScore} display />
+          <span className="unit">点</span>
+        </>
+      }
+      marks={e.status === "finalized" ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
+    />
   );
 }

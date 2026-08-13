@@ -61,6 +61,9 @@ describe("SystemDashboard", () => {
     expect(html).toContain('role="img"');
     expect(html).toContain("全社の運用状況を見る");
     expect(html).toContain("<details");
+    expect(html).toContain('href="/system/companies"');
+    expect(html).toContain('href="/system/users"');
+    expect(html).not.toContain('<div class="kpi-label">確定済みの評価</div>');
     expect(html.indexOf("操作する会社")).toBeLessThan(html.indexOf("先に確認すること"));
   });
 });

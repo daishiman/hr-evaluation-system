@@ -68,23 +68,44 @@ export function denominatorOf(rows: RequirementRow[]): number {
 }
 
 /**
- * 並べ替え1回分の入れ替え内容を出す。
- * 同じ区分の中で隣どうしの seq を交換する（他の区分の並びに影響させない）。
- * 動かせないとき（先頭で↑、末尾で↓）は null。
+ * 並べ替え1回分の変更内容を出す。
+ * 同じ区分の中で seq を入れ替える（他の区分の並びに影響させない）。
+ * up/down は隣どうしの交換、top/bottom は先頭・末尾への移動（間の項目は1つずつ詰める）。
+ * 動かせないとき（先頭で↑・top、末尾で↓・bottom）は null。
  */
-export function swapForMove(
+export function changesForMove(
   rows: RequirementRow[],
   category: string,
   id: string,
-  direction: "up" | "down",
+  direction: "up" | "down" | "top" | "bottom",
 ): { id: string; seq: number }[] | null {
   const list = activeOf(rows, category);
   const i = list.findIndex((r) => r.id === id);
   if (i < 0) return null;
-  const j = direction === "up" ? i - 1 : i + 1;
-  if (j < 0 || j >= list.length) return null;
-  return [
-    { id: list[i].id, seq: list[j].seq },
-    { id: list[j].id, seq: list[i].seq },
-  ];
+
+  let reordered: RequirementRow[];
+  if (direction === "up" || direction === "down") {
+    const j = direction === "up" ? i - 1 : i + 1;
+    if (j < 0 || j >= list.length) return null;
+    reordered = [...list];
+    [reordered[i], reordered[j]] = [reordered[j], reordered[i]];
+  } else {
+    if ((direction === "top" && i === 0) || (direction === "bottom" && i === list.length - 1)) return null;
+    const rest = list.filter((row) => row.id !== id);
+    reordered = direction === "top" ? [list[i], ...rest] : [...rest, list[i]];
+  }
+
+  const seqs = list.map((r) => r.seq);
+  // 重複seqのまま値を入れ替えても、IDの第2ソートで元の順へ戻りうる。
+  // 壊れた旧データを操作したときだけ1始まりへ正規化し、指定した順を確実に保存する。
+  const nextSeqs = new Set(seqs).size === seqs.length ? seqs : list.map((_, index) => index + 1);
+  const previousSeqById = new Map(list.map((row) => [row.id, row.seq]));
+  const changes = reordered
+    .map((row, idx) => ({ id: row.id, seq: nextSeqs[idx] }))
+    .filter((change) => change.seq !== previousSeqById.get(change.id));
+  // 隣との交換は、従来どおり操作対象を先頭に返す（監査記録・既存呼び出しの順序も維持する）。
+  if (direction === "up" || direction === "down") {
+    return [...changes.filter((change) => change.id === id), ...changes.filter((change) => change.id !== id)];
+  }
+  return changes;
 }

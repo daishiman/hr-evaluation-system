@@ -56,7 +56,7 @@ export function managerNextAction(input: {
   }
   return {
     title: "いま急いで対応する作業はありません",
-    body: "新しい提出や確認待ちの評価が入ると、ここに次の作業が表示されます。",
+    body: "新しい提出や確認中の評価が入ると、ここに次の作業が表示されます。",
     label: "評価・結果を確認する",
   };
 }
@@ -90,6 +90,9 @@ export function ManagerDashboard({
     teamNotSubmitted: notSubmitted,
   });
   const cycleHref = cycle ? `/manager/cycles?cycle=${cycle.id}` : "/manager/cycles";
+  // 未確定が1件だけなら、一覧を経由させずその評価に直接送る（一覧で1件だけ探させない）。
+  const nextActionHref =
+    draftEvaluations.length === 1 ? `/manager/evaluations/${draftEvaluations[0].id}` : cycleHref;
 
   return (
     <>
@@ -156,7 +159,7 @@ export function ManagerDashboard({
                 )}
               </p>
             </div>
-            <LinkButton href={cycleHref} variant="primary">{next.label}</LinkButton>
+            <LinkButton href={nextActionHref} variant="primary">{next.label}</LinkButton>
           </div>
         </Card>
       )}
@@ -165,7 +168,7 @@ export function ManagerDashboard({
         未確定の評価
       </SectionHeading>
       {draftEvaluations.length === 0 ? (
-        <p className="footnote">現在、確認待ちの評価はありません。</p>
+        <p className="footnote">現在、確認中の評価はありません。</p>
       ) : (
         <Card>
           {draftEvaluations.slice(0, 5).map((evaluation) => (
@@ -188,8 +191,8 @@ export function ManagerDashboard({
         </Card>
       )}
 
-      <SectionHeading aside={<Link href="/manager/members" className="footnote">メンバー</Link>}>
-        チームの状況
+      <SectionHeading aside={<Link href="/manager/members" className="footnote">メンバー（全社員）</Link>}>
+        担当チームの状況
       </SectionHeading>
       {team.length === 0 ? (
         <EmptyState

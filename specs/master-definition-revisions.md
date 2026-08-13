@@ -21,7 +21,7 @@
 | `gradeRequirementRevise` | `promotionRequirementRevise` | `id`、意味フィールド |
 | `gradeRequirementActivation` | `promotionRequirementActivation` | `id`, `isActive` |
 | `gradeRequirementRestoreContent` | `promotionRequirementRestoreContent` | `id`, `sourceVersionId` |
-| `gradeRequirementOrder` | `promotionRequirementOrder` | `id`, `direction` |
+| `gradeRequirementOrder` | `promotionRequirementOrder` | `id`, `direction`（`up` / `down` / `top` / `bottom`） |
 
 id指定commandで `gradeId` / `category` / `reqKind` を送らない。
 会社、等級、区分、種類は対象idからサーバーが導出する。
@@ -35,6 +35,8 @@ id指定commandで `gradeId` / `category` / `reqKind` を送らない。
 5. 作成済み・公開済みフォームと評価は自動更新しない。
 6. snapshot-fedの定義変更は既存評価をstaleにしない。
 7. 系譜内の1版でも使用済みなら、系譜の完全削除を拒否する。
+8. 並べ替えは同じ等級・区分/種類の使用中の現行版だけを対象とし、先頭で `up` / `top`、末尾で `down` / `bottom` は変更を保存しない。
+9. `top` / `bottom` は対象だけでなく間の項目の `seq` も一括更新する。重複 `seq` の旧データでも、保存後の順序を一意にする。
 
 ## UI契約
 

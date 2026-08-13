@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, CardRow, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { NumberField } from "@/components/NumberField";
 import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
+import {
+  createBlankQuestion,
+  insertBlankQuestionAfter,
+  withClientKeys,
+  type BuilderQuestion,
+  type BuilderQuestionDraft,
+} from "@/components/form-builder-model";
+
+export type { BuilderQuestion } from "@/components/form-builder-model";
 
 /**
  * アンケートの設問をクリックで組み立てる画面。
@@ -15,27 +24,6 @@ import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
  * 集計に使う紐づけ（等級要件・KPI項目）は編集させない。ここを人が触ると
  * 「何の実績としてカウントするか」が分からなくなるため、表示だけにとどめる。
  */
-
-export interface BuilderQuestion {
-  id?: string;
-  section: string;
-  questionType: string;
-  title: string;
-  helpText: string | null;
-  unit: string | null;
-  required: boolean;
-  validationMin: number | null;
-  validationMax: number | null;
-  validationInteger: boolean;
-  options: { value: string; label: string; score?: number }[];
-  isGate: boolean;
-  linkLabel: string | null;
-  gradeRequirementId: string | null;
-  promotionRequirementId: string | null;
-  behaviorGuidelineId: string | null;
-  kpiItemId: string | null;
-  kpiQuestionKey: string | null;
-}
 
 const TYPE_LABEL: Record<string, string> = {
   yesno: "はい / いいえ",
@@ -58,11 +46,14 @@ export function FormBuilder({
   lockReason?: string;
 }) {
   const router = useRouter();
-  const [rows, setRows] = useState<BuilderQuestion[]>(initial);
+  const [rows, setRows] = useState<BuilderQuestionDraft[]>(() => withClientKeys(initial));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const nextClientKey = useRef(0);
+
+  const newClientKey = () => `new:${nextClientKey.current++}`;
 
   const patch = (i: number, p: Partial<BuilderQuestion>) =>
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...p } : r)));
@@ -76,45 +67,30 @@ export function FormBuilder({
       return next;
     });
 
-  const remove = (i: number) => setRows((prev) => prev.filter((_, idx) => idx !== i));
+  const remove = (i: number) => {
+    if (rows[i]?.clientKey === openKey) setOpenKey(null);
+    setRows((prev) => prev.filter((_, idx) => idx !== i));
+  };
 
-  const add = (section: string, questionType: string) =>
-    setRows((prev) => [
-      ...prev,
-      {
-        section,
-        questionType,
-        title: "",
-        helpText: null,
-        unit: null,
-        required: true,
-        validationMin: questionType === "number" ? 0 : null,
-        validationMax: null,
-        /* 単位が決まっていない新しい設問は、まず小数を許す側にしておく。
-           分からないものを止めると、打てるはずの値が打てなくなる。 */
-        validationInteger: false,
-        options:
-          questionType === "single" || questionType === "multi"
-            ? [
-                { value: "1", label: "選択肢1" },
-                { value: "2", label: "選択肢2" },
-              ]
-            : [],
-        isGate: false,
-        linkLabel: null,
-        gradeRequirementId: null,
-        promotionRequirementId: null,
-        behaviorGuidelineId: null,
-        kpiItemId: null,
-        kpiQuestionKey: null,
-      },
-    ]);
+  const add = (section: string, questionType: string) => {
+    const clientKey = newClientKey();
+    setRows((prev) => [...prev, createBlankQuestion(section, questionType, clientKey)]);
+    setOpenKey(clientKey);
+  };
+
+  /* 一覧が長くなるほど、末尾の「設問を足す」まで押しに戻るのが遠くなる。
+     いま見ているカードのすぐ下に、同じまとまり・同じ答え方で1問差し込めるようにする。 */
+  const addAfter = (i: number) => {
+    const clientKey = newClientKey();
+    setRows((prev) => insertBlankQuestionAfter(prev, i, clientKey).rows);
+    setOpenKey(clientKey);
+  };
 
   const save = async () => {
     const blank = rows.findIndex((r) => !r.title.trim());
     if (blank >= 0) {
       setError(`${blank + 1}問目の設問文が空です。入力してから保存してください。`);
-      setOpenId(blank);
+      setOpenKey(rows[blank].clientKey);
       return;
     }
     setBusy(true);
@@ -178,7 +154,7 @@ export function FormBuilder({
 
       <div className="grid gap-3">
         {rows.map((r, i) => {
-          const open = openId === i;
+          const open = openKey === r.clientKey;
           const title = (
             <>
               <span className="num mr-2 text-[var(--ink-muted)]">{i + 1}.</span>
@@ -200,11 +176,14 @@ export function FormBuilder({
               <Button onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label="1つ下へ">
                 ↓
               </Button>
-              <Button onClick={() => setOpenId(open ? null : i)}>{open ? "閉じる" : "編集"}</Button>
+              <Button onClick={() => addAfter(i)} aria-label="この下に自由設問を追加">
+                この下に追加
+              </Button>
+              <Button onClick={() => setOpenKey(open ? null : r.clientKey)}>{open ? "閉じる" : "編集"}</Button>
             </>
           );
           return (
-          <Card key={i} className="card-pad">
+          <Card key={r.clientKey} className="card-pad">
             {/* 頭を固定するのは「編集を開いているカード」だけ。
                 開くと選択肢の並びまで含めて縦に長くなり、下のほうを直しているときに
                 「何問目を・どの答え方で・どの単位で」直しているのかが画面の外へ出てしまう。
@@ -224,7 +203,9 @@ export function FormBuilder({
 
             {open && (
               <div className="field-grid mt-3 border-t border-[var(--line)] pt-3">
-                {r.linkLabel && <p className="footnote m-0 md:col-span-2">集計との紐づけ：{r.linkLabel}</p>}
+                <p className="footnote m-0 md:col-span-2">
+                  {r.linkLabel ? `集計との紐づけ：${r.linkLabel}` : "自由設問（評価集計には使いません）"}
+                </p>
                 <label className="md:col-span-2">
                   <span className="block text-note text-[var(--ink-muted)]">設問文</span>
                   <input className="input mt-1 w-full" value={r.title} onChange={(e) => patch(i, { title: e.target.value })} />
