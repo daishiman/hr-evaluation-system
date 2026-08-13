@@ -25,6 +25,12 @@ function walk(dir: string): string[] {
 
 const sourceFiles = walk(SRC).filter((p) => (p.endsWith(".tsx") || p.endsWith(".ts")) && !p.includes(".test."));
 
+/** 割り込む窓（<dialog>）を書いてよいファイル。増やすときは作法の検査も一緒に足す。 */
+const DIALOG_OWNERS = [
+  join(SRC, "components", "ConfirmButton.tsx"),
+  join(SRC, "components", "GlobalSearch.tsx"),
+];
+
 describe("画面の器の作法", () => {
   it("表を組み立ててよいのは DataTable だけ（画面に <table> を直接書かない）", () => {
     const offenders = sourceFiles.filter((p) => p !== TABLE_OWNER && readFileSync(p, "utf8").includes("<table"));
@@ -63,6 +69,32 @@ describe("画面の器の作法", () => {
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
 
+  it("計算式・設問IDは Code に集約する（画面に <code> を直接書かない）", () => {
+    const owner = join(SRC, "components", "ui.tsx");
+    const offenders = sourceFiles.filter((p) => p !== owner && readFileSync(p, "utf8").includes("<code"));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("計算式を地の文に混ぜない（記号の並びは Code で等幅にする）", () => {
+    // 「計算式：q1_1 ÷【…】× 100」のように本文と同じ書体で出すと、記号の並びが
+    // 文章の一部に見えて読み違える。式は必ず Code に入れて出す（docs/product/spec.md §5-6）。
+    const offenders = sourceFiles.filter((p) => {
+      const s = readFileSync(p, "utf8");
+      return s.includes("計算式：") || s.includes("計算式 ${");
+    });
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("順番のある説明は StepBlock に集約する（番号付きの疑似見出しを画面で書き起こさない）", () => {
+    const owner = join(SRC, "components", "ui.tsx");
+    // 段落タグに「小さい・太字・muted」を貼って見出しの代わりにすると、見出しの階層が
+    // 読み上げに伝わらず、段の境界も余白だけになる（docs/product/spec.md §5-6）。
+    const offenders = sourceFiles.filter(
+      (p) => p !== owner && /[⓪①②③④⑤][^<]{0,20}<\/p>/.test(readFileSync(p, "utf8")),
+    );
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
   it("ボタンの見た目は Button / LinkButton / DownloadButton に集約する（btn クラスを直接書かない）", () => {
     const owner = join(SRC, "components", "ui.tsx");
     // 素の <a>/<button>/<Link> に btn を貼ると、押せる大きさ（44px）・見た目の段階
@@ -96,9 +128,54 @@ describe("画面の器の作法", () => {
     // 確認は「押した場所の幅に左右されない中央のダイアログ」で出す、を1箇所で守る。
     // 画面ごとに行の中へ確認文の箱を差し込むと、本文（.row-main は min-width: 0）が
     // 潰れて1文字ずつ縦に折り返される崩れ方をする（実際にそうなっていた）。
-    const owner = join(SRC, "components", "ConfirmButton.tsx");
-    const offenders = sourceFiles.filter((p) => p !== owner && /<dialog[\s>]/.test(readFileSync(p, "utf8")));
+    //
+    // ヘッダーの検索だけは別の器（探して移るための窓）なので例外にしている。
+    // 窓が満たすべき作法は下の2件で同じように縛る。
+    expect(DIALOG_OWNERS.map((p) => p.replace(`${SRC}/`, ""))).toEqual([
+      "components/ConfirmButton.tsx",
+      "components/GlobalSearch.tsx",
+    ]);
+    const offenders = sourceFiles.filter(
+      (p) => !DIALOG_OWNERS.includes(p) && /<dialog[\s>]/.test(readFileSync(p, "utf8")),
+    );
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("検索の窓も、中央に出して押す場所を窓の中に残す", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".search-dialog {"));
+    const body = block.slice(0, block.indexOf("}"));
+    // Tailwind の初期化が dialog の margin を 0 にするため、指定しないと左上に出る
+    expect(body).toContain("margin: auto");
+    expect(body).toContain("max-height:");
+    expect(body).toContain("overflow: hidden");
+    // 打ち込む欄は常に見える位置に残し、あふれるのは候補の一覧だけ
+    const list = css.slice(css.indexOf(".search-dialog-list {"));
+    expect(list.slice(0, list.indexOf("}"))).toContain("overflow-y: auto");
+    const grid = css.slice(css.indexOf(".search-dialog-body {"));
+    expect(grid.slice(0, grid.indexOf("}"))).toContain("grid-template-rows:");
+  });
+
+  it("検索の窓は Esc で閉じ、開いた先にフォーカスが移る", () => {
+    const source = readFileSync(join(SRC, "components", "GlobalSearch.tsx"), "utf8");
+    // Esc・背景クリックのどちらで閉じても、開いているかの控えを合わせる
+    expect(source).toContain("onClose={close}");
+    // 開いた瞬間に打ち始められる（探すのに手を1つ増やさない）
+    expect(source).toContain("autoFocus");
+    // 上下キーで候補を選び、Enter で開ける
+    expect(source).toContain('e.key === "ArrowDown"');
+    expect(source).toContain('e.key === "Enter"');
+  });
+
+  it("階層表示を畳む印は、畳む幅の中だけで出す", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const narrow = css.slice(css.indexOf("@media (max-width: 1023px)"));
+    const inside = narrow.slice(0, narrow.indexOf("\n}\n"));
+    // 段を隠すのと、隠したと分かる「…」は同じ幅の中で行う
+    expect(inside).toContain(".trail li { display: none; }");
+    expect(inside).toContain('.trail li + li:nth-last-child(2)::before { content: "…"');
+    // 広い画面では段の区切りは「›」のまま（外に置くと全幅で「…」になる）
+    expect(css.replace(inside, "")).not.toContain('content: "…"');
   });
 
   it("確認ダイアログはキャンセルを初期フォーカスにし、暗黙のフォーム送信をしない", () => {
@@ -372,9 +449,8 @@ describe("画面の器の作法", () => {
   });
 
   it("確認の窓は ConfirmButton に集約する（画面ごとに窓を書き起こさない）", () => {
-    const owner = join(SRC, "components", "ConfirmButton.tsx");
     const offenders = sourceFiles.filter((p) => {
-      if (p === owner) return false;
+      if (DIALOG_OWNERS.includes(p)) return false;
       const s = readFileSync(p, "utf8");
       return s.includes("showModal(") || s.includes('role="dialog"');
     });

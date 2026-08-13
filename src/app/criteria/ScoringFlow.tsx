@@ -1,4 +1,5 @@
-import { Badge, Card, Disclosure, Num } from "@/components/ui";
+import type { ReactNode } from "react";
+import { Badge, Card, Code, DefList, Disclosure, NoteBlock, Num, RankMark, StepBlock, StepFlow } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import type { SelectableItem } from "./data";
 
@@ -43,6 +44,15 @@ const ROLE_LABEL: Record<string, string> = {
 
 const RANK_ORDER = ["A", "B", "C", "D", "E"];
 
+/**
+ * 「内部完結」「外部影響」だけでは、何が結果を左右するのか読み取れない。
+ * 値そのものは短く残し、意味は値の下に小さく添える（値と説明を1行に混ぜない）。
+ */
+const CONTROLLABILITY_NOTE: Record<string, string> = {
+  内部完結: "本人・事業所の実行だけでAに届きます。",
+  外部影響: "利用者・家族・市場の反応が結果を左右します。",
+};
+
 /** 配点とランクの割合から点数を出す（評価の計算 src/lib/domain/scoring.ts と同じ丸め方）。 */
 function scoreOf(weight: number, ratio: number): number {
   return Math.round(weight * ratio * 10) / 10;
@@ -76,14 +86,35 @@ export function anchorIdOf(kpiItemId: string): string {
   return `kpi-${kpiItemId}`;
 }
 
-/** 定義書の1列を「見出し：中身」で出す。値が無い列は行ごと出さない（空欄を並べても読めないため）。 */
-function DefRow({ label, value }: { label: string; value: string | null | undefined }) {
-  if (!value) return null;
-  return (
-    <p className="m-0 text-sub">
-      <span className="footnote">{label}</span> {value}
-    </p>
-  );
+/**
+ * 定義書の列を、ラベルと値の対（定義リスト）に組む。
+ *
+ * 以前はラベルと値を空白1つでつないだ段落を9行並べていたため、どこがラベルで
+ * どこが値なのか目で切れなかった（2026-08-13 の指摘）。器を定義リストへ替えると、
+ * ラベル幅・小ささ・狭い画面での縦積みが共通部品側で揃う（docs/product/spec.md §5-5）。
+ *
+ * 値が無い列は行ごと出さない（空欄を並べても読めないため）。
+ */
+function defRowsOf(item: SelectableItem): { label: string; value: ReactNode }[] {
+  const controllabilityNote = item.controllability ? CONTROLLABILITY_NOTE[item.controllability] : undefined;
+  const rows: { label: string; value: ReactNode }[] = [
+    { label: "何を見る項目か", value: item.intent },
+    { label: "実績区分", value: item.measureType },
+    { label: "データ取得元", value: item.dataSource },
+    { label: "判断時期", value: item.judgeTiming },
+    { label: "A水準の型", value: item.aType },
+    { label: "Aランクの基準", value: item.aStandard },
+    {
+      label: "制御可能性",
+      value: item.controllability && (
+        <>
+          {item.controllability}
+          {controllabilityNote && <span className="footnote mt-0.5 block">{controllabilityNote}</span>}
+        </>
+      ),
+    },
+  ];
+  return rows.filter((r) => r.value);
 }
 
 function ItemFlow({
@@ -126,66 +157,46 @@ function ItemFlow({
           </>
         }
       >
-      <div className="grid gap-4">
-        <div>
-          <p className="m-0 mb-1 text-note font-semibold text-ink-muted">⓪ この項目の定義</p>
-          <div className="grid gap-1">
-            <DefRow label="何を見る項目か" value={item.intent} />
-            <DefRow label="実績区分" value={item.measureType} />
-            <DefRow label="データ取得元" value={item.dataSource} />
-            <DefRow label="判断時期" value={item.judgeTiming} />
-            <DefRow
-              label="A水準の型"
-              value={[item.aType, item.aStandard && `A＝${item.aStandard}`].filter(Boolean).join(" ／ ") || null}
-            />
-            <DefRow
-              label="制御可能性"
-              value={
-                item.controllability === "外部影響"
-                  ? "外部影響（利用者・家族・市場の反応が結果を左右する）"
-                  : item.controllability === "内部完結"
-                    ? "内部完結（本人・事業所の実行だけでAに届く）"
-                    : item.controllability
-              }
-            />
-            <DefRow label="なぜその水準をAとするか" value={item.aRationale} />
-            <DefRow label="備考" value={item.remarks} />
-          </div>
-        </div>
+      <StepFlow>
+        <StepBlock step="⓪" title="この項目の定義">
+          <DefList rows={defRowsOf(item)} />
+          {item.aRationale && <NoteBlock label="なぜその水準をAとするか">{item.aRationale}</NoteBlock>}
+          {item.remarks && <NoteBlock label="備考">{item.remarks}</NoteBlock>}
+        </StepBlock>
 
-        <div>
-          <p className="m-0 mb-1 text-note font-semibold text-ink-muted">① 本人に聞くこと</p>
+        <StepBlock step="①" title="本人に聞くこと">
           {questions.length === 0 ? (
             <p className="m-0 text-sub">
               この項目の設問が登録されていません。実績値を出せないため、評価する側が値を入れる必要があります。
             </p>
           ) : (
-            <ul className="m-0 list-none space-y-1 p-0 text-sub">
+            <ul className="m-0 list-none space-y-2 p-0 text-sub">
               {questions.map((q) => (
                 <li key={q.id}>
-                  <span className="num font-bold">{q.questionKey}</span>{" "}
-                  <span className="footnote">（{ROLE_LABEL[q.role] ?? q.role}）</span>
+                  <Code>{q.questionKey}</Code> <span className="footnote">{ROLE_LABEL[q.role] ?? q.role}</span>
                   <br />
                   {q.text}
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </StepBlock>
 
-        <div>
-          <p className="m-0 mb-1 text-note font-semibold text-ink-muted">② 実績値の出し方</p>
-          <p className="m-0 text-sub">{item.formula ?? "計算式が登録されていません（回答した数値をそのまま使います）。"}</p>
-          {item.formulaNote && <p className="footnote m-0 mt-1">{item.formulaNote}</p>}
-          <p className="footnote m-0 mt-1">
-            単位は {item.unit}。{item.direction === "lower" ? "低いほど良い項目です。" : "高いほど良い項目です。"}
-          </p>
-        </div>
+        <StepBlock
+          step="②"
+          title="実績値の出し方"
+          aside={`単位 ${item.unit} ／ ${item.direction === "lower" ? "低いほど良い" : "高いほど良い"}`}
+        >
+          {item.formula ? (
+            <Code block>{item.formula}</Code>
+          ) : (
+            <p className="m-0 text-sub">計算式が登録されていません（回答した数値をそのまま使います）。</p>
+          )}
+          {item.formulaNote && <NoteBlock label="自動で決まる値・固定値の扱い">{item.formulaNote}</NoteBlock>}
+        </StepBlock>
 
-        <div>
-          <p className="m-0 mb-1 text-note font-semibold text-ink-muted">
-            ③ 実績値からランクを決める ／ ④ 何点になるか
-          </p>
+        {/* ③と④は同じ表の別の列で読むもの。段を分けると同じ表を2回出すことになるのでまとめる。 */}
+        <StepBlock step="③④" title="ランクの決まり方と点数">
           {sorted.length === 0 ? (
             <p className="m-0 text-sub">この項目のランク基準が登録されていません。会社の管理者に登録を依頼してください。</p>
           ) : (
@@ -196,18 +207,25 @@ function ItemFlow({
               rows={sorted}
               rowKey={(c) => c.id}
               columns={[
-                { key: "rank", header: "ランク", role: "title", cell: (c) => <span className="num font-bold">{c.rank}</span> },
+                { key: "rank", header: "ランク", role: "title", cell: (c) => <RankMark rank={c.rank} /> },
+                { key: "range", header: "この範囲なら", cell: (c) => c.displayLabel },
                 {
-                  key: "range",
-                  header: "この範囲なら",
-                  cell: (c) => (
-                    <>
-                      {c.displayLabel}
-                      {c.meaning && <span className="footnote"> ／ {c.meaning}</span>}
-                    </>
-                  ),
+                  key: "meaning",
+                  header: "どういう状態か",
+                  // 空欄にすると「登録漏れ」と「そもそも書かない列」の区別が付かないので印を出す
+                  cell: (c) => <span className="footnote">{c.meaning ?? "—"}</span>,
                 },
-                { key: "formula", header: "数式で書くと", cell: (c) => <span className="footnote">{boundText(c, item.direction)}</span> },
+                {
+                  key: "formula",
+                  header: "数式で書くと",
+                  // 上限・下限が両方空の行は日本語の文になる。文を等幅にすると読みにくいので、式のときだけ等幅にする。
+                  cell: (c) =>
+                    c.lowerBound === null && c.upperBound === null ? (
+                      <span className="footnote">{boundText(c, item.direction)}</span>
+                    ) : (
+                      <Code>{boundText(c, item.direction)}</Code>
+                    ),
+                },
                 {
                   key: "ratio",
                   header: "割合",
@@ -223,14 +241,13 @@ function ItemFlow({
               ]}
             />
           )}
-          <p className="footnote mt-2">
+          <NoteBlock label="境目の値の扱い">
             {item.direction === "lower"
-              ? "この項目は低いほど良いので「上限以下・下限超」で見ます。境目の値はどちらか一方のランクにしか入りません。"
-              : "この項目は高いほど良いので「下限以上・上限未満」で見ます。境目の値はどちらか一方のランクにしか入りません。"}
-          </p>
-          {item.aStandard && <p className="footnote m-0 mt-1">Aの水準の考え方：{item.aStandard}</p>}
-        </div>
-      </div>
+              ? "低いほど良いので「上限以下・下限超」で見ます。境目の値はどちらか一方のランクにしか入りません。"
+              : "高いほど良いので「下限以上・上限未満」で見ます。境目の値はどちらか一方のランクにしか入りません。"}
+          </NoteBlock>
+        </StepBlock>
+      </StepFlow>
       </Disclosure>
     </div>
   );

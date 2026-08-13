@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
-import { Badge, Card, CardHead, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { Badge, Card, CardHead, Code, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote } from "@/components/ui";
 import { DetailDialogButton } from "@/components/ConfirmButton";
 import { RankCriteriaSetForm } from "@/components/RankCriteriaSetForm";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
@@ -31,12 +31,8 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
   const nextGroup = nextGroupOf(setup.order, pointGroup);
   const head = (
     <PageTitle
-      breadcrumb={[
-        { label: "制度設定ガイド", href: "/admin/setup" },
-        { label: "KPI・評価セット", href: "/admin/scheme" },
-        /* 等級名はパンくずに詰めない。どの等級が入るかは手順1の配点カードに並びで出る。 */
-        { label: pointGroup, href: schemeStepPath(pointGroup, "select") },
-      ]}
+      /* ヘッダーが出す階層と重ねない（手順1へは階層の1段前が同じ URL を指す）。 */
+      breadcrumb={[{ label: "制度設定ガイド", href: "/admin/setup" }]}
       title={`${pointGroup}：${stepTitle("criteria")}`}
       lede={stepLede("criteria", pointGroup)}
       tags={
@@ -115,12 +111,16 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
         </p>
         {/* 数値の書き方は項目ごとに同じ説明になる。カードごとに繰り返さず、ここで1回だけ読めるようにする。 */}
         <div className="mt-3">
+          {/* 同じ強さの文が5つ縦に並ぶと、どこまでが1つの決まりごとか目で切れない。
+              並びの単位を箇条書きで示す（2026-08-13 の指摘）。 */}
           <DetailDialogButton label="上限・下限の書き方を見る" title="上限・下限の書き方">
-            <p className="text-sub">上限・下限を空欄にすると、その側は制限なし（青天井）になります。</p>
-            <p className="text-sub">いちばん上のランクの外側は空欄にします。いちばん下のランクの外側も空欄にします。</p>
-            <p className="text-sub">そこに制限を入れると、その外の実績値がどのランクにも当てはまらなくなります。</p>
-            <p className="text-sub">ランク同士は、隣り合う欄に同じ値を入れるとぴったり繋がります。</p>
-            <p className="text-sub">重なりや隙間があるまま保存はできません。どう直せばよいかは、その場に出ます。</p>
+            <ul className="m-0 list-disc space-y-1 pl-5 text-sub">
+              <li>上限・下限を空欄にすると、その側は制限なし（青天井）になります。</li>
+              <li>いちばん上のランクの外側は空欄にします。いちばん下のランクの外側も空欄にします。</li>
+              <li>そこに制限を入れると、その外の実績値がどのランクにも当てはまらなくなります。</li>
+              <li>ランク同士は、隣り合う欄に同じ値を入れるとぴったり繋がります。</li>
+              <li>重なりや隙間があるまま保存はできません。どう直せばよいかは、その場に出ます。</li>
+            </ul>
           </DetailDialogButton>
         </div>
       </Card>
@@ -161,13 +161,18 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
                 </>
               }
             />
-            <p className="footnote m-0">
-              {i.isFixedSlot
-                ? "実績値は「達成した等級要件の数 ÷ 出した数 × 100」で出します。分母は、アンケートで出した等級要件の数です。"
-                : i.formula
-                  ? `計算式 ${i.formula}。`
-                  : ""}
-            </p>
+            {i.isFixedSlot ? (
+              <p className="footnote m-0">
+                実績値は「達成した等級要件の数 ÷ 出した数 × 100」で出します。分母は、アンケートで出した等級要件の数です。
+              </p>
+            ) : (
+              i.formula && (
+                /* 記号の並びを地の文と同じ書体で出すと文章の一部に見える。式は等幅で出す。 */
+                <p className="footnote m-0">
+                  計算式 <Code>{i.formula}</Code>
+                </p>
+              )
+            )}
             {i.criteria.length === 0 ? (
               <div className="mt-3">
                 <ReasonNote>

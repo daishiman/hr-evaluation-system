@@ -315,6 +315,21 @@ export function Num({
   );
 }
 
+/* ───────────────────────── 計算式・ID ─────────────────────────
+ * 記号の並び（÷ × 【】 ＋）と英数字のIDを、地の文と同じ書体で出すと
+ * 文章の一部に見えて読み違える。等幅にして「そのままの並びで読むもの」だと示す。
+ */
+
+/**
+ * 計算式・設問ID・コード値を等幅で出す。
+ *
+ * `block` は式が1行で収まらないとき（画面いっぱいを使ってよい場所）に付ける。
+ * 行内の短いIDは既定（`block` なし）で使う。
+ */
+export function Code({ children, block }: { children: ReactNode; block?: boolean }) {
+  return <code className={clsx("code", block && "code-block")}>{children}</code>;
+}
+
 /* ───────────────────────── 面・見出し ───────────────────────── */
 
 /**
@@ -346,7 +361,9 @@ export interface Crumb {
 /**
  * 画面の見出し。全画面でこの1つだけを使う。
  *
- * - `breadcrumb`: いまどこにいて、どこへ戻れるか。画面の中に「一覧に戻る」ボタンを置かない。
+ * - `breadcrumb`: いつもの階層はヘッダーが出す（src/lib/nav.ts の ROUTE_META）。
+ *   ここに渡すのは、URL から作れない戻り先があるときだけ（docs/product/spec.md §25-2）。
+ *   例：絞り込み条件つきの一覧へ戻す、手順の入口へ戻す、来た経路で戻り先が変わる。
  * - `tags`: 対象者・期間・状態など、スクロール中も見えていてほしい札。
  * - `sticky`: 縦に長い画面だけ true にして、見出しの帯を固定ヘッダーの下に貼り付ける
  *   （適用範囲は docs/product/spec.md §6。画面ごとに position: sticky を書かない）。
@@ -411,6 +428,82 @@ export function SectionHeading({
       </div>
       {help && <p className="footnote m-0 -mt-1.5 mb-2">{help}</p>}
     </>
+  );
+}
+
+/* ───────────────────────── 順番のある説明 ─────────────────────────
+ *
+ * 「聞く → 計算する → 判定する → 点になる」のように、順番そのものが意味を持つ
+ * 説明を出すための器（判断基準は docs/product/spec.md §5-6）。
+ *
+ * これを部品にした理由は、番号付きの節を画面ごとに段落で書くと、
+ * 見出しと本文が同じ視覚的な重さで9行続き、どこが区切りか読めなくなること
+ * （2026-08-13、発注者から「⓪番の項目の定義が見にくい」という指摘）。
+ * 区切りは色や囲みではなく、番号の印・字下げ・罫線1本・余白だけで作る。
+ */
+
+/**
+ * 手順・段階の番号を丸で示す小さな印。
+ * 中に入れるのは番号1〜2文字だけ（文章を入れると丸が崩れる）。
+ */
+export function StepMark({ children }: { children: ReactNode }) {
+  return (
+    <span className="step-mark num" aria-hidden="true">
+      {children}
+    </span>
+  );
+}
+
+/** {@link StepBlock} を縦に並べる箱。段の間の空きと区切り線はここで決める。 */
+export function StepFlow({ children }: { children: ReactNode }) {
+  return <div className="step-flow">{children}</div>;
+}
+
+/**
+ * 順番のある説明の1段。
+ *
+ * 見出しは小さく静かに保ち、番号の印で段の始まりを示す。本文は見出しの文字位置へ
+ * 揃えて字下げするので、番号の列が縦のラインになり、上から順に目で追える。
+ */
+export function StepBlock({
+  step,
+  title,
+  aside,
+  children,
+}: {
+  /** 段の番号（⓪①… や 1 2 3）。 */
+  step: ReactNode;
+  title: string;
+  /** 見出しの右に添える短い参照値（単位・向きなど）。文章は入れない。 */
+  aside?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="step-block">
+      <div className="step-block-head">
+        <StepMark>{step}</StepMark>
+        <h3 className="step-block-title">{title}</h3>
+        {aside && <span className="step-block-aside">{aside}</span>}
+      </div>
+      <div className="step-block-body">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * 本文から一段下げて置く注記。
+ *
+ * 「なぜその水準にしたか」「自動で決まる部分」「備考」のように、
+ * 読まなくても操作できるが消すと根拠が追えなくなる文をここへ入れる。
+ * 沈ませ方は左の罫線と余白だけで、面と色は増やさない
+ * （行の中の補足 `InlineDetail` と同じ見た目にして、注記の読み方を1つに保つ）。
+ */
+export function NoteBlock({ label, children }: { label?: string; children: ReactNode }) {
+  return (
+    <div className="note-block">
+      {label && <p className="note-block-label">{label}</p>}
+      {children}
+    </div>
   );
 }
 

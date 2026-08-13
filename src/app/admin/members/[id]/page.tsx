@@ -41,7 +41,6 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
   return (
     <>
       <PageTitle
-        breadcrumb={[{ label: "社員", href: "/admin/members" }]}
         title={`${member.name} さん`}
         lede={`${ROLE_LABEL[member.role as Role] ?? member.role} ／ ${member.email}`}
         actions={

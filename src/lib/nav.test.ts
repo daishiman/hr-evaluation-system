@@ -1,5 +1,17 @@
+import { readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { homeItemFor, isCurrent, navGroupsFor, type NavGroup } from "@/lib/nav";
+import {
+  homeItemFor,
+  isCurrent,
+  navGroupsFor,
+  resolveTrail,
+  ROUTE_META,
+  routeMetaOf,
+  searchableScreens,
+  type NavGroup,
+} from "@/lib/nav";
+import { stepTitle } from "@/lib/domain/scheme-steps";
 
 const hrefsOf = (groups: NavGroup[]) => groups.flatMap((g) => g.items.map((i) => i.href));
 
@@ -168,5 +180,125 @@ describe("メニューの用語", () => {
     );
     expect(new Set(labels).size).toBe(1);
     expect(labels[0]).toBe("評価・結果を確認する");
+  });
+});
+
+/**
+ * ヘッダーの階層表示（いまどこを開いているか）。
+ *
+ * 画面名の正本は ROUTE_META 1箇所だけ。画面側で「社員 →」のような文字列を
+ * 書き起こすと、呼び名を変えたときに直し漏れが出る。
+ */
+describe("いま開いている画面の呼び名", () => {
+  const APP = join(process.cwd(), "src", "app");
+
+  /** src/app の中の page.tsx から、実際に存在するURLの形を集める。 */
+  function routesUnder(dir: string, prefix = ""): string[] {
+    const out: string[] = [];
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (!statSync(p).isDirectory()) continue;
+      // (group) のような括弧つきはURLに出ない
+      const seg = name.startsWith("(") ? "" : `/${name}`;
+      const here = `${prefix}${seg}`;
+      if (readdirSync(p).includes("page.tsx")) out.push(here === "" ? "/" : here);
+      out.push(...routesUnder(p, here));
+    }
+    return out;
+  }
+
+  /* 画面の骨格（AppShell）の外にあるURL。階層表示を出さないので呼び名を持たない。 */
+  const OUTSIDE_SHELL = [
+    "/", // ロール別のホームへ振り分けるだけ
+    "/login",
+    "/f/[token]", // ログインしない人が開く1枚だけのアンケート
+    "/admin/masters/kpi-categories", // KPI・評価セットへ送るだけ
+  ];
+
+  it("骨格の中の画面には、すべて呼び名が付いている", () => {
+    const missing = routesUnder(APP)
+      .filter((r) => !OUTSIDE_SHELL.includes(r))
+      .filter((r) => !ROUTE_META.some((m) => m.pattern === r));
+    expect(missing).toEqual([]);
+  });
+
+  it("対応表に、いまは無いURLが残っていない", () => {
+    const actual = new Set(routesUnder(APP));
+    expect(ROUTE_META.filter((m) => !actual.has(m.pattern)).map((m) => m.pattern)).toEqual([]);
+  });
+
+  it("手順の呼び名は scheme-steps と同じ語を使う（2箇所で言い換えない）", () => {
+    expect(routeMetaOf("/admin/scheme/Chief")?.label).toBe(stepTitle("select"));
+    expect(routeMetaOf("/admin/scheme/Chief/criteria")?.label).toBe(stepTitle("criteria"));
+  });
+
+  it("動的な部分は、名前ではなく種類の呼び名を出す（見出しと二重に読ませない）", () => {
+    expect(routeMetaOf("/admin/members/u_123")?.label).toBe("社員1人");
+    expect(routeMetaOf("/system/users/u_123")?.label).toBe("利用者1人");
+  });
+
+  it("決まった名前の画面を、動的な画面と取り違えない", () => {
+    // /admin/members/policy は /admin/members/[id] の形にも当たってしまう
+    expect(routeMetaOf("/admin/members/policy")?.label).toBe("本人が変更できる項目");
+    expect(resolveTrail("/admin/members/policy", "COMPANY_ADMIN").at(-1)?.label).toBe("本人が変更できる項目");
+  });
+});
+
+describe("階層表示の組み立て", () => {
+  it("ホームでは1段だけ（自分の名前を分類の下にぶら下げない）", () => {
+    expect(resolveTrail("/admin", "COMPANY_ADMIN")).toEqual([{ label: "ホーム", href: "/admin" }]);
+  });
+
+  it("ホームはロールごとの入口を指す", () => {
+    expect(resolveTrail("/criteria", "MANAGER")[0]).toEqual({ label: "ホーム", href: "/manager" });
+    expect(resolveTrail("/criteria", "COMPANY_ADMIN")[0]).toEqual({ label: "ホーム", href: "/admin" });
+  });
+
+  it("サイドバーの分類が2段目に入る（どの区画にいるかが分かる）", () => {
+    const trail = resolveTrail("/admin/members", "COMPANY_ADMIN");
+    expect(trail.map((s) => s.label)).toEqual(["ホーム", "人を管理する", "社員"]);
+    // 分類は開ける場所ではないので、押せる段にしない
+    expect(trail[1].href).toBeUndefined();
+  });
+
+  it("いまの画面は押せない段にし、途中の段は押せる段にする", () => {
+    const trail = resolveTrail("/admin/members/u_1", "COMPANY_ADMIN");
+    expect(trail.map((s) => s.label)).toEqual(["ホーム", "人を管理する", "社員", "社員1人"]);
+    expect(trail[2].href).toBe("/admin/members");
+    expect(trail[3].href).toBeUndefined();
+  });
+
+  it("深い画面でも、上の階層をすべてたどれる", () => {
+    const trail = resolveTrail("/admin/scheme/Chief/criteria", "COMPANY_ADMIN");
+    expect(trail.map((s) => s.label)).toEqual([
+      "ホーム",
+      "制度を順番に設定する",
+      "KPI・評価セット",
+      "使うKPIを選ぶ",
+      "選んだ項目の基準を決める",
+    ]);
+    expect(trail[3].href).toBe("/admin/scheme/Chief");
+  });
+
+  it("開いても何も無い中継のURLは段にしない", () => {
+    const trail = resolveTrail("/manager/evaluations/ev_1", "MANAGER");
+    expect(trail.map((s) => s.label)).toEqual(["ホーム", "評価1件"]);
+  });
+
+  it("知らないURLでは、当てずっぽうの呼び名を作らない", () => {
+    expect(resolveTrail("/admin/nowhere", "COMPANY_ADMIN").map((s) => s.label)).toEqual(["ホーム"]);
+  });
+});
+
+describe("検索で出す画面", () => {
+  it("その人のメニューに出ている画面だけを候補にする", () => {
+    const hrefs = searchableScreens("EMPLOYEE").map((s) => s.href);
+    expect(hrefs.some((h) => h.startsWith("/admin"))).toBe(false);
+    expect(hrefs).toContain("/me/forms");
+  });
+
+  it("候補には分類名も付ける（同じ語の画面を見分けられるように）", () => {
+    const hit = searchableScreens("COMPANY_ADMIN").find((s) => s.href === "/admin/members");
+    expect(hit?.group).toBe("人を管理する");
   });
 });

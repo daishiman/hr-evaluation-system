@@ -25,13 +25,10 @@ export default async function SchemeSelectPage({ params }: { params: Promise<{ g
   const position = groupPosition(setup.order, pointGroup);
   const head = (
     <PageTitle
-      breadcrumb={[
-        { label: "制度設定ガイド", href: "/admin/setup" },
-        { label: "KPI・評価セット", href: "/admin/scheme" },
-        /* 等級名はパンくずに詰めない（5等級ぶんつなぐと1段が130文字を超える）。
-           どの等級が入るかは、下の配点カードに並びで出している。 */
-        { label: pointGroup },
-      ]}
+      /* ヘッダーが出す階層（ホーム›…›使うKPIを選ぶ）と重ねない。
+         ここに残すのは、URL の親ではない「手順の入口」だけ。
+         等級区分名は見出しに出ているので段に詰めない。 */
+      breadcrumb={[{ label: "制度設定ガイド", href: "/admin/setup" }]}
       title={`${pointGroup}：${stepTitle("select")}`}
       lede={stepLede("select", pointGroup)}
       tags={

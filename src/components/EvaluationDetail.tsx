@@ -1,5 +1,5 @@
 import { getEvaluationDetail, listEvaluations } from "@/lib/queries";
-import { Badge, Bar, Card, CardRow, DefList, Disclosure, InlineDetail, LinkButton, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Bar, Card, CardRow, Code, DefList, Disclosure, InlineDetail, LinkButton, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { EightAxisRadar } from "@/components/LazyCharts";
 import { PrintButton } from "@/components/PrintButton";
 import { formatPeriod } from "@/lib/view";
@@ -236,7 +236,9 @@ export async function EvaluationDetail({
               <>
                 <p className="m-0 mt-1 text-note leading-relaxed text-ink-muted">{i.rationale}</p>
                 {showsCriteria && i.calcNote && (
-                  <p className="m-0 mt-1 text-note text-ink-muted">計算式：{i.calcNote}</p>
+                  <p className="m-0 mt-1 text-note text-ink-muted">
+                    計算式 <Code>{i.calcNote}</Code>
+                  </p>
                 )}
                 {/* 得点バーと判定範囲は配点そのものなので評価者だけに出す */}
                 {showsCriteria && <ScoreBar points={i.points} maxPoints={i.maxPoints} />}
