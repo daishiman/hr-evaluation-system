@@ -50,6 +50,14 @@ describe("人を探す", () => {
   it("関係のない語では見つからない", () => {
     expect(matchPerson(person(), "佐藤")).toBe(false);
   });
+
+  // 会社にはメールも社員番号もなく、手がかりを持たない人もいる。
+  // 空欄の項目を「空文字」として扱わないと、名前で当たるはずの人を落とす。
+  it("メール・社員番号・手がかりが無い相手でも名前で見つかる", () => {
+    const company = person({ kind: "company", name: "見本商事", note: null, email: undefined, code: null });
+    expect(matchPerson(company, "見本")).toBe(true);
+    expect(matchPerson(company, "主任")).toBe(false);
+  });
 });
 
 describe("画面を探す", () => {
@@ -67,8 +75,25 @@ describe("画面を探す", () => {
     expect(hits.slice(0, 2)).toEqual(["評価期間", "評価の基準"]);
   });
 
+  it("空欄では当たり扱いにしない（全画面を並べない）", () => {
+    expect(matchScreen(screens[0], "")).toBe(false);
+    expect(matchScreen(screens[0], "　")).toBe(false);
+  });
+
   it("空欄では候補を作らない", () => {
     expect(rankScreens(screens, "")).toEqual([]);
+  });
+
+  // 名前で当たった画面と分類名だけで当たった画面が混ざるとき、
+  // 打った語で始まる画面を先に出さないと、探しているものが下に埋まる。
+  it("分類名でしか当たらない画面は後ろへ回す", () => {
+    const withGroupOnly: ScreenHit[] = [
+      { href: "/admin/kgi", label: "事業所KGIの達成率", group: "評価を順番に進める" },
+      ...screens,
+    ];
+    const hits = rankScreens(withGroupOnly, "評価").map((s) => s.label);
+    expect(hits.slice(0, 2)).toEqual(["評価期間", "評価の基準"]);
+    expect(hits.at(-1)).toBe("事業所KGIの達成率");
   });
 
   it("出す数に上限がある（窓に入らない数を並べない）", () => {
