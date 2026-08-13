@@ -1,10 +1,39 @@
 # AI開発エージェントキット
 
-**バージョン 1.9.0**
+**バージョン 1.10.2**
 
 Claude Code と OpenAI Codex の両方に、「プロの開発ノウハウ集」と「開発を自動で進める司令塔(app-orchestrator)」を同時に追加するキットです。
 
 インストールすると、どちらのツールでも、要件の整理からデザイン・開発・公開・品質チェックまでを決められた手順で進められます。
+
+## Codex の配置はこの2つだけ覚えてください
+
+| 入れるもの | プロジェクト限定 | 全プロジェクト共通 |
+|---|---|---|
+| スキル (`SKILL.md`) | `.agents/skills/<名前>/SKILL.md` | `~/.agents/skills/<名前>/SKILL.md` |
+| custom agent (`.toml`) | `.codex/agents/<名前>.toml` | `~/.codex/agents/<名前>.toml` |
+
+**AIDDはprojectの`.codex/skills`へスキルを置きません。** `.agents/skills` と `.codex/agents` は競合する候補ではなく、入れるものが違います。`AGENTS.md` は毎回読むプロジェクト規約で、スキルやcustom agentの置き場所ではありません。`$CODEX_HOME/skills`（通常`~/.codex/skills`）はCodex組込installer/plugin等が使うpersonal installed/互換領域で、AIDDは書き込みません。
+
+上の表はCodex公式の探索範囲です。AIDDが一度に両方へ書くという意味ではありません。配布キットの通常インストールはuser scope、このAIDDキット開発リポジトリはproject scopeを正とします。同名Skillをuser/projectへ二重導入してもCodexは統合しないため、二重導入は避けてください。
+
+このキット内で編集する原本と、scopeごとの反映先も固定しています。
+
+| キット内の編集元 | 反映先 |
+|---|---|
+| `skills/` と `codex/workflow-skills/` | Codex: `.agents/skills/`、Claude Code: `.claude/skills/` または `.claude/commands/` |
+| `codex/agents/*.toml` | `.codex/agents/*.toml` |
+
+`.agents`・`.codex`・`.claude` の反映済みファイルを直接編集せず、**編集原本 → 明示scope → manifest → verify** の順で反映します。詳しい探索範囲・書込scope・判断表は [`CODEX-PLACEMENT.md`](CODEX-PLACEMENT.md) にまとめています。
+
+Codexのcustom agent TOMLは必須3キーを持ち、モデル・sandbox・承認・MCPは親セッションから継承します。これは設定漏れではなく、キットが利用者の権限を勝手に拡大しないための設計です。Codex公式Hooksも利用できますが、既存のuser hookや設定を壊さないよう、AIDDインストーラーは `config.toml` と `hooks.json` を上書きしません。権限とHooksの判断基準は [`CODEX-PLACEMENT.md`](CODEX-PLACEMENT.md#custom-agent-toml権限hooksの責務) を参照してください。
+
+```text
+公式探索範囲: Codexが読む可能性のある場所
+AIDD書込scope: 今回のinstall/syncが実際に更新する場所（userまたはprojectの片方）
+```
+
+配置の診断は `./aidd-agent-kit/doctor-codex-layout.sh` で行えます。診断は読み取り専用で、同内容のAIDD二重導入は警告し、AIDD user/project間の内容差やproject `.codex/skills` の誤配置をNGにします。`$CODEX_HOME/skills` との同名は管理外の衝突候補として警告しますが、存在だけで誤配置にはしません。CIで `--strict` を付けるとこれらの重複警告もNGです。利用者所有のファイルは自動削除しません。
 
 ```text
 Claude Code: /build-app 社員の勤怠を管理するアプリを作って
@@ -112,7 +141,7 @@ Claude Code / Codex の書き込み対象を**シンボリックリンク(別フ
 |---|---|
 | app-orchestrator | 要件整理→デザイン→開発→公開→品質チェックを順番に進める司令塔 |
 
-Codexにもagent／subagent機能があります。このキットは `~/.codex/agents/app-orchestrator.toml` をcustom agentとして、同じ手順の `$app-orchestrator` を `~/.agents/skills/app-orchestrator/SKILL.md` として導入します。Codexがcustom agentを利用できる環境では司令塔へ委譲し、利用できないクライアントでは同じスキルを現在のスレッドで実行します。
+Codexにもagent／subagent機能があります。選択したscopeの `.codex/agents/app-orchestrator.toml` をcustom agentとして、同じscopeの `$app-orchestrator` を内部実行用Skillとして導入します。利用者の入口は `$build-app` / `$improve-app` です。これらから明示的に委譲し、custom agentを利用できないクライアントだけ、現在のスレッドで内部Skillを明示使用します。`$app-orchestrator` は一般のアプリ依頼から暗黙起動しません。
 
 ### コマンドワークフロー — 4個
 
@@ -140,8 +169,8 @@ Windows: install-windows.bat --legacy-prompts
 |---|---|
 | app-excellence | アプリ開発全体の進め方・品質基準 |
 | mvp-first-development | まず必要な機能一式で公開し、残課題を管理しながら育てる進め方 |
-| jp-web-design | 日本語アプリのデザインルール |
-| ux-design | 使いやすさ(UX)の設計ルール |
+| jp-web-design | Graphite × Amber、Light/Dark、レスポンシブ、状態・モーションを含む日本語UIルール |
+| ux-design | 業務フロー、入力、一括操作、エラー回復、知覚速度を含むUXルール |
 | cloudflare-secure-deploy | 安全にインターネット公開する手順 |
 | launch-security | 公開前のセキュリティ・品質検査 |
 | testing-excellence | テストの進め方 |
@@ -167,6 +196,8 @@ Windows: install-windows.bat --legacy-prompts
 
 使用中に蓄積されたナレッジ(各スキルフォルダ内の `knowledge/` など、キットが配布していない追加ファイル)は**更新で消えず、そのまま残ります**。廃止されたスキルの中にあった場合は、バックアップフォルダの中に残ります。
 
+キット自体を開発するときは `.agents`・`.codex`・`.claude` を直接編集せず、`aidd-agent-kit/` 内の編集原本を変更してproject scopeへsyncします。AIDD同梱Skillを外部から更新する場合も、管理対象runtimeへ直接取得せず、一時領域で確認して編集原本へ反映してからsyncしてください。
+
 ## アンインストールするとき
 
 `.claude`、`.agents/skills`、`.codex` から次を削除してください。
@@ -191,15 +222,52 @@ aidd-agent-kit/
 ├── manual-windows.md        ← Windows用マニュアル(テキスト)
 ├── install-mac.command      ← Mac用インストーラー
 ├── install-windows.bat      ← Windows用インストーラー
+├── sync-project-mac.command ← このリポジトリへ反映(Mac・管理用)
+├── sync-project-windows.bat ← このリポジトリへ反映(Windows・管理用)
+├── verify-codex-layout.sh   ← Codex配置と原本一致の自動検査
+├── scripts/                 ← Windows事前検証とCI用smoke test
 ├── setup-env-mac.command    ← Mac用 開発環境セットアップ(Node.js + pnpm + Cloudflare連携)
 ├── setup-env-windows.bat    ← Windows用 開発環境セットアップ(Node.js + pnpm + Cloudflare連携)
 ├── skills/                  ← Claude Code / Codex 共通スキル20個
 ├── agents/                  ← エージェント(app-orchestrator)
 ├── commands/                ← Claude Code の4コマンド
-└── codex/                   ← Codex のcommand skills・custom agent・任意legacy prompts
+├── CODEX-PLACEMENT.md       ← Codexの配置と反映元の判断表
+└── codex/
+    ├── workflow-skills/     ← `.agents/skills` へ反映するCodex用ワークフロー
+    ├── agents/              ← `.codex/agents` へ反映するcustom agent TOML
+    └── prompts/             ← 任意の旧互換prompt
 ```
 
 ## 変更履歴
+
+### 1.10.2
+
+- Windowsの事前検証を、`cmd.exe`内の長大なPowerShell文字列から独立したPowerShell 5.1互換スクリプトへ分離しました。正規表現の記号がcmd側で再解釈され、インストーラーがexit 255になる問題を防ぎます
+- Windowsの受入検査を再利用可能なsmoke scriptへ集約しました。日本語・空白を含むパス、custom agent TOMLの追加設定、manifest、no-op、project同期、実USERPROFILE不変を段階名つきで検査し、失敗時は原因箇所を残します
+- 成果物先行契約に命令の優先順位を追加しました。分析限定・編集禁止・段階ゲート・承認境界を自律進行より優先し、根因未確定の障害では推測修正ではなく再現fixture・診断・原因範囲の縮小を最初の成果物にします
+- GitHub ActionsのcheckoutをNode.js 24対応版へ統一し、非推奨ランタイム警告を解消しました
+
+### 1.10.1
+
+- 全体の進め方を **Evidence → Decide → Draft → Validate → Diff** に統一しました。質問で要件を埋めるのではなく、依頼文・既存コード・資料・ログから最有力案を1つ選び、仕様初稿・代表画面・動く縦切り・修正差分を先に作ります
+- 新規開発・既存改善・UI/UXで、空欄の質問票、A/B/Cの丸投げ、複数候補からの選択待ちを既定動作から外しました。利用者は完成物を見て違う箇所だけを返せます
+- 質問は秘密、本人確認、課金・契約、公開、破壊操作、重大なデータ所有境界など本人しか決められない事項に限定しました。これらもローカル成果物やdry-runを先に作ります
+- app-excellence、mvp-first-development、design-judgment、ux-design、jp-web-design、Better Auth、Turnstile、app-orchestrator、Claude/Codex入口、T1〜T3テンプレートを同じ成果物先行契約へ揃え、CIで旧来の質問先行文言への退行を検出します
+
+### 1.10.0
+
+- UI標準のMode Aを **Graphite × Amber**へ更新しました。グラファイトを主要CTA・操作・選択、アンバーを実行中・処理中・ヒアリング中だけに限定し、AIへ紫・ネオン・専用グラデーションを付けない規律に統一しました
+- Light / Dark / OS自動追従と手動選択の永続化、IBM Plex Sans + JetBrains Mono、面の明度階層、状態色、44px操作領域、safe-areaを参照実装へ追加しました
+- ナビゲーションを参考画面の模倣で決めず、項目数と最頻作業から上部ナビまたは「212pxサイドバー → 68pxアイコンレール → モバイル下部タブ」を選ぶ導出ルールへしました
+- hover / pressed / focus / 入場 / popover / modal / accordion / toast / loading / 状態更新の短いモーションを標準化しました。入場は追加対象だけ・最大6要素・全体300ms以内とし、reduced-motionでも意味と操作が残る検収を追加しました
+- app-excellenceのT2体験設計書とapp-orchestratorへ、テーマ・ナビ骨格・Light/Darkコントラスト・状態/モーションの設計表を追加しました
+
+### 1.9.1
+
+- Codexのスキル配置を `.agents/skills`、custom agent TOMLを `.codex/agents` とする公式仕様に合わせ、判断表を追加しました
+- 配布元の `codex/skills` を `codex/workflow-skills` に改名し、project配布先の `.agents/skills` と区別しやすい構成にしました
+- project `.codex/skills` を検出した場合、既存ファイルを勝手に移動・削除せず、AIDDの正規配置先を明示するようにしました
+- インストール完了時に `.agents/skills` と `.codex/agents` の実パスを表示し、custom agent TOMLの反映先を確認できるようにしました
 
 ### 1.9.0
 
