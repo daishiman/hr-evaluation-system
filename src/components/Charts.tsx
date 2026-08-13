@@ -25,13 +25,19 @@ import { chartDensity } from "@/lib/domain/evaluation-trend";
  * 色はプライマリ1色だけを使い、比較のときだけ薄い方を過去分に割り当てる。
  */
 
-const BRAND = "#1d63be";
-const BRAND_SOFT = "#9dbde6";
-const LINE = "#e3e6ea";
-const INK_MUTED = "#545e6b";
-/* 等級の区間を敷く面。色相を増やさないため、グラフの中で最も薄い灰色だけを使い、
+/* 色は globals.css のトークンから読む。SVG にはクラスが効かず値で渡すしかないが、
+   ここに色を書き込むと暗いテーマのときだけグラフが白いままになる。
+   等級の区間を敷く面（band）は、色相を増やさないため面の中でいちばん弱い段を使い、
    区間を1つおきに塗って切れ目を出す（塗った側が「上の等級」ではない）。 */
-const BAND = "#f2f4f7";
+const CHART_COLORS = {
+  brand: "var(--brand)",
+  brandSoft: "var(--chart-line-soft)",
+  line: "var(--line)",
+  inkMuted: "var(--ink-muted)",
+  band: "var(--chart-band)",
+  surface: "var(--surface)",
+  ink: "var(--ink)",
+} as const;
 
 /* グラフの中の文字。SVG に描くのでクラスが効かず、数値で渡すしかない。
    globals.css の文字の段（--text-note = 14px / --text-sub = 15px）と
@@ -73,6 +79,7 @@ export function EightAxisRadar({
 }) {
   /* 判定外の軸はラベルに ※ を添える。値を欠損にするだけだと、
      形がへこんだ理由が「悪い」なのか「測れていない」なのか読み取れないため。 */
+  const { brand, brandSoft, line, inkMuted, surface, ink } = CHART_COLORS;
   const unratedNames = new Set(data.filter((d) => d.unrated || d.rank === null).map((d) => d.item));
 
   const merged = data.map((d) => ({
@@ -87,16 +94,16 @@ export function EightAxisRadar({
       <div>
         {data.map((d) => (
           <div key={d.item} style={{ marginBottom: 10 }}>
-            <p style={{ margin: 0, fontSize: CHART_FS_TEXT, color: INK_MUTED }}>
+            <p style={{ margin: 0, fontSize: CHART_FS_TEXT, color: inkMuted }}>
               {d.item}
               {unratedNames.has(d.item) ? "（判定外）" : ""}
             </p>
-            <div style={{ height: 8, borderRadius: 4, background: LINE, overflow: "hidden" }}>
+            <div style={{ height: 8, borderRadius: 4, background: line, overflow: "hidden" }}>
               <div
                 style={{
                   height: "100%",
                   width: `${d.value ?? 0}%`,
-                  background: d.value === null ? "transparent" : BRAND,
+                  background: d.value === null ? "transparent" : brand,
                   borderRadius: 4,
                 }}
               />
@@ -111,21 +118,21 @@ export function EightAxisRadar({
     <div style={{ width: "100%", height: 340 }}>
       <ResponsiveContainer>
         <RadarChart data={merged} outerRadius="72%">
-          <PolarGrid stroke={LINE} />
+          <PolarGrid stroke={line} />
           <PolarAngleAxis
             dataKey="item"
-            tick={{ fontSize: CHART_FS_TICK, fill: INK_MUTED }}
+            tick={{ fontSize: CHART_FS_TICK, fill: inkMuted }}
             tickFormatter={(v: string) =>
               `${v.length > 9 ? `${v.slice(0, 9)}…` : v}${unratedNames.has(v) ? "※" : ""}`
             }
           />
-          <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: CHART_FS_TICK, fill: INK_MUTED }} tickCount={6} />
+          <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: CHART_FS_TICK, fill: inkMuted }} tickCount={6} />
           {compare && (
             <Radar
               name={compareLabel ?? "前回"}
               dataKey={compareLabel ?? "前回"}
-              stroke={BRAND_SOFT}
-              fill={BRAND_SOFT}
+              stroke={brandSoft}
+              fill={brandSoft}
               fillOpacity={0.25}
               connectNulls={false}
             />
@@ -133,15 +140,21 @@ export function EightAxisRadar({
           <Radar
             name={label}
             dataKey={label}
-            stroke={BRAND}
-            fill={BRAND}
+            stroke={brand}
+            fill={brand}
             fillOpacity={0.3}
             /* 判定外を線でつながない。つなぐと0点として面積に混ざってしまう */
             connectNulls={false}
           />
           <Tooltip
             formatter={(v) => [v === null || v === undefined ? "判定外（実績が未入力）" : `${v}%`, valueLabel]}
-            contentStyle={{ fontSize: CHART_FS_TEXT, borderRadius: 8, border: `1px solid ${LINE}` }}
+            contentStyle={{
+              fontSize: CHART_FS_TEXT,
+              borderRadius: 8,
+              border: `1px solid ${line}`,
+              background: surface,
+              color: ink,
+            }}
           />
           {compare && <Legend wrapperStyle={{ fontSize: CHART_FS_TEXT }} />}
         </RadarChart>
@@ -203,6 +216,7 @@ export function TrendChart({
   onSelect?: (cycle: string) => void;
   height?: number;
 }) {
+  const { brand, brandSoft, line, inkMuted, band, surface, ink } = CHART_COLORS;
   const { tickInterval, showDots } = chartDensity(data.length);
   return (
     <div style={{ width: "100%", height }}>
@@ -219,35 +233,41 @@ export function TrendChart({
           {bands
             .filter((b) => b.alt)
             .map((b) => (
-              <ReferenceArea key={`${b.label}-${b.from}`} x1={b.from} x2={b.to} fill={BAND} fillOpacity={1} />
+              <ReferenceArea key={`${b.label}-${b.from}`} x1={b.from} x2={b.to} fill={band} fillOpacity={1} />
             ))}
-          <CartesianGrid stroke={LINE} vertical={false} />
+          <CartesianGrid stroke={line} vertical={false} />
           <XAxis
             dataKey="cycle"
-            tick={{ fontSize: CHART_FS_TICK, fill: INK_MUTED }}
+            tick={{ fontSize: CHART_FS_TICK, fill: inkMuted }}
             tickLine={false}
-            axisLine={{ stroke: LINE }}
+            axisLine={{ stroke: line }}
             interval={tickInterval}
             tickFormatter={shortenTick}
           />
-          <YAxis tick={{ fontSize: CHART_FS_TICK, fill: INK_MUTED }} tickLine={false} axisLine={false} />
+          <YAxis tick={{ fontSize: CHART_FS_TICK, fill: inkMuted }} tickLine={false} axisLine={false} />
           <Tooltip
-            contentStyle={{ fontSize: CHART_FS_TEXT, borderRadius: 8, border: `1px solid ${LINE}` }}
+            contentStyle={{
+              fontSize: CHART_FS_TEXT,
+              borderRadius: 8,
+              border: `1px solid ${line}`,
+              background: surface,
+              color: ink,
+            }}
             labelFormatter={(label) => {
               const cycle = String(label ?? "");
               return gradeOf?.[cycle] ? `${cycle}（${gradeOf[cycle]}）` : cycle;
             }}
           />
           {series.length > 1 && <Legend wrapperStyle={{ fontSize: CHART_FS_TEXT }} />}
-          {activeCycle && <ReferenceLine x={activeCycle} stroke={BRAND_SOFT} strokeWidth={2} />}
+          {activeCycle && <ReferenceLine x={activeCycle} stroke={brandSoft} strokeWidth={2} />}
           {changes.map((c) => (
             <ReferenceLine
               key={c.at}
               x={c.at}
-              stroke={INK_MUTED}
+              stroke={inkMuted}
               strokeDasharray="4 3"
               label={
-                c.label ? { value: c.label, position: "top", fontSize: CHART_FS_TICK, fill: INK_MUTED } : undefined
+                c.label ? { value: c.label, position: "top", fontSize: CHART_FS_TICK, fill: inkMuted } : undefined
               }
             />
           ))}
@@ -257,7 +277,7 @@ export function TrendChart({
               type="monotone"
               dataKey={sr.key}
               name={sr.label}
-              stroke={i === 0 ? BRAND : BRAND_SOFT}
+              stroke={i === 0 ? brand : brandSoft}
               strokeWidth={2}
               dot={showDots ? { r: 3 } : false}
               activeDot={{ r: 5 }}

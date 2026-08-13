@@ -9,36 +9,70 @@
   --brand: #1d63be;
   --brand-deep: #15498f;
   --brand-soft: #e3edfa;
-  --brand-mist: #eef3fa; /* ページ地: 白の単調を避けるプライマリの極薄ティント */
 
-  /* 主要CTA + 結果のキー数字(この2用途のみ) */
-  --accent: #e8590c;
-  --accent-deep: #c74e0b;
-  /* 白文字を載せる面はここを使う。--accent に白文字だと 3.58:1 で本文の基準（4.5:1）に届かない。
-     --accent は「大きい数字の文字色」専用（36px以上の太字なので 3:1 の基準で足りる）。 */
-  --accent-on-white-bg: #c74e0b;
-  --accent-on-white-bg-hover: #a84209;
+  /* ------------------------------------------------------------
+     面の3段階（ページ地 → 面 → 面の中の面）。
+     Harness Studio の「地・面・枠で明度を3段に分ける」考え方に合わせる。
+     画面側は #fff を直接書かず、必ずこの2つを使う。
+     ダークテーマでも同じ役割のまま値だけが入れ替わる。
+     ------------------------------------------------------------ */
+  --page-bg: #eef3fa;      /* ページ地（body の背景） */
+  --surface: #ffffff;      /* カード・ヘッダー・入力欄など「載せる面」 */
+
+  /* 結果のキー数字。押す面は用途が違うので --cta-* に分ける。 */
+  --accent: #232326;
+  --cta-bg: #232326;
+  --cta-bg-hover: #3a3a3f;
+  --cta-fg: #ffffff;
 
   /* テキストと構造(画面の90%) */
   --ink: #16191d;
   --ink-muted: #545e6b;
-  --line: #e3e6ea;
+  --line: #8a949f;
   --subtle: #f5f6f8;
   /* 「いまは使わない設定にしてあるもの」の面と枠（使用しない・利用停止・締め切り済み）。
      白い面と並べて一目で違うと分かる濃さにする。文字（--ink #16191d）との
      コントラストは 13:1 以上あり、読みやすさの下限は割らない。 */
   --off-surface: #e4e7eb;
   --off-surface-soft: #eef0f3;
-  --off-line: #a8b0bb;
+  --off-line: #7a8490;
 
   /* 意味を持つ状態色 */
-  --danger: #d93025;
+  --danger: #c5221f;
   --danger-soft: #fdecea;
+  --danger-fg: #ffffff; /* --danger を面にしたときに載せる文字色 */
   --caution-soft: #fdf6e3;
-  --caution-border: #e6c96a;
+  --caution-border: #947000;
 
-  /* 数字専用フォント(和文フォントで数字を描画しない) */
-  --font-num: "Helvetica Neue", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  /* 「進行中」を表すアンバー。状態表現の専用色で、操作（CTA）には使わない。
+     使い方は下の「バッジ」の節を参照。 */
+  --status-progress: #963f05;
+
+  /* グラフの中だけで使う色。SVG にはクラスが効かず、色を値で渡すしかないため、
+     Charts.tsx がここを読んで描く。テーマを変えたら対で見直すこと。
+     ・soft … 比較用の2本目の線（主役の線より一段弱い同系色）
+     ・band … 等級の区間を1つおきに敷く面（面の中でいちばん弱い段） */
+  --chart-line-soft: #6f91ba;
+  --chart-band: #f2f4f7;
+
+  /* 人を見分ける頭文字の5色。意味のある実使用色なのでテーマと対で持つ。 */
+  --avatar-1-fg: #7a4b12;
+  --avatar-1-bg: #fbf0dd;
+  --avatar-2-fg: #1f5f4a;
+  --avatar-2-bg: #dff0e9;
+  --avatar-3-fg: #5a3d8a;
+  --avatar-3-bg: #eae3f7;
+  --avatar-4-fg: #8a3b3b;
+  --avatar-4-bg: #f8e3e3;
+  --avatar-5-fg: #3d5570;
+  --avatar-5-bg: #e5ebf2;
+
+  /* 数字専用フォント(和文フォントで数字を描画しない)。
+     IBM Plex Sans を先頭に置く（layout.tsx が next/font で読み込み、
+     --font-plex に実際のフォント名を入れる。読めなかったときは後ろへ落ちる）。 */
+  --font-num: var(--font-plex, "IBM Plex Sans"), "Helvetica Neue", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  /* ID・発行パスワード・ログのような「1文字ずつ読み分ける値」用の等幅。 */
+  --font-mono: var(--font-mono-jetbrains, "JetBrains Mono"), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
   /* ------------------------------------------------------------
      余白と骨格の寸法。
@@ -55,6 +89,152 @@
   --sidebar-w: 248px;    /* メニューの幅（本文16px化に合わせて16px広げた） */
   --header-h: 56px;
   --content-max: 1120px; /* 本文の最大幅(これ以上は広げない) */
+
+  color-scheme: light;
+}
+
+/* ============================================================
+   ダークテーマ
+
+   役割の割り当ては light と同じ。値だけを入れ替える。
+   画面側のCSSは var(--surface) 等しか見ていないので、
+   ここに無い変数を足したときは light と対で足すこと。
+
+   出し分けは2通り。
+   ・端末の設定に従う（既定）… html に data-theme が無いとき
+   ・利用者が選ぶ … html[data-theme="light"|"dark"]（ThemeToggle.tsx が付ける）
+   同じ値を2箇所に書いているのは、CSSに変数の集合を使い回す仕組みが無いため。
+   片方だけ直すと「自動のときだけ色が違う」という気づきにくい壊れ方をする。
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    --brand: #6ea8e8;
+    --brand-deep: #a8cbf2;
+    --brand-soft: #1e3a5c;
+
+    --page-bg: #121215;
+    --surface: #1e1e23;
+
+    --accent: #fafafa;
+    --cta-bg: #e8e8ec;
+    --cta-bg-hover: #ffffff;
+    --cta-fg: #17171a;
+
+    --ink: #fafafa;
+    --ink-muted: #b0b0b8;
+    --line: #73737d;
+    --off-line: #85858f;
+    --off-surface: #2e2e34;
+    --off-surface-soft: #26262b;
+    --subtle: #26262b;
+
+    --danger: #fca5a0;
+    --danger-soft: #3b201f;
+    --danger-fg: #2a1413;
+    --caution-soft: #362a15;
+    --caution-border: #a88636;
+
+    --status-progress: #f2c464;
+
+    --chart-line-soft: #3f6f9e;
+    --chart-band: #26262b;
+
+    --avatar-1-fg: #f6c177;
+    --avatar-1-bg: #4a321a;
+    --avatar-2-fg: #9bd8be;
+    --avatar-2-bg: #1f3a31;
+    --avatar-3-fg: #c4a7e7;
+    --avatar-3-bg: #352747;
+    --avatar-4-fg: #f2a6a6;
+    --avatar-4-bg: #482728;
+    --avatar-5-fg: #a9c3df;
+    --avatar-5-bg: #273746;
+
+    color-scheme: dark;
+  }
+}
+html[data-theme="dark"] {
+  --brand: #6ea8e8;
+  --brand-deep: #a8cbf2;
+  --brand-soft: #1e3a5c;
+
+  --page-bg: #121215;
+  --surface: #1e1e23;
+
+  --accent: #fafafa;
+  --cta-bg: #e8e8ec;
+  --cta-bg-hover: #ffffff;
+  --cta-fg: #17171a;
+
+  --ink: #fafafa;
+  --ink-muted: #b0b0b8;
+  --line: #73737d;
+  --off-line: #85858f;
+  --off-surface: #2e2e34;
+  --off-surface-soft: #26262b;
+  --subtle: #26262b;
+
+  --danger: #fca5a0;
+  --danger-soft: #3b201f;
+  --danger-fg: #2a1413;
+  --caution-soft: #362a15;
+  --caution-border: #a88636;
+
+  --status-progress: #f2c464;
+
+  --chart-line-soft: #3f6f9e;
+  --chart-band: #26262b;
+
+  --avatar-1-fg: #f6c177;
+  --avatar-1-bg: #4a321a;
+  --avatar-2-fg: #9bd8be;
+  --avatar-2-bg: #1f3a31;
+  --avatar-3-fg: #c4a7e7;
+  --avatar-3-bg: #352747;
+  --avatar-4-fg: #f2a6a6;
+  --avatar-4-bg: #482728;
+  --avatar-5-fg: #a9c3df;
+  --avatar-5-bg: #273746;
+
+  color-scheme: dark;
+}
+
+/* ダークでは「色を落として沈ませる」が効かない（暗い面は grayscale しても暗いまま）。
+   代わりに明るさを少し下げ、破線の枠と札の文言で「使わない」を伝える。 */
+html[data-theme="dark"] :where(.card, .card-row, .user-row, .list-card, .chip)[data-off="true"],
+html[data-theme="dark"] .user-row[data-muted="true"] { filter: brightness(0.9); }
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) :where(.card, .card-row, .user-row, .list-card, .chip)[data-off="true"],
+  html:not([data-theme="light"]) .user-row[data-muted="true"] { filter: brightness(0.9); }
+}
+
+/* ============================================================
+   コントラストを強める設定にしている人向け (§9)
+
+   弱い罫線と補助文字だけを濃くする。レイアウトは変えない
+   （太らせると行の高さが動き、固定物の実測値がずれる）。
+   ============================================================ */
+@media (prefers-contrast: more) {
+  html:not([data-theme="dark"]) {
+    --ink-muted: #3b434e;
+    --line: #9aa3ae;
+    --off-line: #6b7480;
+  }
+  html[data-theme="dark"] {
+    --ink-muted: #d8d8de;
+    --line: #6e6e78;
+    --off-line: #8a8a94;
+  }
+  :where(a, button, input, select, textarea, summary):focus-visible { outline-width: 3px; }
+}
+/* 端末の設定でダークになっている（明示指定なし）ときは、上の light 向けの
+   濃い灰色が当たったままになる。暗い面では逆に読めなくなるので打ち消す。 */
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    --ink-muted: #d8d8de;
+    --line: #6e6e78;
+    --off-line: #8a8a94;
+  }
 }
 
 /* ============================================================
@@ -119,7 +299,7 @@ html {
 
 body {
   margin: 0;
-  background: var(--brand-mist);
+  background: var(--page-bg);
   color: var(--ink);
   /* 欧文を先に置き、数字・ラテン文字を和文フォントに落とさない */
   font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif;
@@ -170,10 +350,10 @@ body {
   border: 1px solid var(--line);
   border-bottom-width: 2px;
   border-radius: 4px;
-  background: #fff;
+  background: var(--surface);
   padding: 0 5px;
   font-size: var(--text-note);
-  font-family: var(--font-num);
+  font-family: var(--font-mono);
   color: var(--ink-muted);
   line-height: 1.6;
 }
@@ -249,12 +429,15 @@ html[data-sidebar="collapsed"] .app-sidebar { display: none; }
 .app-body { display: flex; flex-direction: column; min-width: 0; }
 
 .app-header {
-  background: #fff;
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
   height: var(--header-h);
   display: flex;
   align-items: center;
-  padding: 0 var(--pad-page-x);
+  /* 切り欠き・角丸のある端末では、横向きにすると左右が隠れる。
+     余白は「本文と同じ量」と「端末が要求する量」の大きいほうを取る。
+     効かせるには layout.tsx の viewportFit: "cover" が対で要る。 */
+  padding: 0 max(var(--pad-page-x), env(safe-area-inset-right)) 0 max(var(--pad-page-x), env(safe-area-inset-left));
   gap: var(--space-block);
   position: sticky;
   top: 0;
@@ -266,7 +449,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 
 /* ---- 左メニュー ---- */
 .app-sidebar {
-  background: #fff;
+  background: var(--surface);
   border-right: 1px solid var(--line);
   position: sticky;
   top: 0;
@@ -281,7 +464,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 .sidebar-head {
   position: sticky;
   top: 0;
-  background: #fff;
+  background: var(--surface);
   display: flex;
   align-items: center;
   gap: var(--space-tight);
@@ -337,7 +520,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 .sidebar-open-sp {
   appearance: none;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   border-radius: 6px;
   font: inherit;
   font-size: var(--text-note);
@@ -369,6 +552,10 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
     top: 0;
     left: 0;
     width: min(280px, 84vw);
+    /* 引き出しは画面の左端に貼り付くので、切り欠き側に出したときに
+       メニューの文字が隠れないよう、左と下に端末ぶんの余白を足す。 */
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
     z-index: 40;
     box-shadow: 0 8px 32px rgba(22, 25, 29, .18);
     transform: translateX(-100%);
@@ -431,7 +618,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 }
 
 @media (max-width: 639px) {
-  .app-header { padding: 0 12px; }
+  .app-header { padding: 0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left)); }
 }
 
 /* 本文の幅と余白はここだけで決める（画面ごとに上書きしない） */
@@ -497,7 +684,7 @@ main {
   top: var(--header-h);
   z-index: 15;
   align-items: center;
-  background: var(--brand-mist);
+  background: var(--page-bg);
   border-bottom: 1px solid var(--line);
   margin: 0 calc(var(--pad-page-x) * -1) var(--space-block);
   padding: 12px var(--pad-page-x);
@@ -516,8 +703,9 @@ main {
   bottom: 0;
   z-index: 16;
   margin: var(--space-section) calc(var(--pad-page-x) * -1) -64px;
-  padding: 10px var(--pad-page-x);
-  background: #fff;
+  /* 下端は、ホームバー（画面下の横棒）に操作が重ならないところまで下げる。 */
+  padding: 10px max(var(--pad-page-x), env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(var(--pad-page-x), env(safe-area-inset-left));
+  background: var(--surface);
   border-top: 1px solid var(--line);
 }
 .action-bar-inner {
@@ -596,9 +784,11 @@ main {
    面・カード (§4)
    ============================================================ */
 .card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  /* 角は 11px。中で固定する帯（.card-head-sticky の 11px 11px 0 0）と同じ値にして、
+     帯がカードの角からはみ出して見えないようにする。対で動かすこと。 */
+  border-radius: 11px;
 }
 .card-pad { padding: var(--pad-card); }
 
@@ -626,7 +816,7 @@ main {
   /* 表の列見出し（4）より上、見出し帯（15）より下。
      カードの頭が画面上部の帯を覆い隠さないための順番。 */
   z-index: 5;
-  background: #fff;
+  background: var(--surface);
   padding: 12px var(--pad-card);
   border-bottom: 1px solid var(--line);
   border-radius: 11px 11px 0 0;
@@ -724,7 +914,7 @@ tr[data-off="true"] > td {
 
 /* 視覚的主役の面(1画面1箇所): 白→brand-softの微グラデ */
 .card.hero-tint {
-  background: linear-gradient(180deg, #fff 20%, var(--brand-soft) 130%);
+  background: linear-gradient(180deg, var(--surface) 20%, var(--brand-soft) 130%);
 }
 /* 主役の面でも「いまは使わない」が勝つ（利用停止の方の詳細画面など）。
    この1行が無いと、上の微グラデが後から書いてある分だけ勝って灰色に見えない。 */
@@ -820,7 +1010,8 @@ tr[data-off="true"] > td {
   appearance: none;
   font: inherit;
   font-size: var(--text-sub);
-  border-radius: 6px;
+  /* 角は 8px。カード（10px）より一段小さくし、押せる面のほうが内側にあると分かる形にする。 */
+  border-radius: 8px;
   padding: 8px 16px;
   cursor: pointer;
   display: inline-flex;
@@ -834,19 +1025,19 @@ tr[data-off="true"] > td {
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
 .btn-primary {
-  background: var(--accent-on-white-bg);
-  border: 1px solid var(--accent-on-white-bg);
-  color: #fff;
+  background: var(--cta-bg);
+  border: 1px solid var(--cta-bg);
+  color: var(--cta-fg);
   font-weight: 600;
   padding: 8px 20px;
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-on-white-bg-hover);
-  border-color: var(--accent-on-white-bg-hover);
+  background: var(--cta-bg-hover);
+  border-color: var(--cta-bg-hover);
 }
 
 .btn-secondary {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--brand);
   color: var(--brand-deep);
   font-weight: 600;
@@ -854,14 +1045,14 @@ tr[data-off="true"] > td {
 .btn-secondary:hover:not(:disabled) { background: var(--brand-soft); }
 
 .btn-tertiary {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   color: var(--ink);
 }
 .btn-tertiary:hover:not(:disabled) { background: var(--subtle); }
 
 .btn-danger-outline {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--danger);
   color: var(--danger);
   font-weight: 600;
@@ -871,7 +1062,7 @@ tr[data-off="true"] > td {
 .btn-danger-solid {
   background: var(--danger);
   border: 1px solid var(--danger);
-  color: #fff;
+  color: var(--danger-fg);
   font-weight: 600;
 }
 
@@ -880,8 +1071,9 @@ tr[data-off="true"] > td {
 .spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255, 255, 255, .4);
-  border-top-color: #fff;
+  /* 面の色はテーマで変わるので、渦は文字色から作る（白固定だと明るい面で消える） */
+  border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
   border-radius: 50%;
   animation: spin 700ms linear infinite;
   flex: none;
@@ -900,13 +1092,19 @@ tr[data-off="true"] > td {
   border: 1px solid transparent;
   padding: 2px 10px;
   font-size: var(--text-note);
-  font-weight: 500;
+  /* 札は短い語と数字だけを載せる。等幅にすると桁と語幅が揃い、
+     行に並んだときの視線の段差が消える。太さは 700 で本文と混ざらないようにする。 */
+  font-family: var(--font-mono);
+  font-weight: 700;
   line-height: 1.6;
 }
-.badge-active   { background: var(--brand-soft); color: var(--brand-deep); }
+/* 色の付いた札には、塗りだけでなく半透明の縁取りも付ける。
+   色を見分けにくい人・印刷・薄い面の上のいずれでも、輪郭で札だと分かるようにする。
+   （取り消し線・破線で既に区別できている札には足さない） */
+.badge-active   { background: var(--brand-soft); color: var(--brand-deep); border-color: color-mix(in srgb, var(--brand) 30%, transparent); }
 .badge-done     { background: var(--subtle); color: var(--ink); border-color: var(--line); }
 .badge-closed   { background: var(--subtle); color: var(--ink-muted); border-color: var(--line); text-decoration: line-through; text-decoration-thickness: 1px; }
-.badge-dropped  { background: #fff; color: var(--ink-muted); border-color: var(--line); border-style: dashed; }
+.badge-dropped  { background: var(--surface); color: var(--ink-muted); border-color: var(--line); border-style: dashed; }
 .badge-required {
   background: var(--subtle);
   color: var(--ink-muted);
@@ -917,10 +1115,11 @@ tr[data-off="true"] > td {
 .badge-alert {
   background: var(--danger-soft);
   color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
   border-radius: 4px;
   padding: 1px 8px;
   font-size: var(--text-note);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ============================================================
@@ -942,7 +1141,7 @@ thead th {
   position: sticky;
   top: var(--table-head-top, var(--header-h));
   z-index: 4;
-  background: #fff;
+  background: var(--surface);
 }
 tbody td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
@@ -1051,7 +1250,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface);
   padding: 8px 12px;
   color: var(--ink);
 }
@@ -1089,7 +1288,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   height: 16px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   color: var(--ink-muted);
 }
 .rule-item[data-met="true"] .rule-mark {
@@ -1106,7 +1305,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   border-radius: 10px;
   padding: 48px 24px;
   text-align: center;
-  background: #fff;
+  background: var(--surface);
 }
 .empty-state .es-title { font-size: var(--text-sub); font-weight: 600; margin: 0; }
 .empty-state .es-body { font-size: var(--text-sub); color: var(--ink-muted); margin: 4px 0 16px; }
@@ -1238,7 +1437,7 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   max-width: min(360px, calc(100vw - 40px));
 }
 .toast {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(22, 25, 29, .12);
@@ -1361,10 +1560,8 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 /* 伸びる部分には必ず色を置く。色を修飾クラス（is-brand）側にだけ持たせていたため、
    クラスを付け忘れた全ての棒が「灰色の帯」に見えていた（読み込み中と誤解される）。 */
 .bar-fill { height: 100%; border-radius: 4px; background: var(--brand); transition: width 700ms cubic-bezier(0.2, 0, 0, 1); }
-.bar-fill.is-base { background: #c6ccd4; }
-.bar-fill.is-brand { background: var(--brand); }
 
-details.disclosure { border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+details.disclosure { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 details.disclosure summary {
   cursor: pointer;
   padding: 14px var(--pad-card);
@@ -1407,7 +1604,7 @@ details.inline-detail > summary {
   padding: 2px 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
   color: var(--brand);
   font-size: var(--text-note);
   /* 短い押し文言は折り返さない（1文字だけ落ちる割れ方を作らない） */
@@ -1439,7 +1636,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .catalog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .spec-note { font-size: var(--text-note); color: var(--ink-muted); margin: 6px 0 14px; }
 .swatch-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-.swatch { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+.swatch { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
 .swatch .sw-color { height: 48px; }
 .swatch .sw-meta { padding: 8px 10px; font-size: var(--text-note); line-height: 1.6; }
 .swatch .sw-meta code { font-size: var(--text-note); color: var(--ink-muted); }
@@ -1449,7 +1646,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 @media (min-width: 640px) { .chip-grid { grid-template-columns: repeat(4, 1fr); } }
 .chip {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   border-radius: 6px;
   padding: 8px 4px;
   font-size: var(--text-note);
@@ -1498,11 +1695,11 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   color: var(--brand-deep);
   background: var(--brand-soft);
 }
-.avatar[data-tone="1"] { color: #7a4b12; background: #fbf0dd; }
-.avatar[data-tone="2"] { color: #1f5f4a; background: #dff0e9; }
-.avatar[data-tone="3"] { color: #5a3d8a; background: #eae3f7; }
-.avatar[data-tone="4"] { color: #8a3b3b; background: #f8e3e3; }
-.avatar[data-tone="5"] { color: #3d5570; background: #e5ebf2; }
+.avatar[data-tone="1"] { color: var(--avatar-1-fg); background: var(--avatar-1-bg); }
+.avatar[data-tone="2"] { color: var(--avatar-2-fg); background: var(--avatar-2-bg); }
+.avatar[data-tone="3"] { color: var(--avatar-3-fg); background: var(--avatar-3-bg); }
+.avatar[data-tone="4"] { color: var(--avatar-4-fg); background: var(--avatar-4-bg); }
+.avatar[data-tone="5"] { color: var(--avatar-5-fg); background: var(--avatar-5-bg); }
 
 /* ---- 小さな札（アイコン＋短い語）----
    「役割」「会社」「等級」のような属性を、文にせず並べるために使う。 */
@@ -1512,7 +1709,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   gap: 4px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
   padding: 2px 10px;
   font-size: var(--text-note);
   color: var(--ink);
@@ -1549,8 +1746,9 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: var(--accent);
-  border: 1.5px solid #fff;
+  /* 「まだ仮パスワード」という状態の印。状態色（アンバー）を使う。 */
+  background: var(--status-progress);
+  border: 1.5px solid var(--surface);
 }
 
 .account-pop {
@@ -1559,7 +1757,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   right: 0;
   z-index: 30;
   width: 292px; /* 文字を大きくしたぶん、氏名と札が折り返さない幅へ広げた */
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 10px;
   box-shadow: 0 12px 28px rgb(22 25 29 / 12%);
@@ -1575,8 +1773,11 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   border-radius: 6px;
   padding: 6px 8px;
   font-size: var(--text-note);
+  color: var(--status-progress);
   line-height: 1.6;
 }
+.account-pop-theme { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+.account-pop-theme-label { margin: 0 0 6px; font-size: var(--text-note); color: var(--ink-muted); }
 .account-pop-links { display: grid; gap: 2px; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
 .account-pop-link {
   display: flex;
@@ -1669,7 +1870,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 }
 .profile-row-action {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   color: var(--brand-deep);
   font-family: inherit;
   cursor: pointer;
@@ -1693,7 +1894,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   align-items: center;
   gap: 4px;
   border: 0;
-  background: #fff;
+  background: var(--surface);
   padding: 5px 12px;
   font: inherit;
   font-size: var(--text-note);
@@ -1704,6 +1905,37 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .switch-2-btn[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-deep); font-weight: 600; }
 .switch-2-btn:disabled { opacity: 0.6; cursor: default; }
 
+/* ---- 見た目の明るさ（自動／明るい／暗い）----
+   3つを横に並べ、選んでいるものだけを塗る。.switch-2 と同じ組み方だが、
+   選択肢が3つあるので枠を丸ではなく角丸にして、押す面を広く取る。
+   既定は「自動」＝ html に data-theme を付けない状態（端末の設定に従う）。 */
+.theme-switch {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.theme-switch-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: var(--text-note);
+  color: var(--ink-muted);
+  cursor: pointer;
+  min-height: 32px;
+  white-space: nowrap;
+}
+.theme-switch-btn + .theme-switch-btn { border-left: 1px solid var(--line); }
+.theme-switch-btn:hover { background: var(--subtle); color: var(--ink); }
+.theme-switch-btn[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-deep); font-weight: 600; }
+/* 押せる大きさの下限は、他の操作と同じ決まりに合わせる（指で押す端末だけ 44px）。 */
+@media (pointer: coarse) {
+  .theme-switch-btn { min-height: 44px; }
+}
+
 /* ============================================================
    Tailwind v4 への橋渡し（CSS変数が単一の真実）
    ============================================================ */
@@ -1711,9 +1943,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
   --color-brand-soft: var(--brand-soft);
-  --color-brand-mist: var(--brand-mist);
   --color-accent: var(--accent);
-  --color-accent-deep: var(--accent-deep);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
   --color-line: var(--line);
@@ -1740,7 +1970,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   line-height: 1.5;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface);
   padding: 8px 12px;
   color: var(--ink);
 }
@@ -1748,7 +1978,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .input:disabled { background: var(--subtle); color: var(--ink-muted); }
 .input-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
 /* 発行したパスワードなど、1文字ずつ読み分ける値。字を詰めず、幅をそろえて出す */
-.input-code { font-family: var(--font-num); letter-spacing: .06em; }
+.input-code { font-family: var(--font-mono); letter-spacing: .06em; }
 
 /* ============================================================
    印刷（A4縦）
@@ -1758,7 +1988,48 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
 
-  body { background: #fff; }
+  /* 画面がダークでも、紙ではライトの意味トークンへ戻す。
+     html:root は明示テーマと端末テーマのセレクタと同じ詳細度を持ち、
+     後に置いたこの値が印刷時だけ確実に勝つ。 */
+  html:root {
+    --brand: #1d63be;
+    --brand-deep: #15498f;
+    --brand-soft: #e3edfa;
+    --page-bg: #eef3fa;
+    --surface: #ffffff;
+    --accent: #232326;
+    --cta-bg: #232326;
+    --cta-bg-hover: #3a3a3f;
+    --cta-fg: #ffffff;
+    --ink: #16191d;
+    --ink-muted: #545e6b;
+    --line: #8a949f;
+    --subtle: #f5f6f8;
+    --off-line: #7a8490;
+    --off-surface: #e4e7eb;
+    --off-surface-soft: #eef0f3;
+    --danger: #c5221f;
+    --danger-soft: #fdecea;
+    --danger-fg: #ffffff;
+    --caution-soft: #fdf6e3;
+    --caution-border: #947000;
+    --status-progress: #963f05;
+    --chart-line-soft: #6f91ba;
+    --chart-band: #f2f4f7;
+    --avatar-1-fg: #7a4b12;
+    --avatar-1-bg: #fbf0dd;
+    --avatar-2-fg: #1f5f4a;
+    --avatar-2-bg: #dff0e9;
+    --avatar-3-fg: #5a3d8a;
+    --avatar-3-bg: #eae3f7;
+    --avatar-4-fg: #8a3b3b;
+    --avatar-4-bg: #f8e3e3;
+    --avatar-5-fg: #3d5570;
+    --avatar-5-bg: #e5ebf2;
+    color-scheme: light;
+  }
+
+  body { background: var(--surface); }
   main { max-width: none; padding: 0; }
 
   /* ヘッダー・ナビ・ボタンなど、紙に不要なものは出さない */
@@ -1777,7 +2048,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   /* 面の陰影は紙では邪魔になるので罫線だけにする */
   .card,
   .card.hero-tint {
-    background: #fff !important;
+    background: var(--surface) !important;
     box-shadow: none !important;
     border: 1px solid var(--line);
     break-inside: avoid;
@@ -1785,7 +2056,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 
   /* 紙には「貼り付く」概念がないので、列見出しは普通の行に戻す。
      ただし複数ページにまたがる表では各ページの先頭に列見出しを繰り返す。 */
-  thead th { position: static; background: #fff !important; }
+  thead th { position: static; background: var(--surface) !important; }
   thead { display: table-header-group; }
   tbody tr { break-inside: avoid; }
 

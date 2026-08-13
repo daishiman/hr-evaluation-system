@@ -183,12 +183,14 @@ describe("画面の器の作法", () => {
     expect(source.match(/fontSize: \d+/g) ?? []).toEqual([]);
   });
 
-  it("白文字を載せる主要ボタンは、コントラストを満たす色を使う", () => {
-    // --accent（#e8590c）に白文字だと 3.58:1 で本文の基準（4.5:1）に届かない。
-    // 大きい数字の文字色としてだけ使い、面の色には --accent-on-white-bg を使う。
+  it("主要ボタンは、テーマ共通のCTA意味トークンを使う", () => {
+    // 結果の数字（--accent）と、押す面（--cta-*）は用途を混ぜない。
+    // 各テーマでの4.5:1以上は theme-contract.test.ts が実際の値から計算する。
     const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
     const primary = css.slice(css.indexOf(".btn-primary {"));
-    expect(primary.slice(0, primary.indexOf("}"))).toContain("var(--accent-on-white-bg)");
+    const block = primary.slice(0, primary.indexOf("}"));
+    expect(block).toContain("var(--cta-bg)");
+    expect(block).toContain("var(--cta-fg)");
   });
 
   it("指で押す端末では、押せるものが44px以上になる", () => {
