@@ -16,7 +16,6 @@ export default async function AccountPasswordPage() {
   return (
     <>
       <PageTitle
-        breadcrumb={[{ label: "自分の情報", href: "/account" }]}
         title="パスワードの変更"
         lede={`${viewer.email} のパスワードを変更します。`}
       />

@@ -35,7 +35,6 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
   return (
     <>
       <PageTitle
-        breadcrumb={[{ label: "利用者一覧", href: "/system/users" }]}
         title={`${user.name} さん`}
       />
 

@@ -87,7 +87,10 @@
   --pad-page-x: 20px;    /* 本文の左右 */
 
   --sidebar-w: 248px;    /* メニューの幅（本文16px化に合わせて16px広げた） */
-  --header-h: 56px;
+  --bar-h: 56px;         /* 帯1段の高さ（メニューの頭。ここは折り返さない） */
+  /* 上のヘッダーの高さ。貼り付く位置（--sticky-top・表の列見出し）がこれを見ているので、
+     実際の高さと必ず一致させる。狭い画面では2段になるので下の @media で上書きする。 */
+  --header-h: var(--bar-h);
   --content-max: 1120px; /* 本文の最大幅(これ以上は広げない) */
 
   color-scheme: light;
@@ -397,6 +400,9 @@ body {
   .sidebar-close-sp,
   .sidebar-open-pc,
   .sidebar-open-sp,
+  .header-move-btn,
+  .header-search-trigger,
+  .search-row-btn,
   .input,
   .field input[type="text"],
   .field input[type="email"],
@@ -444,6 +450,9 @@ body {
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   min-height: 100dvh;
 }
+/* 引き出しが出ている間は、背面のページをスクロールさせない */
+html[data-drawer="open"] body { overflow: hidden; }
+
 /* メニューを閉じているときは、その分だけ本文が広がる */
 html[data-sidebar="collapsed"] .app-layout { grid-template-columns: minmax(0, 1fr); }
 html[data-sidebar="collapsed"] .app-sidebar { display: none; }
@@ -460,14 +469,155 @@ html[data-sidebar="collapsed"] .app-sidebar { display: none; }
      余白は「本文と同じ量」と「端末が要求する量」の大きいほうを取る。
      効かせるには layout.tsx の viewportFit: "cover" が対で要る。 */
   padding: 0 max(var(--pad-page-x), env(safe-area-inset-right)) 0 max(var(--pad-page-x), env(safe-area-inset-left));
-  gap: var(--space-block);
+  gap: var(--space-tight);
   position: sticky;
   top: 0;
   z-index: 20;
+  min-width: 0;
 }
-/* サイドバーにアプリ名が出ているときは、ヘッダー側の名前は重複するので隠す */
-.app-name-header { display: none; }
-html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-left: 128px; }
+/* メニューを閉じているときは、左上に固定の「メニューを開く」が重なる。その分だけ空ける */
+html[data-sidebar="collapsed"] .app-header { padding-left: 132px; }
+
+/* ---- ヘッダー: 1つ前に戻る／進む ----
+   アイコンだけのボタンは作らない方針なので、文字のボタンにする。
+   行き先が無いときは disabled（押せるように見せて何も起きない状態を作らない）。 */
+.header-move { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.header-move-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 6px;
+  font: inherit;
+  font-size: var(--text-note);
+  color: var(--ink-muted);
+  padding: 5px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 32px;
+}
+.header-move-btn:hover:enabled { background: var(--subtle); color: var(--ink); }
+.header-move-btn:disabled {
+  cursor: default;
+  color: color-mix(in srgb, var(--ink-muted) 45%, transparent);
+  border-color: color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* ---- ヘッダー: いま開いている階層 ----
+   段の書式は見出しの中のパンくず（.breadcrumb）と同じものを使う。
+   2つの書式を作らないため、.trail は幅の詰め方だけを足す。 */
+.header-trail { flex: 1 1 auto; min-width: 0; }
+.trail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-note);
+  color: var(--ink-muted);
+  line-height: 1.5;
+  /* ヘッダーは1段しかないので折り返さない。入りきらない段は下の @media で落とす */
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.trail li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.trail li + li::before { content: "›"; color: var(--line); }
+.trail a { color: var(--ink-muted); }
+.trail a:hover { color: var(--brand-deep); text-decoration: underline; }
+/* いまの画面だけは濃く出す。入りきらないときはこの段だけが縮む */
+.trail [aria-current="page"] {
+  color: var(--ink);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- ヘッダー: 検索を開くボタン ---- */
+.header-search-trigger {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 6px;
+  font: inherit;
+  font-size: var(--text-note);
+  color: var(--ink-muted);
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 32px;
+}
+.header-search-trigger:hover { background: var(--subtle); color: var(--ink); }
+.header-search-key { color: color-mix(in srgb, var(--ink-muted) 70%, transparent); }
+@media (max-width: 479px) {
+  /* いちばん狭い画面では、押し方の近道の表示だけを落とす（ボタン自体は残す） */
+  .header-search-key { display: none; }
+}
+
+/* ---- 検索の窓 ----
+   確認の窓（.confirm-dialog）と同じ作り。中央に出し、窓ごとスクロールさせず、
+   あふれるのは候補の一覧だけにする（打ち込む欄は常に見える位置に残す）。 */
+.search-dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0;
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgba(22, 25, 29, .2);
+  width: min(560px, calc(100vw - 32px));
+  color: inherit;
+  margin: auto;
+  max-height: calc(100dvh - 40px);
+  overflow: hidden;
+}
+.search-dialog::backdrop { background: rgba(22, 25, 29, .45); }
+.search-dialog-body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: inherit;
+  padding: 14px 16px 16px;
+}
+.search-dialog-head { display: grid; gap: 4px; }
+.search-input { width: 100%; }
+.search-dialog-list { overflow-y: auto; overscroll-behavior: contain; margin-top: 10px; }
+.search-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.search-group-title {
+  font-size: var(--text-note);
+  font-weight: 700;
+  color: var(--ink-muted);
+  padding: 8px 8px 2px;
+  letter-spacing: 0.04em;
+}
+.search-row-btn {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-sub);
+  color: var(--ink);
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.6;
+}
+.search-row-btn:hover { background: var(--subtle); }
+/* いま選んでいる候補。メニューの現在地と同じ塗りにする（色を増やさない） */
+.search-row[data-active="true"] .search-row-btn { background: var(--brand-soft); color: var(--brand-deep); }
+.search-row-note { font-size: var(--text-note); color: var(--ink-muted); }
+.search-row[data-active="true"] .search-row-note { color: var(--brand-deep); }
 
 /* ---- 左メニュー ---- */
 .app-sidebar {
@@ -490,7 +640,7 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
   display: flex;
   align-items: center;
   gap: var(--space-tight);
-  height: var(--header-h);
+  height: var(--bar-h);
   border-bottom: 1px solid var(--line);
   margin: 0 -12px;
   padding: 0 12px;
@@ -589,9 +739,15 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
   .sidebar-close-sp { display: inline-block; }
   .sidebar-open-pc { display: none; }
   .sidebar-open-sp { display: inline-block; }
-  .app-name-header { display: inline-block; margin-left: 0; }
   html[data-sidebar="collapsed"] .app-sidebar { display: flex; }
-  html[data-sidebar="collapsed"] .app-name-header { margin-left: 0; }
+  /* 引き出しの画面では左上に固定のボタンが無いので、空けた余白も戻す */
+  html[data-sidebar="collapsed"] .app-header { padding-left: max(var(--pad-page-x), env(safe-area-inset-left)); }
+  /* 段が全部は入らない。いまの画面と1つ上だけを残す（どこにいるかが先） */
+  .trail li { display: none; }
+  .trail li:nth-last-child(-n + 2) { display: inline-flex; }
+  /* 落とした段を黙って隠さない（続きがあると分かる印にする）。
+     残る2段のうち前側だけが対象。1段しか無いときは前に印を付けない。 */
+  .trail li + li:nth-last-child(2)::before { content: "…"; color: var(--ink-muted); }
   .sidebar-scrim {
     display: block;
     position: fixed;
@@ -640,7 +796,18 @@ html[data-sidebar="collapsed"] .app-name-header { display: inline-block; margin-
 }
 
 @media (max-width: 639px) {
-  .app-header { padding: 0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left)); }
+  /* 押すものと階層表示を1段に詰めると、どちらも読めない幅になる。
+     2段にして、上の段に操作、下の段に「いまどこか」を置く。
+     貼り付く位置（--sticky-top・表の列見出し）は --header-h を見ているので、
+     ここで高さを直せば全画面が付いてくる。 */
+  :root { --header-h: 88px; }
+  .app-header {
+    padding: 0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 2px;
+  }
+  .header-trail { order: 2; flex-basis: 100%; }
 }
 
 /* 本文の幅と余白はここだけで決める（画面ごとに上書きしない） */

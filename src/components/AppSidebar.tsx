@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { isCurrent, type NavGroup } from "@/lib/nav";
 import { CompanyScopeSwitcher } from "@/components/CompanyScopeSwitcher";
+import { useSidebarDrawer } from "@/components/SidebarDrawer";
 
 /**
  * 左のメニュー。
@@ -43,7 +44,8 @@ export function AppSidebar({
   homeHref: string;
 }) {
   const pathname = usePathname();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  /* 開くボタンはヘッダー側にあるので、開閉は共通の入れ物から借りる */
+  const { open: drawerOpen, setOpen: setDrawerOpen } = useSidebarDrawer();
   const [collapsed, setCollapsed] = useState(false);
   const allHrefs = groups.flatMap((g) => g.items.map((i) => i.href));
 
@@ -55,7 +57,7 @@ export function AppSidebar({
   // 画面を移ったら引き出しは閉じる（開きっぱなしで中身が隠れないように）
   useEffect(() => {
     setDrawerOpen(false);
-  }, [pathname]);
+  }, [pathname, setDrawerOpen]);
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => {
@@ -73,11 +75,6 @@ export function AppSidebar({
 
   return (
     <>
-      {/* 狭い画面用の開くボタン。ヘッダーの左端に入る */}
-      <button type="button" className="sidebar-open-sp" onClick={() => setDrawerOpen(true)} aria-expanded={drawerOpen}>
-        メニュー
-      </button>
-
       {/* 広い画面で閉じているときの開くボタン。押す場所を見失わないよう常に左上に出す */}
       {collapsed && (
         <button type="button" className="sidebar-open-pc" onClick={toggleCollapsed}>

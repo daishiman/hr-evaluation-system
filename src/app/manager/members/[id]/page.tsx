@@ -55,7 +55,6 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
   return (
     <>
       <PageTitle
-        breadcrumb={[{ label: "メンバー", href: "/manager/members" }]}
         title={`${member.name} さん`}
         lede={`${member.gradeName ?? "等級未設定"} ／ ${member.department ?? "所属未設定"} ／ ${ROLE_LABEL[member.role as Role] ?? member.role}`}
       />

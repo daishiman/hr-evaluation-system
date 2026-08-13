@@ -31,12 +31,8 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
   const nextGroup = nextGroupOf(setup.order, pointGroup);
   const head = (
     <PageTitle
-      breadcrumb={[
-        { label: "制度設定ガイド", href: "/admin/setup" },
-        { label: "KPI・評価セット", href: "/admin/scheme" },
-        /* 等級名はパンくずに詰めない。どの等級が入るかは手順1の配点カードに並びで出る。 */
-        { label: pointGroup, href: schemeStepPath(pointGroup, "select") },
-      ]}
+      /* ヘッダーが出す階層と重ねない（手順1へは階層の1段前が同じ URL を指す）。 */
+      breadcrumb={[{ label: "制度設定ガイド", href: "/admin/setup" }]}
       title={`${pointGroup}：${stepTitle("criteria")}`}
       lede={stepLede("criteria", pointGroup)}
       tags={

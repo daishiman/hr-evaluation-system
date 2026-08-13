@@ -138,7 +138,9 @@ export interface Crumb {
 /**
  * 画面の見出し。全画面でこの1つだけを使う。
  *
- * - `breadcrumb`: いまどこにいて、どこへ戻れるか。画面の中に「一覧に戻る」ボタンを置かない。
+ * - `breadcrumb`: いつもの階層はヘッダーが出す（src/lib/nav.ts の ROUTE_META）。
+ *   ここに渡すのは、URL から作れない戻り先があるときだけ（docs/product/spec.md §25-2）。
+ *   例：絞り込み条件つきの一覧へ戻す、手順の入口へ戻す、来た経路で戻り先が変わる。
  * - `tags`: 対象者・期間・状態など、スクロール中も見えていてほしい札。
  * - `sticky`: 縦に長い画面だけ true にして、見出しの帯を固定ヘッダーの下に貼り付ける
  *   （適用範囲は docs/product/spec.md §6。画面ごとに position: sticky を書かない）。

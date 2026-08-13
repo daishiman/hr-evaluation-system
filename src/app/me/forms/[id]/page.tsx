@@ -63,7 +63,6 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
   const header = (
     <PageTitle
       sticky
-      breadcrumb={[{ label: "実績を報告する", href: "/me/forms" }]}
       title={form.title}
       lede={`回答期間 ${formatPeriod(form.opensAt, form.closesAt)}`}
       tags={
