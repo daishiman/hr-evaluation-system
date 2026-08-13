@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { canSeeFormResponses, requireViewer } from "@/lib/session";
 import { listCycles, listForms } from "@/lib/queries";
-import { Badge, Card, CardRow, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, ChipLink, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -50,9 +50,9 @@ export default async function FormContentList({ searchParams }: { searchParams: 
       <SectionHeading>評価期間を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {cycles.map((c) => (
-          <Link key={c.id} href={`/forms?cycle=${c.id}`} className="chip" aria-current={c.id === selected.id ? "true" : undefined}>
+          <ChipLink key={c.id} href={`/forms?cycle=${c.id}`} current={c.id === selected.id}>
             {c.name}
-          </Link>
+          </ChipLink>
         ))}
       </div>
 
@@ -66,7 +66,7 @@ export default async function FormContentList({ searchParams }: { searchParams: 
               key={f.id}
               off={f.status === "closed"}
               title={
-                <Link href={`/forms/${f.id}`} className="text-[var(--brand-deep)]">
+                <Link href={`/forms/${f.id}`} className="text-brand-deep">
                   {f.title}
                 </Link>
               }

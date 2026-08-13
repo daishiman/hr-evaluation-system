@@ -70,6 +70,8 @@
 | UX-013 | observe | 20 年規模では等級変更の縦線が右端に密集し、線同士が重なって本数を数えられない | 長期在籍者の実データで読みにくさが出る | 密集時の間引き規則、または等級区間の一覧表示への切り替えを設計 | [実装](../../src/components/Charts.tsx) |
 | UX-014 | observe | 641〜1024px でサイドバーをアイコンのみに縮める案を見送った | メニューにアイコン運用を導入する判断が出る | アイコンだけで分類が伝わるかを検証してから縮小幅を決める。現状は 1024px 未満でオフキャンバスに切り替える挙動を維持 | [実装](../../src/components/AppSidebar.tsx) |
 | UX-015 | observe | モバイルの下部固定タブバー化を見送り、既存の引き出しメニューを維持した | 主要導線を 5 件以内に絞る合意ができる | 20 画面超のナビゲーション構造を作り直す規模になるため、導線の優先順位を決めてから設計する。今回はセーフエリア対応のみ追加 | [トークン](../../src/app/globals.css) |
+| UX-017 | ready | 見た目を1箇所へ寄せる作業のうち、専用CSSクラスを持つ押しもの（サイドバーの開閉、アカウントメニュー、プロフィール行の見出し、パスワードの表示切替）は `ui.tsx` の外に残っている | 同じ形の押しものが3つ目の画面に必要になる | 色は全てトークン経由で規約違反はないため、部品化の必要が出た時点で `ui.tsx` へ寄せる。今回は役目が1箇所限りのため据え置いた | [実装](../../src/components/AppSidebar.tsx) / [実装](../../src/components/AccountMenu.tsx) |
+| UX-019 | observe | 「ページが見つかりません」だけがサイドバー・ヘッダーの外にある | ログイン後の誤ったアドレスからの復帰が問題になる | 幅と余白は共通化済み。ログイン前後どちらでも出る画面のため共通枠へ入れるかは、戻り先の見せ方とあわせて決める | [実装](../../src/app/not-found.tsx) |
 
 ## セキュリティ・信頼性
 
@@ -80,9 +82,8 @@
 | SECURITY-003 | observe | ログイン以外の操作別レート制限は暫定値 | 429 率または負荷の実測が得られる | 操作別に閾値を調整 | [旧台帳 UX97](./backlog-history-2026-08-13.md) |
 | SECURITY-004 | ready | 2 段階認証がない | 認証強化を優先 | 対象ロール・復旧手段を含めて導入 | [旧台帳 UX35](./backlog-history-2026-08-13.md) |
 | SECURITY-005 | ready | 仮パスワードに期限がない | 招待運用を本格化 | 発行・期限・失効・再発行を実装 | [旧台帳 UX36](./backlog-history-2026-08-13.md) |
-| SECURITY-006 | decision | 管理者が回答下書きを見られる範囲が未定 | プライバシー方針を裁定 | 権限表と監査ログ要件を確定 | [旧台帳 UX43](./backlog-history-2026-08-13.md) |
 | SECURITY-007 | decision | ロールは 4 種固定 | 権限分離の追加要件が出る | ロール追加ではなく権限集合として再設計 | [旧台帳 UX98](./backlog-history-2026-08-13.md) |
-| SECURITY-008 | ready | 依存関係監査の moderate 指摘が残る | 互換性を確認できる更新窓 | 影響を確認して依存を更新 | [旧台帳 UX87](./backlog-history-2026-08-13.md) |
+| SECURITY-008 | observe | 最新版 `drizzle-kit` の開発用依存が、古い esbuild の開発サーバー経路を含む（production Workerには同梱・使用しない） | upstreamが依存を更新、または開発用serveを外部公開する構成へ変える | 最新版を再確認し、互換性を保てる更新だけを適用 | [最終監査](./elegant-review.md#launch-security) |
 | SECURITY-009 | ready | CSP は nonce 方式ではない | inline script をさらに制限 | Next.js・OpenNext の制約を確認して nonce 化 | [旧台帳 UX99](./backlog-history-2026-08-13.md) |
 | RELIABILITY-001 | ready | Route Handler の統合テストが薄い | API 変更前 | 認証・DB を含む代表経路を追加 | [回ごとの記録 H4・J4](./backlog-session-notes.md) |
 | RELIABILITY-002 | observe | 安全側の代替表示が発生しても運用で気づきにくい | 発生率を観測可能にする | 構造化ログ・通知閾値を追加 | [回ごとの記録 Q4](./backlog-session-notes.md) |

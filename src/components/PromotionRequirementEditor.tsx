@@ -142,7 +142,7 @@ export function PromotionRequirementEditor({
 
         {list.map((r, i) => (
           <div key={r.id} className="card-row items-start">
-            <span className="num mt-[2px] w-6 shrink-0 text-sub text-[var(--ink-muted)]">{i + 1}</span>
+            <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{i + 1}</span>
             <div className="row-main">
               {editing[r.id] === undefined ? (
                 <>
@@ -271,7 +271,7 @@ export function PromotionRequirementEditor({
                 aria-label={`${KIND_LABEL[kind]}に追加する項目の内容`}
                 onChange={(e) => setDrafts((s) => ({ ...s, [kind]: { ...draft, open: true, text: e.target.value } }))}
               />
-              <label className="text-note text-[var(--ink-muted)]">
+              <label className="text-note text-ink-muted">
                 対象の昇格（任意。例：Beginner → Regular）
                 <input
                   value={draft.label}
@@ -317,7 +317,7 @@ export function PromotionRequirementEditor({
           )}
         </div>
 
-        <div className="card-pad grid gap-2 border-t border-[var(--line)]">
+        <div className="card-pad grid gap-2 border-t border-line">
           <VersionedMasterSections
             sectionId={`promotion-${gradeId}-${kind}`}
             rows={rows.filter((row) => row.kind === kind)}
@@ -360,7 +360,7 @@ export function PromotionRequirementEditor({
       </p>
       <p className="footnote m-0">内容を直すと、新版を作ります。</p>
       {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
-      {message && <p role="status" aria-live="polite" className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
+      {message && <p role="status" aria-live="polite" className="m-0 text-sub text-brand-deep">{message}</p>}
       {block("report")}
       {block("test")}
       {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。

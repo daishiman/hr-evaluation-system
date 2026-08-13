@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { hasIcon, Icon } from "@/components/Icon";
-import { Button } from "@/components/ui";
+import { Button, HintToggle, RowAction } from "@/components/ui";
 
 /**
  * 自分の登録内容の一覧と、その場での書き換え。
@@ -90,15 +90,13 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
             </span>
 
             <div className="min-w-0 flex-1">
-              <button
-                type="button"
-                className="profile-row-label"
+              <HintToggle
+                open={hintOpen}
+                controls={hintId}
                 onClick={() => setOpenHint(hintOpen ? null : row.key)}
-                aria-expanded={hintOpen}
               >
                 {row.label}
-                <Icon name="chevron" size={12} className={hintOpen ? "rot-180" : undefined} />
-              </button>
+              </HintToggle>
 
               {isEditing ? (
                 <form
@@ -144,7 +142,7 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
                 </form>
               ) : (
                 <p className="profile-row-value">
-                  {row.value ?? <span className="text-[var(--ink-muted)]">未設定</span>}
+                  {row.value ?? <span className="text-ink-muted">未設定</span>}
                   {saved === row.key && (
                     <span className="profile-saved pop-in" role="status">
                       <Icon name="check" size={13} />
@@ -164,10 +162,9 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
 
             {row.editable ? (
               !isEditing && (
-                <button type="button" className="profile-row-action" onClick={() => startEdit(row)}>
-                  <Icon name="pencil" size={14} />
+                <RowAction icon="pencil" onClick={() => startEdit(row)}>
                   変える
-                </button>
+                </RowAction>
               )
             ) : (
               <span className="profile-row-lock" title="会社の管理者だけが変更できます">

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { dirname, relative, resolve, sep } from "node:path";
 
 const root = process.cwd();
 const errors = [];
@@ -18,6 +18,8 @@ const requiredFiles = [
   "docs/product/backlog-history-2026-08-13.md",
   "docs/product/spec.md",
   "system-spec/index.md",
+  "system-spec/routes-and-access.md",
+  "system-spec/route-ledger.json",
   "architecture/index.md",
   ".github/workflows/deploy.yml",
   ".github/workflows/migrate.yml",
@@ -119,6 +121,61 @@ function checkUniqueNumberedSections(relativePath) {
 }
 
 checkUniqueNumberedSections("docs/product/spec.md");
+
+function walkPages(directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) return walkPages(path);
+    return entry.name === "page.tsx" ? [path] : [];
+  });
+}
+
+const routeLedger = JSON.parse(read("system-spec/route-ledger.json") || "{}");
+const implementedRoutes = walkPages(resolve(root, "src/app"))
+  .map((file) => {
+    const route = relative(resolve(root, "src/app"), file).split(sep).slice(0, -1).join("/");
+    return route ? `/${route}` : "/";
+  })
+  .sort();
+const documentedRoutes = (routeLedger.routes ?? []).map((route) => route.path).sort();
+const routeRoles = ["SUPER_ADMIN", "COMPANY_ADMIN", "MANAGER", "EMPLOYEE"];
+const routeWidths = [375, 768, 1280, 1600];
+const routeOutcomes = new Set(["200", "redirect", "notFound", "denied"]);
+
+if (new Set(documentedRoutes).size !== documentedRoutes.length) {
+  errors.push("system-spec/route-ledger.json: route path が重複しています");
+}
+if (JSON.stringify(documentedRoutes) !== JSON.stringify(implementedRoutes)) {
+  const missing = implementedRoutes.filter((route) => !documentedRoutes.includes(route));
+  const stale = documentedRoutes.filter((route) => !implementedRoutes.includes(route));
+  errors.push(
+    `system-spec/route-ledger.json: page.tsx と一致しません（台帳漏れ: ${missing.join(", ") || "なし"} / 実装に無いroute: ${stale.join(", ") || "なし"}）`,
+  );
+}
+if (JSON.stringify(routeLedger.widths) !== JSON.stringify(routeWidths)) {
+  errors.push("system-spec/route-ledger.json: 検証幅は 375 / 768 / 1280 / 1600 の4つにしてください");
+}
+for (const [className, accessClass] of Object.entries(routeLedger.accessClasses ?? {})) {
+  for (const [stateName, state] of Object.entries(accessClass.states ?? {})) {
+    const actualRoles = Object.keys(state.expectedByRole ?? {}).sort();
+    if (JSON.stringify(actualRoles) !== JSON.stringify([...routeRoles].sort())) {
+      errors.push(`system-spec/route-ledger.json: ${className}.${stateName} に4ロールすべての期待結果がありません`);
+    }
+    for (const outcome of Object.values(state.expectedByRole ?? {})) {
+      if (!routeOutcomes.has(outcome)) {
+        errors.push(`system-spec/route-ledger.json: ${className}.${stateName} の期待結果が不正です: ${outcome}`);
+      }
+    }
+  }
+}
+for (const route of routeLedger.routes ?? []) {
+  if (!routeLedger.accessClasses?.[route.accessClass]) {
+    errors.push(`system-spec/route-ledger.json: ${route.path} の accessClass が不明です`);
+  }
+  if (route.widthPolicy !== "all") {
+    errors.push(`system-spec/route-ledger.json: ${route.path} は4幅すべてを検証対象にしてください`);
+  }
+}
 
 function checkLocalLinks(relativePath) {
   const content = read(relativePath);

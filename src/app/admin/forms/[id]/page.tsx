@@ -152,7 +152,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
         <p className="footnote mt-0">
           保存済みの設問文・補足・必須／任意・答え方を表示します。ここには入力欄がなく、開いても回答や下書きは作られません。
         </p>
-        <div className="mt-4 border-t border-[var(--line)] pt-4">
+        <div className="mt-4 border-t border-line pt-4">
           {form.description && <p className="mb-4 whitespace-pre-wrap text-sub leading-relaxed">{form.description}</p>}
           <FormPreview questions={previewQuestions} />
         </div>

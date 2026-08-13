@@ -128,7 +128,7 @@ function ItemFlow({
       >
       <div className="grid gap-4">
         <div>
-          <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">⓪ この項目の定義</p>
+          <p className="m-0 mb-1 text-note font-semibold text-ink-muted">⓪ この項目の定義</p>
           <div className="grid gap-1">
             <DefRow label="何を見る項目か" value={item.intent} />
             <DefRow label="実績区分" value={item.measureType} />
@@ -154,7 +154,7 @@ function ItemFlow({
         </div>
 
         <div>
-          <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">① 本人に聞くこと</p>
+          <p className="m-0 mb-1 text-note font-semibold text-ink-muted">① 本人に聞くこと</p>
           {questions.length === 0 ? (
             <p className="m-0 text-sub">
               この項目の設問が登録されていません。実績値を出せないため、評価する側が値を入れる必要があります。
@@ -174,7 +174,7 @@ function ItemFlow({
         </div>
 
         <div>
-          <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">② 実績値の出し方</p>
+          <p className="m-0 mb-1 text-note font-semibold text-ink-muted">② 実績値の出し方</p>
           <p className="m-0 text-sub">{item.formula ?? "計算式が登録されていません（回答した数値をそのまま使います）。"}</p>
           {item.formulaNote && <p className="footnote m-0 mt-1">{item.formulaNote}</p>}
           <p className="footnote m-0 mt-1">
@@ -183,7 +183,7 @@ function ItemFlow({
         </div>
 
         <div>
-          <p className="m-0 mb-1 text-note font-semibold text-[var(--ink-muted)]">
+          <p className="m-0 mb-1 text-note font-semibold text-ink-muted">
             ③ 実績値からランクを決める ／ ④ 何点になるか
           </p>
           {sorted.length === 0 ? (

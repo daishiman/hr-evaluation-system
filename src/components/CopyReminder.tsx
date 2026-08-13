@@ -76,7 +76,7 @@ export function CopyReminderView({
         </Button>
       </div>
       {result === "copied" && (
-        <p className="m-0 mt-2 text-sub text-[var(--brand-deep)]">
+        <p className="m-0 mt-2 text-sub text-brand-deep">
           コピーしました。メールやチャットに貼り付けてお使いください。
         </p>
       )}

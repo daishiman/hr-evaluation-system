@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { hasIcon, Icon } from "@/components/Icon";
+import { HintToggle, Segmented } from "@/components/ui";
 
 /**
  * 「この項目を本人にも変えさせるか」の切り替え。
@@ -88,18 +89,15 @@ export function ProfilePolicyEditor({ items }: { items: PolicyItem[] }) {
             </span>
 
             <div className="min-w-0 flex-1">
-              <button
-                type="button"
-                className="profile-row-label"
+              <HintToggle
+                open={openHint === item.key}
                 onClick={() => setOpenHint(openHint === item.key ? null : item.key)}
-                aria-expanded={openHint === item.key}
               >
                 {item.label}
-                <Icon name="chevron" size={12} className={openHint === item.key ? "rot-180" : undefined} />
-              </button>
+              </HintToggle>
               {openHint === item.key && <p className="profile-row-hint">{item.hint}</p>}
               {errors[item.key] && (
-                <p className="profile-row-hint text-[var(--danger)]" role="alert">
+                <p className="profile-row-hint text-danger" role="alert">
                   {errors[item.key]}
                 </p>
               )}
@@ -111,28 +109,32 @@ export function ProfilePolicyEditor({ items }: { items: PolicyItem[] }) {
               )}
             </div>
 
-            <div className="switch-2" role="group" aria-label={`${item.label}を変更できる人`}>
-              <button
-                type="button"
-                className="switch-2-btn"
-                aria-pressed={!selfEditable}
-                disabled={busy}
-                onClick={() => void setPolicy(item, false)}
-              >
-                <Icon name="lock" size={13} />
-                会社の管理者のみ
-              </button>
-              <button
-                type="button"
-                className="switch-2-btn"
-                aria-pressed={selfEditable}
-                disabled={busy}
-                onClick={() => void setPolicy(item, true)}
-              >
-                <Icon name="pencil" size={13} />
-                本人も
-              </button>
-            </div>
+            <Segmented
+              label={`${item.label}を変更できる人`}
+              value={selfEditable ? "self" : "admin"}
+              disabled={busy}
+              onChange={(next) => void setPolicy(item, next === "self")}
+              options={[
+                {
+                  value: "admin",
+                  label: (
+                    <>
+                      <Icon name="lock" size={13} />
+                      会社の管理者のみ
+                    </>
+                  ),
+                },
+                {
+                  value: "self",
+                  label: (
+                    <>
+                      <Icon name="pencil" size={13} />
+                      本人も
+                    </>
+                  ),
+                },
+              ]}
+            />
           </div>
         );
       })}

@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { getAuth } from "@/lib/auth";
 import { getDb, schema } from "@/lib/db";
+import {
+  canActOnEmployeeEvaluation,
+  canReadEmployee as canReadEmployeeByRole,
+} from "@/lib/domain/evaluation-authority";
 
 /**
  * 権限の判定をここ1箇所に集める。
@@ -243,17 +247,29 @@ export function resolveCompanyId(v: Viewer, requested?: string | null): string |
 
 /** 指定した利用者を閲覧してよいか。 */
 export async function canViewEmployee(v: Viewer, employeeId: string): Promise<boolean> {
-  if (v.id === employeeId) return true;
-  if (v.role === "SUPER_ADMIN") return true;
-  if (v.role === "EMPLOYEE") return false;
-
   const db = await getDb();
   const rows = await db
-    .select({ id: schema.users.id })
+    .select({ id: schema.users.id, managerId: schema.users.managerId })
     .from(schema.users)
     .where(and(eq(schema.users.id, employeeId), eq(schema.users.companyId, v.companyId ?? "")))
     .limit(1);
-  return rows.length > 0;
+  const target = rows[0];
+  return target ? canReadEmployeeByRole(v.id, v.role, { employeeId: target.id, managerId: target.managerId }) : false;
+}
+
+/** 指定した利用者の評価・メモ・期限へ手を入れてよいか。 */
+export async function canManageEmployee(v: Viewer, employeeId: string): Promise<boolean> {
+  const db = await getDb();
+  const target = (
+    await db
+      .select({ id: schema.users.id, managerId: schema.users.managerId })
+      .from(schema.users)
+      .where(and(eq(schema.users.id, employeeId), eq(schema.users.companyId, v.companyId ?? "")))
+      .limit(1)
+  )[0];
+  return target
+    ? canActOnEmployeeEvaluation(v.id, v.role, { employeeId: target.id, managerId: target.managerId })
+    : false;
 }
 
 /** API用。権限が足りなければ 401 / 403 を投げる。 */

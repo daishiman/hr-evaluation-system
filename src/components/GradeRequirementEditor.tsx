@@ -151,7 +151,7 @@ export function GradeRequirementEditor({
 
         {list.map((r, i) => (
           <div key={r.id} className="card-row items-start">
-            <span className="num mt-[2px] w-6 shrink-0 text-sub text-[var(--ink-muted)]">{i + 1}</span>
+            <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{i + 1}</span>
             <div className="row-main">
               {editing[r.id] === undefined ? (
                 <>
@@ -296,7 +296,7 @@ export function GradeRequirementEditor({
           )}
         </div>
 
-        <div className="card-pad grid gap-2 border-t border-[var(--line)]">
+        <div className="card-pad grid gap-2 border-t border-line">
           <VersionedMasterSections
             sectionId={`grade-${gradeId}-${category}`}
             rows={rows.filter((row) => row.category === category)}
@@ -348,7 +348,7 @@ export function GradeRequirementEditor({
       </Card>
 
       {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
-      {message && <p role="status" aria-live="polite" className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
+      {message && <p role="status" aria-live="polite" className="m-0 text-sub text-brand-deep">{message}</p>}
 
       {block("support", support)}
       {block("operation", operation)}
@@ -375,9 +375,9 @@ export function GradeRequirementEditor({
                     <p className="section-heading m-0 mb-1">{CATEGORY_LABEL[c]}</p>
                     <div className="grid gap-2">
                       {list.map((r) => (
-                        <div key={r.id} className="rounded-lg border border-[var(--line)] p-3">
+                        <div key={r.id} className="rounded-lg border border-line p-3">
                           <p className="m-0 text-sub">{r.text}</p>
-                          <div className="mt-2 flex gap-3 text-sub text-[var(--ink-muted)]">
+                          <div className="mt-2 flex gap-3 text-sub text-ink-muted">
                             <span>○ できている</span>
                             <span>× まだできていない</span>
                           </div>

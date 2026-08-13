@@ -18,6 +18,7 @@ const ready: AdminDashboardSnapshot = {
   kpiItemCount: 33,
   hasActiveScheme: true,
   schemeItemCount: 25,
+  schemeReady: true,
   cycleCount: 1,
   cycle: {
     id: "cycle-2026-h1",
@@ -46,7 +47,8 @@ describe("buildAdminDashboardModel", () => {
     ["行動指針", { activeBehaviorGuidelineCount: 0 }, "/admin/behavior"],
     ["行動指針の等級適用", { behaviorAppliedGradeCount: 0 }, "/admin/behavior"],
     ["KPI", { kpiItemCount: 0 }, "/admin/scheme"],
-    ["評価セット", { hasActiveScheme: false, schemeItemCount: 0 }, "/admin/scheme"],
+    ["評価セット", { hasActiveScheme: false, schemeItemCount: 0, schemeReady: false }, "/admin/scheme"],
+    ["評価セット未完了", { schemeReady: false }, "/admin/scheme"],
     ["評価期間", { hasOpenCycle: false }, "/admin/cycles"],
     ["アンケート作成", { formCount: 0, publishedFormCount: 0 }, "/admin/forms?cycle=cycle-2026-h1"],
     ["アンケート公開", { draftFormCount: 2, publishedFormCount: 5 }, "/admin/forms?cycle=cycle-2026-h1"],

@@ -222,9 +222,9 @@ export function RecordForm({
         >
           {fields.map((f) => (
           <label key={f.name} className={f.type === "textarea" ? "md:col-span-2" : undefined}>
-            <span className="block text-note text-[var(--ink-muted)]">
+            <span className="block text-note text-ink-muted">
               {f.label}
-              {"required" in f && f.required && <span className="ml-1 text-[var(--danger)]">必須</span>}
+              {"required" in f && f.required && <span className="ml-1 text-danger">必須</span>}
             </span>
             {f.type === "select" ? (
               <select name={f.name} defaultValue={f.defaultValue ?? ""} className="input mt-1 w-full">
@@ -314,7 +314,7 @@ export function RecordForm({
           </div>
           {Object.entries(issuedGenerated).map(([name, value]) => (
             <label key={name}>
-              <span className="block text-note text-[var(--ink-muted)]">
+              <span className="block text-note text-ink-muted">
                 {fields.find((field) => field.name === name)?.label ?? name}
               </span>
               <span className="mt-1 flex flex-wrap items-center gap-2">
@@ -345,7 +345,7 @@ export function RecordForm({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-sub text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 mt-3 text-sub text-brand-deep">{message}</p>}
     </Card>
   );
 }

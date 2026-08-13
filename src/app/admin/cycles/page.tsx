@@ -7,6 +7,8 @@ import { Badge, Card, CardHead, DownloadButton, EmptyState, LinkButton, PageTitl
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 import { listUnfinalizedNamesInCycle } from "@/lib/stalled";
 import { cycleCloseConfirmText } from "@/lib/domain/stalled-evaluations";
+import { cycleOpenReadiness } from "@/lib/domain/setup-readiness";
+import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +40,11 @@ export default async function AdminCycles() {
   );
 
   const thisYear = new Date().getFullYear();
+  const schemeReadinessByCycle = new Map(
+    await Promise.all(
+      cycles.map(async (cycle) => [cycle.id, await loadSchemeReadiness(companyId, cycle.schemeId)] as const),
+    ),
+  );
 
   return (
     <>
@@ -76,6 +83,10 @@ export default async function AdminCycles() {
           {cycles.map((c) => {
             const my = forms.filter((f) => f.cycleId === c.id);
             const published = my.filter((f) => f.status === "published").length;
+            const openReadiness = cycleOpenReadiness({
+              schemeReady: schemeReadinessByCycle.get(c.id)?.schemeReady === true,
+              publishedFormCount: published,
+            });
             const responses = my.reduce((sum, f) => sum + Number(f.responseCount ?? 0), 0);
             // 受付中の期間だけ数えている。0件のときは何も足さない（余計な確認を挟まない）。
             const pending = unfinalized.get(c.id) ?? [];
@@ -117,7 +128,7 @@ export default async function AdminCycles() {
                 />
 
                 <div className="mt-3 flex flex-wrap gap-3">
-                  {c.status !== "open" && c.status !== "closed" && (
+                  {c.status !== "open" && c.status !== "closed" && openReadiness.ready && (
                     <ActionButton
                       url="/api/cycles"
                       method="PATCH"
@@ -146,6 +157,12 @@ export default async function AdminCycles() {
                     />
                   )}
                 </div>
+
+                {c.status === "planning" && !openReadiness.ready && (
+                  <div className="mt-3">
+                    <ReasonNote>{openReadiness.message}</ReasonNote>
+                  </div>
+                )}
 
                 {/* 確認の窓を開かなくても「誰が残っているか」まで辿れるようにする。
                     窓の中だけに書くと、押す気のない人には最後まで見えない。 */}

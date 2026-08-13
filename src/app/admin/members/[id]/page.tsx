@@ -56,7 +56,7 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
         <div className="identity-head">
           <Avatar name={member.name} seed={member.id} size={56} />
           <div className="min-w-0">
-            <p className="m-0 flex items-center gap-1 truncate text-sub text-[var(--ink-muted)]">
+            <p className="m-0 flex items-center gap-1 truncate text-sub text-ink-muted">
               <Icon name="mail" size={13} />
               {member.email}
             </p>
@@ -86,7 +86,7 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
                 {member.isActive ? "在籍" : "利用停止"}
               </span>
             </div>
-            <p className="m-0 mt-2 text-note text-[var(--ink-muted)]">
+            <p className="m-0 mt-2 text-note text-ink-muted">
               確定済みの評価 <Num value={finalizedCount} unit="件" />
             </p>
           </div>

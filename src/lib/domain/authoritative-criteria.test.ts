@@ -241,7 +241,7 @@ describe("等級区分ごとの持ち点の型が正本と一致する", () => {
   });
 });
 
-describe("金銭系（20点枠に置ける項目）", () => {
+describe("初期データで旧配点を引き継ぐ金銭系分類", () => {
   it("単価率(6)・売上達成率(9)・利益率(24) の3つだけ", () => {
     expect([...MONETARY_ITEMS].sort((a, b) => a - b)).toEqual([6, 9, 24]);
   });
@@ -271,7 +271,7 @@ describe("初期データが選ぶ項目が制度に収まっている", () => {
         expect(fixed[0].no, label).toBe(1);
         expect(fixed[0].weight, label).toBe(rule.fixedSlotPoints);
 
-        // 20点枠は金銭系だけ。持たない等級区分では1つも無い
+        // 初期値は旧配点を引き継いで金銭系を置く。画面・APIの選択制約ではない。
         const major = rows.filter((x) => x.major === 1);
         expect(major.length, label).toBe(rule.majorSlotCount);
         for (const m of major) {

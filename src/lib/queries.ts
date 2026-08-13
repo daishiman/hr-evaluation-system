@@ -387,6 +387,7 @@ export async function listForms(companyId: string, cycleId?: string) {
       cycleId: s.forms.cycleId,
       gradeName: s.grades.name,
       cycleName: s.evaluationCycles.name,
+      cycleStatus: s.evaluationCycles.status,
       questionCount: sql<number>`(SELECT COUNT(*) FROM form_questions q WHERE q.form_id = ${s.forms.id})`,
       responseCount: sql<number>`(SELECT COUNT(*) FROM form_responses r WHERE r.form_id = ${s.forms.id})`,
     })
@@ -481,6 +482,7 @@ export async function getForm(companyId: string, formId: string) {
       cycleId: s.forms.cycleId,
       gradeName: s.grades.name,
       cycleName: s.evaluationCycles.name,
+      cycleStatus: s.evaluationCycles.status,
     })
     .from(s.forms)
     .leftJoin(s.grades, eq(s.grades.id, s.forms.gradeId))

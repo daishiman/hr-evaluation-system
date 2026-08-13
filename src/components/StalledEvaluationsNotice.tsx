@@ -52,7 +52,7 @@ export function StalledEvaluationsNotice({
         締め切った評価期間は、ふだんのホームには出てきません。ここに残っているものは、まだ確定されていません。
         誰かが確定するまで、ご本人に結果が表示されません。
       </p>
-      <p className="m-0 mt-2 text-note text-[var(--ink-muted)]">
+      <p className="m-0 mt-2 text-note text-ink-muted">
         内訳：確定待ち {summary.finalize}件 ／ 集計待ち {summary.build}件
         {summary.long > 0 && `（うち30日以上そのまま ${summary.long}件）`}
       </p>
@@ -62,7 +62,7 @@ export function StalledEvaluationsNotice({
           <CardRow
             key={`${row.kind}-${row.cycleId}-${row.employeeId}`}
             title={
-              <Link href={stalledHref(row)} className="text-[var(--brand-deep)]">
+              <Link href={stalledHref(row)} className="text-brand-deep">
                 {row.employeeName ?? "氏名未設定"}
               </Link>
             }
@@ -75,7 +75,7 @@ export function StalledEvaluationsNotice({
       {rows.length > shown.length && (
         <p className="footnote m-0 mt-2">
           ほか {rows.length - shown.length}件あります。
-          <Link href={moreHref} className="ml-1 text-[var(--brand-deep)]">
+          <Link href={moreHref} className="ml-1 text-brand-deep">
             評価期間を選んで確認する
           </Link>
         </p>

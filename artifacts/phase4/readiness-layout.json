@@ -1,0 +1,146 @@
+[
+  {
+    "path": "/admin",
+    "width": 375,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "bodyLength": 757
+  },
+  {
+    "path": "/admin",
+    "width": 768,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "bodyLength": 757
+  },
+  {
+    "path": "/admin",
+    "width": 1280,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "bodyLength": 747
+  },
+  {
+    "path": "/admin",
+    "width": 1600,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 1600,
+    "clientWidth": 1600,
+    "bodyLength": 747
+  },
+  {
+    "path": "/admin/setup",
+    "width": 375,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "bodyLength": 1065
+  },
+  {
+    "path": "/admin/setup",
+    "width": 768,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "bodyLength": 1065
+  },
+  {
+    "path": "/admin/setup",
+    "width": 1280,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "bodyLength": 1055
+  },
+  {
+    "path": "/admin/setup",
+    "width": 1600,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 1600,
+    "clientWidth": 1600,
+    "bodyLength": 1055
+  },
+  {
+    "path": "/admin/cycles",
+    "width": 375,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "bodyLength": 773
+  },
+  {
+    "path": "/admin/cycles",
+    "width": 768,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "bodyLength": 773
+  },
+  {
+    "path": "/admin/cycles",
+    "width": 1280,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "bodyLength": 763
+  },
+  {
+    "path": "/admin/cycles",
+    "width": 1600,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 1600,
+    "clientWidth": 1600,
+    "bodyLength": 763
+  },
+  {
+    "path": "/admin/forms",
+    "width": 375,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "bodyLength": 1843
+  },
+  {
+    "path": "/admin/forms",
+    "width": 768,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 768,
+    "clientWidth": 768,
+    "bodyLength": 1843
+  },
+  {
+    "path": "/admin/forms",
+    "width": 1280,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "bodyLength": 1833
+  },
+  {
+    "path": "/admin/forms",
+    "width": 1600,
+    "status": 200,
+    "errors": [],
+    "scrollWidth": 1600,
+    "clientWidth": 1600,
+    "bodyLength": 1833
+  }
+]

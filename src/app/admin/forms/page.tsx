@@ -1,12 +1,13 @@
-import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import { listCycles, listFormKpiCoverage, listForms, listGrades } from "@/lib/queries";
 import { describeFormKpiDiff, diffFormKpiItems, effectiveAskedItems } from "@/lib/domain/form-sync";
 import { ActionButton } from "@/components/ActionButton";
 import { CopyUrl } from "@/components/CopyUrl";
 import { appOrigin, formUrl } from "@/lib/origin";
-import { Badge, Card, CardHead, EmptyState, LinkButton, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardHead, ChipLink, EmptyState, LinkButton, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
+import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
+import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -38,10 +39,11 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
      ドメインを書き込むと必ずどこかで間違ったURLを配ることになる）。 */
   const origin = await appOrigin();
   const selected = cycles.find((c) => c.id === sp.cycle) ?? cycles.find((c) => c.status === "open") ?? cycles[0];
-  const [forms, grades, coverage] = await Promise.all([
+  const [forms, grades, coverage, schemeReadiness] = await Promise.all([
     listForms(companyId, selected.id),
     listGrades(companyId),
     listFormKpiCoverage(companyId, selected.id),
+    loadSchemeReadiness(companyId, selected.schemeId),
   ]);
 
   /* このアンケートが聞いている項目と、いま選んでいる項目のズレ。
@@ -70,9 +72,9 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
       <SectionHeading>評価期間を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {cycles.map((c) => (
-          <Link key={c.id} href={`/admin/forms?cycle=${c.id}`} className="chip" aria-current={c.id === selected.id ? "true" : undefined}>
+          <ChipLink key={c.id} href={`/admin/forms?cycle=${c.id}`} current={c.id === selected.id}>
             {c.name}
-          </Link>
+          </ChipLink>
         ))}
       </div>
 
@@ -96,7 +98,13 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
         <EmptyState title="アンケートがまだありません" body="上のボタンで等級ごとの下書きを作ってください。" />
       ) : (
         <div className="stack">
-          {forms.map((f) => (
+          {forms.map((f) => {
+            const publication = formPublicationReadiness({
+              schemeReady: schemeReadiness.schemeReady,
+              cycleStatus: selected.status,
+              questionCount: Number(f.questionCount ?? 0),
+            });
+            return (
             <Card key={f.id} className="card-pad" off={f.status === "closed"}>
               <CardHead
                 title={
@@ -138,7 +146,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
               />
 
               <div className="mt-3 flex flex-wrap gap-3">
-                {f.status === "draft" && (
+                {f.status === "draft" && publication.ready && (
                   <ActionButton
                     url="/api/forms"
                     method="PATCH"
@@ -158,6 +166,10 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                   />
                 )}
               </div>
+
+              {f.status === "draft" && !publication.ready && (
+                <div className="mt-3"><ReasonNote>{publication.message}</ReasonNote></div>
+              )}
 
               {mismatchOf(f.id, f.gradeId) && (
                 <div className="mt-3">
@@ -192,7 +204,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                 </p>
               )}
             </Card>
-          ))}
+          );})}
         </div>
       )}
     </>

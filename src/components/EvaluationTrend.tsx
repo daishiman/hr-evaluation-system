@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Badge, Card, CardRow, DefList, EmptyState, LinkButton, Num, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, ChoiceChip, DefList, EmptyState, LinkButton, Num, ReasonNote, SectionHeading } from "@/components/ui";
 import { TrendChart } from "@/components/LazyCharts";
 import {
   availableRanges,
@@ -128,15 +128,9 @@ export function EvaluationTrend({
       {ranges.length > 0 && (
         <div className="chip-grid mb-3" aria-label="表示する期間">
           {[null, ...ranges].map((y) => (
-            <button
-              key={y ?? "all"}
-              type="button"
-              className="chip"
-              aria-pressed={range === y}
-              onClick={() => setRange(y)}
-            >
+            <ChoiceChip key={y ?? "all"} selected={range === y} onClick={() => setRange(y)}>
               {y === null ? "全期間" : RANGE_LABEL[y]}
-            </button>
+            </ChoiceChip>
           ))}
         </div>
       )}
@@ -149,7 +143,7 @@ export function EvaluationTrend({
         <Card className="card-pad">
           {/* 等級の区間は文字でも出す。グラフの背景の濃淡だけに頼ると、
               印刷したときと色の見分けがつきにくい方の環境で読めなくなる。 */}
-          <p className="m-0 text-note text-[var(--ink-muted)]">この期間の等級</p>
+          <p className="m-0 text-note text-ink-muted">この期間の等級</p>
           {bands.length > BANDS_LISTED ? (
             /* 20年ぶんのように区間が増えると、この一覧だけで画面が埋まりグラフに届かない。
                回数だけ伝え、期ごとの等級は下の一覧（行ごとのバッジ）に任せる。 */
@@ -172,7 +166,7 @@ export function EvaluationTrend({
 
           {series.map((sr) => (
             <div key={sr.key} className="mt-4">
-              <p className="m-0 text-note text-[var(--ink-muted)]">{sr.label}</p>
+              <p className="m-0 text-note text-ink-muted">{sr.label}</p>
               <TrendChart
                 data={chartData}
                 series={[sr]}
@@ -231,9 +225,7 @@ export function EvaluationTrend({
       {shown.length === 0 ? (
         <ReasonNote
           action={
-            <button type="button" className="chip" onClick={() => setRange(null)}>
-              全期間に戻す
-            </button>
+            <ChoiceChip onClick={() => setRange(null)}>全期間に戻す</ChoiceChip>
           }
         >
           選んだ期間に評価がありません。
@@ -244,9 +236,9 @@ export function EvaluationTrend({
           {listed.map((e) => (
             <CardRow
               key={e.id}
-              className={e.id === current?.id ? "bg-[var(--subtle)]" : undefined}
+              className={e.id === current?.id ? "bg-subtle" : undefined}
               title={
-                <Link href={e.href} className="text-[var(--brand-deep)]">
+                <Link href={e.href} className="text-brand-deep">
                   {e.cycle}
                 </Link>
               }
@@ -254,7 +246,7 @@ export function EvaluationTrend({
               value={
                 <>
                   <Num value={e.headline.value} unit={e.headline.unit} display />
-                  <p className="m-0 text-note text-[var(--ink-muted)]">{e.headline.caption}</p>
+                  <p className="m-0 text-note text-ink-muted">{e.headline.caption}</p>
                 </>
               }
               marks={
@@ -272,9 +264,7 @@ export function EvaluationTrend({
           {listed.length < shown.length && (
             <CardRow
               title={
-                <button type="button" className="chip" onClick={() => setAllRows(true)}>
-                  古い評価も表示する
-                </button>
+                <ChoiceChip onClick={() => setAllRows(true)}>古い評価も表示する</ChoiceChip>
               }
               sub={`いま${listed.length}件を表示中。全部で${shown.length}件あります。`}
             />

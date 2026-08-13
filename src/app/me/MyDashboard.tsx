@@ -51,7 +51,7 @@ export function FormActionCard({ form, primary }: { form: MyActionForm; primary:
         <p className="m-0 mt-3 text-note">
           回答締切：<strong>{form.deadlineLabel}</strong>
           {form.daysUntilDeadline !== null && (
-            <span className="text-[var(--ink-muted)]">
+            <span className="text-ink-muted">
               {form.daysUntilDeadline === 0 ? "（本日）" : `（あと${form.daysUntilDeadline}日）`}
             </span>
           )}
@@ -143,7 +143,7 @@ export function MyDashboard({
         <Card className="card-pad">
           <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
             <div className="min-w-0">
-              <p className="m-0 text-note text-[var(--ink-muted)]">最新の評価</p>
+              <p className="m-0 text-note text-ink-muted">最新の評価</p>
               <p className="todo-row-title m-0 mt-1 text-head">{latest.cycleName ?? "評価結果"}</p>
               <p className="todo-row-sub m-0">{latest.gradeName ?? "等級未設定"}</p>
               {latest.requirementRate !== null ? (
@@ -164,12 +164,12 @@ export function MyDashboard({
           {previous.length > 0 && (
             <div className="mt-5">
               <Disclosure summary="過去の結果を見る" meta={`${previous.length}件`}>
-                <div className="p-0 text-[var(--ink)]">
+                <div className="p-0 text-ink">
                   {previous.map((result) => (
                     <CardRow
                       key={result.id}
                       title={
-                        <Link href={`/me/results/${result.id}`} className="text-[var(--brand-deep)]">
+                        <Link href={`/me/results/${result.id}`} className="text-brand-deep">
                           {result.cycleName ?? "評価結果"}
                         </Link>
                       }

@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema as s } from "@/lib/db";
-import { apiViewer, HttpError } from "@/lib/session";
+import { apiViewer, canManageEmployee, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { isOwnEvaluation, SELF_EVALUATION_BLOCK_REASON } from "@/lib/domain/evaluation-authority";
 
@@ -38,6 +38,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // 自己承認を止める。画面でボタンを隠すだけだと、URLを直接叩けば通ってしまう。
     // 役割では判定しない（会社の管理者も自分自身の評価は同じく触れない）。
     if (isOwnEvaluation(viewer.id, row.employeeId)) throw new HttpError(403, SELF_EVALUATION_BLOCK_REASON);
+    if (!(await canManageEmployee(viewer, row.employeeId))) {
+      throw new HttpError(403, "この方の評価を変更する権限がありません。直属メンバーの評価を選んでください。");
+    }
 
     if (body.action === "comment") {
       await db.update(s.evaluations).set({ evaluatorComment: body.comment ?? null }).where(eq(s.evaluations.id, id));

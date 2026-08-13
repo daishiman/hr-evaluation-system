@@ -2,6 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  canActOnEmployeeEvaluation,
+  canReadEmployee,
+  canReadResponseBody,
+  canReadSelfResult,
+  canReviewEmployeeEvaluation,
   isOwnEvaluation,
   selectNextActionableEvaluation,
   SELF_EVALUATION_BLOCK_REASON,
@@ -9,6 +14,58 @@ import {
 
 const ROOT = process.cwd();
 const read = (path: string) => readFileSync(join(ROOT, path), "utf8");
+
+describe("対象者ごとの権限契約", () => {
+  const directReport = { employeeId: "member-a", managerId: "manager-a" };
+  const outsideReport = { employeeId: "member-b", managerId: "manager-b" };
+
+  it("マネージャーは直属メンバーだけを閲覧できる", () => {
+    expect(canReadEmployee("manager-a", "MANAGER", directReport)).toBe(true);
+    expect(canReadEmployee("manager-a", "MANAGER", outsideReport)).toBe(false);
+  });
+
+  it("会社管理者以上は自社の対象者を閲覧でき、一般は本人だけを閲覧できる", () => {
+    expect(canReadEmployee("admin", "COMPANY_ADMIN", outsideReport)).toBe(true);
+    expect(canReadEmployee("super", "SUPER_ADMIN", outsideReport)).toBe(true);
+    expect(canReadEmployee("member-b", "EMPLOYEE", outsideReport)).toBe(true);
+    expect(canReadEmployee("member-a", "EMPLOYEE", outsideReport)).toBe(false);
+  });
+
+  it("評価操作は管理者または直属上長だけに許可し、自己評価は常に拒否する", () => {
+    expect(canActOnEmployeeEvaluation("manager-a", "MANAGER", directReport)).toBe(true);
+    expect(canActOnEmployeeEvaluation("manager-a", "MANAGER", outsideReport)).toBe(false);
+    expect(canActOnEmployeeEvaluation("admin", "COMPANY_ADMIN", outsideReport)).toBe(true);
+    expect(
+      canActOnEmployeeEvaluation("manager-a", "COMPANY_ADMIN", {
+        employeeId: "manager-a",
+        managerId: "director",
+      }),
+    ).toBe(false);
+  });
+
+  it("評価者向け画面は会社管理者以上または直属上長だけが開ける", () => {
+    expect(canReviewEmployeeEvaluation("admin", "COMPANY_ADMIN", outsideReport)).toBe(true);
+    expect(canReviewEmployeeEvaluation("super", "SUPER_ADMIN", outsideReport)).toBe(true);
+    expect(canReviewEmployeeEvaluation("manager-a", "MANAGER", directReport)).toBe(true);
+    expect(canReviewEmployeeEvaluation("manager-a", "MANAGER", outsideReport)).toBe(false);
+    expect(canReviewEmployeeEvaluation("member-a", "EMPLOYEE", directReport)).toBe(false);
+  });
+
+  it("下書き回答の本文は本人だけ、提出済み回答は本人・直属上長・管理者だけが読める", () => {
+    expect(canReadResponseBody("member-a", "EMPLOYEE", directReport, "draft")).toBe(true);
+    expect(canReadResponseBody("manager-a", "MANAGER", directReport, "draft")).toBe(false);
+    expect(canReadResponseBody("admin", "COMPANY_ADMIN", directReport, "draft")).toBe(false);
+    expect(canReadResponseBody("manager-a", "MANAGER", directReport, "submitted")).toBe(true);
+    expect(canReadResponseBody("manager-b", "MANAGER", directReport, "submitted")).toBe(false);
+    expect(canReadResponseBody("admin", "COMPANY_ADMIN", directReport, "submitted")).toBe(true);
+  });
+
+  it("本人向け結果詳細は本人の確定済み評価だけを許可する", () => {
+    expect(canReadSelfResult("member-a", directReport.employeeId, "finalized")).toBe(true);
+    expect(canReadSelfResult("member-a", directReport.employeeId, "draft")).toBe(false);
+    expect(canReadSelfResult("member-b", directReport.employeeId, "finalized")).toBe(false);
+  });
+});
 
 describe("自分の評価かどうかの判定", () => {
   it("対象者と操作している人が同じなら自分の評価", () => {
@@ -47,6 +104,39 @@ describe("自分の評価を自分で確定できないこと（サーバー側�
 
   it("対象者の取得は会社の絞り込み付きのまま（他社の評価は見えない）", () => {
     expect(route).toContain("eq(s.evaluations.companyId, viewer.companyId)");
+  });
+});
+
+describe("対象者ごとの契約がすべての入口で使われること", () => {
+  it("評価のbuild・確定・再開・コメントは直属範囲をサーバー側で検査する", () => {
+    const build = read("src/app/api/evaluations/build/route.ts");
+    const update = read("src/app/api/evaluations/[id]/route.ts");
+    expect(build).toContain("eq(s.users.managerId, viewer.id)");
+    expect(build).toContain("直属メンバー以外の評価は集計できません");
+    expect(update).toContain("canManageEmployee(viewer, row.employeeId)");
+  });
+
+  it("評価詳細・メンバー詳細・回答本文も直属範囲または本人へ閉じる", () => {
+    expect(read("src/app/manager/evaluations/[id]/page.tsx")).toContain("canReviewEmployeeEvaluation(");
+    expect(read("src/app/manager/members/[id]/page.tsx")).toContain("canViewEmployee(viewer, id)");
+    expect(read("src/app/me/responses/[id]/page.tsx")).toContain("canReadResponseBody(");
+  });
+
+  it("メモと個別期限も直属範囲へ閉じる", () => {
+    expect(read("src/app/api/notes/route.ts")).toContain("canManageEmployee(viewer, body.employeeId)");
+    const deadline = read("src/app/api/forms/[id]/extensions/route.ts");
+    expect(deadline).toContain("canManageEmployee(viewer, employee.id)");
+    expect(deadline).toContain("canManageEmployee(viewer, row.employeeId)");
+  });
+
+  it("回答・社員CSVは会社管理者以上、結果・KPIはマネージャー以上に分ける", () => {
+    const route = read("src/app/api/export/route.ts");
+    expect(route).toContain('q.type === "responses" || q.type === "members" ? "COMPANY_ADMIN" : "MANAGER"');
+  });
+
+  it("本人向け結果の詳細は確定済みだけを開く", () => {
+    const page = read("src/app/me/results/[id]/page.tsx");
+    expect(page).toContain("canReadSelfResult(viewer.id, result.employeeId, result.status)");
   });
 });
 

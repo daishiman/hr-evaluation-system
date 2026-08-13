@@ -211,7 +211,7 @@ export function KpiItemEditor({
   return (
     <div className="stack">
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 text-sub text-brand-deep">{message}</p>}
 
       {items.map((row) => {
         const mark = blockedMark(usedByOf(row.id));
@@ -332,10 +332,10 @@ function ItemForm({
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => onChange({ ...draft, [key]: value });
 
   return (
-    <div className="rounded-lg border border-[var(--line)] p-3">
+    <div className="rounded-lg border border-line p-3">
       <div className="field-grid">
         <label>
-          <span className="block text-note text-[var(--ink-muted)]">項目名</span>
+          <span className="block text-note text-ink-muted">項目名</span>
           <input value={draft.name} onChange={(e) => set("name", e.target.value)} className="input mt-1 w-full" placeholder="例：新規契約獲得率" />
         </label>
 
@@ -348,11 +348,11 @@ function ItemForm({
         ) : (
           <>
             <label>
-              <span className="block text-note text-[var(--ink-muted)]">単位</span>
+              <span className="block text-note text-ink-muted">単位</span>
               <input value={draft.unit} onChange={(e) => set("unit", e.target.value)} className="input mt-1 w-full" placeholder="例：%" />
             </label>
             <label>
-              <span className="block text-note text-[var(--ink-muted)]">向き</span>
+              <span className="block text-note text-ink-muted">向き</span>
               <select
                 value={draft.direction}
                 onChange={(e) => set("direction", e.target.value === "lower" ? "lower" : "higher")}
@@ -363,7 +363,7 @@ function ItemForm({
               </select>
             </label>
             <label>
-              <span className="block text-note text-[var(--ink-muted)]">実績区分</span>
+              <span className="block text-note text-ink-muted">実績区分</span>
               <select value={draft.measureType} onChange={(e) => set("measureType", e.target.value)} className="input mt-1 w-full">
                 {MEASURE_TYPES.map((m) => (
                   <option key={m} value={m}>
@@ -373,7 +373,7 @@ function ItemForm({
               </select>
             </label>
             <label>
-              <span className="block text-note text-[var(--ink-muted)]">分類（カテゴリ）</span>
+              <span className="block text-note text-ink-muted">分類（カテゴリ）</span>
               <select value={draft.categoryId} onChange={(e) => set("categoryId", e.target.value)} className="input mt-1 w-full">
                 <option value="">分類未設定</option>
                 {categories.map((c) => (
@@ -385,21 +385,21 @@ function ItemForm({
             </label>
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={draft.isMonetary} onChange={(e) => set("isMonetary", e.target.checked)} />
-              <span className="text-note text-[var(--ink-muted)]">金銭系の項目（Chief以上で20点枠の候補にする）</span>
+              <span className="text-note text-ink-muted">金銭系の項目（旧配点の分類・選択制約には使いません）</span>
             </label>
           </>
         )}
 
         <label>
-          <span className="block text-note text-[var(--ink-muted)]">計算式（任意）</span>
+          <span className="block text-note text-ink-muted">計算式（任意）</span>
           <input value={draft.formula} onChange={(e) => set("formula", e.target.value)} className="input mt-1 w-full" placeholder="例：契約件数 ÷ 商談件数" />
         </label>
         <label>
-          <span className="block text-note text-[var(--ink-muted)]">計算式の補足（任意）</span>
+          <span className="block text-note text-ink-muted">計算式の補足（任意）</span>
           <input value={draft.formulaNote} onChange={(e) => set("formulaNote", e.target.value)} className="input mt-1 w-full" />
         </label>
         <label>
-          <span className="block text-note text-[var(--ink-muted)]">備考（任意）</span>
+          <span className="block text-note text-ink-muted">備考（任意）</span>
           <input value={draft.remarks} onChange={(e) => set("remarks", e.target.value)} className="input mt-1 w-full" />
         </label>
       </div>

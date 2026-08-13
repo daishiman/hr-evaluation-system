@@ -14,7 +14,7 @@ export default async function ManagerMembers() {
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
   const [members, evals] = await Promise.all([
-    listMembers(viewer.companyId),
+    listMembers(viewer.companyId, viewer.role === "MANAGER" ? { managerId: viewer.id } : undefined),
     listEvaluations(viewer.companyId, viewer.role),
   ]);
 
@@ -24,7 +24,7 @@ export default async function ManagerMembers() {
     <>
       <PageTitle
         title="メンバー"
-        lede="会社に所属する全員を表示しています（担当チームに限りません）。等級・所属・直近の評価を確認でき、名前を選ぶとその方の評価の履歴が見られます。"
+        lede={viewer.role === "MANAGER" ? "担当チームの等級・所属・直近の評価を確認できます。" : "会社に所属する全員の等級・所属・直近の評価を確認できます。"}
       />
 
       {members.length === 0 ? (
@@ -38,7 +38,7 @@ export default async function ManagerMembers() {
                 key={m.id}
                 title={
                   <>
-                    <Link href={`/manager/members/${m.id}`} className="text-[var(--brand-deep)]">
+                    <Link href={`/manager/members/${m.id}`} className="text-brand-deep">
                       {m.name}
                     </Link>
                     {m.role !== "EMPLOYEE" && (
@@ -51,7 +51,7 @@ export default async function ManagerMembers() {
                   last ? (
                     <>
                       <Num value={last.requirementRate} unit="%" />
-                      <p className="m-0 text-note text-[var(--ink-muted)]">{last.cycleName} の等級要件達成率</p>
+                      <p className="m-0 text-note text-ink-muted">{last.cycleName} の等級要件達成率</p>
                     </>
                   ) : (
                     <span className="footnote">確定した評価なし</span>

@@ -1,0 +1,1528 @@
+{
+  "routeAudit": [
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/login",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/account",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/account/password",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/forms",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/forms/frm_kyufu_2026h1_beginner",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/me",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/me/forms",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/me/forms/frm_kyufu_2026h1_beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/me/responses/res_kyufu_2025h1_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/me/results",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/me/results/ev_kyufu_2025h1_e1",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/f/kyufu-2026h1-beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/criteria",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/manager",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/manager/cycles",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/manager/members",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/manager/members/usr_kyufu_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/manager/evaluations/ev_kyufu_2025h1_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/setup",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/masters",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/masters/requirements",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/masters/promotion",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/masters/kpi-categories",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/behavior",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/scheme",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/scheme/Beginner",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/scheme/Beginner/criteria",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/cycles",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/forms",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/forms/frm_kyufu_2026h1_beginner",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/forms/frm_kyufu_2026h1_beginner/responses",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/members",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/members/policy",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/members/usr_kyufu_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/kgi",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/admin/raises",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/system",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/system/companies",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/system/users",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/system/users/usr_kyufu_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/login",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/account",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/account/password",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/forms",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/forms/frm_kyufu_2026h1_beginner",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/me",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/me/forms",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/me/forms/frm_kyufu_2026h1_beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/me/responses/res_kyufu_2025h1_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/me/results",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/me/results/ev_kyufu_2025h1_e1",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/f/kyufu-2026h1-beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/criteria",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/manager",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/manager/cycles",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/manager/members",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/manager/members/usr_kyufu_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/manager/evaluations/ev_kyufu_2025h1_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/setup",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/masters",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/masters/requirements",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/masters/promotion",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/masters/kpi-categories",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/behavior",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/scheme",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/scheme/Beginner",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/scheme/Beginner/criteria",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/cycles",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/forms",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/forms/frm_kyufu_2026h1_beginner",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/forms/frm_kyufu_2026h1_beginner/responses",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/members",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/members/policy",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/members/usr_kyufu_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/kgi",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/raises",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/system",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/system/companies",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/system/users",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/system/users/usr_kyufu_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/login",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/account",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/account/password",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/forms",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/forms/frm_kyufu_2026h1_beginner",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/me",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/me/forms",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/me/forms/frm_kyufu_2026h1_beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/me/responses/res_kyufu_2025h1_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/me/results",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/me/results/ev_kyufu_2025h1_e1",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/f/kyufu-2026h1-beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/criteria",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/cycles",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/members",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/members/usr_kyufu_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/evaluations/ev_kyufu_2025h1_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/setup",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/masters",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/masters/requirements",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/masters/promotion",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/masters/kpi-categories",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/behavior",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/scheme",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/scheme/Beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/scheme/Beginner/criteria",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/cycles",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/forms",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/forms/frm_kyufu_2026h1_beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/forms/frm_kyufu_2026h1_beginner/responses",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/members",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/members/policy",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/members/usr_kyufu_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/kgi",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/admin/raises",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/system",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/system/companies",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/system/users",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/system/users/usr_kyufu_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/login",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/account",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/account/password",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/forms",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/forms/frm_kyufu_2026h1_beginner",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/me",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/me/forms",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/me/forms/frm_kyufu_2026h1_beginner",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/me/responses/res_kyufu_2025h1_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/me/results",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/me/results/ev_kyufu_2025h1_e1",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/f/kyufu-2026h1-beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/criteria",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/manager",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/manager/cycles",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/manager/members",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/manager/members/usr_kyufu_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/manager/evaluations/ev_kyufu_2025h1_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/setup",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/masters",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/masters/requirements",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/masters/promotion",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/masters/kpi-categories",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/behavior",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/scheme",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/scheme/Beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/scheme/Beginner/criteria",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/cycles",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/forms",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/forms/frm_kyufu_2026h1_beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/forms/frm_kyufu_2026h1_beginner/responses",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/members",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/members/policy",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/members/usr_kyufu_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/kgi",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/admin/raises",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/system",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/system/companies",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/system/users",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/system/users/usr_kyufu_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    }
+  ],
+  "anonymousAudit": [
+    {
+      "path": "/",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/login",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    },
+    {
+      "path": "/account",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/account/password",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/forms",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/forms/frm_kyufu_2026h1_beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/me",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/me/forms",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/me/forms/frm_kyufu_2026h1_beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/me/responses/res_kyufu_2025h1_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/me/results",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/me/results/ev_kyufu_2025h1_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/f/kyufu-2026h1-beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/criteria",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/manager",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/manager/cycles",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/manager/members",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/manager/members/usr_kyufu_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/manager/evaluations/ev_kyufu_2025h1_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/setup",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/masters",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/masters/requirements",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/masters/promotion",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/masters/kpi-categories",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/behavior",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/scheme",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/scheme/Beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/scheme/Beginner/criteria",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/cycles",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/forms",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/forms/frm_kyufu_2026h1_beginner",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/forms/frm_kyufu_2026h1_beginner/responses",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/members",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/members/policy",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/members/usr_kyufu_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/kgi",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/admin/raises",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/system",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/system/companies",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/system/users",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    },
+    {
+      "path": "/system/users/usr_kyufu_e1",
+      "expected": "redirect",
+      "actual": "redirect",
+      "status": 200
+    }
+  ],
+  "extraStates": [
+    {
+      "role": "EMPLOYEE",
+      "path": "/forms/not-found",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/me/forms/not-found",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/me/responses/not-found",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/me/results/ev_kyufu_2025h1_e2",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/members/usr_mirai_e1",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/evaluations/ev_mirai_2025h1_e1",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/forms/frm_mirai_2025h1_beginner",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "COMPANY_ADMIN",
+      "path": "/admin/members/usr_mirai_e1",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "SUPER_ADMIN",
+      "path": "/system/users/not-found",
+      "expected": "404",
+      "actual": "404",
+      "status": 200
+    },
+    {
+      "role": "EMPLOYEE",
+      "path": "/f/not-a-token",
+      "expected": "200",
+      "actual": "200",
+      "status": 200
+    }
+  ],
+  "workflows": [
+    {
+      "name": "response-csv-confirm",
+      "dryRunStatus": 200,
+      "hasToken": true,
+      "changedCommitStatus": 409,
+      "changedBody": "{\"ok\":false,\"message\":\"取り込む前に、同じ内容で「まず内容を確認する」を実行してください。\"}"
+    }
+  ],
+  "targetedLayout": {
+    "status": 200,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "bodyLength": 773
+  },
+  "summary": {
+    "authenticatedRouteCases": 168,
+    "anonymousRouteCases": 42,
+    "extraStateCases": 10,
+    "failures": 0
+  },
+  "failures": []
+}

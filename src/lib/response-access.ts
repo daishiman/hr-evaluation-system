@@ -70,6 +70,7 @@ export async function listMyForms(companyId: string, employeeId: string, gradeId
       cycleId: s.forms.cycleId,
       gradeName: s.grades.name,
       cycleName: s.evaluationCycles.name,
+      cycleStatus: s.evaluationCycles.status,
       periodStart: s.evaluationCycles.periodStart,
       periodEnd: s.evaluationCycles.periodEnd,
     })
@@ -135,6 +136,7 @@ export async function listMyForms(companyId: string, employeeId: string, gradeId
       submittedAt: response?.submittedAt ?? null,
       isCurrentGrade: gradeId !== null && f.gradeId === gradeId,
       deadline: judgeFormDeadline({
+        cycleStatus: f.cycleStatus ?? "unknown",
         status: f.status,
         opensAt: f.opensAt,
         closesAt: f.closesAt,
@@ -188,6 +190,7 @@ export interface ResponseDetail {
     formId: string;
     employeeId: string;
     employeeName: string | null;
+    managerId: string | null;
     status: string;
     submittedAt: Date | null;
     respondentNote: string | null;
@@ -221,6 +224,7 @@ export async function getResponseDetail(companyId: string, responseId: string): 
         formId: s.formResponses.formId,
         employeeId: s.formResponses.employeeId,
         employeeName: s.users.name,
+        managerId: s.users.managerId,
         status: s.formResponses.status,
         submittedAt: s.formResponses.submittedAt,
         respondentNote: s.formResponses.respondentNote,
@@ -259,6 +263,7 @@ export async function getResponseDetail(companyId: string, responseId: string): 
       formId: head.formId,
       employeeId: head.employeeId,
       employeeName: head.employeeName,
+      managerId: head.managerId,
       status: head.status,
       submittedAt: head.submittedAt,
       respondentNote: head.respondentNote,

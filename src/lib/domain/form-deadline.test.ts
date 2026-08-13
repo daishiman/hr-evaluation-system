@@ -22,7 +22,7 @@ describe("jstDateString", () => {
 });
 
 describe("judgeFormDeadline 回答期間の境界", () => {
-  const base = { status: "published", opensAt: "2026-04-01", closesAt: "2026-09-30" };
+  const base = { cycleStatus: "open", status: "published", opensAt: "2026-04-01", closesAt: "2026-09-30" };
 
   it("開始日の当日から回答できる（日本時間の0時）", () => {
     // 日本時間 4/1 00:00 = UTC 3/31 15:00
@@ -55,21 +55,50 @@ describe("judgeFormDeadline 回答期間の境界", () => {
   });
 
   it("期限が決まっていなければ、いつでも回答できる", () => {
-    const r = judgeFormDeadline({ status: "published", opensAt: null, closesAt: null, now: jst("2030-01-01T00:00:00Z") });
+    const r = judgeFormDeadline({ cycleStatus: "open", status: "published", opensAt: null, closesAt: null, now: jst("2030-01-01T00:00:00Z") });
     expect(r.canAnswer).toBe(true);
     expect(r.effectiveUntil).toBeNull();
   });
 });
 
 describe("judgeFormDeadline アンケートの状態", () => {
+  it("評価期間が準備中なら、公開済みアンケートでも回答できない", () => {
+    const r = judgeFormDeadline({
+      cycleStatus: "planning",
+      status: "published",
+      opensAt: null,
+      closesAt: null,
+      now: jst("2026-05-01T00:00:00Z"),
+    });
+    expect(r.canAnswer).toBe(false);
+    expect(r.state).toBe("cycle_not_open");
+    expect(r.message).toContain("評価期間");
+    expect(r.message).toContain("準備中");
+  });
+
+  it("評価期間が終了済みなら、個別延長があっても回答できない", () => {
+    const r = judgeFormDeadline({
+      cycleStatus: "closed",
+      status: "published",
+      opensAt: null,
+      closesAt: "2026-09-30",
+      extensions: ["2026-12-31"],
+      now: jst("2026-10-01T00:00:00Z"),
+    });
+    expect(r.canAnswer).toBe(false);
+    expect(r.state).toBe("cycle_not_open");
+    expect(r.message).toContain("終了");
+  });
+
   it("下書きのアンケートは回答できない", () => {
-    const r = judgeFormDeadline({ status: "draft", opensAt: null, closesAt: null, now: jst("2026-05-01T00:00:00Z") });
+    const r = judgeFormDeadline({ cycleStatus: "open", status: "draft", opensAt: null, closesAt: null, now: jst("2026-05-01T00:00:00Z") });
     expect(r.canAnswer).toBe(false);
     expect(r.state).toBe("not_published");
   });
 
   it("締め切り済みのアンケートは、期間内でも回答できない", () => {
     const r = judgeFormDeadline({
+      cycleStatus: "open",
       status: "closed",
       opensAt: "2026-04-01",
       closesAt: "2026-09-30",
@@ -82,7 +111,7 @@ describe("judgeFormDeadline アンケートの状態", () => {
 });
 
 describe("judgeFormDeadline 個別の延長", () => {
-  const base = { status: "published", opensAt: "2026-04-01", closesAt: "2026-09-30" };
+  const base = { cycleStatus: "open", status: "published", opensAt: "2026-04-01", closesAt: "2026-09-30" };
 
   it("延長されていれば締切後も回答できる", () => {
     const r = judgeFormDeadline({ ...base, extensions: ["2026-10-15"], now: jst("2026-10-05T00:00:00Z") });

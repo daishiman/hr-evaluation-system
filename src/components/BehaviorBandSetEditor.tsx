@@ -133,13 +133,13 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-sub text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 mt-3 text-sub text-brand-deep">{message}</p>}
 
       {draft !== null && (
-        <div className="mt-3 rounded-lg border border-[var(--line)] p-3">
+        <div className="mt-3 rounded-lg border border-line p-3">
           <div className="field-grid">
             <label>
-              <span className="block text-note text-[var(--ink-muted)]">新しい基準の呼び名</span>
+              <span className="block text-note text-ink-muted">新しい基準の呼び名</span>
               <input
                 value={draft.name}
                 onChange={(event) => setDraft({ ...draft, name: event.target.value })}
@@ -148,7 +148,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
               />
             </label>
             <label>
-              <span className="block text-note text-[var(--ink-muted)]">中身の作り方</span>
+              <span className="block text-note text-ink-muted">中身の作り方</span>
               <select
                 value={draft.copyFromBand}
                 onChange={(event) => setDraft({ ...draft, copyFromBand: event.target.value })}
@@ -201,7 +201,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           return (
             <div
               key={set.id}
-              className="card-row items-start rounded-lg border border-[var(--line)]"
+              className="card-row items-start rounded-lg border border-line"
               data-off={set.isActive ? undefined : "true"}
             >
               <div className="row-main">
@@ -217,7 +217,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     {mark !== null && <UsedByDetail mark={mark} usedBy={set.usedBy} />}
                   </>
                 ) : (
-                  <label className="block text-note text-[var(--ink-muted)]">
+                  <label className="block text-note text-ink-muted">
                     この基準の呼び名
                     <input
                       value={nameDraft}

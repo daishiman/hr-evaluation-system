@@ -18,7 +18,7 @@ const promoReqs = read("promotion-requirements.json");
 const behaviors = read("behavior-guidelines.json");
 
 /* ───────────────── 7カテゴリ（等級要件達成率を除く32項目の分類） ─────────────────
- * 「各社がカテゴリごとに1項目ずつ選ぶ」ための分類。経営課題の領域で切っている。
+ * KPIを探しやすくする分類。選択をカテゴリごとに1項目へ制限するものではない。
  */
 /** 移行前の配点表の列（等級区分ごとに配点が違う）。 */
 const POINT_GROUPS = ["Beginner", "Regular", "Chief", "AM", "Manager"];
@@ -50,7 +50,8 @@ for (const c of CATEGORIES) for (const no of c.items) categoryOfItem.set(no, c.c
  * 制度（2026-08-11 確定）:
  *   - 等級区分を問わず100点満点。100点で昇格。
  *   - 「等級要件達成率」(No.1) は全等級で必須の固定枠。配点は等級区分ごとに違う。
- *   - Chief 以上は金銭系（単価率／売上達成率／利益率）を1つだけ20点枠として選ぶ。
+ *   - Chief 以上は20点枠を1つ持つ。初期値だけは旧配点を引き継ぎ金銭系から選ぶが、
+ *     画面・APIでは自社KPIのどれへも自由に差し替えられる。
  *   - 残りは1項目10点。
  * 固定枠の配点は data/kpi-points.json（正本）の No.1・ランクA の値をそのまま使い、
  * 10点枠の数は残りの点数から割り出す。ここに数値を書き写すと正本と二重管理になるため。
@@ -58,12 +59,12 @@ for (const c of CATEGORIES) for (const no of c.items) categoryOfItem.set(no, c.c
 const TOTAL_POINTS = 100;
 const MAJOR_SLOT_POINTS = 20;
 const MINOR_SLOT_POINTS = 10;
-/** 金銭系（20点枠に置ける項目）。No.6 単価率 / No.9 売上達成率 / No.24 利益率 */
+/** 初期値で20点枠へ置く金銭系項目。ランタイムの選択制約ではない。 */
 export const MONETARY_ITEMS = [6, 9, 24];
 /** 20点枠を持つのは Chief 以上（事業所の金銭責任が発生する等級区分） */
 const MAJOR_SLOT_COUNT = { Beginner: 0, Regular: 0, Chief: 1, AM: 1, Manager: 1 };
 
-/** その等級区分で評価対象になる項目No（元の配点表に行がある＝対象、「-」は対象外） */
+/** 初期値の候補となる項目No。元配点の継承用で、ランタイムの選択制約ではない。 */
 export const selectableItemsOf = (group) =>
   kpiPoints
     .filter((p) => p["ランク"] === "A" && !["", "-", "－"].includes(String(p[group] ?? "").trim()))

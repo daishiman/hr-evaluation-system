@@ -74,7 +74,7 @@ export default async function AccountPage() {
           <Avatar name={me.name} seed={me.id} size={64} />
           <div className="min-w-0">
             <p className="m-0 text-name font-bold leading-tight">{me.name}</p>
-            <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-note text-[var(--ink-muted)]">
+            <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-note text-ink-muted">
               <span className="inline-flex items-center gap-1">
                 <Icon name="mail" size={13} />
                 {me.email}

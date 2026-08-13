@@ -91,7 +91,7 @@ export function EvaluatorPanel({
         {saved && <span className="footnote">{saved}</span>}
       </div>
 
-      <div className="mt-5 border-t border-[var(--line)] pt-4">
+      <div className="mt-5 border-t border-line pt-4">
         {finalized ? (
           <>
             <p className="m-0 mb-2 text-sub">

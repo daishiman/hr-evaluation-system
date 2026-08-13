@@ -1,4 +1,4 @@
-import { Badge, Card, DefList, ReasonNote, SectionHeading } from "@/components/ui";
+import { Card, DefList, ReasonNote, SectionHeading } from "@/components/ui";
 import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { formatAnswer, type AnswerReadRow } from "@/lib/domain/answer-snapshot";
 
@@ -55,7 +55,9 @@ export function ResponseSnapshot({ rows }: { rows: AnswerReadRow[] }) {
                     ) : r.questionType === "text" ? (
                       <span className="text-sub whitespace-pre-wrap">{shown}</span>
                     ) : (
-                      <Badge tone="done">{shown}</Badge>
+                      // 複数選択は選択肢名が連なり、短い状態語用のBadgeに入れると
+                      // 狭い画面で横にはみ出す。回答本文として通常の折り返しで読む。
+                      <span className="text-sub break-words">{shown}</span>
                     ),
                 };
               })}

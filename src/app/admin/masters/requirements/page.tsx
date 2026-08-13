@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/session";
 import { listGradeRequirements, listGrades } from "@/lib/queries";
 import { getDb } from "@/lib/db";
 import { gradeRequirementUsage } from "@/lib/master-usage";
-import { EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+import { ChipLink, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 import { GradeRequirementEditor } from "@/components/GradeRequirementEditor";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
 
@@ -65,10 +65,10 @@ export default async function AdminGradeRequirements({
         {grades.map((g) => {
           const n = currentReqs.filter((r) => r.gradeId === g.id && r.isActive).length;
           return (
-            <Link key={g.id} href={`/admin/masters/requirements?grade=${g.id}`} className="chip" aria-current={g.id === grade.id ? "true" : undefined}>
+            <ChipLink key={g.id} href={`/admin/masters/requirements?grade=${g.id}`} current={g.id === grade.id}>
               {g.name}
-              <span className="ml-1 text-[var(--ink-muted)]">{n}項目</span>
-            </Link>
+              <span className="ml-1 text-ink-muted">{n}項目</span>
+            </ChipLink>
           );
         })}
       </div>
@@ -82,7 +82,7 @@ export default async function AdminGradeRequirements({
 
       <p className="footnote mt-5">
         等級そのものの設定（名前・水準・半期の目標設定上限数）は
-        <Link href={`/admin/masters?grade=${grade.id}`} className="mx-1 text-[var(--brand-deep)]">
+        <Link href={`/admin/masters?grade=${grade.id}`} className="mx-1 text-brand-deep">
           等級の設定
         </Link>
         で行います。昇格条件は「昇格の条件・要件」、昇給額は「昇給の設定」で変更します。

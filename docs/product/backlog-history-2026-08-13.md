@@ -286,6 +286,20 @@
 
 ---
 
+## 権限のfail-closed化と4幅巡回（2026-08-13）
+
+- **SECURITY-006 は解消済み**。回答下書き本文は本人だけ、本人の結果詳細は確定済みだけを表示する共通権限契約へ寄せ、管理者・上長を含む非本人はfail-closedにした。
+- **UX-018 は解消済み**。実装42ルートを375 / 768 / 1280 / 1600pxで自動巡回し、168レイアウトケースを検査した。375pxの複数選択回答だけで横溢れを検出し、折返し可能な表示へ修正した。代表4画面のスクリーンショットは `artifacts/phase4/` に保存した。
+- **SECURITY-010 は解消済み**。全置換seedはremote指定をデータ読込・SQL生成・ファイル書込・Wrangler実行より前に拒否し、実行先もlocal固定、packageのremote scriptも削除した。
+- **RELIABILITY-005/006 は解消済み**。社員/回答CSVは全行を事前検証し、1行でも不正なら全件保存しない。成功時は全変更と対象ID・変更前snapshot・入力hash・actorの`import_batches`行を同じD1 batchへ入れ、失敗注入で全件rollback/既存値保持を確認した。
+- **RELIABILITY-007 は解消済み**。`computeGroupProgress`を使う評価セットreadinessを1つの読取へ寄せ、setup/dashboard/評価期間作成・開始/アンケート作成・公開と管理画面で共有した。
+
+### ローカルseed guard試験中の事故記録
+
+guardの実プロセス試験初稿で`it.each`引数を誤って文字展開し、remote拒否ケースのつもりがローカル`seed.mjs`を2回実行した。**remote/本番D1への接続はない**。ローカルD1は会社4・利用者31のデモfixtureへ置換された。workspaceと一時領域に直前のD1 backup/exportは見つからず、直前ローカル内容は復元不能。偶発生成された追跡`drizzle/seed.sql`差分は開始時版へ戻した。試験を修正してremoteはwrite/exec前exit=1に固定し、以後この作業ではlocal seed/全消去を実行していない。
+
+---
+
 ## 回ごとの記録（分離）
 
 500行上限のため、以降の回ごとの残課題メモは [`docs/product/backlog-session-notes.md`](./backlog-session-notes.md) に移した。

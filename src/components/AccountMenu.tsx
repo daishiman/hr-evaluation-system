@@ -92,7 +92,7 @@ export function AccountMenu({
             <Avatar name={name} seed={userId} size={40} />
             <div className="min-w-0">
               <p className="m-0 truncate text-body font-semibold">{name}</p>
-              <p className="m-0 truncate text-note text-[var(--ink-muted)]">{email}</p>
+              <p className="m-0 truncate text-note text-ink-muted">{email}</p>
             </div>
           </div>
 
@@ -155,7 +155,7 @@ export function AccountMenu({
           </div>
           {error && (
             <p
-              className="m-0 mt-2 rounded-md border border-[var(--danger)] bg-[var(--danger-soft)] px-2 py-1 text-note"
+              className="m-0 mt-2 rounded-md border border-danger bg-danger-soft px-2 py-1 text-note"
               role="alert"
               aria-live="assertive"
             >
