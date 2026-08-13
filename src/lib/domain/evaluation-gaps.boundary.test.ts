@@ -9,7 +9,7 @@ import {
   scopeEvaluationItem,
 } from "./evaluation-view";
 import { checkGradePointRule, type GradePointRule } from "./grade-points";
-import { inactiveOf, swapForMove, type RequirementRow } from "./grade-requirements";
+import { changesForMove, inactiveOf, type RequirementRow } from "./grade-requirements";
 import { copiedBandSetName, defaultLevelText } from "./behavior";
 import { summarizeBuildResults, FINALIZED_SKIP_MESSAGE } from "./build-summary";
 import { formatAnswer, parseOptions, type AnswerReadRow } from "./answer-snapshot";
@@ -282,21 +282,21 @@ describe("等級要件の並べ替え", () => {
   });
 
   it("隣どうしの並び順を入れ替える", () => {
-    expect(swapForMove(rows, "support", "r2", "up")).toEqual([
+    expect(changesForMove(rows, "support", "r2", "up")).toEqual([
       { id: "r2", seq: 1 },
       { id: "r1", seq: 2 },
     ]);
   });
 
   it("先頭で↑・末尾で↓は動かさない", () => {
-    expect(swapForMove(rows, "support", "r1", "up")).toBeNull();
-    expect(swapForMove(rows, "support", "r2", "down")).toBeNull();
+    expect(changesForMove(rows, "support", "r1", "up")).toBeNull();
+    expect(changesForMove(rows, "support", "r2", "down")).toBeNull();
   });
 
   it("その区分に無い項目・使わない状態の項目は動かさない", () => {
-    expect(swapForMove(rows, "support", "r3", "up")).toBeNull();
-    expect(swapForMove(rows, "support", "r9", "up")).toBeNull();
-    expect(swapForMove(rows, "operation", "r3", "down")).toBeNull();
+    expect(changesForMove(rows, "support", "r3", "up")).toBeNull();
+    expect(changesForMove(rows, "support", "r9", "up")).toBeNull();
+    expect(changesForMove(rows, "operation", "r3", "down")).toBeNull();
   });
 });
 

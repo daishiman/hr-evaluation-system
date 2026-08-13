@@ -200,6 +200,14 @@ export function GradeRequirementEditor({
                 <Button
                   variant="tertiary"
                   disabled={busy || i === 0}
+                  aria-label="先頭に移動"
+                  onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "top" })}
+                >
+                  ⇈
+                </Button>
+                <Button
+                  variant="tertiary"
+                  disabled={busy || i === 0}
                   aria-label="1つ上に移動"
                   onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "up" })}
                 >
@@ -212,6 +220,14 @@ export function GradeRequirementEditor({
                   onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "down" })}
                 >
                   ↓
+                </Button>
+                <Button
+                  variant="tertiary"
+                  disabled={busy || i === list.length - 1}
+                  aria-label="末尾に移動"
+                  onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "bottom" })}
+                >
+                  ⇊
                 </Button>
                 <Button variant="tertiary" disabled={busy} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
                   内容を直す

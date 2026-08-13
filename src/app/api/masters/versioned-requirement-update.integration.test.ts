@@ -59,6 +59,18 @@ async function putGrade(id: string, text: string, opts: { seq?: number; active?:
   });
 }
 
+async function putPromotion(id: string, text: string, opts: { seq?: number; kind?: "report" | "test" } = {}) {
+  await testDb.db.insert(s.promotionRequirements).values({
+    id,
+    companyId: COMPANY,
+    gradeId: GRADE,
+    kind: opts.kind ?? "report",
+    seq: opts.seq ?? 1,
+    text,
+    isGate: true,
+  });
+}
+
 describe("等級・昇格要件の版管理", () => {
   it("内容を直すと新IDだけを追加し、旧行の全カラムと過去参照を変えない", async () => {
     await putGrade("greq_old", "以前の本文");
@@ -256,5 +268,49 @@ describe("等級・昇格要件の版管理", () => {
       ] as unknown as Parameters<typeof testDb.db.batch>[0]),
     ).rejects.toThrow();
     expect(testDb.raw.prepare("SELECT id FROM grade_requirements WHERE id = 'greq_rolled_back'").get()).toBeUndefined();
+  });
+
+  it("等級要件を中央から先頭・末尾へ保存し、別区分は動かさない", async () => {
+    await putGrade("greq_a", "A", { seq: 10 });
+    await putGrade("greq_b", "B", { seq: 30 });
+    await putGrade("greq_c", "C", { seq: 70 });
+    await testDb.db.insert(s.gradeRequirements).values({
+      id: "greq_operation",
+      companyId: COMPANY,
+      gradeId: GRADE,
+      category: "operation",
+      seq: 20,
+      text: "運営",
+    });
+
+    await expect(apply({ kind: "gradeRequirementOrder", id: "greq_b", direction: "top" })).resolves.toMatchObject({
+      id: "greq_b",
+    });
+    expect(
+      testDb.raw.prepare("SELECT id FROM grade_requirements WHERE category = 'support' ORDER BY seq, id").all(),
+    ).toEqual([{ id: "greq_b" }, { id: "greq_a" }, { id: "greq_c" }]);
+
+    await expect(apply({ kind: "gradeRequirementOrder", id: "greq_b", direction: "bottom" })).resolves.toMatchObject({
+      id: "greq_b",
+    });
+    expect(
+      testDb.raw.prepare("SELECT id FROM grade_requirements WHERE category = 'support' ORDER BY seq, id").all(),
+    ).toEqual([{ id: "greq_a" }, { id: "greq_c" }, { id: "greq_b" }]);
+    expect(testDb.raw.prepare("SELECT seq FROM grade_requirements WHERE id = 'greq_operation'").get()).toEqual({ seq: 20 });
+  });
+
+  it("昇格要件も中央から末尾へ保存し、別種類は動かさない", async () => {
+    await putPromotion("preq_a", "A", { seq: 2 });
+    await putPromotion("preq_b", "B", { seq: 5 });
+    await putPromotion("preq_c", "C", { seq: 9 });
+    await putPromotion("preq_test", "テスト", { seq: 4, kind: "test" });
+
+    await expect(
+      apply({ kind: "promotionRequirementOrder", id: "preq_b", direction: "bottom" }),
+    ).resolves.toMatchObject({ id: "preq_b" });
+    expect(
+      testDb.raw.prepare("SELECT id FROM promotion_requirements WHERE kind = 'report' ORDER BY seq, id").all(),
+    ).toEqual([{ id: "preq_a" }, { id: "preq_c" }, { id: "preq_b" }]);
+    expect(testDb.raw.prepare("SELECT seq FROM promotion_requirements WHERE id = 'preq_test'").get()).toEqual({ seq: 4 });
   });
 });

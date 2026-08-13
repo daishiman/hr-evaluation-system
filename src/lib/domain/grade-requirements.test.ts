@@ -6,7 +6,7 @@ import {
   historicalOf,
   inactiveOf,
   remainingSlots,
-  swapForMove,
+  changesForMove,
   type RequirementRow,
 } from "./grade-requirements";
 
@@ -99,13 +99,13 @@ describe("版として残したときの数え方", () => {
       revised("s1v2", "s1", "support", 1),
       row("s2", "support", 2),
     ];
-    expect(swapForMove(rows, "support", "s2", "up")).toEqual([
+    expect(changesForMove(rows, "support", "s2", "up")).toEqual([
       { id: "s2", seq: 1 },
       { id: "s1v2", seq: 2 },
     ]);
     // 旧版そのものは並べ替えの対象にならない
-    expect(swapForMove(rows, "support", "s1", "up")).toBeNull();
-    expect(swapForMove(rows, "support", "s1", "down")).toBeNull();
+    expect(changesForMove(rows, "support", "s1", "up")).toBeNull();
+    expect(changesForMove(rows, "support", "s1", "down")).toBeNull();
   });
 });
 
@@ -192,27 +192,74 @@ describe("並び順の境界", () => {
 
 describe("並べ替え", () => {
   it("同じ区分の中で隣どうしの並び順を入れ替える", () => {
-    expect(swapForMove(beginner, "support", "s2", "up")).toEqual([
+    expect(changesForMove(beginner, "support", "s2", "up")).toEqual([
       { id: "s2", seq: 1 },
       { id: "s1", seq: 2 },
     ]);
-    expect(swapForMove(beginner, "support", "s2", "down")).toEqual([
+    expect(changesForMove(beginner, "support", "s2", "down")).toEqual([
       { id: "s2", seq: 3 },
       { id: "s3", seq: 2 },
     ]);
   });
 
   it("先頭で↑・末尾で↓は動かせない", () => {
-    expect(swapForMove(beginner, "support", "s1", "up")).toBeNull();
-    expect(swapForMove(beginner, "support", "s5", "down")).toBeNull();
+    expect(changesForMove(beginner, "support", "s1", "up")).toBeNull();
+    expect(changesForMove(beginner, "support", "s5", "down")).toBeNull();
   });
 
   it("別の区分の並びには影響しない（運営の先頭は運営の中で判定される）", () => {
     // o6 は全体では6番目だが、運営の中では先頭なので↑では動かない
-    expect(swapForMove(beginner, "operation", "o6", "up")).toBeNull();
-    expect(swapForMove(beginner, "operation", "o7", "up")).toEqual([
+    expect(changesForMove(beginner, "operation", "o6", "up")).toBeNull();
+    expect(changesForMove(beginner, "operation", "o7", "up")).toEqual([
       { id: "o7", seq: 6 },
       { id: "o6", seq: 7 },
     ]);
+  });
+
+  it("中央の項目を先頭・末尾へ移し、間の項目を順番どおりに詰める", () => {
+    const rows = [row("a", "support", 10), row("b", "support", 30), row("c", "support", 70), row("d", "support", 90)];
+
+    expect(changesForMove(rows, "support", "c", "top")).toEqual([
+      { id: "c", seq: 10 },
+      { id: "a", seq: 30 },
+      { id: "b", seq: 70 },
+    ]);
+    expect(changesForMove(rows, "support", "b", "bottom")).toEqual([
+      { id: "c", seq: 30 },
+      { id: "d", seq: 70 },
+      { id: "b", seq: 90 },
+    ]);
+  });
+
+  it("先頭で先頭へ・末尾で末尾へは動かせない", () => {
+    expect(changesForMove(beginner, "support", "s1", "top")).toBeNull();
+    expect(changesForMove(beginner, "support", "s5", "bottom")).toBeNull();
+  });
+
+  it("重複・非連続のseqでも、指定した項目が末尾になる", () => {
+    const rows = [row("a", "support", 10), row("b", "support", 30), row("c", "support", 30), row("d", "support", 90)];
+    const changes = changesForMove(rows, "support", "b", "bottom");
+    expect(changes).not.toBeNull();
+
+    const byId = new Map(changes!.map((change) => [change.id, change.seq]));
+    const reordered = rows
+      .map((item) => ({ ...item, seq: byId.get(item.id) ?? item.seq }))
+      .sort((left, right) => left.seq - right.seq || left.id.localeCompare(right.id));
+    expect(reordered.map((item) => item.id)).toEqual(["a", "c", "d", "b"]);
+  });
+
+  it("旧版と別区分を先頭・末尾移動へ巻き込まない", () => {
+    const rows = [
+      row("old", "support", 1),
+      revised("current", "old", "support", 1),
+      row("support-2", "support", 2),
+      row("operation-1", "operation", 3),
+    ];
+    expect(changesForMove(rows, "support", "support-2", "top")).toEqual([
+      { id: "support-2", seq: 1 },
+      { id: "current", seq: 2 },
+    ]);
+    expect(changesForMove(rows, "support", "old", "bottom")).toBeNull();
+    expect(changesForMove(rows, "support", "missing", "bottom")).toBeNull();
   });
 });

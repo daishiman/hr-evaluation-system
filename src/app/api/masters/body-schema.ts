@@ -77,10 +77,10 @@ export const bodySchema = z.discriminatedUnion("kind", [
     sourceVersionId: z.string().min(1),
   }),
   z.object({
-    /** 等級要件の並べ替え（同じ区分の中で1つ上／下と入れ替える） */
+    /** 等級要件の並べ替え（同じ区分の中で1つ上／下、または先頭／末尾へ移動） */
     kind: z.literal("gradeRequirementOrder"),
     id: z.string().min(1),
-    direction: z.enum(["up", "down"]),
+    direction: z.enum(["up", "down", "top", "bottom"]),
   }),
   z.object({
     kind: z.literal("promotionRequirementCreate"),
@@ -108,10 +108,10 @@ export const bodySchema = z.discriminatedUnion("kind", [
     sourceVersionId: z.string().min(1),
   }),
   z.object({
-    /** 昇格要件の並べ替え（同じ種類の中で1つ上／下と入れ替える） */
+    /** 昇格要件の並べ替え（同じ種類の中で1つ上／下、または先頭／末尾へ移動） */
     kind: z.literal("promotionRequirementOrder"),
     id: z.string().min(1),
-    direction: z.enum(["up", "down"]),
+    direction: z.enum(["up", "down", "top", "bottom"]),
   }),
   z.object({
     /**

@@ -3,7 +3,7 @@ import { schema as s } from "@/lib/db";
 import type { getDb } from "@/lib/db";
 import { HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
-import { GRADE_REQUIREMENT_MAX, swapForMove } from "@/lib/domain/grade-requirements";
+import { GRADE_REQUIREMENT_MAX, changesForMove } from "@/lib/domain/grade-requirements";
 import { currentVersionRows, lineageRootId, versionFamilyIds } from "@/lib/domain/versioned-master";
 import { recordConstitutionEvent } from "@/lib/domain/constitution-events";
 import type { MasterUpdateBody } from "./body-schema";
@@ -287,13 +287,14 @@ export async function applyVersionedRequirementUpdate(args: {
       if (!rows.some((row) => row.id === body.id)) throw new HttpError(404, "等級要件が見つかりませんでした。");
       if (!current || !current.isActive) throw new HttpError(409, "現在使っている版だけ並べ替えられます。画面を更新してください。");
       const siblings = currentVersionRows(rows).filter((row) => row.gradeId === current.gradeId);
-      const swap = swapForMove(siblings, current.category, current.id, body.direction);
-      if (!swap) throw new HttpError(400, "これ以上は動かせません。");
+      const changes = changesForMove(siblings, current.category, current.id, body.direction);
+      if (!changes || changes.length === 0) throw new HttpError(400, "これ以上は動かせません。");
       try {
-        await db.batch([
-          db.update(s.gradeRequirements).set({ seq: swap[0].seq }).where(eq(s.gradeRequirements.id, swap[0].id)),
-          db.update(s.gradeRequirements).set({ seq: swap[1].seq }).where(eq(s.gradeRequirements.id, swap[1].id)),
-        ] as unknown as Parameters<typeof db.batch>[0]);
+        await db.batch(
+          changes.map((row) =>
+            db.update(s.gradeRequirements).set({ seq: row.seq }).where(eq(s.gradeRequirements.id, row.id)),
+          ) as unknown as Parameters<typeof db.batch>[0],
+        );
       } catch (error) {
         translateWriteError(error, "等級要件");
       }
@@ -305,7 +306,7 @@ export async function applyVersionedRequirementUpdate(args: {
         eventType: "reordered",
         actorId: viewerId,
         before: { seq: current.seq },
-        after: { seq: swap.find((row) => row.id === current.id)?.seq ?? current.seq },
+        after: { seq: changes.find((row) => row.id === current.id)?.seq ?? current.seq },
       });
       return { message: "並び順を変更しました。", id: current.id };
     }
@@ -439,13 +440,14 @@ export async function applyVersionedRequirementUpdate(args: {
           isActive: row.isActive,
           previousVersionId: row.previousVersionId,
         }));
-      const swap = swapForMove(siblings, current.kind, current.id, body.direction);
-      if (!swap) throw new HttpError(400, "これ以上は動かせません。");
+      const changes = changesForMove(siblings, current.kind, current.id, body.direction);
+      if (!changes || changes.length === 0) throw new HttpError(400, "これ以上は動かせません。");
       try {
-        await db.batch([
-          db.update(s.promotionRequirements).set({ seq: swap[0].seq }).where(eq(s.promotionRequirements.id, swap[0].id)),
-          db.update(s.promotionRequirements).set({ seq: swap[1].seq }).where(eq(s.promotionRequirements.id, swap[1].id)),
-        ] as unknown as Parameters<typeof db.batch>[0]);
+        await db.batch(
+          changes.map((row) =>
+            db.update(s.promotionRequirements).set({ seq: row.seq }).where(eq(s.promotionRequirements.id, row.id)),
+          ) as unknown as Parameters<typeof db.batch>[0],
+        );
       } catch (error) {
         translateWriteError(error, "昇格要件");
       }
@@ -457,7 +459,7 @@ export async function applyVersionedRequirementUpdate(args: {
         eventType: "reordered",
         actorId: viewerId,
         before: { seq: current.seq },
-        after: { seq: swap.find((row) => row.id === current.id)?.seq ?? current.seq },
+        after: { seq: changes.find((row) => row.id === current.id)?.seq ?? current.seq },
       });
       return { message: "並び順を変更しました。", id: current.id };
     }
