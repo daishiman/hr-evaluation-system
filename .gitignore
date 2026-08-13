@@ -4,10 +4,12 @@
 .claude/settings.local.json
 .claude/*.local.json
 .claude/backup-*/
+.claude/worktrees/
 .codex/backup-*/
 
-# AI開発エージェントキットのローカル導入結果
-.agents/
+# AI開発エージェントキットの導入結果
+# .agents/skills はCodex用スキルの正式な配置先。チーム共有のため追跡する。
+# manifest/version は導入時刻を含むローカル固有ファイルなので除外する。
 .claude/aidd-agent-kit.manifest
 .claude/aidd-agent-kit.version
 .codex/aidd-agent-kit.manifest
