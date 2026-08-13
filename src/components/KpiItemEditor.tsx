@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, Code, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
 import { requestMasterDelete } from "@/components/master-delete-request";
@@ -236,7 +236,11 @@ export function KpiItemEditor({
                     </>
                   }
                 />
-                {row.formula && <p className="footnote m-0 mt-1">計算式：{row.formula}</p>}
+                {row.formula && (
+                  <p className="footnote m-0 mt-1">
+                    計算式 <Code>{row.formula}</Code>
+                  </p>
+                )}
                 {mark !== null && <UsedByDetail mark={mark} usedBy={usedByOf(row.id)} />}
                 {!row.isFixedSlot && (
                   <div className="mt-2 flex flex-wrap gap-2">

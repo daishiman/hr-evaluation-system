@@ -1,4 +1,4 @@
-import { Badge, Card, CardRow, Disclosure, InlineDetail, Num } from "@/components/ui";
+import { Badge, Card, CardRow, Disclosure, InlineDetail, NoteBlock, Num } from "@/components/ui";
 import type { SelectableItem } from "./data";
 
 /**
@@ -143,11 +143,17 @@ export function SelectableItems({
               </li>
             ))}
           </ul>
-          <p className="footnote m-0 mt-1">これらは {gradeName} を対象として想定されていません。</p>
-          <p className="footnote m-0">選ぶことも採点することもできます。</p>
-          <p className="footnote m-0">ただし、上位の等級を想定した閾値がそのまま使われます。</p>
-          <p className="footnote m-0">{gradeName} には厳しすぎる可能性があります。</p>
-          <p className="footnote m-0">項目名を押すと、その閾値を確認できます。</p>
+          {/* 1文ずつ同じ強さで5行並べると、5つの別々の注意に見えて読み飛ばされる。
+              ひとまとまりの注記として一段沈める（2026-08-13 の指摘）。 */}
+          <div className="mt-1">
+            <NoteBlock>
+              <p>これらは {gradeName} を対象として想定されていません。</p>
+              <p>選ぶことも採点することもできます。</p>
+              <p>ただし、上位の等級を想定した閾値がそのまま使われます。</p>
+              <p>{gradeName} には厳しすぎる可能性があります。</p>
+              <p>項目名を押すと、その閾値を確認できます。</p>
+            </NoteBlock>
+          </div>
         </div>
       )}
       {others.length === 0 ? (

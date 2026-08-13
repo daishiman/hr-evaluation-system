@@ -63,6 +63,32 @@ describe("画面の器の作法", () => {
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
 
+  it("計算式・設問IDは Code に集約する（画面に <code> を直接書かない）", () => {
+    const owner = join(SRC, "components", "ui.tsx");
+    const offenders = sourceFiles.filter((p) => p !== owner && readFileSync(p, "utf8").includes("<code"));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("計算式を地の文に混ぜない（記号の並びは Code で等幅にする）", () => {
+    // 「計算式：q1_1 ÷【…】× 100」のように本文と同じ書体で出すと、記号の並びが
+    // 文章の一部に見えて読み違える。式は必ず Code に入れて出す（docs/product/spec.md §5-6）。
+    const offenders = sourceFiles.filter((p) => {
+      const s = readFileSync(p, "utf8");
+      return s.includes("計算式：") || s.includes("計算式 ${");
+    });
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("順番のある説明は StepBlock に集約する（番号付きの疑似見出しを画面で書き起こさない）", () => {
+    const owner = join(SRC, "components", "ui.tsx");
+    // 段落タグに「小さい・太字・muted」を貼って見出しの代わりにすると、見出しの階層が
+    // 読み上げに伝わらず、段の境界も余白だけになる（docs/product/spec.md §5-6）。
+    const offenders = sourceFiles.filter(
+      (p) => p !== owner && /[⓪①②③④⑤][^<]{0,20}<\/p>/.test(readFileSync(p, "utf8")),
+    );
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
   it("ボタンの見た目は Button / LinkButton / DownloadButton に集約する（btn クラスを直接書かない）", () => {
     const owner = join(SRC, "components", "ui.tsx");
     // 素の <a>/<button>/<Link> に btn を貼ると、押せる大きさ（44px）・見た目の段階
