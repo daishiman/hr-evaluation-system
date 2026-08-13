@@ -95,7 +95,7 @@ PASSは「既知課題が0件」という意味ではない。未解決の製品
 ### 追加改善の実測
 
 - TDD RED: `top` / `bottom` domain 3件、API保存2件、次候補3件、FormBuilder / CopyReminder / MembersFilter / UX契約が意図どおり失敗。
-- GREEN: 全体 84 files / 1407 tests PASS（既存の任意本番検査 1 file / 1 test skip）。coverageは statements / branches / functions / lines の4指標すべて100%。
+- GREEN: 全体 84 files / 1410 tests PASS（既存の任意本番検査 1 file / 1 test skip）。coverageは statements / branches / functions / lines の4指標すべて100%。
 - `check:docs`、`typecheck`、OpenNext Cloudflare build、bundle size、`git diff --check`: PASS。圧縮後bundleは 2208.1 KiB（上限の71.9%）。
 - Workers previewで4ロール・のべ287画面を認証付き描画し、変更対象8導線とMANAGERの管理画面拒否を追加スモークで確認した。
 - launch-security: CRITICAL 0 / HIGH 0。依存監査の既知moderate 1件は current backlog `SECURITY-008` に残っている。判定は変更範囲についてGO。

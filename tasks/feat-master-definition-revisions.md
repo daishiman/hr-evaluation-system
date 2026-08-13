@@ -53,7 +53,7 @@ DBより先にUIだけを切り替えない。新commandが保存の正本にな
 | Sample × stalled | `pnpm exec vitest run scripts/sample-data.test.mjs` | PASS（1 file / 22 tests） |
 | Sample + impact focused | `pnpm exec vitest run scripts/sample-data.test.mjs src/lib/impact-contract.test.ts src/lib/impact.watched.test.ts src/lib/impact.integration.test.ts` | PASS（4 files / 44 tests） |
 | Versioned + masters focused | `pnpm exec vitest run src/lib/domain/grade-requirements.test.ts src/app/api/masters/versioned-requirement-update.integration.test.ts src/app/api/masters/body-schema.test.ts src/components/versioned-master-editors.test.ts` | PASS（4 files / 43 tests） |
-| Unit / integration | `pnpm test` | PASS（84 files / 1407 tests、1 file / 1 test skipped） |
+| Unit / integration | `pnpm test:coverage` | PASS（84 files / 1410 tests、1 file / 1 test skipped、4指標100%） |
 | Typecheck | `pnpm typecheck` | PASS |
 | 空白・リンク | `git diff --check` / 関連パスの存在確認 | PASS |
 
