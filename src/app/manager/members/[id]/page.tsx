@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { canViewEmployee, requireRole, ROLE_LABEL, type Role } from "@/lib/session";
 import { getMember, listEvaluations, listNotes } from "@/lib/queries";
-import { Badge, Card, CardRow, DefList, EmptyState, Num, PageTitle, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
-import { TrendChart } from "@/components/LazyCharts";
+import { Badge, Card, DefList, PageTitle, RecordList, SectionHeading } from "@/components/ui";
+import { EvaluationTrend, type TrendItem } from "@/components/EvaluationTrend";
 import { NoteForm } from "@/components/NoteForm";
 import { formatDate, formatPeriod } from "@/lib/view";
 
@@ -26,13 +25,31 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
     listEvaluations(viewer.companyId, viewer.role, { employeeId: id }),
     listNotes(viewer.companyId, id),
   ]);
-  const finalized = evals.filter((e) => e.status === "finalized");
-
-  // 古い順に並べて推移を出す
-  const trend = [...finalized].reverse().map((e) => ({
+  /* 推移・内訳・一覧を1つの節にまとめて渡す。等級はここで決めた「その期の等級」
+     （evaluations.gradeId）を使う。いまの等級（users.gradeId）で塗ると、
+     昇格前の評価まで新しい等級のものとして表示されてしまう。 */
+  const trendItems: TrendItem[] = evals.map((e) => ({
+    id: e.id,
+    href: `/manager/evaluations/${e.id}`,
     cycle: e.cycleName ?? "—",
-    達成率: e.requirementRate ?? 0,
-    KPI評価点: e.totalScore ?? 0,
+    period: formatPeriod(e.periodStart, e.periodEnd),
+    periodStart: e.periodStart ?? null,
+    gradeName: e.gradeName ?? null,
+    finalized: e.status === "finalized",
+    values: { 達成率: e.requirementRate ?? null, KPI評価点: e.totalScore ?? null },
+    sub: `等級要件の達成 ${e.requirementAchieved ?? "—"}/${e.requirementTotal ?? "—"} 項目`,
+    headline: { value: e.totalScore ?? null, unit: "点", caption: "KPI評価点" },
+    rows: [
+      { label: "KPI評価点", value: e.totalScore ?? null, unit: "点" },
+      { label: "満点", value: e.maxScore ?? null, unit: "点" },
+      { label: "等級要件の達成率", value: e.requirementRate ?? null, unit: "%" },
+      {
+        label: "等級要件の達成",
+        text: `${e.requirementAchieved ?? "—"} / ${e.requirementTotal ?? "—"} 項目`,
+      },
+      { label: "評価の状態", text: e.status === "finalized" ? "確定済み" : "確認中" },
+      { label: "評価者のコメント", text: e.evaluatorComment ?? "—" },
+    ],
   }));
 
   return (
@@ -60,56 +77,14 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
         </p>
       </Card>
 
-      <SectionHeading>評価の推移</SectionHeading>
-      {trend.length < 2 ? (
-        <ReasonNote>
-          確定した評価が{trend.length}件のため、推移のグラフはまだ出せません。2回目の評価が確定すると比較できます。
-        </ReasonNote>
-      ) : (
-        <Card className="card-pad">
-          <TrendChart
-            data={trend}
-            series={[
-              { key: "達成率", label: "等級要件達成率（%）" },
-              { key: "KPI評価点", label: "KPI評価点（点）" },
-            ]}
-          />
-        </Card>
-      )}
-
-      <SectionHeading>これまでの評価</SectionHeading>
-      {evals.length === 0 ? (
-        <EmptyState title="評価がまだありません" body="アンケートの提出後、サイドバーの「評価・結果を確認する」から評価を作成できます。" />
-      ) : (
-        <Card>
-          {evals.map((e) => (
-            <CardRow
-              key={e.id}
-              title={
-                <Link href={`/manager/evaluations/${e.id}`} className="text-[var(--brand-deep)]">
-                  {e.cycleName}
-                </Link>
-              }
-              sub={
-                <>
-                  {formatPeriod(e.periodStart, e.periodEnd)} ／ 等級要件の達成{" "}
-                  <Num value={e.requirementAchieved} />/<Num value={e.requirementTotal} /> 項目
-                </>
-              }
-              value={
-                <>
-                  <Num value={e.totalScore} display />
-                  <span className="unit">点</span>
-                  <p className="m-0 text-note text-[var(--ink-muted)]">
-                    満点 <Num value={e.maxScore} unit="点" />
-                  </p>
-                </>
-              }
-              marks={e.status === "finalized" ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
-            />
-          ))}
-        </Card>
-      )}
+      <EvaluationTrend
+        items={trendItems}
+        series={[
+          { key: "達成率", label: "等級要件の達成率（%）" },
+          { key: "KPI評価点", label: "KPI評価点（点）" },
+        ]}
+        emptyBody="アンケートの提出後、サイドバーの「評価・結果を確認する」から評価を作成できます。"
+      />
 
       <SectionHeading aside={<span className="footnote">本人には表示されません</span>}>評価メモ</SectionHeading>
       <NoteForm employeeId={member.id} />
