@@ -7,7 +7,8 @@
 .codex/backup-*/
 
 # AI開発エージェントキットのローカル導入結果
-.agents/
+# .agents/skills は Codex のリポジトリSkill正本なのでチーム共有する(追跡対象)。
+.agents/backup-*/
 .claude/aidd-agent-kit.manifest
 .claude/aidd-agent-kit.version
 .codex/aidd-agent-kit.manifest
