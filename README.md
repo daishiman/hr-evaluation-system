@@ -48,7 +48,7 @@ Cloudflare へ配る構成をローカルで確認するときは `pnpm run cf:d
 
 ## 本番運用とデータの注意
 
-本番配布は `main` のコミットを [Deploy workflow](./.github/workflows/deploy.yml) から行います。スキーマ変更を含む `main` は未適用 migration がある間は配布されないため、[Migration workflow](./.github/workflows/migrate.yml) を完了してから Deploy を再実行します。詳しい順序と復旧判断は [デプロイ時の注意](./docs/deploy-notes.md) に集約しています。
+本番配布は `main` のコミットを [Deploy workflow](./.github/workflows/deploy.yml) から行います。未適用 migration がある場合は、検査・ビルド完了後に本番DBをバックアップし、migration適用と未適用0件の再確認を済ませてから自動で配布します。[Migration workflow](./.github/workflows/migrate.yml) は復旧・先行適用用です。詳しい順序と復旧判断は [デプロイ時の注意](./docs/deploy-notes.md) に集約しています。
 
 このリポジトリは Public です。従業員の個人情報、実際の評価・給与データ、認証情報をコミットしないでください。`data/` には個人情報を含まない制度定義と匿名化サンプルだけを置き、秘密値は `.dev.vars` またはデプロイ環境の Secrets で管理します。
 

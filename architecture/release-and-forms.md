@@ -7,13 +7,14 @@ beads: `hr-0p4`
 
 ```
 [運用入口]
-  GitHub Actions Deploy / Migrate
+  GitHub Actions Deploy（通常） / Migrate（復旧・先行適用）
         │
         ▼
 [機械ゲート]
   check:docs
   typecheck / test:coverage / cf:dry-run / bundle-size
   verify-d1-migrations-list（本番 D1）
+  backup → migrate → parity → deploy
         │
         ▼
 [アプリ保存]
@@ -35,7 +36,7 @@ main push で CI と Deploy が同時に走ると、CI 未完了の SHA を配�
 
 ### 2. migration 順序を prose から gate へ
 
-「先に migrate」を文書だけで頼らず、Deploy 直前の D1 list と Migrate 後の再照会で強制する。
+Deploy自身が未適用状態を分類し、必要な場合だけバックアップしてmigrationを適用する。検査・ビルド → バックアップ → migration → parity確認 → deployを1つの直列フローにし、手動操作の抜けをなくす。復旧用Migrateとも同じconcurrency groupを共有する。
 
 ### 3. フォームは等級横断で原子化
 
@@ -54,7 +55,8 @@ main push で CI と Deploy が同時に走ると、CI 未完了の SHA を配�
 | 役割 | パス |
 |---|---|
 | Deploy gate | `.github/workflows/deploy.yml` |
-| Migrate gate | `.github/workflows/migrate.yml` |
+| Migrate recovery gate | `.github/workflows/migrate.yml` |
+| Deploy workflow契約 | `scripts/deploy-workflow-contract.test.mjs` |
 | D1 list 判定 | `scripts/verify-d1-migrations-list.mjs` |
 | 文書 drift | `scripts/check-docs-drift.mjs` |
 | フォーム原子化 | `src/lib/form-build.ts` |
