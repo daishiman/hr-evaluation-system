@@ -44,59 +44,8 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
         </p>
       </Card>
 
-      <SectionHeading>会社でしぼる</SectionHeading>
-      <div className="mb-5 flex flex-wrap gap-2">
-        <Link href="/system/users" className="chip" aria-current={scope === "" ? "true" : undefined}>
-          すべて（{all.length}）
-        </Link>
-        {companies.map((c) => (
-          <Link key={c.id} href={`/system/users?company=${c.id}`} className="chip" aria-current={scope === c.id ? "true" : undefined}>
-            {c.name}（{all.filter((u) => u.companyId === c.id).length}）
-          </Link>
-        ))}
-        <Link href="/system/users?company=none" className="chip" aria-current={scope === "none" ? "true" : undefined}>
-          会社に属さない（{all.filter((u) => !u.companyId).length}）
-        </Link>
-      </div>
-
-      <SectionHeading aside={<span className="footnote">名前を押すと変更できます</span>}>
-        利用者（{scoped.length}人）
-      </SectionHeading>
-      {scoped.length === 0 ? (
-        <EmptyState title="この条件の利用者はいません" body="別の会社を選ぶか、下から追加してください。" />
-      ) : (
-        <Card>
-          {scoped.map((u) => (
-            <Link
-              key={u.id}
-              href={`/system/users/${u.id}`}
-              className="user-row no-underline"
-              /* 利用停止の方は、札だけでなく行の面と枠でも分かるようにする（全画面共通の作法） */
-              data-off={u.isActive ? undefined : "true"}
-            >
-              <Avatar name={u.name} seed={u.id} size={36} />
-              <div className="min-w-0 flex-1">
-                <p className="m-0 truncate text-body font-semibold text-[var(--ink)]">
-                  {u.name}
-                  {!u.isActive && <span className="ml-2 badge badge-closed">利用停止</span>}
-                </p>
-                <p className="m-0 truncate text-note text-[var(--ink-muted)]">{u.email}</p>
-              </div>
-              <span className="user-row-tags">
-                <span className="tag">
-                  <Icon name="shield" size={13} />
-                  {ROLE_LABEL[u.role as Role] ?? u.role}
-                </span>
-                <span className="tag">
-                  <Icon name="building" size={13} />
-                  {u.companyName ?? "所属なし"}
-                </span>
-              </span>
-            </Link>
-          ))}
-        </Card>
-      )}
-
+      {/* 最頻操作の一つ。一覧が会社数十社ぶんに伸びても、この入口は一覧の下まで
+          スクロールしなくても届く位置に固定する。 */}
       <SectionHeading>利用者を追加する</SectionHeading>
       <Disclosure
         summary="新しい利用者を作る"
@@ -141,6 +90,62 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
           ]}
         />
       </Disclosure>
+
+      <SectionHeading>会社でしぼる</SectionHeading>
+      <div className="mb-5 flex flex-wrap gap-2">
+        <Link href="/system/users" className="chip" aria-current={scope === "" ? "true" : undefined}>
+          すべて（{all.length}）
+        </Link>
+        {companies.map((c) => (
+          <Link key={c.id} href={`/system/users?company=${c.id}`} className="chip" aria-current={scope === c.id ? "true" : undefined}>
+            {c.name}（{all.filter((u) => u.companyId === c.id).length}）
+          </Link>
+        ))}
+        <Link href="/system/users?company=none" className="chip" aria-current={scope === "none" ? "true" : undefined}>
+          会社に属さない（{all.filter((u) => !u.companyId).length}）
+        </Link>
+      </div>
+
+      <SectionHeading aside={<span className="footnote">名前を押すと変更できます</span>}>
+        利用者（{scoped.length}人）
+      </SectionHeading>
+      {scoped.length === 0 ? (
+        <EmptyState
+          title="この条件の利用者はいません"
+          body="別の会社を選ぶか、「新しい利用者を作る」から追加してください。"
+        />
+      ) : (
+        <Card>
+          {scoped.map((u) => (
+            <Link
+              key={u.id}
+              href={`/system/users/${u.id}`}
+              className="user-row no-underline"
+              /* 利用停止の方は、札だけでなく行の面と枠でも分かるようにする（全画面共通の作法） */
+              data-off={u.isActive ? undefined : "true"}
+            >
+              <Avatar name={u.name} seed={u.id} size={36} />
+              <div className="min-w-0 flex-1">
+                <p className="m-0 truncate text-body font-semibold text-[var(--ink)]">
+                  {u.name}
+                  {!u.isActive && <span className="ml-2 badge badge-closed">利用停止</span>}
+                </p>
+                <p className="m-0 truncate text-note text-[var(--ink-muted)]">{u.email}</p>
+              </div>
+              <span className="user-row-tags">
+                <span className="tag">
+                  <Icon name="shield" size={13} />
+                  {ROLE_LABEL[u.role as Role] ?? u.role}
+                </span>
+                <span className="tag">
+                  <Icon name="building" size={13} />
+                  {u.companyName ?? "所属なし"}
+                </span>
+              </span>
+            </Link>
+          ))}
+        </Card>
+      )}
 
       <p className="footnote mt-3">
         個人の評価内容は、その会社の管理者・マネージャーが確認します。この画面では評価の中身は表示しません。

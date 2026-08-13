@@ -246,9 +246,17 @@ export function Disclosure({
  * 同じ中身が3行以上に繰り返されるなら、ここではなく Disclosure で
  * カードの下に1か所だけ置く（行ごとに畳んだものが並ぶのも煩わしいため）。
  */
-export function InlineDetail({ summary, children }: { summary: string; children: ReactNode }) {
+export function InlineDetail({
+  summary,
+  children,
+  open,
+}: {
+  summary: string;
+  children: ReactNode;
+  open?: boolean;
+}) {
   return (
-    <details className="inline-detail">
+    <details className="inline-detail" open={open}>
       <summary>{summary}</summary>
       <div className="inline-detail-body">{children}</div>
     </details>

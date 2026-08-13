@@ -69,3 +69,34 @@ PASSは「既知課題が0件」という意味ではない。未解決の製品
 - `pnpm run check:bundle-size`: PASS（圧縮後 2218.0 KiB、上限の72.2%）
 - workflow YAML parse、Node構文検査、`git diff --check`: PASS
 - 本番D1への接続、migration適用、deployは実行していない
+
+---
+
+## 追加改善の再検証（`daishiman/wt-3`、2026-08-13）
+
+上の全体レビュー後に積み上がったUI改善を、既存成果物を消さず前提だけをリセットして再検証した。30思考法のうち、今回の修正へ直接効いたまとまりは次のとおり。
+
+- 批判的思考・因果関係分析・仮説思考: `top` / `bottom` が常に空配列になる経路を、domain → API 400 → UI失敗まで再現し、位置ではなく同じidの旧 `seq` と比較するよう修正した。
+- システム思考・MECE・依存関係分析: 確定後の次候補を会社全体の `id/status` だけで選ばず、本人・確定済み・MANAGER担当外を除く純関数へ集約した。
+- 抽象化思考・メタ思考: FormBuilderの配列indexを「表示順」と「編集中の同一性」の二役にしない。画面内の安定キーだけを加え、全面的な永続ID改修には広げなかった。
+- 状態遷移・if思考: コピー結果を `idle / copied / manual` の単一状態にし、成功後に失敗したとき成功表示が残る矛盾をなくした。
+- 素人思考・価値提案思考: 設問の `＋` を「この下に追加」と明示し、新規行が自由設問で評価集計に使われないこと、連携IDと昇格ゲートを継承しないことを画面と仕様の両方へ書いた。
+- 要素分解・トレードオン思考: 社員検索、会社切替エラー、空状態、用語、KPI導線は共通部品と小さな契約テストで固定し、大きな画面構造変更を避けた。
+
+### 追加改善の4条件
+
+| 条件 | 判定 | 根拠 |
+|---|---|---|
+| 矛盾なし | PASS | `draft` の表示は「確認中」、作業件数は「未確定」へ統一。コピー成功/失敗、自由設問/連携設問も同時成立しない状態へ整理した |
+| 漏れなし | PASS | 並べ替え4方向、境界、別区分/種類、過去版、重複・非連続 `seq`、grade/promotion保存、schema/editorをtestで追跡した。既存UI改善にも契約・表示テストを追加した |
+| 整合性あり | PASS | domain・API・editor・製品仕様・システム仕様のdirection契約が一致し、次候補と設問追加の判断は小さな純関数を正本にした |
+| 依存関係整合 | PASS | MANAGERの次候補は有効な直属メンバー取得に依存し、FormBuilderの画面内キーは保存payloadへ混ぜず、版管理は現行版だけに限定した |
+
+### 追加改善の実測
+
+- TDD RED: `top` / `bottom` domain 3件、API保存2件、次候補3件、FormBuilder / CopyReminder / MembersFilter / UX契約が意図どおり失敗。
+- GREEN: 全体 84 files / 1407 tests PASS（既存の任意本番検査 1 file / 1 test skip）。coverageは statements / branches / functions / lines の4指標すべて100%。
+- `check:docs`、`typecheck`、OpenNext Cloudflare build、bundle size、`git diff --check`: PASS。圧縮後bundleは 2208.1 KiB（上限の71.9%）。
+- Workers previewで4ロール・のべ287画面を認証付き描画し、変更対象8導線とMANAGERの管理画面拒否を追加スモークで確認した。
+- launch-security: CRITICAL 0 / HIGH 0。依存監査の既知moderate 1件は current backlog `SECURITY-008` に残っている。判定は変更範囲についてGO。
+- アプリ内ブラウザはこのセッションで接続先が無く、desktop / 375pxの目視だけはpreview確認者へ引き継ぐ。本番D1、production deploy、main mergeは実行していない。

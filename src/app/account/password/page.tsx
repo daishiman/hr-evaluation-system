@@ -1,10 +1,15 @@
 import { requireViewer } from "@/lib/session";
-import { Card, PageTitle, ReasonNote } from "@/components/ui";
+import { Card, PageTitle } from "@/components/ui";
 import { PasswordChangeForm } from "@/components/PasswordChangeForm";
 
 export const dynamic = "force-dynamic";
 
-/** 自分のパスワードを変更する画面。この画面の目的はそれだけ。 */
+/**
+ * 自分のパスワードを変更する画面。この画面の目的はそれだけ。
+ *
+ * 仮パスワードのままであることの案内は AppShell の全画面共通バナーが出す。
+ * この画面はまさにその案内の行き先なので、ここで同じ文言を繰り返さない。
+ */
 export default async function AccountPasswordPage() {
   const viewer = await requireViewer();
 
@@ -15,13 +20,6 @@ export default async function AccountPasswordPage() {
         title="パスワードの変更"
         lede={`${viewer.email} のパスワードを変更します。`}
       />
-      {viewer.mustChangePassword && (
-        <div className="mb-4">
-          <ReasonNote>
-            いまのパスワードは、アカウントを発行したときの仮のものです。あなただけが知っているものに変更してください。
-          </ReasonNote>
-        </div>
-      )}
       {/* 項目が3つだけの画面。幅いっぱいに伸ばさず、入力に見合った幅に絞る（.narrow-form） */}
       <Card className="card-pad narrow-form">
         <PasswordChangeForm />

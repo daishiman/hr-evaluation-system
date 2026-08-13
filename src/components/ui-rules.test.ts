@@ -669,7 +669,8 @@ describe("畳んだものへ必ず手が届く", () => {
     const ui = readFileSync(UI, "utf8");
     // Disclosure・InlineDetail は summary が必須（? を付けない）
     expect(ui).toMatch(/summary: ReactNode;/);
-    expect(ui).toMatch(/export function InlineDetail\(\{ summary, children \}: \{ summary: string;/);
+    expect(ui).toMatch(/export function InlineDetail[\s\S]{0,220}summary: string;/);
+    expect(ui).not.toMatch(/export function InlineDetail[\s\S]{0,220}summary\?: string;/);
     // どちらも <summary> を必ず描く
     expect(ui.match(/<summary/g) ?? []).toHaveLength(2);
     // 窓は押すボタンと対で作る（label が必須）

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, ReasonNote } from "@/components/ui";
+import { Button, InlineDetail, ReasonNote } from "@/components/ui";
 
 /**
  * 未回答の方への連絡文を1クリックで作る。
@@ -19,8 +19,7 @@ export function CopyReminder({
   url: string;
   deadline?: string | null;
 }) {
-  const [copied, setCopied] = useState(false);
-  const [fallback, setFallback] = useState<string | null>(null);
+  const [result, setResult] = useState<"idle" | "copied" | "manual">("idle");
 
   const text = [
     "評価アンケートのご提出のお願い",
@@ -39,24 +38,51 @@ export function CopyReminder({
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setFallback(null);
+      setResult("copied");
     } catch {
       // クリップボードが使えない環境では、選んでコピーできる形で出す
-      setFallback(text);
+      setResult("manual");
     }
   };
 
+  return <CopyReminderView text={text} result={result} onCopy={() => void copy()} />;
+}
+
+export function CopyReminderView({
+  text,
+  result,
+  onCopy,
+}: {
+  text: string;
+  result: "idle" | "copied" | "manual";
+  onCopy: () => void;
+}) {
   return (
     <div>
-      <Button type="button" variant="secondary" onClick={() => void copy()}>
-        未回答の方への連絡文をコピーする
-      </Button>
-      {copied && <p className="m-0 mt-2 text-sub text-[var(--brand-deep)]">コピーしました。メールやチャットに貼り付けてお使いください。</p>}
-      {fallback && (
-        <div className="mt-2">
-          <ReasonNote>この環境では自動でコピーできませんでした。下の文面を選んでコピーしてください。</ReasonNote>
-          <textarea className="input mt-2 w-full font-mono text-note" rows={8} readOnly value={fallback} />
+      {/* 送る前に中身（宛先・URL・期限）を確認できるようにする。
+          クリップボードAPIの成否に関わらず、常にこの場で開ける。 */}
+      <InlineDetail summary="送る文面を確認する" open={result === "manual"}>
+        <textarea
+          aria-label="未回答者への連絡文"
+          className="input mt-2 w-full font-mono text-note"
+          rows={8}
+          readOnly
+          value={text}
+        />
+      </InlineDetail>
+      <div className="mt-2">
+        <Button type="button" variant="secondary" onClick={onCopy}>
+          未回答の方への連絡文をコピーする
+        </Button>
+      </div>
+      {result === "copied" && (
+        <p className="m-0 mt-2 text-sub text-[var(--brand-deep)]">
+          コピーしました。メールやチャットに貼り付けてお使いください。
+        </p>
+      )}
+      {result === "manual" && (
+        <div className="mt-2" role="alert" aria-live="assertive">
+          <ReasonNote>この環境では自動でコピーできませんでした。上で開いた文面を選んでコピーしてください。</ReasonNote>
         </div>
       )}
     </div>

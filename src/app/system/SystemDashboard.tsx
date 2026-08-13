@@ -52,7 +52,6 @@ export function SystemDashboard({
   // 停止済みの会社は運用対象ではないため、「先に直す未設定」には混ぜない。
   const needsAttention = companies.filter((company) => company.isActive && companySetupIssues(company).length > 0);
   const totalActiveUsers = companies.reduce((sum, company) => sum + company.activeUsers, 0);
-  const totalFinalized = companies.reduce((sum, company) => sum + company.finalizedEvaluations, 0);
 
   return (
     <>
@@ -60,9 +59,11 @@ export function SystemDashboard({
         title="システム運用"
         lede="操作する会社を決め、運用を止めている未設定だけを先に確認します。"
         actions={
-          <LinkButton href="/system/companies" variant="primary">
-            会社を追加する
-          </LinkButton>
+          companies.length > 0 && (
+            <LinkButton href="/system/companies" variant="primary">
+              会社を追加する
+            </LinkButton>
+          )
         }
       />
 
@@ -145,18 +146,14 @@ export function SystemDashboard({
       )}
 
       <div className="kpi-strip" aria-label="全社の集計">
-        <div className="kpi">
+        <Link href="/system/companies" className="kpi no-underline">
           <div className="kpi-label">利用中の会社</div>
           <div className="kpi-value"><Num value={activeCompanies.length} unit="社" /></div>
-        </div>
-        <div className="kpi">
+        </Link>
+        <Link href="/system/users" className="kpi no-underline">
           <div className="kpi-label">利用中のアカウント</div>
           <div className="kpi-value"><Num value={totalActiveUsers} unit="人" /></div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">確定済みの評価</div>
-          <div className="kpi-value"><Num value={totalFinalized} unit="件" /></div>
-        </div>
+        </Link>
       </div>
 
       {companies.length > 0 && (
