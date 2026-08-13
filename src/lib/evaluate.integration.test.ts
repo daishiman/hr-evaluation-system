@@ -629,6 +629,10 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
       { id: IDS.employee, name: "本人", gradeId: IDS.gradeFrom, status: "submitted" },
     ]);
 
+    await current.db.update(s.formResponses).set({ status: "draft" });
+    const draft = await listPendingRespondents(IDS.company, IDS.cycle);
+    expect(draft[0].status).toBe("draft");
+
     await current.db.delete(s.formResponses);
     const after = await listPendingRespondents(IDS.company, IDS.cycle);
     expect(after[0].status).toBe("none");

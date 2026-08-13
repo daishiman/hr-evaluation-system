@@ -6,6 +6,7 @@ import {
   canReadEmployee,
   canReadResponseBody,
   canReadSelfResult,
+  canReviewEmployeeEvaluation,
   isOwnEvaluation,
   selectNextActionableEvaluation,
   SELF_EVALUATION_BLOCK_REASON,
@@ -40,6 +41,14 @@ describe("対象者ごとの権限契約", () => {
         managerId: "director",
       }),
     ).toBe(false);
+  });
+
+  it("評価者向け画面は会社管理者以上または直属上長だけが開ける", () => {
+    expect(canReviewEmployeeEvaluation("admin", "COMPANY_ADMIN", outsideReport)).toBe(true);
+    expect(canReviewEmployeeEvaluation("super", "SUPER_ADMIN", outsideReport)).toBe(true);
+    expect(canReviewEmployeeEvaluation("manager-a", "MANAGER", directReport)).toBe(true);
+    expect(canReviewEmployeeEvaluation("manager-a", "MANAGER", outsideReport)).toBe(false);
+    expect(canReviewEmployeeEvaluation("member-a", "EMPLOYEE", directReport)).toBe(false);
   });
 
   it("下書き回答の本文は本人だけ、提出済み回答は本人・直属上長・管理者だけが読める", () => {

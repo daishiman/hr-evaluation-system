@@ -13,5 +13,6 @@ describe("CSV取り込み前確認トークン", () => {
     const token = await issueImportConfirmation("secret", "form-a", "csv");
     await expect(verifyImportConfirmation("other", token, "form-a", "csv")).resolves.toBe(false);
     await expect(verifyImportConfirmation("secret", "broken", "form-a", "csv")).resolves.toBe(false);
+    await expect(verifyImportConfirmation("secret", "%", "form-a", "csv")).resolves.toBe(false);
   });
 });

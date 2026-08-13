@@ -12,6 +12,11 @@ describe("設定・評価期間・アンケートのreadiness正本", () => {
     expect(result.schemeMessage).toContain("Chief");
   });
 
+  it("評価セット未作成と配点ルール未作成を区別して次の操作を案内する", () => {
+    expect(setupReadiness({ hasScheme: false, groups: [] }).schemeMessage).toContain("評価セット");
+    expect(setupReadiness({ hasScheme: true, groups: [] }).schemeMessage).toContain("配点ルール");
+  });
+
   it("評価期間は評価セット完了かつ公開中アンケートありでだけopenにできる", () => {
     expect(cycleOpenReadiness({ schemeReady: true, publishedFormCount: 1 }).ready).toBe(true);
     expect(cycleOpenReadiness({ schemeReady: false, publishedFormCount: 1 }).ready).toBe(false);

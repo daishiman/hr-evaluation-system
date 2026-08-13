@@ -35,4 +35,12 @@ describe("評価期間×社員の正式回答版", () => {
     ];
     expect(resolveAuthoritativeResponses(rows)).toEqual([rows[2]]);
   });
+
+  it("提出日時が欠けた回答同士でもフォーム版と回答IDで決定する", () => {
+    const rows = [
+      { id: "res-old", employeeId: "employee-a", submittedAt: null, formVersion: 1 },
+      { id: "res-current", employeeId: "employee-a", submittedAt: null, formVersion: 2 },
+    ];
+    expect(resolveAuthoritativeResponses(rows)).toEqual([rows[1]]);
+  });
 });
