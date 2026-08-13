@@ -277,6 +277,15 @@
 
 ---
 
+## ライト／ダークテーマの全画面契約（2026-08-13）
+
+- **UX-016 は解消済み**。グラフへCSS変数を直接渡し、ライトの既定値・`getComputedStyle`・`MutationObserver` による二重同期を廃止した。初回描画も切り替え後も、画面と同じテーマ値で描く。
+- 面の白固定を意味トークンへ置き換え、ライト・自動ダーク・明示ダーク・印刷のトークン漏れを契約テストで固定した。
+- テーマ値・保存キー・描画前初期化は `src/lib/theme.ts` へ分離し、Server Component が Client Component の値を読む境界違反を除いた。
+- danger / progress の小文字は4.5:1以上、境界線とグラフの比較線は3:1以上を色値から自動検査する。
+
+---
+
 ## 回ごとの記録（分離）
 
 500行上限のため、以降の回ごとの残課題メモは [`docs/product/backlog-session-notes.md`](./backlog-session-notes.md) に移した。

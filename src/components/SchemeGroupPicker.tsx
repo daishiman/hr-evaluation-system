@@ -412,7 +412,7 @@ export function SchemeGroupPicker({
               return (
                 <label
                   key={item.id}
-                  className={`flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--line)] bg-white p-4 text-sub ${
+                  className={`flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 text-sub ${
                     checked ? "border-[var(--brand)] bg-[var(--brand-soft)]" : ""
                   } ${disabled ? "opacity-50" : ""}`}
                 >
@@ -480,7 +480,7 @@ export function SchemeGroupPicker({
                 className={
                   pick.majorId === o.id
                     ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-sub"
-                    : "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
+                    : "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
                 }
               >
                 <span className="block font-bold">
@@ -527,7 +527,7 @@ export function SchemeGroupPicker({
                       className={
                         on
                           ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-sub"
-                          : "rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
+                          : "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
                       }
                     >
                       <span className="block font-bold">

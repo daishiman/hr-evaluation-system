@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { signOut } from "@/lib/auth-client";
 
 /**
@@ -113,6 +114,13 @@ export function AccountMenu({
               仮のパスワードのままです。あなただけが知っているものに変えてください。
             </p>
           )}
+
+          {/* 見た目の設定は「自分のこと」なので、ヘッダーに出さずここへ置く。
+              メニューを閉じていても、このアイコンからは必ず辿り着ける。 */}
+          <div className="account-pop-theme">
+            <p className="account-pop-theme-label">画面の明るさ</p>
+            <ThemeToggle />
+          </div>
 
           <div className="account-pop-links">
             <Link href="/account" className="account-pop-link no-underline">

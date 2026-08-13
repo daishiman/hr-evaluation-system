@@ -348,7 +348,7 @@ function QuestionField({
                   className={
                     on
                       ? "flex w-full items-center gap-2 rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-sub"
-                      : "flex w-full items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sub hover:border-[var(--brand)]"
+                      : "flex w-full items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sub hover:border-[var(--brand)]"
                   }
                 >
                   <input
@@ -417,7 +417,7 @@ function QuestionField({
               className={
                 current === (o.score ?? Number(o.value))
                   ? "block w-full rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-sub"
-                  : "block w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
+                  : "block w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
               }
               aria-pressed={current === (o.score ?? Number(o.value))}
               onClick={() => onChange({ valueNumber: o.score ?? Number(o.value), valueText: o.label, valueChoices: null })}
