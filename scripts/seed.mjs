@@ -1,16 +1,27 @@
 /**
  * シードSQLを生成して D1 に流し込む。
  *   pnpm run db:seed:local   … ローカルD1へ
- *   pnpm run db:seed:remote  … 本番D1へ
+ *
+ * 全テーブルを削除し、既知の共通デモパスワードを含むデータへ置き換えるため、
+ * 本番D1への実行は常に拒否する。
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { buildSeed, DEMO_PASSWORD } from "./seed-data.mjs";
+import { assertFullSeedTargetIsLocal } from "./seed-target.mjs";
 
-const remote = process.argv.includes("--remote");
+try {
+  // seed-data の読込み、SQL生成、ファイル書込み、wrangler起動より先に止める。
+  assertFullSeedTargetIsLocal(process.argv.slice(2));
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+
 const generateOnly = process.argv.includes("--generate-only");
+const { buildSeed, DEMO_PASSWORD } = await import("./seed-data.mjs");
 
 const TABLES = [
+  "import_batches",
   "employee_notes", "kgi_coefficients",
   "raise_revisions", "raise_exceptions", "raise_patterns", "raise_policies", "raise_settings",
   "evaluation_gates", "evaluation_requirements", "evaluation_behaviors", "evaluation_items", "evaluations",
@@ -43,6 +54,7 @@ console.log(`デモ用パスワード: ${DEMO_PASSWORD}`);
 
 if (generateOnly) process.exit(0);
 
-const args = ["wrangler", "d1", "execute", "hr-evaluation-db", "--file=drizzle/seed.sql", remote ? "--remote" : "--local", "-y"];
+// guardに加えて実行先もローカルへ固定し、後続の条件分岐から本番へ届かないようにする。
+const args = ["wrangler", "d1", "execute", "hr-evaluation-db", "--file=drizzle/seed.sql", "--local", "-y"];
 console.log(`\n実行: pnpm ${args.join(" ")}`);
 execFileSync("pnpm", args, { stdio: "inherit", cwd: new URL("..", import.meta.url).pathname });

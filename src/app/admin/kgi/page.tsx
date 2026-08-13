@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import {
   countEvaluationsByOffice,
@@ -11,7 +10,7 @@ import {
 } from "@/lib/queries";
 import { kgiRangeLabel, matchKgiCoefficient } from "@/lib/domain/kgi";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, Disclosure, EmptyState, InlineDetail, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
+import { Badge, Card, ChipLink, Disclosure, EmptyState, InlineDetail, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { formatDate, formatPeriod, CYCLE_STATUS_LABEL } from "@/lib/view";
 import { detectStaleCycles } from "@/lib/impact";
@@ -112,9 +111,9 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
       <SectionHeading>評価期間を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {cycles.map((c) => (
-          <Link key={c.id} href={`/admin/kgi?cycle=${c.id}`} className="chip" aria-current={c.id === cycle.id ? "true" : undefined}>
+          <ChipLink key={c.id} href={`/admin/kgi?cycle=${c.id}`} current={c.id === cycle.id}>
             {c.name}
-          </Link>
+          </ChipLink>
         ))}
       </div>
 
@@ -304,7 +303,7 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
                 value: (
                   <>
                     {r.beforeRate === null ? "未登録" : <Num value={r.beforeRate} unit="%" />}
-                    <span className="mx-1 text-[var(--ink-muted)]">→</span>
+                    <span className="mx-1 text-ink-muted">→</span>
                     <Num value={r.afterRate} unit="%" />
                   </>
                 ),

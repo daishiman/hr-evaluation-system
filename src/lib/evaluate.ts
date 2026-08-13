@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { getDb, insertMany, schema as s } from "@/lib/db";
+import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
 import { computeActualValue, FormulaError } from "@/lib/domain/formula";
 import {
   gradeRequirementRate,
@@ -19,6 +19,7 @@ import {
 import { computeBonus, type KgiCoefficientRow } from "@/lib/domain/kgi";
 import { FINALIZED_SKIP_MESSAGE } from "@/lib/domain/build-summary";
 import { newId } from "@/lib/id";
+import { resolveAuthoritativeResponses } from "@/lib/domain/authoritative-response";
 
 /** 実績値を出せなかったときに、評価者向けに出す既定の理由。 */
 export const UNRATED_RATIONALE =
@@ -76,8 +77,9 @@ export async function buildEvaluationsForCycle(
     db.select().from(s.grades).where(eq(s.grades.companyId, companyId)),
     db.select().from(s.promotionThresholds).where(eq(s.promotionThresholds.companyId, companyId)),
     db
-      .select()
+      .select({ response: s.formResponses, formVersion: s.forms.version })
       .from(s.formResponses)
+      .innerJoin(s.forms, eq(s.forms.id, s.formResponses.formId))
       .where(
         and(
           eq(s.formResponses.companyId, companyId),
@@ -95,9 +97,12 @@ export async function buildEvaluationsForCycle(
       .where(and(eq(s.officeKgiResults.companyId, companyId), eq(s.officeKgiResults.cycleId, cycleId))),
   ]);
 
+  const authoritativeResponses = resolveAuthoritativeResponses(
+    responses.map(({ response, formVersion }) => ({ ...response, formVersion })),
+  );
   const targets = opts?.employeeIds?.length
-    ? responses.filter((r) => opts.employeeIds!.includes(r.employeeId))
-    : responses;
+    ? authoritativeResponses.filter((r) => opts.employeeIds!.includes(r.employeeId))
+    : authoritativeResponses;
   if (targets.length === 0) return [];
 
   const [users, categories, behaviorGuidelines] = await Promise.all([
@@ -397,12 +402,8 @@ export async function buildEvaluationsForCycle(
         }),
       };
 
-      /* ── 保存（同じサイクル・同じ人の未確定分は作り直す） ── */
-      if (existing) {
-        await db.delete(s.evaluations).where(eq(s.evaluations.id, existing.id));
-      }
-
-      await db.insert(s.evaluations).values({
+      /* ── 保存（同じ評価期間・同じ人の未確定分は作り直す） ── */
+      const evaluationRow: typeof s.evaluations.$inferInsert = {
         id: evalId,
         companyId,
         cycleId,
@@ -440,12 +441,8 @@ export async function buildEvaluationsForCycle(
         // ここが空だと「基準を変えたのに集計し直していない評価」を
         // 見つけられず、集計し直しても警告が消えない（→ src/lib/impact.ts）。
         computedAt: new Date(),
-      });
-
-      await insertMany((rows) => db.insert(s.evaluationItems).values(rows), itemRows);
-      await insertMany(
-        (rows) => db.insert(s.evaluationRequirements).values(rows),
-        reqRows.map((r) => ({
+      };
+      const requirementRows: typeof s.evaluationRequirements.$inferInsert[] = reqRows.map((r) => ({
           id: newId("er"),
           companyId,
           evaluationId: evalId,
@@ -453,11 +450,8 @@ export async function buildEvaluationsForCycle(
           category: r.category,
           text: r.text,
           achieved: r.achieved,
-        })),
-      );
-      await insertMany(
-        (rows) => db.insert(s.evaluationGates).values(rows),
-        gateRows.map((g) => ({
+        }));
+      const evaluationGateRows: typeof s.evaluationGates.$inferInsert[] = gateRows.map((g) => ({
           id: newId("eg"),
           companyId,
           evaluationId: evalId,
@@ -465,11 +459,8 @@ export async function buildEvaluationsForCycle(
           kind: g.kind,
           text: g.text,
           achieved: g.achieved,
-        })),
-      );
-      await insertMany(
-        (rows) => db.insert(s.evaluationBehaviors).values(rows),
-        behRows.map((b) => ({
+        }));
+      const evaluationBehaviorRows: typeof s.evaluationBehaviors.$inferInsert[] = behRows.map((b) => ({
           id: newId("eb"),
           companyId,
           evaluationId: evalId,
@@ -478,8 +469,24 @@ export async function buildEvaluationsForCycle(
           aspectName: b.aspectName,
           score: b.score,
           levelLabel: b.label,
-        })),
+        }));
+
+      const statements: unknown[] = [];
+      if (existing) statements.push(db.delete(s.evaluations).where(eq(s.evaluations.id, existing.id)));
+      statements.push(db.insert(s.evaluations).values(evaluationRow));
+      statements.push(...chunkRowsForD1(itemRows).map((rows) => db.insert(s.evaluationItems).values(rows)));
+      statements.push(
+        ...chunkRowsForD1(requirementRows).map((rows) => db.insert(s.evaluationRequirements).values(rows)),
       );
+      statements.push(
+        ...chunkRowsForD1(evaluationGateRows).map((rows) => db.insert(s.evaluationGates).values(rows)),
+      );
+      statements.push(
+        ...chunkRowsForD1(evaluationBehaviorRows).map((rows) => db.insert(s.evaluationBehaviors).values(rows)),
+      );
+      /* 削除・評価本体・全根拠行を1つのD1 transactionで確定する。
+         子行の保存に失敗した場合は、変更前の評価全体へrollbackする。 */
+      await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
 
       out.push({
         evaluationId: evalId,
@@ -526,11 +533,19 @@ export async function listPendingRespondents(companyId: string, cycleId: string)
       and(eq(s.users.companyId, companyId), inArray(s.users.gradeId, gradeIds), eq(s.users.isActive, true)),
     );
   const responses = await db
-    .select()
+    .select({ response: s.formResponses, formVersion: s.forms.version })
     .from(s.formResponses)
+    .innerJoin(s.forms, eq(s.forms.id, s.formResponses.formId))
     .where(and(eq(s.formResponses.companyId, companyId), eq(s.formResponses.cycleId, cycleId)));
+  const authoritativeResponses = resolveAuthoritativeResponses(
+    responses
+      .filter(({ response }) => response.status === "submitted")
+      .map(({ response, formVersion }) => ({ ...response, formVersion })),
+  );
   return members.map((m) => {
-    const r = responses.find((x) => x.employeeId === m.id);
-    return { ...m, status: r?.status ?? "none" };
+    const submitted = authoritativeResponses.find((response) => response.employeeId === m.id);
+    if (submitted) return { ...m, status: "submitted" };
+    const hasDraft = responses.some(({ response }) => response.employeeId === m.id && response.status === "draft");
+    return { ...m, status: hasDraft ? "draft" : "none" };
   });
 }

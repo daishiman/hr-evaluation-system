@@ -7,7 +7,7 @@ import { detectStaleCycles } from "@/lib/impact";
 import { RecordForm } from "@/components/RecordForm";
 import { PromotionRequirementEditor } from "@/components/PromotionRequirementEditor";
 import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
-import { EmptyState, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
+import { ChipLink, EmptyState, PageTitle, ProvisionalMark, ReasonNote, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -63,14 +63,12 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
       <SectionHeading>等級を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {grades.map((g) => (
-          <Link
+          <ChipLink
             key={g.id}
-            href={`/admin/masters/promotion?grade=${g.id}`}
-            className="chip"
-            aria-current={g.id === grade.id ? "true" : undefined}
+            href={`/admin/masters/promotion?grade=${g.id}`} current={g.id === grade.id}
           >
             {g.name}
-          </Link>
+          </ChipLink>
         ))}
       </div>
 
@@ -116,7 +114,7 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
           />
           <p className="footnote">
             行動指針の中身は
-            <Link href="/admin/behavior" className="mx-1 text-[var(--brand-deep)]">
+            <Link href="/admin/behavior" className="mx-1 text-brand-deep">
               行動指針
             </Link>
             で決めます。行動指針を出さない等級では、この点数は判定に使われません。

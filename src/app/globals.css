@@ -5,10 +5,10 @@
    値は差し替え可・役割の割り当ては変えない
    ============================================================ */
 :root {
-  /* 操作・選択・リンク・進捗(この4用途のみ) */
-  --brand: #1d63be;
-  --brand-deep: #15498f;
-  --brand-soft: #e3edfa;
+  /* 操作・選択・リンク。業務内容より前に色が立たない Graphite に限定する。 */
+  --brand: #3d3d42;
+  --brand-deep: #27272a;
+  --brand-soft: #e4e4e1;
 
   /* ------------------------------------------------------------
      面の3段階（ページ地 → 面 → 面の中の面）。
@@ -16,26 +16,26 @@
      画面側は #fff を直接書かず、必ずこの2つを使う。
      ダークテーマでも同じ役割のまま値だけが入れ替わる。
      ------------------------------------------------------------ */
-  --page-bg: #eef3fa;      /* ページ地（body の背景） */
+  --page-bg: #f1f1ef;      /* ページ地（body の背景） */
   --surface: #ffffff;      /* カード・ヘッダー・入力欄など「載せる面」 */
 
   /* 結果のキー数字。押す面は用途が違うので --cta-* に分ける。 */
-  --accent: #232326;
-  --cta-bg: #232326;
-  --cta-bg-hover: #3a3a3f;
+  --accent: #202024;
+  --cta-bg: #2a2a2e;
+  --cta-bg-hover: #404046;
   --cta-fg: #ffffff;
 
   /* テキストと構造(画面の90%) */
-  --ink: #16191d;
-  --ink-muted: #545e6b;
-  --line: #8a949f;
-  --subtle: #f5f6f8;
+  --ink: #17171a;
+  --ink-muted: #5f5f66;
+  --line: #85858c;
+  --subtle: #f5f5f3;
   /* 「いまは使わない設定にしてあるもの」の面と枠（使用しない・利用停止・締め切り済み）。
      白い面と並べて一目で違うと分かる濃さにする。文字（--ink #16191d）との
      コントラストは 13:1 以上あり、読みやすさの下限は割らない。 */
-  --off-surface: #e4e7eb;
-  --off-surface-soft: #eef0f3;
-  --off-line: #7a8490;
+  --off-surface: #e5e5e2;
+  --off-surface-soft: #efefed;
+  --off-line: #7d7d84;
 
   /* 意味を持つ状態色 */
   --danger: #c5221f;
@@ -46,26 +46,26 @@
 
   /* 「進行中」を表すアンバー。状態表現の専用色で、操作（CTA）には使わない。
      使い方は下の「バッジ」の節を参照。 */
-  --status-progress: #963f05;
+  --status-progress: #815508;
 
   /* グラフの中だけで使う色。SVG にはクラスが効かず、色を値で渡すしかないため、
      Charts.tsx がここを読んで描く。テーマを変えたら対で見直すこと。
      ・soft … 比較用の2本目の線（主役の線より一段弱い同系色）
      ・band … 等級の区間を1つおきに敷く面（面の中でいちばん弱い段） */
-  --chart-line-soft: #6f91ba;
-  --chart-band: #f2f4f7;
+  --chart-line-soft: #76767e;
+  --chart-band: #f2f2ef;
 
-  /* 人を見分ける頭文字の5色。意味のある実使用色なのでテーマと対で持つ。 */
-  --avatar-1-fg: #7a4b12;
-  --avatar-1-bg: #fbf0dd;
-  --avatar-2-fg: #1f5f4a;
-  --avatar-2-bg: #dff0e9;
-  --avatar-3-fg: #5a3d8a;
-  --avatar-3-bg: #eae3f7;
-  --avatar-4-fg: #8a3b3b;
-  --avatar-4-bg: #f8e3e3;
-  --avatar-5-fg: #3d5570;
-  --avatar-5-bg: #e5ebf2;
+  /* 人物識別は色相ではなく、ごく弱い温度差で区別する。 */
+  --avatar-1-fg: #53535a;
+  --avatar-1-bg: #f1f1ef;
+  --avatar-2-fg: #4c5353;
+  --avatar-2-bg: #e9eeee;
+  --avatar-3-fg: #55515a;
+  --avatar-3-bg: #eeebf0;
+  --avatar-4-fg: #5a5050;
+  --avatar-4-bg: #f0eaea;
+  --avatar-5-fg: #4f555b;
+  --avatar-5-bg: #e9edf0;
 
   /* 数字専用フォント(和文フォントで数字を描画しない)。
      IBM Plex Sans を先頭に置く（layout.tsx が next/font で読み込み、
@@ -111,93 +111,93 @@
    ============================================================ */
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) {
-    --brand: #6ea8e8;
-    --brand-deep: #a8cbf2;
-    --brand-soft: #1e3a5c;
+    --brand: #d7d7dc;
+    --brand-deep: #f1f1f3;
+    --brand-soft: #35353a;
 
-    --page-bg: #121215;
-    --surface: #1e1e23;
+    --page-bg: #1c1c20;
+    --surface: #28282d;
 
-    --accent: #fafafa;
-    --cta-bg: #e8e8ec;
+    --accent: #f4f4f5;
+    --cta-bg: #ececef;
     --cta-bg-hover: #ffffff;
-    --cta-fg: #17171a;
+    --cta-fg: #202024;
 
-    --ink: #fafafa;
-    --ink-muted: #b0b0b8;
-    --line: #73737d;
-    --off-line: #85858f;
-    --off-surface: #2e2e34;
-    --off-surface-soft: #26262b;
-    --subtle: #26262b;
+    --ink: #f4f4f5;
+    --ink-muted: #b9b9c0;
+    --line: #85858e;
+    --off-line: #96969f;
+    --off-surface: #38383e;
+    --off-surface-soft: #323237;
+    --subtle: #303035;
 
     --danger: #fca5a0;
     --danger-soft: #3b201f;
     --danger-fg: #2a1413;
-    --caution-soft: #362a15;
+    --caution-soft: #3a3020;
     --caution-border: #a88636;
 
-    --status-progress: #f2c464;
+    --status-progress: #e0b66e;
 
-    --chart-line-soft: #3f6f9e;
-    --chart-band: #26262b;
+    --chart-line-soft: #8d8d96;
+    --chart-band: #303035;
 
-    --avatar-1-fg: #f6c177;
-    --avatar-1-bg: #4a321a;
-    --avatar-2-fg: #9bd8be;
-    --avatar-2-bg: #1f3a31;
-    --avatar-3-fg: #c4a7e7;
-    --avatar-3-bg: #352747;
-    --avatar-4-fg: #f2a6a6;
-    --avatar-4-bg: #482728;
-    --avatar-5-fg: #a9c3df;
-    --avatar-5-bg: #273746;
+    --avatar-1-fg: #ddd9d2;
+    --avatar-1-bg: #4a4640;
+    --avatar-2-fg: #d4dddd;
+    --avatar-2-bg: #414849;
+    --avatar-3-fg: #dad6df;
+    --avatar-3-bg: #464249;
+    --avatar-4-fg: #dfd5d5;
+    --avatar-4-bg: #494141;
+    --avatar-5-fg: #d6dce1;
+    --avatar-5-bg: #41474d;
 
     color-scheme: dark;
   }
 }
 html[data-theme="dark"] {
-  --brand: #6ea8e8;
-  --brand-deep: #a8cbf2;
-  --brand-soft: #1e3a5c;
+  --brand: #d7d7dc;
+  --brand-deep: #f1f1f3;
+  --brand-soft: #35353a;
 
-  --page-bg: #121215;
-  --surface: #1e1e23;
+  --page-bg: #1c1c20;
+  --surface: #28282d;
 
-  --accent: #fafafa;
-  --cta-bg: #e8e8ec;
+  --accent: #f4f4f5;
+  --cta-bg: #ececef;
   --cta-bg-hover: #ffffff;
-  --cta-fg: #17171a;
+  --cta-fg: #202024;
 
-  --ink: #fafafa;
-  --ink-muted: #b0b0b8;
-  --line: #73737d;
-  --off-line: #85858f;
-  --off-surface: #2e2e34;
-  --off-surface-soft: #26262b;
-  --subtle: #26262b;
+  --ink: #f4f4f5;
+  --ink-muted: #b9b9c0;
+  --line: #85858e;
+  --off-line: #96969f;
+  --off-surface: #38383e;
+  --off-surface-soft: #323237;
+  --subtle: #303035;
 
   --danger: #fca5a0;
   --danger-soft: #3b201f;
   --danger-fg: #2a1413;
-  --caution-soft: #362a15;
+  --caution-soft: #3a3020;
   --caution-border: #a88636;
 
-  --status-progress: #f2c464;
+  --status-progress: #e0b66e;
 
-  --chart-line-soft: #3f6f9e;
-  --chart-band: #26262b;
+  --chart-line-soft: #8d8d96;
+  --chart-band: #303035;
 
-  --avatar-1-fg: #f6c177;
-  --avatar-1-bg: #4a321a;
-  --avatar-2-fg: #9bd8be;
-  --avatar-2-bg: #1f3a31;
-  --avatar-3-fg: #c4a7e7;
-  --avatar-3-bg: #352747;
-  --avatar-4-fg: #f2a6a6;
-  --avatar-4-bg: #482728;
-  --avatar-5-fg: #a9c3df;
-  --avatar-5-bg: #273746;
+  --avatar-1-fg: #ddd9d2;
+  --avatar-1-bg: #4a4640;
+  --avatar-2-fg: #d4dddd;
+  --avatar-2-bg: #414849;
+  --avatar-3-fg: #dad6df;
+  --avatar-3-bg: #464249;
+  --avatar-4-fg: #dfd5d5;
+  --avatar-4-bg: #494141;
+  --avatar-5-fg: #d6dce1;
+  --avatar-5-bg: #41474d;
 
   color-scheme: dark;
 }
@@ -2140,40 +2140,31 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   font-size: var(--text-sub);
 }
 
-/* ---- 2択のスイッチ（そのまま状態表示になる）---- */
-.switch-2 { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; flex-shrink: 0; }
-.switch-2-btn {
+/* ---- 並べて1つ選ぶスイッチ（選んだものがそのまま状態表示になる）----
+   「会社の管理者のみ／本人も」「自動／明るい／暗い」のように、
+   選択肢が2〜3個で、いま何が選ばれているかを出しておきたいものに使う。
+
+   以前は2択（.switch-2）と明るさ切替（.theme-switch）が別々に定義されており、
+   同じ役目なのに角丸・余白・hover の有無が食い違っていた
+   （明るさ切替だけ hover で色が変わり、2択だけ角が丸かった）。
+   1つの組み方に統合し、選択肢の数で見た目を分岐させない。
+   使う側は Segmented（components/ui.tsx）だけを通す。 */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.segmented-btn {
+  appearance: none;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   border: 0;
-  background: var(--surface);
-  padding: 5px 12px;
-  font: inherit;
-  font-size: var(--text-note);
-  color: var(--ink-muted);
-  cursor: pointer;
-}
-.switch-2-btn + .switch-2-btn { border-left: 1px solid var(--line); }
-.switch-2-btn[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-deep); font-weight: 600; }
-.switch-2-btn:disabled { opacity: 0.6; cursor: default; }
-
-/* ---- 見た目の明るさ（自動／明るい／暗い）----
-   3つを横に並べ、選んでいるものだけを塗る。.switch-2 と同じ組み方だが、
-   選択肢が3つあるので枠を丸ではなく角丸にして、押す面を広く取る。
-   既定は「自動」＝ html に data-theme を付けない状態（端末の設定に従う）。 */
-.theme-switch {
-  display: inline-flex;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--surface);
-}
-.theme-switch-btn {
-  appearance: none;
-  border: 0;
   background: transparent;
-  padding: 6px 10px;
+  padding: 6px 12px;
   font: inherit;
   font-size: var(--text-note);
   color: var(--ink-muted);
@@ -2181,16 +2172,59 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   min-height: 32px;
   white-space: nowrap;
 }
-.theme-switch-btn + .theme-switch-btn { border-left: 1px solid var(--line); }
-.theme-switch-btn:hover { background: var(--subtle); color: var(--ink); }
-.theme-switch-btn[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-deep); font-weight: 600; }
+.segmented-btn + .segmented-btn { border-left: 1px solid var(--line); }
+.segmented-btn:hover:not(:disabled) { background: var(--subtle); color: var(--ink); }
+.segmented-btn[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-deep); font-weight: 600; }
+.segmented-btn:disabled { opacity: 0.6; cursor: default; }
 /* 押せる大きさの下限は、他の操作と同じ決まりに合わせる（指で押す端末だけ 44px）。 */
 @media (pointer: coarse) {
-  .theme-switch-btn { min-height: 44px; }
+  .segmented-btn { min-height: 44px; }
 }
+
+/* ---- 選んで積み上げる大きめの選択肢（名前＋補足の2行を持つ）----
+   1行のチップに収まらない選択肢（評価項目の選択など）に使う。
+   選択中は brand の枠と面、未選択は line の枠。画面ごとに
+   「rounded-lg border border-… bg-…」と書き起こさない（OptionCard に集約）。 */
+.option-card {
+  appearance: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-sub);
+  padding: 8px 12px;
+}
+/* 押せる見た目（指のカーソル・hover で枠が動く）は、実際に押せるものだけに与える。
+   選んだ結果を並べるだけの箱（外すボタンが別にある）には付けない。 */
+:where(button, label).option-card { cursor: pointer; }
+:where(button, label).option-card:hover:not(:disabled) { border-color: var(--brand); }
+/* 押して選ぶ形（button）と、チェックを入れて選ぶ形（label + checkbox）で
+   選択中の見た目を変えない。aria-pressed は button にしか付けられないため、
+   label 側は data-on で同じ状態を表す。 */
+.option-card[aria-pressed="true"],
+.option-card[data-on="true"] { border-color: var(--brand); background: var(--brand-soft); }
+/* いくつでも選べる形は、チェックと文字を横に並べる */
+.option-card-check { display: flex; align-items: center; gap: 8px; }
+.option-card:disabled { opacity: 0.6; cursor: default; }
+.option-card-title { display: block; font-weight: 700; }
+.option-card-sub { display: block; font-size: var(--text-note); color: var(--ink-muted); }
 
 /* ============================================================
    Tailwind v4 への橋渡し（CSS変数が単一の真実）
+
+   ここに載せた意味トークンだけが、text-ink-muted / border-line のような
+   クラス名として画面から使える。画面側は text-[var(--ink-muted)] のような
+   書き方をしない。同じ色に2通りの書き方があると、テーマや色を足したときに
+   片方だけ直し漏れる（2026-08 時点で208箇所が任意値の書き方で散っていた）。
+   守られているかは ui-rules.test.ts が見張る。
+
+   面の役割（--page-bg / --surface / --off-*）と押す面（--cta-*）もここに載せる。
+   ここに無い色は「画面から直接使ってはいけない色」＝ CSS の部品定義の中だけで
+   使う色、という区別になる。
    ============================================================ */
 @theme inline {
   --color-brand: var(--brand);
@@ -2203,8 +2237,17 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   --color-subtle: var(--subtle);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-danger-fg: var(--danger-fg);
   --color-caution-soft: var(--caution-soft);
   --color-caution-border: var(--caution-border);
+  --color-page-bg: var(--page-bg);
+  --color-surface: var(--surface);
+  --color-off-surface: var(--off-surface);
+  --color-off-surface-soft: var(--off-surface-soft);
+  --color-off-line: var(--off-line);
+  --color-cta-bg: var(--cta-bg);
+  --color-cta-fg: var(--cta-fg);
+  --color-status-progress: var(--status-progress);
 }
 
 /* ============================================================
@@ -2245,40 +2288,40 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
      html:root は明示テーマと端末テーマのセレクタと同じ詳細度を持ち、
      後に置いたこの値が印刷時だけ確実に勝つ。 */
   html:root {
-    --brand: #1d63be;
-    --brand-deep: #15498f;
-    --brand-soft: #e3edfa;
-    --page-bg: #eef3fa;
+    --brand: #3d3d42;
+    --brand-deep: #27272a;
+    --brand-soft: #e4e4e1;
+    --page-bg: #f1f1ef;
     --surface: #ffffff;
-    --accent: #232326;
-    --cta-bg: #232326;
-    --cta-bg-hover: #3a3a3f;
+    --accent: #202024;
+    --cta-bg: #2a2a2e;
+    --cta-bg-hover: #404046;
     --cta-fg: #ffffff;
-    --ink: #16191d;
-    --ink-muted: #545e6b;
-    --line: #8a949f;
-    --subtle: #f5f6f8;
-    --off-line: #7a8490;
-    --off-surface: #e4e7eb;
-    --off-surface-soft: #eef0f3;
+    --ink: #17171a;
+    --ink-muted: #5f5f66;
+    --line: #85858c;
+    --subtle: #f5f5f3;
+    --off-line: #7d7d84;
+    --off-surface: #e5e5e2;
+    --off-surface-soft: #efefed;
     --danger: #c5221f;
     --danger-soft: #fdecea;
     --danger-fg: #ffffff;
     --caution-soft: #fdf6e3;
     --caution-border: #947000;
-    --status-progress: #963f05;
-    --chart-line-soft: #6f91ba;
-    --chart-band: #f2f4f7;
-    --avatar-1-fg: #7a4b12;
-    --avatar-1-bg: #fbf0dd;
-    --avatar-2-fg: #1f5f4a;
-    --avatar-2-bg: #dff0e9;
-    --avatar-3-fg: #5a3d8a;
-    --avatar-3-bg: #eae3f7;
-    --avatar-4-fg: #8a3b3b;
-    --avatar-4-bg: #f8e3e3;
-    --avatar-5-fg: #3d5570;
-    --avatar-5-bg: #e5ebf2;
+    --status-progress: #815508;
+    --chart-line-soft: #76767e;
+    --chart-band: #f2f2ef;
+    --avatar-1-fg: #53535a;
+    --avatar-1-bg: #f1f1ef;
+    --avatar-2-fg: #4c5353;
+    --avatar-2-bg: #e9eeee;
+    --avatar-3-fg: #55515a;
+    --avatar-3-bg: #eeebf0;
+    --avatar-4-fg: #5a5050;
+    --avatar-4-bg: #f0eaea;
+    --avatar-5-fg: #4f555b;
+    --avatar-5-bg: #e9edf0;
     color-scheme: light;
   }
 
@@ -2320,7 +2363,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 
   /* 押して初めて出る操作（アカウントメニュー・切り替え）は紙に出さない */
   .account-menu,
-  .switch-2,
+  .segmented,
   .action-bar,
   .breadcrumb,
   .profile-row-action { display: none !important; }

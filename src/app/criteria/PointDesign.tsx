@@ -20,7 +20,7 @@ function CompositionBar({ rule }: { rule: GradePointRule }) {
 
   return (
     <div
-      className="mt-3 flex h-3 overflow-hidden rounded-full border border-[var(--line)]"
+      className="mt-3 flex h-3 overflow-hidden rounded-full border border-line"
       role="img"
       aria-label={`満点${total}点の内訳`}
     >
@@ -51,7 +51,7 @@ function SlotRow({
     <div className="card-row items-start">
       <span
         aria-hidden="true"
-        className="mt-[5px] inline-block h-3 w-3 shrink-0 rounded-sm border border-[var(--line)]"
+        className="mt-[5px] inline-block h-3 w-3 shrink-0 rounded-sm border border-line"
         style={{ background: swatch }}
       />
       <div className="row-main">
@@ -92,8 +92,8 @@ export function PointDesign({
   return (
     <>
       <Card className="card-pad hero-tint">
-        <p className="m-0 text-note text-[var(--ink-muted)]">{gradeName} の満点と、その内訳</p>
-        <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
+        <p className="m-0 text-note text-ink-muted">{gradeName} の満点と、その内訳</p>
+        <p className="num-display m-0 text-hero-sp leading-tight text-accent">
           <Num value={rule.totalPoints} />
           <span className="unit">点満点</span>
         </p>
@@ -103,7 +103,7 @@ export function PointDesign({
         </p>
         <CompositionBar rule={rule} />
         {sum !== rule.totalPoints && (
-          <p className="m-0 mt-2 text-note text-[var(--danger)]">
+          <p className="m-0 mt-2 text-note text-danger">
             内訳の合計が <Num value={sum} unit="点" /> で満点と合いません。会社の管理者に配点の見直しを依頼してください。
           </p>
         )}
@@ -187,7 +187,7 @@ export function PointRuleComparison({ rules, currentGroup }: { rules: GradePoint
                 <Num value={r.majorSlotCount} />
               </>
             ) : (
-              <span className="text-[var(--ink-muted)]">—</span>
+              <span className="text-ink-muted">—</span>
             ),
         },
         {
@@ -202,7 +202,7 @@ export function PointRuleComparison({ rules, currentGroup }: { rules: GradePoint
                 <Num value={r.minorSlotCount} />
               </>
             ) : (
-              <span className="text-[var(--ink-muted)]">—</span>
+              <span className="text-ink-muted">—</span>
             ),
         },
         { key: "slots", header: "選ぶ項目数", num: true, cell: (r) => <Num value={slotCountOf(r)} /> },

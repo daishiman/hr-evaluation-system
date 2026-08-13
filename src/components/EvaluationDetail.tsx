@@ -5,6 +5,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { formatPeriod } from "@/lib/view";
 import { buildRadarValues, buildThresholdScale, parseReasonText, RANK_LEGEND } from "@/lib/domain/evaluation-view";
 import type { Role } from "@/lib/session";
+import type { ReactNode } from "react";
 
 /**
  * 評価結果の詳細。
@@ -17,6 +18,7 @@ export async function EvaluationDetail({
   role,
   backHref,
   backLabel,
+  afterConclusion,
 }: {
   companyId: string;
   evaluationId: string;
@@ -24,6 +26,8 @@ export async function EvaluationDetail({
   /** 戻り先はパンくずの1段目として出す（画面の中に「一覧に戻る」ボタンを置かない） */
   backHref: string;
   backLabel: string;
+  /** 評価者だけに必要な例外・再集計案内。結論の直後、根拠の前に置く。 */
+  afterConclusion?: ReactNode;
 }) {
   const detail = await getEvaluationDetail(companyId, evaluationId, role);
   if (!detail) {
@@ -102,8 +106,8 @@ export async function EvaluationDetail({
       {/* 視覚的主役: 結論を1つだけ大きく出す */}
       <Card className="hero-tint">
         <div className="hero-number">
-          <p className="m-0 text-note text-[var(--ink-muted)]">この期の判定</p>
-          <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
+          <p className="m-0 text-note text-ink-muted">この期の判定</p>
+          <p className="num-display m-0 text-hero-sp leading-tight text-accent">
             {head.raiseEligible ? "昇給の要件を満たしています" : "昇給は見送りです"}
           </p>
           <p className="m-0 mt-2 text-sub">
@@ -114,7 +118,7 @@ export async function EvaluationDetail({
             )}
           </p>
           {showsCriteria && (
-            <p className="m-0 mt-3 text-sub text-[var(--ink-muted)]">
+            <p className="m-0 mt-3 text-sub text-ink-muted">
               KPI評価点 <Num value={head.totalScore} unit="点" /> / <Num value={head.maxScore} unit="点" />
               {head.requiredKpiPointsSnapshot !== null && (
                 <>（昇格に必要な点数 <Num value={head.requiredKpiPointsSnapshot} unit="点" />）</>
@@ -140,6 +144,8 @@ export async function EvaluationDetail({
           </ReasonNote>
         </div>
       )}
+
+      {afterConclusion}
 
       <SectionHeading
         aside={<span className="footnote">{items.length}項目の達成度（外側ほど良い）</span>}
@@ -228,9 +234,9 @@ export async function EvaluationDetail({
             }
             detail={
               <>
-                <p className="m-0 mt-1 text-note leading-relaxed text-[var(--ink-muted)]">{i.rationale}</p>
+                <p className="m-0 mt-1 text-note leading-relaxed text-ink-muted">{i.rationale}</p>
                 {showsCriteria && i.calcNote && (
-                  <p className="m-0 mt-1 text-note text-[var(--ink-muted)]">
+                  <p className="m-0 mt-1 text-note text-ink-muted">
                     計算式 <Code>{i.calcNote}</Code>
                   </p>
                 )}
@@ -252,7 +258,7 @@ export async function EvaluationDetail({
                 <>
                   <Num value={i.points} display />
                   <span className="unit">点</span>
-                  <p className="m-0 text-note text-[var(--ink-muted)]">
+                  <p className="m-0 text-note text-ink-muted">
                     配点 <Num value={i.maxPoints} unit="点" />
                   </p>
                 </>
@@ -363,7 +369,7 @@ export async function EvaluationDetail({
             ) : (
               <>
                 <div className="hero-number">
-                  <p className="m-0 text-note text-[var(--ink-muted)]">個人Pt</p>
+                  <p className="m-0 text-note text-ink-muted">個人Pt</p>
                   <p className="num-display m-0 text-num-l leading-tight">
                     <Num value={head.personalPoints} unit="Pt" display />
                   </p>
@@ -383,7 +389,7 @@ export async function EvaluationDetail({
                   ]}
                 />
                 {head.bonusRationale && (
-                  <p className="m-0 mt-2 text-note leading-relaxed text-[var(--ink-muted)]">{head.bonusRationale}</p>
+                  <p className="m-0 mt-2 text-note leading-relaxed text-ink-muted">{head.bonusRationale}</p>
                 )}
                 <p className="footnote m-0 mt-2">
                   {head.status === "finalized"
@@ -591,7 +597,7 @@ function ThresholdBand({
       </div>
       {/* 「帯は現在の基準表のA〜E」は全項目で同じ文になるので、行から外して
           一覧の下に1か所だけ置いた（項目数ぶん繰り返すと一覧が文字で埋まる）。 */}
-      <p className="m-0 mt-1 text-note text-[var(--ink-muted)]">
+      <p className="m-0 mt-1 text-note text-ink-muted">
         判定範囲 {snapshotLabel ?? "—"}
         {rank ? `（ランク${rank}）` : "（判定外）"} ／ 実績値 <Num value={actualValue} unit={unit ?? undefined} />
       </p>

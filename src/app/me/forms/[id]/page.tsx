@@ -51,6 +51,7 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
   ]);
 
   const judgement = judgeFormDeadline({
+    cycleStatus: form.cycleStatus ?? "unknown",
     status: form.status,
     opensAt: form.opensAt,
     closesAt: form.closesAt,
@@ -148,7 +149,7 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
 
       <p className="footnote mt-3">
         ほかの回では答えた内容も見返せます。
-        <Link href="/me/forms" className="text-[var(--brand-deep)]">
+        <Link href="/me/forms" className="text-brand-deep">
           実績を報告する
         </Link>
         の一覧から開いてください。

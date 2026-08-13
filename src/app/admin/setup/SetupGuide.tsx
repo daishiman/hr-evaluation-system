@@ -32,7 +32,7 @@ export function SetupGuide({ steps }: { steps: SetupStep[] }) {
               heading
               lead={
                 <span
-                  className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] font-bold text-[var(--brand-deep)]"
+                  className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft font-bold text-brand-deep"
                   aria-hidden="true"
                 >
                   {step.number}
@@ -57,7 +57,7 @@ export function SetupGuide({ steps }: { steps: SetupStep[] }) {
             </div>
 
             {/* 「なぜこの順番か」は進めるのに要らない。押したときだけ出す（畳む仕組みは共通部品に寄せる）。 */}
-            <div className="mt-3 border-t border-[var(--line)] pt-3">
+            <div className="mt-3 border-t border-line pt-3">
               <InlineDetail summary="この順番で進める理由">
                 <p className="footnote m-0">{step.detail}</p>
               </InlineDetail>

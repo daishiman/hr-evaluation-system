@@ -50,7 +50,7 @@ export function VersionedMasterSections<T extends VersionedMasterItem>({
         <p className="footnote m-0">ここには、今後使わない現行項目が出ます。</p>
         <p className="footnote m-0 mt-1">再開は次に作るアンケートから反映されます。</p>
         {reactivationBlocked && stopped.length > 0 && (
-          <p id={reasonId} className="footnote m-0 mt-2 text-[var(--danger)]">
+          <p id={reasonId} className="footnote m-0 mt-2 text-danger">
             先に1項目を「今後使わない」にしてください。
           </p>
         )}
@@ -135,7 +135,7 @@ function HistoryRow<T extends VersionedMasterItem>({
         <>
           {renderDetail?.(item.row)}
           {restoreBlocked && (
-            <p id={reasonId} className="footnote m-0 mt-1 text-[var(--danger)]">
+            <p id={reasonId} className="footnote m-0 mt-1 text-danger">
               先に現在版を「もう一度使う」にしてください。
             </p>
           )}

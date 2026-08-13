@@ -28,7 +28,7 @@ export function CompanyScopeSwitcher({
   if (companies.length === 0) return null;
 
   return (
-    <div className="grid gap-1 text-note text-[var(--ink-muted)]">
+    <div className="grid gap-1 text-note text-ink-muted">
       <label htmlFor="company-scope">操作する会社</label>
       {/* 高さは付けない。px で決め打ちすると、文字の段を上げたときに下が欠ける（spec §18）。
           文字の大きさも指定しない。入力欄の共通の見た目（.input）が正本で、

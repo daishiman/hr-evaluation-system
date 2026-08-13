@@ -13,6 +13,7 @@ import {
   Badge,
   Card,
   CardRow,
+  ChipLink,
   Disclosure,
   EmptyState,
   InlineDetail,
@@ -147,9 +148,9 @@ export default async function CriteriaPage({
       <SectionHeading>等級を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {grades.map((g) => (
-          <a key={g.id} href={`/criteria?grade=${g.id}`} className="chip" aria-current={g.id === grade?.id ? "true" : undefined}>
+          <ChipLink key={g.id} href={`/criteria?grade=${g.id}`} current={g.id === grade?.id}>
             {g.name}
-          </a>
+          </ChipLink>
         ))}
       </div>
 
@@ -388,7 +389,7 @@ export default async function CriteriaPage({
                     alignTop
                     title={b.aspectName}
                     detail={
-                      <ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-note text-[var(--ink-muted)]">
+                      <ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-note text-ink-muted">
                         {b.levels.map((l) => (
                           <li key={l.id}>
                             <span className="num font-bold">{l.score}</span> {l.label}：{l.text}

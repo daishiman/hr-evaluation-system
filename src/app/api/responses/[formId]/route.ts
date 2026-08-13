@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { getDb, insertMany, schema as s } from "@/lib/db";
+import { getDb, schema as s } from "@/lib/db";
 import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
@@ -8,6 +8,8 @@ import { judgeFormDeadline } from "@/lib/domain/form-deadline";
 import { canAnswerForm } from "@/lib/domain/form-entry";
 import { isAnswered, questionSnapshot } from "@/lib/domain/answer-snapshot";
 import { checkAnswerNumbers } from "@/lib/domain/number-input";
+import { saveResponseWithAnswers } from "@/lib/response-write";
+import { getForm } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -46,13 +48,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
     const body = bodySchema.parse(await req.json());
     const db = await getDb();
 
-    const form = (
-      await db
-        .select()
-        .from(s.forms)
-        .where(and(eq(s.forms.id, formId), eq(s.forms.companyId, viewer.companyId ?? "")))
-        .limit(1)
-    )[0];
+    const form = await getForm(viewer.companyId ?? "", formId);
     if (!form) throw new HttpError(404, "アンケートが見つかりませんでした。");
     // 中身は誰でも読めるが、書けるのは自分の等級のアンケートだけ。
     // 画面で入力欄を出さないことは制御ではないので、ここで必ず弾く（下書きの自動保存も同じ扱い）。
@@ -73,6 +69,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
       );
 
     const judgement = judgeFormDeadline({
+      cycleStatus: form.cycleStatus ?? "unknown",
       status: form.status,
       opensAt: form.opensAt,
       closesAt: form.closesAt,
@@ -146,6 +143,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
     }
 
     const responseId = existing?.id ?? newId("res");
+    let officeId = existing?.officeId ?? null;
     if (!existing) {
       // 回答時点の所属事業所を写し取る。
       // 期中に異動すると、いまの所属で賞与の事業所KGI係数が決まってしまい、
@@ -153,33 +151,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
       const me = (
         await db.select({ officeId: s.users.officeId }).from(s.users).where(eq(s.users.id, viewer.id)).limit(1)
       )[0];
-      await db.insert(s.formResponses).values({
-        id: responseId,
-        companyId: form.companyId,
-        formId,
-        cycleId: form.cycleId,
-        employeeId: viewer.id,
-        gradeId: form.gradeId,
-        officeId: me?.officeId ?? null,
-        status: body.status,
-        respondentNote: body.note ?? null,
-        submittedAt: body.status === "submitted" ? new Date() : null,
-      });
-    } else {
-      await db
-        .update(s.formResponses)
-        .set({
-          status: body.status,
-          respondentNote: body.note ?? null,
-          submittedAt: body.status === "submitted" ? new Date() : null,
-        })
-        .where(eq(s.formResponses.id, responseId));
+      officeId = me?.officeId ?? null;
     }
 
-    await db.delete(s.formAnswers).where(eq(s.formAnswers.responseId, responseId));
-    await insertMany(
-      (rows) => db.insert(s.formAnswers).values(rows),
-      incoming.map((a) => ({
+    const answerRows = incoming.map((a) => ({
         id: newId("fa"),
         companyId: form.companyId,
         responseId,
@@ -189,7 +164,26 @@ export async function POST(req: Request, ctx: { params: Promise<{ formId: string
         valueJson: a.valueJson,
         // 当時の設問文をこの行に写し取る（設問が将来変わっても、当時の文面で読み返せるようにする）
         ...questionSnapshot(a.question),
-      })),
+      }));
+
+    /* responseの状態と回答本文は1つのD1 transactionで確定する。
+       子行の途中で失敗しても、提出済みの印だけ・回答の一部だけを残さない。 */
+    await saveResponseWithAnswers(
+      db,
+      {
+        id: responseId,
+        companyId: form.companyId,
+        formId,
+        cycleId: form.cycleId,
+        employeeId: viewer.id,
+        gradeId: form.gradeId,
+        officeId,
+        status: body.status,
+        respondentNote: body.note ?? null,
+        submittedAt: body.status === "submitted" ? new Date() : null,
+      },
+      answerRows,
+      Boolean(existing),
     );
 
     return {

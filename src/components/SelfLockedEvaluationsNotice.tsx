@@ -37,7 +37,7 @@ export function SelfLockedEvaluationsNotice({
           <CardRow
             key={row.evaluationId}
             title={
-              <Link href={`/manager/evaluations/${row.evaluationId}`} className="text-[var(--brand-deep)]">
+              <Link href={`/manager/evaluations/${row.evaluationId}`} className="text-brand-deep">
                 {row.employeeName ?? "氏名未設定"}
               </Link>
             }

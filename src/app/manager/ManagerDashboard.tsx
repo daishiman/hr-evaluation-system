@@ -153,7 +153,7 @@ export function ManagerDashboard({
               <p className="m-0 mt-3 text-note">
                 回答締切：<strong>{cycle.deadlineLabel}</strong>
                 {cycle.daysUntilDeadline !== null && (
-                  <span className="text-[var(--ink-muted)]">
+                  <span className="text-ink-muted">
                     {cycle.daysUntilDeadline === 0 ? "（本日）" : `（あと${cycle.daysUntilDeadline}日）`}
                   </span>
                 )}
@@ -164,7 +164,7 @@ export function ManagerDashboard({
         </Card>
       )}
 
-      <SectionHeading aside={cycle && <Link href={cycleHref} className="footnote">サイクル全体を見る</Link>}>
+      <SectionHeading aside={cycle && <Link href={cycleHref} className="footnote">評価期間全体を見る</Link>}>
         未確定の評価
       </SectionHeading>
       {draftEvaluations.length === 0 ? (
@@ -175,7 +175,7 @@ export function ManagerDashboard({
             <CardRow
               key={evaluation.id}
               title={
-                <Link href={`/manager/evaluations/${evaluation.id}`} className="text-[var(--brand-deep)]">
+                <Link href={`/manager/evaluations/${evaluation.id}`} className="text-brand-deep">
                   {evaluation.employeeName ?? "氏名未設定"}
                 </Link>
               }
@@ -216,12 +216,12 @@ export function ManagerDashboard({
 
           <div className="mt-4">
             <Disclosure summary="メンバー別の状況を見る" meta={`${team.length}人`}>
-              <div className="p-0 text-[var(--ink)]">
+              <div className="p-0 text-ink">
                 {team.map((member) => (
                   <CardRow
                     key={member.id}
                     title={
-                      <Link href={`/manager/members/${member.id}`} className="text-[var(--brand-deep)]">
+                      <Link href={`/manager/members/${member.id}`} className="text-brand-deep">
                         {member.name}
                       </Link>
                     }

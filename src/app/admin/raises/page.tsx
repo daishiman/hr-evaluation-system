@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import {
   getRaisePolicy,
@@ -10,7 +9,7 @@ import {
   listRaiseSettings,
 } from "@/lib/queries";
 import { RecordForm } from "@/components/RecordForm";
-import { Badge, Card, CardRow, Disclosure, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, ChipLink, Disclosure, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { formatDate } from "@/lib/view";
 
@@ -108,9 +107,9 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
       ) : (
         <div className="mb-5 flex flex-wrap gap-2">
           {grades.map((g) => (
-            <Link key={g.id} href={`/admin/raises?grade=${g.id}`} className="chip" aria-current={g.id === grade?.id ? "true" : undefined}>
+            <ChipLink key={g.id} href={`/admin/raises?grade=${g.id}`} current={g.id === grade?.id}>
               {g.name}
-            </Link>
+            </ChipLink>
           ))}
         </div>
       )}
@@ -197,7 +196,7 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
                         value: (
                           <>
                             <Num value={r.beforeAmount} unit="円" />
-                            <span className="mx-1 text-[var(--ink-muted)]">→</span>
+                            <span className="mx-1 text-ink-muted">→</span>
                             <Num value={r.afterAmount} unit="円" />
                           </>
                         ),

@@ -68,7 +68,7 @@ export function ActionButton({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {result && <p className="m-0 mb-2 max-w-[22rem] text-note text-[var(--brand-deep)]">{result}</p>}
+      {result && <p className="m-0 mb-2 max-w-[22rem] text-note text-brand-deep">{result}</p>}
       {confirm ? (
         <ConfirmButton label={label} confirm={confirm} variant={variant} busy={busy} onConfirm={() => void run()}>
           {children}

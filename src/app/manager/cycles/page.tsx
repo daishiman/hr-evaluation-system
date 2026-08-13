@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/session";
-import { listCycles, listEvaluations } from "@/lib/queries";
+import { listCycles, listEvaluations, listMembers } from "@/lib/queries";
 import { listPendingRespondents } from "@/lib/evaluate";
 import { detectStaleCycles } from "@/lib/impact";
 import { ActionButton } from "@/components/ActionButton";
-import { Badge, Card, CardRow, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, ChipLink, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -38,11 +38,16 @@ export default async function ManagerCycles({
   const sp = await searchParams;
   const selected = cycles.find((c) => c.id === sp.cycle) ?? cycles.find((c) => c.status === "open") ?? cycles[0];
 
-  const [pending, evals, staleCycles] = await Promise.all([
+  const [allPending, allEvals, staleCycles, assignedMembers] = await Promise.all([
     listPendingRespondents(companyId, selected.id),
     listEvaluations(companyId, viewer.role, { cycleId: selected.id }),
     detectStaleCycles(companyId),
+    viewer.role === "MANAGER" ? listMembers(companyId, { managerId: viewer.id }) : Promise.resolve([]),
   ]);
+  const assignedIds =
+    viewer.role === "MANAGER" ? new Set(assignedMembers.map((member) => member.id)) : null;
+  const pending = assignedIds ? allPending.filter((row) => assignedIds.has(row.id)) : allPending;
+  const evals = assignedIds ? allEvals.filter((row) => assignedIds.has(row.employeeId)) : allEvals;
   const stale = staleCycles.find((c) => c.cycleId === selected.id);
   const submitted = pending.filter((p) => p.status === "submitted");
   const notSubmitted = pending.filter((p) => p.status !== "submitted");
@@ -58,22 +63,20 @@ export default async function ManagerCycles({
       <SectionHeading>期間を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {cycles.map((c) => (
-          <Link
+          <ChipLink
             key={c.id}
-            href={`/manager/cycles?cycle=${c.id}`}
-            className="chip"
-            aria-current={c.id === selected.id ? "true" : undefined}
+            href={`/manager/cycles?cycle=${c.id}`} current={c.id === selected.id}
           >
             {c.name}
-          </Link>
+          </ChipLink>
         ))}
       </div>
 
       <Card className="card-pad hero-tint">
-        <p className="m-0 text-note text-[var(--ink-muted)]">
+        <p className="m-0 text-note text-ink-muted">
           {formatPeriod(selected.periodStart, selected.periodEnd)} ／ {CYCLE_STATUS_LABEL[selected.status] ?? selected.status}
         </p>
-        <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
+        <p className="num-display m-0 text-hero-sp leading-tight text-accent">
           {submitted.length}
           <span className="unit"> / {pending.length} 人が提出済み</span>
         </p>
@@ -209,7 +212,7 @@ function EvaluationRow({
   return (
     <CardRow
       title={
-        <Link href={`/manager/evaluations/${e.id}`} className="text-[var(--brand-deep)]">
+        <Link href={`/manager/evaluations/${e.id}`} className="text-brand-deep">
           {e.employeeName}
         </Link>
       }

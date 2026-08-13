@@ -3,6 +3,8 @@ import { canEditForm, canSeeCriteria, requireViewer } from "@/lib/session";
 import { getForm, listFormQuestions } from "@/lib/queries";
 import { toContentQuestions } from "@/lib/domain/form-visibility";
 import { canAnswerForm } from "@/lib/domain/form-entry";
+import { judgeFormDeadline } from "@/lib/domain/form-deadline";
+import { listActiveExtensions } from "@/lib/response-access";
 import { FormPreview } from "@/components/FormPreview";
 import { Badge, Card, InlineDetail, LinkButton, PageTitle, ReasonNote } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
@@ -33,7 +35,15 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
 
   // 回答できる人には回答画面への入口を出す。できない人には、その理由をここで伝える
   // （回答用のURLを踏んだ人もこの画面に着くため、行き止まりにしない）。
-  const canAnswer = canAnswerForm(viewer.gradeId, form.gradeId) && form.status === "published";
+  const judgement = judgeFormDeadline({
+    cycleStatus: form.cycleStatus ?? "unknown",
+    status: form.status,
+    opensAt: form.opensAt,
+    closesAt: form.closesAt,
+    extensions: await listActiveExtensions(form.id, viewer.id),
+    now: new Date(),
+  });
+  const canAnswer = canAnswerForm(viewer.gradeId, form.gradeId) && judgement.canAnswer;
   const otherGrade = viewer.gradeId !== null && !canAnswerForm(viewer.gradeId, form.gradeId);
 
   return (
@@ -79,6 +89,14 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
           <ReasonNote action={<LinkButton href="/me/forms">自分のアンケートを見る</LinkButton>}>
             このアンケートは別の等級（{form.gradeName ?? "—"}）の方向けです。中身は確認できますが、回答はできません。
             ご自身の等級のアンケートは「実績を報告する」から開けます。
+          </ReasonNote>
+        </div>
+      )}
+
+      {!otherGrade && !judgement.canAnswer && form.status !== "draft" && (
+        <div className="mb-4">
+          <ReasonNote action={<LinkButton href="/me/forms">自分のアンケートを見る</LinkButton>}>
+            {judgement.message}
           </ReasonNote>
         </div>
       )}

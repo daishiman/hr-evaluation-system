@@ -803,3 +803,146 @@ describe("長い文が来ても読める形で折り返る", () => {
     expect(uses).toEqual([]);
   });
 });
+
+describe("色と選択肢の見た目は1箇所で決める（画面に直書きしない）", () => {
+  /* 依頼の発端は「場所によってボタンの色が違う」「背景の色が規約から外れている」。
+     原因は、同じ色を書く道が2つあったこと（意味の名前と、任意値 text-[var(--…)]）と、
+     同じ役目の部品が画面ごとに手書きされていたこと。
+     この節は「2つ目の道を作らない」ことだけを縛る。 */
+
+  const UI = join(SRC, "components", "ui.tsx");
+  const screens = sourceFiles.filter((p) => p !== UI);
+
+  it("色は意味の名前で書く（任意値 text-[var(--…)] を残さない）", () => {
+    /* 任意値で書くと、同じ色に2つの書き方が並び立つ。
+       どちらが正しいか読む側に判断させないため、意味の名前（text-ink-muted 等）へ寄せる。
+       名前は globals.css の @theme inline が作る。 */
+    const offenders = sourceFiles.filter((p) => /-\[var\(--/.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("色そのもの（#rrggbb・rgb()・hsl()）を画面に書かない", () => {
+    const offenders = sourceFiles.filter((p) => /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("Tailwind の色見本（bg-white・text-gray-500 など）を使わない", () => {
+    const palette =
+      /\b(bg|text|border|ring|fill|stroke)-(white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)\b/;
+    const offenders = sourceFiles.filter((p) => palette.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("並べて1つ選ぶスイッチ（.segmented）は Segmented だけが書く", () => {
+    /* 以前は2択用と明るさ切替用の2つのCSSがあり、角丸と hover が食い違っていた。
+       CSSを1つに統合したので、書く場所も1つに固定する。 */
+    const offenders = screens.filter((p) => /"[^"]*\bsegmented\b/.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+    const ui = readFileSync(UI, "utf8");
+    expect(ui).toContain("export function Segmented");
+    // 選択中がどれかを、見た目だけでなく読み上げにも伝える
+    expect(ui).toMatch(/className="segmented-btn"[\s\S]{0,200}aria-pressed=/);
+  });
+
+  it("押して選ぶ小さな札（.chip）は ChoiceChip / ChipLink / ChipTag だけが書く", () => {
+    /* 同じ chip が「押して絞り込む」「別の画面へ行く」「ただ表示する」の3役に使われ、
+       画面ごとに aria-pressed や aria-current が付いたり付かなかったりしていた。 */
+    const offenders = screens.filter((p) => /className="chip"|className=\{`chip/.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+    const ui = readFileSync(UI, "utf8");
+    for (const name of ["ChoiceChip", "ChipLink", "ChipTag"]) {
+      expect(ui).toContain(`export function ${name}`);
+    }
+  });
+
+  it("選んで積み上げる大きめの選択肢（.option-card）は OptionCard / OptionCheck だけが書く", () => {
+    /* 選択肢のカードは2つの画面で5回書き起こされ、hover の有無が食い違っていた。
+       SchemeGroupPicker の「選んだ結果を並べる箱」だけは押せない表示用のため、
+       同じ面を使いつつ押せる見た目（cursor・hover）はCSS側で除いている。 */
+    const allowed = new Set(["SchemeGroupPicker.tsx"]);
+    const offenders = screens.filter(
+      (p) => !allowed.has(p.split("/").pop() ?? "") && /"[^"]*\boption-card\b/.test(readFileSync(p, "utf8")),
+    );
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+    const ui = readFileSync(UI, "utf8");
+    expect(ui).toContain("export function OptionCard");
+    expect(ui).toContain("export function OptionCheck");
+  });
+
+  it("押せる見た目は、実際に押せるものだけに付く", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    // .option-card は表示だけの箱にも使うため、指の形と hover は button / label に限定する
+    expect(css).toContain(":where(button, label).option-card { cursor: pointer; }");
+    expect(css).toMatch(/:where\(button, label\)\.option-card:hover:not\(:disabled\)/);
+  });
+
+  it("消えた古い書き方（.switch-2 / .theme-switch）が残っていない", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    // 経緯を書いたコメントには名前が残ってよい。縛るのは「セレクタとして生きていないこと」。
+    expect(css).not.toMatch(/^\s*\.(switch-2|theme-switch)[\s{,]/m);
+    const offenders = sourceFiles.filter((p) => /switch-2|theme-switch/.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("意味の名前は @theme inline で作られている（クラス名だけあって色が出ない、を防ぐ）", () => {
+    /* Tailwind v4 では、CSS変数を宣言しただけでは text-ink-muted は生まれない。
+       @theme inline に橋渡しを書き忘れると、クラスは付いているのに色が付かない
+       （＝「この画面だけ見た目が反映されていない」に見える）。 */
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const bridge = css.slice(css.indexOf("@theme inline {"));
+    const block = bridge.slice(0, bridge.indexOf("}"));
+    for (const name of [
+      "brand", "brand-deep", "brand-soft", "accent", "ink", "ink-muted", "line", "subtle",
+      "danger", "danger-soft", "danger-fg", "caution-soft", "caution-border",
+      "page-bg", "surface", "off-surface", "off-surface-soft", "off-line",
+      "cta-bg", "cta-fg", "status-progress",
+    ]) {
+      expect(block).toContain(`--color-${name}: var(--${name});`);
+    }
+  });
+
+  it("行の中の小さな操作（項目名・行の操作・見せ隠し）は ui.tsx だけが書く", () => {
+    /* btn を当てると行の高さが押し広がるため、この3つだけは専用の見た目を持つ。
+       専用であるぶん、画面ごとに書き起こすと押せる状態の伝え方（aria-*）が
+       そこだけ抜ける。実際、同じ項目名の組み方が2画面で書かれており、
+       開いているときに矢印を反転させる指定が片方だけ抜けかけていた。 */
+    const offenders = screens.filter((p) =>
+      /className="(profile-row-label|profile-row-action|field-toggle)"/.test(readFileSync(p, "utf8")),
+    );
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+    const ui = readFileSync(UI, "utf8");
+    for (const name of ["HintToggle", "RowAction", "RevealToggle"]) {
+      expect(ui).toContain(`export function ${name}`);
+    }
+  });
+
+  it("開くもの・押すもの・見せ隠しで、状態の伝え方を取り違えない", () => {
+    /* 見た目が似ていても意味は別物。1つの部品にまとめると混ざるので、
+       それぞれが正しい属性を持っていることを固定する。 */
+    const ui = readFileSync(UI, "utf8");
+    /* 1つの部品の範囲は「宣言から、次の宣言の手前まで」で切り出す。
+       関数の閉じ括弧で切ると、引数の型定義の } に先に当たって範囲が空になる。 */
+    const bodyOf = (name: string) => {
+      const from = ui.indexOf(`export function ${name}`);
+      const rest = ui.slice(from + 1);
+      const next = rest.indexOf("\nexport ");
+      return next < 0 ? rest : rest.slice(0, next);
+    };
+    // 補足を開く＝開閉。押した状態（aria-pressed）ではない
+    expect(bodyOf("HintToggle")).toContain("aria-expanded={open}");
+    // 見せ隠し＝押した状態。かつ、どの欄かを読み上げへ伝える
+    const reveal = bodyOf("RevealToggle");
+    expect(reveal).toContain("aria-pressed={visible}");
+    expect(reveal).toMatch(/aria-label=\{`\$\{label\}を/);
+    // 欄の名前は省略できない（「表示する」だけでは、どの欄か分からない）
+    expect(reveal).not.toContain("label?:");
+  });
+
+  it("本文の幅と余白は globals.css だけが決める（画面ごとに max-w-* を書かない）", () => {
+    /* main の幅は 1箇所（.app-main / main）に置いてある。
+       画面側で max-w-md などを足すと、その画面だけ余白の作法が変わる。 */
+    const pages = sourceFiles.filter((p) => p.endsWith("page.tsx"));
+    const offenders = pages.filter((p) => /<main[^>]*max-w-/s.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+});

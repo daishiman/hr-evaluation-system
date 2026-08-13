@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { canViewEmployee, requireViewer } from "@/lib/session";
+import { requireViewer } from "@/lib/session";
+import { canReadResponseBody } from "@/lib/domain/evaluation-authority";
 import { getResponseDetail } from "@/lib/response-access";
 import { ResponseSnapshot } from "@/components/ResponseSnapshot";
 import { Card, DefList, PageTitle, ReasonNote } from "@/components/ui";
@@ -22,7 +23,14 @@ export default async function ResponsePage({ params }: { params: Promise<{ id: s
   const detail = await getResponseDetail(viewer.companyId, id);
   if (!detail) notFound();
 
-  if (!(await canViewEmployee(viewer, detail.response.employeeId))) {
+  if (
+    !canReadResponseBody(
+      viewer.id,
+      viewer.role,
+      { employeeId: detail.response.employeeId, managerId: detail.response.managerId },
+      detail.response.status,
+    )
+  ) {
     return (
       <>
         <PageTitle title="この回答は開けません" />

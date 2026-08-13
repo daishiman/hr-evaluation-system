@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, CardHead, ReasonNote, SectionHeading } from "@/components/ui";
+import { Button, Card, CardHead, ChoiceChip, OptionCard, OptionCheck, ReasonNote, SectionHeading } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { NumberField } from "@/components/NumberField";
@@ -251,11 +251,11 @@ export function FormAnswer({
       <StickyActionBar
         status={
           <>
-            <span className="text-sub text-[var(--ink)]">
+            <span className="text-sub text-ink">
               入力できた項目 <span className="num font-bold">{answeredCount}</span>
               <span className="unit"> / {questions.length}</span>
             </span>
-            <span className="mx-2 text-[var(--line)]">|</span>
+            <span className="mx-2 text-line">|</span>
             {saving
               ? "保存しています…"
               : savedAt
@@ -319,15 +319,13 @@ function QuestionField({
       return (
         <div className="mt-2 flex flex-wrap gap-2" id={`f_${q.id}`} tabIndex={-1}>
           {yesNo.map((o) => (
-            <button
+            <ChoiceChip
               key={o.v}
-              type="button"
-              className="chip"
-              aria-pressed={current === o.v}
+              selected={current === o.v}
               onClick={() => onChange({ valueNumber: o.v, valueText: o.label, valueChoices: null })}
             >
               {o.label}
-            </button>
+            </ChoiceChip>
           ))}
         </div>
       );
@@ -343,28 +341,19 @@ function QuestionField({
             options.map((o) => {
               const on = chosen.includes(o.value);
               return (
-                <label
+                <OptionCheck
                   key={o.value}
-                  className={
-                    on
-                      ? "flex w-full items-center gap-2 rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-sub"
-                      : "flex w-full items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sub hover:border-[var(--brand)]"
-                  }
-                >
-                  <input
-                    type="checkbox"
-                    checked={on}
-                    onChange={(e) => {
-                      const next = e.target.checked ? [...chosen, o.value] : chosen.filter((v) => v !== o.value);
-                      onChange({
-                        valueChoices: next,
-                        valueNumber: null,
-                        valueText: next.map((v) => options.find((x) => x.value === v)?.label ?? v).join("、") || null,
-                      });
-                    }}
-                  />
-                  {o.label}
-                </label>
+                  label={o.label}
+                  checked={on}
+                  onToggle={(checked) => {
+                    const next = checked ? [...chosen, o.value] : chosen.filter((v) => v !== o.value);
+                    onChange({
+                      valueChoices: next,
+                      valueNumber: null,
+                      valueText: next.map((v) => options.find((x) => x.value === v)?.label ?? v).join("、") || null,
+                    });
+                  }}
+                />
               );
             })
           )}
@@ -393,15 +382,13 @@ function QuestionField({
       return (
         <div className="mt-2 flex flex-wrap gap-2" id={`f_${q.id}`} tabIndex={-1}>
           {scaleSteps(q).map((n) => (
-            <button
+            <ChoiceChip
               key={n}
-              type="button"
-              className="chip"
-              aria-pressed={current === n}
+              selected={current === n}
               onClick={() => onChange({ valueNumber: n, valueText: String(n), valueChoices: null })}
             >
               {n}
-            </button>
+            </ChoiceChip>
           ))}
         </div>
       );
@@ -411,19 +398,12 @@ function QuestionField({
       return (
         <div className="mt-2 space-y-1" id={`f_${q.id}`} tabIndex={-1}>
           {options.map((o) => (
-            <button
+            <OptionCard
               key={o.value}
-              type="button"
-              className={
-                current === (o.score ?? Number(o.value))
-                  ? "block w-full rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-sub"
-                  : "block w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
-              }
-              aria-pressed={current === (o.score ?? Number(o.value))}
+              title={o.label}
+              selected={current === (o.score ?? Number(o.value))}
               onClick={() => onChange({ valueNumber: o.score ?? Number(o.value), valueText: o.label, valueChoices: null })}
-            >
-              {o.label}
-            </button>
+            />
           ))}
         </div>
       );

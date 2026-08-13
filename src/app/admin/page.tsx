@@ -12,7 +12,6 @@ import {
   listPromotionRequirements,
   listPromotionThresholds,
   listRaiseSettings,
-  listSchemeItems,
 } from "@/lib/queries";
 import { listPendingRespondents } from "@/lib/evaluate";
 import { listStalledEvaluations } from "@/lib/stalled";
@@ -20,6 +19,7 @@ import { listSelfLockedEvaluations } from "@/lib/self-locked";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
 import { EmptyState } from "@/components/ui";
 import { AdminDashboard } from "./AdminDashboard";
+import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -64,11 +64,11 @@ export default async function AdminHome() {
   // 開いている期間を運用対象にする。無ければ直近の期間を、履歴の文脈として表示する。
   const openCycle = cycles.find((cycle) => cycle.status === "open") ?? null;
   const shownCycle = openCycle ?? cycles[0] ?? null;
-  const [pending, evaluations, forms, schemeItems, stalled, selfLocked] = await Promise.all([
+  const [pending, evaluations, forms, schemeReadiness, stalled, selfLocked] = await Promise.all([
     shownCycle ? listPendingRespondents(companyId, shownCycle.id) : Promise.resolve([]),
     shownCycle ? listEvaluations(companyId, viewer.role, { cycleId: shownCycle.id }) : Promise.resolve([]),
     shownCycle ? listForms(companyId, shownCycle.id) : Promise.resolve([]),
-    scheme ? listSchemeItems(companyId, scheme.id) : Promise.resolve([]),
+    loadSchemeReadiness(companyId, scheme?.id ?? null),
     // 締め切った期間に残っている分。上の集計は1期ぶんしか見ないので、別に読む。
     listStalledEvaluations(companyId),
     // 頼める上長がいないまま確定できていない分。期の状態は問わない。
@@ -89,7 +89,8 @@ export default async function AdminHome() {
         behaviorAppliedGradeCount: grades.filter((row) => row.isActive && Boolean(row.behaviorBand)).length,
         kpiItemCount: kpiItems.length,
         hasActiveScheme: scheme !== null,
-        schemeItemCount: schemeItems.length,
+        schemeItemCount: schemeReadiness.groups.reduce((sum, group) => sum + group.progress.selectedCount, 0),
+        schemeReady: schemeReadiness.schemeReady,
         cycleCount: cycles.length,
         cycle: shownCycle
           ? {

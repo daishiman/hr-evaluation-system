@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireRole, ROLE_LABEL, type Role } from "@/lib/session";
 import { listAllUsers, listCompanies } from "@/lib/queries";
-import { Card, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+import { Card, ChipLink, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
@@ -34,11 +34,11 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
 
       {/* 全体像は数字だけ。誰が何人いるかを一行で掴ませる */}
       <Card className="card-pad hero-tint">
-        <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
+        <p className="num-display m-0 text-hero-sp leading-tight text-accent">
           {scoped.filter((u) => u.isActive).length}
           <span className="unit"> / {scoped.length} 人が利用中</span>
         </p>
-        <p className="m-0 mt-2 text-sub text-[var(--ink-muted)]">
+        <p className="m-0 mt-2 text-sub text-ink-muted">
           {countLabel("SUPER_ADMIN")}人 ／ {countLabel("COMPANY_ADMIN")}人 ／ {countLabel("MANAGER")}人 ／{" "}
           {countLabel("EMPLOYEE")}人
         </p>
@@ -93,17 +93,17 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
 
       <SectionHeading>会社でしぼる</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
-        <Link href="/system/users" className="chip" aria-current={scope === "" ? "true" : undefined}>
+        <ChipLink href="/system/users" current={scope === ""}>
           すべて（{all.length}）
-        </Link>
+        </ChipLink>
         {companies.map((c) => (
-          <Link key={c.id} href={`/system/users?company=${c.id}`} className="chip" aria-current={scope === c.id ? "true" : undefined}>
+          <ChipLink key={c.id} href={`/system/users?company=${c.id}`} current={scope === c.id}>
             {c.name}（{all.filter((u) => u.companyId === c.id).length}）
-          </Link>
+          </ChipLink>
         ))}
-        <Link href="/system/users?company=none" className="chip" aria-current={scope === "none" ? "true" : undefined}>
+        <ChipLink href="/system/users?company=none" current={scope === "none"}>
           会社に属さない（{all.filter((u) => !u.companyId).length}）
-        </Link>
+        </ChipLink>
       </div>
 
       <SectionHeading aside={<span className="footnote">名前を押すと変更できます</span>}>
@@ -126,11 +126,11 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
             >
               <Avatar name={u.name} seed={u.id} size={36} />
               <div className="min-w-0 flex-1">
-                <p className="m-0 truncate text-body font-semibold text-[var(--ink)]">
+                <p className="m-0 truncate text-body font-semibold text-ink">
                   {u.name}
                   {!u.isActive && <span className="ml-2 badge badge-closed">利用停止</span>}
                 </p>
-                <p className="m-0 truncate text-note text-[var(--ink-muted)]">{u.email}</p>
+                <p className="m-0 truncate text-note text-ink-muted">{u.email}</p>
               </div>
               <span className="user-row-tags">
                 <span className="tag">

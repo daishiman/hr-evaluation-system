@@ -82,7 +82,7 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
   return (
     <div className="stack">
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 text-sub text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 text-sub text-brand-deep">{message}</p>}
 
       {categories.map((c) => {
         const mark = blockedMark(usedByOf(c.id));
@@ -122,7 +122,7 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
           </div>
         ) : (
           <>
-            <label className="block text-note text-[var(--ink-muted)]">
+            <label className="block text-note text-ink-muted">
               カテゴリの名前
               <input
                 value={newName}

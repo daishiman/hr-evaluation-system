@@ -109,6 +109,33 @@ describe("計算式そのものが手に負えない場合", () => {
 });
 
 describe("保存の途中で、理由の分からない止まり方をした場合", () => {
+  it("子行の保存が失敗したら、作り直す前の評価と根拠を丸ごと保持する", async () => {
+    await seedCompany(current);
+    await seedResponse(current, questions());
+    const first = await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
+    expect(first[0].ok).toBe(true);
+
+    const [before] = await current.db.select().from(s.evaluations);
+    const itemsBefore = await current.db.select().from(s.evaluationItems);
+    current.raw.exec(`
+      CREATE TRIGGER fail_evaluation_item_insert
+      BEFORE INSERT ON evaluation_items
+      BEGIN
+        SELECT RAISE(FAIL, 'child insert failed');
+      END;
+    `);
+
+    const out = await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
+    expect(out[0].ok).toBe(false);
+    expect(out[0].message).toContain("child insert failed");
+
+    const [after] = await current.db.select().from(s.evaluations);
+    const itemsAfter = await current.db.select().from(s.evaluationItems);
+    expect(after.id).toBe(before.id);
+    expect(after.computedAt?.getTime()).toBe(before.computedAt?.getTime());
+    expect(itemsAfter.map((item) => item.id)).toEqual(itemsBefore.map((item) => item.id));
+  });
+
   /**
    * データベース側が「文章になっていないもの」を投げてくることがありうる。
    * そのときも、その人だけを失敗として残し、ほかの人の集計は続ける。

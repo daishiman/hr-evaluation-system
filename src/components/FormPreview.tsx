@@ -1,4 +1,4 @@
-import { Card, SectionHeading } from "@/components/ui";
+import { Card, ChipTag, SectionHeading } from "@/components/ui";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { parseOptions, scaleSteps } from "@/lib/domain/answer-snapshot";
 
@@ -80,9 +80,9 @@ function answerShape(q: PreviewQuestion) {
     return (
       <div className="flex flex-wrap gap-2">
         {labels.map((label, index) => (
-          <span key={`${index}:${label}`} className="chip">
+          <ChipTag key={`${index}:${label}`}>
             {label}
-          </span>
+          </ChipTag>
         ))}
         <span className="footnote self-center">から1つ選びます</span>
       </div>
@@ -94,9 +94,9 @@ function answerShape(q: PreviewQuestion) {
     return (
       <div className="flex flex-wrap gap-2">
         {options.map((option, index) => (
-          <span key={`${index}:${option.value}`} className="chip">
+          <ChipTag key={`${index}:${option.value}`}>
             {option.label}
-          </span>
+          </ChipTag>
         ))}
         <span className="footnote self-center">
           {q.questionType === "multi" ? "から、当てはまるものをいくつでも選びます" : "から1つ選びます"}
@@ -112,9 +112,9 @@ function answerShape(q: PreviewQuestion) {
       return (
         <div className="flex flex-wrap gap-2">
           {options.map((option, index) => (
-            <span key={`${index}:${option.value}`} className="chip">
+            <ChipTag key={`${index}:${option.value}`}>
               {option.label}
-            </span>
+            </ChipTag>
           ))}
           <span className="footnote self-center">から1つ選びます</span>
         </div>
@@ -123,9 +123,9 @@ function answerShape(q: PreviewQuestion) {
     return (
       <div className="flex flex-wrap gap-2">
         {scaleSteps(q).map((step) => (
-          <span key={step} className="chip">
+          <ChipTag key={step}>
             {step}
-          </span>
+          </ChipTag>
         ))}
         <span className="footnote self-center">から1つ選びます</span>
       </div>

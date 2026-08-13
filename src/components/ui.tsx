@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { clsx } from "clsx";
+import { Icon, type IconName } from "@/components/Icon";
 
 /* ───────────────────────── ボタン ───────────────────────── */
 
@@ -37,6 +38,228 @@ export function DownloadButton({
   ...rest
 }: ComponentProps<"a"> & { variant?: ButtonVariant }) {
   return <a className={clsx("btn", `btn-${variant}`, className)} {...rest} />;
+}
+
+/* ───────────────────────── 選ぶ ─────────────────────────
+ *
+ * 「選ぶ」の見た目は3つだけ。用途で使い分け、画面ごとに書き起こさない。
+ *
+ *   Segmented   … 2〜3個から1つ。選んだものがそのまま状態表示になる（設定・表示切替）
+ *   ChoiceChip  … 短い語の選択肢を横に並べる（はい/いいえ・段階・期間の絞り込み）
+ *   OptionCard  … 名前＋補足の2行を持つ、縦に積む選択肢（評価項目・回答の選択肢）
+ *
+ * どれも「押せるもの」なので button で作る。色・枠・押せる大きさは
+ * globals.css の .segmented / .chip / .option-card が唯一の正本。
+ */
+
+/**
+ * 並べて1つ選ぶスイッチ。
+ *
+ * 選択肢は2〜3個まで。それ以上は ChoiceChip か通常の選択欄にする
+ * （横に伸びて狭い画面からはみ出す）。
+ */
+export function Segmented<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  disabled,
+}: {
+  /** 何を選ぶまとまりなのかを読み上げに渡す（見た目には出ない）。 */
+  label: string;
+  options: { value: T; label: ReactNode; /** 読み上げ用に、札の文字だけでは足りないときの言い換え。 */ srLabel?: string }[];
+  value: T;
+  onChange: (next: T) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="segmented" role="group" aria-label={label}>
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          className="segmented-btn"
+          aria-pressed={value === o.value}
+          aria-label={o.srLabel}
+          disabled={disabled}
+          onClick={() => onChange(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 押して選ぶ短い札。選択中は `aria-pressed`（＝見た目も塗りも1箇所で決まる）。
+ * 「選ぶ」ではなく「移動する」ものにはリンク（LinkButton）を使う。
+ */
+export function ChoiceChip({
+  selected,
+  className,
+  ...rest
+}: Omit<ComponentProps<"button">, "type" | "aria-pressed"> & { selected?: boolean }) {
+  return <button type="button" className={clsx("chip", className)} aria-pressed={selected} {...rest} />;
+}
+
+/**
+ * 押すと画面が切り替わる札（期間・等級・会社の絞り込み）。
+ *
+ * 見た目は ChoiceChip と同じだが、こちらは URL が変わる＝リンク。
+ * いま見ているものは `aria-current="true"` で示す（押して選ぶ札の
+ * `aria-pressed` とは別の意味なので、部品を分けている）。
+ */
+export function ChipLink({
+  current,
+  className,
+  ...rest
+}: ComponentProps<typeof Link> & { current?: boolean }) {
+  return <Link className={clsx("chip", className)} aria-current={current ? "true" : undefined} {...rest} />;
+}
+
+/** 読むだけの札（回答の選択肢の下書き表示など）。押せる見た目を与えない。 */
+export function ChipTag({ children }: { children: ReactNode }) {
+  return <span className="chip">{children}</span>;
+}
+
+/**
+ * 名前＋補足の2行を持つ、縦に積む選択肢（1つだけ選ぶ）。
+ *
+ * 以前は「rounded-lg border border-… bg-… px-3 py-2」という同じ並びが
+ * 回答画面と評価項目の選択で書き起こされており、hover の有無が食い違っていた。
+ */
+export function OptionCard({
+  title,
+  sub,
+  selected,
+  className,
+  ...rest
+}: Omit<ComponentProps<"button">, "type" | "aria-pressed" | "title"> & {
+  title: ReactNode;
+  sub?: ReactNode;
+  selected?: boolean;
+}) {
+  return (
+    <button type="button" className={clsx("option-card", className)} aria-pressed={selected} {...rest}>
+      <span className="option-card-title">{title}</span>
+      {sub && <span className="option-card-sub">{sub}</span>}
+    </button>
+  );
+}
+
+/**
+ * いくつでも選べる形の選択肢。見た目は OptionCard と同じで、選ぶ手段だけが
+ * チェックボックスになる（button には複数選択の意味を持たせられないため）。
+ */
+export function OptionCheck({
+  label,
+  checked,
+  onToggle,
+  disabled,
+}: {
+  label: ReactNode;
+  checked: boolean;
+  onToggle: (next: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="option-card option-card-check" data-on={checked ? "true" : undefined}>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onToggle(e.target.checked)} />
+      {label}
+    </label>
+  );
+}
+
+/* ───────────────────── 行の中の小さな操作 ─────────────────────
+ *
+ * 本文の脇に置く、控えめな押しどころ。btn（44px の押せる面）を当てると
+ * 行の高さが押し広がり、一覧としての読みやすさが落ちるため専用の見た目を持つ。
+ * ただし「専用」はこの3つだけで、画面ごとに書き起こさない。
+ *
+ *   HintToggle   … 項目名を押すと補足が開く（自分の情報・公開範囲の設定）
+ *   RowAction    … 行の右端に置く操作（変える）
+ *   RevealToggle … 隠してある入力を見せる／隠す（パスワード）
+ *
+ * 見た目の正本は globals.css の .profile-row-label / .profile-row-action /
+ * .field-toggle。押せる状態の伝え方（aria-*）はここが唯一の正本。
+ */
+
+/**
+ * 押すと補足が開く項目名。
+ *
+ * 以前は「自分の情報」と「公開範囲の設定」で同じ組み方が2回書かれており、
+ * 開いているときに矢印を反転させる指定が、片方だけ抜け落ちかけていた。
+ */
+export function HintToggle({
+  open,
+  controls,
+  children,
+  ...rest
+}: Omit<ComponentProps<"button">, "type" | "aria-expanded" | "aria-controls"> & {
+  open: boolean;
+  /** 開いた先の補足に id があるとき、読み上げへ対応関係を伝える。 */
+  controls?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className="profile-row-label"
+      aria-expanded={open}
+      aria-controls={open ? controls : undefined}
+      {...rest}
+    >
+      {children}
+      <Icon name="chevron" size={12} className={open ? "rot-180" : undefined} />
+    </button>
+  );
+}
+
+/** 一覧の行の右端に置く操作。印と短い動詞を対で出す。 */
+export function RowAction({
+  icon,
+  children,
+  ...rest
+}: Omit<ComponentProps<"button">, "type"> & { icon: IconName }) {
+  return (
+    <button type="button" className="profile-row-action" {...rest}>
+      <Icon name={icon} size={14} />
+      {children}
+    </button>
+  );
+}
+
+/**
+ * 隠してある入力（パスワード）の中身を見せる／隠す。
+ *
+ * 「表示する」の4文字だけでは、読み上げでどの欄のことか分からない。
+ * 欄の名前を必ず受け取り、読み上げ用の文をここで組み立てる。
+ */
+export function RevealToggle({
+  label,
+  controls,
+  visible,
+  onToggle,
+}: {
+  /** 対象の欄の名前（「今のパスワード」など）。 */
+  label: string;
+  /** 見せ隠しする入力欄の id。 */
+  controls: string;
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="field-toggle"
+      aria-pressed={visible}
+      aria-controls={controls}
+      aria-label={`${label}を${visible ? "隠す" : "表示する"}`}
+      onClick={onToggle}
+    >
+      {visible ? "隠す" : "表示する"}
+    </button>
+  );
 }
 
 /* ───────────────────────── バッジ ─────────────────────────
@@ -76,7 +299,7 @@ export function Num({
   className?: string;
 }) {
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return <span className="text-[var(--ink-muted)]">—</span>;
+    return <span className="text-ink-muted">—</span>;
   }
   const parts = nf.format(value).split(",");
   return (
@@ -394,7 +617,7 @@ export function Bar({ value, max, label }: { value: number; max: number; label?:
       <div className="bar-track" role="img" aria-label={`${label ?? "達成度"} ${max}中 ${value}`}>
         <div className="bar-fill" style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-1 text-note text-[var(--ink-muted)]">
+      <p className="mt-1 text-note text-ink-muted">
         <Num value={value} /> / <Num value={max} />
         {label ? ` ${label}` : ""}
       </p>
@@ -618,8 +841,8 @@ export function RankMark({ rank }: { rank: string | null }) {
       className={clsx(
         "num inline-flex h-6 w-6 items-center justify-center rounded-full border text-note font-bold",
         strong
-          ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]"
-          : "border-[var(--line)] bg-[var(--subtle)] text-[var(--ink-muted)]",
+          ? "border-brand bg-brand-soft text-brand-deep"
+          : "border-line bg-subtle text-ink-muted",
       )}
       aria-label={rank ? `ランク ${rank}` : "実績が未入力のため判定外"}
     >

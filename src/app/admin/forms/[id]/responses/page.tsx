@@ -49,6 +49,7 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
      優先順位の理由は appOrigin() 側に書いてある。 */
   const origin = await appOrigin();
   const judgement = judgeFormDeadline({
+    cycleStatus: form.cycleStatus ?? "unknown",
     status: form.status,
     opensAt: form.opensAt,
     closesAt: form.closesAt,
@@ -149,7 +150,7 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
               role: "title",
               cell: (r) => (
                 r.responseId ? (
-                  <Link href={`/me/responses/${r.responseId}`} className="text-[var(--brand-deep)]">
+                  <Link href={`/me/responses/${r.responseId}`} className="text-brand-deep">
                     {r.name}
                   </Link>
                 ) : (

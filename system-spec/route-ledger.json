@@ -1,0 +1,170 @@
+{
+  "$schemaNote": "42個の page.tsx の正本台帳。各routeはaccessClassの全state×4roleを、375/768/1280/1600pxの全幅で検証する。",
+  "widths": [375, 768, 1280, 1600],
+  "outcomeMeaning": {
+    "200": "目的を完了できる画面、または状態理由と復帰先を示す画面を表示する",
+    "redirect": "HTTP redirectでログイン・ホーム・確認専用画面などへ送る",
+    "notFound": "対象の不存在・他社・担当外を区別せず404にする",
+    "denied": "HTTP 200の権限不足画面で本文を出さず、理由と復帰先だけを示す"
+  },
+  "accessClasses": {
+    "rootRouter": {
+      "states": {
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "signedIn": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "login": {
+      "states": {
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "200" } },
+        "signedIn": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "selfStatic": {
+      "states": {
+        "signedIn": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "200" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "formContent": {
+      "states": {
+        "ownCompanyExists": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "200" } },
+        "missingOrWrongCompany": { "expectedByRole": { "SUPER_ADMIN": "notFound", "COMPANY_ADMIN": "notFound", "MANAGER": "notFound", "EMPLOYEE": "notFound" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "selfForm": {
+      "states": {
+        "eligibleOrPriorResponse": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "200" } },
+        "otherGradeWithoutPriorResponse": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "missingOrWrongCompany": { "expectedByRole": { "SUPER_ADMIN": "notFound", "COMPANY_ADMIN": "notFound", "MANAGER": "notFound", "EMPLOYEE": "notFound" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "selfResponse": {
+      "states": {
+        "ownerAnyStatus": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "200" } },
+        "submittedDirectReport": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "denied" } },
+        "submittedNotDirectReport": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "denied", "EMPLOYEE": "denied" } },
+        "draftNotOwner": { "expectedByRole": { "SUPER_ADMIN": "denied", "COMPANY_ADMIN": "denied", "MANAGER": "denied", "EMPLOYEE": "denied" } },
+        "missingOrWrongCompany": { "expectedByRole": { "SUPER_ADMIN": "notFound", "COMPANY_ADMIN": "notFound", "MANAGER": "notFound", "EMPLOYEE": "notFound" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "selfResult": {
+      "states": {
+        "ownerFinalized": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "200" } },
+        "ownerDraftOrOtherPerson": { "expectedByRole": { "SUPER_ADMIN": "notFound", "COMPANY_ADMIN": "notFound", "MANAGER": "notFound", "EMPLOYEE": "notFound" } },
+        "missingOrWrongCompany": { "expectedByRole": { "SUPER_ADMIN": "notFound", "COMPANY_ADMIN": "notFound", "MANAGER": "notFound", "EMPLOYEE": "notFound" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "managerStatic": {
+      "states": {
+        "signedIn": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "redirect" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "managerMemberSubject": {
+      "states": {
+        "selfOrDirectReport": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "redirect" } },
+        "otherEmployee": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "notFound", "EMPLOYEE": "redirect" } },
+        "missingOrWrongCompany": { "expectedByRole": { "SUPER_ADMIN": "notFound", "COMPANY_ADMIN": "notFound", "MANAGER": "notFound", "EMPLOYEE": "redirect" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "managerEvaluationSubject": {
+      "states": {
+        "directReport": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "redirect" } },
+        "selfOrNotDirectReport": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "notFound", "EMPLOYEE": "redirect" } },
+        "missingOrWrongCompany": { "expectedByRole": { "SUPER_ADMIN": "notFound", "COMPANY_ADMIN": "notFound", "MANAGER": "notFound", "EMPLOYEE": "redirect" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "companyAdminStatic": {
+      "states": {
+        "signedIn": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "companyAdminSubject": {
+      "states": {
+        "ownCompanyExists": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "missingOrWrongCompany": { "expectedByRole": { "SUPER_ADMIN": "notFound", "COMPANY_ADMIN": "notFound", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "superStatic": {
+      "states": {
+        "signedIn": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "superSubject": {
+      "states": {
+        "exists": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "missing": { "expectedByRole": { "SUPER_ADMIN": "notFound", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "publicToken": {
+      "states": {
+        "eligibleOrPriorResponse": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "otherGrade": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "notAnswerableWithoutPriorResponse": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "200" } },
+        "invalidOrWrongCompany": { "expectedByRole": { "SUPER_ADMIN": "200", "COMPANY_ADMIN": "200", "MANAGER": "200", "EMPLOYEE": "200" } },
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    },
+    "legacyRedirect": {
+      "states": {
+        "anonymous": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } },
+        "signedIn": { "expectedByRole": { "SUPER_ADMIN": "redirect", "COMPANY_ADMIN": "redirect", "MANAGER": "redirect", "EMPLOYEE": "redirect" } }
+      }
+    }
+  },
+  "routes": [
+    { "path": "/", "accessClass": "rootRouter", "widthPolicy": "all", "purpose": "役割別ホームへ振り分ける", "subject": "ログイン中の本人" },
+    { "path": "/login", "accessClass": "login", "widthPolicy": "all", "purpose": "メールとパスワードでログインする", "subject": "未ログイン利用者" },
+    { "path": "/account", "accessClass": "selfStatic", "widthPolicy": "all", "purpose": "自分の情報を確認・許可範囲で更新する", "subject": "ログイン中の本人" },
+    { "path": "/account/password", "accessClass": "selfStatic", "widthPolicy": "all", "purpose": "自分のパスワードを変更する", "subject": "ログイン中の本人" },
+    { "path": "/forms", "accessClass": "selfStatic", "widthPolicy": "all", "purpose": "自社アンケートの中身を一覧で確認する", "subject": "操作対象会社のアンケート" },
+    { "path": "/forms/[id]", "accessClass": "formContent", "widthPolicy": "all", "purpose": "アンケート1本の設問内容を読む", "subject": "操作対象会社のアンケート" },
+    { "path": "/me", "accessClass": "selfStatic", "widthPolicy": "all", "purpose": "自分の次の回答と確定結果を確認する", "subject": "ログイン中の本人" },
+    { "path": "/me/forms", "accessClass": "selfStatic", "widthPolicy": "all", "purpose": "自分が回答するアンケートを確認する", "subject": "ログイン中の本人" },
+    { "path": "/me/forms/[id]", "accessClass": "selfForm", "widthPolicy": "all", "purpose": "自分のアンケートへ回答する", "subject": "本人の等級対象または本人が回答済みのアンケート" },
+    { "path": "/me/responses/[id]", "accessClass": "selfResponse", "widthPolicy": "all", "purpose": "回答時点の設問と回答本文を読み返す", "subject": "本人の回答、または閲覧を許された提出済み回答" },
+    { "path": "/me/results", "accessClass": "selfStatic", "widthPolicy": "all", "purpose": "自分の確定済み評価を一覧する", "subject": "ログイン中の本人" },
+    { "path": "/me/results/[id]", "accessClass": "selfResult", "widthPolicy": "all", "purpose": "自分の確定済み評価の根拠を読む", "subject": "本人の確定済み評価" },
+    { "path": "/f/[token]", "accessClass": "publicToken", "widthPolicy": "all", "purpose": "配布URLから回答または内容確認へ案内する", "subject": "操作対象会社の配布トークン" },
+    { "path": "/criteria", "accessClass": "managerStatic", "widthPolicy": "all", "purpose": "評価基準を確認する", "subject": "操作対象会社の評価基準" },
+    { "path": "/manager", "accessClass": "managerStatic", "widthPolicy": "all", "purpose": "担当者の次の評価作業を確認する", "subject": "管理者は自社全員、マネージャーは直属部下" },
+    { "path": "/manager/cycles", "accessClass": "managerStatic", "widthPolicy": "all", "purpose": "評価期間ごとの提出・評価状況を確認する", "subject": "管理者は自社全員、マネージャーは直属部下" },
+    { "path": "/manager/members", "accessClass": "managerStatic", "widthPolicy": "all", "purpose": "評価対象メンバーを一覧する", "subject": "管理者は自社全員、マネージャーは直属部下" },
+    { "path": "/manager/members/[id]", "accessClass": "managerMemberSubject", "widthPolicy": "all", "purpose": "メンバーのプロフィールと評価推移を読む", "subject": "管理者は自社社員、マネージャーは本人または直属部下" },
+    { "path": "/manager/evaluations/[id]", "accessClass": "managerEvaluationSubject", "widthPolicy": "all", "purpose": "評価根拠を確認して確定・差し戻す", "subject": "管理者は自社評価、マネージャーは直属部下の評価" },
+    { "path": "/admin", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "制度と評価運用の詰まりを確認する", "subject": "操作対象会社" },
+    { "path": "/admin/setup", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "制度設定を依存順に進める", "subject": "操作対象会社" },
+    { "path": "/admin/masters", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "等級を設定する", "subject": "操作対象会社" },
+    { "path": "/admin/masters/requirements", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "等級要件を設定する", "subject": "操作対象会社" },
+    { "path": "/admin/masters/promotion", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "昇格の条件と要件を設定する", "subject": "操作対象会社" },
+    { "path": "/admin/masters/kpi-categories", "accessClass": "legacyRedirect", "widthPolicy": "all", "purpose": "旧KPIカテゴリ入口から評価セットへ移す", "subject": "旧URLへ来た利用者" },
+    { "path": "/admin/behavior", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "行動指針を設定する", "subject": "操作対象会社" },
+    { "path": "/admin/scheme", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "KPI・評価セットの進捗を確認する", "subject": "操作対象会社" },
+    { "path": "/admin/scheme/[group]", "accessClass": "companyAdminSubject", "widthPolicy": "all", "purpose": "等級区分で使うKPIを選ぶ", "subject": "操作対象会社の有効な等級区分" },
+    { "path": "/admin/scheme/[group]/criteria", "accessClass": "companyAdminSubject", "widthPolicy": "all", "purpose": "選んだKPIのA〜E基準を決める", "subject": "操作対象会社の有効な等級区分" },
+    { "path": "/admin/cycles", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "評価期間を作成・開始・締め切る", "subject": "操作対象会社" },
+    { "path": "/admin/forms", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "アンケートを作成・公開・締め切る", "subject": "操作対象会社" },
+    { "path": "/admin/forms/[id]", "accessClass": "companyAdminSubject", "widthPolicy": "all", "purpose": "アンケートの設問を組み立てる", "subject": "操作対象会社のアンケート" },
+    { "path": "/admin/forms/[id]/responses", "accessClass": "companyAdminSubject", "widthPolicy": "all", "purpose": "アンケートの提出状況と回答を確認する", "subject": "操作対象会社のアンケート" },
+    { "path": "/admin/members", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "社員を一覧・登録する", "subject": "操作対象会社" },
+    { "path": "/admin/members/policy", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "本人が変更できるプロフィール項目を決める", "subject": "操作対象会社" },
+    { "path": "/admin/members/[id]", "accessClass": "companyAdminSubject", "widthPolicy": "all", "purpose": "社員情報と利用状態を管理する", "subject": "操作対象会社の社員" },
+    { "path": "/admin/kgi", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "事業所KGI達成率と係数を設定する", "subject": "操作対象会社" },
+    { "path": "/admin/raises", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "昇給条件と金額を設定する", "subject": "操作対象会社" },
+    { "path": "/system", "accessClass": "superStatic", "widthPolicy": "all", "purpose": "全社の稼働状況を確認する", "subject": "全会社" },
+    { "path": "/system/companies", "accessClass": "superStatic", "widthPolicy": "all", "purpose": "会社を一覧・追加・停止する", "subject": "全会社" },
+    { "path": "/system/users", "accessClass": "superStatic", "widthPolicy": "all", "purpose": "全利用者を会社別に一覧する", "subject": "全会社の利用者" },
+    { "path": "/system/users/[id]", "accessClass": "superSubject", "widthPolicy": "all", "purpose": "利用者の役割・所属・利用状態を管理する", "subject": "存在する利用者" }
+  ]
+}
