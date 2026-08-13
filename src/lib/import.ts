@@ -1,11 +1,12 @@
 import { and, eq } from "drizzle-orm";
-import { getDb, insertMany, schema as s } from "@/lib/db";
+import { getDb, schema as s } from "@/lib/db";
 import { newId } from "@/lib/id";
 import { parseCsv } from "@/lib/csv";
 import { HttpError } from "@/lib/session";
 import { parseOptions, questionSnapshot, type QuestionSnapshot } from "@/lib/domain/answer-snapshot";
 import { normalizeKey } from "@/lib/csv-normalize";
 import { parseImportedNumber, questionNumberPolicy, type NumberFieldPolicy } from "@/lib/domain/number-input";
+import { responseWithAnswersStatements } from "@/lib/response-write";
 export { normalizeKey } from "@/lib/csv-normalize";
 
 /**
@@ -96,7 +97,7 @@ export async function importResponsesCsv(
   companyId: string,
   formId: string,
   csvText: string,
-  options: { dryRun?: boolean } = {},
+  options: { dryRun?: boolean; actorId?: string | null } = {},
 ): Promise<ImportResult> {
   const dryRun = options.dryRun === true;
   const db = await getDb();
@@ -161,7 +162,15 @@ export async function importResponsesCsv(
     .where(eq(s.users.companyId, companyId));
 
   const rows: ImportRowResult[] = [];
-  let imported = 0;
+  type ResponsePlan = {
+    response: typeof s.formResponses.$inferInsert;
+    answers: (typeof s.formAnswers.$inferInsert)[];
+    exists: boolean;
+    row: ImportRowResult;
+    before: unknown;
+  };
+  const plans: ResponsePlan[] = [];
+  const seenEmployees = new Set<string>();
 
   for (let r = 1; r < table.length; r++) {
     const line = table[r];
@@ -184,6 +193,11 @@ export async function importResponsesCsv(
       rows.push({ row: r + 1, name: person.name, status: "スキップ", reason: "この方の等級は、このアンケートの対象等級と違います" });
       continue;
     }
+    if (seenEmployees.has(person.id)) {
+      rows.push({ row: r + 1, name: person.name, status: "スキップ", reason: "同じ方がこのファイルに複数行あります" });
+      continue;
+    }
+    seenEmployees.add(person.id);
 
     // 値を設問の形式に合わせて変換する
     const answers: {
@@ -245,7 +259,7 @@ export async function importResponsesCsv(
 
     const existing = (
       await db
-        .select({ id: s.formResponses.id })
+        .select()
         .from(s.formResponses)
         .where(and(eq(s.formResponses.formId, formId), eq(s.formResponses.employeeId, person.id)))
         .limit(1)
@@ -254,27 +268,31 @@ export async function importResponsesCsv(
     const submittedAt = timeCol >= 0 ? parseTimestamp(line[timeCol]) : null;
     const responseId = existing?.id ?? newId("res");
 
-    if (dryRun) {
-      imported++;
-      rows.push({
+    const rowResult: ImportRowResult = {
         row: r + 1,
         name: person.name,
-        status: "取り込み",
-        reason: existing ? "すでにある回答を置き換えます" : undefined,
+        status: unreadable.length > 0 ? "スキップ" : "取り込み",
+        reason: unreadable.length > 0 ? "読み取れない値があります。修正後にもう一度確認してください" : (existing ? "すでにある回答を置き換えます" : undefined),
         answered: answers.length,
         unreadable: unreadable.length > 0 ? unreadable : undefined,
-      });
-      continue;
-    }
+      };
+    rows.push(rowResult);
 
-    if (existing) {
-      await db
-        .update(s.formResponses)
-        .set({ status: "submitted", submittedAt: submittedAt ?? new Date(), importSource: "csv", officeId: person.officeId ?? null })
-        .where(eq(s.formResponses.id, responseId));
-      await db.delete(s.formAnswers).where(eq(s.formAnswers.responseId, responseId));
-    } else {
-      await db.insert(s.formResponses).values({
+    const answerRows = answers.map((a) => ({
+      id: newId("fa"),
+      companyId,
+      responseId,
+      questionId: a.questionId,
+      valueNumber: a.valueNumber,
+      valueText: a.valueText,
+      valueJson: a.valueJson,
+      ...a.snapshot,
+    }));
+    const oldAnswers = existing
+      ? await db.select().from(s.formAnswers).where(eq(s.formAnswers.responseId, responseId))
+      : [];
+    plans.push({
+      response: {
         id: responseId,
         companyId,
         formId,
@@ -285,35 +303,38 @@ export async function importResponsesCsv(
         importSource: "csv",
         status: "submitted",
         submittedAt: submittedAt ?? new Date(),
-      });
-    }
-
-    await insertMany(
-      (vals) => db.insert(s.formAnswers).values(vals),
-      answers.map((a) => ({
-        id: newId("fa"),
-        companyId,
-        responseId,
-        questionId: a.questionId,
-        valueNumber: a.valueNumber,
-        valueText: a.valueText,
-        valueJson: a.valueJson,
-        // 取り込んだ回答にも当時の設問文を写し取る（Web回答と同じ扱いにする）
-        ...a.snapshot,
-      })),
-    );
-
-    imported++;
-    rows.push({
-      row: r + 1,
-      name: person.name,
-      status: "取り込み",
-      answered: answers.length,
-      unreadable: unreadable.length > 0 ? unreadable : undefined,
+      },
+      answers: answerRows,
+      exists: Boolean(existing),
+      row: rowResult,
+      before: existing ? { response: existing, answers: oldAnswers } : null,
     });
   }
 
-  return { imported, skipped: rows.length - imported, unmatchedHeaders, rows, dryRun };
+  const invalid = rows.filter((row) => row.status === "スキップ");
+  const imported = rows.length - invalid.length;
+  if (!dryRun && invalid.length > 0) {
+    throw new HttpError(409, `取り込めない行が${invalid.length}件あります。ファイル全体は保存していません。まず内容を確認し、全行を修正してください。`);
+  }
+  if (dryRun) return { imported, skipped: invalid.length, unmatchedHeaders, rows, dryRun };
+
+  const statements = plans.flatMap((plan) => responseWithAnswersStatements(db, plan.response, plan.answers, plan.exists));
+  const beforeJson = JSON.stringify(plans.map((plan) => ({ responseId: plan.response.id, before: plan.before })));
+  if (beforeJson.length > 1_500_000) {
+    throw new HttpError(413, "変更前の回答が大きすぎるため、安全な復元記録を作れません。ファイルを分けてください。");
+  }
+  if (statements.length + 1 > 500) {
+    throw new HttpError(413, "1回で安全に保存できる量を超えています。500文以内になるようファイルを分けてください。");
+  }
+  const sourceHash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(csvText))))
+    .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  statements.push(db.insert(s.importBatches).values({
+    id: newId("import"), companyId, kind: "responses", subjectId: formId,
+    actorId: options.actorId ?? null, beforeJson, sourceHash, rowCount: plans.length,
+  }) as unknown as (typeof statements)[number]);
+  await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+
+  return { imported, skipped: 0, unmatchedHeaders, rows, dryRun };
 }
 
 /** 「2026/07/24 12:32:24」「2026-07-24 12:32」などを日時にする。読めなければ null。 */

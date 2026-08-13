@@ -24,6 +24,16 @@ pnpm run preview
 
 `cloudflare-env.d.ts` は `wrangler.jsonc` から生成する Git 管理外ファイルです。別 worktree からコピーせず、各 checkout で `pnpm run cf-typegen` を実行します。秘密値は追跡せず、ローカルでは `.dev.vars`、本番では Cloudflare Secrets を使います。
 
+### 全置換seedはローカル専用
+
+`pnpm run db:seed:local` は、ローカルD1の全業務テーブルを削除してデモデータへ置き換える開発用コマンドです。生成データには既知の共通デモパスワードが含まれるため、本番初期化には使いません。
+
+- package scripts に `db:seed:remote` は用意しない。
+- `node scripts/seed.mjs --remote` を直接実行しても、seedデータの読込み・SQL生成・`drizzle/seed.sql` の書込み・Wrangler起動より前に必ず失敗する。
+- 本番は Deploy workflow のmigrationと、権限を確認できる管理画面・用途別コマンドで必要なデータだけを追加する。全テーブルを一括置換しない。
+
+本番へ見本会社だけを追加・削除する `db:sample:*:remote` は、専用IDの行だけを対象にする別機能です。全置換seedの代わりには使いません。
+
 ### preview で見る代表経路
 
 - ログインし、ロール別ホームを表示できる。

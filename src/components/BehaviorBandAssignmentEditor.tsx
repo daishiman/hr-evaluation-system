@@ -96,7 +96,7 @@ export function BehaviorBandAssignmentEditor({
         />
         <div className="card-pad">
           <label>
-            <span className="block text-note text-[var(--ink-muted)]">この等級に出す行動指針</span>
+            <span className="block text-note text-ink-muted">この等級に出す行動指針</span>
             <select
               value={draft}
               onChange={(event) => choose(event.target.value)}
@@ -142,7 +142,7 @@ export function BehaviorBandAssignmentEditor({
             </div>
           )}
           {message && (
-            <p role="status" aria-live="polite" className="m-0 mt-3 text-sub text-[var(--brand-deep)]">
+            <p role="status" aria-live="polite" className="m-0 mt-3 text-sub text-brand-deep">
               {message}
             </p>
           )}

@@ -18,6 +18,8 @@ export interface AdminDashboardSnapshot {
   kpiItemCount: number;
   hasActiveScheme: boolean;
   schemeItemCount: number;
+  /** computeGroupProgressを全等級区分へ適用した共通readiness */
+  schemeReady: boolean;
   cycleCount: number;
   cycle: {
     id: string;
@@ -69,7 +71,7 @@ export function buildAdminDashboardModel(snapshot: AdminDashboardSnapshot): Admi
     snapshot.activeGradeRequirementCount > 0 &&
     snapshot.activePromotionRequirementCount > 0;
   const behaviorReady = snapshot.activeBehaviorGuidelineCount > 0 && snapshot.behaviorAppliedGradeCount > 0;
-  const schemeReady = snapshot.kpiItemCount > 0 && snapshot.hasActiveScheme && snapshot.schemeItemCount > 0;
+  const schemeReady = snapshot.schemeReady;
   const preparation = {
     completed: [requirementsReady, behaviorReady, schemeReady].filter(Boolean).length,
     total: 3,
@@ -268,7 +270,7 @@ export function AdminDashboard({
               <h2 id="admin-next-action" className="m-0 mt-2 text-title font-bold">
                 {model.nextAction.title}
               </h2>
-              <p className="m-0 mt-1 text-sub text-[var(--ink-muted)]">{model.nextAction.body}</p>
+              <p className="m-0 mt-1 text-sub text-ink-muted">{model.nextAction.body}</p>
             </div>
             <LinkButton href={model.nextAction.href} variant="primary">
               {model.nextAction.label}
@@ -366,7 +368,7 @@ export function AdminDashboard({
 
       {snapshot.cycle && (
         <Card className="card-pad mt-4">
-          <p className="m-0 text-note text-[var(--ink-muted)]">表示中の評価期間</p>
+          <p className="m-0 text-note text-ink-muted">表示中の評価期間</p>
           <p className="m-0 mt-1 text-body font-bold">
             {snapshot.cycle.name} ／ {formatPeriod(snapshot.cycle.periodStart, snapshot.cycle.periodEnd)}
           </p>
@@ -396,28 +398,28 @@ export function AdminDashboard({
       {/* 順番と役割の一覧はカード1枚ぶんの長さ。畳む仕組みは共通部品に寄せる。 */}
       <div className="mt-5">
         <Disclosure summary="設定する順番と役割を確認する">
-        <p className="m-0 text-note text-[var(--ink-muted)]">
+        <p className="m-0 text-note text-ink-muted">
           後の設定は前の設定を使って作られます。迷ったときは上から順に確認してください。
         </p>
         <ol className="m-0 mt-3 grid list-decimal gap-2 pl-5 text-sub">
           <li>
-            <Link href="/admin/masters" className="text-[var(--brand-deep)]">等級の設定</Link> — 制度の土台になる等級と水準を決める
+            <Link href="/admin/masters" className="text-brand-deep">等級の設定</Link> — 制度の土台になる等級と水準を決める
           </li>
           <li>
-            <Link href="/admin/masters/requirements" className="text-[var(--brand-deep)]">等級要件</Link>・
-            <Link href="/admin/masters/promotion" className="text-[var(--brand-deep)]">昇格の条件・要件</Link> — 何を満たすかを決める
+            <Link href="/admin/masters/requirements" className="text-brand-deep">等級要件</Link>・
+            <Link href="/admin/masters/promotion" className="text-brand-deep">昇格の条件・要件</Link> — 何を満たすかを決める
           </li>
           <li>
-            <Link href="/admin/behavior" className="text-[var(--brand-deep)]">行動指針</Link> — 何を問い、どの等級に出すかを決める
+            <Link href="/admin/behavior" className="text-brand-deep">行動指針</Link> — 何を問い、どの等級に出すかを決める
           </li>
           <li>
-            <Link href="/admin/scheme" className="text-[var(--brand-deep)]">KPI・評価セット</Link> — 測る項目とA〜Eの線引きを決める
+            <Link href="/admin/scheme" className="text-brand-deep">KPI・評価セット</Link> — 測る項目とA〜Eの線引きを決める
           </li>
           <li>
-            <Link href="/admin/cycles" className="text-[var(--brand-deep)]">評価期間</Link> — 今回の半期を作る
+            <Link href="/admin/cycles" className="text-brand-deep">評価期間</Link> — 今回の半期を作る
           </li>
           <li>
-            <Link href="/admin/forms" className="text-[var(--brand-deep)]">アンケート</Link> — 内容を確認して公開する
+            <Link href="/admin/forms" className="text-brand-deep">アンケート</Link> — 内容を確認して公開する
           </li>
         </ol>
         </Disclosure>
@@ -444,7 +446,7 @@ function StageCard({
       {/* 手順の札つきカードの頭。制度設定ガイド（SetupGuide）と同じ組み方にそろえている。 */}
       <CardHead
         heading
-        lead={<span className="num text-[var(--ink-muted)]">{number}</span>}
+        lead={<span className="num text-ink-muted">{number}</span>}
         title={title}
         actions={<Badge tone={badgeTone}>{badge}</Badge>}
       />

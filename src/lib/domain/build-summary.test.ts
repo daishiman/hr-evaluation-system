@@ -69,7 +69,7 @@ describe("集計し直しの受け口（/api/evaluations/build）", () => {
   });
 
   it("他社のサイクルIDを渡されたら404で止める", () => {
-    expect(route).toContain('new HttpError(404, "その期（サイクル）は見つかりませんでした。")');
+    expect(route).toContain('new HttpError(404, "その評価期間は見つかりませんでした。")');
   });
 
   it("結果の要約を返し、画面がそのまま出せるようにする", () => {
@@ -83,7 +83,7 @@ describe("確定済みの評価は集計し直しで上書きされない", () =
   it("確定済みなら計算にも保存にも進まない", () => {
     const guard = evaluate.indexOf('existing?.status === "finalized"');
     const del = evaluate.indexOf("db.delete(s.evaluations)");
-    const insert = evaluate.indexOf("db.insert(s.evaluations).values({");
+    const insert = evaluate.indexOf("db.insert(s.evaluations).values(evaluationRow)");
     expect(guard).toBeGreaterThanOrEqual(0);
     expect(del).toBeGreaterThan(guard);
     expect(insert).toBeGreaterThan(guard);

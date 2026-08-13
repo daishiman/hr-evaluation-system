@@ -44,7 +44,7 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
         <div className="identity-head">
           <Avatar name={user.name} seed={user.id} size={56} />
           <div className="min-w-0">
-            <p className="m-0 flex items-center gap-1 truncate text-sub text-[var(--ink-muted)]">
+            <p className="m-0 flex items-center gap-1 truncate text-sub text-ink-muted">
               <Icon name="mail" size={13} />
               {user.email}
             </p>

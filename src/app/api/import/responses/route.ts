@@ -2,6 +2,8 @@ import { z } from "zod";
 import { apiViewer, HttpError, resolveCompanyId } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { importResponsesCsv } from "@/lib/import";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { issueImportConfirmation, verifyImportConfirmation } from "@/lib/domain/import-confirmation";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +14,13 @@ const bodySchema = z.object({
   csv: z.string().min(1, "取り込む内容を貼り付けてください").max(2_000_000),
   /** true のときは保存せず、取り込んだ場合の結果だけを返す */
   dryRun: z.boolean().optional(),
+  /** dry-runで同じ内容を確認したことを示す、サーバー署名済みトークン */
+  confirmationToken: z.string().min(1).optional(),
 });
 
 /**
  * 回答一覧（Googleフォームの書き出し）をまとめて取り込む。
- * 会社の管理者だけが使える。取り込めなかった行は理由つきで返す。
+ * 会社の管理者だけが使える。全行を事前確認し、1行でも不正なら全体を保存しない。
  */
 export async function POST(req: Request) {
   return handle(async () => {
@@ -24,8 +28,20 @@ export async function POST(req: Request) {
     const body = bodySchema.parse(await req.json());
     const companyId = resolveCompanyId(viewer, body.companyId);
     if (!companyId) throw new HttpError(400, "会社を指定してください。");
+    const { env } = await getCloudflareContext({ async: true });
+    if (!env.BETTER_AUTH_SECRET) throw new Error("BETTER_AUTH_SECRET が設定されていません。");
+    if (
+      body.dryRun !== true &&
+      (!body.confirmationToken ||
+        !(await verifyImportConfirmation(env.BETTER_AUTH_SECRET, body.confirmationToken, body.formId, body.csv)))
+    ) {
+      throw new HttpError(409, "取り込む前に、同じ内容で「まず内容を確認する」を実行してください。");
+    }
 
-    const result = await importResponsesCsv(companyId, body.formId, body.csv, { dryRun: body.dryRun === true });
+    const result = await importResponsesCsv(companyId, body.formId, body.csv, {
+      dryRun: body.dryRun === true,
+      actorId: viewer.id,
+    });
 
     const notes: string[] = [];
     if (result.unmatchedHeaders.length > 0) {
@@ -38,9 +54,10 @@ export async function POST(req: Request) {
     if (result.dryRun) {
       return {
         ...result,
+        confirmationToken: await issueImportConfirmation(env.BETTER_AUTH_SECRET, body.formId, body.csv),
         message:
           `取り込むとどうなるかの確認です（まだ保存していません）。${result.imported}件を取り込めます。` +
-          (result.skipped > 0 ? `${result.skipped}件は取り込めません（理由は下の一覧をご確認ください）。` : "") +
+          (result.skipped > 0 ? `${result.skipped}件に修正が必要です。本取込ではファイル全体を保存しません。` : "") +
           notes.join(""),
       };
     }
@@ -49,7 +66,7 @@ export async function POST(req: Request) {
       ...result,
       message:
         `${result.imported}件を取り込みました。` +
-        (result.skipped > 0 ? `${result.skipped}件は取り込めませんでした（理由は下の一覧をご確認ください）。` : "") +
+        (result.skipped > 0 ? `${result.skipped}件に修正が必要なため、ファイル全体を保存しませんでした。` : "") +
         (notes.length > 0 ? notes.join("") : ""),
     };
   });

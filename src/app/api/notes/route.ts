@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getDb, schema as s } from "@/lib/db";
-import { apiViewer, canViewEmployee, HttpError } from "@/lib/session";
+import { apiViewer, canManageEmployee, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const viewer = await apiViewer("MANAGER");
     const body = bodySchema.parse(await req.json());
     if (!viewer.companyId) throw new HttpError(400, "所属会社が設定されていません。");
-    if (!(await canViewEmployee(viewer, body.employeeId))) {
+    if (!(await canManageEmployee(viewer, body.employeeId))) {
       throw new HttpError(403, "この方のメモを書く権限がありません。");
     }
 

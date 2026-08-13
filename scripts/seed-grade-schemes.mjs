@@ -1,5 +1,5 @@
 /**
- * 等級別配点への移行（1回限りの移行スクリプト）。
+ * 等級別配点への旧移行スクリプト（自由選択化より前の履歴）。
  *
  *   pnpm exec node scripts/seed-grade-schemes.mjs --local    … ローカルD1へ
  *   pnpm exec node scripts/seed-grade-schemes.mjs --remote   … 本番D1へ
@@ -20,6 +20,11 @@
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+
+console.error(
+  "この移行は自由選択化より前の履歴です。再実行すると現在の評価セットを失うため実行できません。現行画面から評価セットを編集してください。",
+);
+process.exit(1);
 
 const remote = process.argv.includes("--remote");
 const local = process.argv.includes("--local");

@@ -2,7 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { useRouter } from "next/navigation";
-import { Button, LinkButton, ReasonNote } from "@/components/ui";
+import { Button, LinkButton, ReasonNote, RevealToggle } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 
 /**
@@ -115,7 +115,7 @@ export function PasswordChangeForm() {
           パスワードを変更しました
         </p>
         <p className="m-0 text-sub">{done}</p>
-        <p className="m-0 text-sub text-[var(--ink-muted)]">
+        <p className="m-0 text-sub text-ink-muted">
           この端末はそのまま使えます。ほかの端末やブラウザで開いていた場合は、ログインし直してください。
           そのときは新しいパスワードをお使いください。
         </p>
@@ -246,17 +246,7 @@ function PasswordField({
     <div className={`field ${error ? "has-error" : ""}`}>
       <label htmlFor={id}>
         {label}
-        <button
-          type="button"
-          className="field-toggle"
-          aria-pressed={visible}
-          aria-controls={id}
-          // 「表示する」は次に起きること。読み上げでもどの欄のことか分かるようにする
-          aria-label={`${label}を${visible ? "隠す" : "表示する"}`}
-          onClick={() => setVisible((v) => !v)}
-        >
-          {visible ? "隠す" : "表示する"}
-        </button>
+        <RevealToggle label={label} controls={id} visible={visible} onToggle={() => setVisible((v) => !v)} />
       </label>
       <input
         id={id}

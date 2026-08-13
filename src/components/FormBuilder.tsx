@@ -150,15 +150,15 @@ export function FormBuilder({
   return (
     <>
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 mb-3 text-sub text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 mb-3 text-sub text-brand-deep">{message}</p>}
 
       <div className="grid gap-3">
         {rows.map((r, i) => {
           const open = openKey === r.clientKey;
           const title = (
             <>
-              <span className="num mr-2 text-[var(--ink-muted)]">{i + 1}.</span>
-              {r.title || <span className="text-[var(--ink-muted)]">（設問文が未入力です）</span>}
+              <span className="num mr-2 text-ink-muted">{i + 1}.</span>
+              {r.title || <span className="text-ink-muted">（設問文が未入力です）</span>}
             </>
           );
           const sub = (
@@ -202,16 +202,16 @@ export function FormBuilder({
             )}
 
             {open && (
-              <div className="field-grid mt-3 border-t border-[var(--line)] pt-3">
+              <div className="field-grid mt-3 border-t border-line pt-3">
                 <p className="footnote m-0 md:col-span-2">
                   {r.linkLabel ? `集計との紐づけ：${r.linkLabel}` : "自由設問（評価集計には使いません）"}
                 </p>
                 <label className="md:col-span-2">
-                  <span className="block text-note text-[var(--ink-muted)]">設問文</span>
+                  <span className="block text-note text-ink-muted">設問文</span>
                   <input className="input mt-1 w-full" value={r.title} onChange={(e) => patch(i, { title: e.target.value })} />
                 </label>
                 <label className="md:col-span-2">
-                  <span className="block text-note text-[var(--ink-muted)]">補足（任意）</span>
+                  <span className="block text-note text-ink-muted">補足（任意）</span>
                   <input
                     className="input mt-1 w-full"
                     value={r.helpText ?? ""}
@@ -219,7 +219,7 @@ export function FormBuilder({
                   />
                 </label>
                 <label>
-                  <span className="block text-note text-[var(--ink-muted)]">まとまり</span>
+                  <span className="block text-note text-ink-muted">まとまり</span>
                   <select className="input mt-1 w-full" value={r.section} onChange={(e) => patch(i, { section: e.target.value })}>
                     {SECTION_ORDER.concat("free").map((sec) => (
                       <option key={sec} value={sec}>
@@ -229,7 +229,7 @@ export function FormBuilder({
                   </select>
                 </label>
                 <label>
-                  <span className="block text-note text-[var(--ink-muted)]">答え方</span>
+                  <span className="block text-note text-ink-muted">答え方</span>
                   <select
                     className="input mt-1 w-full"
                     value={r.questionType}
@@ -245,7 +245,7 @@ export function FormBuilder({
                 {r.questionType === "number" && (
                   <>
                     <label>
-                      <span className="block text-note text-[var(--ink-muted)]">単位</span>
+                      <span className="block text-note text-ink-muted">単位</span>
                       <input
                         className="input mt-1 w-full"
                         value={r.unit ?? ""}
@@ -253,7 +253,7 @@ export function FormBuilder({
                       />
                     </label>
                     <label>
-                      <span className="block text-note text-[var(--ink-muted)]">入力できる最小値</span>
+                      <span className="block text-note text-ink-muted">入力できる最小値</span>
                       {/* 回答画面と同じ部品を使う。空欄のままにできる（＝下限を決めない）。
                           以前はここで打った文字をそのまま数値にしていたため、全角で打つと
                           「決めたつもりなのに決まっていない」状態になっていた。 */}
@@ -267,7 +267,7 @@ export function FormBuilder({
                       />
                     </label>
                     <label>
-                      <span className="block text-note text-[var(--ink-muted)]">小数の扱い</span>
+                      <span className="block text-note text-ink-muted">小数の扱い</span>
                       {/* 「件」「人」のように数え上げるものは小数が意味を持たない。
                           止めるかどうかは設問ごとに決める（単位だけで決めると、%のように
                           小数が要るものまで巻き込む）。 */}
@@ -284,7 +284,7 @@ export function FormBuilder({
                 )}
                 {(r.questionType === "single" || r.questionType === "multi") && (
                   <div className="md:col-span-2">
-                    <span className="block text-note text-[var(--ink-muted)]">選択肢</span>
+                    <span className="block text-note text-ink-muted">選択肢</span>
                     <div className="mt-1 grid gap-2">
                       {r.options.map((o, oi) => (
                         <div key={oi} className="flex items-center gap-2">
@@ -323,7 +323,7 @@ export function FormBuilder({
                   <input type="checkbox" checked={r.required} onChange={(e) => patch(i, { required: e.target.checked })} />
                   回答を必須にする
                 </label>
-                <div className="md:col-span-2 flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-3">
+                <div className="md:col-span-2 flex flex-wrap items-center gap-3 border-t border-line pt-3">
                   <Button variant="danger-outline" onClick={() => remove(i)}>
                     この設問を削除する
                   </Button>
@@ -351,11 +351,11 @@ export function FormBuilder({
       <StickyActionBar
         status={
           <>
-            <span className="text-sub text-[var(--ink)]">
+            <span className="text-sub text-ink">
               設問 <span className="num font-bold">{rows.length}</span>
               <span className="unit"> 問</span>
             </span>
-            <span className="mx-2 text-[var(--line)]">|</span>
+            <span className="mx-2 text-line">|</span>
             保存しても公開はされません。公開はアンケート一覧から行います。
           </>
         }
@@ -377,7 +377,7 @@ function QuestionList({ rows }: { rows: BuilderQuestion[] }) {
           alignTop
           title={
             <>
-              <span className="num mr-2 text-[var(--ink-muted)]">{i + 1}.</span>
+              <span className="num mr-2 text-ink-muted">{i + 1}.</span>
               {r.title}
             </>
           }

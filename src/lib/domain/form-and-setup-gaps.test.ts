@@ -105,6 +105,7 @@ describe("本人に見せる選択肢から、点数を落とす", () => {
 describe("アンケートの締切", () => {
   it("延長が複数あれば、いちばん遅い日付を締切にする（順番に関係なく）", () => {
     const late = judgeFormDeadline({
+      cycleStatus: "open",
       opensAt: null,
       closesAt: "2026-09-30",
       extensions: ["2026-10-31", "2026-10-05"],
@@ -112,6 +113,7 @@ describe("アンケートの締切", () => {
       status: "published",
     });
     const same = judgeFormDeadline({
+      cycleStatus: "open",
       opensAt: null,
       closesAt: "2026-09-30",
       extensions: ["2026-10-05", "2026-10-31"],

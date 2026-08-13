@@ -309,7 +309,7 @@ export const promotionThresholds = sqliteTable(
 
 /* ───────────────────────── KPI 制度マスタ ───────────────────────── */
 
-/** 7カテゴリ（等級要件達成率を除く32項目の分類）。各社はここから1つずつ選ぶ。 */
+/** KPIの分類。評価セットでは同じ分類から複数項目を選んでもよい。 */
 export const kpiCategories = sqliteTable(
   "kpi_categories",
   {
@@ -352,15 +352,7 @@ export const kpiItems = sqliteTable(
     remarks: text("remarks"),
     /** No.1 等級要件達成率だけが true（どの等級区分でも必ず入る固定枠） */
     isFixedSlot: integer("is_fixed_slot", { mode: "boolean" }).notNull().default(false),
-    /**
-     * 金銭系の項目（単価率・売上達成率・利益率）。Chief 以上でだけ 20点枠に置ける。
-     *
-     * カテゴリでは判別できないため専用の列で持つ。
-     * 同じ sales カテゴリでも No.12 加算取得率は10点枠であり、
-     * 逆に No.4 昇給率は hr カテゴリだが金額を扱う。
-     * 「どの等級区分でこの項目を選べるか」は kpi_reference_points の行の有無が正であり、
-     * この列は「20点枠の候補かどうか」だけを表す。
-     */
+    /** 旧配点表で金銭系だった分類。現在の評価セット選択可否・20点枠の制約には使わない。 */
     isMonetary: integer("is_monetary", { mode: "boolean" }).notNull().default(false),
     /** 制度として未確定の項目に立てる「仮」フラグ */
     isProvisional: integer("is_provisional", { mode: "boolean" }).notNull().default(false),
@@ -400,7 +392,7 @@ export const kpiRankCriteria = sqliteTable(
  * 元の配点表（「KPI基準定義_配点」シート）の写し。参考値としてだけ使う。
  *
  * 元の制度は「等級ごとに、項目ごとの点数が決まっている」表を持っていた。
- * いまの仕組みは会社ごとに8項目を選び直せるため、選び直すと元の点数が分からなくなる。
+ * いまの仕組みは等級区分ごとに1〜8項目を選び直せるため、選び直すと元の点数が分からなくなる。
  * そこで表をそのまま保管しておき、評価セットの画面で「元はこの点数でした」と出せるようにする。
  * この表は計算には一切使わない（計算に使うのは scheme_items / scheme_rank_ratios）。
  */
@@ -457,7 +449,7 @@ export const kpiQuestions = sqliteTable(
  * 制度（2026-08-11 確定）:
  *   - 評価は等級区分を問わず 100点満点。100点で次の等級に昇格する。
  *   - 「等級要件達成率」(No.1) は全等級で必須の固定枠。配点は等級区分ごとに固定。
- *   - Chief 以上は金銭系の項目を1つだけ 20点枠として選ぶ。
+ *   - Chief 以上は自由選択した項目の1つを 20点枠として選ぶ。
  *   - 残りは1項目 10点。
  *
  *   等級区分  固定枠  20点枠  10点枠  選ぶ項目数
@@ -549,7 +541,7 @@ export const schemeItems = sqliteTable(
     weight: integer("weight").notNull(),
     /** 固定枠（等級要件達成率）は差し替え不可 */
     isFixedSlot: integer("is_fixed_slot", { mode: "boolean" }).notNull().default(false),
-    /** 20点枠（金銭系）として選ばれた項目 */
+    /** 20点枠として選ばれた項目。金銭系かどうかは制約しない。 */
     isMajorSlot: integer("is_major_slot", { mode: "boolean" }).notNull().default(false),
     displayOrder: integer("display_order").notNull(),
     createdAt: createdAt(),
@@ -756,6 +748,28 @@ export const formDeadlineExtensions = sqliteTable(
   ],
 );
 
+/**
+ * CSV一括取込の復元点。業務行と同じD1 batchへ1行追加し、途中失敗時は一緒にrollbackする。
+ * before_json は対象IDと変更前の行/回答本文（新規は null）、source_hash は確認した入力本文のSHA-256。
+ */
+export const importBatches = sqliteTable(
+  "import_batches",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    /** members | responses */
+    kind: text("kind").notNull(),
+    /** 回答CSVではform ID、社員CSVでは会社ID */
+    subjectId: text("subject_id").notNull(),
+    actorId: text("actor_id").references(() => users.id, { onDelete: "set null" }),
+    sourceHash: text("source_hash").notNull(),
+    rowCount: integer("row_count").notNull(),
+    beforeJson: text("before_json").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("idx_import_batches_company_time").on(t.companyId, t.createdAt)],
+);
+
 /* ───────────────────────── 評価結果 ───────────────────────── */
 
 export const evaluations = sqliteTable(
@@ -773,7 +787,7 @@ export const evaluations = sqliteTable(
     /** この結果を集計した日時。制度マスタの更新がこれより新しければ「再集計が必要」と判定する。 */
     computedAt: integer("computed_at", { mode: "timestamp_ms" }),
 
-    /** 8項目の合計得点（100点満点） */
+    /** 等級区分ごとの選択項目（1〜8件）の合計得点（100点満点） */
     totalScore: real("total_score").notNull().default(0),
     maxScore: real("max_score").notNull().default(100),
     /** 等級要件の達成率（%） */

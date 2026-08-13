@@ -39,6 +39,14 @@ export default async function PublicForm({ params }: { params: Promise<{ token: 
     );
   }
 
+  const cycle = (
+    await db
+      .select({ status: s.evaluationCycles.status })
+      .from(s.evaluationCycles)
+      .where(and(eq(s.evaluationCycles.id, form.cycleId), eq(s.evaluationCycles.companyId, form.companyId)))
+      .limit(1)
+  )[0];
+
   // 過去に自分が答えていれば、等級が変わっていても読み返せるようにする
   const mine = (
     await db
@@ -54,6 +62,7 @@ export default async function PublicForm({ params }: { params: Promise<{ token: 
   }
 
   const judgement = judgeFormDeadline({
+    cycleStatus: cycle?.status ?? "unknown",
     status: form.status,
     opensAt: form.opensAt,
     closesAt: form.closesAt,

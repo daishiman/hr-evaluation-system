@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { explicitTheme, storedTheme, THEME_STORAGE_KEY, THEMES, type Theme } from "@/lib/theme";
+import { Segmented } from "@/components/ui";
 
 /**
  * 画面の明るさ（自動・明るい・暗い）の切り替え。
@@ -49,19 +50,11 @@ export function ThemeToggle() {
   }
 
   return (
-    <div className="theme-switch" role="group" aria-label="画面の明るさ">
-      {THEMES.map((value) => (
-        <button
-          key={value}
-          type="button"
-          className="theme-switch-btn"
-          aria-pressed={theme === value}
-          aria-label={`画面の明るさ: ${LABELS[value]}`}
-          onClick={() => choose(value)}
-        >
-          {LABELS[value]}
-        </button>
-      ))}
-    </div>
+    <Segmented
+      label="画面の明るさ"
+      value={theme}
+      onChange={choose}
+      options={THEMES.map((value) => ({ value, label: LABELS[value], srLabel: `画面の明るさ: ${LABELS[value]}` }))}
+    />
   );
 }

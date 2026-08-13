@@ -18,7 +18,7 @@ type RowResult = {
  * 回答一覧（スプレッドシートの書き出し）の取り込み。
  *
  * ファイルを選ぶか、スプレッドシートからそのまま貼り付けて取り込む。
- * 取り込めなかった行も理由つきで一覧に出す（揃った分だけ先に進める）。
+ * 取り込めない行は理由つきで一覧に出し、1行でもあればファイル全体を保存しない。
  */
 export function CsvImport({ formId, formTitle }: { formId: string; formTitle: string }) {
   const router = useRouter();
@@ -31,6 +31,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
   const [rows, setRows] = useState<RowResult[] | null>(null);
   /** 直前の結果が「確認だけ（まだ保存していない）」かどうか */
   const [checked, setChecked] = useState(false);
+  const [confirmationToken, setConfirmationToken] = useState<string | null>(null);
 
   const preview = text.trim() === "" ? [] : text.trim().split(/\r?\n/).slice(0, 3);
 
@@ -41,6 +42,8 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
     setMessage(null);
     setError(null);
     setRows(null);
+    setChecked(false);
+    setConfirmationToken(null);
   };
 
   const run = async (dryRun: boolean) => {
@@ -55,9 +58,9 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
       const res = await fetch("/api/import/responses", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ formId, csv: text, dryRun }),
+        body: JSON.stringify({ formId, csv: text, dryRun, confirmationToken: dryRun ? undefined : confirmationToken }),
       });
-      const data = (await res.json()) as { ok: boolean; message?: string; rows?: RowResult[] };
+      const data = (await res.json()) as { ok: boolean; message?: string; rows?: RowResult[]; confirmationToken?: string };
       if (!res.ok || !data.ok) {
         setError(data.message ?? "取り込みできませんでした。");
         return;
@@ -65,6 +68,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
       setMessage(data.message ?? "取り込みました。");
       setRows(data.rows ?? []);
       setChecked(dryRun);
+      setConfirmationToken(dryRun ? (data.confirmationToken ?? null) : null);
       if (!dryRun) router.refresh();
     } catch {
       setError("通信できませんでした。時間をおいてもう一度お試しください。");
@@ -78,6 +82,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
       <p className="m-0 text-sub">
         「{formTitle}」の回答として取り込みます。1行目に設問名、2行目から回答を入れてください。
         氏名（または社員番号）でこのシステムの登録者と突き合わせます。
+        1行でも修正が必要な場合は、ほかの行も含めて保存しません。
       </p>
 
       <div className="mt-3 grid gap-3">
@@ -103,6 +108,8 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
               setText(e.target.value);
               setFileName(null);
               setRows(null);
+              setChecked(false);
+              setConfirmationToken(null);
             }}
             placeholder="タイムスタンプ,氏名（回答者）,【支援】１）…"
           />
@@ -120,7 +127,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
         <Button variant="tertiary" onClick={() => run(true)} disabled={busy}>
           まず内容を確認する
         </Button>
-        <Button onClick={() => run(false)} disabled={busy}>
+        <Button onClick={() => run(false)} disabled={busy || !checked || !confirmationToken}>
           {busy ? "処理しています…" : "この内容を取り込む"}
         </Button>
         <span className="footnote">同じ方の回答がすでにある場合は、新しい内容で置き換えます。</span>

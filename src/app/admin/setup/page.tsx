@@ -9,11 +9,11 @@ import {
   listGrades,
   listKpiItems,
   listPromotionRequirements,
-  listSchemeItems,
 } from "@/lib/queries";
 import { requireRole } from "@/lib/session";
 import { SetupGuide, type SetupStep } from "./SetupGuide";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
+import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -42,8 +42,8 @@ export default async function AdminSetupPage() {
     ]);
 
   const currentCycle = cycles.find((cycle) => cycle.status === "open") ?? cycles[0] ?? null;
-  const [schemeItems, evaluations] = await Promise.all([
-    scheme ? listSchemeItems(companyId, scheme.id) : Promise.resolve([]),
+  const [schemeReadiness, evaluations] = await Promise.all([
+    loadSchemeReadiness(companyId, scheme?.id ?? null),
     currentCycle
       ? listEvaluations(companyId, viewer.role, { cycleId: currentCycle.id })
       : Promise.resolve([]),
@@ -65,6 +65,7 @@ export default async function AdminSetupPage() {
   const publishedForms = forms.filter((form) => form.status === "published").length;
   const draftForms = forms.filter((form) => form.status === "draft").length;
   const finalizedEvaluations = evaluations.filter((evaluation) => evaluation.status === "finalized").length;
+  const selectedSchemeItems = schemeReadiness.groups.reduce((sum, group) => sum + group.progress.selectedCount, 0);
 
   const steps: SetupStep[] = [
     {
@@ -97,9 +98,9 @@ export default async function AdminSetupPage() {
       number: 3,
       title: "KPI・評価セットを決める",
       summary: "等級区分ごとに、評価するKPIと配点の組み合わせを決めます。",
-      current: `利用できるKPI ${activeKpis.length}項目 ／ 有効な評価セット ${scheme ? "1件" : "なし"} ／ 選択済み ${schemeItems.length}枠`,
-      complete: Boolean(scheme) && schemeItems.length > 0,
-      statusLabel: scheme && schemeItems.length > 0 ? "設定あり" : "要設定",
+      current: `利用できるKPI ${activeKpis.length}項目 ／ 有効な評価セット ${scheme ? "1件" : "なし"} ／ 選択済み ${selectedSchemeItems}枠`,
+      complete: schemeReadiness.schemeReady,
+      statusLabel: schemeReadiness.schemeReady ? "設定済み" : "要設定",
       actions: [{ href: "/admin/scheme", label: "KPI・評価セットを設定する" }],
       detail:
         "評価セットで選んだKPIから、アンケートのKPI設問と評価時の配点が決まります。評価期間やアンケートを作る前に、対象項目を確定します。",

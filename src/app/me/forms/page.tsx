@@ -80,7 +80,7 @@ function FormRow({ row }: { row: MyFormRow }) {
          「自分がまだやること」だけが白い面で立って見える状態にする。 */
       off={!row.deadline.canAnswer || row.supersededBy !== null}
       title={
-        <Link href={`/me/forms/${row.formId}`} className="text-[var(--brand-deep)]">
+        <Link href={`/me/forms/${row.formId}`} className="text-brand-deep">
           {row.title}
         </Link>
       }
@@ -106,7 +106,7 @@ function FormRow({ row }: { row: MyFormRow }) {
           {row.supersededBy && (
             <p className="footnote m-0">
               このアンケートは新しい版に差し替わりました。入力途中の内容はこのまま残ります。回答は
-              <Link href={`/me/forms/${row.supersededBy.formId}`} className="text-[var(--brand-deep)]">
+              <Link href={`/me/forms/${row.supersededBy.formId}`} className="text-brand-deep">
                 新しい版
               </Link>
               からお願いします。

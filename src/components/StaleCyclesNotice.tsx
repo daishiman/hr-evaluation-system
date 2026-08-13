@@ -39,7 +39,7 @@ export function StaleCyclesNotice({ cycles }: { cycles: StaleCycle[] }) {
             <li key={c.cycleId}>
               {c.cycleName}：確認中 {c.recomputable}件が古い基準のままです
               {c.finalized > 0 && `（確定済み ${c.finalized}件は当時の基準のまま据え置き）`}。
-              <Link href={`/manager/cycles?cycle=${c.cycleId}`} className="ml-1 text-[var(--brand-deep)]">
+              <Link href={`/manager/cycles?cycle=${c.cycleId}`} className="ml-1 text-brand-deep">
                 集計し直す
               </Link>
             </li>

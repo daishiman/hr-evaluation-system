@@ -107,6 +107,11 @@ function contrast(foreground: string, background: string): number {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
+function chroma(hex: string): number {
+  const channels = rgb(hex);
+  return Math.max(...channels) - Math.min(...channels);
+}
+
 describe("全画面のテーマ契約", () => {
   it("矛盾なし: テーマの値・保存・初期化は純粋モジュールを正本にし、画面へ色を直書きしない", () => {
     const contract = readFileSync(CONTRACT_PATH, "utf8");
@@ -162,6 +167,44 @@ describe("全画面のテーマ契約", () => {
         const foreground = colors[`avatar-${tone}-fg` as keyof typeof colors];
         const background = colors[`avatar-${tone}-bg` as keyof typeof colors];
         expect(contrast(foreground, background), `${name}: avatar ${tone}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it("大人っぽさ: 操作・面・グラフは無彩色、人物識別色は低彩度に限定する", () => {
+    const css = readFileSync(CSS_PATH, "utf8");
+    const themes = {
+      light: themeColors(blockAfter(css, ":root")),
+      dark: themeColors(blockAfter(css, 'html[data-theme="dark"]')),
+    };
+    const neutralTokens = [
+      "brand",
+      "brand-deep",
+      "brand-soft",
+      "page-bg",
+      "surface",
+      "accent",
+      "cta-bg",
+      "cta-bg-hover",
+      "cta-fg",
+      "ink",
+      "ink-muted",
+      "line",
+      "subtle",
+      "off-line",
+      "off-surface",
+      "off-surface-soft",
+      "chart-line-soft",
+      "chart-band",
+    ] as const;
+
+    for (const [name, colors] of Object.entries(themes)) {
+      for (const token of neutralTokens) {
+        expect(chroma(colors[token]), `${name}: ${token}`).toBeLessThanOrEqual(12);
+      }
+      for (const tone of [1, 2, 3, 4, 5]) {
+        expect(chroma(colors[`avatar-${tone}-fg` as keyof typeof colors]), `${name}: avatar ${tone} fg`).toBeLessThanOrEqual(16);
+        expect(chroma(colors[`avatar-${tone}-bg` as keyof typeof colors]), `${name}: avatar ${tone} bg`).toBeLessThanOrEqual(16);
       }
     }
   });

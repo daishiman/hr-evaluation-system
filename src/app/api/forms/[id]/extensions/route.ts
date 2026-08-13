@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema as s } from "@/lib/db";
-import { apiViewer, HttpError } from "@/lib/session";
+import { apiViewer, canManageEmployee, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { newId } from "@/lib/id";
 import { formatJpDate, jstDateString } from "@/lib/domain/form-deadline";
@@ -60,6 +60,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         .limit(1)
     )[0];
     if (!employee) throw new HttpError(404, "対象の方が見つかりませんでした。");
+    if (!(await canManageEmployee(viewer, employee.id))) {
+      throw new HttpError(403, "直属メンバー以外の期限は変更できません。");
+    }
 
     // 過ぎた日付を入れても意味がないので入口で止める（日本時間の今日を基準にする）
     const today = jstDateString(new Date());
@@ -116,6 +119,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     )[0];
     if (!row) throw new HttpError(404, "対象の延長が見つかりませんでした。");
     if (row.revokedAt) throw new HttpError(400, "この延長はすでに取り消されています。");
+    if (!(await canManageEmployee(viewer, row.employeeId))) {
+      throw new HttpError(403, "直属メンバー以外の期限は変更できません。");
+    }
 
     await db
       .update(s.formDeadlineExtensions)

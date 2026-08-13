@@ -121,7 +121,7 @@ export function NumberField({
         />
         {unit && <span className="unit">{unit}</span>}
       </span>
-      {error && <span className="footnote text-[var(--danger)]">{error}</span>}
+      {error && <span className="footnote text-danger">{error}</span>}
     </span>
   );
 }

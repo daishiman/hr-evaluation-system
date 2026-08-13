@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import { listBehaviorBandSets, listGradeRequirements, listGrades, listPromotionThresholds, listRaiseSettings } from "@/lib/queries";
 import { detectStaleCycles } from "@/lib/impact";
@@ -7,7 +6,7 @@ import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
 import { behaviorBandLabel } from "@/lib/domain/behavior";
 import { GRADE_REQUIREMENT_MAX } from "@/lib/domain/grade-requirements";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
-import { Card, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { Card, ChipLink, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -66,9 +65,9 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
       <SectionHeading>等級を選ぶ</SectionHeading>
       <div className="mb-5 flex flex-wrap gap-2">
         {grades.map((g) => (
-          <Link key={g.id} href={`/admin/masters?grade=${g.id}`} className="chip" aria-current={g.id === grade.id ? "true" : undefined}>
+          <ChipLink key={g.id} href={`/admin/masters?grade=${g.id}`} current={g.id === grade.id}>
             {g.name}
-          </Link>
+          </ChipLink>
         ))}
       </div>
 

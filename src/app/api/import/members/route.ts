@@ -17,7 +17,7 @@ const bodySchema = z.object({
  * 社員一覧をまとめて取り込む。会社の管理者だけが使える。
  *
  * メールアドレスが同じ方はすでにいる方として更新し、いない方はアカウントを作る。
- * 不備のある行はその行だけ理由つきで止め、揃っている行は取り込む。
+ * 先に全行を確認し、不備が1行でもあればファイル全体を保存しない。
  */
 export async function POST(req: Request) {
   return handle(async () => {
@@ -28,6 +28,7 @@ export async function POST(req: Request) {
 
     const result = await importMembersCsv(companyId, body.csv, {
       dryRun: body.dryRun === true,
+      actorId: viewer.id,
     });
 
     const notes: string[] = [];
@@ -37,10 +38,10 @@ export async function POST(req: Request) {
 
     const message = result.dryRun
       ? `取り込むとどうなるかの確認です（まだ保存していません）。新しく作る方${result.created}人、情報を更新する方${result.updated}人。` +
-        (result.failed > 0 ? `${result.failed}行は取り込めません（理由は下の一覧をご確認ください）。` : "") +
+        (result.failed > 0 ? `${result.failed}行に修正が必要です。本取込ではファイル全体を保存しません。` : "") +
         notes.join("")
       : `${result.created}人を新しく登録し、${result.updated}人の情報を更新しました。` +
-        (result.failed > 0 ? `${result.failed}行は取り込めませんでした（理由は下の一覧をご確認ください）。` : "") +
+        (result.failed > 0 ? `${result.failed}行に修正が必要なため、ファイル全体を保存しませんでした。` : "") +
         notes.join("");
 
     return { ...result, message };

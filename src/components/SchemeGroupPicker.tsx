@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, DefList, Disclosure, InlineDetail, Num, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, DefList, Disclosure, InlineDetail, Num, OptionCard, ProvisionalMark, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { validateScheme, type SchemeSelection } from "@/lib/domain/scheme";
 import { RULE_NOTES, expectedItemCount, pointsForSlot, ruleBreakdown, type GradePointRule } from "@/lib/domain/grade-points";
@@ -242,15 +242,15 @@ export function SchemeGroupPicker({
   return (
     <>
       <Card className="card-pad hero-tint mt-1">
-        <p className="m-0 text-note text-[var(--ink-muted)]">{pointGroup} の配点</p>
-        <p className="num-display m-0 text-hero-sp leading-tight text-[var(--accent)]">
+        <p className="m-0 text-note text-ink-muted">{pointGroup} の配点</p>
+        <p className="num-display m-0 text-hero-sp leading-tight text-accent">
           {v.total}
           <span className="unit"> / {rule.totalPoints} 点</span>
         </p>
 
         {/* 等級名は文に混ぜない（5等級ぶんつなぐと1行が130文字を超えていた）。
             どの等級がこの区分に入るかは、数えるものなので並びで出す。 */}
-        <p className="m-0 mt-3 text-note text-[var(--ink-muted)]">この等級区分に入る等級</p>
+        <p className="m-0 mt-3 text-note text-ink-muted">この等級区分に入る等級</p>
         {gradeNames.length === 0 ? (
           <p className="footnote m-0 mt-1">この等級区分の等級は登録されていません。</p>
         ) : (
@@ -262,7 +262,7 @@ export function SchemeGroupPicker({
         )}
 
         {/* 満点の内訳は足し算。1本の文にせず、枠ごとの並びと合計で出す。 */}
-        <p className="m-0 mt-3 text-note text-[var(--ink-muted)]">満点の内訳</p>
+        <p className="m-0 mt-3 text-note text-ink-muted">満点の内訳</p>
         <ul className="m-0 mt-1 list-none space-y-1 p-0 text-sub">
           {ruleBreakdown(rule).map((part) => (
             <li key={part.kind} className="flex flex-wrap items-baseline justify-between gap-2">
@@ -344,7 +344,7 @@ export function SchemeGroupPicker({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-sub text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 mt-3 text-sub text-brand-deep">{message}</p>}
 
       {fixedItem && (
         <Card className="card-pad mt-4">
@@ -376,11 +376,12 @@ export function SchemeGroupPicker({
               return (
                 <div
                   key={x.kpiItemId}
-                  className="flex items-start justify-between gap-2 rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-sub"
+                  className="option-card flex items-start justify-between gap-2"
+                  data-on="true"
                 >
                   <span className="min-w-0">
-                    <span className="block font-bold">{item?.name ?? x.kpiItemId}</span>
-                    <span className="block text-note text-[var(--ink-muted)]">
+                    <span className="option-card-title">{item?.name ?? x.kpiItemId}</span>
+                    <span className="option-card-sub">
                       <Num value={x.weight} unit="点" />
                       {x.isMajorSlot ? "（重い枠）" : ""}
                     </span>
@@ -412,14 +413,14 @@ export function SchemeGroupPicker({
               return (
                 <label
                   key={item.id}
-                  className={`flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 text-sub ${
-                    checked ? "border-[var(--brand)] bg-[var(--brand-soft)]" : ""
+                  className={`flex cursor-pointer items-start gap-2 rounded-xl border border-line bg-surface p-4 text-sub ${
+                    checked ? "border-brand bg-brand-soft" : ""
                   } ${disabled ? "opacity-50" : ""}`}
                 >
                   <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggleComparison(item.id)} />
                   <span>
                     <span className="block font-bold">{item.name}</span>
-                    <span className="block text-note text-[var(--ink-muted)]">単位 {item.unit}</span>
+                    <span className="block text-note text-ink-muted">単位 {item.unit}</span>
                   </span>
                 </label>
               );
@@ -472,31 +473,23 @@ export function SchemeGroupPicker({
           </div>
           <div className="field-grid mt-3">
             {majorOptions.map((o) => (
-              <button
+              <OptionCard
                 key={o.id}
-                type="button"
-                aria-pressed={pick.majorId === o.id}
+                selected={pick.majorId === o.id}
                 onClick={() => toggleMajor(o.id)}
-                className={
-                  pick.majorId === o.id
-                    ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-sub"
-                    : "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
+                title={
+                  <>
+                    {o.name}
+                    {!rated.has(o.id) && (
+                      <>
+                        {" "}
+                        <Badge tone="required">基準未設定</Badge>
+                      </>
+                    )}
+                  </>
                 }
-              >
-                <span className="block font-bold">
-                  {o.name}
-                  {!rated.has(o.id) && (
-                    <>
-                      {" "}
-                      <Badge tone="required">基準未設定</Badge>
-                    </>
-                  )}
-                </span>
-                <span className="block text-note text-[var(--ink-muted)]">
-                  単位 {o.unit}
-                  {o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}
-                </span>
-              </button>
+                sub={`単位 ${o.unit}${o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}`}
+              />
             ))}
           </div>
         </Card>
@@ -519,43 +512,35 @@ export function SchemeGroupPicker({
                 {options.map((o) => {
                   const on = pick.minorIds.includes(o.id);
                   return (
-                    <button
+                    <OptionCard
                       key={o.id}
-                      type="button"
-                      aria-pressed={on}
+                      selected={on}
                       onClick={() => toggleMinor(o.id)}
-                      className={
-                        on
-                          ? "rounded-lg border border-[var(--brand)] bg-[var(--brand-soft)] px-3 py-2 text-left text-sub"
-                          : "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left text-sub hover:border-[var(--brand)]"
+                      title={
+                        <>
+                          {o.name}
+                          {on && (
+                            <>
+                              {" "}
+                              <Badge tone="done">選択中</Badge>
+                            </>
+                          )}
+                          {o.isProvisional && (
+                            <>
+                              {" "}
+                              <ProvisionalMark note="制度として未確定の項目です（叩き台）。" />
+                            </>
+                          )}
+                          {!rated.has(o.id) && (
+                            <>
+                              {" "}
+                              <Badge tone="required">基準未設定</Badge>
+                            </>
+                          )}
+                        </>
                       }
-                    >
-                      <span className="block font-bold">
-                        {o.name}
-                        {on && (
-                          <>
-                            {" "}
-                            <Badge tone="done">選択中</Badge>
-                          </>
-                        )}
-                        {o.isProvisional && (
-                          <>
-                            {" "}
-                            <ProvisionalMark note="制度として未確定の項目です（叩き台）。" />
-                          </>
-                        )}
-                        {!rated.has(o.id) && (
-                          <>
-                            {" "}
-                            <Badge tone="required">基準未設定</Badge>
-                          </>
-                        )}
-                      </span>
-                      <span className="block text-note text-[var(--ink-muted)]">
-                        単位 {o.unit}
-                        {o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}
-                      </span>
-                    </button>
+                      sub={`単位 ${o.unit}${o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}`}
+                    />
                   );
                 })}
               </div>
@@ -585,11 +570,11 @@ export function SchemeGroupPicker({
       <StickyActionBar
         status={
           <>
-            <span className="text-sub text-[var(--ink)]">
+            <span className="text-sub text-ink">
               {pointGroup} 合計 <span className="num font-bold">{v.total}</span>
               <span className="unit"> / {rule.totalPoints} 点</span>
             </span>
-            <span className="mx-2 text-[var(--line)]">|</span>
+            <span className="mx-2 text-line">|</span>
             {v.ok ? `残り ${rule.totalPoints - v.total} 点` : (v.errors[0] ?? "設定が未完了です")}
           </>
         }

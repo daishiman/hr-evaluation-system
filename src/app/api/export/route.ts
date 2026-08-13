@@ -18,13 +18,13 @@ const querySchema = z.object({
 /**
  * これまでスプレッドシートで見ていた表のCSV書き出し。
  *
- * 配点・閾値・昇格に必要な点数が含まれるため、マネージャー以上だけが使える。
+ * 回答・社員情報は会社の管理者以上、評価結果・KPI明細はマネージャー以上が使える。
  */
 export async function GET(req: Request) {
   try {
-    const viewer = await apiViewer("MANAGER");
     const url = new URL(req.url);
     const q = querySchema.parse(Object.fromEntries(url.searchParams));
+    const viewer = await apiViewer(q.type === "responses" || q.type === "members" ? "COMPANY_ADMIN" : "MANAGER");
 
     const companyId = resolveCompanyId(viewer, q.companyId);
     if (!companyId) throw new HttpError(400, "会社を指定してください。");

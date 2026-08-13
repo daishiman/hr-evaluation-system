@@ -20,6 +20,68 @@ export function isOwnEvaluation(viewerId: string, employeeId: string): boolean {
 
 type EvaluationActionRole = "SUPER_ADMIN" | "COMPANY_ADMIN" | "MANAGER" | "EMPLOYEE";
 
+interface EmployeeAuthorityTarget {
+  employeeId: string;
+  managerId: string | null;
+}
+
+/**
+ * 個人情報を読む対象範囲。
+ *
+ * 会社境界は呼び出し側の問い合わせで閉じ、この純粋関数は「本人・管理者・直属上長」だけを判定する。
+ * MANAGER を会社全員へ広げる例外は作らない。
+ */
+export function canReadEmployee(
+  viewerId: string,
+  viewerRole: EvaluationActionRole,
+  target: EmployeeAuthorityTarget,
+): boolean {
+  if (viewerId === target.employeeId) return true;
+  if (viewerRole === "SUPER_ADMIN" || viewerRole === "COMPANY_ADMIN") return true;
+  return viewerRole === "MANAGER" && target.managerId === viewerId;
+}
+
+/** 評価への書き込みは、自己評価を除く管理者または直属上長だけ。 */
+export function canActOnEmployeeEvaluation(
+  viewerId: string,
+  viewerRole: EvaluationActionRole,
+  target: EmployeeAuthorityTarget,
+): boolean {
+  if (viewerId === target.employeeId) return false;
+  if (viewerRole === "SUPER_ADMIN" || viewerRole === "COMPANY_ADMIN") return true;
+  return viewerRole === "MANAGER" && target.managerId === viewerId;
+}
+
+/** 評価者向け画面は会社管理者以上、または直属上長だけが開ける。 */
+export function canReviewEmployeeEvaluation(
+  viewerId: string,
+  viewerRole: EvaluationActionRole,
+  target: EmployeeAuthorityTarget,
+): boolean {
+  if (viewerRole === "SUPER_ADMIN" || viewerRole === "COMPANY_ADMIN") return true;
+  return viewerRole === "MANAGER" && target.managerId === viewerId;
+}
+
+/**
+ * 回答本文の閲覧範囲。
+ * 下書きは回答者本人だけに閉じる。提出後だけ、直属上長と会社管理者以上へ開く。
+ */
+export function canReadResponseBody(
+  viewerId: string,
+  viewerRole: EvaluationActionRole,
+  target: EmployeeAuthorityTarget,
+  responseStatus: string,
+): boolean {
+  if (viewerId === target.employeeId) return true;
+  if (responseStatus !== "submitted") return false;
+  return canReadEmployee(viewerId, viewerRole, target);
+}
+
+/** 本人用の結果入口は、本人の確定済み評価だけを公開する。 */
+export function canReadSelfResult(viewerId: string, employeeId: string, status: string): boolean {
+  return viewerId === employeeId && status === "finalized";
+}
+
 interface ActionableEvaluation {
   id: string;
   employeeId: string;

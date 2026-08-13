@@ -123,7 +123,7 @@ export function MembersCsvImport() {
       </p>
       {/* 取り込んだ結果を左右する事実なので、これは畳まない */}
       <p className="footnote m-0 mt-1">
-        メールアドレスが同じ方は、すでにいる方として情報を更新します。
+        メールアドレスが同じ方は、すでにいる方として情報を更新します。1行でも修正が必要な場合は、ファイル全体を保存しません。
       </p>
       <div className="mt-2">
         <DetailDialogButton label="CSVの書き方を見る" title="CSVの書き方">

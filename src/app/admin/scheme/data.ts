@@ -8,8 +8,9 @@ import {
   listRankCriteria,
   listRankRatios,
 } from "@/lib/queries";
-import { targetsPointGroup, type GradePointRule } from "@/lib/domain/grade-points";
-import { computeGroupProgress, type GroupProgress } from "@/lib/domain/scheme-steps";
+import type { GradePointRule } from "@/lib/domain/grade-points";
+import type { GroupProgress } from "@/lib/domain/scheme-steps";
+import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 
 /**
  * KPI・評価セットの3画面（入口・手順1・手順2）が共通で使う読み取り。
@@ -47,56 +48,20 @@ export async function loadSchemeSetup(companyId: string): Promise<SchemeSetup> {
   const scheme = await getActiveScheme(companyId);
   const db = await getDb();
 
-  const [rules, grades, criteria, items] = await Promise.all([
-    db
-      .select()
-      .from(s.gradePointRules)
-      .where(eq(s.gradePointRules.companyId, companyId))
-      .orderBy(asc(s.gradePointRules.displayOrder)),
+  const [grades, readiness] = await Promise.all([
     listGrades(companyId),
-    db
-      .select({ kpiItemId: s.kpiRankCriteria.kpiItemId, targetGrades: s.kpiRankCriteria.targetGrades })
-      .from(s.kpiRankCriteria)
-      .where(eq(s.kpiRankCriteria.companyId, companyId)),
-    scheme
-      ? db
-          .select({
-            kpiItemId: s.schemeItems.kpiItemId,
-            pointGroup: s.schemeItems.pointGroup,
-            isFixedSlot: s.schemeItems.isFixedSlot,
-            isMajorSlot: s.schemeItems.isMajorSlot,
-          })
-          .from(s.schemeItems)
-          .where(and(eq(s.schemeItems.companyId, companyId), eq(s.schemeItems.schemeId, scheme.id)))
-          .orderBy(asc(s.schemeItems.displayOrder))
-      : Promise.resolve([]),
+    loadSchemeReadiness(companyId, scheme?.id ?? null),
   ]);
 
-  const groups: SchemeGroup[] = rules.map((r) => {
-    const rule: GradePointRule = {
-      pointGroup: r.pointGroup,
-      totalPoints: r.totalPoints,
-      fixedSlotPoints: r.fixedSlotPoints,
-      majorSlotPoints: r.majorSlotPoints,
-      majorSlotCount: r.majorSlotCount,
-      minorSlotPoints: r.minorSlotPoints,
-      minorSlotCount: r.minorSlotCount,
-    };
-    const ratedItemIds = [
-      ...new Set(criteria.filter((x) => targetsPointGroup(x.targetGrades, r.pointGroup)).map((x) => x.kpiItemId)),
-    ];
-    const saved = items
-      .filter((i) => i.pointGroup === r.pointGroup)
-      .map((i) => ({ kpiItemId: i.kpiItemId, isFixedSlot: i.isFixedSlot, isMajorSlot: i.isMajorSlot }));
-
+  const groups: SchemeGroup[] = readiness.groups.map(({ rule, saved, ratedItemIds, progress }) => {
     return {
-      pointGroup: r.pointGroup,
+      pointGroup: progress.pointGroup,
       // AMⅠ/Ⅱ・ManagerⅠ/Ⅱ は同じ等級区分なので、その区分に入る等級をまとめて渡す
-      gradeNames: grades.filter((g) => g.pointGroup === r.pointGroup).map((g) => g.name),
+      gradeNames: grades.filter((g) => g.pointGroup === progress.pointGroup).map((g) => g.name),
       rule,
       ratedItemIds,
       saved,
-      progress: computeGroupProgress({ rule, saved, ratedItemIds }),
+      progress,
     };
   });
 

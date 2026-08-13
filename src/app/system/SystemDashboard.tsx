@@ -112,7 +112,7 @@ export function SystemDashboard({
                 </div>
               </div>
             ) : (
-              <p className="m-0 text-sub text-[var(--ink-muted)]">
+              <p className="m-0 text-sub text-ink-muted">
                 利用中の会社がありません。会社一覧で利用状態を確認してください。
               </p>
             )}
@@ -135,7 +135,7 @@ export function SystemDashboard({
                 </div>
                 <p className="todo-row-sub m-0 mt-2">{issues.join(" ／ ")}</p>
                 <p className="footnote card-foot m-0">
-                  <Link href={`/system/users?company=${company.id}`} className="text-[var(--brand-deep)]">
+                  <Link href={`/system/users?company=${company.id}`} className="text-brand-deep">
                     利用者と設定状況を見る
                   </Link>
                 </p>
@@ -164,9 +164,9 @@ export function SystemDashboard({
                 <CardRow
                   key={company.id}
                   off={!company.isActive}
-                  className="text-[var(--ink)]"
+                  className="text-ink"
                   title={
-                    <Link href={`/system/users?company=${company.id}`} className="text-[var(--brand-deep)]">
+                    <Link href={`/system/users?company=${company.id}`} className="text-brand-deep">
                       {company.name}
                     </Link>
                   }

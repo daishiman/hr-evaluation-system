@@ -46,9 +46,14 @@ describe("パスワード変更画面", () => {
     expect(FORM).toContain('className="sr-only"');
   });
 
-  it("表示・非表示の切り替えが、読み上げでもどの欄か分かる", () => {
-    expect(FORM).toContain("aria-pressed");
-    expect(FORM).toMatch(/aria-label=\{`\$\{label\}を/);
+  it("見せ隠しは共通部品に任せ、欄の名前を渡している", () => {
+    /* 読み上げ用の文の組み立ては RevealToggle（ui.tsx）が持つ。
+       ここで見るのは「この画面がその部品を使い、欄の名前を渡していること」だけ。
+       文そのものの作法は ui-rules.test.ts が見張る（検査の持ち主を部品と揃える）。 */
+    expect(FORM).toContain("<RevealToggle");
+    // 欄の名前と、見せ隠しする入力欄の id を渡していること
+    expect(FORM).toMatch(/<RevealToggle[^>]*label=\{label\}/);
+    expect(FORM).toMatch(/<RevealToggle[^>]*controls=\{id\}/);
   });
 
   it("送信中に二重で送らない", () => {

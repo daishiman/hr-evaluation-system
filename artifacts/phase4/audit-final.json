@@ -1,0 +1,69 @@
+{
+  "date": "2026-08-13",
+  "runtime": "OpenNext Cloudflare Workers preview",
+  "releaseDecision": "GO_LOCAL_PREVIEW_NO_EXTERNAL_DEPLOY",
+  "tests": {
+    "filesPassed": 97,
+    "filesSkipped": 1,
+    "testsPassed": 1507,
+    "testsSkipped": 1,
+    "typecheck": "PASS",
+    "docsCheck": "PASS",
+    "build": "PASS"
+  },
+  "routeContract": {
+    "routes": 42,
+    "expandedStaticCases": 1696,
+    "passed": 1696
+  },
+  "previewHttp": {
+    "authenticated": 168,
+    "anonymous": 42,
+    "negative": 10,
+    "total": 220,
+    "passed": 220,
+    "failed": 0,
+    "classification": "HTTP status plus NEXT_REDIRECT and NEXT_HTTP_ERROR_FALLBACK RSC digests"
+  },
+  "layout": {
+    "pages": 42,
+    "widths": [375, 768, 1280, 1600],
+    "total": 168,
+    "passedAfterFix": 168,
+    "failedAfterFix": 0,
+    "readinessChangedPagesExtra": 16,
+    "readinessChangedPagesExtraPassed": 16,
+    "fixed": "ResponseSnapshot multiple-choice text overflow at 375px"
+  },
+  "representativeScreenshots": {
+    "count": 4,
+    "visualReview": "PASS",
+    "files": [
+      "01-employee-forms-375.png",
+      "02-manager-evaluation-1280.png",
+      "03-criteria-768.png",
+      "04-response-import-1600.png"
+    ]
+  },
+  "workflows": {
+    "passed": 4,
+    "failed": 0,
+    "responseCsvChangedAfterDryRun": 409,
+    "responseCsvMixedInvalidActual": 409,
+    "memberCsvMixedInvalidActual": 409,
+    "cycleOpenWithoutPublishedForm": 409
+  },
+  "launchSecurity": {
+    "critical": 0,
+    "high": 0,
+    "moderate": 1,
+    "decision": "GO",
+    "residual": "Latest drizzle-kit dev-only transitive esbuild serve advisory; not bundled or used by the production Worker"
+  },
+  "fourConditions": {
+    "noContradictions": "PASS",
+    "noOmissions": "PASS",
+    "integrity": "PASS",
+    "dependencyConsistency": "PASS"
+  }
+}

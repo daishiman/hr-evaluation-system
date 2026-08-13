@@ -46,6 +46,8 @@ export type DeadlineState =
   | "not_published"
   /** 管理者が締め切った（forms.status = closed） */
   | "closed_by_admin"
+  /** 評価期間そのものが準備中または終了済み */
+  | "cycle_not_open"
   /** 回答期間の開始前 */
   | "before_open"
   /** 回答期間内 */
@@ -56,6 +58,8 @@ export type DeadlineState =
   | "past_deadline";
 
 export interface DeadlineInput {
+  /** evaluation_cycles.status（planning | open | closed）。open 以外は fail-closed */
+  cycleStatus: string;
   /** forms.status（draft | published | closed） */
   status: string;
   /** forms.opens_at（YYYY-MM-DD）。null なら開始日の制限なし */
@@ -122,6 +126,21 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
       extended: false,
       message:
         "このアンケートは締め切られました。提出済みの回答はそのまま残っています。事情があって回答できなかった場合は、上長または会社の管理者にご連絡ください。本人ごとに期限を延ばすことができます。",
+    };
+  }
+
+  // アンケート単体が公開中でも、評価期間が開いていなければ回答は受け付けない。
+  // 未知の状態も open とみなさず fail-closed にする。
+  if (input.cycleStatus !== "open") {
+    const closed = input.cycleStatus === "closed";
+    return {
+      canAnswer: false,
+      state: "cycle_not_open",
+      effectiveUntil,
+      extended: false,
+      message: closed
+        ? "この評価期間は終了しているため、回答を保存できません。提出済みの回答はそのまま残っています。必要な場合は会社の管理者にご相談ください。"
+        : "この評価期間はまだ準備中です。受付が始まると、この画面から回答できます。",
     };
   }
 

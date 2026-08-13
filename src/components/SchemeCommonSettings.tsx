@@ -62,7 +62,7 @@ export function SchemeCommonSettings({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-sub text-[var(--brand-deep)]">{message}</p>}
+      {message && <p className="m-0 mt-3 text-sub text-brand-deep">{message}</p>}
       <div className="mt-3">
         <Button variant="secondary" onClick={save} disabled={busy || !changed}>
           {busy ? "保存しています…" : changed ? "共通の設定を保存する" : "変更はありません"}

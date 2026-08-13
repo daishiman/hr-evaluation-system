@@ -38,7 +38,7 @@ const bodySchema = z.object({
         kpiItemId: z.string().min(1),
         categoryId: z.string().nullable(),
         isFixedSlot: z.boolean(),
-        /** 20点枠（金銭系）として選んだか */
+        /** 20点枠として選んだか（項目分類による制約なし） */
         isMajorSlot: z.boolean().optional(),
       }),
     )
@@ -91,7 +91,7 @@ async function saveCommon(
  * 評価セット（等級区分ごとの項目選択）の保存。会社の管理者以上のみ。
  *
  * 配点はリクエストの値を一切使わず grade_point_rules から決める。
- * 固定枠・20点枠・その等級区分で選べるかどうかも、画面を通さずに送られた場合に備えて
+ * 固定枠・20点枠・件数・配点も、画面を通さずに送られた場合に備えて
  * ここで必ず確かめる（画面が正しく送ることに依存しない）。
  */
 export async function PUT(req: Request) {

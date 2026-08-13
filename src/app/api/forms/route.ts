@@ -4,6 +4,8 @@ import { getDb, schema as s } from "@/lib/db";
 import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import { assertFormContentEditable, buildFormDrafts, type FormDraftInput } from "@/lib/form-build";
+import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
+import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,14 @@ export async function POST(req: Request) {
     const companyId = viewer.companyId;
     const body = createSchema.parse(await req.json());
     const db = await getDb();
+
+    const cycle = (
+      await db.select().from(s.evaluationCycles)
+        .where(and(eq(s.evaluationCycles.id, body.cycleId), eq(s.evaluationCycles.companyId, companyId))).limit(1)
+    )[0];
+    if (!cycle) throw new HttpError(404, "評価期間が見つかりませんでした。");
+    const schemeReadiness = await loadSchemeReadiness(companyId, cycle.schemeId);
+    if (!schemeReadiness.schemeReady) throw new HttpError(409, schemeReadiness.schemeMessage);
 
     const grades = await db.select().from(s.grades).where(eq(s.grades.companyId, companyId));
     const targets = body.gradeIds
@@ -130,8 +140,19 @@ export async function PATCH(req: Request) {
 
     let supersededNote = "";
     if (body.status === "published") {
-      const qs = await db.select({ id: s.formQuestions.id }).from(s.formQuestions).where(eq(s.formQuestions.formId, form.id));
-      if (qs.length === 0) throw new HttpError(400, "設問が1問もありません。設問を追加してから公開してください。");
+      const [qs, cycle] = await Promise.all([
+        db.select({ id: s.formQuestions.id }).from(s.formQuestions).where(eq(s.formQuestions.formId, form.id)),
+        db.select().from(s.evaluationCycles).where(and(eq(s.evaluationCycles.id, form.cycleId), eq(s.evaluationCycles.companyId, companyId))).limit(1),
+      ]);
+      const cycleRow = cycle[0];
+      if (!cycleRow) throw new HttpError(404, "評価期間が見つかりませんでした。");
+      const schemeReadiness = await loadSchemeReadiness(companyId, cycleRow.schemeId);
+      const readiness = formPublicationReadiness({
+        schemeReady: schemeReadiness.schemeReady,
+        cycleStatus: cycleRow.status,
+        questionCount: qs.length,
+      });
+      if (!readiness.ready) throw new HttpError(409, readiness.message);
       // 同じサイクル・等級で公開中のものは自動で締める（回答先が2つに割れないようにする）
       const siblings = await db
         .select()

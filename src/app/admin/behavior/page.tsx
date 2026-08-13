@@ -7,7 +7,7 @@ import { BehaviorBandAssignmentEditor } from "@/components/BehaviorBandAssignmen
 import { BehaviorBandSetEditor } from "@/components/BehaviorBandSetEditor";
 import { BehaviorGuidelineEditor } from "@/components/BehaviorGuidelineEditor";
 import { gradesUsingBand } from "@/lib/domain/behavior";
-import { Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+import { ChipLink, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -77,14 +77,12 @@ export default async function AdminBehavior({
         <>
           <div className="mb-5 flex flex-wrap gap-2">
             {grades.map((g) => (
-              <Link
+              <ChipLink
                 key={g.id}
-                href={`/admin/behavior?grade=${g.id}${band ? `&band=${band}` : ""}`}
-                className="chip"
-                aria-current={g.id === selectedGrade?.id ? "true" : undefined}
+                href={`/admin/behavior?grade=${g.id}${band ? `&band=${band}` : ""}`} current={g.id === selectedGrade?.id}
               >
                 {g.name}
-              </Link>
+              </ChipLink>
             ))}
           </div>
           {selectedGrade && (
@@ -137,21 +135,19 @@ export default async function AdminBehavior({
         <>
           <div className="mb-4 flex flex-wrap gap-2">
             {bandSets.map((set) => (
-              <Link
+              <ChipLink
                 key={set.code}
-                href={`/admin/behavior?band=${set.code}${selectedGrade ? `&grade=${selectedGrade.id}` : ""}`}
-                className="chip"
-                aria-current={set.code === band ? "true" : undefined}
+                href={`/admin/behavior?band=${set.code}${selectedGrade ? `&grade=${selectedGrade.id}` : ""}`} current={set.code === band}
                 data-off={set.isActive ? undefined : "true"}
               >
                 {set.name}
                 {!set.isActive && "（使用しない）"}
-              </Link>
+              </ChipLink>
             ))}
           </div>
           <p className="footnote">
             点数（模範3・信頼2・安定1・不安定0・悪影響-1）は変えられません。会社ごとに変えられるのは「どういう状態をその点数と見なすか」の文章です。昇格に必要な合計点は
-            <Link href="/admin/masters/promotion" className="mx-1 text-[var(--brand-deep)]">
+            <Link href="/admin/masters/promotion" className="mx-1 text-brand-deep">
               昇格の条件・要件
             </Link>
             で決めます。

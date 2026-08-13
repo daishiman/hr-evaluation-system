@@ -75,7 +75,7 @@ function toIsoDate(raw: string): string | null {
 export async function importMembersCsv(
   companyId: string,
   csvText: string,
-  options: { dryRun?: boolean } = {},
+  options: { dryRun?: boolean; actorId?: string | null } = {},
 ): Promise<MemberImportResult> {
   const dryRun = options.dryRun === true;
   const db = await getDb();
@@ -108,8 +108,7 @@ export async function importMembersCsv(
   const [grades, offices, existingUsers] = await Promise.all([
     db.select({ id: s.grades.id, name: s.grades.name, code: s.grades.code }).from(s.grades).where(eq(s.grades.companyId, companyId)),
     db.select({ id: s.offices.id, name: s.offices.name }).from(s.offices).where(eq(s.offices.companyId, companyId)),
-    db.select({ id: s.users.id, name: s.users.name, email: s.users.email, companyId: s.users.companyId, employeeCode: s.users.employeeCode })
-      .from(s.users),
+    db.select().from(s.users),
   ]);
 
   const gradeByKey = new Map<string, string>();
@@ -132,6 +131,7 @@ export async function importMembersCsv(
     hiredAt: string | null;
     isActive: boolean | null;
     managerRaw: string;
+    managerSpecified: boolean;
     existingId: string | null;
   };
 
@@ -192,6 +192,7 @@ export async function importMembersCsv(
       department: at(line, col.department) || null,
       hiredAt, isActive,
       managerRaw: at(line, col.manager),
+      managerSpecified: col.manager >= 0,
       existingId: existing?.id ?? null,
     });
   }
@@ -212,7 +213,9 @@ export async function importMembersCsv(
   };
 
   const managerPlan = new Map<number, { id: string | null; error?: string }>();
-  for (const p of plans) managerPlan.set(p.row, resolveManager(p.managerRaw));
+  for (const p of plans) {
+    managerPlan.set(p.row, p.managerSpecified ? resolveManager(p.managerRaw) : { id: null });
+  }
 
   let created = 0;
   let updated = 0;
@@ -220,20 +223,12 @@ export async function importMembersCsv(
   const issuedPasswords = new Set<string>();
   const credentials: IssuedMemberCredential[] = [];
 
+  // DBへ触る前に、全行のIDと資格情報まで確定する。後続検査が1件でも失敗すれば
+  // ファイル全体を止めるため、ここで作った値はまだ外へ返さず保存もしない。
   for (const p of plans) {
     const mp = managerPlan.get(p.row)!;
     if (mp.error) {
       results.push({ row: p.row, name: p.name, email: p.email, status: "エラー", reason: mp.error });
-      continue;
-    }
-    if (dryRun) {
-      if (p.existingId) {
-        updated++;
-        results.push({ row: p.row, name: p.name, email: p.email, status: "更新", reason: "すでにいる方の情報を更新します" });
-      } else {
-        created++;
-        results.push({ row: p.row, name: p.name, email: p.email, status: "新規作成", reason: "新しくアカウントを作ります" });
-      }
       continue;
     }
     if (p.existingId) {
@@ -242,51 +237,80 @@ export async function importMembersCsv(
       const userId = crypto.randomUUID();
       const initialPassword = generateUniqueInitialPassword(issuedPasswords);
       newIdByRow.set(p.row, userId);
-      await db.batch([
-        db.insert(s.users).values({
-          id: userId,
-          name: p.name,
-          email: p.email,
-          emailVerified: true,
-          companyId,
-          role: p.role ?? "EMPLOYEE",
-          gradeId: p.gradeId,
-          officeId: p.officeId,
-          employeeCode: p.employeeCode,
-          department: p.department,
-          hiredAt: p.hiredAt,
-          isActive: p.isActive ?? true,
-          mustChangePassword: true,
-        }),
-        db.insert(s.accounts).values({
-          id: newId("acc"),
-          accountId: userId,
-          providerId: "credential",
-          userId,
-          password: await hashPassword(initialPassword),
-        }),
-      ]);
       issuedPasswords.add(initialPassword);
       credentials.push({ row: p.row, name: p.name, email: p.email, initialPassword });
+    }
+  }
+
+  const plannedManagerById = new Map(
+    existingUsers.filter((user) => user.companyId === companyId).map((user) => [user.id, user.managerId]),
+  );
+  for (const p of plans) {
+    if (!p.managerSpecified) continue;
+    const mp = managerPlan.get(p.row);
+    const selfId = newIdByRow.get(p.row);
+    if (!mp || mp.error || !selfId) continue;
+    plannedManagerById.set(
+      selfId,
+      mp.id?.startsWith("row:") ? (newIdByRow.get(Number(mp.id.slice(4))) ?? null) : mp.id,
+    );
+  }
+  const cyclicUserIds = new Set<string>();
+  for (const [userId, firstManagerId] of plannedManagerById) {
+    const seen = new Set([userId]);
+    let managerId = firstManagerId;
+    while (managerId) {
+      if (seen.has(managerId)) { cyclicUserIds.add(userId); break; }
+      seen.add(managerId);
+      managerId = plannedManagerById.get(managerId) ?? null;
+    }
+  }
+  for (const p of plans) {
+    const selfId = newIdByRow.get(p.row);
+    if (selfId && cyclicUserIds.has(selfId)) {
+      results.push({ row: p.row, name: p.name, email: p.email, status: "エラー", reason: "上長の関係が循環します。別の上長を指定してください。" });
+    }
+  }
+
+  const failed = results.filter((x) => x.status === "エラー").length;
+  if (!dryRun && failed > 0) {
+    throw new HttpError(409, `取り込めない行が${failed}件あります。ファイル全体は保存していません。まず内容を確認し、全行を修正してください。`);
+  }
+
+  for (const p of plans) {
+    if (results.some((result) => result.row === p.row && result.status === "エラー")) continue;
+    if (p.existingId) {
+      updated++;
+      results.push({ row: p.row, name: p.name, email: p.email, status: "更新", reason: dryRun ? "すでにいる方の情報を更新します" : "登録済みの方の情報を更新しました" });
+    } else {
       created++;
-      results.push({ row: p.row, name: p.name, email: p.email, status: "新規作成", reason: "下の仮パスワード一覧をご本人にお伝えください" });
+      results.push({ row: p.row, name: p.name, email: p.email, status: "新規作成", reason: dryRun ? "新しくアカウントを作ります" : "下の仮パスワード一覧をご本人にお伝えください" });
     }
   }
 
   if (!dryRun) {
-    // 上長は全員を登録し終えてから設定する（ファイル内の上長も指せるようにするため）
+    const statements: Parameters<typeof db.batch>[0][number][] = [];
     for (const p of plans) {
-      const mp = managerPlan.get(p.row);
-      if (!mp || mp.error) continue;
-      const selfId = newIdByRow.get(p.row);
-      if (!selfId) continue;
-      const managerId = mp.id?.startsWith("row:")
-        ? (newIdByRow.get(Number(mp.id.slice(4))) ?? null)
-        : mp.id;
-
-      const patch: Record<string, unknown> = { managerId: managerId === selfId ? null : managerId };
-      if (p.existingId) {
-        patch.name = p.name;
+      const selfId = newIdByRow.get(p.row)!;
+      const mp = managerPlan.get(p.row)!;
+      const managerId = p.managerSpecified
+        ? (mp.id?.startsWith("row:") ? (newIdByRow.get(Number(mp.id.slice(4))) ?? null) : mp.id)
+        : undefined;
+      if (!p.existingId) {
+        const credential = credentials.find((item) => item.row === p.row)!;
+        statements.push(db.insert(s.users).values({
+          id: selfId, name: p.name, email: p.email, emailVerified: true, companyId,
+          role: p.role ?? "EMPLOYEE", gradeId: p.gradeId, officeId: p.officeId,
+          employeeCode: p.employeeCode, department: p.department, hiredAt: p.hiredAt,
+          isActive: p.isActive ?? true, mustChangePassword: true, managerId: managerId ?? null,
+        }) as unknown as (typeof statements)[number]);
+        statements.push(db.insert(s.accounts).values({
+          id: newId("acc"), accountId: selfId, providerId: "credential", userId: selfId,
+          password: await hashPassword(credential.initialPassword),
+        }) as unknown as (typeof statements)[number]);
+      } else {
+        const patch: Record<string, unknown> = { name: p.name };
+        if (p.managerSpecified) patch.managerId = managerId ?? null;
         if (p.role !== null) patch.role = p.role;
         if (p.gradeId !== null) patch.gradeId = p.gradeId;
         if (p.officeId !== null) patch.officeId = p.officeId;
@@ -294,17 +318,25 @@ export async function importMembersCsv(
         if (p.department !== null) patch.department = p.department;
         if (p.hiredAt !== null) patch.hiredAt = p.hiredAt;
         if (p.isActive !== null) patch.isActive = p.isActive;
-      }
-      await db.update(s.users).set(patch).where(eq(s.users.id, selfId));
-
-      if (p.existingId) {
-        updated++;
-        results.push({ row: p.row, name: p.name, email: p.email, status: "更新", reason: "登録済みの方の情報を更新しました" });
+        statements.push(db.update(s.users).set(patch).where(eq(s.users.id, selfId)) as unknown as (typeof statements)[number]);
       }
     }
+    const beforeJson = JSON.stringify(plans.map((plan) => ({
+      userId: newIdByRow.get(plan.row),
+      before: plan.existingId ? userByEmail.get(plan.email) : null,
+    })));
+    if (beforeJson.length > 1_500_000 || statements.length + 1 > 500) {
+      throw new HttpError(413, "1回で安全に保存・復元記録を作れる量を超えています。ファイルを分けてください。");
+    }
+    const sourceHash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(csvText))))
+      .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    statements.push(db.insert(s.importBatches).values({
+      id: newId("import"), companyId, kind: "members", subjectId: companyId,
+      actorId: options.actorId ?? null, beforeJson, sourceHash, rowCount: plans.length,
+    }) as unknown as (typeof statements)[number]);
+    await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
   }
 
   results.sort((a, b) => a.row - b.row);
-  const failed = results.filter((x) => x.status === "エラー").length;
-  return { created, updated, failed, unmatchedHeaders, rows: results, credentials, dryRun };
+  return { created, updated, failed, unmatchedHeaders, rows: results, credentials: dryRun ? [] : credentials, dryRun };
 }

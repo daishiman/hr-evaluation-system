@@ -43,10 +43,23 @@ export async function POST(req: Request) {
         .where(and(eq(s.evaluationCycles.id, body.cycleId), eq(s.evaluationCycles.companyId, viewer.companyId)))
         .limit(1)
     )[0];
-    if (!cycle) throw new HttpError(404, "その期（サイクル）は見つかりませんでした。");
+    if (!cycle) throw new HttpError(404, "その評価期間は見つかりませんでした。");
+
+    let employeeIds = body.employeeIds;
+    if (viewer.role === "MANAGER") {
+      const assigned = await db
+        .select({ id: s.users.id })
+        .from(s.users)
+        .where(and(eq(s.users.companyId, viewer.companyId), eq(s.users.managerId, viewer.id)));
+      const assignedIds = new Set(assigned.map((employee) => employee.id));
+      if (employeeIds?.some((employeeId) => !assignedIds.has(employeeId))) {
+        throw new HttpError(403, "直属メンバー以外の評価は集計できません。");
+      }
+      employeeIds = employeeIds ?? [...assignedIds];
+    }
 
     const results = await buildEvaluationsForCycle(viewer.companyId, cycle.id, viewer.id, {
-      employeeIds: body.employeeIds,
+      employeeIds,
     });
 
     return { message: summarizeBuildResults(results), results };
