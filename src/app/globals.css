@@ -1125,8 +1125,11 @@ main {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  margin: 0 0 4px;
-  padding: 0;
+  /* 見出しとの間の 4px は下余白ではなく内側の余白で取る。
+     外側の余白は親の <nav> にすり抜けて消えることがあり、
+     画面を絵として写し取るときに 4px ぶん詰まって見えるため。 */
+  margin: 0;
+  padding: 0 0 4px;
   list-style: none;
   font-size: var(--text-note);
   color: var(--ink-muted);
@@ -2727,8 +2730,40 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .feedback-fab .btn:hover,
 .feedback-fab .btn:focus-visible { opacity: 1; }
 
-/* 画面を撮っている間は、この仕組み自体を写さない（写り込むと本題が隠れる） */
-html[data-shooting] .feedback-root { visibility: hidden; }
+/* 撮っている間の待ち表示。押した直後に何が起きているかを黙らせない。 */
+.feedback-shooting {
+  display: flex;
+  align-items: center;
+  gap: var(--space-tight);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--subtle);
+  color: var(--ink-muted);
+  font-size: var(--text-note);
+  padding: 10px 12px;
+}
+
+/* 撮り直しと、撮れなかったときの逃げ道。主役ではないので静かに置く。 */
+.feedback-alt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-tight);
+  border-top: 1px dashed var(--line);
+  padding-top: 12px;
+}
+.feedback-alt .footnote { margin: 0; }
+.feedback-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--brand-deep);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.feedback-link:hover { text-decoration: none; }
 
 .feedback-dialog {
   border: 1px solid var(--line);

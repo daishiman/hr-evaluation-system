@@ -9,8 +9,15 @@ import { IMPROVEMENT_BODY_MAX, IMPROVEMENT_SHOT_MAX_BYTES, shotBytesOf } from "@
 /**
  * 全画面共通の「改善要望」。
  *
- * 右下の小さなボタンから開き、いまの画面を撮って印を付け、一言添えて送る。
+ * 右下の小さなボタンを押した時点で、いまの画面を撮って書き込める状態にする。
+ * 「コピーしました→貼り付けてください」のような中間の操作を挟まない。
  * どの画面から届いたかは開いているURLから自動で入れる（打たせない）。
+ *
+ * 撮り方は、いま表示している DOM を描き直す方式（modern-screenshot、SVG の
+ * foreignObject）。ブラウザの画面共有（getDisplayMedia）は使わない。共有の許可を
+ * 毎回聞かれると「押した次の瞬間に書き込める」体験が壊れるため。
+ * このアプリの図は recharts（SVG）で、canvas・iframe・外部画像を使っていないので、
+ * 描き直し方式で忠実に写る（→ docs/product/spec.md §26-3）。
  *
  * 差し込むのは AppShell の1箇所だけ。画面ごとに置くと、置き忘れた画面が
  * 「意見を出せない画面」になる。
@@ -116,7 +123,9 @@ export function FeedbackWidget() {
   const [textDraft, setTextDraft] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
   const screenLabel = routeMetaOf(pathname)?.label ?? "その他の画面";
@@ -138,8 +147,22 @@ export function FeedbackWidget() {
     setBody("");
     setTextDraft("");
     setError(null);
+    setNotice(null);
     setSent(false);
     baseRef.current = null;
+  };
+
+  /**
+   * 描き直しで写らない可能性があるものを、撮る前に数えておく。
+   * いまのこのアプリには1つも無い（図は recharts の SVG）。将来入ったときに
+   * 黙って崩れた絵が届くのを防ぐための備え。
+   */
+  const riskyNodeCount = () => {
+    const risky = document.querySelectorAll("canvas, iframe, embed, object");
+    const foreignImages = [...document.images].filter(
+      (img) => img.src.startsWith("http") && !img.src.startsWith(window.location.origin),
+    );
+    return risky.length + foreignImages.length;
   };
 
   /* ───── 画像を受け取る ───── */
@@ -161,53 +184,76 @@ export function FeedbackWidget() {
   /**
    * いまの画面を撮る。
    *
-   * ブラウザの画面共有を使う。撮る対象を選ぶ間はまだ映さないので、
-   * 選び終わってからこの窓を閉じ、少し待ってから1コマだけ取り出す。
-   * こうしないと、この窓自体が写り込む。
+   * 表示中の DOM を描き直して1枚の絵にする。共有の許可を聞かれないので、
+   * 押した直後に書き込める状態まで進める。
+   *
+   * - この仕組み自体（`.feedback-root`）は撮る対象から外す（写り込ませない）。
+   * - 見えている範囲だけを切り出す（本文は `translate` でずらし、
+   *   上の帯と左のメニューは貼り付いて見えている位置へ動かす）。
+   * - 画面の細かさ（`devicePixelRatio`）を最大2倍まで見て、文字をぼやけさせない。
    */
-  const capture = async () => {
+  const capture = useCallback(async () => {
     setError(null);
-    const media = navigator.mediaDevices;
-    if (!media?.getDisplayMedia) {
-      setError("この端末では画面を撮れません。画像を貼り付けてください。");
-      return;
-    }
-    let stream: MediaStream;
+    setNotice(riskyNodeCount() > 0 ? "この画面には、絵として写しにくい部品があります。撮れた画像を確かめてください。" : null);
+    setCapturing(true);
     try {
-      stream = await media.getDisplayMedia({
-        video: { displaySurface: "browser" },
-        audio: false,
-        preferCurrentTab: true,
-      } as DisplayMediaStreamOptions);
-    } catch {
-      setError("画面の共有が許可されませんでした。");
-      return;
-    }
-
-    document.documentElement.dataset.shooting = "1";
-    setOpen(false);
-    try {
-      const video = document.createElement("video");
-      video.srcObject = stream;
-      video.muted = true;
-      video.playsInline = true;
-      await video.play();
-      // 窓が消えて画面が描き直されるのを待つ
-      await new Promise((r) => setTimeout(r, 450));
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext("2d")?.drawImage(video, 0, 0);
-      video.pause();
+      const { domToCanvas } = await import("modern-screenshot");
+      const scrollY = window.scrollY;
+      const scrollX = window.scrollX;
+      const canvas = await domToCanvas(document.body, {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scale: Math.min(2, window.devicePixelRatio || 1),
+        backgroundColor: getComputedStyle(document.body).backgroundColor,
+        features: {
+          // 画面では見えないスクロールバーを描き直しの側で足されると、
+          // メニューなど中でスクロールする箱の下端が数ピクセル削られる。
+          copyScrollbar: false,
+          // 中でスクロールしている箱（横に流れる表など）も、見えている位置のまま写す。
+          restoreScrollPosition: true,
+        },
+        style: {
+          // 描き直す先では body に既定の余白（8px）が付く。消さないと絵が斜めにずれる。
+          margin: "0",
+          transform: `translate(${-scrollX}px, ${-scrollY}px)`,
+          transformOrigin: "top left",
+        },
+        // 改善要望の窓・ボタンは撮らない
+        filter: (node) => !(node instanceof Element && node.classList?.contains("feedback-root")),
+        onCloneNode: (cloned) => {
+          // 上の帯と左のメニューは「貼り付いて」見えている。描き直しには
+          // スクロール量が無いので、見えている位置まで自分で下ろす。
+          if (!(cloned instanceof Element)) return;
+          for (const el of cloned.querySelectorAll<HTMLElement>(".app-header, .app-sidebar")) {
+            if (scrollY > 0) el.style.transform = `translateY(${scrollY}px)`;
+          }
+          // 中でスクロールする箱（メニュー・横に流れる表）は、画面では棒が出ないのに
+          // 描き直しの側では場所を取る棒が出る。そのぶん中身の下端・右端が切れるので、
+          // 「はみ出しは隠す」に置き換える。見えている範囲は画面と同じになる。
+          const boxes = [cloned, ...cloned.querySelectorAll<HTMLElement>("*")];
+          for (const el of boxes) {
+            if (!(el instanceof HTMLElement)) continue;
+            for (const axis of ["overflowX", "overflowY"] as const) {
+              if (/auto|scroll|overlay/.test(el.style[axis])) el.style[axis] = "hidden";
+            }
+            // 描き直す側には画面での実寸が小数第3位までで写される。札は切り上げ、
+            // 入れ物は切り捨てになるため、ちょうど収まっていた並びが 0.001px だけ
+            // あふれて、札が1つだけ次の行へ落ちる。札の間隔を 0.05px 詰めて逃がす
+            // （見た目には出ない大きさ。入れ物側を広げると縮む力が働いて逆効果）。
+            if (/wrap/.test(el.style.flexWrap)) {
+              const gap = Number.parseFloat(el.style.columnGap);
+              if (gap > 0.1) el.style.columnGap = `${gap - 0.05}px`;
+            }
+          }
+        },
+      });
       await acceptImage(canvas.toDataURL("image/png"));
     } catch {
-      setError("画面を撮れませんでした。もう一度お試しください。");
+      setError("うまく撮れませんでした。画像を貼り付けるか、ファイルを選んでください。");
     } finally {
-      for (const track of stream.getTracks()) track.stop();
-      delete document.documentElement.dataset.shooting;
-      setOpen(true);
+      setCapturing(false);
     }
-  };
+  }, [acceptImage]);
 
   const onPaste = (e: React.ClipboardEvent) => {
     const file = [...e.clipboardData.items].find((i) => i.type.startsWith("image/"))?.getAsFile();
@@ -379,6 +425,8 @@ export function FeedbackWidget() {
           onClick={() => {
             reset();
             setOpen(true);
+            // 押した時点で撮る。窓が開いたときには、もう書き込める状態にする。
+            void capture();
           }}
         >
           改善要望
@@ -398,6 +446,7 @@ export function FeedbackWidget() {
             ) : (
               <>
                 {error && <ReasonNote>{error}</ReasonNote>}
+                {notice && <ReasonNote>{notice}</ReasonNote>}
 
                 <label className="footnote" htmlFor="feedback_body">
                   改善したいこと
@@ -412,16 +461,12 @@ export function FeedbackWidget() {
                   placeholder="例：この一覧から、担当者で絞り込めると助かります。"
                 />
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Button type="button" onClick={capture} disabled={busy}>
-                    この画面を撮る
-                  </Button>
-                  <Button type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
-                    画像を選ぶ
-                  </Button>
-                  <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
-                  <span className="footnote">画像は貼り付け（Ctrl+V）もできます</span>
-                </div>
+                {capturing && (
+                  <div className="feedback-shooting mt-3" role="status">
+                    <span className="spinner" aria-hidden="true" />
+                    <span>この画面を撮っています…</span>
+                  </div>
+                )}
 
                 {shot && (
                   <div className="mt-3">
@@ -474,6 +519,21 @@ export function FeedbackWidget() {
                     <p className="footnote">見られたくない部分は「目隠し」で塗りつぶせます。</p>
                   </div>
                 )}
+
+                {/* 撮り直しと、撮れなかったときの逃げ道。主役ではないので下に小さく置く。 */}
+                <div className="feedback-alt mt-3">
+                  <Button type="button" onClick={capture} disabled={busy || capturing}>
+                    {shot ? "撮り直す" : "もう一度撮る"}
+                  </Button>
+                  <span className="footnote">
+                    うまく撮れないときは、画像を貼り付け（Ctrl+V）するか
+                    <button type="button" className="feedback-link" onClick={() => fileRef.current?.click()}>
+                      ファイルを選ぶ
+                    </button>
+                    こともできます。
+                  </span>
+                  <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPickFile} />
+                </div>
               </>
             )}
           </div>
