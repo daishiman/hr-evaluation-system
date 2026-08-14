@@ -241,6 +241,289 @@ html[data-theme="dark"] .user-row[data-muted="true"] { filter: brightness(0.9); 
 }
 
 /* ============================================================
+   配色（テーマの系統）
+
+   明るさ（自動・明るい・暗い）とは別の軸として、色の系統を選べるようにする。
+   既定はここまでのグラファイト（無彩色）で、html に data-palette が無い状態。
+   PaletteToggle.tsx が html[data-palette] を付け外しし、値だけが入れ替わる。
+
+   なぜこの形か
+   ・役割の割り当て（--brand は操作、--accent はキー数字…）は系統を問わず同じ。
+     画面側は var(--surface) 等しか見ていないので、画面のコードは1行も変わらない。
+   ・系統が上書きするのは「骨格の18個」だけにする。
+     状態色（danger / caution / status-progress）と人物識別色（avatar-*）は
+     意味が系統に依存しないので、上のグラファイトの値をそのまま受け継ぐ。
+     ここを系統ごとに書くと、危険色が系統ごとに変わって意味が読めなくなる。
+   ・暗いほうは「明示（data-theme="dark"）」と「端末に従う」の2箇所へ同じ値を書く。
+     CSSに変数の集合を使い回す仕組みが無いため。ずれると気づきにくい壊れ方をするので、
+     palette-contract.test.ts が2箇所の一致を機械で固定している。
+
+   詳細度の順番（これが崩れると色が混ざる）
+   ・明るい  html[data-palette="x"]                      … 0-1-1
+   ・暗い    html[data-palette="x"][data-theme="dark"]    … 0-2-1（明るいに勝つ）
+   ・端末暗  html[data-palette="x"]:not([data-theme="light"]) … 0-2-1（後ろに置いて勝つ）
+   紙は常に明るい。ファイル末尾の印刷ブロックが html:root[data-palette] で最後に上書きする。
+
+   コントラストは全系統・全モードで WCAG AA（本文4.5:1・境界線3:1）を満たすことを
+   palette-contract.test.ts が検査する。満たさない値はこのファイルに置けない。
+   ============================================================ */
+/* ---- アズール（青） ---- */
+html[data-palette="azure"] {
+  --brand: #2f4c74;
+  --brand-deep: #1c3252;
+  --brand-soft: #dce6f2;
+  --page-bg: #eaeff6;
+  --surface: #ffffff;
+  --accent: #1c3252;
+  --cta-bg: #26415f;
+  --cta-bg-hover: #375a7d;
+  --cta-fg: #ffffff;
+  --ink: #131a24;
+  --ink-muted: #4d5967;
+  --line: #7b8797;
+  --subtle: #f1f5fa;
+  --off-surface: #dde4ee;
+  --off-surface-soft: #e8edf4;
+  --off-line: #737f8f;
+  --chart-line-soft: #6d7b8d;
+  --chart-band: #edf1f7;
+}
+html[data-palette="azure"][data-theme="dark"] {
+  --brand: #a8c6ea;
+  --brand-deep: #d7e6f7;
+  --brand-soft: #24384f;
+  --page-bg: #131c27;
+  --surface: #1c2836;
+  --accent: #e8f1fb;
+  --cta-bg: #d8e6f5;
+  --cta-bg-hover: #eef5fd;
+  --cta-fg: #14202c;
+  --ink: #eef4fa;
+  --ink-muted: #b0c1d2;
+  --line: #7d8fa2;
+  --subtle: #223040;
+  --off-surface: #2a3949;
+  --off-surface-soft: #243241;
+  --off-line: #8ea0b3;
+  --chart-line-soft: #8798ab;
+  --chart-band: #223040;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-palette="azure"]:not([data-theme="light"]) {
+    --brand: #a8c6ea;
+    --brand-deep: #d7e6f7;
+    --brand-soft: #24384f;
+    --page-bg: #131c27;
+    --surface: #1c2836;
+    --accent: #e8f1fb;
+    --cta-bg: #d8e6f5;
+    --cta-bg-hover: #eef5fd;
+    --cta-fg: #14202c;
+    --ink: #eef4fa;
+    --ink-muted: #b0c1d2;
+    --line: #7d8fa2;
+    --subtle: #223040;
+    --off-surface: #2a3949;
+    --off-surface-soft: #243241;
+    --off-line: #8ea0b3;
+    --chart-line-soft: #8798ab;
+    --chart-band: #223040;
+  }
+}
+
+/* ---- サンド（暖色） ---- */
+html[data-palette="sand"] {
+  --brand: #6d5137;
+  --brand-deep: #4a3624;
+  --brand-soft: #efe6da;
+  --page-bg: #f6f1e9;
+  --surface: #fffdf9;
+  --accent: #4a3624;
+  --cta-bg: #57402b;
+  --cta-bg-hover: #715540;
+  --cta-fg: #ffffff;
+  --ink: #241d15;
+  --ink-muted: #5f5344;
+  --line: #94866f;
+  --subtle: #f7f2ea;
+  --off-surface: #e8e0d3;
+  --off-surface-soft: #f0eae0;
+  --off-line: #8a7c69;
+  --chart-line-soft: #857763;
+  --chart-band: #f2ece2;
+}
+html[data-palette="sand"][data-theme="dark"] {
+  --brand: #e3cbaa;
+  --brand-deep: #f4e6d3;
+  --brand-soft: #4a3b2a;
+  --page-bg: #201a13;
+  --surface: #2c241a;
+  --accent: #f7ede0;
+  --cta-bg: #f0e2cf;
+  --cta-bg-hover: #fdf6ec;
+  --cta-fg: #241c12;
+  --ink: #f6efe5;
+  --ink-muted: #cbbba5;
+  --line: #96866f;
+  --subtle: #322a1f;
+  --off-surface: #3b3225;
+  --off-surface-soft: #342c20;
+  --off-line: #a3927a;
+  --chart-line-soft: #9c8c76;
+  --chart-band: #322a1f;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-palette="sand"]:not([data-theme="light"]) {
+    --brand: #e3cbaa;
+    --brand-deep: #f4e6d3;
+    --brand-soft: #4a3b2a;
+    --page-bg: #201a13;
+    --surface: #2c241a;
+    --accent: #f7ede0;
+    --cta-bg: #f0e2cf;
+    --cta-bg-hover: #fdf6ec;
+    --cta-fg: #241c12;
+    --ink: #f6efe5;
+    --ink-muted: #cbbba5;
+    --line: #96866f;
+    --subtle: #322a1f;
+    --off-surface: #3b3225;
+    --off-surface-soft: #342c20;
+    --off-line: #a3927a;
+    --chart-line-soft: #9c8c76;
+    --chart-band: #322a1f;
+  }
+}
+
+/* ---- モス（緑） ---- */
+html[data-palette="moss"] {
+  --brand: #3a5442;
+  --brand-deep: #23372a;
+  --brand-soft: #dfe9e0;
+  --page-bg: #edf2ed;
+  --surface: #ffffff;
+  --accent: #23372a;
+  --cta-bg: #2f4a37;
+  --cta-bg-hover: #43614c;
+  --cta-fg: #ffffff;
+  --ink: #131a15;
+  --ink-muted: #4d5a50;
+  --line: #7c8a80;
+  --subtle: #f2f6f2;
+  --off-surface: #dee6df;
+  --off-surface-soft: #e9efe9;
+  --off-line: #74827a;
+  --chart-line-soft: #6d7c72;
+  --chart-band: #eef3ee;
+}
+html[data-palette="moss"][data-theme="dark"] {
+  --brand: #a9c9b0;
+  --brand-deep: #d5e8d9;
+  --brand-soft: #27392c;
+  --page-bg: #121a14;
+  --surface: #1b271e;
+  --accent: #e9f3ea;
+  --cta-bg: #d6e8d9;
+  --cta-bg-hover: #edf7ee;
+  --cta-fg: #142016;
+  --ink: #eef5ef;
+  --ink-muted: #b2c4b6;
+  --line: #7f9285;
+  --subtle: #212f24;
+  --off-surface: #29382c;
+  --off-surface-soft: #233024;
+  --off-line: #90a394;
+  --chart-line-soft: #899c8d;
+  --chart-band: #212f24;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-palette="moss"]:not([data-theme="light"]) {
+    --brand: #a9c9b0;
+    --brand-deep: #d5e8d9;
+    --brand-soft: #27392c;
+    --page-bg: #121a14;
+    --surface: #1b271e;
+    --accent: #e9f3ea;
+    --cta-bg: #d6e8d9;
+    --cta-bg-hover: #edf7ee;
+    --cta-fg: #142016;
+    --ink: #eef5ef;
+    --ink-muted: #b2c4b6;
+    --line: #7f9285;
+    --subtle: #212f24;
+    --off-surface: #29382c;
+    --off-surface-soft: #233024;
+    --off-line: #90a394;
+    --chart-line-soft: #899c8d;
+    --chart-band: #212f24;
+  }
+}
+
+/* ---- ミッドナイト（濃紺） ---- */
+html[data-palette="midnight"] {
+  --brand: #35405a;
+  --brand-deep: #1f2740;
+  --brand-soft: #dde0ea;
+  --page-bg: #e4e7ee;
+  --surface: #f8f9fc;
+  --accent: #1f2740;
+  --cta-bg: #262e46;
+  --cta-bg-hover: #3b4560;
+  --cta-fg: #ffffff;
+  --ink: #10141f;
+  --ink-muted: #4a5265;
+  --line: #79808f;
+  --subtle: #eef0f5;
+  --off-surface: #d7dae3;
+  --off-surface-soft: #e3e6ed;
+  --off-line: #717988;
+  --chart-line-soft: #6b7382;
+  --chart-band: #e9ebf1;
+}
+html[data-palette="midnight"][data-theme="dark"] {
+  --brand: #b6c2d6;
+  --brand-deep: #dfe6f2;
+  --brand-soft: #1e2739;
+  --page-bg: #0b0e14;
+  --surface: #141922;
+  --accent: #eef2f9;
+  --cta-bg: #dee5f1;
+  --cta-bg-hover: #f4f7fc;
+  --cta-fg: #10141c;
+  --ink: #f0f3f9;
+  --ink-muted: #b3bccb;
+  --line: #7b8698;
+  --subtle: #1a2029;
+  --off-surface: #232a36;
+  --off-surface-soft: #1d232d;
+  --off-line: #8b96a6;
+  --chart-line-soft: #8590a1;
+  --chart-band: #1a2029;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-palette="midnight"]:not([data-theme="light"]) {
+    --brand: #b6c2d6;
+    --brand-deep: #dfe6f2;
+    --brand-soft: #1e2739;
+    --page-bg: #0b0e14;
+    --surface: #141922;
+    --accent: #eef2f9;
+    --cta-bg: #dee5f1;
+    --cta-bg-hover: #f4f7fc;
+    --cta-fg: #10141c;
+    --ink: #f0f3f9;
+    --ink-muted: #b3bccb;
+    --line: #7b8698;
+    --subtle: #1a2029;
+    --off-surface: #232a36;
+    --off-surface-soft: #1d232d;
+    --off-line: #8b96a6;
+    --chart-line-soft: #8590a1;
+    --chart-band: #1a2029;
+  }
+}
+
+/* ============================================================
    文字の大きさ（このアプリで使ってよい段はこれだけ）
 
    ここが文字サイズの唯一の正本。画面側は text-note / text-body …の
@@ -2031,6 +2314,9 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 }
 .account-pop-theme { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
 .account-pop-theme-label { margin: 0 0 6px; font-size: var(--text-note); color: var(--ink-muted); }
+/* 配色の選択肢。5つあるので、明るさ（3つ・横1列の .segmented）とは別に2列で置く。
+   横1列にすると、狭い端末で札が1文字ずつ潰れて読めなくなる。 */
+.palette-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .account-pop-links { display: grid; gap: 2px; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
 .account-pop-link {
   display: flex;
@@ -2286,8 +2572,12 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 
   /* 画面がダークでも、紙ではライトの意味トークンへ戻す。
      html:root は明示テーマと端末テーマのセレクタと同じ詳細度を持ち、
-     後に置いたこの値が印刷時だけ確実に勝つ。 */
-  html:root {
+     後に置いたこの値が印刷時だけ確実に勝つ。
+     配色（data-palette）を選んでいるときは、暗いほうの指定が
+     html[data-palette="x"][data-theme="dark"] と一段強い詳細度になるため、
+     同じ強さの html:root[data-palette] を並べて、最後に置いたこちらを勝たせる。 */
+  html:root,
+  html:root[data-palette] {
     --brand: #3d3d42;
     --brand-deep: #27272a;
     --brand-soft: #e4e4e1;

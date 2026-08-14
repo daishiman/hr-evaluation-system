@@ -1217,3 +1217,26 @@ export const constitutionEvents = sqliteTable(
     index("idx_ce_company_time").on(t.companyId, t.occurredAt),
   ],
 );
+
+/* ─────────────────────── 見た目の選択の集計 ───────────────────────
+ *
+ * 「どの配色 × どの明るさが選ばれたか」を数えるだけのテーブル。
+ * 将来どの色合いを標準にするかを、好みの言い合いではなく実際の選択で決めるために置く。
+ *
+ * 誰が選んだかは持たない（user_id も company_id も無い）。個人の設定は
+ * これまでどおりブラウザの中だけにあり、ここへ来るのは回数だけ。
+ * 行は組み合わせの数（配色5 × 明るさ3 × 実表示2）だけで、増え続けない。
+ */
+export const themeChoiceCounts = sqliteTable("theme_choice_counts", {
+  /** `${palette}:${mode}:${resolved}`。組み合わせ1つにつき1行にするための自然キー。 */
+  key: text("key").primaryKey(),
+  /** graphite | azure | sand | moss | midnight（→ src/lib/palette.ts） */
+  palette: text("palette").notNull(),
+  /** 利用者が選んだ明るさ: auto | light | dark（→ src/lib/theme.ts） */
+  mode: text("mode").notNull(),
+  /** 「自動」のときに実際どちらで表示されたか: light | dark */
+  resolved: text("resolved").notNull(),
+  /** 選ばれた回数。1人が何度選び直しても、そのたびに1票入る。 */
+  count: integer("count").notNull().default(0),
+  updatedAt: updatedAt(),
+});
