@@ -46,6 +46,7 @@ const STATIC_ROUTES = [
   "/me", "/me/forms", "/me/results",
   "/manager", "/manager/cycles", "/manager/members",
   "/admin", "/admin/behavior", "/admin/cycles", "/admin/forms", "/admin/kgi",
+  "/admin/improvements",
   "/admin/masters", "/admin/masters/promotion", "/admin/masters/requirements",
   "/admin/members", "/admin/members/policy", "/admin/raises", "/admin/scheme", "/admin/setup",
   "/system", "/system/companies", "/system/users",
@@ -55,6 +56,7 @@ const STATIC_ROUTES = [
 const DYNAMIC_PATTERNS = [
   /^\/admin\/forms\/[^/]+$/,
   /^\/admin\/forms\/[^/]+\/responses$/,
+  /^\/admin\/improvements\/[^/]+$/,
   /^\/admin\/members\/[^/]+$/,
   /^\/admin\/scheme\/[^/]+$/,
   /^\/admin\/scheme\/[^/]+\/criteria$/,

@@ -50,6 +50,7 @@
 | FEATURE-019 | ready | 他等級閲覧の絞り込みと状態確認が弱い | 候補探索の利用が増える | 等級・状態フィルターを追加 | [回ごとの記録 F1・F2](./backlog-session-notes.md) |
 | FEATURE-020 | observe | アーカイブ済みイベントの UI が限定的 | 一覧・復元要求が発生 | 読み取り専用一覧と復元権限を設計 | [回ごとの記録 V2](./backlog-session-notes.md) |
 | FEATURE-021 | observe | 等級の変遷は評価行からしか辿れず、評価のない期の昇格は推移に出ない | 期中昇格の可視化が要求される | 等級履歴を独立して持つか、評価行からの導出のままとするかを決める | [実装](../../src/lib/domain/evaluation-trend.ts) |
+| FEATURE-022 | observe | 改善要望を送った本人に、その後の対応状況が返らない（読めるのは管理者だけ） | 「送ったが放置されているのでは」という申告が出る | 送った本人の画面に自分の要望と状態を出すか、状態変更時に通知するかを決める | [仕様 §26-6](./spec.md) / [実装](../../src/app/admin/improvements/page.tsx) |
 
 ## UX・アクセシビリティ
 
@@ -79,6 +80,7 @@
 | UX-023 | ready | ランク A〜E を色で見分けられない（`RankMark` は A だけ塗り、B〜E は同じ灰色） | 良い順を一目で読みたい要望が出る | 色相を増やさない方針（[仕様 §5-6](./spec.md)）を保つため、濃淡だけで 5 段を作れるか、または割合の棒を印の横に添えるかを検証してから決める | [実装](../../src/components/ui.tsx) |
 | UX-024 | observe | 端末の「コントラストを強める」設定の追加補正が、既定のグレー配色にだけ当たる。他の4系統では追加補正が当たらない（AA は全系統で満たしている） | 高コントラスト設定の利用者から読みづらさの申告が出る | 補正値を系統ごとに書き足すか、`color-mix` で現在の色から相対的に濃くするかを決める。系統ごとに書くと二重管理が増えるため、まず申告の有無を見る | [仕様 §テーマ契約](./spec.md) / [トークン](../../src/app/globals.css) |
 | UX-027 | observe | 375px幅の「次にやること」カードは本文と主要ボタンが横並びのため、横溢れや重なりはないが本文列が細い | モバイルで読みにくいと申告される | 広い幅の横並びは保ち、カード容器が狭いときだけ主要ボタンを本文の下へ縦積みにする | [375px確認画像](./theme-gallery/responsive-375.png) |
+| UX-028 | observe | 画面の撮影は DOM を描き直す方式のため、**いま見えている範囲だけ**が写る（画面外までは撮れない）。また、将来 `canvas`・`iframe`・別ドメインの画像を画面に足すと、その部分だけ白く抜ける（現時点では0件） | 画面外まで撮りたいという申告が出る、または `canvas`・`iframe`・外部画像を使う画面を追加する | 前者はスクロールしながら複数枚撮って繋ぐ方式を検討する。後者は追加時に該当画面で撮影を実測し、必要なら `canvas` を画像に置き換える下ごしらえを撮影前に入れる | [仕様 §26-3](./spec.md) / [実装](../../src/components/FeedbackWidget.tsx) |
 
 ## セキュリティ・信頼性
 
@@ -92,6 +94,7 @@
 | SECURITY-007 | decision | ロールは 4 種固定 | 権限分離の追加要件が出る | ロール追加ではなく権限集合として再設計 | [旧台帳 UX98](./backlog-history-2026-08-13.md) |
 | SECURITY-008 | observe | 最新版 `drizzle-kit` の開発用依存が、古い esbuild の開発サーバー経路を含む（production Workerには同梱・使用しない） | upstreamが依存を更新、または開発用serveを外部公開する構成へ変える | 最新版を再確認し、互換性を保てる更新だけを適用 | [最終監査](./elegant-review.md#launch-security) |
 | SECURITY-009 | ready | CSP は nonce 方式ではない | inline script をさらに制限 | Next.js・OpenNext の制約を確認して nonce 化 | [旧台帳 UX99](./backlog-history-2026-08-13.md) |
+| SECURITY-011 | observe | ローカルpreviewではBetter Authがclient IPを解決できず、共有bucketへfallbackする警告が出る | productionログでも同じ警告を1件以上観測 | Cloudflareの信頼済みIP header/proxy設定をBetter Auth公式契約で検証し、認証方式を変えず最小設定する | [リリース判定](./T4-release-readiness.md) / [認証設定](../../src/lib/auth.ts) |
 | RELIABILITY-001 | ready | Route Handler の統合テストが薄い | API 変更前 | 認証・DB を含む代表経路を追加 | [回ごとの記録 H4・J4](./backlog-session-notes.md) |
 | RELIABILITY-002 | observe | 安全側の代替表示が発生しても運用で気づきにくい | 発生率を観測可能にする | 構造化ログ・通知閾値を追加 | [回ごとの記録 Q4](./backlog-session-notes.md) |
 | RELIABILITY-003 | ready | 制度マスタ本体の更新と監査記録が同じ原子的保存単位ではない | 完全な監査証跡を要件化 | 全更新 command と監査 INSERT を同じ D1 batch に統合し、実体内の順序をDB制約で保証 | [システム仕様](../../system-spec/master-settings.md) / [実装](../../src/lib/domain/constitution-events.ts) |
@@ -108,7 +111,8 @@
 | PERFORMANCE-001 | observe | 一覧は数百件超でページングが必要 | 対象データが数百件に達する | cursor または keyset 方式を導入 | [旧台帳 D1](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-002 | observe | マスタ参照は都度 D1 を読む | 読取負荷・待ち時間が問題化 | キャッシュ範囲と無効化を設計 | [旧台帳 D11](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-003 | ready | 本番端末・回線で Core Web Vitals を計測していない | 次の性能確認 | 主要画面を実測し基準超過だけ改善 | [旧台帳 UX101](./backlog-history-2026-08-13.md) |
-| PERFORMANCE-004 | ready | 公開バンドルの圧縮後実測が 2,471.8 KiB（無料プラン3,072 KiBの80.5%）で警告域に入った | 次の機能追加・依存更新前 | `wrangler deploy --dry-run` の構成内訳を比較し、未使用・重複コードを優先して3072 KiBまでの余白を戻す | [容量チェック](../../scripts/check-bundle-size.mjs) / [デプロイ注意](../deploy-notes.md) |
+| PERFORMANCE-004 | ready | 公開バンドルの圧縮後実測が 2,632.0 KiB（無料プラン3,072 KiBの85.7%）で警告域に入った（改善要望の撮影ライブラリは押したときだけ遅延読込） | 次の機能追加・依存更新前 | `wrangler deploy --dry-run` の構成内訳を比較し、未使用・重複コードを優先して3072 KiBまでの余白を戻す | [容量チェック](../../scripts/check-bundle-size.mjs) / [デプロイ注意](../deploy-notes.md) |
+| PERFORMANCE-005 | observe | 改善要望の画像を R2 ではなく D1 に data URL で持つ（バインディングが無いため）。1件あたり最大 700KB | `SUM(improvement_shots.bytes)`を定期計測し500MB到達、または詳細画像読取p95が500ms超を2週連続で観測 | R2 バインディングを足し、画像本体を移して D1 には鍵だけ残す。移行前に総bytes・件数・p95の内容非保持メトリクスを用意する | [仕様 §26-5](./spec.md) / [保存契約](../../system-spec/improvement-requests.md) |
 | SCALE-001 | observe | 管理画面の件数取得は会社数増加時に要確認 | 20 社または高負荷を観測 | クエリ計画を測り必要箇所だけ集約化 | [回ごとの記録 N4・N6](./backlog-session-notes.md) |
 | SCALE-002 | decision | フォーム数・KPI 項目数の上限が未定義 | 複数フォーム運用を制度化 | ドメイン上限と超過時の案内を決める | [回ごとの記録 R2・R4](./backlog-session-notes.md) |
 | SCALE-003 | observe | ブラウザ下書きの容量上限を実測していない | 大規模フォームを導入 | 想定最大データで容量・復元を検証 | [回ごとの記録 R1](./backlog-session-notes.md) |

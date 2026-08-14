@@ -1,4 +1,5 @@
 import type { Role } from "@/lib/session";
+import routeLedger from "../../system-spec/route-ledger.json";
 
 /**
  * サイドバーに出すメニューの定義。
@@ -66,6 +67,12 @@ const COMPANY_GROUPS: NavGroup[] = [
       { href: "/criteria", label: "評価の基準" },
       { href: "/forms", label: "アンケートの中身" },
     ],
+  },
+  /* 各画面から届いた「ここが使いにくい」を読む場所。
+     他の人が書いた不満がそのまま載るため、管理者だけに出す。 */
+  {
+    title: "使い勝手を直す",
+    items: [{ href: "/admin/improvements", label: "届いた改善要望" }],
   },
 ];
 
@@ -201,53 +208,10 @@ export interface RouteMeta {
  *
  * 追加した画面がここに無いと nav.test.ts が落ちる（呼び名の付け忘れを防ぐ）。
  */
-export const ROUTE_META: RouteMeta[] = [
-  { pattern: "/account", label: "自分の情報" },
-  { pattern: "/account/password", label: "パスワードの変更" },
-
-  { pattern: "/admin", label: "ホーム" },
-  { pattern: "/admin/setup", label: "制度設定ガイド" },
-  { pattern: "/admin/masters", label: "等級の設定" },
-  { pattern: "/admin/masters/requirements", label: "等級要件（支援・運営）" },
-  { pattern: "/admin/masters/promotion", label: "昇格の条件・要件" },
-  { pattern: "/admin/behavior", label: "行動指針" },
-  { pattern: "/admin/scheme", label: "KPI・評価セット" },
-  /* 等級区分名（初級・主任…）は段に詰めない。5区分ぶんつなぐと1段が長くなりすぎる。
-     手順名は src/lib/domain/scheme-steps.ts の stepTitle が正本（nav.test.ts で一致を固定）。 */
-  { pattern: "/admin/scheme/[group]", label: "使うKPIを選ぶ" },
-  { pattern: "/admin/scheme/[group]/criteria", label: "選んだ項目の基準を決める" },
-  { pattern: "/admin/cycles", label: "評価期間" },
-  { pattern: "/admin/forms", label: "アンケート" },
-  { pattern: "/admin/forms/[id]", label: "アンケート1本" },
-  { pattern: "/admin/forms/[id]/responses", label: "回答一覧" },
-  { pattern: "/admin/kgi", label: "事業所KGIの達成率" },
-  { pattern: "/admin/raises", label: "昇給の設定" },
-  { pattern: "/admin/members", label: "社員" },
-  { pattern: "/admin/members/[id]", label: "社員1人" },
-  { pattern: "/admin/members/policy", label: "本人が変更できる項目" },
-
-  { pattern: "/criteria", label: "評価の基準" },
-  { pattern: "/forms", label: "アンケートの中身" },
-  { pattern: "/forms/[id]", label: "アンケート1本" },
-
-  { pattern: "/manager", label: "ホーム" },
-  { pattern: "/manager/cycles", label: "評価・結果を確認する" },
-  { pattern: "/manager/evaluations/[id]", label: "評価1件" },
-  { pattern: "/manager/members", label: "メンバー" },
-  { pattern: "/manager/members/[id]", label: "メンバー1人" },
-
-  { pattern: "/me", label: "ホーム" },
-  { pattern: "/me/forms", label: "実績を報告する" },
-  { pattern: "/me/forms/[id]", label: "アンケート1本" },
-  { pattern: "/me/responses/[id]", label: "提出した内容" },
-  { pattern: "/me/results", label: "評価の結果を見る" },
-  { pattern: "/me/results/[id]", label: "評価1件" },
-
-  { pattern: "/system", label: "ホーム" },
-  { pattern: "/system/companies", label: "会社一覧" },
-  { pattern: "/system/users", label: "利用者一覧" },
-  { pattern: "/system/users/[id]", label: "利用者1人" },
-];
+export const ROUTE_META: RouteMeta[] = routeLedger.routes.map((route) => ({
+  pattern: route.path,
+  label: route.label,
+}));
 
 /* 途中の段として出しても行き先が無いURL。階層表示から外す。 */
 const HIDDEN_PREFIXES = ["/manager/evaluations"];
@@ -266,6 +230,17 @@ export function routeMetaOf(pathname: string): RouteMeta | null {
     if (best === null || dynamic < best.dynamic) best = { meta, dynamic };
   }
   return best?.meta ?? null;
+}
+
+/** 実URLは再現用に残し、集計だけを動的パターンへ正規化する。 */
+export function routeIdentityOf(rawPath: string): { path: string; routePattern: string; label: string } {
+  const path = rawPath.split(/[?#]/)[0] || "/";
+  const meta = routeMetaOf(path);
+  return {
+    path,
+    routePattern: meta?.pattern ?? path,
+    label: meta?.label ?? "その他の画面",
+  };
 }
 
 /** 階層表示の1段。 */

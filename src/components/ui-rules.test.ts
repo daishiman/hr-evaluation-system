@@ -29,6 +29,7 @@ const sourceFiles = walk(SRC).filter((p) => (p.endsWith(".tsx") || p.endsWith(".
 const DIALOG_OWNERS = [
   join(SRC, "components", "ConfirmButton.tsx"),
   join(SRC, "components", "GlobalSearch.tsx"),
+  join(SRC, "components", "FeedbackWidget.tsx"),
 ];
 
 describe("画面の器の作法", () => {
@@ -134,6 +135,7 @@ describe("画面の器の作法", () => {
     expect(DIALOG_OWNERS.map((p) => p.replace(`${SRC}/`, ""))).toEqual([
       "components/ConfirmButton.tsx",
       "components/GlobalSearch.tsx",
+      "components/FeedbackWidget.tsx",
     ]);
     const offenders = sourceFiles.filter(
       (p) => !DIALOG_OWNERS.includes(p) && /<dialog[\s>]/.test(readFileSync(p, "utf8")),
@@ -154,6 +156,100 @@ describe("画面の器の作法", () => {
     expect(list.slice(0, list.indexOf("}"))).toContain("overflow-y: auto");
     const grid = css.slice(css.indexOf(".search-dialog-body {"));
     expect(grid.slice(0, grid.indexOf("}"))).toContain("grid-template-rows:");
+  });
+
+  it("改善要望の窓も、中央に出して押す場所を窓の中に残す", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".feedback-dialog {"));
+    const body = block.slice(0, block.indexOf("}"));
+    // Tailwind の初期化が dialog の margin を 0 にするため、指定しないと左上に出る
+    expect(body).toContain("margin: auto");
+    expect(body).toContain("max-height:");
+    expect(body).toContain("overflow: hidden");
+    // 「閉じる」「送る」は常に見える位置に残し、あふれるのは本文だけ
+    const grid = css.slice(css.indexOf(".feedback-dialog-body {"));
+    expect(grid.slice(0, grid.indexOf("}"))).toContain("grid-template-rows:");
+    const main = css.slice(css.indexOf(".feedback-dialog-main {"));
+    expect(main.slice(0, main.indexOf("}"))).toContain("overflow-y: auto");
+  });
+
+  it("改善要望の窓は Esc で閉じ、開いた先で打ち始められる", () => {
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    // Esc・背景クリックのどちらで閉じても、開いているかの控えを合わせる
+    expect(source).toContain("onClose={close}");
+    // 開いた瞬間に打ち始められる（送るまでの手を1つ増やさない）
+    expect(source).toContain("autoFocus");
+    // 開いたら出られない窓を作らない
+    expect(source).toMatch(/onClick=\{close\}>\s*\n?\s*閉じる/);
+  });
+
+  it("未送信内容を閉じるだけで消さず、画像なしと空欄エラーから回復できる", () => {
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    // 開くたびに無条件resetしない。画像・本文はReact state内だけで保持し、端末へ永続化しない。
+    expect(source).toContain("const hasDraft = Boolean(");
+    expect(source).toContain("閉じる前の未送信内容を復元しました");
+    expect(source).not.toMatch(/localStorage|sessionStorage|indexedDB/i);
+    // 人事画面の画像を外し、文章だけで送れる。
+    expect(source).toContain("画像を外す（文章だけで送る）");
+    expect(source).toContain("shot: image");
+    // 空欄時にボタンを黙って無効化せず、理由を出して本文へ戻す。
+    expect(source).toContain("bodyRef.current?.focus()");
+    expect(source).toMatch(/disabled=\{busy \|\| capturing\}/);
+  });
+
+  it("黒塗りは選択中の注釈色に左右されず、送信には冪等キーを付ける", () => {
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    expect(source).toContain('tool === "mask" ? cssColor("ink")');
+    expect(source).toMatch(/submissionKey[,:]/);
+    expect(source).toContain("crypto.randomUUID()");
+  });
+
+  it("画面を撮るとき、改善要望の仕組み自体は写らない", () => {
+    /* 撮った画像に「改善要望」のボタンや窓が写ると、本題の場所が隠れる。
+       撮る対象から `.feedback-root` を外していることを固定する。 */
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    expect(source).toMatch(/filter:[^\n]*\n?[^\n]*classList\?\.contains\("feedback-root"\)/);
+  });
+
+  it("画面を撮るのに、共有の許可を聞くやり方を使わない", () => {
+    /* 押した次の瞬間に書き込める体験にするため、表示中の DOM を描き直して撮る。
+       getDisplayMedia は毎回 OS・ブラウザの許可を挟むので使わない。
+       貼り付け・ファイル添付は、撮れなかったときの逃げ道として残す。 */
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    expect(source).not.toMatch(/navigator\.mediaDevices|getDisplayMedia\(/);
+    expect(source).toContain('import("modern-screenshot")');
+    expect(source).toContain("onPaste");
+    expect(source).toContain('type="file"');
+  });
+
+  it("貼り付いて見えている帯とメニューは、撮った絵でも同じ位置に出す", () => {
+    /* 描き直しにはスクロール量が無いため、何もしないと上の帯と左のメニューが
+       絵から消える（利用者には「壊れた画像」に見える）。 */
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    expect(source).toContain('querySelectorAll<HTMLElement>(".app-header, .app-sidebar")');
+    expect(source).toContain("translateY(${scrollY}px)");
+  });
+
+  it("撮った絵が実画面とずれないための補正が入っている", () => {
+    /* 実画面と撮影画像を画素で比べて必要と分かった補正。外すと次の崩れが戻る。
+       ・body の既定余白 → 絵が斜めにずれる
+       ・描き直し側のスクロールバー → 中でスクロールする箱の下端・右端が数 px 欠ける
+       ・実寸のまるめ（子は切り上げ・親は切り捨て）→ 折り返す並びで札が1つだけ次の行へ落ちる */
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    expect(source).toContain('margin: "0"');
+    expect(source).toContain("copyScrollbar: false");
+    expect(source).toContain('el.style[axis] = "hidden"');
+    expect(source).toMatch(/flexWrap[\s\S]{0,400}columnGap/);
+  });
+
+  it("パンくずの下の余白は外側ではなく内側で取る", () => {
+    /* 外側の余白は親へすり抜けて相殺されるため、画面を絵として写し取ると
+       4px ぶん詰まって見える（見出しの位置がずれる）。 */
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".breadcrumb {"));
+    const rule = block.slice(0, block.indexOf("}"));
+    expect(rule).toContain("margin: 0;");
+    expect(rule).toContain("padding: 0 0 4px;");
   });
 
   it("検索の窓は Esc で閉じ、開いた先にフォーカスが移る", () => {
@@ -272,9 +368,12 @@ describe("画面の器の作法", () => {
 
   it("指で押す端末では、押せるものが44px以上になる", () => {
     const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
-    expect(css).toContain("@media (pointer: coarse)");
-    const block = css.slice(css.indexOf("@media (pointer: coarse)"));
-    expect(block.slice(0, block.indexOf("}"))).toContain("min-height: 44px");
+    const start = css.indexOf("@media (pointer: coarse)");
+    const end = css.indexOf("/* ============================================================", start);
+    const touchContract = css.slice(start, end);
+    expect(touchContract).toContain("min-height: 44px");
+    expect(touchContract).toMatch(/\.chip:is\(button, a\),\s*\.feedback-link\s*\{[^}]*min-height:\s*44px/s);
+    expect(touchContract).toMatch(/\.chip:is\(button, a\)\s*\{[^}]*min-width:\s*44px/s);
   });
 
   it("カードの中の固定見出しは CardHead の pinned に集約する", () => {

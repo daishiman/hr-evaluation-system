@@ -25,12 +25,12 @@ function toRoute(file) {
   return route ? `/${route}` : "/";
 }
 
-test("42個の page.tsx とルート台帳が完全に一致する", () => {
+test("44個の page.tsx とルート台帳が完全に一致する", () => {
   const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
   const implemented = walkPages(join(root, "src/app")).map(toRoute).sort();
   const documented = ledger.routes.map((route) => route.path).sort();
 
-  assert.equal(implemented.length, 42);
+  assert.equal(implemented.length, 44);
   assert.equal(new Set(documented).size, documented.length, "台帳のパスが重複しています");
   assert.deepEqual(documented, implemented);
 });
@@ -54,6 +54,7 @@ test("全ルートが4ロール×状態×期待結果と4つの検証幅へ展�
     const accessClass = ledger.accessClasses[route.accessClass];
     assert.ok(accessClass, `${route.path}: accessClass が不明です`);
     assert.equal(route.widthPolicy, "all", `${route.path}: 4幅すべてを対象にしてください`);
+    assert.ok(route.label, `${route.path}: 画面名がありません`);
     assert.ok(route.purpose, `${route.path}: 目的がありません`);
     assert.ok(route.subject, `${route.path}: 対象がありません`);
     for (const width of ledger.widths) {
@@ -65,5 +66,5 @@ test("全ルートが4ロール×状態×期待結果と4つの検証幅へ展�
       }
     }
   }
-  assert.ok(expandedCases >= 42 * 4 * 2 * 4, "全routeを最低2状態×4ロール×4幅へ展開してください");
+  assert.ok(expandedCases >= 44 * 4 * 2 * 4, "全routeを最低2状態×4ロール×4幅へ展開してください");
 });

@@ -1,5 +1,7 @@
 # Phase 1 — 思考リセット・俯瞰レポート
 
+> 履歴注記: §1〜15は2026-08-13時点、改善要望2画面の追加前に行った監査記録である。そこにある「42画面/route」や当時のtest件数は過去の証跡で、現行の正本は`system-spec/route-ledger.json`の**44 route**。今回の再レビューと現行判定は§16以降に追記する。
+
 調査日: 2026-08-13
 対象: 現在のワークツリー（既存レビューの結論を前提にせず、ファイル・実行結果から再構成）
 工程境界: 分析のみ。製品コード、仕様正本、残課題リストは変更していない。Phase 2 の30思考法分析と実装には進んでいない。
@@ -340,3 +342,76 @@ remote seed guardの実プロセス試験初稿で`it.each`の引数展開を誤
 | 依存関係整合 | **PASS** | 制度→評価セット→評価期間→フォーム→回答→正式版→評価→確定/公開の順を共有契約とfail-closed APIで固定した。 |
 
 **最終判定: 4条件すべてPASS。** 全test/docs/type/build、Workers preview、HTTP負系、全ページ4幅、主要業務フロー、launch-securityを再通過した。外部公開は依頼どおり行わない。
+
+---
+
+# 2026-08-14 — 画面内改善要望の30思考法レビューと閉鎖パッチ
+
+## 16. 思考リセットと対象
+
+前日のPASSや既存`feat/page-feedback`を完成の根拠にせず、成果物を削除せずに現行コード、D1 migration、API、Widget、管理2画面、route台帳、テストを再観測した。対象は認証済み業務ページの共通Widgetから、会社管理者/システム全体管理者の一覧・詳細・更新までの1縦切り。redirect専用`/`、未認証`/login`、global error/not-found、R2、Jira化、通知、認証変更、production公開は境界外とした。
+
+## 17. 今回の30思考法と改善根拠
+
+| # | 思考法 | 今回の適用と改善根拠 |
+|---:|---|---|
+| 1 | 批判的思考 | 「画面から送れる」だけで完成とせず、失敗時の部分保存、再送重複、他社更新を反証した。 |
+| 2 | 演繹思考 | session由来のuser/companyが正本なら、POST/PATCHの全queryと更新WHEREにもcompany境界が必要と導いた。 |
+| 3 | 帰納的思考 | 動的URLが実IDごとに割れる例から、全routeの集計単位をledger patternへ一般化した。 |
+| 4 | アブダクション | `/f/<token>`が「その他」になる最善説明を、nav表とroute台帳の二重管理と特定した。 |
+| 5 | 垂直思考 | FAB→React state→JSON→API→D1 request/shot→管理queryまで追い、原子境界をD1 batchへ置いた。 |
+| 6 | 要素分解 | route、入力、保存、回復、管理、認可、文書、証明へ分け、1縦切りの依存順へ戻した。 |
+| 7 | MECE | 文章のみ/画像あり、成功/400/413/429/500、4ロール、自社/他社を重複なく受入条件にした。 |
+| 8 | 2軸思考 | 発生確率×影響で、部分保存・情報漏えい・重複を優先し、装飾追加を後順位にした。 |
+| 9 | プロセス思考 | 開く→撮る/外す→入力→送信→一覧→詳細→更新の終了までをE2E背骨にした。 |
+| 10 | メタ思考 | disabledやHTTP 200を成功の代理にせず、利用者が理由を理解して回復できるかへ評価軸を変えた。 |
+| 11 | 抽象化思考 | 実URLを証拠、route patternを集計単位と分離し、同じ文字列へ2責務を持たせない設計にした。 |
+| 12 | ダブル・ループ思考 | 自動撮影は常に添付すべきという前提を疑い、速度は維持しつつ文章のみを第一級にした。 |
+| 13 | ブレインストーミング | 再撮影、paste、file、黒塗り、画像削除、通知、R2等を発散し、今回の最小完結集合へ収束した。 |
+| 14 | 水平思考 | 正常系でなく再送・close/reopen・遅い撮影・画像失敗から設計し、cancel tokenとsession内下書きを加えた。 |
+| 15 | 逆説思考 | ボタンをdisabledにすれば誤送信が減る一方で理由が消えるため、押せる状態でinline error+focusを採用した。 |
+| 16 | 類推思考 | 決済のidempotency keyと複合一意制約を類推し、submission key+決定的IDで並行再送を1件にした。 |
+| 17 | if思考 | 画像行だけ失敗、6連投、偽装MIME、375px、別会社IDを仮定し、すべてをテスト化した。 |
+| 18 | 素人思考 | 「413」「冪等」ではなく「画像を外す」「入力内容は残っています」「◯秒後」と回復文へ翻訳した。 |
+| 19 | システム思考 | route ledger→nav→POST→DB→query→一覧filterを同じroute identityの連鎖として整合させた。 |
+| 20 | 因果関係分析 | 非原子保存→本文だけ残る→管理者が画像なしと誤認する連鎖をbatch rollbackで止めた。 |
+| 21 | 因果ループ | 送信失敗→再送→重複→管理負荷→投稿への不信という強化ループを冪等応答で止めた。 |
+| 22 | トレードオン思考 | 自動撮影の速さと機微情報保護を、即時撮影+いつでも画像削除+黒固定で両立した。 |
+| 23 | プラスサム思考 | ledgerを画面名と集計のSSOTにし、利用者の入力削減と管理者の集計精度を同時に上げた。 |
+| 24 | 価値提案思考 | 価値を「スクリーンショット機能」ではなく「問題の場所と内容がそのページで完結して届く」に固定した。 |
+| 25 | 戦略的思考 | 即時R2/Jira化を避け、公開前のデータ整合・境界・回復を先に閉じた。 |
+| 26 | why思考 | なぜ画像/本文が食い違う→別INSERT→なぜ別→transaction設計なし→D1 batch契約不足、と根へ到達した。 |
+| 27 | 改善思考 | route/shot/本文/管理ルールをRED化し、domain→DB→API→UIの順でGREEN化した。 |
+| 28 | 仮説思考 | session内stateならclose/reopenを保ちつつ端末へ機微情報を残さない仮説をUI契約とbrowserで検証対象にした。 |
+| 29 | 論点思考 | 真の論点を「描けるか」から「正しいページ・1件・完全な保存として、安全に届くか」へ絞った。 |
+| 30 | KJ法 | 指摘を識別/保存/安全/回復/管理/証明へ束ね、独立実装と直列gateを整理した。 |
+
+## 18. 実装した閉鎖パッチ
+
+- `route-ledger.json`へlabelを統合し、`nav.ts`が直接読むSSOTにした。実URLと`route_pattern`を別列に保存する。
+- `0019_improvement_delivery.sql`で現行の全動的routeを正しいpatternへ戻すbackfill、route index、company+reporter+submission keyのunique indexを追加した。
+- POSTは解析前/stream実サイズ、strict schema、magic bytes、投稿者rate-limitを通し、本文+任意画像をD1 batchへ保存する。
+- submission key、会社、投稿者を含む決定的IDで、同一会社内の順次/並行再送だけを同じ1件にした。画像や自由本文をログしない。
+- Widgetは未送信内容をタブのReact stateだけで保持し、再撮影、貼付、黒塗り、画像削除、文章のみ、inline error+focusを揃えた。
+- 管理更新は同状態のメモ追加/修正/空化を許し、見送り理由をUI/APIで必須化。更新WHEREにも会社境界を持たせた。
+- T1/T2/T3、製品仕様、system-spec、route巡回、R2移行triggerを同じ変更で同期した。
+
+## 19. RED→GREEN証拠と4条件
+
+初回REDは`request-body`未実装、動的route非正規化、弱い画像検証、本文の黙示切詰め、同状態メモ規則不足を意図どおり失敗させた。GREEN後の独立再監査では、migrationの動的route誤変換と会社をまたぐ決定的ID衝突を追加REDで再現し、全現行patternとcompany境界を実装へ固定した。最終的に次を確認した。
+
+- Vitest: 109 files PASS / 1 skip、1,640 tests PASS / 1 skip。coverageはStatements 1,656/1,656、Branches 1,334/1,334、Functions 383/383、Lines 1,352/1,352で全て100%。
+- docs drift、typecheck、Next build、OpenNext Cloudflare dry-run、local D1 migration 0019、bundle上限検査を通過。bundleは2,632.0KiB / 3,072KiB（85.7%、警告域だが上限内）。
+- preview実HTTP: 投稿200→同submission key再送200→会社管理者一覧200→詳細200→同状態メモ編集/空化200→理由なし見送り400→理由あり200→一般更新403を通過。
+- 認証付き描画巡回は4ロールのべ289件。既知の長文141件は制度原文・式・URL等で、今回追加した一覧には新しい長文警告なし。detailはE2E作成後の直接HTTP 200で確認した。
+- launch-security: Critical 0 / High 0、auditはmoderate 1（既存の開発時限定依存）、security headersをpreview応答で確認。
+- 実ブラウザはin-app Browserの接続先が0件で、今回の375/768/1280/1600、Light/Dark、Tab、reduced-motion実測は未確認。過去の4幅画像を今回の証明に流用せず、T4のproduction公開前gateへ残した。
+
+| 条件 | 現在判定 | 根拠/残gate |
+|---|---|---|
+| 矛盾なし | **PASS** | 44 route ledgerを画面名/route patternのSSOTにし、API/DB/UI/仕様の42/44表記を現行/履歴に分離した |
+| 漏れなし | **PASS** | 文章/画像、400/413/429/500、rollback/再送、4ロール、他社404、メモ空化をunit/integration/preview HTTPで覆った。実ブラウザ未確認はT4へ明記した |
+| 整合性あり | **PASS** | D1 batch、unique submission key、厳密shot、同一管理規則を失敗注入と100% coverageで固定した |
+| 依存関係整合 | **PASS** | ledger→route identity→POST→migration/query→一覧filter→詳細/PATCH→docs/巡回の依存順がbuildまで通過した |
+
+**今回の4条件はすべてPASS。** ただしこれはコード・データ・API・文書のローカル判定であり、production公開判定ではない。T4は実ブラウザ受入と依頼者承認を未完として明示し、productionへのmerge/deployは行わない。

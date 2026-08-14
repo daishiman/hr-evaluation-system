@@ -8,6 +8,7 @@ import {
   resolveTrail,
   ROUTE_META,
   routeMetaOf,
+  routeIdentityOf,
   searchableScreens,
   type NavGroup,
 } from "@/lib/nav";
@@ -223,7 +224,7 @@ describe("いま開いている画面の呼び名", () => {
   });
 
   it("対応表に、いまは無いURLが残っていない", () => {
-    const actual = new Set(routesUnder(APP));
+    const actual = new Set(["/", ...routesUnder(APP)]);
     expect(ROUTE_META.filter((m) => !actual.has(m.pattern)).map((m) => m.pattern)).toEqual([]);
   });
 
@@ -235,6 +236,14 @@ describe("いま開いている画面の呼び名", () => {
   it("動的な部分は、名前ではなく種類の呼び名を出す（見出しと二重に読ませない）", () => {
     expect(routeMetaOf("/admin/members/u_123")?.label).toBe("社員1人");
     expect(routeMetaOf("/system/users/u_123")?.label).toBe("利用者1人");
+  });
+
+  it("配布URLをその他扱いにせず、実URLと集計単位を分ける", () => {
+    expect(routeIdentityOf("/f/company-secret-token")).toEqual({
+      path: "/f/company-secret-token",
+      routePattern: "/f/[token]",
+      label: "配布されたアンケート",
+    });
   });
 
   it("決まった名前の画面を、動的な画面と取り違えない", () => {
