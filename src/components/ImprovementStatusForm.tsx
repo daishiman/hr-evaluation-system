@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, ChoiceChip, ReasonNote } from "@/components/ui";
 import {
@@ -27,12 +27,21 @@ export function ImprovementStatusForm({
   const router = useRouter();
   const [next, setNext] = useState<ImprovementStatus>(status);
   const [text, setText] = useState(note ?? "");
+  const [savedStatus, setSavedStatus] = useState(status);
+  const [savedNote, setSavedNote] = useState(note ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
 
   const submit = async () => {
     if (busy) return;
+    if (next === "dropped" && text.trim().length === 0) {
+      setError("見送りにする理由を入力してください。");
+      setDone(false);
+      noteRef.current?.focus();
+      return;
+    }
     setBusy(true);
     setError(null);
     setDone(false);
@@ -47,6 +56,9 @@ export function ImprovementStatusForm({
         setError(json.message ?? "更新できませんでした。");
         return;
       }
+      setSavedStatus(next);
+      setSavedNote(text.trim());
+      setText(text.trim());
       setDone(true);
       router.refresh();
     } catch {
@@ -56,7 +68,7 @@ export function ImprovementStatusForm({
     }
   };
 
-  const unchanged = next === status && text === (note ?? "");
+  const unchanged = next === savedStatus && text.trim() === savedNote;
 
   return (
     <Card className="card-pad">
@@ -76,11 +88,16 @@ export function ImprovementStatusForm({
         対応のメモ（見送りの理由もここに書きます）
       </label>
       <textarea
+        ref={noteRef}
         id="improvement_note"
         className="input min-h-[80px] w-full"
         value={text}
+        aria-invalid={Boolean(error && next === "dropped" && text.trim().length === 0)}
         maxLength={1000}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value);
+          if (e.target.value.trim()) setError(null);
+        }}
         placeholder="例：次の改修でまとめて直します。"
       />
 

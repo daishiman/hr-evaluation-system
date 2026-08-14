@@ -5,17 +5,18 @@ import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import {
   IMPROVEMENT_STATUSES,
-  canChangeImprovementStatus,
   canHandleImprovements,
+  improvementHandlingError,
   isImprovementStatus,
 } from "@/lib/domain/improvement";
+import { readJsonBodyWithinLimit } from "@/lib/request-body";
 
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   status: z.enum(IMPROVEMENT_STATUSES),
   note: z.string().max(1000).nullish(),
-});
+}).strict();
 
 /**
  * 要望の状態を変える。会社の管理者とシステム全体管理者だけ。
@@ -30,12 +31,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (!viewer.companyId) throw new HttpError(400, "所属会社が設定されていません。");
 
     const { id } = await ctx.params;
-    const input = bodySchema.parse(await req.json());
+    const input = bodySchema.parse(await readJsonBodyWithinLimit(req, 16_000));
     const db = await getDb();
 
     const row = (
       await db
-        .select({ id: s.improvementRequests.id, status: s.improvementRequests.status })
+        .select({
+          id: s.improvementRequests.id,
+          status: s.improvementRequests.status,
+          handledNote: s.improvementRequests.handledNote,
+        })
         .from(s.improvementRequests)
         .where(and(eq(s.improvementRequests.id, id), eq(s.improvementRequests.companyId, viewer.companyId)))
         .limit(1)
@@ -44,14 +49,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
     const from = isImprovementStatus(row.status) ? row.status : "open";
     const note = input.note?.trim() ?? "";
-    if (!canChangeImprovementStatus(from, input.status) && !note) {
-      throw new HttpError(400, "変更する内容がありません。");
-    }
+    const ruleError = improvementHandlingError(from, row.handledNote, input.status, note || null);
+    if (ruleError) throw new HttpError(400, ruleError);
 
     await db
       .update(s.improvementRequests)
       .set({ status: input.status, handledNote: note || null, handledById: viewer.id })
-      .where(eq(s.improvementRequests.id, id));
+      .where(and(eq(s.improvementRequests.id, id), eq(s.improvementRequests.companyId, viewer.companyId)));
 
     return { message: "対応状況を更新しました。" };
   });

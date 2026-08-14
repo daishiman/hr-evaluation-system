@@ -42,3 +42,12 @@ COMPANY_ADMIN と SUPER_ADMIN も評価される本人になりうるため、`/
 - `/admin/improvements`・`/admin/improvements/[id]`: 各画面から届いた改善要望を読み、対応状況を変える（COMPANY_ADMIN 以上・自社分だけ）。
 
 routeを追加・削除・改名するときは `route-ledger.json` を同じ変更で更新する。漏れ・古いroute・重複は `pnpm run check:docs` が失敗させる。
+
+## 4. 画面名と改善要望の集計単位
+
+`route-ledger.json`の`path`と`label`は、パンくずだけでなく改善要望の画面名・集計単位の正本でもある。`src/lib/nav.ts`は台帳をimportし、別の対応表を持たない。
+
+- 実URLは再現用`improvement_requests.path`へ保持する。
+- 動的IDを台帳patternへ戻した値は`route_pattern`へ保持し、一覧の集計・絞込に使う。
+- `/f/<token>`は`/f/[token]`・「配布されたアンケート」になる。
+- 台帳と実装の一致、代表的な動的URLの解決を契約テストで固定する。

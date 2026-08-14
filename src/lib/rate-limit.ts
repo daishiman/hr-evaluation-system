@@ -39,6 +39,9 @@ export interface RateLimitResult {
  */
 export const AUTH_ATTEMPT_RATE_LIMIT: RateLimitRule = { windowMs: 10_000, max: 3 };
 
+/** 改善要望の連投。文章を書き直せる余裕を残しつつ、画像付き連投を抑える。 */
+export const IMPROVEMENT_SUBMIT_RATE_LIMIT: RateLimitRule = { windowMs: 60_000, max: 5 };
+
 /**
  * key への1回の試行を記録し、許可するかどうかを返す。
  * 固定ウィンドウ方式（ウィンドウが変わったら数え直す）。

@@ -53,7 +53,7 @@ const TOOL_OPTIONS: { value: Tool; label: string }[] = [
   { value: "rect", label: "四角" },
   { value: "arrow", label: "矢印" },
   { value: "text", label: "文字" },
-  { value: "mask", label: "目隠し" },
+  { value: "mask", label: "黒塗り" },
 ];
 
 /**
@@ -114,6 +114,9 @@ export function FeedbackWidget() {
   const baseRef = useRef<HTMLImageElement | null>(null);
   const drawingRef = useRef<Shape | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const captureVersionRef = useRef(0);
+  const submissionKeyRef = useRef("");
 
   const [open, setOpen] = useState(false);
   const [shot, setShot] = useState<{ dataUrl: string; width: number; height: number } | null>(null);
@@ -122,13 +125,15 @@ export function FeedbackWidget() {
   const [color, setColor] = useState<ColorKey>("red");
   const [textDraft, setTextDraft] = useState("");
   const [body, setBody] = useState("");
+  const [draftPath, setDraftPath] = useState("");
   const [busy, setBusy] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bodyError, setBodyError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
-  const screenLabel = routeMetaOf(pathname)?.label ?? "その他の画面";
+  const screenLabel = routeMetaOf(draftPath || pathname)?.label ?? "その他の画面";
 
   /* ───── 窓の開け閉め ───── */
 
@@ -142,13 +147,18 @@ export function FeedbackWidget() {
   }, [open]);
 
   const reset = () => {
+    captureVersionRef.current += 1;
     setShot(null);
     setShapes([]);
     setBody("");
+    setDraftPath(pathname);
     setTextDraft("");
     setError(null);
+    setBodyError(null);
     setNotice(null);
     setSent(false);
+    setCapturing(false);
+    submissionKeyRef.current = crypto.randomUUID();
     baseRef.current = null;
   };
 
@@ -167,12 +177,14 @@ export function FeedbackWidget() {
 
   /* ───── 画像を受け取る ───── */
 
-  const acceptImage = useCallback(async (dataUrl: string) => {
+  const acceptImage = useCallback(async (dataUrl: string, expectedVersion?: number) => {
     try {
       const next = await loadImage(dataUrl);
+      if (expectedVersion !== undefined && expectedVersion !== captureVersionRef.current) return;
       const img = new Image();
       img.src = next.dataUrl;
       await img.decode();
+      if (expectedVersion !== undefined && expectedVersion !== captureVersionRef.current) return;
       baseRef.current = img;
       setShapes([]);
       setShot(next);
@@ -193,6 +205,7 @@ export function FeedbackWidget() {
    * - 画面の細かさ（`devicePixelRatio`）を最大2倍まで見て、文字をぼやけさせない。
    */
   const capture = useCallback(async () => {
+    const version = ++captureVersionRef.current;
     setError(null);
     setNotice(riskyNodeCount() > 0 ? "この画面には、絵として写しにくい部品があります。撮れた画像を確かめてください。" : null);
     setCapturing(true);
@@ -247,11 +260,13 @@ export function FeedbackWidget() {
           }
         },
       });
-      await acceptImage(canvas.toDataURL("image/png"));
+      if (version !== captureVersionRef.current) return;
+      await acceptImage(canvas.toDataURL("image/png"), version);
     } catch {
+      if (version !== captureVersionRef.current) return;
       setError("うまく撮れませんでした。画像を貼り付けるか、ファイルを選んでください。");
     } finally {
-      setCapturing(false);
+      if (version === captureVersionRef.current) setCapturing(false);
     }
   }, [acceptImage]);
 
@@ -259,13 +274,33 @@ export function FeedbackWidget() {
     const file = [...e.clipboardData.items].find((i) => i.type.startsWith("image/"))?.getAsFile();
     if (!file) return;
     e.preventDefault();
-    void readFileAsDataUrl(file).then(acceptImage);
+    const version = ++captureVersionRef.current;
+    setCapturing(false);
+    void readFileAsDataUrl(file)
+      .then((url) => acceptImage(url, version))
+      .catch(() => setError("画像を読み込めませんでした。別の画像をお試しください。"));
   };
 
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (file) void readFileAsDataUrl(file).then(acceptImage);
+    if (file) {
+      const version = ++captureVersionRef.current;
+      setCapturing(false);
+      void readFileAsDataUrl(file)
+        .then((url) => acceptImage(url, version))
+        .catch(() => setError("画像を読み込めませんでした。別の画像をお試しください。"));
+    }
+  };
+
+  const removeShot = () => {
+    captureVersionRef.current += 1;
+    drawingRef.current = null;
+    baseRef.current = null;
+    setCapturing(false);
+    setShot(null);
+    setShapes([]);
+    setNotice("画像を外しました。文章だけで送れます。");
   };
 
   /* ───── 印を描く ───── */
@@ -337,7 +372,7 @@ export function FeedbackWidget() {
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!shot) return;
     const at = pointOf(e);
-    const c = cssColor(color);
+    const c = tool === "mask" ? cssColor("ink") : cssColor(color);
     if (tool === "text") {
       const text = textDraft.trim();
       if (!text) {
@@ -377,7 +412,8 @@ export function FeedbackWidget() {
   const submit = async () => {
     if (busy) return;
     if (!body.trim()) {
-      setError("改善したいことを入力してください。");
+      setBodyError("改善したいことを入力してください。");
+      bodyRef.current?.focus();
       return;
     }
     setBusy(true);
@@ -391,14 +427,17 @@ export function FeedbackWidget() {
           return;
         }
       }
+      const submissionKey = submissionKeyRef.current || crypto.randomUUID();
+      submissionKeyRef.current = submissionKey;
       const res = await fetch("/api/improvements", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          path: pathname,
-          body,
+          path: draftPath || pathname,
+          body: body.trim(),
           viewport: `${window.innerWidth}×${window.innerHeight}`,
           shot: image,
+          submissionKey,
         }),
       });
       const json = (await res.json()) as { ok: boolean; message?: string };
@@ -407,6 +446,12 @@ export function FeedbackWidget() {
         return;
       }
       setSent(true);
+      setBody("");
+      setShot(null);
+      setShapes([]);
+      setTextDraft("");
+      baseRef.current = null;
+      submissionKeyRef.current = "";
     } catch {
       setError("通信できませんでした。入力内容はこの窓に残っています。");
     } finally {
@@ -423,10 +468,15 @@ export function FeedbackWidget() {
           type="button"
           variant="secondary"
           onClick={() => {
-            reset();
+            const hasDraft = Boolean(body.trim() || shot || shapes.length > 0 || capturing);
+            if (sent || !hasDraft) {
+              reset();
+              // 押した時点で撮る。窓が開いたときには、もう書き込める状態にする。
+              void capture();
+            } else {
+              setNotice("閉じる前の未送信内容を復元しました。");
+            }
             setOpen(true);
-            // 押した時点で撮る。窓が開いたときには、もう書き込める状態にする。
-            void capture();
           }}
         >
           改善要望
@@ -452,14 +502,25 @@ export function FeedbackWidget() {
                   改善したいこと
                 </label>
                 <textarea
+                  ref={bodyRef}
                   id="feedback_body"
                   className="input min-h-[80px] w-full"
                   autoFocus
                   maxLength={IMPROVEMENT_BODY_MAX}
                   value={body}
-                  onChange={(e) => setBody(e.target.value)}
+                  aria-invalid={Boolean(bodyError)}
+                  aria-describedby={bodyError ? "feedback_body_error" : undefined}
+                  onChange={(e) => {
+                    setBody(e.target.value);
+                    if (e.target.value.trim()) setBodyError(null);
+                  }}
                   placeholder="例：この一覧から、担当者で絞り込めると助かります。"
                 />
+                {bodyError && (
+                  <p id="feedback_body_error" className="field-error mt-1" role="alert">
+                    {bodyError}
+                  </p>
+                )}
 
                 {capturing && (
                   <div className="feedback-shooting mt-3" role="status">
@@ -478,7 +539,7 @@ export function FeedbackWidget() {
                           </ChoiceChip>
                         ))}
                       </div>
-                      <div className="flex items-center gap-1">
+                      {tool !== "mask" && <div className="flex items-center gap-1" role="group" aria-label="印の色">
                         {COLOR_KEYS.map((key) => (
                           <ChoiceChip
                             key={key}
@@ -489,7 +550,7 @@ export function FeedbackWidget() {
                             <span className="feedback-swatch" data-mark={key} />
                           </ChoiceChip>
                         ))}
-                      </div>
+                      </div>}
                       <Button type="button" onClick={undo} disabled={shapes.length === 0}>
                         元に戻す
                       </Button>
@@ -509,6 +570,7 @@ export function FeedbackWidget() {
                     <canvas
                       ref={canvasRef}
                       className="feedback-canvas mt-2"
+                      aria-label="画面の写し。選んだ道具で注釈を書き込めます"
                       width={shot.width}
                       height={shot.height}
                       onPointerDown={onPointerDown}
@@ -516,7 +578,7 @@ export function FeedbackWidget() {
                       onPointerUp={onPointerUp}
                       onPointerCancel={onPointerUp}
                     />
-                    <p className="footnote">見られたくない部分は「目隠し」で塗りつぶせます。</p>
+                    <p className="footnote">見られたくない部分は「黒塗り」で隠せます。黒塗りの色は固定です。</p>
                   </div>
                 )}
 
@@ -525,6 +587,11 @@ export function FeedbackWidget() {
                   <Button type="button" onClick={capture} disabled={busy || capturing}>
                     {shot ? "撮り直す" : "もう一度撮る"}
                   </Button>
+                  {(shot || capturing) && (
+                    <Button type="button" onClick={removeShot} disabled={busy}>
+                      画像を外す（文章だけで送る）
+                    </Button>
+                  )}
                   <span className="footnote">
                     うまく撮れないときは、画像を貼り付け（Ctrl+V）するか
                     <button type="button" className="feedback-link" onClick={() => fileRef.current?.click()}>
@@ -543,7 +610,7 @@ export function FeedbackWidget() {
               閉じる
             </Button>
             {!sent && (
-              <Button type="button" variant="primary" onClick={submit} disabled={busy || !body.trim()}>
+              <Button type="button" variant="primary" onClick={submit} disabled={busy || capturing}>
                 送る
               </Button>
             )}

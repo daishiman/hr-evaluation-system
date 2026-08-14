@@ -696,6 +696,19 @@ body {
   .account-trigger {
     min-height: 44px;
   }
+  /* ChoiceChip/ChipLink と、文章内に置くファイル選択も同じ指の面積を持たせる。
+     読み取り専用の ChipTag は不要に太らせない。 */
+  .chip:is(button, a),
+  .feedback-link {
+    min-height: 44px;
+  }
+  .chip:is(button, a) {
+    min-width: 44px;
+  }
+  .feedback-link {
+    display: inline-flex;
+    align-items: center;
+  }
 }
 
 /* ============================================================

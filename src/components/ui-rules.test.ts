@@ -183,6 +183,27 @@ describe("画面の器の作法", () => {
     expect(source).toMatch(/onClick=\{close\}>\s*\n?\s*閉じる/);
   });
 
+  it("未送信内容を閉じるだけで消さず、画像なしと空欄エラーから回復できる", () => {
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    // 開くたびに無条件resetしない。画像・本文はReact state内だけで保持し、端末へ永続化しない。
+    expect(source).toContain("const hasDraft = Boolean(");
+    expect(source).toContain("閉じる前の未送信内容を復元しました");
+    expect(source).not.toMatch(/localStorage|sessionStorage|indexedDB/i);
+    // 人事画面の画像を外し、文章だけで送れる。
+    expect(source).toContain("画像を外す（文章だけで送る）");
+    expect(source).toContain("shot: image");
+    // 空欄時にボタンを黙って無効化せず、理由を出して本文へ戻す。
+    expect(source).toContain("bodyRef.current?.focus()");
+    expect(source).toMatch(/disabled=\{busy \|\| capturing\}/);
+  });
+
+  it("黒塗りは選択中の注釈色に左右されず、送信には冪等キーを付ける", () => {
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    expect(source).toContain('tool === "mask" ? cssColor("ink")');
+    expect(source).toMatch(/submissionKey[,:]/);
+    expect(source).toContain("crypto.randomUUID()");
+  });
+
   it("画面を撮るとき、改善要望の仕組み自体は写らない", () => {
     /* 撮った画像に「改善要望」のボタンや窓が写ると、本題の場所が隠れる。
        撮る対象から `.feedback-root` を外していることを固定する。 */
@@ -347,9 +368,12 @@ describe("画面の器の作法", () => {
 
   it("指で押す端末では、押せるものが44px以上になる", () => {
     const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
-    expect(css).toContain("@media (pointer: coarse)");
-    const block = css.slice(css.indexOf("@media (pointer: coarse)"));
-    expect(block.slice(0, block.indexOf("}"))).toContain("min-height: 44px");
+    const start = css.indexOf("@media (pointer: coarse)");
+    const end = css.indexOf("/* ============================================================", start);
+    const touchContract = css.slice(start, end);
+    expect(touchContract).toContain("min-height: 44px");
+    expect(touchContract).toMatch(/\.chip:is\(button, a\),\s*\.feedback-link\s*\{[^}]*min-height:\s*44px/s);
+    expect(touchContract).toMatch(/\.chip:is\(button, a\)\s*\{[^}]*min-width:\s*44px/s);
   });
 
   it("カードの中の固定見出しは CardHead の pinned に集約する", () => {

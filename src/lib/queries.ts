@@ -933,6 +933,7 @@ export async function listImprovementRequests(companyId: string) {
     .select({
       id: s.improvementRequests.id,
       path: s.improvementRequests.path,
+      routePattern: s.improvementRequests.routePattern,
       screenLabel: s.improvementRequests.screenLabel,
       body: s.improvementRequests.body,
       status: s.improvementRequests.status,
@@ -967,6 +968,7 @@ export async function getImprovementRequest(companyId: string, id: string) {
     .select({
       id: s.improvementRequests.id,
       path: s.improvementRequests.path,
+      routePattern: s.improvementRequests.routePattern,
       screenLabel: s.improvementRequests.screenLabel,
       body: s.improvementRequests.body,
       status: s.improvementRequests.status,

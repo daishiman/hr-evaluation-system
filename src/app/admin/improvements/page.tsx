@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminImprovements({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; path?: string; period?: string }>;
+  searchParams: Promise<{ status?: string; route?: string; period?: string }>;
 }) {
   const viewer = await requireRole("COMPANY_ADMIN");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
@@ -35,18 +35,18 @@ export default async function AdminImprovements({
   const sp = await searchParams;
   const status = sp.status && isImprovementStatus(sp.status) ? sp.status : null;
   const period = sp.period && isImprovementPeriod(sp.period) ? sp.period : "all";
-  const path = sp.path ?? null;
+  const routePattern = sp.route ?? null;
 
   const all = await listImprovementRequests(viewer.companyId);
   const counts = countImprovementsByStatus(all);
   const screens = groupImprovementsByScreen(all).slice(0, 6);
-  const rows = filterImprovements(all, { status, path, since: improvementPeriodStart(period, new Date()) });
+  const rows = filterImprovements(all, { status, routePattern, since: improvementPeriodStart(period, new Date()) });
 
-  const query = (next: { status?: string | null; path?: string | null; period?: string | null }) => {
-    const merged = { status, path, period, ...next };
+  const query = (next: { status?: string | null; routePattern?: string | null; period?: string | null }) => {
+    const merged = { status, routePattern, period, ...next };
     const params = new URLSearchParams();
     if (merged.status) params.set("status", merged.status);
-    if (merged.path) params.set("path", merged.path);
+    if (merged.routePattern) params.set("route", merged.routePattern);
     if (merged.period && merged.period !== "all") params.set("period", merged.period);
     const q = params.toString();
     return q ? `/admin/improvements?${q}` : "/admin/improvements";
@@ -90,11 +90,15 @@ export default async function AdminImprovements({
       </div>
       {screens.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
-          <ChipLink href={query({ path: null })} current={path === null}>
+          <ChipLink href={query({ routePattern: null })} current={routePattern === null}>
             画面すべて
           </ChipLink>
           {screens.map((s) => (
-            <ChipLink key={s.path} href={query({ path: s.path })} current={path === s.path}>
+            <ChipLink
+              key={s.routePattern}
+              href={query({ routePattern: s.routePattern })}
+              current={routePattern === s.routePattern}
+            >
               {s.screenLabel}（{s.count}）
             </ChipLink>
           ))}

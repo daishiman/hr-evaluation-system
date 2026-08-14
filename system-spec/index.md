@@ -10,8 +10,9 @@
 | [account-and-users.md](./account-and-users.md) | 本人プロフィール・編集ポリシー・利用者管理の不変条件 |
 | [master-settings.md](./master-settings.md) | 制度設定画面の責務・会社境界・スナップショット・再集計・等級/昇格要件の版ライフサイクル・監査ジャーナル契約 |
 | [release-and-forms.md](./release-and-forms.md) | 本番Deployの自動migrationとfail-closedゲート、複数等級フォームの原子的作成 |
-| [routes-and-access.md](./routes-and-access.md) | 全42画面の目的・対象、ロール×状態×結果、4幅の受入契約 |
+| [routes-and-access.md](./routes-and-access.md) | 全44画面の目的・対象、ロール×状態×結果、4幅の受入契約 |
 | [imports-and-readiness.md](./imports-and-readiness.md) | CSV一括取込の原子性・復元点、評価セット/期間/アンケートの共通readiness |
+| [improvement-requests.md](./improvement-requests.md) | 画面内改善要望のroute identity、API/DB、原子保存、冪等、管理更新契約 |
 
 機械可読なルート正本は [`route-ledger.json`](./route-ledger.json)。`page.tsx` との完全一致を `pnpm run check:docs` で検査する。
 

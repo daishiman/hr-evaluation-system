@@ -9,7 +9,10 @@ import { HttpError } from "@/lib/session";
  */
 export function jsonError(e: unknown) {
   if (e instanceof HttpError) {
-    return NextResponse.json({ ok: false, message: e.message }, { status: e.status });
+    return NextResponse.json(
+      { ok: false, message: e.message },
+      { status: e.status, headers: e.responseHeaders },
+    );
   }
   if (e instanceof z.ZodError) {
     const first = e.issues[0];

@@ -55,6 +55,20 @@ export function canChangeImprovementStatus(from: ImprovementStatus, to: Improvem
   return from !== to;
 }
 
+/** 状態と対応メモを一緒に保存するときの業務ルール。 */
+export function improvementHandlingError(
+  currentStatus: ImprovementStatus,
+  currentNote: string | null,
+  nextStatus: ImprovementStatus,
+  nextNote: string | null,
+): string | null {
+  const before = currentNote?.trim() ?? "";
+  const after = nextNote?.trim() ?? "";
+  if (nextStatus === "dropped" && after.length === 0) return "見送りにする理由を入力してください。";
+  if (currentStatus === nextStatus && before === after) return "変更する内容がありません。";
+  return null;
+}
+
 /* ───────────────────────── 権限 ───────────────────────── */
 
 /**
@@ -95,13 +109,24 @@ export function shotBytesOf(dataUrl: string): number {
 
 /** 受け取ってよい画像かどうか（形式と大きさ）。 */
 export function isAcceptableShot(dataUrl: string): boolean {
-  if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(dataUrl)) return false;
-  return shotBytesOf(dataUrl) <= IMPROVEMENT_SHOT_MAX_BYTES;
+  const match = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl);
+  if (!match || match[2].length % 4 !== 0) return false;
+  const bytes = shotBytesOf(dataUrl);
+  if (bytes > IMPROVEMENT_SHOT_MAX_BYTES) return false;
+  try {
+    const decoded = atob(match[2]);
+    const has = (...signature: number[]) => signature.every((value, index) => decoded.charCodeAt(index) === value);
+    if (match[1] === "png") return has(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
+    if (match[1] === "jpeg") return has(0xff, 0xd8, 0xff);
+    return has(0x52, 0x49, 0x46, 0x46) && decoded.slice(8, 12) === "WEBP";
+  } catch {
+    return false;
+  }
 }
 
-/** 入力された本文を保存できる形に整える。前後の空白を落とし、上限で切る。 */
+/** 入力された本文を保存できる形に整える。長さは呼び出し側が拒否し、ここでは黙って切らない。 */
 export function normalizeImprovementBody(raw: string): string {
-  return raw.replace(/\r\n/g, "\n").trim().slice(0, IMPROVEMENT_BODY_MAX);
+  return raw.replace(/\r\n/g, "\n").trim();
 }
 
 /* ───────────────────────── 一覧の絞り込みとまとめ ───────────────────────── */
@@ -110,6 +135,7 @@ export interface ImprovementRow {
   id: string;
   status: ImprovementStatus;
   path: string;
+  routePattern: string;
   screenLabel: string;
   createdAt: Date;
 }
@@ -118,7 +144,7 @@ export interface ImprovementFilter {
   /** null は「すべて」 */
   status?: ImprovementStatus | null;
   /** null は「すべての画面」 */
-  path?: string | null;
+  routePattern?: string | null;
   /** この日時より後に届いたものだけ */
   since?: Date | null;
 }
@@ -127,7 +153,7 @@ export interface ImprovementFilter {
 export function filterImprovements<T extends ImprovementRow>(rows: T[], filter: ImprovementFilter): T[] {
   return rows.filter((r) => {
     if (filter.status && r.status !== filter.status) return false;
-    if (filter.path && r.path !== filter.path) return false;
+    if (filter.routePattern && r.routePattern !== filter.routePattern) return false;
     if (filter.since && r.createdAt.getTime() < filter.since.getTime()) return false;
     return true;
   });
@@ -143,12 +169,12 @@ export function countImprovementsByStatus(rows: ImprovementRow[]): Record<Improv
 /** 「どの画面から届いたか」の集計。多い順に並べ、同数なら画面名の順にする。 */
 export function groupImprovementsByScreen(
   rows: ImprovementRow[],
-): { path: string; screenLabel: string; count: number }[] {
-  const map = new Map<string, { path: string; screenLabel: string; count: number }>();
+): { routePattern: string; screenLabel: string; count: number }[] {
+  const map = new Map<string, { routePattern: string; screenLabel: string; count: number }>();
   for (const r of rows) {
-    const hit = map.get(r.path);
+    const hit = map.get(r.routePattern);
     if (hit) hit.count += 1;
-    else map.set(r.path, { path: r.path, screenLabel: r.screenLabel, count: 1 });
+    else map.set(r.routePattern, { routePattern: r.routePattern, screenLabel: r.screenLabel, count: 1 });
   }
   return [...map.values()].sort((a, b) => b.count - a.count || a.screenLabel.localeCompare(b.screenLabel, "ja"));
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   IMPROVEMENT_BODY_MAX,
   IMPROVEMENT_PERIODS,
@@ -10,6 +10,7 @@ import {
   countImprovementsByStatus,
   filterImprovements,
   groupImprovementsByScreen,
+  improvementHandlingError,
   improvementPeriodStart,
   improvementStatusLabel,
   improvementStatusTone,
@@ -21,13 +22,17 @@ import {
   type ImprovementRow,
 } from "@/lib/domain/improvement";
 
-const row = (over: Partial<ImprovementRow> & { id: string }): ImprovementRow => ({
-  status: "open",
-  path: "/admin",
-  screenLabel: "ホーム",
-  createdAt: new Date("2026-08-01T00:00:00Z"),
-  ...over,
-});
+const row = (over: Partial<ImprovementRow> & { id: string }): ImprovementRow => {
+  const path = over.path ?? "/admin";
+  return {
+    status: "open",
+    path,
+    routePattern: over.routePattern ?? path,
+    screenLabel: "ホーム",
+    createdAt: new Date("2026-08-01T00:00:00Z"),
+    ...over,
+  };
+};
 
 describe("状態の呼び名と色", () => {
   it("4つの状態それぞれに日本語の呼び名がある", () => {
@@ -52,6 +57,20 @@ describe("状態の付け替え", () => {
 
   it("同じ状態への付け替えは受け付けない", () => {
     expect(canChangeImprovementStatus("open", "open")).toBe(false);
+  });
+});
+
+describe("対応メモの更新", () => {
+  it("状態が同じでもメモの追加・修正・空化ができる", () => {
+    expect(improvementHandlingError("open", null, "doing", null)).toBeNull();
+    expect(improvementHandlingError("doing", "", "doing", "確認します")).toBeNull();
+    expect(improvementHandlingError("doing", "確認します", "doing", "次回対応します")).toBeNull();
+    expect(improvementHandlingError("doing", "確認します", "doing", "")).toBeNull();
+  });
+
+  it("見送りは理由が必須で、同じ内容の再保存だけを断る", () => {
+    expect(improvementHandlingError("open", "", "dropped", "")).toBe("見送りにする理由を入力してください。");
+    expect(improvementHandlingError("doing", "確認中", "doing", "確認中")).toBe("変更する内容がありません。");
   });
 });
 
@@ -85,10 +104,32 @@ describe("画像の受け取り", () => {
     expect(isAcceptableShot("https://example.com/a.png")).toBe(false);
   });
 
+  it("拡張子の名乗りと実データの署名が違う画像を受け取らない", () => {
+    expect(isAcceptableShot("data:image/png;base64,AAAA")).toBe(false);
+    expect(isAcceptableShot("data:image/jpeg;base64,iVBORw0KGgo=")).toBe(false);
+  });
+
   it("上限までの画像は受け取り、超えたものは断る", () => {
-    const chars = Math.ceil((IMPROVEMENT_SHOT_MAX_BYTES / 3) * 4);
-    expect(isAcceptableShot("data:image/jpeg;base64,AAAA")).toBe(true);
-    expect(isAcceptableShot(`data:image/jpeg;base64,${"A".repeat(chars + 8)}`)).toBe(false);
+    let oversizedBase64 = `/9j/${"A".repeat(Math.ceil(((IMPROVEMENT_SHOT_MAX_BYTES + 8) / 3) * 4))}`;
+    oversizedBase64 += "A".repeat((4 - (oversizedBase64.length % 4)) % 4);
+    expect(isAcceptableShot("data:image/jpeg;base64,/9j/2Q==")).toBe(true);
+    expect(isAcceptableShot(`data:image/jpeg;base64,${oversizedBase64}`)).toBe(false);
+  });
+
+  it("PNGとWebPの署名を受け取り、base64復号失敗は安全に断る", () => {
+    expect(isAcceptableShot("data:image/png;base64,iVBORw0KGgo=")).toBe(true);
+    expect(isAcceptableShot("data:image/webp;base64,UklGRjAwMDBXRUJQ")).toBe(true);
+    expect(isAcceptableShot("data:image/png;base64,AAA")).toBe(false);
+
+    const originalAtob = globalThis.atob;
+    try {
+      vi.stubGlobal("atob", () => {
+        throw new Error("decode failed");
+      });
+      expect(isAcceptableShot("data:image/png;base64,iVBORw0KGgo=")).toBe(false);
+    } finally {
+      vi.stubGlobal("atob", originalAtob);
+    }
   });
 });
 
@@ -97,8 +138,8 @@ describe("本文の整え方", () => {
     expect(normalizeImprovementBody("  文字が小さい\r\nです  ")).toBe("文字が小さい\nです");
   });
 
-  it("長すぎる本文は上限で切る", () => {
-    expect(normalizeImprovementBody("あ".repeat(IMPROVEMENT_BODY_MAX + 50))).toHaveLength(IMPROVEMENT_BODY_MAX);
+  it("長すぎる本文を黙って切らず、呼び出し側が拒否できる長さを保つ", () => {
+    expect(normalizeImprovementBody("あ".repeat(IMPROVEMENT_BODY_MAX + 50))).toHaveLength(IMPROVEMENT_BODY_MAX + 50);
   });
 });
 
@@ -118,7 +159,7 @@ describe("一覧の絞り込み", () => {
   });
 
   it("画面で絞り込む", () => {
-    expect(filterImprovements(rows, { path: "/admin/members" }).map((r) => r.id)).toEqual(["b", "c"]);
+    expect(filterImprovements(rows, { routePattern: "/admin/members" }).map((r) => r.id)).toEqual(["b", "c"]);
   });
 
   it("届いた日で絞り込む", () => {
@@ -128,7 +169,7 @@ describe("一覧の絞り込み", () => {
 
   it("条件を重ねると、すべて満たすものだけが残る", () => {
     const since = new Date("2026-08-05T00:00:00Z");
-    expect(filterImprovements(rows, { status: "open", path: "/admin/members", since }).map((r) => r.id)).toEqual(["c"]);
+    expect(filterImprovements(rows, { status: "open", routePattern: "/admin/members", since }).map((r) => r.id)).toEqual(["c"]);
   });
 });
 
@@ -140,13 +181,13 @@ describe("件数のまとめ", () => {
 
   it("画面ごとに数え、多い順に並べる", () => {
     const rows = [
-      row({ id: "a", path: "/admin/members", screenLabel: "社員" }),
+      row({ id: "a", path: "/admin/members/u_1", routePattern: "/admin/members/[id]", screenLabel: "社員1人" }),
       row({ id: "b", path: "/admin", screenLabel: "ホーム" }),
-      row({ id: "c", path: "/admin/members", screenLabel: "社員" }),
+      row({ id: "c", path: "/admin/members/u_2", routePattern: "/admin/members/[id]", screenLabel: "社員1人" }),
     ];
     expect(groupImprovementsByScreen(rows)).toEqual([
-      { path: "/admin/members", screenLabel: "社員", count: 2 },
-      { path: "/admin", screenLabel: "ホーム", count: 1 },
+      { routePattern: "/admin/members/[id]", screenLabel: "社員1人", count: 2 },
+      { routePattern: "/admin", screenLabel: "ホーム", count: 1 },
     ]);
   });
 
@@ -155,7 +196,7 @@ describe("件数のまとめ", () => {
       row({ id: "a", path: "/admin/raises", screenLabel: "昇給の設定" }),
       row({ id: "b", path: "/admin/cycles", screenLabel: "評価期間" }),
     ];
-    expect(groupImprovementsByScreen(rows).map((g) => g.path)).toEqual(["/admin/raises", "/admin/cycles"]);
+    expect(groupImprovementsByScreen(rows).map((g) => g.routePattern)).toEqual(["/admin/raises", "/admin/cycles"]);
   });
 });
 

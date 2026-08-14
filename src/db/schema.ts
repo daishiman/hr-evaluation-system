@@ -1283,9 +1283,13 @@ export const improvementRequests = sqliteTable(
     companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
     /** 送った人。退職しても要望は残すので、行ごと消さない（onDelete を付けない）。 */
     reporterId: text("reporter_id").notNull().references(() => users.id),
+    /** 送信者がタブ内の1件ごとに発行する再送識別子。既存行だけは null。 */
+    submissionKey: text("submission_key"),
     /** 送信時に開いていた画面のURL（クエリは落とす） */
     path: text("path").notNull(),
-    /** その画面の呼び名（→ src/lib/nav.ts の ROUTE_META） */
+    /** 動的IDを正規化した集計用ルート（→ system-spec/route-ledger.json） */
+    routePattern: text("route_pattern").notNull(),
+    /** その画面の呼び名（→ system-spec/route-ledger.json） */
     screenLabel: text("screen_label").notNull(),
     body: text("body").notNull(),
     /** 「1280×720」の形。狭い画面だけで起きる崩れを切り分けるために残す。 */
@@ -1303,6 +1307,8 @@ export const improvementRequests = sqliteTable(
   (t) => [
     index("idx_ir_company").on(t.companyId, t.createdAt),
     index("idx_ir_status").on(t.companyId, t.status),
+    index("idx_ir_route").on(t.companyId, t.routePattern),
+    uniqueIndex("uq_ir_reporter_submission").on(t.companyId, t.reporterId, t.submissionKey),
     check("ck_improvement_requests_status", sql`${t.status} IN ('open', 'doing', 'done', 'dropped')`),
   ],
 );
