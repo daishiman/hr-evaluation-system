@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { StalledByCompanyNotice } from "@/components/StalledEvaluationsNotice";
 import { Badge, Bar, Card, CardRow, Disclosure, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { PALETTE_LABELS, PALETTES } from "@/lib/palette";
+import type { ThemePreferenceUsage } from "@/lib/theme-preferences";
 
 export interface SystemCompanySummary {
   id: string;
@@ -40,18 +42,31 @@ export function SystemDashboard({
   selectedCompanyId,
   scopeControl,
   stalledByCompany = [],
+  themeUsage = { activeUsers: 0, measuredUsers: 0, coverageRate: 0, rows: [] },
 }: {
   companies: SystemCompanySummary[];
   selectedCompanyId: string | null;
   scopeControl: ReactNode;
   /** 会社ごとの「締め切った期間に残っている評価」の件数。個人名は載せない */
   stalledByCompany?: { companyId: string; companyName: string; total: number; worstDays: number | null; long: number }[];
+  /** 外観の現在設定。個人を特定できる値は含まない。 */
+  themeUsage?: ThemePreferenceUsage;
 }) {
   const selected = companies.find((company) => company.id === selectedCompanyId) ?? null;
   const activeCompanies = companies.filter((company) => company.isActive);
   // 停止済みの会社は運用対象ではないため、「先に直す未設定」には混ぜない。
   const needsAttention = companies.filter((company) => company.isActive && companySetupIssues(company).length > 0);
   const totalActiveUsers = companies.reduce((sum, company) => sum + company.activeUsers, 0);
+  const paletteUsage = PALETTES.map((palette) => {
+    const users = themeUsage.rows
+      .filter((row) => row.palette === palette)
+      .reduce((sum, row) => sum + row.users, 0);
+    return {
+      palette,
+      users,
+      percentage: themeUsage.measuredUsers > 0 ? Math.round((users / themeUsage.measuredUsers) * 1000) / 10 : 0,
+    };
+  });
 
   return (
     <>
@@ -154,6 +169,39 @@ export function SystemDashboard({
           <div className="kpi-label">利用中のアカウント</div>
           <div className="kpi-value"><Num value={totalActiveUsers} unit="人" /></div>
         </Link>
+      </div>
+
+      <div className="mt-5">
+        <Disclosure
+          summary="配色の利用状況"
+          meta={`${themeUsage.measuredUsers} / ${themeUsage.activeUsers}人を計測（${themeUsage.coverageRate}%）`}
+        >
+          {themeUsage.measuredUsers === 0 ? (
+            <p className="m-0 text-sub text-ink-muted">
+              まだ現在設定を計測できていません。利用者がログインすると、既定の配色を含めて集計されます。
+            </p>
+          ) : (
+            <div className="grid gap-3 p-4 sm:grid-cols-2" aria-label="配色ごとの現在利用人数">
+              {paletteUsage.map(({ palette, users, percentage }) => (
+                <div key={palette}>
+                  <div className="flex items-baseline justify-between gap-3 text-sub">
+                    <span className="font-semibold">{PALETTE_LABELS[palette]}</span>
+                    <span className="tnum text-ink-muted">
+                      <Num value={users} unit="人" /> ／ {percentage}%
+                    </span>
+                  </div>
+                  <div
+                    className="bar-track mt-1"
+                    role="img"
+                    aria-label={`${PALETTE_LABELS[palette]} ${themeUsage.measuredUsers}人中 ${users}人、${percentage}%`}
+                  >
+                    <div className="bar-fill" style={{ width: `${percentage}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Disclosure>
       </div>
 
       {companies.length > 0 && (

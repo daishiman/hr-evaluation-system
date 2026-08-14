@@ -6,6 +6,7 @@ import { groupStalledByCompany } from "@/lib/domain/stalled-evaluations";
 import { listCompanies } from "@/lib/queries";
 import { requireRole } from "@/lib/session";
 import { listStalledAcrossCompanies } from "@/lib/stalled";
+import { readThemePreferenceUsage } from "@/lib/theme-preferences";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function SystemHome() {
   const db = await getDb();
   const companies = await listCompanies();
 
-  const [userStats, cycleStats, evaluationStats] = await Promise.all([
+  const [userStats, cycleStats, evaluationStats, themeUsage] = await Promise.all([
     db
       .select({
         companyId: s.users.companyId,
@@ -41,6 +42,7 @@ export default async function SystemHome() {
       })
       .from(s.evaluations)
       .groupBy(s.evaluations.companyId),
+    readThemePreferenceUsage(db),
   ]);
 
   const summaries: SystemCompanySummary[] = companies.map((company) => {
@@ -81,6 +83,7 @@ export default async function SystemHome() {
       selectedCompanyId={viewer.companyId}
       scopeControl={<CompanyScopeSwitcher companies={switchable} currentId={viewer.companyId} />}
       stalledByCompany={stalledByCompany}
+      themeUsage={themeUsage}
     />
   );
 }

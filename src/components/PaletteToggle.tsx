@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Icon } from "@/components/Icon";
 import { ChoiceChip } from "@/components/ui";
 import {
   DEFAULT_PALETTE,
@@ -46,6 +47,8 @@ export function PaletteToggle() {
   }, []);
 
   function choose(next: Palette) {
+    // 選択中の札を押し直しても、保存や計測を繰り返さない。
+    if (next === palette) return;
     setPalette(next);
     applyPalette(next);
     try {
@@ -60,17 +63,24 @@ export function PaletteToggle() {
 
   return (
     <div className="palette-choices" role="group" aria-label="画面の配色">
-      {PALETTES.map((value) => (
-        <ChoiceChip
-          key={value}
-          selected={palette === value}
-          onClick={() => choose(value)}
-          aria-label={`画面の配色: ${PALETTE_LABELS[value]}（${PALETTE_NOTES[value]}）`}
-          title={PALETTE_NOTES[value]}
-        >
-          {PALETTE_LABELS[value]}
-        </ChoiceChip>
-      ))}
+      {PALETTES.map((value) => {
+        const selected = palette === value;
+        return (
+          <ChoiceChip
+            key={value}
+            selected={selected}
+            onClick={() => choose(value)}
+            aria-label={`画面の配色: ${PALETTE_LABELS[value]}（${PALETTE_NOTES[value]}）`}
+            title={PALETTE_NOTES[value]}
+          >
+            <span className="palette-swatch" data-palette={value} aria-hidden />
+            <span>{PALETTE_LABELS[value]}</span>
+            <span className="palette-choice-status" aria-hidden>
+              {selected && <Icon name="check" size={15} />}
+            </span>
+          </ChoiceChip>
+        );
+      })}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   real,
   index,
   uniqueIndex,
+  check,
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
@@ -1240,3 +1241,29 @@ export const themeChoiceCounts = sqliteTable("theme_choice_counts", {
   count: integer("count").notNull().default(0),
   updatedAt: updatedAt(),
 });
+
+/**
+ * 配色の現在設定。利用者1人に1行だけを保持する。
+ *
+ * theme_choice_counts は過去の「切り替え回数」を壊さないため残すが、
+ * 標準配色の判断に使う正本はこちら。利用者IDはセッションから取得し、
+ * APIの本文からは受け取らない。
+ */
+export const themeUserPreferences = sqliteTable(
+  "theme_user_preferences",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    palette: text("palette").notNull(),
+    mode: text("mode").notNull(),
+    resolved: text("resolved").notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check("ck_theme_user_preferences_palette", sql`${t.palette} IN ('graphite', 'azure', 'sand', 'moss', 'midnight')`),
+    check("ck_theme_user_preferences_mode", sql`${t.mode} IN ('auto', 'light', 'dark')`),
+    check("ck_theme_user_preferences_resolved", sql`${t.resolved} IN ('light', 'dark')`),
+    check("ck_theme_user_preferences_consistent", sql`${t.mode} = 'auto' OR ${t.mode} = ${t.resolved}`),
+  ],
+);

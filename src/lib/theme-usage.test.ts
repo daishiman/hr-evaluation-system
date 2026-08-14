@@ -89,7 +89,7 @@ describe("見た目の選択の記録", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(sent!.url).toBe(THEME_CHOICE_ENDPOINT);
-    expect(sent!.init.method).toBe("POST");
+    expect(sent!.init.method).toBe("PUT");
     expect(sent!.init.keepalive).toBe(true);
     expect(JSON.parse(String(sent!.init.body))).toEqual({
       palette: "azure",

@@ -52,6 +52,12 @@ describe("SystemDashboard", () => {
         companies: [ready, needsSetup],
         selectedCompanyId: ready.id,
         scopeControl,
+        themeUsage: {
+          activeUsers: 10,
+          measuredUsers: 2,
+          coverageRate: 20,
+          rows: [{ palette: "azure", mode: "dark", resolved: "dark", users: 2, percentage: 100 }],
+        },
       }),
     );
 
@@ -63,6 +69,10 @@ describe("SystemDashboard", () => {
     expect(html).toContain("<details");
     expect(html).toContain('href="/system/companies"');
     expect(html).toContain('href="/system/users"');
+    expect(html).toContain("配色の利用状況");
+    expect(html).toContain("2 / 10人を計測");
+    expect(html).toContain("ブルー");
+    expect(html).toContain("20%");
     expect(html).not.toContain('<div class="kpi-label">確定済みの評価</div>');
     expect(html.indexOf("操作する会社")).toBeLessThan(html.indexOf("先に確認すること"));
   });

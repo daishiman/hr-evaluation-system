@@ -1,5 +1,5 @@
 /**
- * 「どの見た目が選ばれたか」を数えるための、薄い記録の層。
+ * 「どの見た目が現在使われているか」を保存する、薄い記録の層。
  *
  * なぜ独立させるか
  *   見た目を変える処理（ThemeToggle / PaletteToggle）に記録を書き込むと、
@@ -9,10 +9,9 @@
  *   差し替えても、切り替えの実装は1行も変わらない。
  *
  * 守ること
- *   ・誰が選んだかは記録しない。数えるのは組み合わせごとの回数だけ。
+ *   ・利用者IDは本文に入れない。APIが検証済みセッションから取得する。
  *   ・記録に失敗しても、画面の操作は止めない（送りっぱなしにする）。
- *   ・記録するのは「選んだ瞬間」だけ。画面を開くたびには数えない
- *     （よく見る画面ほど票が増える、という数え方にしないため）。
+ *   ・初回ログイン後と変更時に送る。サーバー側は1人1行のupsertなので重複票にならない。
  */
 import { DEFAULT_PALETTE, storedPalette, type Palette } from "@/lib/palette";
 import { storedTheme, type ExplicitTheme, type Theme } from "@/lib/theme";
@@ -34,7 +33,7 @@ export const THEME_CHOICE_ENDPOINT = "/api/theme-choice";
 /** 既定の送信先。応答は使わないので待たない。失敗は黙って捨てる。 */
 function postThemeChoice(choice: ThemeChoice): void {
   void fetch(THEME_CHOICE_ENDPOINT, {
-    method: "POST",
+    method: "PUT",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(choice),
     // 画面を閉じる直前に選んだときでも送り切る

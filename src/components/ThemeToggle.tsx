@@ -40,6 +40,8 @@ export function ThemeToggle() {
   }, []);
 
   function choose(next: Theme) {
+    // 選択中の札の押し直しは、保存と計測のどちらも行わない。
+    if (next === theme) return;
     setTheme(next);
     applyTheme(next);
     try {

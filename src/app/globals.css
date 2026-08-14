@@ -2314,9 +2314,35 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 }
 .account-pop-theme { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
 .account-pop-theme-label { margin: 0 0 6px; font-size: var(--text-note); color: var(--ink-muted); }
+.account-pop-theme .segmented-btn { min-height: 44px; }
 /* 配色の選択肢。5つあるので、明るさ（3つ・横1列の .segmented）とは別に2列で置く。
    横1列にすると、狭い端末で札が1文字ずつ潰れて読めなくなる。 */
 .palette-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.palette-choices .chip {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 8px;
+  text-align: left;
+}
+.palette-choice-status { display: grid; width: 16px; place-items: center; color: var(--brand-deep); }
+.palette-swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+/* 選択前に結果を予測できる、各系統の brand / brand-soft の小さな見本。 */
+.palette-swatch[data-palette="graphite"] { background: linear-gradient(135deg, #3d3d42 0 50%, #e4e4e1 50%); }
+.palette-swatch[data-palette="azure"] { background: linear-gradient(135deg, #2f4c74 0 50%, #dce6f2 50%); }
+.palette-swatch[data-palette="sand"] { background: linear-gradient(135deg, #6d5137 0 50%, #efe6da 50%); }
+.palette-swatch[data-palette="moss"] { background: linear-gradient(135deg, #3a5442 0 50%, #dfe9e0 50%); }
+.palette-swatch[data-palette="midnight"] { background: linear-gradient(135deg, #35405a 0 50%, #dde0ea 50%); }
+@media (hover: hover) and (pointer: fine) {
+  .palette-choices .chip:hover { border-color: var(--brand); }
+}
 .account-pop-links { display: grid; gap: 2px; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
 .account-pop-link {
   display: flex;
