@@ -593,6 +593,35 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
   );
 }
 
+/* ───────────────────────── 待機状態 ─────────────────────────
+ * 中身が届くまでの仮置き。loading.tsx から呼ぶ。
+ */
+
+/**
+ * 画面の中身が届くまでの仮置き。
+ *
+ * 置き場所に決まりがある。**src/app 直下には置かない**（＝全画面に効かせない）。
+ *
+ * 直下に置くと、すべての画面が「まず200でこの仮置きを返し、中身は後から流す」形になる。
+ * HTTPは先にヘッダーを送るので、一度200を送った後から307へ変えられない。そのため
+ * redirect() が「HTTPのリダイレクト」ではなく「本文に埋め込んだ指示」に降格し、
+ * 実行がブラウザ側のJS任せになる。リダイレクトするだけの画面（/ と /login）が
+ * 特定のブラウザだけ永久に待ち続けたのは、これが原因だった（2026-08-14）。
+ *
+ * 置いてよいのは、実際に中身を描く画面（/me /admin /manager /system）の配下だけ。
+ * この決まりは common-state-ui.test.ts が機械的に見張っている。
+ */
+export function PageLoading({ lede }: { lede: string }) {
+  return (
+    <main className="narrow-form" aria-live="polite" aria-busy="true">
+      <p className="page-title">画面を読み込んでいます</p>
+      <p className="page-lede">{lede}</p>
+      <div className="skeleton h-12 w-full" aria-hidden="true" />
+      <div className="skeleton mt-3 h-28 w-full" aria-hidden="true" />
+    </main>
+  );
+}
+
 /**
  * 表示できない理由をその場に出す。
  * 一覧が空・編集できないときに無言にしないための部品。
