@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
+import { PALETTE_INIT_SCRIPT } from "@/lib/palette";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -41,6 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* 暗い設定の人に、明るい画面が一瞬見えるのを防ぐ */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* 同じ理由で、選んだ配色も描画より先に当てる（前回と違う色が一瞬見えるのを防ぐ）。
+            明るさとは別のスクリプトにして、片方が壊れても、もう片方は当たるようにする。 */}
+        <script dangerouslySetInnerHTML={{ __html: PALETTE_INIT_SCRIPT }} />
       </head>
       <body>{children}</body>
     </html>

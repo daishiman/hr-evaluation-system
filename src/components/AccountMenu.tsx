@@ -5,8 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
+import { PaletteToggle } from "@/components/PaletteToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { signOut } from "@/lib/auth-client";
+import { recordAppliedThemeChoice } from "@/lib/theme-usage";
 
 /**
  * 右上の自分のアイコン。押すと自分のことだけがまとまって出る。
@@ -42,6 +44,20 @@ export function AccountMenu({
 
   // 画面を移ったら閉じる（開いたまま残って本文を隠さないように）
   useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    // 一度も外観を変えていない人も、既定の現在利用者として数える。
+    recordAppliedThemeChoice();
+
+    // 自動モードの実表示は端末設定で変わるため、その変化も現在値へ反映する。
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      if (document.documentElement.dataset.theme === undefined) recordAppliedThemeChoice();
+    };
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -116,10 +132,15 @@ export function AccountMenu({
           )}
 
           {/* 見た目の設定は「自分のこと」なので、ヘッダーに出さずここへ置く。
-              メニューを閉じていても、このアイコンからは必ず辿り着ける。 */}
+              メニューを閉じていても、このアイコンからは必ず辿り着ける。
+              明るさと配色は別の軸なので2段に分ける（どちらを変えても、もう片方は残る）。 */}
           <div className="account-pop-theme">
             <p className="account-pop-theme-label">画面の明るさ</p>
             <ThemeToggle />
+          </div>
+          <div className="account-pop-theme">
+            <p className="account-pop-theme-label">画面の配色</p>
+            <PaletteToggle />
           </div>
 
           <div className="account-pop-links">

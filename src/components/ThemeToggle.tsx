@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { explicitTheme, storedTheme, THEME_STORAGE_KEY, THEMES, type Theme } from "@/lib/theme";
+import { recordAppliedThemeChoice } from "@/lib/theme-usage";
 import { Segmented } from "@/components/ui";
 
 /**
@@ -39,6 +40,8 @@ export function ThemeToggle() {
   }, []);
 
   function choose(next: Theme) {
+    // 選択中の札の押し直しは、保存と計測のどちらも行わない。
+    if (next === theme) return;
     setTheme(next);
     applyTheme(next);
     try {
@@ -47,6 +50,8 @@ export function ThemeToggle() {
     } catch {
       /* 保存できなくても、この画面の間は選んだ見た目のまま使える */
     }
+    // 見た目を変えてから数える（→ lib/theme-usage.ts）。数えられなくても画面は変わっている。
+    recordAppliedThemeChoice();
   }
 
   return (

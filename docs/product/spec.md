@@ -354,6 +354,41 @@
 - 印刷は画面の選択にかかわらず、ライトの意味トークン一式へ固定する。ダークの白文字を白い紙へ持ち込まない。
 - 自動検査は `src/components/theme-contract.test.ts` が担当する。`ui-rules.test.ts` は主要ボタンが `--cta-*` を使うことなど、部品の用途を固定する。
 
+### 配色（テーマの系統）— 2026-08-14 追加・全画面共通
+
+- 明るさ（自動・明るい・暗い）とは**別の軸**として、色の系統を選べる。組み合わせは 5系統 × 3段階。
+  片方を変えても、もう片方の選択は残る。
+- 系統は5つ。**既存1系統**の `graphite`（グレー・既定）と、**新規4系統**の `azure`（ブルー）／
+  `sand`（ベージュ）／ `moss`（グリーン）／ `midnight`（ネイビー）。ユーザーが希望する「ホワイト」は、
+  各系統の**明るい（Light）**に相当する。値・保存キー（`hr-palette`）・描画前の初期化は `src/lib/palette.ts` を正本とする。
+- 既定は**属性なし**。`html` に `data-palette` が無い状態が `graphite` で、これまでと1バイトも変わらない見た目になる。
+  残り4系統だけが `html[data-palette]` として書き出される。
+- 系統が入れ替えるのは**骨格の18個だけ**（`--brand` / `--brand-deep` / `--brand-soft` / `--page-bg` / `--surface` /
+  `--accent` / `--cta-bg` / `--cta-bg-hover` / `--cta-fg` / `--ink` / `--ink-muted` / `--line` / `--subtle` /
+  `--off-surface` / `--off-surface-soft` / `--off-line` / `--chart-line-soft` / `--chart-band`）。
+  **危険・注意・進行中の色（`--danger` / `--caution-*` / `--status-progress`）と人物識別色（`--avatar-*`）は系統で変えない。**
+  意味を持つ色が系統ごとに変わると、赤が赤である保証が消えるため。これらは既定の値をそのまま受け継ぐ。
+- 役割の割り当ては系統を問わず同じ。画面のコードは `var(--surface)` 等しか見ていないので、系統を足しても画面側は1行も変わらない。
+- 詳細度は「明るい（`html[data-palette="x"]`）→ 暗い（`+[data-theme="dark"]`）→ 端末追従（`:not([data-theme="light"])`）」の順で強くする。
+  印刷は末尾の `@media print` が `html:root[data-palette]` を並べて最後に上書きし、**どの系統でも紙は明るいまま**出る。
+- **全系統・明暗ともに WCAG AA**（本文4.5:1・境界線3:1）を満たす。満たさない値は `globals.css` に置けない
+  （`src/components/palette-contract.test.ts` が骨格18個の過不足・暗い値の二重定義の一致・全組み合わせのコントラストを機械で固定する）。
+- 既知の制限: 端末の「コントラストを強める」設定の追加補正（`@media (prefers-contrast: more)`）は、既定のグラファイトにだけ当たる。
+  他の系統では追加補正は当たらないが、AA は満たしている（→ 残課題 UX-024）。
+- 評価業務中の往復を増やさないよう、選ぶ場所は右上のアカウントメニュー（`PaletteToggle.tsx`）へ集約する。
+  明るさの下に「画面の配色」を並べ、色の見本と名前、選択中の文字／チェックを同時に出す。色だけで状態を伝えない。
+- 見本の画像は [docs/product/theme-gallery.md](theme-gallery.md) に 5系統 × 明暗 の10枚をそろえる。
+- **人気の正本は「認証ユーザーが現在使っている設定」**とする。`theme_user_preferences` はユーザーごと1行だけ持ち、
+  `palette` / `mode` / `resolved` / `updated_at` を upsert する。ユーザーIDは本文から受け取らず、検証済みセッションだけから取得する。
+  初回の認証後表示でも、既定の `graphite` を含めた現在設定を記録する。同じ値の再選択は行も更新時刻も変えない。
+- `mode=light|dark` のとき `resolved` は必ず同じ値とし、矛盾する入力は API と DB の両方で拒否する。`auto` だけが端末の現在値に応じて
+  `resolved=light|dark` を取り、端末設定の変化時に現在行を更新する。
+- `PUT /api/theme-choice` はログイン中の本人の現在行だけを更新する。`GET /api/theme-choice` は `SUPER_ADMIN` に限定し、
+  個人データを返さず、配色／明るさ／解決後明暗の現在人数・割合・計測母数・有効ユーザーに対するカバー率だけを返す。
+  管理者は `/system` の折りたたみ「配色の利用状況」で現在の採用率を比較する。
+- 旧 `theme_choice_counts` は過去データを物理削除しないため残すが、切替回数のため現在の人気判定には使わない。
+  送信入口 `setThemeChoiceSink` は、テストまたは将来の送信先差し替え用として維持する。
+
 ### 表を残す箇所の整え方（`DataTable` に集約済み）
 
 - **列見出しは固定する**: `thead th` を `position: sticky` にし、固定ヘッダー（＋あれば見出しの帯）の下に貼り付ける。
