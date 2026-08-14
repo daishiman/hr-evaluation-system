@@ -67,6 +67,12 @@ const COMPANY_GROUPS: NavGroup[] = [
       { href: "/forms", label: "アンケートの中身" },
     ],
   },
+  /* 各画面から届いた「ここが使いにくい」を読む場所。
+     他の人が書いた不満がそのまま載るため、管理者だけに出す。 */
+  {
+    title: "使い勝手を直す",
+    items: [{ href: "/admin/improvements", label: "届いた改善要望" }],
+  },
 ];
 
 /**
@@ -225,6 +231,8 @@ export const ROUTE_META: RouteMeta[] = [
   { pattern: "/admin/members", label: "社員" },
   { pattern: "/admin/members/[id]", label: "社員1人" },
   { pattern: "/admin/members/policy", label: "本人が変更できる項目" },
+  { pattern: "/admin/improvements", label: "届いた改善要望" },
+  { pattern: "/admin/improvements/[id]", label: "要望1件" },
 
   { pattern: "/criteria", label: "評価の基準" },
   { pattern: "/forms", label: "アンケートの中身" },

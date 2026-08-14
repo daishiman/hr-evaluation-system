@@ -6,7 +6,7 @@
 
 ## 1. 台帳の読み方
 
-`route-ledger.json` が、実装にある **42個すべての `page.tsx`** を列挙する。各routeは1つの `accessClass` を参照し、そのclassが「状態 × 4ロール × 期待結果」を定義する。同じ契約を **375 / 768 / 1280 / 1600px** の4幅すべてに適用する。
+`route-ledger.json` が、実装にある **44個すべての `page.tsx`** を列挙する。各routeは1つの `accessClass` を参照し、そのclassが「状態 × 4ロール × 期待結果」を定義する。同じ契約を **375 / 768 / 1280 / 1600px** の4幅すべてに適用する。
 
 | 結果 | 意味 |
 |---|---|
@@ -33,11 +33,12 @@
 
 COMPANY_ADMIN と SUPER_ADMIN も評価される本人になりうるため、`/me/*` は EMPLOYEE 専用ではなく全ロール共通の自己サービスである。ロールだけでなく、会社・本人・直属上長・確定状態を組み合わせて判定する。
 
-## 3. 42routeの完全性
+## 3. 44routeの完全性
 
 台帳には通常画面のほか、redirect専用の `/` と `/admin/masters/kpi-categories` も含める。製品仕様から漏れていた次の2画面も独立routeとして扱う。
 
 - `/admin/forms/[id]/responses`: 会社管理者が提出状況と回答を確認する。
 - `/me/responses/[id]`: 回答時点の設問と回答本文を権限範囲内で読み返す。
+- `/admin/improvements`・`/admin/improvements/[id]`: 各画面から届いた改善要望を読み、対応状況を変える（COMPANY_ADMIN 以上・自社分だけ）。
 
 routeを追加・削除・改名するときは `route-ledger.json` を同じ変更で更新する。漏れ・古いroute・重複は `pnpm run check:docs` が失敗させる。

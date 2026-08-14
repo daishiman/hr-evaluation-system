@@ -9,6 +9,7 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { homeItemFor, navGroupsFor, searchableScreens } from "@/lib/nav";
 import { LinkButton, ReasonNote } from "@/components/ui";
 import { StickyOffset } from "@/components/StickyOffset";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 
 /**
  * 画面の骨格。
@@ -84,6 +85,9 @@ export async function AppShell({ viewer, children }: { viewer: Viewer; children:
             )}
             {children}
           </main>
+
+          {/* 改善要望はここ1箇所だけ。画面ごとに置くと、置き忘れた画面ができる */}
+          <FeedbackWidget />
         </div>
       </div>
     </SidebarDrawerProvider>

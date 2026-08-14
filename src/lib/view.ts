@@ -18,6 +18,17 @@ export function formatDate(v: string | Date | null | undefined): string {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
+/**
+ * 日付と時刻。届いた順を追う画面（改善要望）で使う。
+ * 「今日の何時に届いたか」まで分からないと、同じ日の並びが読めないため。
+ */
+export function formatDateTime(v: Date | null | undefined): string {
+  if (!v || Number.isNaN(v.getTime())) return "—";
+  const hh = String(v.getHours()).padStart(2, "0");
+  const mm = String(v.getMinutes()).padStart(2, "0");
+  return `${formatDate(v)} ${hh}:${mm}`;
+}
+
 export function formatPeriod(start?: string | null, end?: string | null): string {
   if (!start || !end) return "—";
   return `${formatDate(start)} 〜 ${formatDate(end)}`;

@@ -1,5 +1,5 @@
 {
-  "$schemaNote": "42個の page.tsx の正本台帳。各routeはaccessClassの全state×4roleを、375/768/1280/1600pxの全幅で検証する。",
+  "$schemaNote": "44個の page.tsx の正本台帳。各routeはaccessClassの全state×4roleを、375/768/1280/1600pxの全幅で検証する。",
   "widths": [375, 768, 1280, 1600],
   "outcomeMeaning": {
     "200": "目的を完了できる画面、または状態理由と復帰先を示す画面を表示する",
@@ -159,6 +159,8 @@
     { "path": "/admin/forms/[id]/responses", "accessClass": "companyAdminSubject", "widthPolicy": "all", "purpose": "アンケートの提出状況と回答を確認する", "subject": "操作対象会社のアンケート" },
     { "path": "/admin/members", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "社員を一覧・登録する", "subject": "操作対象会社" },
     { "path": "/admin/members/policy", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "本人が変更できるプロフィール項目を決める", "subject": "操作対象会社" },
+    { "path": "/admin/improvements", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "各画面から届いた改善要望を読み、対応状況を決める", "subject": "操作対象会社" },
+    { "path": "/admin/improvements/[id]", "accessClass": "companyAdminSubject", "widthPolicy": "all", "purpose": "要望1件の内容と画面の写しを読み、対応状況を変える", "subject": "改善要望1件" },
     { "path": "/admin/members/[id]", "accessClass": "companyAdminSubject", "widthPolicy": "all", "purpose": "社員情報と利用状態を管理する", "subject": "操作対象会社の社員" },
     { "path": "/admin/kgi", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "事業所KGI達成率と係数を設定する", "subject": "操作対象会社" },
     { "path": "/admin/raises", "accessClass": "companyAdminStatic", "widthPolicy": "all", "purpose": "昇給条件と金額を設定する", "subject": "操作対象会社" },

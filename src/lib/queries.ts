@@ -1,5 +1,7 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { getDb, schema } from "@/lib/db";
+import { isImprovementStatus } from "@/lib/domain/improvement";
 import { canSeeCriteria, type Viewer } from "@/lib/session";
 import {
   employeePromotionBlockedReason,
@@ -913,4 +915,78 @@ export async function getAnyUser(userId: string) {
     .where(eq(s.users.id, userId))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/* ───────────────── 改善要望（各画面からの共有） ───────────────── */
+
+/**
+ * 会社に届いた改善要望の一覧。
+ *
+ * 画像（improvement_shots）はここで引かない。1件あたり数百KBあるため、
+ * 一覧で全件ぶんを読むと応答が跳ね上がる。添付の有無だけを返す。
+ */
+export async function listImprovementRequests(companyId: string) {
+  const db = await getDb();
+  const reporter = alias(s.users, "improvement_reporter");
+  const handler = alias(s.users, "improvement_handler");
+  const rows = await db
+    .select({
+      id: s.improvementRequests.id,
+      path: s.improvementRequests.path,
+      screenLabel: s.improvementRequests.screenLabel,
+      body: s.improvementRequests.body,
+      status: s.improvementRequests.status,
+      viewport: s.improvementRequests.viewport,
+      handledNote: s.improvementRequests.handledNote,
+      createdAt: s.improvementRequests.createdAt,
+      updatedAt: s.improvementRequests.updatedAt,
+      reporterName: reporter.name,
+      handledByName: handler.name,
+      shotBytes: s.improvementShots.bytes,
+    })
+    .from(s.improvementRequests)
+    .leftJoin(reporter, eq(reporter.id, s.improvementRequests.reporterId))
+    .leftJoin(handler, eq(handler.id, s.improvementRequests.handledById))
+    .leftJoin(s.improvementShots, eq(s.improvementShots.requestId, s.improvementRequests.id))
+    .where(eq(s.improvementRequests.companyId, companyId))
+    .orderBy(desc(s.improvementRequests.createdAt));
+
+  return rows.map((r) => ({
+    ...r,
+    status: isImprovementStatus(r.status) ? r.status : ("open" as const),
+    hasShot: r.shotBytes !== null,
+  }));
+}
+
+/** 要望1件。画像もここで一緒に読む（詳細画面だけが画像を要る）。 */
+export async function getImprovementRequest(companyId: string, id: string) {
+  const db = await getDb();
+  const reporter = alias(s.users, "improvement_reporter");
+  const handler = alias(s.users, "improvement_handler");
+  const rows = await db
+    .select({
+      id: s.improvementRequests.id,
+      path: s.improvementRequests.path,
+      screenLabel: s.improvementRequests.screenLabel,
+      body: s.improvementRequests.body,
+      status: s.improvementRequests.status,
+      viewport: s.improvementRequests.viewport,
+      userAgent: s.improvementRequests.userAgent,
+      handledNote: s.improvementRequests.handledNote,
+      createdAt: s.improvementRequests.createdAt,
+      updatedAt: s.improvementRequests.updatedAt,
+      reporterName: reporter.name,
+      handledByName: handler.name,
+      shot: s.improvementShots.dataUrl,
+    })
+    .from(s.improvementRequests)
+    .leftJoin(reporter, eq(reporter.id, s.improvementRequests.reporterId))
+    .leftJoin(handler, eq(handler.id, s.improvementRequests.handledById))
+    .leftJoin(s.improvementShots, eq(s.improvementShots.requestId, s.improvementRequests.id))
+    .where(and(eq(s.improvementRequests.companyId, companyId), eq(s.improvementRequests.id, id)))
+    .limit(1);
+
+  const r = rows[0];
+  if (!r) return null;
+  return { ...r, status: isImprovementStatus(r.status) ? r.status : ("open" as const) };
 }

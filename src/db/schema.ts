@@ -1267,3 +1267,59 @@ export const themeUserPreferences = sqliteTable(
     check("ck_theme_user_preferences_consistent", sql`${t.mode} = 'auto' OR ${t.mode} = ${t.resolved}`),
   ],
 );
+
+/* ───────────────────────── 改善要望（各画面からの共有） ─────────────────────────
+ *
+ * 「この画面のここが使いにくい」を、その画面から直接送ってもらうための箱。
+ * どの画面で起きたかは送信側で自動的に入れる（利用者に打たせない）。
+ *
+ * 消さずに状態で持つ（→ src/lib/domain/improvement.ts）。見送りにしたものも
+ * 残しておかないと、同じ要望が何度も届いていることに気づけない。
+ */
+export const improvementRequests = sqliteTable(
+  "improvement_requests",
+  {
+    id: id(),
+    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    /** 送った人。退職しても要望は残すので、行ごと消さない（onDelete を付けない）。 */
+    reporterId: text("reporter_id").notNull().references(() => users.id),
+    /** 送信時に開いていた画面のURL（クエリは落とす） */
+    path: text("path").notNull(),
+    /** その画面の呼び名（→ src/lib/nav.ts の ROUTE_META） */
+    screenLabel: text("screen_label").notNull(),
+    body: text("body").notNull(),
+    /** 「1280×720」の形。狭い画面だけで起きる崩れを切り分けるために残す。 */
+    viewport: text("viewport"),
+    userAgent: text("user_agent"),
+    /** open | doing | done | dropped */
+    status: text("status").notNull().default("open"),
+    /** 状態を最後に変えた人 */
+    handledById: text("handled_by_id").references(() => users.id),
+    /** 対応のメモ（見送りの理由もここに書く） */
+    handledNote: text("handled_note"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("idx_ir_company").on(t.companyId, t.createdAt),
+    index("idx_ir_status").on(t.companyId, t.status),
+    check("ck_improvement_requests_status", sql`${t.status} IN ('open', 'doing', 'done', 'dropped')`),
+  ],
+);
+
+/**
+ * 要望に添える画面の写し（注釈を焼き込んだあとの1枚）。
+ *
+ * 一覧では画像を引かないよう、本体とは別の行に分ける。
+ * R2 を使っていないので data URL の文字列として持つ。大きさの上限は
+ * src/lib/domain/improvement.ts の IMPROVEMENT_SHOT_MAX_BYTES。
+ */
+export const improvementShots = sqliteTable("improvement_shots", {
+  requestId: text("request_id")
+    .primaryKey()
+    .references(() => improvementRequests.id, { onDelete: "cascade" }),
+  /** data:image/jpeg;base64,… の形 */
+  dataUrl: text("data_url").notNull(),
+  bytes: integer("bytes").notNull(),
+  createdAt: createdAt(),
+});

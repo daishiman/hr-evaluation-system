@@ -29,6 +29,7 @@ const sourceFiles = walk(SRC).filter((p) => (p.endsWith(".tsx") || p.endsWith(".
 const DIALOG_OWNERS = [
   join(SRC, "components", "ConfirmButton.tsx"),
   join(SRC, "components", "GlobalSearch.tsx"),
+  join(SRC, "components", "FeedbackWidget.tsx"),
 ];
 
 describe("画面の器の作法", () => {
@@ -134,6 +135,7 @@ describe("画面の器の作法", () => {
     expect(DIALOG_OWNERS.map((p) => p.replace(`${SRC}/`, ""))).toEqual([
       "components/ConfirmButton.tsx",
       "components/GlobalSearch.tsx",
+      "components/FeedbackWidget.tsx",
     ]);
     const offenders = sourceFiles.filter(
       (p) => !DIALOG_OWNERS.includes(p) && /<dialog[\s>]/.test(readFileSync(p, "utf8")),
@@ -154,6 +156,42 @@ describe("画面の器の作法", () => {
     expect(list.slice(0, list.indexOf("}"))).toContain("overflow-y: auto");
     const grid = css.slice(css.indexOf(".search-dialog-body {"));
     expect(grid.slice(0, grid.indexOf("}"))).toContain("grid-template-rows:");
+  });
+
+  it("改善要望の窓も、中央に出して押す場所を窓の中に残す", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const block = css.slice(css.indexOf(".feedback-dialog {"));
+    const body = block.slice(0, block.indexOf("}"));
+    // Tailwind の初期化が dialog の margin を 0 にするため、指定しないと左上に出る
+    expect(body).toContain("margin: auto");
+    expect(body).toContain("max-height:");
+    expect(body).toContain("overflow: hidden");
+    // 「閉じる」「送る」は常に見える位置に残し、あふれるのは本文だけ
+    const grid = css.slice(css.indexOf(".feedback-dialog-body {"));
+    expect(grid.slice(0, grid.indexOf("}"))).toContain("grid-template-rows:");
+    const main = css.slice(css.indexOf(".feedback-dialog-main {"));
+    expect(main.slice(0, main.indexOf("}"))).toContain("overflow-y: auto");
+  });
+
+  it("改善要望の窓は Esc で閉じ、開いた先で打ち始められる", () => {
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    // Esc・背景クリックのどちらで閉じても、開いているかの控えを合わせる
+    expect(source).toContain("onClose={close}");
+    // 開いた瞬間に打ち始められる（送るまでの手を1つ増やさない）
+    expect(source).toContain("autoFocus");
+    // 開いたら出られない窓を作らない
+    expect(source).toMatch(/onClick=\{close\}>\s*\n?\s*閉じる/);
+  });
+
+  it("画面を撮っている間は、改善要望の仕組み自体が写らない", () => {
+    /* 撮った画像に「改善要望」のボタンや窓が写ると、本題の場所が隠れる。
+       撮る側（コンポーネント）と隠す側（CSS）が対で無いと無言で写り込むため、
+       両方が揃っていることを固定する。 */
+    const source = readFileSync(join(SRC, "components", "FeedbackWidget.tsx"), "utf8");
+    expect(source).toContain('document.documentElement.dataset.shooting = "1"');
+    expect(source).toContain("delete document.documentElement.dataset.shooting");
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    expect(css).toContain("html[data-shooting] .feedback-root { visibility: hidden; }");
   });
 
   it("検索の窓は Esc で閉じ、開いた先にフォーカスが移る", () => {

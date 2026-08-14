@@ -2695,3 +2695,117 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   /* 色の付いた数字・バッジは、色が出ない環境でも読めるように濃さを上げる */
   .hero-number .num-display { color: var(--ink) !important; }
 }
+
+/* ============================================================
+   改善要望（各画面から「ここが使いにくい」を送る）
+   実装は src/components/FeedbackWidget.tsx
+   ============================================================ */
+
+/* 画像に焼き込む印の色。
+   明るさ（light / dark）や配色の選択で変えない。保存した後に色が変わると、
+   「赤で囲った場所」という会話が成り立たなくなるため。 */
+:root {
+  --mark-red: #d92d20;
+  --mark-amber: #b54708;
+  --mark-blue: #175cd3;
+  --mark-ink: #101828;
+  --mark-paper: #ffffff;
+}
+
+/* 右下に控えめに置く。本文の上に重ねるので、面と影で浮かせる。 */
+.feedback-fab {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 35;
+}
+.feedback-fab .btn {
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(22, 25, 29, .18);
+  opacity: .82;
+}
+.feedback-fab .btn:hover,
+.feedback-fab .btn:focus-visible { opacity: 1; }
+
+/* 画面を撮っている間は、この仕組み自体を写さない（写り込むと本題が隠れる） */
+html[data-shooting] .feedback-root { visibility: hidden; }
+
+.feedback-dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0;
+  background: var(--surface);
+  color: inherit;
+  box-shadow: 0 12px 40px rgba(22, 25, 29, .2);
+  width: min(760px, calc(100vw - 32px));
+  /* Tailwind の初期化が dialog の margin を 0 にするため、
+     指定しないと画面の左上に貼り付く（確認の窓と同じ理由）。 */
+  margin: auto;
+  max-height: calc(100dvh - 40px);
+  /* 窓ごとスクロールさせると「送る」が下に隠れる。あふれるのは本文だけにする。 */
+  overflow: hidden;
+}
+@media (max-width: 639px) {
+  .feedback-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+}
+.feedback-dialog::backdrop { background: rgba(22, 25, 29, .45); }
+
+.feedback-dialog-body {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  max-height: inherit;
+}
+.feedback-dialog-main {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 18px;
+}
+/* 閉じる・送るは常に見える位置に残す */
+.feedback-dialog-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-tight);
+  border-top: 1px solid var(--line);
+  background: var(--subtle);
+  padding: 12px 18px max(12px, env(safe-area-inset-bottom));
+}
+
+.feedback-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-tight);
+}
+.feedback-swatch {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+}
+.feedback-swatch[data-mark="red"] { background: var(--mark-red); }
+.feedback-swatch[data-mark="amber"] { background: var(--mark-amber); }
+.feedback-swatch[data-mark="blue"] { background: var(--mark-blue); }
+.feedback-swatch[data-mark="ink"] { background: var(--mark-ink); }
+
+.feedback-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--subtle);
+  /* 指でなぞって書けるようにする（画面のスクロールに取られない） */
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* 届いた要望の画面の写し（一覧の詳細で読む） */
+.improvement-shot {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
