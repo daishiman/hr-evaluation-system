@@ -416,6 +416,14 @@ export interface IssueDraftInput {
   expected: string | null;
   /** 送った人の役割。氏名・メールは記録票へ出さない */
   reporterRoleLabel: string;
+  /**
+   * 会社側でどこまで進んでいるか（未対応・対応中・完了・見送り）と、そのメモ。
+   *
+   * 記録票を作ったあとに動くのは主にここ。載せておかないと、開発側は
+   * 「もう会社側で見送りになった話」を知らずに着手することになる。
+   */
+  statusLabel: string;
+  handledNote: string | null;
   createdAt: Date;
   hasShot: boolean;
   /** 画像と原文を読む場所（社内の管理画面） */
@@ -674,6 +682,12 @@ export function buildIssueBody(input: IssueDraftInput): string {
       input.hasShot
         ? `- 画面の写し：本人の書き込みあり（社内の管理画面で確認）：${input.adminUrl}`
         : `- 画面の写し：なし。原文は社内の管理画面で確認できます：${input.adminUrl}`,
+    ].join("\n"),
+    ``,
+    `## 会社側の対応状況`,
+    [
+      `- 状態：${input.statusLabel}`,
+      `- メモ：${input.handledNote ?? "（記入なし）"}`,
     ].join("\n"),
     ``,
   );

@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/session";
 import { listImprovementRequests } from "@/lib/queries";
-import { Badge, Card, CardRow, ChipLink, EmptyState, LinkButton, PageTitle, ReasonNote, SectionHeading, StatGrid } from "@/components/ui";
+import { ChipLink, EmptyState, PageTitle, ReasonNote, SectionHeading, StatGrid } from "@/components/ui";
+import { ImprovementBulkTable } from "@/components/ImprovementBulkTable";
 import { formatDateTime } from "@/lib/view";
 import {
   IMPROVEMENT_STATUSES,
@@ -9,11 +10,20 @@ import {
   groupImprovementsByScreen,
   improvementPeriodStart,
   improvementStatusLabel,
-  improvementStatusTone,
   isImprovementPeriod,
   isImprovementStatus,
 } from "@/lib/domain/improvement";
-import { improvementKindLabel } from "@/lib/domain/improvement-issue";
+import {
+  IMPROVEMENT_SORTS,
+  IMPROVEMENT_VIEWS,
+  canDisposeImprovements,
+  filterImprovementsByView,
+  improvementSortLabel,
+  improvementViewLabel,
+  isImprovementSort,
+  isImprovementView,
+  sortImprovements,
+} from "@/lib/domain/improvement-disposition";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +38,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminImprovements({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; route?: string; period?: string }>;
+  searchParams: Promise<{ status?: string; route?: string; period?: string; view?: string; sort?: string }>;
 }) {
   const viewer = await requireRole("COMPANY_ADMIN");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
@@ -37,18 +47,34 @@ export default async function AdminImprovements({
   const status = sp.status && isImprovementStatus(sp.status) ? sp.status : null;
   const period = sp.period && isImprovementPeriod(sp.period) ? sp.period : "all";
   const routePattern = sp.route ?? null;
+  // 既定は「まだ片付いていないもの」だけ。終わったもの・廃棄したものは、
+  // 探すときにだけ見えればよい（毎週読む人の視界に残さない）。
+  const view = sp.view && isImprovementView(sp.view) ? sp.view : "active";
+  const sort = sp.sort && isImprovementSort(sp.sort) ? sp.sort : "new";
 
   const all = await listImprovementRequests(viewer.companyId);
   const counts = countImprovementsByStatus(all);
   const screens = groupImprovementsByScreen(all).slice(0, 6);
-  const rows = filterImprovements(all, { status, routePattern, since: improvementPeriodStart(period, new Date()) });
+  const visible = filterImprovementsByView(all, view);
+  const rows = sortImprovements(
+    filterImprovements(visible, { status, routePattern, since: improvementPeriodStart(period, new Date()) }),
+    sort,
+  );
 
-  const query = (next: { status?: string | null; routePattern?: string | null; period?: string | null }) => {
-    const merged = { status, routePattern, period, ...next };
+  const query = (next: {
+    status?: string | null;
+    routePattern?: string | null;
+    period?: string | null;
+    view?: string | null;
+    sort?: string | null;
+  }) => {
+    const merged = { status, routePattern, period, view, sort, ...next };
     const params = new URLSearchParams();
     if (merged.status) params.set("status", merged.status);
     if (merged.routePattern) params.set("route", merged.routePattern);
     if (merged.period && merged.period !== "all") params.set("period", merged.period);
+    if (merged.view && merged.view !== "active") params.set("view", merged.view);
+    if (merged.sort && merged.sort !== "new") params.set("sort", merged.sort);
     const q = params.toString();
     return q ? `/admin/improvements?${q}` : "/admin/improvements";
   };
@@ -68,6 +94,20 @@ export default async function AdminImprovements({
       />
 
       <SectionHeading help="絞り込みは重ねられます。">絞り込む</SectionHeading>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {IMPROVEMENT_VIEWS.map((v) => (
+          <ChipLink key={v} href={query({ view: v })} current={view === v}>
+            {improvementViewLabel(v)}
+          </ChipLink>
+        ))}
+      </div>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {IMPROVEMENT_SORTS.map((v) => (
+          <ChipLink key={v} href={query({ sort: v })} current={sort === v}>
+            {improvementSortLabel(v)}
+          </ChipLink>
+        ))}
+      </div>
       <div className="mb-4 flex flex-wrap gap-2">
         <ChipLink href={query({ status: null })} current={status === null}>
           状態すべて
@@ -106,7 +146,15 @@ export default async function AdminImprovements({
         </div>
       )}
 
-      <SectionHeading>要望（{rows.length}件）</SectionHeading>
+      <SectionHeading
+        help={
+          viewer.role === "SUPER_ADMIN"
+            ? "選んだ要望を、まとめて開発の記録票へ送れます。"
+            : undefined
+        }
+      >
+        要望（{rows.length}件）
+      </SectionHeading>
       {all.length === 0 ? (
         <EmptyState
           title="まだ要望は届いていません"
@@ -115,31 +163,28 @@ export default async function AdminImprovements({
       ) : rows.length === 0 ? (
         <ReasonNote>この絞り込みに当てはまる要望はありません。条件を外してください。</ReasonNote>
       ) : (
-        <Card>
-          {rows.map((r) => (
-            <CardRow
-              key={r.id}
-              alignTop
-              off={r.status === "done" || r.status === "dropped"}
-              title={r.body}
-              sub={`${r.screenLabel}／${r.reporterName ?? "退職された方"}`}
-              detail={
-                <p className="footnote m-0">
-                  {formatDateTime(r.createdAt)}
-                  {r.hasShot ? "／画像あり" : ""}
-                  {r.hasIssue ? "／記録票あり" : ""}
-                </p>
-              }
-              marks={
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={r.kind === "bug" ? "alert" : "closed"}>{improvementKindLabel(r.kind)}</Badge>
-                  <Badge tone={improvementStatusTone(r.status)}>{improvementStatusLabel(r.status)}</Badge>
-                  <LinkButton href={`/admin/improvements/${r.id}`}>開く</LinkButton>
-                </div>
-              }
-            />
-          ))}
-        </Card>
+        <ImprovementBulkTable
+          canPush={viewer.role === "SUPER_ADMIN"}
+          canDispose={canDisposeImprovements(viewer.role)}
+          rows={rows.map((r) => ({
+            id: r.id,
+            headline: r.body,
+            screenLabel: r.screenLabel,
+            reporterName: r.reporterName ?? "退職された方",
+            createdAtText: `${formatDateTime(r.createdAt)}${r.hasShot ? "／画像あり" : ""}`,
+            kind: r.kind,
+            status: r.status,
+            discarded: r.discarded,
+            duplicateOfId: r.duplicateOfId,
+            stateNote: r.discarded ? (r.discardReason ?? "") : r.duplicateOfId ? "他の要望にまとめました" : "",
+            syncState: r.syncState,
+            syncNote: r.syncNote,
+            issueNumber: r.issueNumber,
+            issueUrl: r.issueUrl,
+            issueClosed: r.issueClosed,
+            off: r.discarded || r.status === "done" || r.status === "dropped",
+          }))}
+        />
       )}
     </>
   );

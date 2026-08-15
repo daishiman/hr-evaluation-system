@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
-import { getImprovementRequest, listRelatedIssueLinks } from "@/lib/queries";
+import { getImprovementRequest, listImprovementEvents, listRelatedIssueLinks } from "@/lib/queries";
 import {
   Badge,
   Card,
@@ -11,11 +11,20 @@ import {
   LinkButton,
   PageTitle,
   ReasonNote,
+  RecordList,
   SectionHeading,
 } from "@/components/ui";
 import { ImprovementStatusForm } from "@/components/ImprovementStatusForm";
 import { ImprovementIssueForm } from "@/components/ImprovementIssueForm";
-import { improvementStatusLabel, improvementStatusTone } from "@/lib/domain/improvement";
+import { ImprovementDispositionForm } from "@/components/ImprovementDispositionForm";
+import {
+  canDisposeImprovements,
+  isDispositionAction,
+  dispositionActionLabel,
+  improvementDisplayState,
+  improvementDisplayStateLabel,
+  improvementDisplayStateTone,
+} from "@/lib/domain/improvement-disposition";
 import { diagnosticsLevelFor, improvementKindLabel, parseDiagnostics } from "@/lib/domain/improvement-issue";
 import { buildImprovementIssueDraft } from "@/lib/improvement-issue-draft";
 import { formatDateTime } from "@/lib/view";
@@ -41,6 +50,10 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
 
   const diagnostics = parseDiagnostics(item.diagnostics, diagnosticsLevelFor(item.kind));
   const canPushIssue = viewer.role === "SUPER_ADMIN";
+  const canDispose = canDisposeImprovements(viewer.role);
+  const displayState = improvementDisplayState(item);
+  // 誰がいつどの状態に変えたかは、上書きせず積み上げてある（→ improvement_status_events）。
+  const events = await listImprovementEvents(item.id);
   // 似ている記録票は、実際に出すときと同じ条件で引く（下見と実物を一致させる）。
   const draft = canPushIssue && !item.issueUrl
     ? await buildImprovementIssueDraft(
@@ -56,7 +69,9 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
         lede="送られた内容と、そのときの画面です。"
         tags={
           <>
-            <Badge tone={improvementStatusTone(item.status)}>{improvementStatusLabel(item.status)}</Badge>
+            <Badge tone={improvementDisplayStateTone(displayState)}>
+              {improvementDisplayStateLabel(displayState)}
+            </Badge>
             <Badge tone={item.kind === "bug" ? "alert" : "closed"}>{improvementKindLabel(item.kind)}</Badge>
           </>
         }
@@ -188,6 +203,36 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
       <ImprovementStatusForm id={item.id} status={item.status} note={item.handledNote} />
       {item.handledByName && (
         <p className="footnote">最後に更新した人：{item.handledByName}（{formatDateTime(item.updatedAt)}）</p>
+      )}
+
+      {item.discarded && (
+        <ReasonNote>
+          この要望は廃棄されています。記録票へは送られません。
+        </ReasonNote>
+      )}
+
+      {canDispose && (
+        <>
+          <SectionHeading help="落とした判断は、あとから元に戻せます。">この要望の扱い</SectionHeading>
+          <ImprovementDispositionForm id={item.id} hasIssue={Boolean(item.issueNumber)} discarded={item.discarded} />
+        </>
+      )}
+
+      <SectionHeading help="消さずに積み上げています。">操作の履歴</SectionHeading>
+      {events.length === 0 ? (
+        <ReasonNote>まだ状態を変えた記録はありません。</ReasonNote>
+      ) : (
+        <RecordList
+          items={events.map((e) => ({
+            key: e.id,
+            title: isDispositionAction(e.action) ? dispositionActionLabel(e.action) : "対応状況の変更",
+            rows: [
+              { label: "日時", value: formatDateTime(e.createdAt) },
+              { label: "操作した人", value: e.actorName ?? "退職された方" },
+            ],
+            note: e.reason ?? undefined,
+          }))}
+        />
       )}
     </>
   );

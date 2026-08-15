@@ -1315,6 +1315,22 @@ export const improvementRequests = sqliteTable(
     handledById: text("handled_by_id").references(() => users.id),
     /** 対応のメモ（見送りの理由もここに書く） */
     handledNote: text("handled_note"),
+    /**
+     * 同じ内容の要望を1つにまとめたときの統合先。
+     * 重複を状態の値にすると「どれと同じか」が消えるので、指し先そのものを持つ。
+     */
+    duplicateOfId: text("duplicate_of_id").references((): AnySQLiteColumn => improvementRequests.id),
+    /**
+     * 廃棄（誤送信・テスト投稿など）の印。行は消さない。
+     *
+     * 消してしまうと、取り違えて捨てたときに声そのものが失われ、
+     * どれくらい誤送信が起きているかも数えられなくなる。
+     * 廃棄の前の対応状況は improvement_status_events に残し、戻せるようにする。
+     */
+    discardedAt: integer("discarded_at", { mode: "timestamp_ms" }),
+    discardedById: text("discarded_by_id").references(() => users.id),
+    /** 廃棄の理由（定型の理由＋自由記述を1文にしたもの）。一覧で理由を出すために持つ。 */
+    discardReason: text("discard_reason"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -1322,6 +1338,7 @@ export const improvementRequests = sqliteTable(
     index("idx_ir_company").on(t.companyId, t.createdAt),
     index("idx_ir_status").on(t.companyId, t.status),
     index("idx_ir_route").on(t.companyId, t.routePattern),
+    index("idx_ir_discarded").on(t.companyId, t.discardedAt),
     uniqueIndex("uq_ir_reporter_submission").on(t.companyId, t.reporterId, t.submissionKey),
     check("ck_improvement_requests_status", sql`${t.status} IN ('open', 'doing', 'done', 'dropped')`),
   ],
@@ -1350,6 +1367,10 @@ export const improvementShots = sqliteTable("improvement_shots", {
  * 「まだ作っていない」を null 列の組み合わせで表すと、作りかけと作り済みの
  * 見分けが画面ごとにぶれる。行があれば作り済み、無ければ未作成、で1つに固定する。
  * 二重に立てないための境界は request_id の主キーそのもの。
+ *
+ * 一括送信では、同じ要望に対する2本目の送信がこの主キーで必ず弾かれるように、
+ * 外へ出す前に issue_number = 0 の「席取り」を入れてから GitHub を呼ぶ。
+ * 押した人が二度押ししない前提を置かない（画面側の抑止は補助にすぎない）。
  */
 export const improvementIssueLinks = sqliteTable("improvement_issue_links", {
   requestId: text("request_id")
@@ -1357,9 +1378,63 @@ export const improvementIssueLinks = sqliteTable("improvement_issue_links", {
     .references(() => improvementRequests.id, { onDelete: "cascade" }),
   /** どのリポジトリへ出したか（owner/repo）。出し先を変えても過去の行き先が追える。 */
   repo: text("repo").notNull(),
+  /** 記録票の番号。0 は「席取りだけして、まだ GitHub の返事が来ていない」。 */
   issueNumber: integer("issue_number").notNull(),
   issueUrl: text("issue_url").notNull(),
+  /**
+   * 最後に GitHub へ渡した時点の内容の指紋。
+   * これと今の内容を比べて「更新あり」を出す。更新日時で比べると、
+   * 中身が同じでも触っただけで差分ありになり、意味のない更新が積み上がる。
+   * 形は src/lib/domain/improvement-sync.ts が正本。
+   */
+  contentFingerprint: text("content_fingerprint").notNull().default(""),
+  /** 最後に GitHub 側へ反映できた時刻。まだ一度も反映していなければ null。 */
+  syncedAt: integer("synced_at", { mode: "timestamp" }),
+  /**
+   * ok | missing。missing は「番号は控えているが GitHub 側に無い（消された）」。
+   * ここで止めず、画面から作り直せるようにするための印。
+   */
+  linkState: text("link_state").notNull().default("ok"),
+  /**
+   * GitHub 側で開いているか閉じているか（open | closed）。
+   * 取り込んだ時点の写しであって、常に最新とは限らない。
+   * 一覧に出すのは「アプリと記録票がずれている」ことを見せるため。
+   */
+  issueState: text("issue_state").notNull().default("open"),
   /** 記録票を作った人。作成後に退職しても記録は残す。 */
   createdById: text("created_by_id").references(() => users.id),
   createdAt: createdAt(),
 });
+
+/**
+ * 要望の状態を変えた記録（追記だけ・書き換えない）。
+ *
+ * 状態の列を上書きするだけだと、「誰がいつ、なぜ落としたか」が次の更新で消える。
+ * 廃棄を取り消して元へ戻すときも、戻し先はこの履歴の from_status から決める。
+ * だからこの表は追記専用にし、行の書き換えも削除もしない。
+ */
+export const improvementStatusEvents = sqliteTable(
+  "improvement_status_events",
+  {
+    id: id(),
+    requestId: text("request_id")
+      .notNull()
+      .references(() => improvementRequests.id, { onDelete: "cascade" }),
+    /**
+     * status（対応状況の変更）| reject | duplicate | discard | restore |
+     * unlink | close-issue | refresh。言葉の正本は
+     * src/lib/domain/improvement-disposition.ts。
+     */
+    action: text("action").notNull(),
+    /** 変える前後の対応状況。戻すときの行き先になる。 */
+    fromStatus: text("from_status").notNull(),
+    toStatus: text("to_status").notNull(),
+    /** 定型の理由（by-design / mistake など）。対応状況の更新では空。 */
+    reasonCode: text("reason_code"),
+    /** 定型と自由記述をまとめた1文。画面と記録票のコメントにそのまま出す。 */
+    reason: text("reason"),
+    actorId: text("actor_id").references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("idx_ise_request").on(t.requestId, t.createdAt)],
+);

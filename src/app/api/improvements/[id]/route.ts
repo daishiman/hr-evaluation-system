@@ -10,9 +10,9 @@ import {
   isImprovementStatus,
 } from "@/lib/domain/improvement";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
-import { getImprovementRequest, listRelatedIssueLinks } from "@/lib/queries";
-import { buildImprovementIssueDraft } from "@/lib/improvement-issue-draft";
-import { createGithubIssue, requireGithubSettings } from "@/lib/github-issue";
+import { newId } from "@/lib/id";
+import { requireGithubSettings } from "@/lib/github-issue";
+import { syncImprovementIssue } from "@/lib/improvement-issue-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +60,19 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       .set({ status: input.status, handledNote: note || null, handledById: viewer.id })
       .where(and(eq(s.improvementRequests.id, id), eq(s.improvementRequests.companyId, viewer.companyId)));
 
+    // 誰がいつ状態を変えたかは、この画面からの更新でも残す。
+    // まとめ操作のときだけ履歴があると、経緯が途中で切れて読めなくなる。
+    await db.insert(s.improvementStatusEvents).values({
+      id: newId("ise"),
+      requestId: id,
+      action: "status",
+      fromStatus: from,
+      toStatus: input.status,
+      reasonCode: null,
+      reason: note || null,
+      actorId: viewer.id,
+    });
+
     return { message: "対応状況を更新しました。" };
   });
 }
@@ -71,8 +84,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
  * このシステムを作っている側のリポジトリなので、会社の管理者が押せると
  * 「自社の中の操作」のつもりで社外へ文章が出ることになる。
  *
- * 二重に立てない。すでに作ってあれば、新しく作らずその行き先を返す
- * （押した人にとっては「もう作ってある」と分かればよい）。
+ * 二重に立てない。すでに作ってあれば、内容が変わっていれば同じ記録票を更新し、
+ * 変わっていなければ何もしない。判断の中身は improvement-issue-sync.ts。
  *
  * 置き場所を `/issue` に分けず、この要望1件の入口（PATCH と同じファイル）へ
  * 同居させている。道を1本増やすと、同じ依存一式（DB・ログイン・検査）を
@@ -84,53 +97,19 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     if (!viewer.companyId) throw new HttpError(400, "操作する会社が選ばれていません。");
 
     const { id } = await ctx.params;
-    const item = await getImprovementRequest(viewer.companyId, id);
-    if (!item) throw new HttpError(404, "対象の要望が見つかりませんでした。");
-
-    if (item.issueUrl) {
-      return {
-        issueNumber: item.issueNumber,
-        issueUrl: item.issueUrl,
-        message: "この要望の記録票はすでに作られています。",
-      };
-    }
-
     // 設定の不足は、外へ送る前に確かめる（送ってから気づくと二重投稿になる）。
     const settings = await requireGithubSettings();
-    const draft = await buildImprovementIssueDraft(
-      item,
-      await listRelatedIssueLinks(viewer.companyId, item.routePattern, item.kind, item.id),
-    );
-    const created = await createGithubIssue(settings, {
-      title: draft.title,
-      body: draft.body,
-      labels: draft.labels,
-    });
+    const result = await syncImprovementIssue(settings, { id: viewer.id, companyId: viewer.companyId }, id);
 
-    const db = await getDb();
-    await db
-      .insert(s.improvementIssueLinks)
-      .values({
-        requestId: item.id,
-        repo: settings.repo,
-        issueNumber: created.number,
-        issueUrl: created.url,
-        createdById: viewer.id,
-      })
-      .onConflictDoNothing({ target: s.improvementIssueLinks.requestId });
-
-    // 未対応のまま置き去りにしないよう、作った時点で「対応中」へ進める。
-    if (item.status === "open") {
-      await db
-        .update(s.improvementRequests)
-        .set({ status: "doing", handledById: viewer.id })
-        .where(and(eq(s.improvementRequests.id, item.id), eq(s.improvementRequests.companyId, viewer.companyId)));
-    }
+    // 1件だけの操作では、失敗をそのまま失敗として返す（画面が赤く出す）。
+    // 一覧の一括送信は同じ関数の結果を行ごとに並べるので、そちらでは止めない。
+    if (result.action === "failed") throw new HttpError(502, result.reason);
 
     return {
-      issueNumber: created.number,
-      issueUrl: created.url,
-      message: `記録票 #${created.number} を作りました。`,
+      issueNumber: result.issueNumber,
+      issueUrl: result.issueUrl,
+      action: result.action,
+      message: result.reason,
     };
   });
 }

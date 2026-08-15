@@ -70,6 +70,8 @@ const draft: IssueDraftInput = {
   body: "保存を押しても、点数が入らないまま前の画面に戻ってしまいます。",
   expected: "押したら点数が保存されてほしい。",
   reporterRoleLabel: "マネージャー",
+  statusLabel: "未対応",
+  handledNote: null,
   createdAt: new Date("2026-08-15T02:34:00Z"),
   hasShot: true,
   adminUrl: "https://hr.example.com/admin/improvements/improve_1",

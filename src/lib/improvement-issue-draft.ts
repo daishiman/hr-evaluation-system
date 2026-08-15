@@ -9,6 +9,8 @@
 import { ROLE_LABEL, type Role } from "@/lib/session";
 import { appOrigin } from "@/lib/origin";
 import { appVersion } from "@/lib/github-issue";
+import { improvementStatusLabel, isImprovementStatus } from "@/lib/domain/improvement";
+import { improvementFingerprint } from "@/lib/domain/improvement-sync";
 import {
   buildIssueBody,
   buildIssueLabels,
@@ -33,6 +35,9 @@ export interface ImprovementForIssue {
   hasShot: boolean;
   /** 送った人の役割。氏名は記録票へ出さないので受け取らない */
   reporterRole: string | null;
+  /** open | doing | done | dropped */
+  status: string;
+  handledNote: string | null;
 }
 
 export interface IssueDraft {
@@ -40,10 +45,32 @@ export interface IssueDraft {
   body: string;
   labels: string[];
   kind: ImprovementKind;
+  /** この文面を作った時点の内容の指紋。次に送るときの「変わったか」の基準になる。 */
+  fingerprint: string;
 }
 
 function roleLabelOf(role: string | null): string {
   return role && role in ROLE_LABEL ? ROLE_LABEL[role as Role] : "不明";
+}
+
+/**
+ * 「記録票を作ったあとに変わったか」を見るための指紋。
+ *
+ * 文面ではなく元の内容から作る。文面にはアプリの版や「似ている記録票」が
+ * 混ざるため、こちらの都合（配布・別の要望の起票）で毎回変わってしまい、
+ * 中身が同じ記録票に更新コメントが積み上がる。
+ */
+export function improvementFingerprintOf(item: ImprovementForIssue): string {
+  return improvementFingerprint({
+    kind: item.kind,
+    screenLabel: item.screenLabel,
+    path: item.path,
+    routePattern: item.routePattern,
+    body: item.body,
+    expected: item.expected,
+    status: item.status,
+    handledNote: item.handledNote,
+  });
 }
 
 export async function buildImprovementIssueDraft(
@@ -61,6 +88,8 @@ export async function buildImprovementIssueDraft(
     body: item.body,
     expected: item.expected,
     reporterRoleLabel: roleLabelOf(item.reporterRole),
+    statusLabel: improvementStatusLabel(isImprovementStatus(item.status) ? item.status : "open"),
+    handledNote: item.handledNote,
     createdAt: item.createdAt,
     hasShot: item.hasShot,
     adminUrl: `${origin}/admin/improvements/${item.id}`,
@@ -73,5 +102,6 @@ export async function buildImprovementIssueDraft(
     body: buildIssueBody(input),
     labels: buildIssueLabels(kind, diagnostics, item.routePattern),
     kind,
+    fingerprint: improvementFingerprintOf(item),
   };
 }
