@@ -10,6 +10,7 @@
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { githubTokenMissingMessage } from "@/lib/domain/github-setup";
 import { HttpError } from "@/lib/session";
 
 export interface GithubIssueSettings {
@@ -55,10 +56,8 @@ export async function requireGithubSettings(): Promise<GithubIssueSettings> {
     );
   }
   if (!token) {
-    throw new HttpError(
-      503,
-      "GitHub の書き込み用トークンが未設定です。\n`wrangler secret put GITHUB_TOKEN`\nこれを実行して登録してください。権限は Issues の書き込みだけで足ります。",
-    );
+    // 取得先・選ぶ権限まで案内に含める（詳細は domain/github-setup.ts）。
+    throw new HttpError(503, githubTokenMissingMessage(repo));
   }
   return { repo, token };
 }

@@ -68,6 +68,8 @@ submission keyから投稿者を含む決定的request IDをSHA-256で生成し�
 - 会社scopeは`getImprovementRequest(companyId, id)`。他社・不存在はいずれも404。
 - 既存linkがあれば外部送信せずその`issue_number`/`issue_url`を返す。二重起票の境界は`improvement_issue_links`のPK。
 - `requireGithubSettings()`を**送信前**に通す。`GITHUB_REPO`未設定・不正、`GITHUB_TOKEN`未設定は503で、設定手順を含む文を返す。
+- token未設定時の文面は`src/lib/domain/github-setup.ts`が正本（取得先URL・一覧URL・選ぶpermission・一度しか表示されない旨・`wrangler secret put`のコマンド）。対象repoは`GITHUB_REPO`から差し込み、案内側へ書き写さない。同じURLを`.dev.vars.example`・README・`docs/deploy-notes.md` §5・`wrangler.jsonc`のコメントでも案内する。
+- 画面（`ImprovementIssueForm`）は改行で分けて1行目をReasonNote、2行目以降を手順の番号付きリストで出し、`https://`で始まる部分だけを`target="_blank" rel="noopener noreferrer"`のリンクにする。
 - 起票成功時は`improvement_issue_links`へ`onConflictDoNothing`で挿入し、`status='open'`なら`doing`へ進める。
 - tokenはserver専用（`src/lib/github-issue.ts`）。clientへ渡さず、client bundleへ露出させない。
 - 本文・titleは`src/lib/improvement-issue-draft.ts`が組み立て、管理画面のpreviewとAPIが同じ関数を共有する。previewも`listRelatedIssueLinks()`を同条件で引き、previewと実送信の本文を一致させる。

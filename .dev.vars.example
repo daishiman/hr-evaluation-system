@@ -1,3 +1,17 @@
 # ローカル開発用の設定値の見本。実際の値は .dev.vars に書く（gitには入らない）
 BETTER_AUTH_SECRET=32文字以上のランダムな文字列
 BETTER_AUTH_URL=http://localhost:8787
+
+# 改善要望から開発の記録票（GitHub Issue）を作るためのトークン。
+# 無くても要望の投稿・閲覧は動く（記録票を作るときだけ設定案内が出る）。
+#
+# 取得先: https://github.com/settings/personal-access-tokens/new
+#   Resource owner     … リポジトリの持ち主
+#   Repository access  … Only select repositories で wrangler.jsonc の GITHUB_REPO のものだけ
+#   Permissions        … Repository permissions の Issues を Read and write（他は No access のまま）
+#   Expiration         … 期限を付けた場合、切れたら同じ手順で作り直して入れ直す
+# 作成後の値は一度しか表示されない。その場でコピーする。
+# 発行済みの確認・失効: https://github.com/settings/personal-access-tokens
+#
+# 本番へ入れるときは、このファイルではなく `wrangler secret put GITHUB_TOKEN` を使う。
+GITHUB_TOKEN=github_pat_で始まる文字列

@@ -17,6 +17,9 @@
   //   GITHUB_REPO      … 改善要望から作る記録票（Issue）の出し先。owner/repo の形。
   //                      書き込み用トークンは秘密の値なので、ここには置かず
   //                      `wrangler secret put GITHUB_TOKEN` で登録する。
+  //                      トークンの取得先: https://github.com/settings/personal-access-tokens/new
+  //                      （Repository access は GITHUB_REPO のリポジトリだけ、
+  //                        Permissions は Issues: Read and write のみ）
   "vars": {
     "BETTER_AUTH_URL": "https://hr-evaluation-system.daishimanju.workers.dev",
     "APP_ORIGIN": "https://hr-evaluation-system.daishimanju.workers.dev",
