@@ -74,7 +74,9 @@ describe("一覧からまとめて指示文を払い出す", () => {
     // ここが崩れると、利用者の生の声と技術情報が誰でも読める形で外に出る。
     const guard = read("src/lib/agent-api.ts");
     const route = read("src/app/api/improvements/route.ts");
-    expect(guard).toContain("agentAuth(await agentKey()");
+    expect(guard).toContain("agentAuth(");
+    // 受け取った鍵は、突き合わせる前にハッシュへ変える（生のまま比べる先を作らない）
+    expect(guard).toContain("await hashAgentKey(given)");
     // 判定を通す前に何かを返す道を作らない
     expect(route).toContain("const denied = await guardAgentRequest(req);");
     expect(route).toContain("if (denied) return denied;");
@@ -166,5 +168,58 @@ describe("要望を落とす・戻す", () => {
     const page = read("src/app/admin/improvements/page.tsx");
     expect(page).toContain('isImprovementView(sp.view) ? sp.view : "active"');
     expect(page).toContain("filterImprovementsByView(all, view)");
+  });
+});
+
+/* ═══════════ 受け取り用の鍵を画面から発行する ═══════════
+ *
+ * 2026-08-15、依頼者から「API の鍵はどこで設定できるのか」という質問。
+ * それまで鍵はサーバーの設定にしか置けず、ターミナルを開かないと
+ * 使い始められなかった。ここで固定するのは、画面から出せるようにした結果
+ * 鍵が余計な場所へ残ってしまう道を作っていないこと。
+ */
+describe("Claude Code 連携の鍵", () => {
+  it("発行できるのはシステム全体管理者だけ（画面でもサーバー側でも確かめる）", () => {
+    expect(read("src/app/api/agent-keys/route.ts")).toContain('apiViewer("SUPER_ADMIN")');
+    expect(read("src/app/system/agent-keys/page.tsx")).toContain('requireRole("SUPER_ADMIN")');
+  });
+
+  it("生の鍵は保存しない（保管場所に入るのはハッシュと先頭数文字だけ）", () => {
+    const store = read("src/lib/agent-keys.ts");
+    expect(store).toContain("keyHash: await hashAgentKey(raw)");
+    expect(store).not.toMatch(/keyRaw|rawKey|key: raw/);
+    // 鍵を書き出す道を作らない（ログに出れば、保存していないことの意味がなくなる）
+    expect(store).not.toContain("console.");
+    expect(read("src/app/api/agent-keys/route.ts")).not.toContain("console.");
+  });
+
+  it("突き合わせは、長さで早く抜けない比べ方を通す", () => {
+    // 1文字ずつ抜けると、当てにくる側が「どこまで合っているか」を時間で測れる。
+    expect(read("src/lib/domain/agent-api.ts")).toContain("keysMatch(");
+    expect(read("src/lib/agent-api.ts")).toContain("hashAgentKey(given)");
+  });
+
+  it("鍵を出すのは発行の直後だけ。閉じたら出せないことを同じ場所で言う", () => {
+    const panel = read("src/components/AgentKeyPanel.tsx");
+    expect(panel).toContain("AGENT_KEY_ONCE_NOTICE");
+    // 手元に残す道を作らない（残せば、画面を閉じたあとも読めてしまう）
+    expect(panel).not.toContain("localStorage");
+    expect(panel).not.toContain("sessionStorage");
+    // 記録の一覧に生の鍵を渡さない
+    expect(read("src/app/system/agent-keys/page.tsx")).not.toContain("issued");
+  });
+
+  it("止める操作は、押す前に何が止まるかを出す", () => {
+    const panel = read("src/components/AgentKeyPanel.tsx");
+    expect(panel).toContain('agentKeyConfirmText("reissue")');
+    expect(panel).toContain('agentKeyConfirmText("revoke")');
+    expect(panel).toContain("<ConfirmButton");
+  });
+
+  it("鍵が無いときの案内から、発行する画面へ辿れる", () => {
+    const domain = read("src/lib/domain/agent-api.ts");
+    expect(domain).toContain("AGENT_KEY_PAGE_PATH");
+    // メニューからも開ける（URLを知っている人だけの画面にしない）
+    expect(read("src/lib/nav.ts")).toContain("/system/agent-keys");
   });
 });

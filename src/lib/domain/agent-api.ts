@@ -12,6 +12,8 @@
  * 断り方は、鍵の取り違えと未設定で言い分けない（在り処の手がかりを与えない）。
  */
 
+import { AGENT_KEY_PAGE_PATH } from "@/lib/domain/agent-keys";
+
 /** 鍵を置く場所の名前。画面・手順書・エラー文で同じ名前を出す。 */
 export const AGENT_KEY_NAME = "AGENT_API_KEY";
 
@@ -25,20 +27,22 @@ export const AGENT_KEY_MIN_LENGTH = 32;
  * 鍵が未設定のときに出す案内。1行1手順にして、上から順にやれば終わる形にする。
  * 「設定が足りません」だけだと、受け取った人が調べ直すことになる。
  */
-export function agentKeySetupLines(): string[] {
+export function agentKeySetupLines(origin?: string | null): string[] {
+  const page = origin ? `${origin}${AGENT_KEY_PAGE_PATH}` : AGENT_KEY_PAGE_PATH;
   return [
-    "鍵はこちらで作ります。人が考えた文字列は使いません。",
+    `画面から発行できます：${page}`,
+    "システム全体管理者でログインし、「鍵を発行する」を押します。",
+    "出てきた鍵はその場で1回だけ表示します。控えてから閉じてください。",
+    "ターミナルで設定したい場合は、次の手順でも登録できます。",
     "作り方：openssl rand -base64 32 を実行します。",
     `登録：${AGENT_KEY_PUT_COMMAND} を実行します。`,
     "聞かれたら、作った文字列を貼り付けます。",
-    "登録した鍵は、あとから画面に出す方法はありません。",
-    "手元にも控えを1つ残してください。",
-    "漏れたと思ったら、同じ手順で入れ直せば古い鍵は使えなくなります。",
+    "どちらで設定した鍵でも、この API は同じように通ります。",
   ];
 }
 
-export function agentKeyMissingMessage(): string {
-  return ["この API の鍵がまだ設定されていません。", ...agentKeySetupLines()].join("\n");
+export function agentKeyMissingMessage(origin?: string | null): string {
+  return ["この API の鍵がまだ設定されていません。", ...agentKeySetupLines(origin)].join("\n");
 }
 
 /**
@@ -73,17 +77,52 @@ export function keysMatch(expected: string, given: string): boolean {
   return diff === 0;
 }
 
-export function agentAuth(expectedKey: string | null | undefined, authorization: string | null): AgentAuthResult {
-  const expected = expectedKey?.trim() ?? "";
-  // 短すぎる鍵は「設定されていない」と同じ扱いにする。運営者にだけ理由が届く。
-  if (expected.length < AGENT_KEY_MIN_LENGTH) {
-    return { ok: false, status: 503, message: agentKeyMissingMessage() };
+/**
+ * 鍵の在り処は2つある。どちらで設定した鍵でも通る。
+ *  ・envKey       サーバーの設定値（ターミナルから登録したもの）
+ *  ・activeKeyHash 画面から発行した鍵の、保存してあるハッシュ
+ *
+ * 見る順番は「画面で発行した鍵 → サーバーの設定値」。画面で作り直したのに
+ * 古い設定値が優先されて通り続ける、という取り違えを作らないため。
+ */
+export interface AgentKeySource {
+  envKey: string | null | undefined;
+  activeKeyHash: string | null | undefined;
+}
+
+/** 鍵がどこかに設定されているか。両方とも無ければ 503 で設定手順を返す。 */
+export function agentKeyConfigured(source: AgentKeySource): boolean {
+  const env = source.envKey?.trim() ?? "";
+  const hash = source.activeKeyHash?.trim() ?? "";
+  return env.length >= AGENT_KEY_MIN_LENGTH || hash.length > 0;
+}
+
+/**
+ * 通してよいかを決める。
+ *
+ * givenHash は、受け取った鍵をハッシュ化したもの（呼び出し側で作る）。
+ * 保存してあるのはハッシュだけなので、突き合わせもハッシュどうしで行う。
+ */
+export function agentAuth(
+  source: AgentKeySource,
+  authorization: string | null,
+  givenHash: string | null,
+  origin?: string | null,
+): AgentAuthResult {
+  // どこにも鍵が無いときだけ、設定手順を返す。運営者にだけ理由が届く。
+  if (!agentKeyConfigured(source)) {
+    return { ok: false, status: 503, message: agentKeyMissingMessage(origin) };
   }
   const given = readBearer(authorization);
-  if (!given || !keysMatch(expected, given)) {
-    return { ok: false, status: 401, message: AGENT_UNAUTHORIZED_MESSAGE };
-  }
-  return { ok: true };
+  if (!given) return { ok: false, status: 401, message: AGENT_UNAUTHORIZED_MESSAGE };
+
+  const hash = source.activeKeyHash?.trim() ?? "";
+  if (hash.length > 0 && givenHash && keysMatch(hash, givenHash)) return { ok: true };
+
+  const env = source.envKey?.trim() ?? "";
+  if (env.length >= AGENT_KEY_MIN_LENGTH && keysMatch(env, given)) return { ok: true };
+
+  return { ok: false, status: 401, message: AGENT_UNAUTHORIZED_MESSAGE };
 }
 
 /* ───────────────────────── 返し方 ───────────────────────── */
@@ -140,6 +179,34 @@ export function agentFetchCommand(origin: string, query: string): string {
  * 作業する側へ貼る文。取得から作業までを1つにまとめる。
  * これだけを貼れば、あとは返ってきた指示文の中に手順が入っている。
  */
+/**
+ * 環境変数の名前の代わりに、鍵そのものを埋めた文面。
+ *
+ * 使ってよいのは、発行した直後に1回だけ出す場所に限る。手元に環境変数を
+ * 用意しなくてもそのまま動く形が要る、という理由があるときだけ。
+ * 一覧や詳細画面はこれを使わない（画面に鍵が残り続けるため）。
+ */
+export function withInlineKey(text: string, raw: string): string {
+  return text.replaceAll(`$${AGENT_KEY_SHELL_VAR}`, raw);
+}
+
+/**
+ * 発行した直後にだけ渡す、鍵を埋め込んだ文面。
+ * これ1つを貼れば、手元に何も用意しなくても受け取れる。
+ * 代わりに鍵が文中に入るので、人に見える場所へ貼らないことを最後に書く。
+ */
+export function agentPromptTextWithKey(origin: string, query: string, raw: string): string {
+  return [
+    "次のコマンドで作業指示を受け取ってください。",
+    "",
+    withInlineKey(agentFetchCommand(origin, query), raw),
+    "",
+    "受け取った指示文の中身に従って直してください。",
+    "指示文の中に、進め方と受け入れ条件が入っています。",
+    "この文には鍵が入っています。人の目に触れる場所へ貼らないでください。",
+  ].join("\n");
+}
+
 export function agentPromptText(origin: string, query: string): string {
   return [
     "次のコマンドで作業指示を受け取ってください。",
@@ -149,5 +216,6 @@ export function agentPromptText(origin: string, query: string): string {
     "受け取った指示文の中身に従って直してください。",
     "指示文の中に、進め方と受け入れ条件が入っています。",
     `鍵は環境変数 ${AGENT_KEY_SHELL_VAR} に入れておいてください。`,
+    `鍵は ${origin}${AGENT_KEY_PAGE_PATH} で発行できます。`,
   ].join("\n");
 }

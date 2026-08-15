@@ -118,6 +118,7 @@ export function navGroupsFor(role: Role): NavGroup[] {
           items: [
             { href: "/system/companies", label: "会社一覧", icon: "building" },
             { href: "/system/users", label: "利用者一覧", icon: "userAdmin" },
+            { href: "/system/agent-keys", label: "Claude Code 連携の鍵", icon: "lock" },
           ],
         },
         ...COMPANY_GROUPS,
