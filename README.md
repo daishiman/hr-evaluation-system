@@ -26,14 +26,14 @@ pnpm run preview
 
 `preview` は Workers 相当のローカル環境を `http://localhost:8787` で起動します。日常の UI 開発で `pnpm dev` を使う場合は、`.dev.vars` の `BETTER_AUTH_URL` を Next.js が表示する URL に合わせてください。
 
-改善要望を作業指示文として払い出す読み取り API（`GET /api/improvements`）だけは、鍵が要ります。無くても投稿・閲覧は動き、払い出しのときだけ設定案内が出ます。鍵はシステム全体管理者が画面から発行できます（メニュー「Claude Code 連携の鍵」＝ `/system/agent-keys`。用途の名前を付けて発行すると乱数で作られ、その場で1回だけ表示します。同時に10本まで持て、1本だけ止めても他は動き続けます）。ターミナルから設定する場合は `openssl rand -base64 32` で作り、`.dev.vars` の `AGENT_API_KEY` に置きます（本番は `pnpm exec wrangler secret put AGENT_API_KEY`）。どちらの鍵でも通り、**見る順番は画面発行の鍵 → 環境変数 `AGENT_API_KEY`** です。環境変数の鍵は同じ画面から受け付けを止められます。手順の詳細は [デプロイ注意 §5](docs/deploy-notes.md) にあります。
+改善要望を作業指示文として払い出す読み取り API（`GET /api/improvements`）だけは、通行証が要ります。無くても投稿・閲覧は動き、払い出しのときだけ設定案内が出ます。通行証は `pnpm improvements login` で受け取り、システム全体管理者がブラウザで承認します（メニュー「Claude Code 連携の鍵」＝ `/system/agent-keys`）。同じ画面には古い方式の鍵も残しています（用途の名前を付けて発行すると乱数で作られ、その場で1回だけ表示します。同時に10本まで持て、1本だけ止めても他は動き続けます）。ターミナルから設定する場合は `openssl rand -base64 32` で作り、`.dev.vars` の `AGENT_API_KEY` に置きます（本番は `pnpm exec wrangler secret put AGENT_API_KEY`）。どれでも通り、**見る順番は通行証 → 画面発行の鍵 → 環境変数 `AGENT_API_KEY`** です。環境変数の鍵は同じ画面から受け付けを止められます。手順の詳細は [デプロイ注意 §5](docs/deploy-notes.md) にあります。
 
 ## Claude Code から改善要望を呼び出して直す
 
 利用者が画面から送った改善要望を、このリポジトリから直接読み出して着手できます。毎回 URL や鍵を打つ必要はありません。
 
-1. **鍵を発行する** — システム全体管理者で [/system/agent-keys](https://hr-evaluation-system.daishimanju.workers.dev/system/agent-keys) を開き、用途の名前（例: 自宅の Claude Code）を付けて「鍵を発行する」を押します。鍵はその場で1回だけ表示されます。
-2. **手元に置く** — `cp .env.example .env.local` でファイルを作り、`HR_AGENT_KEY=` の右に控えた鍵を貼ります。`.env.local` は追跡されません。発行画面の「.env.local へ書く1行をコピー」を押すと、この1行がそのまま手に入ります。
+1. **この端末を通す** — ターミナルで `pnpm improvements login` を実行します。合言葉（例 `ABCD-2345`）が出たまま待ちます。
+2. **ブラウザで承認する** — システム全体管理者で [/system/agent-keys](https://hr-evaluation-system.daishimanju.workers.dev/system/agent-keys) を開き、合言葉を入れて「この端末を通す」を押します。ターミナルの表示が進み、通行証が `.env.local` に書き込まれます（値は表示しません。`.env.local` は追跡されません）。
 3. **呼び出す** — 次のどれかを実行します。
 
 ```bash
@@ -43,33 +43,40 @@ pnpm improvements get <ID> <ID>                # まとめて読む（最大10�
 pnpm improvements review <ID> --pr <確認依頼>  # 確認依頼を出した（レビュー待ちにする）
 pnpm improvements done <ID> --pr <確認依頼>    # 確認依頼が取り込まれた（対応済みにする）
 pnpm improvements failed <ID> --reason <理由>  # 直しきれなかった理由を残す
-pnpm improvements key                          # 鍵の在り処だけを確かめる（値は出ません）
+pnpm improvements key                          # 通行証の在り処だけを確かめる（値は出ません）
+pnpm improvements login                        # ブラウザで承認して、この端末を通す
 pnpm improvements list --json                  # 機械処理用にJSONで出す
 ```
 
 Claude Code の中からは `/improvements`（一覧を見る）と `/improve-request <要望ID>`（その要望のとおりに直して公開する）で同じことができます。
 
-宛先は既定で本番です。ローカルの `pnpm run preview` に向けるときだけ `--base http://localhost:8787` を付けるか、`.env.local` に `HR_APP_URL` を書きます。鍵が未設定のときは発行画面と書き込み手順を出して止まり、鍵の値そのものは画面にもログにも出しません。
+宛先は既定で本番です。ローカルの `pnpm run preview` に向けるときだけ `--base http://localhost:8787` を付けるか、`.env.local` に `HR_APP_URL` を書きます。通行証が未設定のときは `login` の手順を出して止まり、通行証の値そのものは画面にもログにも出しません。
 
-### 鍵の置き場所（1Password を既定に、無くても動く）
+### 通行証は2本立て（毎回、短い方を取り直す）
 
-鍵は次の順で探し、最初に見つかったものを使います。1Password が入っていない環境でも下の段で動きます。
+`login` で受け取るのは長い方の通行証だけです。実際に要望を読むときは、その場で**15分で切れる短い通行証**を取り直して使います。短い方はディスクに書きません。長い方は90日で切れ、切れたら `pnpm improvements login` からやり直します。通した端末は `/system/agent-keys` の「通した端末」から1台ずつ止められ、止めた瞬間から読み取りも取り直しも通らなくなります。
+
+### 通行証の置き場所（1Password を既定に、無くても動く）
+
+通行証は次の順で探し、最初に見つかったものを使います。1Password が入っていない環境でも下の段で動きます。
 
 | 順 | 置き場所 | 設定のしかた |
 | --- | --- | --- |
-| 1 | 環境変数 | `HR_AGENT_KEY=…`（その場だけ差し替えたいとき） |
-| 2 | 1Password | 鍵を保管庫に入れ、場所だけを `HR_AGENT_KEY_OP_REF=op://保管庫/項目名/credential` に書く |
-| 3 | OSのキーチェーン | `security add-generic-password -s hr-agent-key -a "$USER" -w` |
-| 4 | `.env.local` | `HR_AGENT_KEY=…` の1行 |
+| 1 | 環境変数 | `HR_AGENT_TOKEN=…`（その場だけ差し替えたいとき） |
+| 2 | 1Password | 値を保管庫へ移し、`.env.local` を `HR_AGENT_TOKEN=op://保管庫/項目名/credential` に書き換える |
+| 3 | OSのキーチェーン | `security add-generic-password -s hr-agent-token -a "$USER" -w` |
+| 4 | `.env.local` | `HR_AGENT_TOKEN=…` の1行（`login` が書き込む先） |
 
-どこから読めているかは `pnpm improvements key` で確かめられます（出るのは置き場所の名前だけで、鍵の値は出ません）。
+値が `op://` で始まるときは、台本が自分自身を `op run --` で起動し直します。1Password が値を**その処理の環境変数にだけ**渡すので、平文はファイルにも画面にも残りません。`op` が入っていない環境ではそのまま3・4の段で動きます。どこから読めているかは `pnpm improvements key` で確かめられます（出るのは置き場所の名前だけです）。
 
-### 鍵で何ができるか
+長命の鍵（`HR_AGENT_KEY`）は**古い方式**です。使えば動きますが、実行のたびに移行の案内が出ます。画面の「鍵を発行する（古い方式）」も当面残しますが、新しく作る必要はありません。
 
-画面から発行した鍵には、発行した時点の**会社が焼き込まれます**。その鍵でできるのは次の2つだけです。
+### 通行証・鍵で何ができるか
+
+通行証には、承認した人の**会社が焼き込まれます**（画面から発行した鍵も同じです）。できるのは次の2つだけです。
 
 - その会社の要望を読む
-- **その鍵で受け取った**要望の状態を変える
+- **その端末で受け取った**要望の状態を変える
 
 他社の要望は、要望IDを直接指しても「見つかりません」としか返りません。受け取っていない要望も状態を変えられません。どちらもサーバー側で断っています。
 

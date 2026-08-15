@@ -6,15 +6,20 @@ import {
   KEY_FILE,
   KEY_VAR,
   OP_REF_VAR,
+  OP_RUN_GUARD,
   REDACTED,
+  TOKEN_PATH,
+  TOKEN_VAR,
   buildUrl,
   describeFailure,
   describeNetworkError,
   missingKeyMessage,
   parseArgs,
   readEnvValue,
+  opRunPlan,
   resolveConfig,
   run,
+  writeEnvLine,
 } from "./improvements.mjs";
 
 /** 通信のふり。実際には外へ出さない。 */
@@ -118,8 +123,8 @@ describe("宛先の組み立て", () => {
   });
 });
 
-describe("鍵が未設定のとき", () => {
-  it("発行画面と書き込み先を含む案内を出して終わる", async () => {
+describe("通行証も鍵も未設定のとき", () => {
+  it("承認の画面と書き込み先を含む案内を出して終わる", async () => {
     const err = vi.fn();
     const fetchImpl = vi.fn();
     const code = await run({ argv: ["list"], env: {}, envFileText: null, fetchImpl, err, out: vi.fn() });
@@ -129,7 +134,9 @@ describe("鍵が未設定のとき", () => {
     const message = err.mock.calls[0][0];
     expect(message).toContain("/system/agent-keys");
     expect(message).toContain(KEY_FILE);
-    expect(message).toContain(KEY_VAR);
+    // 案内の主役は `login`。古い方式の鍵ではなく、通行証の置き場所を教える。
+    expect(message).toContain("pnpm improvements login");
+    expect(message).toContain(TOKEN_VAR);
   });
 
   it("案内には鍵の値を作る材料が入らない", () => {
@@ -493,5 +500,219 @@ describe("書き戻しの実行", () => {
 
     expect(code).toBe(1);
     expect(err.mock.calls[0][0]).toContain("まだ受け取っていません");
+  });
+});
+
+/* ───────────────────────── ブラウザで承認して端末を通す ───────────────────────── */
+
+const REFRESH = "refresh-token-abcdefghijklmnopqrstuvwxyz";
+const ACCESS = "access-token-0123456789abcdefghij";
+
+/** 呼ばれた順に別の返事をする通信のふり。 */
+function scriptedFetch(responses) {
+  let i = 0;
+  return vi.fn(async () => responses[Math.min(i++, responses.length - 1)]);
+}
+
+describe("端末を通す（login）", () => {
+  const started = textResponse(
+    JSON.stringify({
+      userCode: "ABCD2345",
+      deviceCode: "device-code-zzzzzzzzzzzzzzzzzzzz",
+      intervalSeconds: 5,
+      expiresInMinutes: 10,
+      instructions: "ブラウザで次の画面を開き、合言葉を入れてください。\n  合言葉: ABCD-2345",
+    }),
+  );
+
+  it("承認されるまで待ち、受け取った通行証は表示せず書き込む", async () => {
+    const out = vi.fn();
+    const err = vi.fn();
+    const saveToken = vi.fn();
+    const fetchImpl = scriptedFetch([
+      started,
+      textResponse(JSON.stringify({ state: "pending", message: "まだ承認されていません。" })),
+      textResponse(JSON.stringify({ state: "approved", refreshToken: REFRESH, accessToken: ACCESS })),
+    ]);
+
+    const code = await run({
+      argv: ["login", "--label", "開発機"],
+      env: {},
+      fetchImpl,
+      out,
+      err,
+      sleep: async () => {},
+      saveToken,
+    });
+
+    expect(code).toBe(0);
+    // 待っている間に、断りの応答を返し続けない（待ちも 200 で見分ける）
+    expect(fetchImpl.mock.calls[1][1].method).toBe("PUT");
+    expect(saveToken).toHaveBeenCalledWith(REFRESH);
+    const printed = [...out.mock.calls, ...err.mock.calls].flat().join("\n");
+    expect(printed).toContain("ABCD-2345");
+    expect(printed).toContain(KEY_FILE);
+    expect(printed).not.toContain(REFRESH);
+    expect(printed).not.toContain(ACCESS);
+  });
+
+  it("端末の名前は開始のときに送る", async () => {
+    const fetchImpl = scriptedFetch([
+      started,
+      textResponse(JSON.stringify({ state: "approved", refreshToken: REFRESH, accessToken: ACCESS })),
+    ]);
+    await run({
+      argv: ["login", "--label", "開発機"],
+      env: {},
+      fetchImpl,
+      out: vi.fn(),
+      err: vi.fn(),
+      sleep: async () => {},
+      saveToken: vi.fn(),
+    });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ label: "開発機" });
+  });
+
+  it("断られたら理由を出して止まり、何も書き込まない", async () => {
+    const err = vi.fn();
+    const saveToken = vi.fn();
+    const code = await run({
+      argv: ["login"],
+      env: {},
+      fetchImpl: scriptedFetch([
+        started,
+        textResponse(JSON.stringify({ state: "denied", message: "この端末は承認されませんでした。" })),
+      ]),
+      out: vi.fn(),
+      err,
+      sleep: async () => {},
+      saveToken,
+    });
+
+    expect(code).toBe(1);
+    expect(saveToken).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toContain("承認されませんでした");
+  });
+});
+
+describe("短い通行証を毎回取り直す", () => {
+  it("長い方は送るだけで、受け取りには短い方を使う", async () => {
+    const fetchImpl = scriptedFetch([
+      textResponse(JSON.stringify({ accessToken: ACCESS, expiresInSeconds: 900 })),
+      textResponse("# 手つかずの改善要望 0件\n"),
+    ]);
+    const out = vi.fn();
+    const err = vi.fn();
+
+    const code = await run({ argv: ["list"], env: { [TOKEN_VAR]: REFRESH }, fetchImpl, out, err });
+
+    expect(code).toBe(0);
+    const [tokenUrl, tokenInit] = fetchImpl.mock.calls[0];
+    expect(tokenUrl).toBe(`${DEFAULT_BASE}${TOKEN_PATH}`);
+    expect(JSON.parse(tokenInit.body)).toEqual({ refreshToken: REFRESH });
+    // 長い方は受け取りの通信には載せない（漏れても短い方だけで済むようにする）
+    expect(fetchImpl.mock.calls[1][1].headers.authorization).toBe(`Bearer ${ACCESS}`);
+    const printed = [...out.mock.calls, ...err.mock.calls].flat().join("\n");
+    expect(printed).not.toContain(REFRESH);
+    expect(printed).not.toContain(ACCESS);
+  });
+
+  it("長い方が切れていたら、入り直しを案内して止まる", async () => {
+    const err = vi.fn();
+    const fetchImpl = fakeFetch(
+      textResponse(JSON.stringify({ message: "通行証の期限が切れました。" }), { status: 401 }),
+    );
+    const code = await run({ argv: ["list"], env: { [TOKEN_VAR]: REFRESH }, fetchImpl, out: vi.fn(), err });
+
+    expect(code).toBe(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(err.mock.calls[0][0]).toContain("期限が切れました");
+  });
+
+  it("通行証があるときは、古い方式の注意を出さない", async () => {
+    const err = vi.fn();
+    await run({
+      argv: ["list"],
+      env: { [TOKEN_VAR]: REFRESH },
+      fetchImpl: scriptedFetch([
+        textResponse(JSON.stringify({ accessToken: ACCESS })),
+        textResponse("本文"),
+      ]),
+      out: vi.fn(),
+      err,
+    });
+    expect(err).not.toHaveBeenCalled();
+  });
+
+  it("古い鍵はそのまま動くが、移行の案内を最後に添える", async () => {
+    const err = vi.fn();
+    const out = vi.fn();
+    const code = await run({
+      argv: ["list"],
+      env: { [KEY_VAR]: KEY },
+      fetchImpl: fakeFetch(textResponse("本文")),
+      out,
+      err,
+    });
+
+    expect(code).toBe(0);
+    expect(out).toHaveBeenCalledWith("本文");
+    expect(err.mock.calls.flat().join("\n")).toContain("古い方式");
+  });
+
+  it("key は通行証と鍵のどちらが読めているかを言い分ける", async () => {
+    const out = vi.fn();
+    await run({ argv: ["key"], env: { [TOKEN_VAR]: REFRESH }, fetchImpl: vi.fn(), out, err: vi.fn() });
+    expect(out.mock.calls[0][0]).toContain("通行証は 環境変数 から");
+    expect(out.mock.calls[0][0]).not.toContain(REFRESH);
+  });
+});
+
+describe("1Password に預けたときの受け渡し", () => {
+  it("参照が書いてあれば、自分自身を op run で起動し直す計画を作る", () => {
+    const plan = opRunPlan({
+      env: { [TOKEN_VAR]: "op://保管庫/項目/credential" },
+      scriptPath: "/x/improvements.mjs",
+      argv: ["list"],
+      execPath: "/usr/bin/node",
+    });
+    expect(plan).toEqual({
+      command: "op",
+      args: ["run", "--", "/usr/bin/node", "/x/improvements.mjs", "list"],
+    });
+  });
+
+  it("設定ファイル側に書いてあれば、ファイルごと渡す", () => {
+    const plan = opRunPlan({
+      env: {},
+      envFileText: `${TOKEN_VAR}=op://保管庫/項目/credential`,
+      scriptPath: "/x/improvements.mjs",
+      argv: [],
+      execPath: "/usr/bin/node",
+    });
+    expect(plan.args.slice(0, 3)).toEqual(["run", "--env-file", KEY_FILE]);
+  });
+
+  it("すでに op run の中なら、もう起動し直さない", () => {
+    expect(
+      opRunPlan({ env: { [TOKEN_VAR]: "op://a/b/c", [OP_RUN_GUARD]: "1" } }),
+    ).toBeNull();
+  });
+
+  it("値を直に持っているときは起動し直さない", () => {
+    expect(opRunPlan({ env: { [TOKEN_VAR]: REFRESH } })).toBeNull();
+  });
+});
+
+describe("設定ファイルへの書き込み", () => {
+  it("同じ名前の古い行は残さず、1行だけにする", () => {
+    const text = writeEnvLine(`${TOKEN_VAR}=old\nHR_APP_URL=http://localhost:8787\n`, TOKEN_VAR, "new");
+    expect(readEnvValue(text, TOKEN_VAR)).toBe("new");
+    expect(text.split("\n").filter((l) => l.startsWith(`${TOKEN_VAR}=`))).toHaveLength(1);
+    expect(readEnvValue(text, "HR_APP_URL")).toBe("http://localhost:8787");
+  });
+
+  it("何も無いところにも書ける", () => {
+    expect(readEnvValue(writeEnvLine(null, TOKEN_VAR, "v"), TOKEN_VAR)).toBe("v");
   });
 });

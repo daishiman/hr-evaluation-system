@@ -118,9 +118,9 @@
 | OPS-003 | observe | サンプル会社は本番運用開始時に削除が必要 | 実会社データの利用開始前 | 専用コマンドで削除し結果を記録 | [製品仕様](./spec.md) / [package scripts](../../package.json) |
 | OPS-004 | observe | KPI ランク境界・係数は初回半期後の再調整候補 | 初回半期が終了 | 実分布と端数影響を確認して制度値を見直す | [回ごとの記録 N2・S4](./backlog-session-notes.md) |
 | OPS-005 | ready | サーバー描画でクライアント API 混入を検出する専用 CI がない | 同種の回帰を予防 | 静的スキャナーを CI に追加 | [回ごとの記録 T3](./backlog-session-notes.md) |
-| OPS-007 | ready | 鍵は長命のまま（ブラウザでログインして短命の鍵を自動更新する形になっていない） | 鍵の配布が人手で回らなくなったとき | 端末ごとの認可（device authorization grant 相当）と自動更新を実装し、長命の鍵は非推奨にする | [鍵の権限](../../src/lib/domain/agent-scope.ts) / [呼び出し台本](../../scripts/improvements.mjs) |
+| OPS-007 | observe | 端末ごとの承認と短命の通行証を入れた（`pnpm improvements login`）。長命の鍵は古い方式として残している | 通した端末が実運用で1台以上動いたら | 移行の実績を見て OPS-008 の停止に進む | [端末を通す判断](../../src/lib/domain/agent-device.ts) / [呼び出し台本](../../scripts/improvements.mjs) |
 | OPS-009 | ready | 確認依頼が取り込まれたことを、作業する側がコマンドで知らせている（取り込みを見張る受け口がない） | 知らせ忘れで「レビュー待ち」のまま残る要望が出たら | GitHub の取り込み通知を受ける入口を足し、確認依頼の場所と要望IDの対応から状態を自動で進める | [書き戻し本体](../../src/lib/improvement-agent-write.ts) / [仕様](../../system-spec/improvement-requests.md) |
-| OPS-008 | observe | 会社を焼き込む前に発行した鍵は、全社の要望を読めるまま（状態は変えられない） | 既存の鍵が使われなくなったら | 発行し直したうえで古い鍵を止め、会社なしの鍵を受け付けなくする | [鍵の一覧画面](../../src/app/system/agent-keys/page.tsx) / [鍵の権限](../../src/lib/domain/agent-scope.ts) |
+| OPS-008 | ready | 長命の鍵（会社を焼き込む前のものを含む）を、いつ画面から止めるかが決まっていない | 通した端末が1台以上あり、鍵の最終使用日時が30日以上動かなくなったら | 発行の入口を画面から外し、残った鍵を1本ずつ止める。会社なしの鍵を受け付けない判定に切り替える | [鍵の一覧画面](../../src/app/system/agent-keys/page.tsx) / [鍵の権限](../../src/lib/domain/agent-scope.ts) |
 | PERFORMANCE-001 | observe | 一覧は数百件超でページングが必要 | 対象データが数百件に達する | cursor または keyset 方式を導入 | [旧台帳 D1](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-002 | observe | マスタ参照は都度 D1 を読む | 読取負荷・待ち時間が問題化 | キャッシュ範囲と無効化を設計 | [旧台帳 D11](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-003 | ready | 本番端末・回線で Core Web Vitals を計測していない | 次の性能確認 | 主要画面を実測し基準超過だけ改善 | [旧台帳 UX101](./backlog-history-2026-08-13.md) |

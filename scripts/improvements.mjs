@@ -7,9 +7,18 @@
 //   pnpm improvements review <ID> --pr …    # 確認依頼を作ったことを書き戻す
 //   pnpm improvements done <ID> --pr …      # その確認依頼が取り込まれたことを書き戻す
 //   pnpm improvements failed <ID> --reason … # 直しきれなかった理由を残す
-//   pnpm improvements key                   # 鍵の在り処だけを確かめる（値は出さない）
+//   pnpm improvements login                 # ブラウザで承認して、この端末を通す
+//   pnpm improvements key                   # 通行証の在り処だけを確かめる（値は出さない）
 //
-// 鍵の探し方は上から順に4つ。最初に見つかったものを使う。
+// 受け取りに使うものは2種類ある。上が本筋で、下は移行のために残している。
+//   A. 通行証（HR_AGENT_TOKEN）… `login` で受け取る。15分の短い通行証を毎回取り直す
+//   B. 長命の鍵（HR_AGENT_KEY） … 画面で発行した鍵。古い方式（そのうち止める）
+//
+// 値が op:// で始まるときは、この台本が自分自身を `op run --` で起動し直す。
+// そうすると 1Password が値を**この処理の環境変数にだけ**入れてくれるので、
+// ディスクにも画面にも平文が現れない。op が無い環境ではそのまま下の段で動く。
+//
+// 探し方は上から順に4つ。最初に見つかったものを使う。
 //   1. 環境変数 HR_AGENT_KEY（その場だけ差し替えたいとき）
 //   2. 1Password（HR_AGENT_KEY_OP_REF に op://… を書き、op コマンドで読む）
 //   3. OSのキーチェーン（macOS の security コマンド）
@@ -20,8 +29,8 @@
 // 鍵と同じ文字列は必ず伏せ字へ置き換える（→ redactor）。取り違えて画面へ流すと、
 // そこから先はログにも履歴にも残ってしまい、取り消せない。
 
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,8 +58,33 @@ export const OP_REF_VAR = "HR_AGENT_KEY_OP_REF";
 /** OSのキーチェーンに入れるときの名前。手順書と合わせる。 */
 export const KEYCHAIN_SERVICE = "hr-agent-key";
 
+/** 通行証（長い方）を置く変数の名前。`login` が書き込む先でもある。 */
+export const TOKEN_VAR = "HR_AGENT_TOKEN";
+
+/** 通行証を 1Password に置くときの、場所を書く変数の名前。 */
+export const TOKEN_OP_REF_VAR = "HR_AGENT_TOKEN_OP_REF";
+
+/** 通行証を OSのキーチェーンに入れるときの名前。 */
+export const TOKEN_KEYCHAIN_SERVICE = "hr-agent-token";
+
+/** 承認待ちを作る・引き取る入口。 */
+export const DEVICE_PATH = "/api/agent/device";
+
+/** 短い通行証を取り直す入口。 */
+export const TOKEN_PATH = "/api/agent/token";
+
+/** `op run --` の中で動いていることの目印。二重に起動し直さないために見る。 */
+export const OP_RUN_GUARD = "HR_AGENT_OP_RUN";
+
 /** 出力に鍵が混じったときの置き換え先。長さも伏せる。 */
 export const REDACTED = "********";
+
+/**
+ * 古い方式の鍵で動いたときに添える1文（`src/lib/domain/agent-device.ts` と同じ文言）。
+ * この台本は TypeScript を読み込めないため、ここに写しを置く。
+ */
+export const LEGACY_KEY_NOTICE =
+  "この鍵は古い方式です。\n`pnpm improvements login` で短い通行証に移せます。";
 
 export const USAGE = [
   "使い方:",
@@ -59,13 +93,15 @@ export const USAGE = [
   "  pnpm improvements review <ID> --pr …      確認依頼を作ったことを書き戻す",
   "  pnpm improvements done <ID> --pr …        確認依頼が取り込まれたことを書き戻す",
   "  pnpm improvements failed <ID> --reason …  直しきれなかった理由を残す",
-  "  pnpm improvements key                     鍵の在り処だけを確かめる",
+  "  pnpm improvements login                   ブラウザで承認して、この端末を通す",
+  "  pnpm improvements key                     通行証の在り処だけを確かめる",
   "",
   "付けられるもの:",
   "  --json        機械処理用にJSONのまま出す",
   `  --base <URL>  宛先を変える（既定は本番。環境変数 ${BASE_VAR} でも指定できる）`,
   "  --pr …        確認依頼の場所（URL・番号のどちらか。--release でも同じ）",
   "  --reason …    直しきれなかった理由",
+  "  --label …     この端末の名前（login のときだけ）",
 ].join("\n");
 
 /* ───────────────────────── 入力を読む ───────────────────────── */
@@ -80,9 +116,19 @@ export function parseArgs(argv) {
   let json = false;
   let base = null;
   let detail = null;
+  let label = null;
 
-  const fail = (message) => ({ error: message, command: null, ids: [], json, base, detail: null, dropped: 0 });
-  const ok = (command, ids, dropped = 0) => ({ command, ids, dropped, json, base, detail });
+  const fail = (message) => ({
+    error: message,
+    command: null,
+    ids: [],
+    json,
+    base,
+    detail: null,
+    label: null,
+    dropped: 0,
+  });
+  const ok = (command, ids, dropped = 0) => ({ command, ids, dropped, json, base, detail, label });
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -93,6 +139,11 @@ export function parseArgs(argv) {
       i += 1;
     } else if (arg.startsWith("--base=")) {
       base = arg.slice("--base=".length);
+    } else if (arg === "--label") {
+      label = argv[i + 1] ?? "";
+      i += 1;
+    } else if (arg.startsWith("--label=")) {
+      label = arg.slice("--label=".length);
     } else if (arg === "--pr" || arg === "--release" || arg === "--reason") {
       // --release は v53 までの書き方。使い続けている手順書のために受け続ける。
       detail = argv[i + 1] ?? "";
@@ -100,7 +151,7 @@ export function parseArgs(argv) {
     } else if (arg.startsWith("--pr=") || arg.startsWith("--release=") || arg.startsWith("--reason=")) {
       detail = arg.slice(arg.indexOf("=") + 1);
     } else if (arg === "--help" || arg === "-h" || arg === "help") {
-      return { command: "help", ids: [], json: false, base: null, detail: null, dropped: 0 };
+      return { command: "help", ids: [], json: false, base: null, detail: null, label: null, dropped: 0 };
     } else if (arg.startsWith("-")) {
       return fail(`${arg} は使えません。`);
     } else {
@@ -111,7 +162,7 @@ export function parseArgs(argv) {
   if (base !== null && base.trim() === "") return fail("--base のあとに宛先のURLがありません。");
 
   const [command, ...ids] = rest;
-  if (!command) return { command: "help", ids: [], json, base, detail, dropped: 0 };
+  if (!command) return { command: "help", ids: [], json, base, detail, label, dropped: 0 };
 
   if (command === "list") {
     if (ids.length > 0) {
@@ -123,6 +174,11 @@ export function parseArgs(argv) {
   if (command === "key") {
     if (ids.length > 0) return fail("key に要望IDは付けられません。");
     return ok("key", []);
+  }
+
+  if (command === "login") {
+    if (ids.length > 0) return fail("login に要望IDは付けられません。");
+    return ok("login", []);
   }
 
   if (command === "get") {
@@ -171,26 +227,25 @@ export function readEnvValue(text, name) {
 }
 
 /**
- * 鍵が無いときの案内。発行画面 → 書き込み先 → 実行、の順で1行1手順にする。
- * 鍵の値はどこにも出さない（この関数は鍵を受け取らない）。
+ * まだ何も持っていないときの案内。`login` を先頭に置く。
+ * 値はどこにも出さない（この関数は通行証も鍵も受け取らない）。
  */
 export function missingKeyMessage(base) {
   return [
-    "改善要望を読むための鍵が、この作業ディレクトリに設定されていません。",
+    "この作業ディレクトリは、まだ改善要望を読める状態になっていません。",
     "",
-    "1. 次の画面をシステム全体管理者で開き、「鍵を発行する」を押します。",
+    "1. 次を実行します。ターミナルに合言葉が出ます。",
+    "   pnpm improvements login",
+    "2. ブラウザで次の画面を開き、合言葉を入れて「この端末を通す」を押します。",
     `   ${base}${KEY_PAGE_PATH}`,
-    "2. 出てきた鍵はその場で1回だけ表示されます。控えてください。",
-    `3. このリポジトリの直下で \`cp .env.example ${KEY_FILE}\` を実行し、次の1行を書きます。`,
-    `   ${KEY_VAR}=控えた鍵`,
-    "4. もう一度 `pnpm improvements list` を実行します。",
+    "3. もう一度 `pnpm improvements list` を実行します。",
     "",
-    "1Password を使うときは、控えた鍵を保管庫に入れ、その場所だけを次の形で渡します。",
-    `   ${OP_REF_VAR}=op://保管庫/項目名/credential`,
+    `受け取った通行証は ${KEY_FILE} に書き込みます（共有されない設定ファイルです）。`,
+    "1Password に移すときは、その1行の値を保管庫へ入れ、次の形に書き換えます。",
+    `   ${TOKEN_VAR}=op://保管庫/項目名/credential`,
+    "こう書くと、値は `op run --` でこの処理にだけ渡り、ファイルには残りません。",
     "OSのキーチェーンに入れるときは、次の1行で登録できます。",
-    `   security add-generic-password -s ${KEYCHAIN_SERVICE} -a "$USER" -w`,
-    "",
-    `${KEY_FILE} は共有されない設定ファイルです（除外済み）。鍵を他のファイルへ書かないでください。`,
+    `   security add-generic-password -s ${TOKEN_KEYCHAIN_SERVICE} -a "$USER" -w`,
   ].join("\n");
 }
 
@@ -225,46 +280,100 @@ export function systemSecretReader(runCommand = runCommandSafely) {
 export const noSecretReader = { onePassword: () => null, keychain: () => null };
 
 /**
- * 鍵と宛先を決める。鍵の在り処は次の順で、最初に見つかったものを使う。
+ * 使うもの（通行証・鍵）と宛先を決める。在り処は次の順で、最初に見つかったものを使う。
  *   環境変数 → 1Password → キーチェーン → .env.local
  *
- * 環境変数を先頭にしているのは、その場だけ別の鍵で試したいときに、
+ * 環境変数を先頭にしているのは、その場だけ別のもので試したいときに、
  * 保管庫の中身を書き換えずに済ませるため。
  * 1Password が入っていない環境でも、そのまま下へ落ちて動く（詰まらせない）。
  *
- * 返すのは鍵そのものと、**どこから来たか**の名前だけ。名前は画面に出してよい。
+ * 返すのは値そのものと、**どこから来たか**の名前だけ。名前は画面に出してよい。
  */
+function resolveOne({ env, envFileText, secrets, varName, opRefVar, keychainService }) {
+  const opRef = (env[opRefVar] ?? "").trim();
+  const candidates = [
+    ["環境変数", () => (env[varName] ?? "").trim() || null],
+    ["1Password", () => (opRef ? secrets.onePassword(opRef) : null)],
+    ["キーチェーン", () => secrets.keychain(keychainService)],
+    [KEY_FILE, () => readEnvValue(envFileText, varName)],
+  ];
+  for (const [name, read] of candidates) {
+    const found = (read() ?? "").trim();
+    if (found.length > 0) return { value: found, source: name };
+  }
+  return { value: null, source: null };
+}
+
 export function resolveConfig({
   env = {},
   envFileText = null,
   baseOverride = null,
   secrets = noSecretReader,
 } = {}) {
-  const opRef = (env[OP_REF_VAR] ?? "").trim();
-  const candidates = [
-    ["環境変数", () => (env[KEY_VAR] ?? "").trim() || null],
-    ["1Password", () => (opRef ? secrets.onePassword(opRef) : null)],
-    ["キーチェーン", () => secrets.keychain(KEYCHAIN_SERVICE)],
-    [KEY_FILE, () => readEnvValue(envFileText, KEY_VAR)],
-  ];
-
-  let key = null;
-  let source = null;
-  for (const [name, read] of candidates) {
-    const found = (read() ?? "").trim();
-    if (found.length > 0) {
-      key = found;
-      source = name;
-      break;
-    }
-  }
+  const token = resolveOne({
+    env,
+    envFileText,
+    secrets,
+    varName: TOKEN_VAR,
+    opRefVar: TOKEN_OP_REF_VAR,
+    keychainService: TOKEN_KEYCHAIN_SERVICE,
+  });
+  const key = resolveOne({
+    env,
+    envFileText,
+    secrets,
+    varName: KEY_VAR,
+    opRefVar: OP_REF_VAR,
+    keychainService: KEYCHAIN_SERVICE,
+  });
 
   const base =
     (baseOverride ?? "").trim() ||
     (env[BASE_VAR] ?? "").trim() ||
     readEnvValue(envFileText, BASE_VAR) ||
     DEFAULT_BASE;
-  return { key, source, base: base.replace(/\/+$/, "") };
+  return {
+    token: token.value,
+    tokenSource: token.source,
+    key: key.value,
+    source: key.source,
+    base: base.replace(/\/+$/, ""),
+  };
+}
+
+/**
+ * 1Password に値を預けているとき、自分自身を `op run --` で起動し直す計画を作る。
+ *
+ * こうすると値は**この処理の環境変数にだけ**入り、ファイルにも画面にも残らない。
+ * すでに `op run` の中にいるときは何もしない（無限に起動し直さないため）。
+ * 参照が環境変数側にあるならそのまま渡し、設定ファイル側にあるならファイルごと渡す。
+ */
+export function opRunPlan({ env = {}, envFileText = null, scriptPath = "", argv = [], execPath = "node" } = {}) {
+  if ((env[OP_RUN_GUARD] ?? "") === "1") return null;
+  const inEnv = [TOKEN_VAR, KEY_VAR].some((name) => (env[name] ?? "").startsWith("op://"));
+  const inFile = [TOKEN_VAR, KEY_VAR].some((name) =>
+    (readEnvValue(envFileText, name) ?? "").startsWith("op://"),
+  );
+  if (!inEnv && !inFile) return null;
+  const args = inEnv
+    ? ["run", "--", execPath, scriptPath, ...argv]
+    : ["run", "--env-file", KEY_FILE, "--", execPath, scriptPath, ...argv];
+  return { command: "op", args };
+}
+
+/**
+ * 設定ファイルの1行を書き替える（無ければ足す）。値は返り値の中だけに置く。
+ * 既にある行を残したまま足すと、古い通行証が先に読まれて動かなくなる。
+ */
+export function writeEnvLine(text, name, value) {
+  const lines = (text ?? "").split(/\r?\n/);
+  const kept = lines.filter((line) => {
+    const trimmed = line.trim().replace(/^export\s+/, "");
+    return !trimmed.startsWith(`${name}=`);
+  });
+  while (kept.length > 0 && kept[kept.length - 1].trim() === "") kept.pop();
+  kept.push(`${name}=${value}`, "");
+  return kept.join("\n");
 }
 
 /**
@@ -329,6 +438,112 @@ export function describeNetworkError(base, error) {
   ].join("\n");
 }
 
+/* ───────────────────────── 通行証をやりとりする ───────────────────────── */
+
+/**
+ * 長い方の通行証で、短い方を取り直す。毎回取り直すので、手元に短い方を残さない。
+ * 残さないから、置き場所を守る仕組みも要らない（無いものは漏れない）。
+ */
+export async function requestAccessToken(fetchImpl, base, refreshToken) {
+  const res = await fetchImpl(`${base}${TOKEN_PATH}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+  const body = await res.text();
+  if (!res.ok) return { token: null, message: serverMessage(body) ?? describeFailure(res.status, null, base) };
+  try {
+    const parsed = JSON.parse(body);
+    const token = typeof parsed?.accessToken === "string" ? parsed.accessToken : "";
+    if (token.length === 0) return { token: null, message: "通行証を受け取れませんでした。" };
+    return { token, message: null };
+  } catch {
+    return { token: null, message: "通行証を受け取れませんでした。" };
+  }
+}
+
+/**
+ * ブラウザで承認してもらい、この端末を通す。
+ *
+ * 受け取った通行証は**表示しない**。表示するとターミナルの履歴に残り、
+ * そこから先は消して回れない。書き込み先だけを言う。
+ */
+export async function runLogin({ fetchImpl, base, label, out, err, sleep, saveToken, addSecret }) {
+  let started;
+  try {
+    started = await fetchImpl(`${base}${DEVICE_PATH}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ label: label ?? "" }),
+    });
+  } catch (error) {
+    err(describeNetworkError(base, error));
+    return 1;
+  }
+  const startBody = await started.text();
+  if (!started.ok) {
+    err(serverMessage(startBody) ?? describeFailure(started.status, null, base));
+    return 1;
+  }
+  let start;
+  try {
+    start = JSON.parse(startBody);
+  } catch {
+    err("承認の手続きを始められませんでした。");
+    return 1;
+  }
+  addSecret(start.deviceCode);
+  out(start.instructions);
+
+  const intervalMs = Math.max(1, Number(start.intervalSeconds) || 5) * 1000;
+  const deadline = Date.now() + Math.max(1, Number(start.expiresInMinutes) || 10) * 60_000;
+
+  while (Date.now() < deadline) {
+    await sleep(intervalMs);
+    let res;
+    try {
+      res = await fetchImpl(`${base}${DEVICE_PATH}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ deviceCode: start.deviceCode }),
+      });
+    } catch (error) {
+      err(describeNetworkError(base, error));
+      return 1;
+    }
+    const body = await res.text();
+    if (!res.ok) {
+      err(serverMessage(body) ?? describeFailure(res.status, null, base));
+      return 1;
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      err("承認の結果を読めませんでした。");
+      return 1;
+    }
+    if (parsed.state === "pending") continue;
+    if (parsed.state !== "approved") {
+      err(parsed.message ?? "承認されませんでした。");
+      return 1;
+    }
+    addSecret(parsed.refreshToken);
+    addSecret(parsed.accessToken);
+    saveToken(parsed.refreshToken);
+    out(
+      [
+        "この端末を通しました。",
+        `通行証は ${KEY_FILE} に書き込みました（表示はしません）。`,
+        "つづけて `pnpm improvements list` を実行できます。",
+      ].join("\n"),
+    );
+    return 0;
+  }
+  err("承認されないまま、合言葉の期限が切れました。もう一度お試しください。");
+  return 1;
+}
+
 /* ───────────────────────── 実行 ───────────────────────── */
 
 /**
@@ -343,12 +558,18 @@ export async function run({
   secrets = noSecretReader,
   out: rawOut = console.log,
   err: rawErr = console.error,
+  sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
+  saveToken = () => {},
 } = {}) {
   const parsed = parseArgs(argv ?? []);
-  // 鍵を解決する前の出力にも、同じ関数を通す（あとから分岐が増えても素通りしない）。
-  let secret = null;
-  const out = (text) => rawOut(redact(text, secret));
-  const err = (text) => rawErr(redact(text, secret));
+  // 値を解決する前の出力にも、同じ関数を通す（あとから分岐が増えても素通りしない）。
+  const found = [];
+  const addSecret = (value) => {
+    if (typeof value === "string" && value.length > 0) found.push(value);
+  };
+  const hide = (text) => found.reduce((acc, s) => redact(acc, s), String(text));
+  const out = (text) => rawOut(hide(text));
+  const err = (text) => rawErr(hide(text));
 
   if (parsed.error) {
     err(`${parsed.error}\n\n${USAGE}`);
@@ -359,18 +580,53 @@ export async function run({
     return 0;
   }
 
-  const { key, source, base } = resolveConfig({ env, envFileText, baseOverride: parsed.base, secrets });
-  secret = key;
-  if (!key) {
+  const { token, tokenSource, key, source, base } = resolveConfig({
+    env,
+    envFileText,
+    baseOverride: parsed.base,
+    secrets,
+  });
+  addSecret(token);
+  addSecret(key);
+
+  if (parsed.command === "login") {
+    return runLogin({ fetchImpl, base, label: parsed.label, out, err, sleep, saveToken, addSecret });
+  }
+
+  if (!token && !key) {
     err(missingKeyMessage(base));
     return 1;
   }
 
   // 在り処だけを言う。値は出さない（出さないことは、この関数の外でも試験する）。
   if (parsed.command === "key") {
-    out([`鍵は ${source} から読めています。`, `宛先: ${base}`].join("\n"));
+    const where = token ? `通行証は ${tokenSource} から読めています。` : `鍵は ${source} から読めています。`;
+    out([where, `宛先: ${base}`].join("\n"));
     return 0;
   }
+
+  // 通行証があれば、その場で短い方を取り直す。手元には短い方を残さない。
+  let bearer = key;
+  if (token) {
+    let issued;
+    try {
+      issued = await requestAccessToken(fetchImpl, base, token);
+    } catch (error) {
+      err(describeNetworkError(base, error));
+      return 1;
+    }
+    if (!issued.token) {
+      err(issued.message ?? "通行証を取り直せませんでした。");
+      return 1;
+    }
+    addSecret(issued.token);
+    bearer = issued.token;
+  }
+  // 古い方式の注意は、いちばん最後に出す。先に出すと、本当の理由の上に
+  // 覆いかぶさって「何が起きたか」が読み取りにくくなる。
+  const notice = () => {
+    if (!token) err(LEGACY_KEY_NOTICE);
+  };
 
   const writing =
     parsed.command === "review" || parsed.command === "done" || parsed.command === "failed";
@@ -379,7 +635,7 @@ export async function run({
     ? {
         method: "PATCH",
         headers: {
-          authorization: `Bearer ${key}`,
+          authorization: `Bearer ${bearer}`,
           "content-type": "application/json",
           accept: "application/json",
         },
@@ -391,7 +647,7 @@ export async function run({
       }
     : {
         headers: {
-          authorization: `Bearer ${key}`,
+          authorization: `Bearer ${bearer}`,
           accept: parsed.json ? "application/json" : "text/markdown",
         },
       };
@@ -401,6 +657,7 @@ export async function run({
     response = await fetchImpl(url, init);
   } catch (error) {
     err(describeNetworkError(base, error));
+    notice();
     return 1;
   }
 
@@ -408,9 +665,10 @@ export async function run({
 
   if (!response.ok) {
     // 書き戻しの断りは、サーバーが出す日本語の理由がそのまま次の一手になる
-    // （権限が無い・受け取っていない・公開先が空、など）。訳し直すと薄くなる。
+    // （権限が無い・受け取っていない・確認依頼の場所が空、など）。訳し直すと薄くなる。
     const reason = writing ? serverMessage(body) : null;
     err(reason ?? describeFailure(response.status, response.headers?.get?.("retry-after") ?? null, base));
+    notice();
     return 1;
   }
 
@@ -418,6 +676,7 @@ export async function run({
   if (parsed.dropped > 0) {
     err(`一度に読めるのは${BULK_MAX}件までです。${parsed.dropped}件は今回含めていません。`);
   }
+  notice();
   return 0;
 }
 
@@ -442,13 +701,42 @@ function readEnvFile() {
   }
 }
 
+/**
+ * 受け取った通行証を設定ファイルへ書き込む。所有者だけが読める権限にする。
+ * 値を返さず、画面にも出さない（呼び出し側は成否しか知らない）。
+ */
+function saveTokenToFile(value) {
+  const path = resolve(process.cwd(), KEY_FILE);
+  writeFileSync(path, writeEnvLine(readEnvFile(), TOKEN_VAR, value), { encoding: "utf8", mode: 0o600 });
+  chmodSync(path, 0o600);
+}
+
 const isDirectExecution = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isDirectExecution) {
+  const envFileText = readEnvFile();
+  // 1Password に預けているなら、自分自身を `op run --` で起動し直す。
+  // こうすると値はこの処理の環境変数にだけ入り、画面にもファイルにも出ない。
+  const plan = opRunPlan({
+    env: process.env,
+    envFileText,
+    scriptPath: fileURLToPath(import.meta.url),
+    argv: process.argv.slice(2),
+    execPath: process.execPath,
+  });
+  if (plan) {
+    const child = spawnSync(plan.command, plan.args, {
+      stdio: "inherit",
+      env: { ...process.env, [OP_RUN_GUARD]: "1" },
+    });
+    // `op` が入っていない環境では、そのまま自分で続ける（詰まらせない）。
+    if (!child.error) process.exit(child.status ?? 1);
+  }
   process.exitCode = await run({
     argv: process.argv.slice(2),
     env: process.env,
-    envFileText: readEnvFile(),
+    envFileText,
     // 保管庫を読むのは、実際に走らせたときだけ。試験では差し替える。
     secrets: systemSecretReader(),
+    saveToken: saveTokenToFile,
   });
 }

@@ -16,6 +16,8 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { AGENT_KEY_MIN_LENGTH, agentAuth, readBearer } from "@/lib/domain/agent-api";
 import type { AgentCallerScope } from "@/lib/domain/agent-scope";
 import { activeAgentKeyHashes, envKeyEnabled, hashAgentKey, touchAgentKey } from "@/lib/agent-keys";
+import { agentSessionKnown, resolveAgentSession } from "@/lib/agent-device";
+import { AGENT_SESSION_ENDED_MESSAGE } from "@/lib/domain/agent-device";
 import { getDb } from "@/lib/db";
 import { appOrigin } from "@/lib/origin";
 import { AGENT_API_RATE_LIMIT, consumeRateLimit } from "@/lib/rate-limit";
@@ -88,9 +90,33 @@ export async function guardAgentRequest(req: Request): Promise<AgentGate> {
   const authorization = req.headers.get("authorization");
   const given = readBearer(authorization);
   const db = await getDb();
-  const active = await activeAgentKeyHashes(db);
-  // 受け取った鍵は、突き合わせる前にハッシュへ変える。生のまま比べる先を作らない。
+  // 受け取ったものは、突き合わせる前にハッシュへ変える。生のまま比べる先を作らない。
   const givenHash = given ? await hashAgentKey(given) : null;
+
+  // 先に短命の通行証を見る。こちらが本筋で、鍵は移行のために残している道。
+  // 順番を逆にすると、鍵が1本も無い場所で通行証まで「鍵が未設定」で断られる。
+  if (givenHash) {
+    const session = await resolveAgentSession(db, givenHash, new Date());
+    if (session) {
+      const caller: AgentCaller = {
+        keyId: session.id,
+        keyLabel: session.label,
+        companyId: session.companyId,
+        scopes: session.scopes,
+      };
+      return { denied: null, caller };
+    }
+    // 通らなかったが、この仕組みで配ったものではあった＝期限切れか、止められた。
+    // 鍵の話に落とすと「鍵が未設定です」と案内してしまい、直しようがなくなる。
+    if (await agentSessionKnown(db, givenHash)) {
+      const denied = textResponse(401, AGENT_SESSION_ENDED_MESSAGE, {
+        "www-authenticate": 'Bearer realm="improvements"',
+      });
+      return { denied, caller: null };
+    }
+  }
+
+  const active = await activeAgentKeyHashes(db);
 
   const auth = agentAuth(
     {
