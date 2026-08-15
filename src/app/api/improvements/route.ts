@@ -4,6 +4,7 @@ import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import {
   IMPROVEMENT_BODY_MAX,
+  improvementStatusLabel,
   isAcceptableShot,
   normalizeImprovementBody,
   shotBytesOf,
@@ -12,26 +13,32 @@ import {
   diagnosticsLevelFor,
   IMPROVEMENT_EXPECTED_MAX,
   IMPROVEMENT_KINDS,
+  improvementKindLabel,
   normalizeDiagnostics,
   serializeDiagnostics,
-} from "@/lib/domain/improvement-issue";
+} from "@/lib/domain/improvement-instruction";
 import { routeIdentityOf } from "@/lib/nav";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
 import { findImprovementBySubmission, saveImprovementRequest } from "@/lib/improvement-write";
 import { consumeRateLimit, IMPROVEMENT_SUBMIT_RATE_LIMIT } from "@/lib/rate-limit";
-import { requireGithubSettings, type GithubIssueSettings } from "@/lib/github-issue";
-import { syncImprovementIssue } from "@/lib/improvement-issue-sync";
+import { getImprovementsForAgent, listImprovementsForAgent } from "@/lib/queries";
+import { appOrigin } from "@/lib/origin";
+import { guardAgentRequest } from "@/lib/agent-api";
+import {
+  AGENT_BULK_MAX,
+  AGENT_LIST_MAX,
+  agentFetchCommand,
+  agentFormat,
+  parseAgentIds,
+  type AgentFormat,
+} from "@/lib/domain/agent-api";
+import {
+  buildBulkImprovementInstruction,
+  buildImprovementInstruction,
+} from "@/lib/improvement-instruction-draft";
+import { handOutImprovement, recordHandout } from "@/lib/improvement-handout-write";
 import { applyDisposition } from "@/lib/improvement-disposition";
 import { DISPOSITION_ACTIONS } from "@/lib/domain/improvement-disposition";
-
-/** 記録票の設定。未設定なら null（落とす・戻す操作はそれでも進める）。 */
-async function githubSettingsIfReady(): Promise<GithubIssueSettings | null> {
-  try {
-    return await requireGithubSettings();
-  } catch {
-    return null;
-  }
-}
 
 export const dynamic = "force-dynamic";
 
@@ -119,30 +126,27 @@ export async function POST(req: Request) {
   });
 }
 
-const syncSchema = z
+
+const disposeSchema = z
   .object({
     id: z.string().min(1).max(60),
-    /** 既定は記録票への反映。落とす・戻す操作は action で選ぶ。 */
-    action: z.enum(["sync", ...DISPOSITION_ACTIONS]).default("sync"),
+    /** 既定は指示文の払い出し。落とす・戻す操作は action で選ぶ。 */
+    action: z.enum(["handout", ...DISPOSITION_ACTIONS]).default("handout"),
     reasonCode: z.string().max(40).default(""),
     reasonNote: z.string().max(1000).default(""),
-    closeIssue: z.boolean().default(false),
     duplicateOfId: z.string().max(60).nullish(),
   })
   .strict();
 
 /**
- * 選んだ要望1件を、開発の記録票（GitHub Issue）へ反映する。
+ * 選んだ要望1件を払い出し済みにする、または落とす・戻す。
  *
- * 一覧の一括送信は、画面がこの入口を**1件ずつ順番に**呼ぶ。まとめて1回で
- * 送らないのは3つの理由から。
+ * 一覧のまとめ操作は、画面がこの入口を**1件ずつ順番に**呼ぶ。まとめて1回で
+ * 送らないのは2つの理由から。
  *  ・どこまで進んだかを件数で見せられる（50件を無言で待たせない）
- *  ・成功した分はその時点で確定し、失敗した行だけ送り直せる
- *  ・GitHub を一度に叩かない（並べて投げると受付上限で断られる）
+ *  ・成功した分はその時点で確定し、失敗した行だけやり直せる
  *
  * できるのはシステム全体管理者だけ。画面側でボタンを隠すだけにしない。
- * 記録票の置き場所は会社ごとではなく開発側のリポジトリなので、
- * 会社の管理者が押せると「自社の中の操作」のつもりで社外へ文章が出る。
  *
  * 入口を増やさず PUT として同居させている（道を1本増やすと、同じ依存一式を
  * 束ねた塊が配布物に増え、無料枠の上限まで約0.5MB食う）。
@@ -152,28 +156,131 @@ export async function PUT(req: Request) {
     const viewer = await apiViewer("SUPER_ADMIN");
     if (!viewer.companyId) throw new HttpError(400, "操作する会社が選ばれていません。");
 
-    const input = syncSchema.parse(await readJsonBodyWithinLimit(req, 4_000));
+    const input = disposeSchema.parse(await readJsonBodyWithinLimit(req, 4_000));
     const actor = { id: viewer.id, companyId: viewer.companyId };
 
-    if (input.action !== "sync") {
-      // 落とす・戻すはアプリの中だけで完結できる。記録票の設定が無くても止めない
-      // （設定不足で要望を1件も片付けられない状態を作らない）。
-      const settings = await githubSettingsIfReady();
-      const result = await applyDisposition(settings, actor, input.id, {
+    if (input.action === "handout") return { result: await handOutImprovement(actor, input.id) };
+
+    // 1件ごとの失敗は、この入口では成功として返す（結果の表に行として並ぶ）。
+    // ここで例外にすると、続きの行が動かないまま画面が止まる。
+    return {
+      result: await applyDisposition(actor, input.id, {
         action: input.action,
         reasonCode: input.reasonCode,
         reasonNote: input.reasonNote,
-        closeIssue: input.closeIssue,
         duplicateOfId: input.duplicateOfId ?? null,
-      });
-      return { result };
-    }
-
-    const settings = await requireGithubSettings();
-    const result = await syncImprovementIssue(settings, actor, input.id);
-
-    // 1件ごとの失敗は、この入口では成功として返す（結果の表に行として並ぶ）。
-    // ここで例外にすると、続きの行が送られないまま画面が止まる。
-    return { result };
+      }),
+    };
   });
+}
+
+/* ───────────────────────── 作業する側へ払い出す ───────────────────────── */
+
+function markdown(body: string): Response {
+  return new Response(body, {
+    headers: { "content-type": "text/markdown; charset=utf-8", "cache-control": "no-store" },
+  });
+}
+
+function json(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+  });
+}
+
+/** 未対応の要望の一覧。中身は返さず、どれを取りにいくかを選ぶためだけに使う。 */
+async function agentList(format: AgentFormat, origin: string): Promise<Response> {
+  const rows = await listImprovementsForAgent(AGENT_LIST_MAX);
+  if (format === "json") {
+    return json({
+      count: rows.length,
+      items: rows.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        kindLabel: improvementKindLabel(r.kind),
+        screen: r.screenLabel,
+        routePattern: r.routePattern,
+        summary: r.summary,
+        status: r.status,
+        statusLabel: improvementStatusLabel(r.status),
+        handedOut: r.handedOutAt !== null,
+        company: r.companyName,
+      })),
+    });
+  }
+
+  const lines = [
+    `# 手つかずの改善要望 ${rows.length}件`,
+    ``,
+    `作業指示は1件ずつ取り出します。`,
+    `1件だけ：\`?id=要望ID\``,
+    `まとめて：\`?ids=要望ID,要望ID\`（最大${AGENT_BULK_MAX}件）`,
+    ``,
+    ...(rows.length === 0
+      ? ["いま渡せる要望はありません。"]
+      : rows.map((r) => {
+          const marks = [improvementKindLabel(r.kind), improvementStatusLabel(r.status)];
+          if (r.handedOutAt) marks.push("払い出し済み");
+          return `- \`${r.id}\`（${marks.join("／")}）${r.screenLabel}：${r.summary}`;
+        })),
+    ``,
+    `## 取り出し方`,
+    ``,
+    `\`\`\``,
+    agentFetchCommand(origin, `?id=${rows[0]?.id ?? "要望ID"}`),
+    `\`\`\``,
+  ];
+  return markdown(lines.join("\n"));
+}
+
+/**
+ * 指示文の本体を返す。
+ *
+ * 受け取れた時点で「渡した」ことになるので、ここで払い出しの控えを残す。
+ * 画面のボタンからだけ控えを残すと、API で直接取った分が未払い出しのまま残り、
+ * あとから「内容が変わったか」を見られなくなる。
+ */
+async function agentDocuments(ids: string[], dropped: number, format: AgentFormat): Promise<Response> {
+  const items = await getImprovementsForAgent(ids);
+  if (items.length === 0) {
+    return markdown("# 対象の要望が見つかりません\n\n要望IDを確かめてください。\n");
+  }
+
+  const document =
+    items.length === 1
+      ? (await buildImprovementInstruction(items[0])).document
+      : await buildBulkImprovementInstruction(items);
+
+  const db = await getDb();
+  for (const item of items) await recordHandout(db, item, null);
+
+  const notice = dropped > 0 ? `\n\n（一度に渡せるのは${AGENT_BULK_MAX}件までです。${dropped}件は含めていません）\n` : "\n";
+  if (format === "json") {
+    return json({ count: items.length, dropped, ids: items.map((i) => i.id), document });
+  }
+  return markdown(`${document}${notice}`);
+}
+
+/**
+ * 作業する側（Claude Code）が読む入口。
+ *
+ * 中身には利用者の生の声と技術情報が入るので、鍵が無ければ何も返さない。
+ * 判定は src/lib/agent-api.ts に寄せてあり、ここでは通ったあとだけを書く。
+ */
+export async function GET(req: Request) {
+  const denied = await guardAgentRequest(req);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const format = agentFormat(url.searchParams.get("format"), req.headers.get("accept"));
+  const single = url.searchParams.get("id");
+  const many = url.searchParams.get("ids");
+
+  if (single) return agentDocuments([single], 0, format);
+  if (many) {
+    const { ids, dropped } = parseAgentIds(many);
+    if (ids.length === 0) return markdown("# 要望IDがありません\n\n`?ids=` に要望IDを並べてください。\n");
+    return agentDocuments(ids, dropped, format);
+  }
+  return agentList(format, await appOrigin());
 }

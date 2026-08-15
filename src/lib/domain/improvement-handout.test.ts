@@ -5,16 +5,15 @@ import {
   bulkSummaryText,
   changedFieldLabels,
   improvementFingerprint,
-  issueSyncNote,
-  issueSyncState,
-  issueSyncStateLabel,
-  issueSyncStateTone,
-  issueUpdateComment,
+  handoutNote,
+  handoutState,
+  handoutStateLabel,
+  handoutStateTone,
   plannedAction,
   summarizeBulk,
   type FingerprintParts,
-  type IssueLinkSnapshot,
-} from "@/lib/domain/improvement-sync";
+  type HandoutSnapshot,
+} from "@/lib/domain/improvement-handout";
 
 const base: FingerprintParts = {
   kind: "bug",
@@ -27,10 +26,9 @@ const base: FingerprintParts = {
   handledNote: null,
 };
 
-const link = (over: Partial<IssueLinkSnapshot> = {}): IssueLinkSnapshot => ({
-  issueNumber: 12,
-  linkState: "ok",
+const handout = (over: Partial<HandoutSnapshot> = {}): HandoutSnapshot => ({
   contentFingerprint: improvementFingerprint(base),
+  handedOutAt: new Date("2026-08-15T03:00:00Z"),
   ...over,
 });
 
@@ -66,8 +64,8 @@ describe("変わった項目の読み取り", () => {
   });
 
   it("前回の指紋が無いときは、変わっていない扱いにする", () => {
-    // 記録票を作ったときの内容が残っていないのに「変更あり」とすると、
-    // 中身が同じ記録票へコメントだけが積み上がる。
+    // 渡したときの内容が残っていないのに「変更あり」とすると、
+    // 中身が同じ指示文を何度も渡すことになる。
     expect(changedFieldLabels("", improvementFingerprint(base))).toEqual([]);
   });
 
@@ -80,113 +78,80 @@ describe("変わった項目の読み取り", () => {
   });
 });
 
-describe("記録票の状態", () => {
-  it("控えが無ければ未起票", () => {
-    expect(issueSyncState(null, improvementFingerprint(base))).toBe("none");
+describe("払い出しの状態", () => {
+  it("控えが無ければ未払い出し", () => {
+    expect(handoutState(null, improvementFingerprint(base))).toBe("none");
   });
 
-  it("指紋が一致していれば起票済み", () => {
-    expect(issueSyncState(link(), improvementFingerprint(base))).toBe("synced");
+  it("指紋が一致していれば払い出し済み", () => {
+    expect(handoutState(handout(), improvementFingerprint(base))).toBe("handed");
   });
 
-  it("作ったあとに内容が変わっていれば更新あり", () => {
-    expect(issueSyncState(link(), improvementFingerprint({ ...base, status: "done" }))).toBe("changed");
+  it("渡したあとに内容が変わっていれば更新あり", () => {
+    expect(handoutState(handout(), improvementFingerprint({ ...base, status: "done" }))).toBe("changed");
   });
 
-  it("GitHub 側に無い控え・作りかけの控えは、どちらも送れない状態にする", () => {
-    expect(issueSyncState(link({ linkState: "missing" }), improvementFingerprint(base))).toBe("broken");
-    expect(issueSyncState(link({ issueNumber: 0 }), improvementFingerprint(base))).toBe("broken");
-  });
-
-  it("4つの状態すべてに、言葉・色・送ったときの動きがある", () => {
-    expect(issueSyncStateLabel("none")).toBe("未起票");
-    expect(issueSyncStateLabel("synced")).toBe("起票済み");
-    expect(issueSyncStateLabel("changed")).toBe("更新あり");
-    expect(issueSyncStateLabel("broken")).toBe("送信できない");
-    expect(issueSyncStateTone("none")).toBe("closed");
-    expect(issueSyncStateTone("synced")).toBe("done");
-    expect(issueSyncStateTone("changed")).toBe("active");
-    expect(issueSyncStateTone("broken")).toBe("alert");
-    expect(plannedAction("none")).toBe("create");
-    expect(plannedAction("synced")).toBe("skip");
-    expect(plannedAction("changed")).toBe("update");
-    expect(plannedAction("broken")).toBe("recreate");
+  it("3つの状態すべてに、言葉・色・渡したときの動きがある", () => {
+    expect(handoutStateLabel("none")).toBe("未払い出し");
+    expect(handoutStateLabel("handed")).toBe("払い出し済み");
+    expect(handoutStateLabel("changed")).toBe("更新あり");
+    expect(handoutStateTone("none")).toBe("closed");
+    expect(handoutStateTone("handed")).toBe("done");
+    expect(handoutStateTone("changed")).toBe("active");
+    expect(plannedAction("none")).toBe("handout");
+    expect(plannedAction("handed")).toBe("skip");
+    expect(plannedAction("changed")).toBe("rehandout");
   });
 
   it("どの状態にも理由が出る（無言の行を作らない）", () => {
-    expect(issueSyncNote("none", null)).toContain("まだ記録票を作っていません");
-    expect(issueSyncNote("changed", link())).toContain("内容が変わりました");
-    expect(issueSyncNote("synced", link())).toContain("何も変わりません");
-    expect(issueSyncNote("broken", link({ linkState: "missing" }))).toContain("GitHub 側に記録票がありません");
-    expect(issueSyncNote("broken", link({ issueNumber: 0 }))).toContain("途中で終わりました");
-    expect(issueSyncNote("broken", null)).toContain("途中で終わりました");
+    expect(handoutNote("none")).toContain("まだ指示文を渡していません");
+    expect(handoutNote("changed")).toContain("内容が変わりました");
+    expect(handoutNote("handed")).toContain("渡した内容のまま");
   });
 });
 
-describe("一括送信の結果", () => {
-  it("4つの実行内容に、言葉と色がある", () => {
-    expect(bulkActionLabel("created")).toBe("新規に作成");
-    expect(bulkActionLabel("updated")).toBe("内容を更新");
+describe("まとめ操作の結果", () => {
+  it("払い出しの実行内容に、言葉と色がある", () => {
+    expect(bulkActionLabel("handed")).toBe("払い出し");
+    expect(bulkActionLabel("rehanded")).toBe("再払い出し");
     expect(bulkActionLabel("skipped")).toBe("スキップ");
     expect(bulkActionLabel("failed")).toBe("失敗");
-    expect(bulkActionTone("created")).toBe("done");
-    expect(bulkActionTone("updated")).toBe("active");
+    expect(bulkActionTone("handed")).toBe("done");
+    expect(bulkActionTone("rehanded")).toBe("active");
     expect(bulkActionTone("skipped")).toBe("closed");
     expect(bulkActionTone("failed")).toBe("alert");
   });
 
   it("件数のまとめは、実行内容ごとに数え上げる", () => {
     const counts = summarizeBulk([
-      { action: "created" },
-      { action: "created" },
-      { action: "updated" },
+      { action: "handed" },
+      { action: "handed" },
+      { action: "rehanded" },
       { action: "skipped" },
       { action: "failed" },
     ]);
-    expect(counts.created).toBe(2);
-    expect(counts.updated).toBe(1);
+    expect(counts.handed).toBe(2);
+    expect(counts.rehanded).toBe(1);
     expect(counts.skipped).toBe(1);
     expect(counts.failed).toBe(1);
     // 0件のものは書かない。数えた実行内容だけを並べる（0件が並ぶと読み飛ばされる）。
-    expect(bulkSummaryText(counts)).toBe("新規に作成2件／内容を更新1件／スキップ1件／失敗1件");
+    expect(bulkSummaryText(counts)).toBe("払い出し2件／再払い出し1件／スキップ1件／失敗1件");
   });
 
   it("落とす・戻す操作も同じまとめに数える", () => {
     const counts = summarizeBulk([{ action: "discarded" }, { action: "restored" }, { action: "rejected" }]);
     expect(bulkSummaryText(counts)).toBe("対応しない1件／廃棄1件／元に戻した1件");
     expect(bulkActionLabel("duplicated")).toBe("重複");
-    expect(bulkActionLabel("unlinked")).toBe("ひも付け解除");
-    expect(bulkActionLabel("closed")).toBe("記録票を閉じた");
-    expect(bulkActionLabel("refreshed")).toBe("状態を取り込んだ");
+    expect(bulkActionLabel("discarded")).toBe("廃棄");
+    expect(bulkActionLabel("restored")).toBe("元に戻した");
+    expect(bulkActionLabel("rejected")).toBe("対応しない");
     expect(bulkActionTone("discarded")).toBe("dropped");
     expect(bulkActionTone("restored")).toBe("done");
     expect(bulkActionTone("rejected")).toBe("dropped");
     expect(bulkActionTone("duplicated")).toBe("dropped");
-    expect(bulkActionTone("unlinked")).toBe("closed");
-    expect(bulkActionTone("closed")).toBe("closed");
-    expect(bulkActionTone("refreshed")).toBe("active");
   });
 
   it("1件も無ければ、0件の羅列ではなく「対象がありません」と言う", () => {
     expect(bulkSummaryText(summarizeBulk([]))).toBe("対象がありません");
-  });
-});
-
-describe("記録票へ足すコメント", () => {
-  const at = new Date("2026-08-15T03:00:00Z");
-
-  it("いつ・何が変わったか・本文を置き換えたことを書く", () => {
-    const text = issueUpdateComment(["要望の本文", "対応状況"], at, false);
-    expect(text).toContain("2026-08-15 12:00 JST");
-    expect(text).toContain("- 要望の本文");
-    expect(text).toContain("- 対応状況");
-    expect(text).toContain("最新の内容へ置き換えました");
-    expect(text).not.toContain("閉じられています");
-  });
-
-  it("閉じている記録票では、勝手に開き直していないことを書き添える", () => {
-    const text = issueUpdateComment(["対応状況"], at, true);
-    expect(text).toContain("閉じられています");
-    expect(text).toContain("開き直すことはしていません");
   });
 });

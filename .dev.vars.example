@@ -2,16 +2,13 @@
 BETTER_AUTH_SECRET=32文字以上のランダムな文字列
 BETTER_AUTH_URL=http://localhost:8787
 
-# 改善要望から開発の記録票（GitHub Issue）を作るためのトークン。
-# 無くても要望の投稿・閲覧は動く（記録票を作るときだけ設定案内が出る）。
+# 改善要望を作業指示文として払い出す API の鍵。
+# 無くても要望の投稿・閲覧は動く（払い出しのときだけ設定案内が出る）。
 #
-# 取得先: https://github.com/settings/personal-access-tokens/new
-#   Resource owner     … リポジトリの持ち主
-#   Repository access  … Only select repositories で wrangler.jsonc の GITHUB_REPO のものだけ
-#   Permissions        … Repository permissions の Issues を Read and write（他は No access のまま）
-#   Expiration         … 期限を付けた場合、切れたら同じ手順で作り直して入れ直す
-# 作成後の値は一度しか表示されない。その場でコピーする。
-# 発行済みの確認・失効: https://github.com/settings/personal-access-tokens
+# 作り方: openssl rand -base64 32
+#   人が考えた文字列は使わない（32文字未満は未設定と同じ扱いになる）。
+#   要望には利用者の生の声と技術情報が入るので、鍵が無いと中身は一切返らない。
+#   漏れたと思ったら、同じ手順で入れ直せば古い鍵は使えなくなる。
 #
-# 本番へ入れるときは、このファイルではなく `wrangler secret put GITHUB_TOKEN` を使う。
-GITHUB_TOKEN=github_pat_で始まる文字列
+# 本番へ入れるときは、このファイルではなく `wrangler secret put AGENT_API_KEY` を使う。
+AGENT_API_KEY=openssl-rand-base64-32-で作った文字列

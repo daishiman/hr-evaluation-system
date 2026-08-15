@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { DB } from "@/lib/db";
 import { schema as s } from "@/lib/db";
-import type { ImprovementKind } from "@/lib/domain/improvement-issue";
+import type { ImprovementKind } from "@/lib/domain/improvement-instruction";
 
 export interface ImprovementWriteInput {
   companyId: string;

@@ -1,13 +1,13 @@
 /**
- * 改善要望を「そのまま実装に取りかかれる記録票」へ書き起こすための決まりごと。
+ * 改善要望を「そのまま実装に取りかかれる作業指示文」へ書き起こす決まりごと。
  *
- * 使われる場面: 届いた要望1件を読んだ運営者が、開発の作業票（GitHub Issue）を
- * 作る。作った票だけを見て実装に入れることがこの機能の要件なので、
- * 「あとで本人に聞けば分かる」を前提にした書式にしない。
+ * 使われる場面: 届いた要望を運営者が払い出し、Claude Code がその文だけを読んで
+ * 直す。読み手は本人に聞き返せないので、「あとで聞けば分かる」を前提にした
+ * 書式にしない。要望ID・画面・再現手順・受け入れ条件・技術情報を1つの文に畳む。
  *
  * ここには DOM も DB も HTTP も持ち込まない（純粋な計算だけを置く）。
  * ブラウザから技術情報を集める側は src/lib/client-diagnostics.ts、
- * 実際に票を出す側は src/lib/github-issue.ts。
+ * 実際に払い出す側は src/lib/improvement-handout-write.ts。
  */
 
 /* ───────────────────────── 種類 ───────────────────────── */
@@ -156,8 +156,11 @@ export const DIAGNOSTICS_LIMITS = {
   bodyTotalText: 64_000,
   /** JSON 全体のバイト数。これを超えたら保存しない（1行に収める） */
   bytes: 200_000,
-  /** 記録票の本文の上限（GitHub の上限 65536 に対する安全側の線） */
-  issueBodyText: 58_000,
+  /**
+   * 指示文1件ぶんの上限。読み手（Claude Code）が一度に読める量には限りがあり、
+   * 1件で埋めてしまうと、まとめて渡した残りの要望が読まれない。
+   */
+  documentText: 58_000,
 } as const;
 
 /* ───────────────────────── 伏せる ───────────────────────── */
@@ -165,7 +168,8 @@ export const DIAGNOSTICS_LIMITS = {
 /**
  * 外に出してはいけないものを伏せる。
  *
- * 記録票は社外のサービス（GitHub）に置くので、画面の中で見せてよい水準では足りない。
+ * 指示文は API から払い出され、手元の作業ログや別の画面へ写る。
+ * 画面の中で見せてよい水準では足りないので、
  * 「本人にしか結び付かないもの」と「持っていると入れてしまえるもの」を落とす。
  * 消すのではなく `***` に置き換える。丸ごと消すと、そこに何かがあった事実まで消える。
  */
@@ -395,17 +399,12 @@ export function sourceCandidatesFor(routePattern: string): string[] {
   return [`src/app${inner}/page.tsx`];
 }
 
-/* ───────────────────────── 記録票の文面 ───────────────────────── */
 
-/** すでに記録票になっている、似た要望（同じ画面・同じ種類）。 */
-export interface RelatedIssue {
-  number: number;
-  url: string;
-  /** 同じ画面から届いた要望の1行目 */
-  summary: string;
-}
+/* ───────────────────────── 指示文 ───────────────────────── */
 
-export interface IssueDraftInput {
+export interface InstructionInput {
+  /** 要望ID。この文だけを見て、元の要望へ戻れるようにするため必ず出す */
+  id: string;
   kind: ImprovementKind;
   /** 画面の呼び名（route-ledger.json の label） */
   screenLabel: string;
@@ -414,12 +413,12 @@ export interface IssueDraftInput {
   routePattern: string;
   body: string;
   expected: string | null;
-  /** 送った人の役割。氏名・メールは記録票へ出さない */
+  /** 送った人の役割。氏名・メールは指示文へ出さない */
   reporterRoleLabel: string;
   /**
    * 会社側でどこまで進んでいるか（未対応・対応中・完了・見送り）と、そのメモ。
    *
-   * 記録票を作ったあとに動くのは主にここ。載せておかないと、開発側は
+   * 払い出したあとに動くのは主にここ。載せておかないと、読み手は
    * 「もう会社側で見送りになった話」を知らずに着手することになる。
    */
   statusLabel: string;
@@ -431,8 +430,6 @@ export interface IssueDraftInput {
   /** 配っているアプリの版。分からないときは null */
   appVersion: string | null;
   diagnostics: ImprovementDiagnostics | null;
-  /** 同じ画面・同じ種類で、すでに記録票になっているもの */
-  related?: RelatedIssue[];
 }
 
 /** 日本時間の日時。サーバーは UTC で動くので、読む人の時間に直してから書く。 */
@@ -455,18 +452,12 @@ const TITLE_MAX = 60;
 
 const KIND_TAG: Record<ImprovementKind, string> = { bug: "不具合", usability: "改善", feature: "新機能" };
 
-/** 記録票の見出し。一覧で「どの画面の何か」だけが読めればよい。 */
-export function buildIssueTitle(input: Pick<IssueDraftInput, "kind" | "screenLabel" | "body">): string {
+/** 指示文の見出し。一覧で「どの画面の何か」だけが読めればよい。 */
+export function buildInstructionTitle(input: Pick<InstructionInput, "kind" | "screenLabel" | "body">): string {
   const head = input.body.split("\n")[0].trim();
   const summary = head.length > TITLE_MAX ? `${head.slice(0, TITLE_MAX)}…` : head;
   return `[${KIND_TAG[input.kind]}] ${input.screenLabel}：${summary}`;
 }
-
-const KIND_TOPIC: Record<ImprovementKind, string> = {
-  bug: "bug",
-  usability: "enhancement",
-  feature: "feature-request",
-};
 
 /**
  * 重大度。本人の言い方ではなく、自動で集めた事実だけから決める。
@@ -475,39 +466,40 @@ const KIND_TOPIC: Record<ImprovementKind, string> = {
  * 逆に穏やかな文面の裏で 500 が出ていることがある。並べ替えの基準は
  * 文面ではなく事実側に置く（読む人が毎回本文を開かずに順番を決められる）。
  */
-export function issueSeverity(kind: ImprovementKind, d: ImprovementDiagnostics | null): "high" | "medium" | "low" {
+export type InstructionSeverity = "high" | "medium" | "low";
+
+export function instructionSeverity(kind: ImprovementKind, d: ImprovementDiagnostics | null): InstructionSeverity {
   const broken = (d?.logs.length ?? 0) > 0 || (d?.network ?? []).some((n) => n.status === null || n.status >= 500);
   if (broken) return "high";
   if (kind === "bug" || (d?.network.length ?? 0) > 0) return "medium";
   return "low";
 }
 
-/**
- * 画面のかたまり（機能領域）。URL の最初の区切りをそのまま使う。
- * 命名を別に決めると、画面が増えるたびに対応表の更新が要る。
- */
-export function areaOf(routePattern: string): string | null {
-  const first = routePattern.split("/").filter(Boolean)[0];
-  return first && !first.startsWith("[") ? first : null;
+const SEVERITY_LABEL: Record<InstructionSeverity, string> = {
+  high: "高（壊れている記録あり）",
+  medium: "中",
+  low: "低",
+};
+
+export function severityLabel(severity: InstructionSeverity): string {
+  return SEVERITY_LABEL[severity];
 }
 
 /**
- * 記録票に付ける札。仕分けに使う4種類（何か / どれくらい急ぐか / どの領域か）に絞る。
- * GitHub 側に無い札は、記録票を作るときに自動で作られる。
+ * 作業のやり方。読み手はこの文しか見ないので、進め方もここに書く。
+ *
+ * 「直し方」ではなく「守ってほしい順序と範囲」だけを書く。中身の判断まで
+ * 縛ると、読み手が現物を見て気づいたことを反映できなくなる。
  */
-export function buildIssueLabels(
-  kind: ImprovementKind,
-  diagnostics: ImprovementDiagnostics | null = null,
-  routePattern = "",
-): string[] {
-  const area = areaOf(routePattern);
-  return [
-    "improvement",
-    KIND_TOPIC[kind],
-    `severity:${issueSeverity(kind, diagnostics)}`,
-    ...(area ? [`area:${area}`] : []),
-  ];
-}
+const WORK_RULES = [
+  "要望は1件ずつ直す。まとめて1回で直さない。",
+  "直したら、再発を止めるテストを足す。",
+  "手元で確かめてから、公開まで通す。",
+  "リポジトリの CLAUDE.md と docs の規約に従う。",
+  "画面に出す日本語は1文40文字以内にする。",
+  "書いてある事実と現物が食い違うときは現物を優先する。",
+  "直せない事情が出たら、その理由を残して次へ進む。",
+];
 
 function formatAgo(agoMs: number): string {
   return agoMs < 1000 ? "送信直前" : `${Math.round(agoMs / 1000)}秒前`;
@@ -532,7 +524,7 @@ function reproductionSteps(diagnostics: ImprovementDiagnostics | null): string {
 
 /**
  * 環境。技術情報が付いている要望でしか呼ばないので、ここでは有無を分岐しない。
- * アプリの版は「影響範囲」に必ず出るため、ここでは重ねない。
+ * アプリの版は「要望の概要」に必ず出るため、ここでは重ねない。
  */
 function environmentBlock(d: ImprovementDiagnostics): string {
   return [
@@ -544,7 +536,14 @@ function environmentBlock(d: ImprovementDiagnostics): string {
   ].join("\n");
 }
 
-/** 通信1本ぶん。宛先と結果を1行で出し、中身はさらに畳んで置く。 */
+function indent(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => `  ${line}`)
+    .join("\n");
+}
+
+/** 通信1本ぶん。宛先と結果を1行で出し、中身はその下に置く。 */
 function networkEntryBlock(n: DiagnosticsNetworkEntry): string {
   const head = `- \`${n.method} ${n.path}\` → ${n.status === null ? "応答なし" : n.status}（${n.durationMs}ms、${formatAgo(n.agoMs)}）${n.external ? " ※外部サービス" : ""}`;
   const parts = [head];
@@ -554,30 +553,22 @@ function networkEntryBlock(n: DiagnosticsNetworkEntry): string {
   return parts.join("\n");
 }
 
-function indent(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => `  ${line}`)
-    .join("\n");
-}
-
 /**
- * 技術情報の中身。開いた瞬間にログの壁にならないよう、小見出しで分ける。
- * 集めていない種類（新機能の要望など）では、その旨だけを書いて場所を取らない。
+ * 技術情報の中身。種類ごとに集めた量が違うので、無いものは見出しごと出さない。
+ * 「記録なし」と「そもそも集めていない」を混ぜると、読み手が原因を探し続ける。
  */
-function technicalBlock(input: IssueDraftInput): string {
+function technicalBlock(input: InstructionInput, h: string): string {
   const d = input.diagnostics;
   const level = diagnosticsLevelFor(input.kind);
 
-  // 技術情報が無い要望でも、読み始める場所だけは必ず出す（下で足す）。
   const sections = d
-    ? ["### 環境", environmentBlock(d)]
+    ? [`${h} 環境`, environmentBlock(d)]
     : ["（この要望には技術情報が付いていません。機能を入れる前に届いたものです）"];
 
   if (d && level === "full") {
     sections.push(
       "",
-      "### コンソールのエラー（直近）",
+      `${h} コンソールのエラー（直近）`,
       bulletList(d.logs.map((l) => `\`${l.level}\` ${l.text}（${formatAgo(l.agoMs)}）`), "（記録なし）"),
     );
   }
@@ -585,10 +576,10 @@ function technicalBlock(input: IssueDraftInput): string {
   if (d && level !== "minimal") {
     sections.push(
       "",
-      "### 失敗した通信（直近）",
+      `${h} 失敗した通信（直近）`,
       d.network.length > 0 ? d.network.map(networkEntryBlock).join("\n") : "（記録なし）",
       "",
-      "### 操作の履歴",
+      `${h} 操作の履歴`,
       reproductionSteps(d),
     );
   }
@@ -596,7 +587,7 @@ function technicalBlock(input: IssueDraftInput): string {
   if (d && level === "full") {
     sections.push(
       "",
-      "### 表示の速さ",
+      `${h} 表示の速さ`,
       [
         `- 最初の応答まで：${d.performance.ttfbMs ?? "不明"}ms`,
         `- 画面の組み立て完了：${d.performance.domContentLoadedMs ?? "不明"}ms`,
@@ -606,19 +597,10 @@ function technicalBlock(input: IssueDraftInput): string {
     );
   }
 
-  sections.push(
-    "",
-    "### 読み始めるファイルの候補",
-    bulletList(
-      sourceCandidatesFor(input.routePattern).map((f) => `\`${f}\``),
-      "（URL の形から導けませんでした。`system-spec/route-ledger.json` を見てください）",
-    ),
-  );
-
   return sections.join("\n");
 }
 
-function acceptanceCriteria(input: IssueDraftInput): string {
+function acceptanceCriteria(input: InstructionInput): string {
   const common = [
     `\`${input.routePattern}\` を4つの幅で開いても崩れない`,
     "確かめる幅は 375 / 768 / 1280 / 1600px",
@@ -639,87 +621,136 @@ function acceptanceCriteria(input: IssueDraftInput): string {
 }
 
 /**
- * 記録票の本文。
+ * 指示文1件ぶん。
  *
- * 読む順は「何が起きたか → どうしてほしいか → どうやれば再現するか →
- * どこを見ればよいか → 何ができたら完了か」。技術情報は最後に畳んで置く。
- * 先に技術情報を出すと、読む人が症状より先にログを読み始めてしまう。
+ * 読む順は「何をどう進めるか → 何が起きたか → どうしてほしいか →
+ * どうやれば再現するか → 何ができたら完了か → どこを見ればよいか」。
+ * 進め方を先頭に置くのは、読み手が本文の途中から手を動かし始めないため。
+ *
+ * depth は見出しの深さ。1件だけ渡すときは 1、まとめて渡すときは 2。
  */
-export function buildIssueBody(input: IssueDraftInput): string {
+export function buildInstructionDocument(input: InstructionInput, depth: 1 | 2 = 1): string {
+  const head = "#".repeat(depth);
+  const h = "#".repeat(depth + 1);
   const level = diagnosticsLevelFor(input.kind);
+  const severity = instructionSeverity(input.kind, input.diagnostics);
   const overview = {
     bug: "うまく動かない",
     usability: "使いにくい",
     feature: "この機能がほしい",
   }[input.kind];
-  const related = input.related ?? [];
 
   const sections = [
-    `## 概要`,
+    `${head} ${buildInstructionTitle(input)}`,
+    ``,
     `**${input.screenLabel}**で、${overview}という声が届きました。`,
     ``,
-    `## ユーザーの声（原文のまま）`,
+    `${h} 作業のやり方`,
+    WORK_RULES.map((l) => `- ${l}`).join("\n"),
+    ``,
+    `${h} 要望の概要`,
+    [
+      `- 要望ID：\`${input.id}\``,
+      `- 種類：${improvementKindLabel(input.kind)}`,
+      `- 重大度：${severityLabel(severity)}`,
+      `- 画面：${input.screenLabel}（\`${input.routePattern}\`）`,
+      `- 実URL：\`${input.path}\``,
+      `- 送った人の役割：${input.reporterRoleLabel}`,
+      `- 投稿日時：${formatJst(input.createdAt)}`,
+      `- アプリの版：${input.appVersion ?? "不明"}`,
+      `- 会社側の状態：${input.statusLabel}`,
+      `- 会社側のメモ：${input.handledNote ?? "（記入なし）"}`,
+      input.hasShot
+        ? `- 画面の写し：本人の書き込みあり（社内の管理画面で確認）：${input.adminUrl}`
+        : `- 画面の写し：なし。原文は社内の管理画面で確認できます：${input.adminUrl}`,
+    ].join("\n"),
+    ``,
+    `${h} ユーザーの声（原文のまま）`,
     `> ${input.body.split("\n").join("\n> ")}`,
     ``,
-    `## 期待と実際`,
+    `${h} 期待と実際`,
     `- 期待：${input.expected ?? "（本人からの記入なし。上の声から読み取ってください）"}`,
     `- 実際：${input.kind === "bug" ? "上の声のとおり（再現手順は下の自動記録を参照）" : "上の声のとおり"}`,
     ``,
   ];
 
   if (level !== "minimal") {
-    sections.push(`## 再現手順（送信直前の操作の自動記録）`, reproductionSteps(input.diagnostics), ``);
+    sections.push(`${h} 再現手順（送信直前の操作の自動記録）`, reproductionSteps(input.diagnostics), ``);
   }
 
   sections.push(
-    `## 影響範囲`,
-    [
-      `- 画面：${input.screenLabel}（\`${input.routePattern}\`）`,
-      `- 実URL：\`${input.path}\``,
-      `- 送った人の役割：${input.reporterRoleLabel}`,
-      `- 届いた日時：${formatJst(input.createdAt)}`,
-      `- アプリの版：${input.appVersion ?? "不明"}`,
-      input.hasShot
-        ? `- 画面の写し：本人の書き込みあり（社内の管理画面で確認）：${input.adminUrl}`
-        : `- 画面の写し：なし。原文は社内の管理画面で確認できます：${input.adminUrl}`,
-    ].join("\n"),
-    ``,
-    `## 会社側の対応状況`,
-    [
-      `- 状態：${input.statusLabel}`,
-      `- メモ：${input.handledNote ?? "（記入なし）"}`,
-    ].join("\n"),
-    ``,
-  );
-
-  if (related.length > 0) {
-    sections.push(
-      `## 似ている記録票（同じ画面・同じ種類）`,
-      `重複かどうかは中身を読んで判断してください。同じなら、こちらを閉じて向こうへ声を足す方が早いです。`,
-      related.map((r) => `- #${r.number} ${r.summary}（${r.url}）`).join("\n"),
-      ``,
-    );
-  }
-
-  sections.push(
-    `## 完了の条件`,
+    `${h} 受け入れ条件`,
     acceptanceCriteria(input),
     ``,
-    // 見出しの言い回しで「開かないと直せない」のか「参考までに」なのかを分ける。
-    `<details><summary>${level === "full" ? "技術情報（実装に必須）" : "参考情報（自動収集）"}</summary>`,
+    `${h} 影響範囲と読み始めるファイルの候補`,
+    bulletList(
+      sourceCandidatesFor(input.routePattern).map((f) => `\`${f}\``),
+      "（URL の形から導けませんでした。`system-spec/route-ledger.json` を見てください）",
+    ),
     ``,
-    technicalBlock(input),
+    `${h} 技術情報（自動収集・伏せ字ずみ）`,
+    technicalBlock(input, "#".repeat(depth + 2)),
     ``,
-    `</details>`,
-    ``,
-    `---`,
-    `この記録票は人事評価システムの「改善要望」から自動で書き起こしました。氏名・メール・評価の中身は載せていません。`,
   );
 
-  const body = sections.join("\n");
-  // GitHub には本文の上限がある。超えると記録票そのものが作れず、
-  // 「押しても何も起きない」に見えるので、こちら側で先に切っておく。
-  return body.length > DIAGNOSTICS_LIMITS.issueBodyText
-    ? `${body.slice(0, DIAGNOSTICS_LIMITS.issueBodyText)}\n\n（長すぎるため、ここで切りました。全文は社内の管理画面で読めます）`
-    : body;
+  const document = sections.join("\n");
+  // 読み手が一度に読める量には限りがある。溢れた指示文を渡すと、
+  // 後ろの受け入れ条件だけが落ちた状態で作業が始まる。こちら側で先に切る。
+  return document.length > DIAGNOSTICS_LIMITS.documentText
+    ? `${document.slice(0, DIAGNOSTICS_LIMITS.documentText)}\n\n（長すぎるため、ここで切りました。全文は社内の管理画面で読めます）`
+    : document;
+}
+
+/**
+ * まとめて渡すときの指示文。
+ *
+ * 並べただけでは、読み手はどれから手を付けるか決められず、
+ * 同じ画面を何度も往復する。先に着手の順番と、まとめ方の注意を置く。
+ * 順番は重大度が高い順、同じ重大度なら同じ画面が続くように並べる。
+ */
+export function buildBulkInstructionDocument(inputs: InstructionInput[]): string {
+  if (inputs.length === 0) return "# 作業指示：対象の要望がありません\n";
+
+  const ordered = orderForWork(inputs);
+  const lines = [
+    `# 作業指示：改善要望 ${ordered.length}件`,
+    ``,
+    `## 作業のやり方`,
+    [...WORK_RULES, "上から順に進める。", "1件終えるごとに区切って確かめる。"].map((l) => `- ${l}`).join("\n"),
+    ``,
+    `## 着手の順番`,
+    ordered
+      .map((input, i) => {
+        const severity = severityLabel(instructionSeverity(input.kind, input.diagnostics));
+        return `${i + 1}. \`${input.id}\`（重大度：${severity}／${input.screenLabel}）`;
+      })
+      .join("\n"),
+    ``,
+    `## まとめ方の注意`,
+    [
+      "同じ画面のものは続けて直す。",
+      "直し方がぶつかったら、重大度が高い方を優先する。",
+      "1件ごとに区切って保存する。",
+    ]
+      .map((l) => `- ${l}`)
+      .join("\n"),
+    ``,
+  ];
+
+  for (const input of ordered) {
+    lines.push(`---`, ``, buildInstructionDocument(input, 2), ``);
+  }
+  return lines.join("\n");
+}
+
+/** 着手の順番。重大度が高い順、同じなら同じ画面が続くように並べる。 */
+const SEVERITY_ORDER: Record<InstructionSeverity, number> = { high: 0, medium: 1, low: 2 };
+
+function orderForWork(inputs: InstructionInput[]): InstructionInput[] {
+  return [...inputs].sort((a, b) => {
+    const sa = SEVERITY_ORDER[instructionSeverity(a.kind, a.diagnostics)];
+    const sb = SEVERITY_ORDER[instructionSeverity(b.kind, b.diagnostics)];
+    if (sa !== sb) return sa - sb;
+    return a.routePattern.localeCompare(b.routePattern) || a.createdAt.getTime() - b.createdAt.getTime();
+  });
 }

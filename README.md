@@ -26,7 +26,7 @@ pnpm run preview
 
 `preview` は Workers 相当のローカル環境を `http://localhost:8787` で起動します。日常の UI 開発で `pnpm dev` を使う場合は、`.dev.vars` の `BETTER_AUTH_URL` を Next.js が表示する URL に合わせてください。
 
-改善要望から開発の記録票（GitHub Issue）を作る機能だけは、GitHub のトークンが要ります。無くても投稿・閲覧は動き、記録票を作るときだけ設定案内が出ます。用意する場合は [fine-grained token の作成画面](https://github.com/settings/personal-access-tokens/new) で **Issues: Read and write** だけを付けたトークンを作り、`.dev.vars` の `GITHUB_TOKEN` に置きます（本番は `pnpm exec wrangler secret put GITHUB_TOKEN`）。手順の詳細は [デプロイ注意 §5](docs/deploy-notes.md) にあります。
+改善要望を作業指示文として払い出す読み取り API（`GET /api/improvements`）だけは、鍵が要ります。無くても投稿・閲覧は動き、払い出しのときだけ設定案内が出ます。鍵は `openssl rand -base64 32` で作り、`.dev.vars` の `AGENT_API_KEY` に置きます（本番は `pnpm exec wrangler secret put AGENT_API_KEY`）。手順の詳細は [デプロイ注意 §5](docs/deploy-notes.md) にあります。
 
 ## 品質確認
 

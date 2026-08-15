@@ -1295,7 +1295,7 @@ export const improvementRequests = sqliteTable(
     /**
      * bug（動かない）| usability（使いにくい）| feature（機能がほしい）。
      * 直す優先順位・記録票の書き出し方・**自動で集めてよい技術情報の量**を
-     * 分ける唯一の入力（→ src/lib/domain/improvement-issue.ts の収集レベル）。
+     * 分ける唯一の入力（→ src/lib/domain/improvement-instruction.ts の収集レベル）。
      * 種類を聞いていなかった既存行は 'usability' 扱い（→ 0020 の既定値）。
      */
     kind: text("kind").notNull().default("usability"),
@@ -1303,7 +1303,7 @@ export const improvementRequests = sqliteTable(
     expected: text("expected"),
     /**
      * 送信時にブラウザ側で自動収集した技術情報（JSON文字列）。
-     * 中身の形と上限、伏せ方は src/lib/domain/improvement-issue.ts が正本。
+     * 中身の形と上限、伏せ方は src/lib/domain/improvement-instruction.ts が正本。
      */
     diagnostics: text("diagnostics"),
     /** 「1280×720」の形。狭い画面だけで起きる崩れを切り分けるために残す。 */
@@ -1362,47 +1362,30 @@ export const improvementShots = sqliteTable("improvement_shots", {
 });
 
 /**
- * 要望から作った記録票（GitHub Issue）。
+ * 要望を作業指示文として払い出した記録。
  *
- * 「まだ作っていない」を null 列の組み合わせで表すと、作りかけと作り済みの
- * 見分けが画面ごとにぶれる。行があれば作り済み、無ければ未作成、で1つに固定する。
- * 二重に立てないための境界は request_id の主キーそのもの。
+ * 「まだ払い出していない」を null 列の組み合わせで表すと、途中と済みの
+ * 見分けが画面ごとにぶれる。行があれば払い出し済み、無ければ未払い出し、
+ * で1つに固定する。二重に作らない境界は request_id の主キーそのもの。
  *
- * 一括送信では、同じ要望に対する2本目の送信がこの主キーで必ず弾かれるように、
- * 外へ出す前に issue_number = 0 の「席取り」を入れてから GitHub を呼ぶ。
- * 押した人が二度押ししない前提を置かない（画面側の抑止は補助にすぎない）。
+ * 外へ出す通信はもう無いので、席取り（番号0の行）も要らない。
+ * 払い出しはアプリの中で完結し、書き込み1文で決まる。
  */
-export const improvementIssueLinks = sqliteTable("improvement_issue_links", {
+export const improvementHandouts = sqliteTable("improvement_handouts", {
   requestId: text("request_id")
     .primaryKey()
     .references(() => improvementRequests.id, { onDelete: "cascade" }),
-  /** どのリポジトリへ出したか（owner/repo）。出し先を変えても過去の行き先が追える。 */
-  repo: text("repo").notNull(),
-  /** 記録票の番号。0 は「席取りだけして、まだ GitHub の返事が来ていない」。 */
-  issueNumber: integer("issue_number").notNull(),
-  issueUrl: text("issue_url").notNull(),
   /**
-   * 最後に GitHub へ渡した時点の内容の指紋。
+   * 最後に払い出した時点の内容の指紋。
    * これと今の内容を比べて「更新あり」を出す。更新日時で比べると、
-   * 中身が同じでも触っただけで差分ありになり、意味のない更新が積み上がる。
-   * 形は src/lib/domain/improvement-sync.ts が正本。
+   * 中身が同じでも触っただけで差分ありになり、意味のない払い出しが積み上がる。
+   * 形は src/lib/domain/improvement-handout.ts が正本。
    */
   contentFingerprint: text("content_fingerprint").notNull().default(""),
-  /** 最後に GitHub 側へ反映できた時刻。まだ一度も反映していなければ null。 */
-  syncedAt: integer("synced_at", { mode: "timestamp" }),
-  /**
-   * ok | missing。missing は「番号は控えているが GitHub 側に無い（消された）」。
-   * ここで止めず、画面から作り直せるようにするための印。
-   */
-  linkState: text("link_state").notNull().default("ok"),
-  /**
-   * GitHub 側で開いているか閉じているか（open | closed）。
-   * 取り込んだ時点の写しであって、常に最新とは限らない。
-   * 一覧に出すのは「アプリと記録票がずれている」ことを見せるため。
-   */
-  issueState: text("issue_state").notNull().default("open"),
-  /** 記録票を作った人。作成後に退職しても記録は残す。 */
-  createdById: text("created_by_id").references(() => users.id),
+  /** 最後に払い出した時刻。まだ一度も払い出していなければ null。 */
+  handedOutAt: integer("handed_out_at", { mode: "timestamp" }),
+  /** 払い出した人。そのあと退職しても記録は残す。 */
+  handedOutById: text("handed_out_by_id").references(() => users.id),
   createdAt: createdAt(),
 });
 

@@ -9,18 +9,18 @@ import { RefreshStatus } from "@/components/RefreshStatus";
 import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { DataTable, type Column } from "@/components/DataTable";
 import { type ImprovementStatus } from "@/lib/domain/improvement";
-import { improvementKindLabel, type ImprovementKind } from "@/lib/domain/improvement-issue";
+import { improvementKindLabel, type ImprovementKind } from "@/lib/domain/improvement-instruction";
 import {
   bulkActionLabel,
   bulkActionTone,
   bulkSummaryText,
-  issueSyncStateLabel,
-  issueSyncStateTone,
+  handoutStateLabel,
+  handoutStateTone,
   plannedAction,
   summarizeBulk,
   type BulkAction,
-  type IssueSyncState,
-} from "@/lib/domain/improvement-sync";
+  type HandoutState,
+} from "@/lib/domain/improvement-handout";
 import {
   bulkDispositionConfirm,
   dispositionActionLabel,
@@ -45,72 +45,56 @@ export interface ImprovementRow {
   discarded: boolean;
   duplicateOfId: string | null;
   stateNote: string;
-  syncState: IssueSyncState;
-  syncNote: string;
-  issueNumber: number | null;
-  issueUrl: string | null;
-  issueClosed: boolean;
+  handoutState: HandoutState;
+  handoutNote: string;
   off: boolean;
 }
 
-interface SyncResult {
+interface BulkResult {
   id: string;
   label: string;
   action: BulkAction;
-  issueNumber: number | null;
-  issueUrl: string | null;
   reason: string;
 }
 
-/** まとめて選べる操作。記録票へ送るのと、落とす・戻すを同じ場所から行う。 */
-type BulkOperation = "sync" | DispositionAction;
-
-/** 記録票へのリンク。番号だけを出し、URL は押す先として持つ。 */
-function IssueLink({ number, url }: { number: number | null; url: string | null }) {
-  if (number === null || number === 0 || !url) return <span className="footnote">—</span>;
-  return (
-    <a href={url} className="underline" target="_blank" rel="noopener noreferrer">
-      #{number}
-    </a>
-  );
-}
+/** まとめて選べる操作。指示文を払い出すのと、落とす・戻すを同じ場所から行う。 */
+type BulkOperation = "handout" | DispositionAction;
 
 /**
  * 届いた要望の一覧と、そこからのまとめ操作。
  *
- * 使われる場面: 週に一度まとめて読み、直すものを開発へ渡し、
+ * 使われる場面: 週に一度まとめて読み、直すものを作業する側へ渡し、
  * 直さないもの・誤って届いたものをその場で片付ける。
  * 1件ずつ詳細を開く作りだと、20件で20往復する。だから
- *  ・行を見比べる表（状態・記録票・種類が縦に並ぶ）
+ *  ・行を見比べる表（状態・払い出し・種類が縦に並ぶ）
  *  ・選んだぶんをまとめて処理する
  *  ・処理のあと、行ごとに何が起きたかを表で返す
  * の3つをこの1画面で完結させる。
  *
- * 外へ出る操作（記録票へ送る・記録票を閉じる）と、見えなくする操作（廃棄）は、
- * どちらも1件も選ばれていない状態から始める。手間を省く操作だけを既定にする。
+ * 見えなくする操作（廃棄）も、まとめての払い出しも、1件も選ばれていない
+ * 状態から始める。手間を省く操作だけを既定にする。
  */
 export function ImprovementBulkTable({
   rows,
-  canPush,
+  canHandOut,
   canDispose,
 }: {
   rows: ImprovementRow[];
-  canPush: boolean;
+  canHandOut: boolean;
   canDispose: boolean;
 }) {
   const { refresh, refreshing } = useRefreshAfterSave();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [results, setResults] = useState<SyncResult[] | null>(null);
+  const [results, setResults] = useState<BulkResult[] | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [pending, setPending] = useState<DispositionAction | null>(null);
   const [reasonCode, setReasonCode] = useState("");
   const [reasonNote, setReasonNote] = useState("");
-  const [closeIssue, setCloseIssue] = useState(false);
   const lastIndex = useRef(-1);
 
   const ids = useMemo(() => rows.map((r) => r.id), [rows]);
   const allSelected = ids.length > 0 && ids.every((id) => selected.has(id));
-  const selectable = canPush || canDispose;
+  const selectable = canHandOut || canDispose;
 
   const toggle = useCallback((id: string) => {
     setSelected((prev) => {
@@ -139,18 +123,18 @@ export function ImprovementBulkTable({
     setPending(action);
     setReasonCode(reasonChoices(action)[0]?.code ?? "");
     setReasonNote("");
-    setCloseIssue(false);
   };
 
   /**
    * 選んだぶんを、順番に1件ずつ処理する。
-   * まとめて並べて投げると GitHub の受付上限に当たり、まとめて断られる。
+   * まとめて1回で送らないのは、どこまで進んだかを件数で見せるため。
+   * 済んだ分はその場で確定し、失敗した行だけをやり直せる。
    */
   const run = async (targets: string[], operation: BulkOperation) => {
     if (targets.length === 0 || progress || refreshing) return;
     setResults(null);
     setProgress({ done: 0, total: targets.length });
-    const collected: SyncResult[] = [];
+    const collected: BulkResult[] = [];
     for (const id of targets) {
       const row = rows.find((r) => r.id === id);
       try {
@@ -158,20 +142,16 @@ export function ImprovementBulkTable({
           method: "PUT",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(
-            operation === "sync"
-              ? { id }
-              : { id, action: operation, reasonCode, reasonNote, closeIssue },
+            operation === "handout" ? { id, action: "handout" } : { id, action: operation, reasonCode, reasonNote },
           ),
         });
-        const json = (await res.json()) as { ok?: boolean; result?: SyncResult; message?: string };
+        const json = (await res.json()) as { ok?: boolean; result?: BulkResult; message?: string };
         if (res.ok && json.ok && json.result) collected.push(json.result);
         else {
           collected.push({
             id,
             label: row?.headline ?? id,
             action: "failed",
-            issueNumber: row?.issueNumber ?? null,
-            issueUrl: row?.issueUrl ?? null,
             reason: json.message ?? "処理できませんでした。",
           });
         }
@@ -180,8 +160,6 @@ export function ImprovementBulkTable({
           id,
           label: row?.headline ?? id,
           action: "failed",
-          issueNumber: row?.issueNumber ?? null,
-          issueUrl: row?.issueUrl ?? null,
           reason: "通信できませんでした。この行だけやり直せます。",
         });
       }
@@ -197,11 +175,11 @@ export function ImprovementBulkTable({
     refresh();
   };
 
-  /** 選んだぶんを記録票へ送る（まとめ送りと、失敗した行の送り直しの両方で使う）。 */
-  const send = (ids: string[]) => run(ids, "sync");
+  /** 選んだぶんの指示文を払い出す（まとめ払い出しと、失敗した行のやり直しの両方で使う）。 */
+  const send = (ids: string[]) => run(ids, "handout");
 
   const chosen = rows.filter((r) => selected.has(r.id));
-  const count = (plan: string) => chosen.filter((r) => plannedAction(r.syncState) === plan).length;
+  const count = (plan: string) => chosen.filter((r) => plannedAction(r.handoutState) === plan).length;
 
   // 理由の判定は画面とサーバーで同じ関数を使う（片方だけ緩い状態を作らない）。
   // 足りないうちは実行ボタンを押せなくし、何が足りないかをその場に出す。
@@ -261,16 +239,12 @@ export function ImprovementBulkTable({
       },
     },
     {
-      key: "issue",
-      header: "記録票",
+      key: "handout",
+      header: "払い出し",
       cell: (r) => (
         <>
-          <span className="flex items-center gap-2">
-            <Badge tone={issueSyncStateTone(r.syncState)}>{issueSyncStateLabel(r.syncState)}</Badge>
-            <IssueLink number={r.issueNumber} url={r.issueUrl} />
-            {r.issueClosed && <Badge tone="closed">閉</Badge>}
-          </span>
-          <span className="footnote">{r.syncNote}</span>
+          <Badge tone={handoutStateTone(r.handoutState)}>{handoutStateLabel(r.handoutState)}</Badge>
+          <span className="footnote">{r.handoutNote}</span>
         </>
       ),
     },
@@ -325,12 +299,6 @@ export function ImprovementBulkTable({
               }}
               placeholder="例：同じ内容を先週まとめて直しました。"
             />
-            {pending === "reject" && (
-              <label className="footnote mt-3 flex items-center gap-2">
-                <input type="checkbox" checked={closeIssue} onChange={(e) => setCloseIssue(e.target.checked)} />
-                記録票も「対応しない」として閉じる
-              </label>
-            )}
             <div className="mt-3 flex flex-wrap gap-2">
               <ConfirmButton
                 label={`${chosen.length}件に実行する`}
@@ -369,7 +337,6 @@ export function ImprovementBulkTable({
                 header: "実行内容",
                 cell: (r) => <Badge tone={bulkActionTone(r.action)}>{bulkActionLabel(r.action)}</Badge>,
               },
-              { key: "issue", header: "記録票", cell: (r) => <IssueLink number={r.issueNumber} url={r.issueUrl} /> },
               { key: "reason", header: "理由", cell: (r) => r.reason },
             ]}
           />
@@ -382,7 +349,7 @@ export function ImprovementBulkTable({
                   disabled={progress !== null || refreshing}
                   onClick={() => send(failed.map((r) => r.id))}
                 >
-                  {`失敗した${failed.length}件を送り直す`}
+                  {`失敗した${failed.length}件をやり直す`}
                 </Button>
               }
             >
@@ -397,7 +364,7 @@ export function ImprovementBulkTable({
           status={
             progress
               ? `処理しています（${progress.done}/${progress.total}件目）`
-              : `${selected.size}件を選択中／新規${count("create")}・更新${count("update")}・作り直し${count("recreate")}・スキップ${count("skip")}`
+              : `${selected.size}件を選択中／払い出し${count("handout")}・再払い出し${count("rehandout")}・スキップ${count("skip")}`
           }
         >
           <Button type="button" variant="tertiary" disabled={progress !== null || refreshing} onClick={() => setSelected(new Set())}>
@@ -421,14 +388,14 @@ export function ImprovementBulkTable({
               </Button>
             </>
           )}
-          {canPush && (
+          {canHandOut && (
             <Button
               type="button"
               variant="primary"
               disabled={progress !== null || refreshing}
               onClick={() => send(chosen.map((r) => r.id))}
             >
-              {progress ? "処理しています…" : `${selected.size}件を記録票へ送る`}
+              {progress ? "処理しています…" : `${selected.size}件をまとめて払い出す`}
             </Button>
           )}
         </StickyActionBar>
