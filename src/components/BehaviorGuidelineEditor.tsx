@@ -1,7 +1,7 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
@@ -17,6 +17,7 @@ import {
   deleteConfirmText,
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
  * 行動指針（観点 × 5段階の文言）の編集。
@@ -61,7 +62,7 @@ export function BehaviorGuidelineEditor({
   /** 観点ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -87,7 +88,7 @@ export function BehaviorGuidelineEditor({
         return false;
       }
       setMessage(json.message ?? "保存しました。");
-      router.refresh();
+      refresh();
       return true;
     } catch {
       setError("通信できませんでした。入力した内容はこの画面に残っています。");
@@ -105,7 +106,7 @@ export function BehaviorGuidelineEditor({
     const result = await requestMasterDelete("behaviorGuideline", id);
     if (result.ok) {
       setMessage(result.message);
-      router.refresh();
+      refresh();
     } else {
       setError(result.message);
     }
@@ -120,9 +121,9 @@ export function BehaviorGuidelineEditor({
   const anyBlocked = list.some((g) => usedByOf(g.id).length > 0);
 
   return (
-    <div className="stack">
+    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="stack m-0 min-w-0 border-0 p-0">
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 text-sub text-brand-deep">{message}</p>}
+      <RefreshStatus message={message} refreshing={refreshing} />
 
       {list.length === 0 && (
         <ReasonNote>
@@ -347,6 +348,6 @@ export function BehaviorGuidelineEditor({
           <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
         </Disclosure>
       )}
-    </div>
+    </fieldset>
   );
 }

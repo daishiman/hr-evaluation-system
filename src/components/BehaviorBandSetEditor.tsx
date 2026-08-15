@@ -1,7 +1,7 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
@@ -17,6 +17,7 @@ import {
   deleteConfirmText,
 } from "@/lib/domain/master-delete";
 import { requestMasterDelete } from "@/components/master-delete-request";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
  * 行動指針の「基準セット」を作る・呼び名を直す・使用を止める。
@@ -51,7 +52,7 @@ export interface BehaviorBandSetRow {
 }
 
 export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBandSetRow[]; currentBand: string | null }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -75,7 +76,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
         return false;
       }
       setMessage(json.message ?? "保存しました。");
-      router.refresh();
+      refresh();
       return true;
     } catch {
       setError("通信できませんでした。入力した内容はこの画面に残っています。");
@@ -93,7 +94,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
     const result = await requestMasterDelete("behaviorBandSet", id);
     if (result.ok) {
       setMessage(result.message);
-      router.refresh();
+      refresh();
     } else {
       setError(result.message);
     }
@@ -117,11 +118,11 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
         sub="等級ごとに問う内容を変えたいときは、基準を分けて作ります。よく使うのは、いまの基準を複製して一部だけ書き換えるやり方です。"
         actions={
           draft === null ? (
-            <Button variant="secondary" disabled={busy} onClick={openDraft}>
+            <Button variant="secondary" disabled={busy || refreshing} onClick={openDraft}>
               基準を新しく作る
             </Button>
           ) : (
-            <Button variant="tertiary" disabled={busy} onClick={() => setDraft(null)}>
+            <Button variant="tertiary" disabled={busy || refreshing} onClick={() => setDraft(null)}>
               やめる
             </Button>
           )
@@ -133,7 +134,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-sub text-brand-deep">{message}</p>}
+      <RefreshStatus message={message} refreshing={refreshing} className="m-0 mt-3 text-sub text-brand-deep" />
 
       {draft !== null && (
         <div className="mt-3 rounded-lg border border-line p-3">
@@ -171,7 +172,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
               variant="primary"
-              disabled={busy || draft.name.trim() === ""}
+              disabled={busy || refreshing || draft.name.trim() === ""}
               onClick={async () => {
                 const ok = await send({
                   name: draft.name.trim(),
@@ -180,7 +181,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                 if (ok) setDraft(null);
               }}
             >
-              {busy ? "作っています…" : "この内容で作る"}
+              {busy ? "作っています…" : refreshing ? "一覧に反映しています…" : "この内容で作る"}
             </Button>
           </div>
         </div>
@@ -230,7 +231,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button
                       variant="primary"
-                      disabled={busy || nameDraft.trim() === ""}
+                      disabled={busy || refreshing || nameDraft.trim() === ""}
                       onClick={async () => {
                         const ok = await send({ id: set.id, name: nameDraft.trim() });
                         if (ok) setEditingName((s) => { const n = { ...s }; delete n[set.id]; return n; });
@@ -240,7 +241,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     </Button>
                     <Button
                       variant="tertiary"
-                      disabled={busy}
+                      disabled={busy || refreshing}
                       onClick={() => setEditingName((s) => { const n = { ...s }; delete n[set.id]; return n; })}
                     >
                       やめる
@@ -253,7 +254,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                   <Badge tone={set.isActive ? "active" : "dropped"}>{set.isActive ? "使用中" : "使用しない"}</Badge>
                   <Button
                     variant="tertiary"
-                    disabled={busy}
+                    disabled={busy || refreshing}
                     onClick={() => setEditingName((s) => ({ ...s, [set.id]: set.name }))}
                   >
                     呼び名を直す
@@ -265,13 +266,14 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       <ConfirmButton
                         label="使わない"
                         variant="danger-outline"
-                        busy={busy}
+                        busy={busy || refreshing}
+                        busyLabel={busy ? "保存しています…" : "一覧に反映しています…"}
                         confirm={`「${set.name}」を次に作るアンケートで選べないようにします。中身は残るので、あとからもう一度使えます。すでに公開したアンケートと確定済みの評価はそのまま残ります。`}
                         onConfirm={() => void send({ id: set.id, isActive: false })}
                       />
                     )
                   ) : (
-                    <Button variant="secondary" disabled={busy} onClick={() => void send({ id: set.id, isActive: true })}>
+                    <Button variant="secondary" disabled={busy || refreshing} onClick={() => void send({ id: set.id, isActive: true })}>
                       もう一度使う
                     </Button>
                   )}
@@ -279,7 +281,8 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     <ConfirmButton
                       label={DELETE_LABEL}
                       variant="danger-outline"
-                      busy={busy}
+                      busy={busy || refreshing}
+                      busyLabel={busy ? "削除しています…" : "一覧に反映しています…"}
                       confirm={deleteConfirmText(
                         set.name,
                         set.totalAspectCount > 0 ? `中に入っている観点${set.totalAspectCount}件も一緒に消えます。` : undefined,

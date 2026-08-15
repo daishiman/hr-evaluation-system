@@ -1,7 +1,7 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button, Card, CardHead, Disclosure, InlineDetail, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
@@ -17,6 +17,7 @@ import {
   deleteConfirmText,
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
+import { RefreshStatus } from "@/components/RefreshStatus";
 import {
   CATEGORY_LABEL,
   GRADE_REQUIREMENT_MAX,
@@ -55,7 +56,7 @@ export function GradeRequirementEditor({
   /** 項目ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -79,7 +80,7 @@ export function GradeRequirementEditor({
         return false;
       }
       setMessage(json.message ?? "保存しました。");
-      router.refresh();
+      refresh();
       return true;
     } catch {
       setError("通信できませんでした。入力した内容はこの画面に残っています。");
@@ -97,7 +98,7 @@ export function GradeRequirementEditor({
     const result = await requestMasterDelete("gradeRequirement", id);
     if (result.ok) {
       setMessage(result.message);
-      router.refresh();
+      refresh();
     } else {
       setError(result.message);
     }
@@ -329,7 +330,7 @@ export function GradeRequirementEditor({
   };
 
   return (
-    <div className="stack">
+    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="stack m-0 min-w-0 border-0 p-0">
       <Card className="card-pad">
         <p className="m-0 text-sub">
           いま編集しているのは <b>{gradeName}</b> の等級要件です。
@@ -348,7 +349,7 @@ export function GradeRequirementEditor({
       </Card>
 
       {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
-      {message && <p role="status" aria-live="polite" className="m-0 text-sub text-brand-deep">{message}</p>}
+      <RefreshStatus message={message} refreshing={refreshing} />
 
       {block("support", support)}
       {block("operation", operation)}
@@ -404,6 +405,6 @@ export function GradeRequirementEditor({
           <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
         </Disclosure>
       )}
-    </div>
+    </fieldset>
   );
 }

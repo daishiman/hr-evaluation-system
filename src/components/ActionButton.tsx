@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { Button, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { RefreshStatus } from "@/components/RefreshStatus";
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 
 /**
  * サーバーに1回だけ送る操作のボタン。
@@ -31,7 +32,7 @@ export function ActionButton({
   onDoneMessage?: string;
   children?: ReactNode;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export function ActionButton({
         return;
       }
       setResult(onDoneMessage ?? json.message ?? "完了しました。");
-      router.refresh();
+      refresh();
     } catch {
       setError("通信できませんでした。時間をおいてもう一度お試しください。");
     } finally {
@@ -68,15 +69,28 @@ export function ActionButton({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {result && <p className="m-0 mb-2 max-w-[22rem] text-note text-brand-deep">{result}</p>}
+      {/* 実行できたことと、画面へ出し終えたことを分けて出す（RecordForm と同じ作法） */}
+      <RefreshStatus
+        message={result}
+        refreshing={refreshing}
+        target="画面"
+        className="m-0 mb-2 max-w-[22rem] text-note text-brand-deep"
+      />
       {confirm ? (
-        <ConfirmButton label={label} confirm={confirm} variant={variant} busy={busy} onConfirm={() => void run()}>
+        <ConfirmButton
+          label={label}
+          confirm={confirm}
+          variant={variant}
+          busy={busy || refreshing}
+          busyLabel={busy ? "実行しています…" : "画面に反映しています…"}
+          onConfirm={() => void run()}
+        >
           {children}
         </ConfirmButton>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant={variant} disabled={busy} onClick={() => void run()}>
-            {busy ? "実行しています…" : label}
+          <Button variant={variant} disabled={busy || refreshing} onClick={() => void run()}>
+            {busy ? "実行しています…" : refreshing ? "画面に反映しています…" : label}
           </Button>
           {children}
         </div>

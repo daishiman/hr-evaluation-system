@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { clsx } from "clsx";
 import { Icon, type IconName } from "@/components/Icon";
+import { PageHeadIcon } from "@/components/PageHeadIcon";
 
 /* ───────────────────────── ボタン ───────────────────────── */
 
@@ -399,7 +400,11 @@ export function PageTitle({
             </ol>
           </nav>
         )}
-        <h1 className="page-title">{title}</h1>
+        {/* 絵は見出しの左に添えるだけ（意味は文字が持つ）。左のメニューと同じ絵を出す */}
+        <h1 className="page-title">
+          <PageHeadIcon />
+          {title}
+        </h1>
         {lede && <p className="page-lede">{lede}</p>}
         {tags && <div className="page-head-tags">{tags}</div>}
       </div>
@@ -586,6 +591,11 @@ export function InlineDetail({
 export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
     <div className="empty-state">
+      {/* 「まだ何も入っていない入れ物」を絵でも示す。文字だけの空白は、
+          読み込み中なのか本当に0件なのかが一目で分かりにくい */}
+      <p className="es-mark">
+        <Icon name="inbox" size={22} />
+      </p>
       <p className="es-title">{title}</p>
       <p className="es-body">{body}</p>
       {action}
@@ -629,7 +639,11 @@ export function PageLoading({ lede }: { lede: string }) {
 export function ReasonNote({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="caution-panel flex flex-wrap items-center justify-between gap-3">
-      <span>{children}</span>
+      {/* 「手を止めて読んでほしい」を色以外でも示す（色だけで状態を伝えない） */}
+      <span className="flex min-w-0 items-start gap-2">
+        <Icon name="info" className="reason-note-mark" />
+        <span className="min-w-0">{children}</span>
+      </span>
       {action}
     </div>
   );

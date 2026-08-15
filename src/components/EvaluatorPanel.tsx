@@ -1,9 +1,10 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ActionButton";
 import { Button, Card, ReasonNote } from "@/components/ui";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
  * 上長のコメントと、確定／確認中に戻す操作。
@@ -23,7 +24,7 @@ export function EvaluatorPanel({
   /** 手を入れられない理由。渡されたら操作は出さず、理由だけを出す（自分自身の評価など）。 */
   blockedReason?: string | null;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [text, setText] = useState(comment);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
@@ -45,7 +46,7 @@ export function EvaluatorPanel({
         return;
       }
       setSaved("コメントを保存しました。");
-      router.refresh();
+      refresh();
     } catch {
       setError("通信できませんでした。入力内容はこの画面に残っています。");
     } finally {
@@ -78,6 +79,7 @@ export function EvaluatorPanel({
         id="ev_comment"
         className="input min-h-[88px] w-full"
         value={text}
+        disabled={busy || refreshing}
         onChange={(e) => {
           setText(e.target.value);
           setSaved(null);
@@ -85,10 +87,10 @@ export function EvaluatorPanel({
         placeholder="例：未達の項目について、期首に分母と行動計画をすり合わせましょう。"
       />
       <div className="mt-2 flex flex-wrap items-center gap-3">
-        <Button onClick={saveComment} disabled={busy}>
-          コメントを保存する
+        <Button onClick={saveComment} disabled={busy || refreshing}>
+          {busy ? "保存しています…" : refreshing ? "画面に反映しています…" : "コメントを保存する"}
         </Button>
-        {saved && <span className="footnote">{saved}</span>}
+        <RefreshStatus message={saved} refreshing={refreshing} target="画面" className="footnote" />
       </div>
 
       <div className="mt-5 border-t border-line pt-4">

@@ -1,3 +1,4 @@
+import type { IconName } from "@/components/Icon";
 import type { Role } from "@/lib/session";
 import routeLedger from "../../system-spec/route-ledger.json";
 
@@ -15,6 +16,15 @@ import routeLedger from "../../system-spec/route-ledger.json";
 export interface NavItem {
   href: string;
   label: string;
+  /**
+   * その項目を表す絵。**省略できない**。
+   *
+   * メニューを畳むとアイコンだけの列になり、絵が唯一の手がかりになる。
+   * 「その画面が扱う対象から一意に思い出せる絵」を選ぶ（書類・歯車のような
+   * どの画面にも当てはまる絵は使わない）。同じロールのメニューの中で
+   * 同じ絵を2つの項目に使わない（nav.test.ts が見張っている）。
+   */
+  icon: IconName;
   /** 一覧の中の詳細画面など、この配下も現在地として扱いたいときに使う */
   exact?: boolean;
 }
@@ -34,45 +44,45 @@ const COMPANY_GROUPS: NavGroup[] = [
   {
     title: "制度を順番に設定する",
     items: [
-      { href: "/admin/setup", label: "制度設定ガイド" },
-      { href: "/admin/masters", label: "等級の設定" },
-      { href: "/admin/masters/requirements", label: "等級要件（支援・運営）" },
-      { href: "/admin/masters/promotion", label: "昇格の条件・要件" },
-      { href: "/admin/behavior", label: "行動指針" },
-      { href: "/admin/scheme", label: "KPI・評価セット" },
+      { href: "/admin/setup", label: "制度設定ガイド", icon: "guide" },
+      { href: "/admin/masters", label: "等級の設定", icon: "grade" },
+      { href: "/admin/masters/requirements", label: "等級要件（支援・運営）", icon: "requirement" },
+      { href: "/admin/masters/promotion", label: "昇格の条件・要件", icon: "promotion" },
+      { href: "/admin/behavior", label: "行動指針", icon: "behavior" },
+      { href: "/admin/scheme", label: "KPI・評価セット", icon: "kpi" },
     ],
   },
   {
     title: "評価を順番に進める",
     items: [
-      { href: "/admin/cycles", label: "評価期間" },
-      { href: "/admin/forms", label: "アンケート" },
-      { href: "/manager/cycles", label: "評価・結果を確認する" },
+      { href: "/admin/cycles", label: "評価期間", icon: "calendar" },
+      { href: "/admin/forms", label: "アンケート", icon: "survey" },
+      { href: "/manager/cycles", label: "評価・結果を確認する", icon: "evaluation" },
     ],
   },
   {
     title: "運用を補う",
     items: [
-      { href: "/admin/kgi", label: "事業所KGIの達成率" },
-      { href: "/admin/raises", label: "昇給の設定" },
+      { href: "/admin/kgi", label: "事業所KGIの達成率", icon: "achievement" },
+      { href: "/admin/raises", label: "昇給の設定", icon: "raise" },
     ],
   },
   {
     title: "人を管理する",
-    items: [{ href: "/admin/members", label: "社員" }],
+    items: [{ href: "/admin/members", label: "社員", icon: "users" }],
   },
   {
     title: "基準を確認する",
     items: [
-      { href: "/criteria", label: "評価の基準" },
-      { href: "/forms", label: "アンケートの中身" },
+      { href: "/criteria", label: "評価の基準", icon: "criteria" },
+      { href: "/forms", label: "アンケートの中身", icon: "surveyRead" },
     ],
   },
   /* 各画面から届いた「ここが使いにくい」を読む場所。
      他の人が書いた不満がそのまま載るため、管理者だけに出す。 */
   {
     title: "使い勝手を直す",
-    items: [{ href: "/admin/improvements", label: "届いた改善要望" }],
+    items: [{ href: "/admin/improvements", label: "届いた改善要望", icon: "inbox" }],
   },
 ];
 
@@ -89,8 +99,8 @@ const COMPANY_GROUPS: NavGroup[] = [
 const MY_EVALUATION_GROUP: NavGroup = {
   title: "自分の評価",
   items: [
-    { href: "/me/forms", label: "実績を報告する" },
-    { href: "/me/results", label: "評価の結果を見る" },
+    { href: "/me/forms", label: "実績を報告する", icon: "report" },
+    { href: "/me/results", label: "評価の結果を見る", icon: "result" },
   ],
 };
 
@@ -102,50 +112,50 @@ export function navGroupsFor(role: Role): NavGroup[] {
   switch (role) {
     case "SUPER_ADMIN":
       return [
-        { title: null, items: [{ href: "/system", label: "ホーム", exact: true }] },
+        { title: null, items: [{ href: "/system", label: "ホーム", icon: "home", exact: true }] },
         {
           title: "システムを管理する",
           items: [
-            { href: "/system/companies", label: "会社一覧" },
-            { href: "/system/users", label: "利用者一覧" },
+            { href: "/system/companies", label: "会社一覧", icon: "building" },
+            { href: "/system/users", label: "利用者一覧", icon: "userAdmin" },
           ],
         },
         ...COMPANY_GROUPS,
       ];
     case "COMPANY_ADMIN":
       return [
-        { title: null, items: [{ href: "/admin", label: "ホーム", exact: true }] },
+        { title: null, items: [{ href: "/admin", label: "ホーム", icon: "home", exact: true }] },
         ...COMPANY_GROUPS,
         MY_EVALUATION_GROUP,
       ];
     case "MANAGER":
       return [
-        { title: null, items: [{ href: "/manager", label: "ホーム", exact: true }] },
+        { title: null, items: [{ href: "/manager", label: "ホーム", icon: "home", exact: true }] },
         {
           title: "評価を進める",
-          items: [{ href: "/manager/cycles", label: "評価・結果を確認する" }],
+          items: [{ href: "/manager/cycles", label: "評価・結果を確認する", icon: "evaluation" }],
         },
         {
           title: "人を見る",
-          items: [{ href: "/manager/members", label: "メンバー" }],
+          items: [{ href: "/manager/members", label: "メンバー", icon: "users" }],
         },
         MY_EVALUATION_GROUP,
         {
           title: "基準を確認する",
           items: [
-            { href: "/criteria", label: "評価の基準" },
-            { href: "/forms", label: "アンケートの中身" },
+            { href: "/criteria", label: "評価の基準", icon: "criteria" },
+            { href: "/forms", label: "アンケートの中身", icon: "surveyRead" },
           ],
         },
       ];
     default:
       return [
-        { title: null, items: [{ href: "/me", label: "ホーム", exact: true }] },
+        { title: null, items: [{ href: "/me", label: "ホーム", icon: "home", exact: true }] },
         {
           title: "半期の実績",
           items: [
-            { href: "/me/forms", label: "実績を報告する" },
-            { href: "/me/results", label: "評価の結果を見る" },
+            { href: "/me/forms", label: "実績を報告する", icon: "report" },
+            { href: "/me/results", label: "評価の結果を見る", icon: "result" },
           ],
         },
         /* アンケートの中身は全ロールが読める（配点・昇格ゲートは出さない）。
@@ -153,7 +163,7 @@ export function navGroupsFor(role: Role): NavGroup[] {
            別の用事なので、「実績を報告する」と同じ分類には入れない。 */
         {
           title: "内容を確認する",
-          items: [{ href: "/forms", label: "アンケートの中身" }],
+          items: [{ href: "/forms", label: "アンケートの中身", icon: "surveyRead" }],
         },
       ];
   }
@@ -180,6 +190,35 @@ export function isCurrent(pathname: string, item: NavItem, allHrefs: string[]): 
   return !allHrefs.some(
     (href) => href !== item.href && href.length > item.href.length && (pathname === href || pathname.startsWith(`${href}/`)),
   );
+}
+
+/**
+ * いまの画面の見出しに添える絵。
+ *
+ * 画面ごとに絵を選び直さない。**メニューで使っている絵をそのまま持ってくる**。
+ * 左のメニュー（畳むとアイコンだけになる）と見出しに同じ絵が出ることで、
+ * 「この絵はこの画面」という対応を、利用者が使いながら覚えられる。
+ * 対応表を1つにしておかないと、同じ画面が場所によって違う絵で出てしまう。
+ *
+ * メニューに無い画面（一覧の中の詳細など）は、その一覧の絵を引き継ぐ。
+ * どこにも当たらない画面は絵なし（当てずっぽうの絵を出さない）。
+ */
+export function navIconFor(pathname: string): IconName | null {
+  const items = allNavItems();
+  const allHrefs = items.map((i) => i.href);
+  return items.find((item) => isCurrent(pathname, item, allHrefs))?.icon ?? null;
+}
+
+/** 全ロールぶんのメニュー項目を、同じURLで1つにまとめて返す。 */
+export function allNavItems(): NavItem[] {
+  const roles: Role[] = ["EMPLOYEE", "MANAGER", "COMPANY_ADMIN", "SUPER_ADMIN"];
+  const byHref = new Map<string, NavItem>();
+  for (const role of roles) {
+    for (const group of navGroupsFor(role)) {
+      for (const item of group.items) if (!byHref.has(item.href)) byHref.set(item.href, item);
+    }
+  }
+  return [...byHref.values()];
 }
 
 /* ------------------------------------------------------------------ *

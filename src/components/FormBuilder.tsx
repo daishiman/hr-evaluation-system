@@ -1,7 +1,7 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, CardRow, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { NumberField } from "@/components/NumberField";
@@ -13,6 +13,7 @@ import {
   type BuilderQuestion,
   type BuilderQuestionDraft,
 } from "@/components/form-builder-model";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 export type { BuilderQuestion } from "@/components/form-builder-model";
 
@@ -45,7 +46,7 @@ export function FormBuilder({
   editable: boolean;
   lockReason?: string;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [rows, setRows] = useState<BuilderQuestionDraft[]>(() => withClientKeys(initial));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -128,7 +129,7 @@ export function FormBuilder({
         return;
       }
       setMessage(json.message ?? "保存しました。");
-      router.refresh();
+      refresh();
     } catch {
       setError("通信できませんでした。入力内容はこの画面に残っています。");
     } finally {
@@ -148,9 +149,9 @@ export function FormBuilder({
   }
 
   return (
-    <>
+    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="m-0 min-w-0 border-0 p-0">
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 mb-3 text-sub text-brand-deep">{message}</p>}
+      <RefreshStatus message={message} refreshing={refreshing} target="画面" className="m-0 mb-3 text-sub text-brand-deep" />
 
       <div className="grid gap-3">
         {rows.map((r, i) => {
@@ -360,11 +361,11 @@ export function FormBuilder({
           </>
         }
       >
-        <Button variant="primary" onClick={save} disabled={busy}>
-          {busy ? "保存しています…" : "設問を保存する"}
+        <Button variant="primary" onClick={save} disabled={busy || refreshing}>
+          {busy ? "保存しています…" : refreshing ? "画面に反映しています…" : "設問を保存する"}
         </Button>
       </StickyActionBar>
-    </>
+    </fieldset>
   );
 }
 

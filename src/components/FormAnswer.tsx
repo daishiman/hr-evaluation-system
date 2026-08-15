@@ -1,13 +1,14 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button, Card, CardHead, ChoiceChip, OptionCard, OptionCheck, ReasonNote, SectionHeading } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_HELP, SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import { NumberField } from "@/components/NumberField";
 import { numberInputHint, questionNumberPolicy } from "@/lib/domain/number-input";
 import { isAnswered, parseOptions, scaleSteps, type OptionLike } from "@/lib/domain/answer-snapshot";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 export interface AnswerQuestion {
   id: string;
@@ -67,7 +68,7 @@ export function FormAnswer({
   deadlineNote: string | null;
   note: string | null;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [values, setValues] = useState<Record<string, AnswerValue>>(() =>
     Object.fromEntries(initial.map((a) => [a.questionId, a])),
   );
@@ -116,7 +117,7 @@ export function FormAnswer({
           return false;
         }
         setSavedAt(new Date());
-        if (status === "submitted") router.refresh();
+        if (status === "submitted") refresh();
         return true;
       } catch {
         setError("通信できませんでした。電波の状況を確認して、もう一度お試しください。入力内容はこの画面に残っています。");
@@ -125,7 +126,7 @@ export function FormAnswer({
         setSaving(false);
       }
     },
-    [formId, router],
+    [formId, refresh],
   );
 
   const update = useCallback(
@@ -174,8 +175,14 @@ export function FormAnswer({
   }
 
   return (
-    <>
+    <fieldset disabled={refreshing} aria-busy={refreshing} className="m-0 min-w-0 border-0 p-0">
       {error && <ReasonNote>{error}</ReasonNote>}
+      <RefreshStatus
+        message={refreshing ? "提出しました。" : null}
+        refreshing={refreshing}
+        target="画面"
+        className="m-0 mb-3 text-sub text-brand-deep"
+      />
 
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
@@ -256,7 +263,9 @@ export function FormAnswer({
               <span className="unit"> / {questions.length}</span>
             </span>
             <span className="mx-2 text-line">|</span>
-            {saving
+            {refreshing
+              ? "提出内容を画面に反映しています…"
+              : saving
               ? "保存しています…"
               : savedAt
                 ? `保存済み ${savedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`
@@ -268,25 +277,25 @@ export function FormAnswer({
       >
         {confirming ? (
           <>
-            <Button onClick={() => setConfirming(false)}>入力に戻る</Button>
+            <Button disabled={refreshing} onClick={() => setConfirming(false)}>入力に戻る</Button>
             <Button
               variant="primary"
-              disabled={saving}
+              disabled={saving || refreshing}
               onClick={async () => {
                 const ok = await save("submitted", values, memo);
                 if (ok) setConfirming(false);
               }}
             >
-              提出する
+              {saving ? "提出しています…" : refreshing ? "画面に反映しています…" : "提出する"}
             </Button>
           </>
         ) : (
-          <Button variant="primary" onClick={() => setConfirming(true)}>
+          <Button variant="primary" disabled={refreshing} onClick={() => setConfirming(true)}>
             内容を確認して提出する
           </Button>
         )}
       </StickyActionBar>
-    </>
+    </fieldset>
   );
 }
 

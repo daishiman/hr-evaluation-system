@@ -1,7 +1,7 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
@@ -17,6 +17,7 @@ import {
   deleteConfirmText,
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
  * 昇格要件（受講して報告書を提出／独学してテストに合格）の編集。
@@ -55,7 +56,7 @@ export function PromotionRequirementEditor({
   /** 項目ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -78,7 +79,7 @@ export function PromotionRequirementEditor({
         return false;
       }
       setMessage(json.message ?? "保存しました。");
-      router.refresh();
+      refresh();
       return true;
     } catch {
       setError("通信できませんでした。入力した内容はこの画面に残っています。");
@@ -96,7 +97,7 @@ export function PromotionRequirementEditor({
     const result = await requestMasterDelete("promotionRequirement", id);
     if (result.ok) {
       setMessage(result.message);
-      router.refresh();
+      refresh();
     } else {
       setError(result.message);
     }
@@ -353,14 +354,14 @@ export function PromotionRequirementEditor({
   };
 
   return (
-    <div className="stack">
+    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="stack m-0 min-w-0 border-0 p-0">
       <p className="footnote m-0">
         いま編集しているのは <b>{gradeName}</b> の昇格要件です。ここでの変更は次に作るアンケートから反映されます。
         すでに作成・公開したアンケートと確定済みの評価は変わりません。
       </p>
       <p className="footnote m-0">内容を直すと、新版を作ります。</p>
       {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
-      {message && <p role="status" aria-live="polite" className="m-0 text-sub text-brand-deep">{message}</p>}
+      <RefreshStatus message={message} refreshing={refreshing} />
       {block("report")}
       {block("test")}
       {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。
@@ -372,6 +373,6 @@ export function PromotionRequirementEditor({
           <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
         </Disclosure>
       )}
-    </div>
+    </fieldset>
   );
 }

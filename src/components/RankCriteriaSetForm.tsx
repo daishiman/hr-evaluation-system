@@ -1,11 +1,12 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button, ReasonNote } from "@/components/ui";
 import { NumberField } from "@/components/NumberField";
 import { checkRankBoundaries, sortByRank, type BoundFix, type RankBoundRow } from "@/lib/domain/rank-bounds";
 import type { Direction } from "@/lib/domain/scoring";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
  * KPI項目1つぶんのランク基準（A〜E）を、まとめて直す。
@@ -32,7 +33,7 @@ export function RankCriteriaSetForm({
   direction: Direction;
   rows: { id: string; rank: string; lowerBound: number | null; upperBound: number | null; displayLabel: string }[];
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [values, setValues] = useState(() =>
     sortByRank(rows).map((r) => ({ id: r.id, rank: r.rank, lowerBound: r.lowerBound, upperBound: r.upperBound })),
   );
@@ -82,7 +83,7 @@ export function RankCriteriaSetForm({
         return;
       }
       setMessage(json.message ?? "保存しました。");
-      router.refresh();
+      refresh();
     } catch {
       setError("通信できませんでした。入力内容はこの画面に残っています。");
     } finally {
@@ -93,7 +94,7 @@ export function RankCriteriaSetForm({
   const current = new Map(rows.map((r) => [r.id, r.displayLabel]));
 
   return (
-    <div className="mt-3">
+    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="m-0 mt-3 min-w-0 border-0 p-0">
       <div className="stack-tight">
         {values.map((r) => (
           <div key={r.id} className="flex flex-wrap items-center gap-2">
@@ -148,8 +149,8 @@ export function RankCriteriaSetForm({
       )}
 
       <div className="mt-3">
-        <Button type="button" variant="primary" disabled={busy} onClick={() => void submit()}>
-          {busy ? "保存しています…" : "ランクA〜Eの基準を保存"}
+        <Button type="button" variant="primary" disabled={busy || refreshing} onClick={() => void submit()}>
+          {busy ? "保存しています…" : refreshing ? "画面に反映しています…" : "ランクA〜Eの基準を保存"}
         </Button>
       </div>
 
@@ -158,7 +159,7 @@ export function RankCriteriaSetForm({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-sub text-brand-deep">{message}</p>}
-    </div>
+      <RefreshStatus message={message} refreshing={refreshing} target="画面" className="m-0 mt-3 text-sub text-brand-deep" />
+    </fieldset>
   );
 }

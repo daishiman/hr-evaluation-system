@@ -87,6 +87,7 @@
   --pad-page-x: 20px;    /* 本文の左右 */
 
   --sidebar-w: 248px;    /* メニューの幅（本文16px化に合わせて16px広げた） */
+  --rail-w: 68px;        /* メニューを畳んだときの、絵だけの列の幅 */
   --bar-h: 56px;         /* 帯1段の高さ（メニューの頭。ここは折り返さない） */
   /* 上のヘッダーの高さ。貼り付く位置（--sticky-top・表の列見出し）がこれを見ているので、
      実際の高さと必ず一致させる。狭い画面では2段になるので下の @media で上書きする。 */
@@ -681,7 +682,7 @@ body {
   .sidebar-link,
   .sidebar-close,
   .sidebar-close-sp,
-  .sidebar-open-pc,
+  .sidebar-open-rail,
   .sidebar-open-sp,
   .header-move-btn,
   .header-search-trigger,
@@ -749,9 +750,9 @@ body {
 /* 引き出しが出ている間は、背面のページをスクロールさせない */
 html[data-drawer="open"] body { overflow: hidden; }
 
-/* メニューを閉じているときは、その分だけ本文が広がる */
-html[data-sidebar="collapsed"] .app-layout { grid-template-columns: minmax(0, 1fr); }
-html[data-sidebar="collapsed"] .app-sidebar { display: none; }
+/* メニューを閉じているときは、絵だけの細い列（レール）にして本文を広げる。
+   完全に隠さないのは、閉じたままでも行き先の数と現在地が見えているようにするため。 */
+html[data-sidebar="collapsed"] .app-layout { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
 
 .app-body { display: flex; flex-direction: column; min-width: 0; }
 
@@ -771,8 +772,6 @@ html[data-sidebar="collapsed"] .app-sidebar { display: none; }
   z-index: 20;
   min-width: 0;
 }
-/* メニューを閉じているときは、左上に固定の「メニューを開く」が重なる。その分だけ空ける */
-html[data-sidebar="collapsed"] .app-header { padding-left: 132px; }
 
 /* ---- ヘッダー: 1つ前に戻る／進む ----
    アイコンだけのボタンは作らない方針なので、文字のボタンにする。
@@ -963,7 +962,9 @@ html[data-sidebar="collapsed"] .app-header { padding-left: 132px; }
   letter-spacing: 0.04em;
 }
 .sidebar-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 8px 10px;
   border-radius: 6px;
   font-size: var(--text-sub);
@@ -971,6 +972,9 @@ html[data-sidebar="collapsed"] .app-header { padding-left: 132px; }
   min-height: 36px;
   line-height: 1.5;
 }
+/* 絵は文字の脇役。文字と同じ濃さで並べると、どちらを読めばよいか分からなくなる */
+.sidebar-link-icon { flex: 0 0 auto; color: var(--ink-muted); }
+.sidebar-link-label { min-width: 0; }
 /* 分類の中の項目であることが分かるよう、見出しがあるグループだけ字下げする */
 .sidebar-group-title + .sidebar-link,
 .sidebar-group-title ~ .sidebar-link { padding-left: 18px; }
@@ -980,13 +984,17 @@ html[data-sidebar="collapsed"] .app-header { padding-left: 132px; }
   color: var(--brand-deep);
   font-weight: 600;
 }
+/* 現在地は絵も一緒に濃くする（色だけでなく、太字と背景でも分かる状態を保つ） */
+.sidebar-link[aria-current="page"] .sidebar-link-icon { color: var(--brand-deep); }
 
-/* 開閉ボタン。アイコンを使わない方針なので、すべて文字のボタンにする */
+/* 開閉ボタン。文字のボタンを基本にし、絵は文字の左に添える */
 .sidebar-close,
 .sidebar-close-sp,
-.sidebar-open-pc,
 .sidebar-open-sp {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--line);
   background: var(--surface);
   border-radius: 6px;
@@ -999,18 +1007,77 @@ html[data-sidebar="collapsed"] .app-header { padding-left: 132px; }
   min-height: 32px;
 }
 .sidebar-close:hover,
-.sidebar-open-pc:hover,
 .sidebar-open-sp:hover { background: var(--subtle); color: var(--ink); }
 
-.sidebar-open-pc {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 30;
+/* 畳んだ列の中の「開く」。絵だけなので、押せる面を 44px 角で確保する */
+.sidebar-open-rail {
+  appearance: none;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin: 0 auto;
 }
+.sidebar-open-rail:hover { background: var(--subtle); color: var(--ink); }
+
 .sidebar-open-sp,
 .sidebar-close-sp { display: none; }
 .sidebar-scrim { display: none; }
+
+/* ---- 畳んだメニュー（絵だけの列）と、名前の吹き出し ----
+   吹き出しは補助であって、意味の置き場所ではない。同じ名前を aria-label でも渡し、
+   マウスを乗せたときとキーボードで移動したときの両方で出す（motion-a11y の作法）。 */
+.rail-tip { display: none; }
+
+@media (min-width: 1024px) {
+  html[data-sidebar="collapsed"] .app-sidebar { padding: 0 8px 24px; }
+  html[data-sidebar="collapsed"] .sidebar-head { margin: 0 -8px; padding: 0 8px; justify-content: center; }
+  /* 畳んだ列に入らないものは出さない。会社の切り替えは開けば出る */
+  html[data-sidebar="collapsed"] .app-name,
+  html[data-sidebar="collapsed"] .sidebar-close,
+  html[data-sidebar="collapsed"] .sidebar-scope,
+  html[data-sidebar="collapsed"] .sidebar-group-title,
+  html[data-sidebar="collapsed"] .sidebar-link-label { display: none; }
+  html[data-sidebar="collapsed"] .sidebar-open-rail { display: inline-flex; }
+  /* 分類の切れ目の罫線は畳んでも残す（並びのまとまりが消えないように） */
+  html[data-sidebar="collapsed"] .sidebar-link,
+  html[data-sidebar="collapsed"] .sidebar-group-title + .sidebar-link,
+  html[data-sidebar="collapsed"] .sidebar-group-title ~ .sidebar-link {
+    justify-content: center;
+    padding: 0;
+    min-height: 44px;
+  }
+  html[data-sidebar="collapsed"] .sidebar-group { gap: 4px; }
+
+  html[data-sidebar="collapsed"] .rail-tip {
+    display: block;
+    position: fixed;
+    left: calc(var(--rail-w) + 8px);
+    transform: translateY(-50%);
+    z-index: 50;
+    background: var(--ink);
+    color: var(--surface);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: var(--text-note);
+    line-height: 1.4;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(22, 25, 29, .22);
+    pointer-events: none;
+    animation: rail-tip-in 120ms ease-out;
+  }
+}
+@keyframes rail-tip-in {
+  from { opacity: 0; transform: translateY(-50%) translateX(-4px); }
+  to { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
 
 /* ---- 狭い画面: メニューは重ねて開く引き出しにする ---- */
 @media (max-width: 1023px) {
@@ -1032,12 +1099,13 @@ html[data-sidebar="collapsed"] .app-header { padding-left: 132px; }
   .app-sidebar[data-drawer="open"] { transform: translateX(0); }
   /* 引き出しは開いている間だけ見えればよい。閉じるボタンは引き出し用のものを使う */
   .sidebar-close { display: none; }
-  .sidebar-close-sp { display: inline-block; }
-  .sidebar-open-pc { display: none; }
-  .sidebar-open-sp { display: inline-block; }
+  .sidebar-close-sp { display: inline-flex; }
+  .sidebar-open-rail { display: none; }
+  .sidebar-open-sp { display: inline-flex; }
   html[data-sidebar="collapsed"] .app-sidebar { display: flex; }
-  /* 引き出しの画面では左上に固定のボタンが無いので、空けた余白も戻す */
-  html[data-sidebar="collapsed"] .app-header { padding-left: max(var(--pad-page-x), env(safe-area-inset-left)); }
+  /* 狭い画面では絵だけの列を作らない（重ねて開く引き出しのままにする）。
+     広い画面用の指定のほうが強いので、ここで本文の全幅に戻す。 */
+  html[data-sidebar="collapsed"] .app-layout { grid-template-columns: minmax(0, 1fr); }
   /* 段が全部は入らない。いまの画面と1つ上だけを残す（どこにいるかが先） */
   .trail li { display: none; }
   .trail li:nth-last-child(-n + 2) { display: inline-flex; }
@@ -1058,6 +1126,8 @@ html[data-sidebar="collapsed"] .app-header { padding-left: 132px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .app-sidebar { transition: none; }
+  /* 吹き出しは出す（意味が消えると困る）。滑り込む動きだけ止める */
+  html[data-sidebar="collapsed"] .rail-tip { animation: none; }
 }
 /* アプリ名 = ホームに戻るボタン(必須仕様) */
 .app-name {
@@ -1129,6 +1199,14 @@ main {
   margin-bottom: var(--space-block);
 }
 .page-title { font-size: var(--text-title); font-weight: 700; margin: 0 0 4px; line-height: 1.5; }
+/* 見出しに添える絵。文字より一段薄くして、読む順番が「絵 → 文字」にならないようにする。
+   行の高さは文字が決める（絵で見出しの行間を広げない）。 */
+.page-title-icon {
+  display: inline-flex;
+  vertical-align: -0.18em;
+  margin-right: 8px;
+  color: var(--ink-muted);
+}
 .page-lede { font-size: var(--text-sub); color: var(--ink-muted); margin: 0; line-height: 1.7; }
 
 /* ---- 見出しの上のパンくず（いまどこにいるか・どこへ戻れるか）----
@@ -1795,6 +1873,9 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   text-align: center;
   background: var(--surface);
 }
+/* 「読み込み中」なのか「本当に0件」なのかは文字だけだと判別が遅い。
+   空の入れ物を絵でも示す。色は付けず、薄い墨のまま(意味は文言が持つ) */
+.empty-state .es-mark { margin: 0 0 8px; line-height: 1; color: var(--ink-muted); }
 .empty-state .es-title { font-size: var(--text-sub); font-weight: 600; margin: 0; }
 .empty-state .es-body { font-size: var(--text-sub); color: var(--ink-muted); margin: 4px 0 16px; }
 
@@ -1806,6 +1887,9 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
   font-size: var(--text-note);
   line-height: 1.8;
 }
+/* 注意の面は色でも示しているが、色だけに頼らないための添え物。
+   1行目の文字の高さに合わせて上に寄せる(2行以上でも中央に浮かない) */
+.caution-panel .reason-note-mark { flex: none; margin-top: 3px; color: var(--caution-border); }
 
 /* ============================================================
    確認ダイアログ (§5)
@@ -2663,9 +2747,10 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   /* ヘッダー・ナビ・ボタンなど、紙に不要なものは出さない */
   .app-header,
   .app-sidebar,
-  .sidebar-open-pc,
+  .sidebar-open-rail,
   .sidebar-open-sp,
   .sidebar-scrim,
+  .rail-tip,
   .no-print,
   .btn { display: none !important; }
 
