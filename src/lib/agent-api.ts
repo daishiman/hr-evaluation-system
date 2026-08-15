@@ -14,6 +14,7 @@
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { AGENT_KEY_MIN_LENGTH, agentAuth, readBearer } from "@/lib/domain/agent-api";
+import type { AgentCallerScope } from "@/lib/domain/agent-scope";
 import { activeAgentKeyHashes, envKeyEnabled, hashAgentKey, touchAgentKey } from "@/lib/agent-keys";
 import { getDb } from "@/lib/db";
 import { appOrigin } from "@/lib/origin";
@@ -54,10 +55,12 @@ function textResponse(status: number, body: string, headers: Record<string, stri
 
 /**
  * どの鍵で通ったか。払い出しの履歴に、そのまま写す。
- * サーバーの設定値で通ったときは鍵の行が無いので、どちらも null になる。
+ * サーバーの設定値で通ったときは鍵の行が無いので、keyId も keyLabel も null になる。
+ *
+ * 会社とできることも一緒に持たせる。あとから読み直す作りにすると、読み直しを
+ * 忘れた入口だけが全社を見てしまう。通った瞬間に範囲まで確定させる。
  */
-export interface AgentCaller {
-  keyId: string | null;
+export interface AgentCaller extends AgentCallerScope {
   keyLabel: string | null;
 }
 
@@ -111,5 +114,10 @@ export async function guardAgentRequest(req: Request): Promise<AgentGate> {
   // 通った鍵が画面発行のものなら、使われたことを控える（配ったのに届いていない、に気づくため）。
   const used = auth.keyHash ? (active.find((k) => k.hash === auth.keyHash) ?? null) : null;
   if (used) await touchAgentKey(db, used.id, used.lastUsedAt);
-  return { denied: null, caller: { keyId: used?.id ?? null, keyLabel: used?.label ?? null } };
+
+  // 設定値の鍵には会社が無い。読み取りだけの鍵として扱う（→ domain/agent-scope.ts）。
+  const caller: AgentCaller = used
+    ? { keyId: used.id, keyLabel: used.label, companyId: used.companyId, scopes: used.scopes }
+    : { keyId: null, keyLabel: null, companyId: null, scopes: ["improvements:read"] };
+  return { denied: null, caller };
 }

@@ -31,7 +31,8 @@ vi.mock("@opennextjs/cloudflare", () => ({
   getCloudflareContext: async () => ({ env: mocked.env }),
 }));
 
-import { GET, POST, PUT } from "@/app/api/improvements/route";
+import { GET, POST, PUT, PATCH as agentWriteBack } from "@/app/api/improvements/route";
+import { hashAgentKey } from "@/lib/agent-keys";
 import { IMPROVEMENT_REQUEST_MAX_BYTES } from "@/lib/domain/improvement";
 import { PATCH } from "@/app/api/improvements/[id]/route";
 
@@ -686,5 +687,219 @@ describe("GET /api/improvements（作業指示の払い出し）", () => {
 
     expect(single).toContain("見つかりません");
     expect(list).not.toContain("improve_target");
+  });
+});
+
+/* ═══════════ 鍵の届く範囲 ═══════════
+ *
+ * 2026-08-15、依頼者の確定仕様。鍵には会社を焼き込み、できることを2つに限る。
+ * 「他社の要望は読めない」「自分が受け取った要望しか状態を変えられない」は、
+ * 画面や呼び出し側の作法ではなくサーバー側で断ることが条件なので、ここで固定する。
+ */
+describe("鍵の届く範囲（会社と、自分が取った分だけ）", () => {
+  const SCOPED_KEY = "scoped-agent-key-0123456789abcdefgh";
+  const OTHER = "cmp_other";
+
+  /** 会社を焼き込んだ鍵。読み取りと、自分が取った分の状態更新ができる。 */
+  async function seedScopedKey(over: Record<string, unknown> = {}) {
+    await testDb.db.insert(s.agentApiKeys).values({
+      id: "agkey_scoped",
+      label: "自宅の Claude Code",
+      keyHash: await hashAgentKey(SCOPED_KEY),
+      keyPrefix: SCOPED_KEY.slice(0, 8),
+      companyId: IDS.company,
+      scopes: "improvements:read,improvements:write-own",
+      ...over,
+    });
+  }
+
+  async function seedRequest(id: string, companyId: string, reporterId: string) {
+    await testDb.db.insert(s.improvementRequests).values({
+      id,
+      companyId,
+      reporterId,
+      submissionKey: crypto.randomUUID(),
+      path: "/admin/members",
+      routePattern: "/admin/members",
+      screenLabel: "社員",
+      kind: "bug",
+      body: companyId === OTHER ? "他社だけの秘密の不満" : "保存できません",
+      status: "open",
+    });
+  }
+
+  /** 他社と、その会社の要望を1件用意する。 */
+  async function seedOtherCompany() {
+    await testDb.db.insert(s.companies).values({ id: OTHER, name: "他社", slug: "other" });
+    await testDb.db.insert(s.users).values({
+      id: "usr_other",
+      name: "他社の社員",
+      email: "other@example.com",
+      companyId: OTHER,
+      role: "EMPLOYEE",
+    });
+    await seedRequest("improve_other", OTHER, "usr_other");
+  }
+
+  const scoped = (query = "") =>
+    new Request(`http://localhost/api/improvements${query}`, {
+      headers: { authorization: `Bearer ${SCOPED_KEY}` },
+    });
+
+  const writeBack = (body: Record<string, unknown>, key = SCOPED_KEY) =>
+    new Request("http://localhost/api/improvements", {
+      method: "PATCH",
+      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  beforeEach(async () => {
+    await seedScopedKey();
+    await seedRequest("improve_mine", IDS.company, IDS.employee);
+    await seedOtherCompany();
+  });
+
+  it("他社の要望は、IDを直接指しても1文字も返さない", async () => {
+    const response = await GET(scoped("?id=improve_other"));
+    const text = await response.text();
+
+    expect(text).not.toContain("他社だけの秘密の不満");
+    expect(text).toContain("見つかりません");
+  });
+
+  it("一覧にも他社の要望は並ばない", async () => {
+    const text = await (await GET(scoped())).text();
+
+    expect(text).toContain("improve_mine");
+    expect(text).not.toContain("improve_other");
+  });
+
+  it("会社が焼き込まれていない鍵（設定値の鍵）は、これまでどおり全社を読める", async () => {
+    const text = await (
+      await GET(
+        new Request("http://localhost/api/improvements", {
+          headers: { authorization: `Bearer ${AGENT_KEY}` },
+        }),
+      )
+    ).text();
+
+    expect(text).toContain("improve_mine");
+    expect(text).toContain("improve_other");
+  });
+
+  it("受け取っていない要望は、対応済みにできない", async () => {
+    const response = await agentWriteBack(writeBack({ id: "improve_mine", result: "done", detail: "v53" }));
+    const row = (
+      await testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_mine"))
+    )[0];
+
+    expect(response.status).toBe(403);
+    expect(await response.text()).toContain("まだ受け取っていません");
+    expect(row.status).toBe("open");
+  });
+
+  it("他社の要望は、状態も変えられない（他社だとは言わない）", async () => {
+    const response = await agentWriteBack(writeBack({ id: "improve_other", result: "done", detail: "v53" }));
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).toContain("見つかりません");
+  });
+
+  it("会社が焼き込まれていない鍵では、状態を変えられない", async () => {
+    await GET(
+      new Request("http://localhost/api/improvements?id=improve_mine", {
+        headers: { authorization: `Bearer ${AGENT_KEY}` },
+      }),
+    );
+    const response = await agentWriteBack(
+      writeBack({ id: "improve_mine", result: "done", detail: "v53" }, AGENT_KEY),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.text()).toContain("権限がありません");
+  });
+
+  it("読み取りだけの鍵では、状態を変えられない", async () => {
+    await testDb.db
+      .update(s.agentApiKeys)
+      .set({ scopes: "improvements:read" })
+      .where(eq(s.agentApiKeys.id, "agkey_scoped"));
+    await GET(scoped("?id=improve_mine"));
+
+    const response = await agentWriteBack(writeBack({ id: "improve_mine", result: "done", detail: "v53" }));
+    expect(response.status).toBe(403);
+  });
+
+  it("受け取った要望は、公開先を添えれば対応済みにできる", async () => {
+    await GET(scoped("?id=improve_mine"));
+    const response = await agentWriteBack(
+      writeBack({ id: "improve_mine", result: "done", detail: "https://example.com/v53" }),
+    );
+    const row = (
+      await testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_mine"))
+    )[0];
+    const events = await testDb.db
+      .select()
+      .from(s.improvementStatusEvents)
+      .where(eq(s.improvementStatusEvents.requestId, "improve_mine"));
+
+    expect(response.status).toBe(200);
+    expect(row.status).toBe("done");
+    // 誰が・いつ・どの公開で変えたかを残す。人が差し戻すときに読む材料になる。
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      action: "agent-done",
+      fromStatus: "doing",
+      toStatus: "done",
+      keyId: "agkey_scoped",
+      keyLabel: "自宅の Claude Code",
+      releaseRef: "https://example.com/v53",
+      actorId: null,
+    });
+  });
+
+  it("公開先が空なら、対応済みにしない", async () => {
+    await GET(scoped("?id=improve_mine"));
+    const response = await agentWriteBack(writeBack({ id: "improve_mine", result: "done", detail: "   " }));
+    const row = (
+      await testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_mine"))
+    )[0];
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("公開した先");
+    expect(row.status).toBe("doing");
+  });
+
+  it("直しきれなかったときは、対応中のまま理由だけを残す", async () => {
+    await GET(scoped("?id=improve_mine"));
+    const response = await agentWriteBack(
+      writeBack({ id: "improve_mine", result: "failed", detail: "再現できませんでした" }),
+    );
+    const row = (
+      await testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_mine"))
+    )[0];
+
+    expect(response.status).toBe(200);
+    expect(row.status).toBe("doing");
+    expect(row.handledNote).toContain("再現できませんでした");
+  });
+
+  it("人はあとから差し戻せる（対応済みを対応中へ戻す）", async () => {
+    await GET(scoped("?id=improve_mine"));
+    await agentWriteBack(writeBack({ id: "improve_mine", result: "done", detail: "v53" }));
+
+    mocked.apiViewer.mockResolvedValue(viewer("COMPANY_ADMIN"));
+    const back = new Request("http://localhost/api/improvements/improve_mine", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "doing", note: "公開できていなかったので戻します" }),
+    });
+    const response = await PATCH(back, { params: Promise.resolve({ id: "improve_mine" }) });
+    const row = (
+      await testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_mine"))
+    )[0];
+
+    expect(response.status).toBe(200);
+    expect(row.status).toBe("doing");
   });
 });

@@ -16,8 +16,9 @@ import {
   activeAgentKeys,
   agentKeyCapNote,
   agentKeyDisplayName,
-  agentKeyExportLine,
+  agentKeyEnvFileLine,
   agentKeyLabelError,
+  agentKeyScopeNote,
   agentKeyMaskedLabel,
   agentKeyPrefix,
   agentKeyRevokeConfirmText,
@@ -78,8 +79,9 @@ describe("画面に出してよい範囲", () => {
     expect(AGENT_KEY_ONCE_NOTICE).toContain("もう一度表示することはできません");
   });
 
-  it("手元へ貼る1行は、鍵を引用符で囲む", () => {
-    expect(agentKeyExportLine("abc-def")).toBe("export HR_AGENT_KEY='abc-def'");
+  it("設定ファイルへ貼る1行は、変数名と鍵だけにする", () => {
+    // .env.local は行をそのまま読む。引用符や export を足すと読み方が増える。
+    expect(agentKeyEnvFileLine("abc-def")).toBe("HR_AGENT_KEY=abc-def");
   });
 });
 
@@ -215,5 +217,23 @@ describe("案内の行き先", () => {
   it("発行の場所と呼び名は1か所で決める", () => {
     expect(AGENT_KEY_PAGE_PATH).toBe("/system/agent-keys");
     expect(AGENT_KEY_PAGE_LABEL).toContain("鍵");
+  });
+});
+
+describe("鍵が届く範囲の1行", () => {
+  it("会社と、できることを並べる", () => {
+    expect(
+      agentKeyScopeNote({ companyName: "テスト社", scopes: ["improvements:read", "improvements:write-own"] }),
+    ).toBe("テスト社の要望／要望の読み取り・自分が取得した要望の状態更新");
+  });
+
+  it("会社が焼き込まれていない古い鍵は、全社が読めると分かるように書く", () => {
+    expect(agentKeyScopeNote({ companyName: null, scopes: ["improvements:read"] })).toBe(
+      "すべての会社の要望／要望の読み取り",
+    );
+  });
+
+  it("できることが1つも無い鍵は、そう書く（空欄にしない）", () => {
+    expect(agentKeyScopeNote({ companyName: "テスト社", scopes: [] })).toBe("テスト社の要望／権限なし");
   });
 });

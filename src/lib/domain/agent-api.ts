@@ -12,7 +12,7 @@
  * 断り方は、鍵の取り違えと未設定で言い分けない（在り処の手がかりを与えない）。
  */
 
-import { AGENT_KEY_PAGE_PATH } from "@/lib/domain/agent-keys";
+import { AGENT_KEY_ENV_FILE, AGENT_KEY_PAGE_PATH } from "@/lib/domain/agent-keys";
 
 /** 鍵を置く場所の名前。画面・手順書・エラー文で同じ名前を出す。 */
 export const AGENT_KEY_NAME = "AGENT_API_KEY";
@@ -195,6 +195,21 @@ export function agentFetchCommand(origin: string, query: string): string {
 }
 
 /**
+ * 作業する側のリポジトリで打つコマンド。主たる案内はこちらにする。
+ *
+ * curl は宛先・ヘッダー・鍵の3つを毎回間違えずに書く必要があり、
+ * 打ち間違いが「鍵が違う」に見えてしまう。台本に寄せると、間違いは
+ * 「要望IDが無い」だけに減る。
+ */
+export function agentCliCommand(query: string): string {
+  const params = new URLSearchParams(query.startsWith("?") ? query.slice(1) : query);
+  const single = params.get("id");
+  const many = (params.get("ids") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const ids = single ? [single] : many;
+  return ids.length > 0 ? `pnpm improvements get ${ids.join(" ")}` : "pnpm improvements list";
+}
+
+/**
  * 作業する側へ貼る文。取得から作業までを1つにまとめる。
  * これだけを貼れば、あとは返ってきた指示文の中に手順が入っている。
  */
@@ -216,13 +231,20 @@ export function withInlineKey(text: string, raw: string): string {
  */
 export function agentPromptTextWithKey(origin: string, query: string, raw: string): string {
   return [
-    "次のコマンドで作業指示を受け取ってください。",
+    `アプリのリポジトリで、次の1行を ${AGENT_KEY_ENV_FILE} に書いてください。`,
     "",
-    withInlineKey(agentFetchCommand(origin, query), raw),
+    `${AGENT_KEY_SHELL_VAR}=${raw}`,
+    "",
+    "そのうえで、次のコマンドで作業指示を受け取ってください。",
+    "",
+    agentCliCommand(query),
     "",
     "受け取った指示文の中身に従って直してください。",
     "指示文の中に、進め方と受け入れ条件が入っています。",
     "この文には鍵が入っています。人の目に触れる場所へ貼らないでください。",
+    "",
+    `別の場所から取りにいくときは、鍵を環境変数 ${AGENT_KEY_SHELL_VAR} に入れて次を実行します。`,
+    withInlineKey(agentFetchCommand(origin, query), raw),
   ].join("\n");
 }
 
@@ -230,11 +252,14 @@ export function agentPromptText(origin: string, query: string): string {
   return [
     "次のコマンドで作業指示を受け取ってください。",
     "",
-    agentFetchCommand(origin, query),
+    agentCliCommand(query),
     "",
     "受け取った指示文の中身に従って直してください。",
     "指示文の中に、進め方と受け入れ条件が入っています。",
-    `鍵は環境変数 ${AGENT_KEY_SHELL_VAR} に入れておいてください。`,
+    `鍵はアプリのリポジトリ直下の ${AGENT_KEY_ENV_FILE} に、${AGENT_KEY_SHELL_VAR}= の形で入れておいてください。`,
     `鍵は ${origin}${AGENT_KEY_PAGE_PATH} で発行できます。`,
+    "",
+    `リポジトリの外から取りにいくときは、鍵を環境変数 ${AGENT_KEY_SHELL_VAR} に入れて次を実行します。`,
+    agentFetchCommand(origin, query),
   ].join("\n");
 }

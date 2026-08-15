@@ -12,6 +12,8 @@
  * 「いま手元にあるのはこの鍵か」を見分けるためのもので、当てる材料にはならない。
  */
 
+import { agentScopeLabel, type AgentScope } from "@/lib/domain/agent-scope";
+
 /** 鍵に使う乱数の長さ（バイト）。base64url にすると43文字になる。 */
 export const AGENT_KEY_BYTES = 32;
 
@@ -46,9 +48,18 @@ export function agentKeyMaskedLabel(prefix: string): string {
   return `${prefix}…（以降は表示しません）`;
 }
 
-/** 手元のターミナルへ貼る1行。鍵を単引用符で囲み、貼り間違いで壊れないようにする。 */
-export function agentKeyExportLine(raw: string): string {
-  return `export HR_AGENT_KEY='${raw}'`;
+/** 鍵を置くファイル。作業する側のリポジトリ直下に作る（共有はされない）。 */
+export const AGENT_KEY_ENV_FILE = ".env.local";
+
+/**
+ * 作業する側の `.env.local` へ貼る1行。
+ *
+ * ターミナルの export ではなくファイルの1行にするのは、export だと
+ * 窓を閉じるたびに消えて、次の日にまた鍵を探すことになるため。
+ * ファイルに置けば `pnpm improvements list` がそのまま通る。
+ */
+export function agentKeyEnvFileLine(raw: string): string {
+  return `HR_AGENT_KEY=${raw}`;
 }
 
 /* ───────────────────────── 用途の名前 ───────────────────────── */
@@ -90,6 +101,22 @@ export interface AgentKeyRecord {
   lastUsedAt: Date | null;
   revokedAt: Date | null;
   revokedByName: string | null;
+  /** この鍵で扱える会社。空なら、会社を焼き込む前に発行した鍵。 */
+  companyName: string | null;
+  /** できること。→ src/lib/domain/agent-scope.ts */
+  scopes: readonly AgentScope[];
+}
+
+/**
+ * その鍵が届く範囲を1行で言う。
+ *
+ * 会社が入っていない古い鍵は、全社の要望が読める代わりに状態は変えられない。
+ * 一覧で「読み取りだけ」と見えないと、止めるべき鍵が止まらないまま残る。
+ */
+export function agentKeyScopeNote(record: Pick<AgentKeyRecord, "companyName" | "scopes">): string {
+  const where = record.companyName ? `${record.companyName}の要望` : "すべての会社の要望";
+  const what = record.scopes.map(agentScopeLabel).join("・");
+  return what.length > 0 ? `${where}／${what}` : `${where}／権限なし`;
 }
 
 /**

@@ -1162,7 +1162,7 @@ export async function listHandoutEvents(requestId: string): Promise<HandoutEvent
  * 代わりに、渡してはいけないもの（廃棄・重複・完了・見送り）をここで必ず落とす。
  * 画面側の絞り込みに任せると、URL を手で書き換えたときに素通りする。
  */
-export async function listImprovementsForAgent(limit: number) {
+export async function listImprovementsForAgent(limit: number, companyId: string | null) {
   const db = await getDb();
   const rows = await db
     .select({
@@ -1184,6 +1184,9 @@ export async function listImprovementsForAgent(limit: number) {
         isNull(s.improvementRequests.discardedAt),
         isNull(s.improvementRequests.duplicateOfId),
         inArray(s.improvementRequests.status, ["open", "doing"]),
+        // 会社が焼き込まれた鍵では、その会社の分しか読めない。
+        // 絞り込みを呼び出し側だけに置くと、書き忘れた入口が全社を返す。
+        companyId ? eq(s.improvementRequests.companyId, companyId) : undefined,
       ),
     )
     .orderBy(desc(s.improvementRequests.createdAt))
@@ -1196,8 +1199,13 @@ export async function listImprovementsForAgent(limit: number) {
   }));
 }
 
-/** 指示文にするための本体。会社をまたいで、指定のIDだけを読む。 */
-export async function getImprovementsForAgent(ids: string[]) {
+/**
+ * 指示文にするための本体。指定のIDだけを読む。
+ *
+ * companyId を渡すと、その会社の分しか返らない。会社が焼き込まれていない
+ * 古い鍵のときだけ null になり、これまでどおり会社をまたいで読める。
+ */
+export async function getImprovementsForAgent(ids: string[], companyId: string | null) {
   if (ids.length === 0) return [];
   const db = await getDb();
   const reporter = alias(s.users, "improvement_reporter");
@@ -1221,7 +1229,13 @@ export async function getImprovementsForAgent(ids: string[]) {
     .from(s.improvementRequests)
     .leftJoin(reporter, eq(reporter.id, s.improvementRequests.reporterId))
     .leftJoin(s.improvementShots, eq(s.improvementShots.requestId, s.improvementRequests.id))
-    .where(and(inArray(s.improvementRequests.id, ids), isNull(s.improvementRequests.discardedAt)))
+    .where(
+      and(
+        inArray(s.improvementRequests.id, ids),
+        isNull(s.improvementRequests.discardedAt),
+        companyId ? eq(s.improvementRequests.companyId, companyId) : undefined,
+      ),
+    )
     .limit(ids.length);
   return rows.map((r) => ({ ...r, hasShot: r.shotBytes !== null }));
 }
@@ -1243,6 +1257,9 @@ export async function listImprovementEvents(requestId: string) {
       toStatus: s.improvementStatusEvents.toStatus,
       reason: s.improvementStatusEvents.reason,
       actorName: actor.name,
+      // 人ではなく鍵が変えた行もある。空欄にすると「退職された方」に見えてしまう。
+      keyLabel: s.improvementStatusEvents.keyLabel,
+      releaseRef: s.improvementStatusEvents.releaseRef,
       createdAt: s.improvementStatusEvents.createdAt,
     })
     .from(s.improvementStatusEvents)

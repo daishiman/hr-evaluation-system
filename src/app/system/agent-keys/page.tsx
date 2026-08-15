@@ -9,6 +9,7 @@ import {
   AGENT_KEY_PAGE_LABEL,
   agentKeyDisplayName,
   agentKeyMaskedLabel,
+  agentKeyScopeNote,
   agentKeyState,
   agentKeyStateLabel,
   agentKeyStateTone,
@@ -44,6 +45,7 @@ export default async function SystemAgentKeys() {
       active: state === "active",
       stateLabel: agentKeyStateLabel(state),
       tone: agentKeyStateTone(state),
+      scopeText: agentKeyScopeNote(k),
       createdText: `${formatDateTime(k.createdAt)}／${k.createdByName ?? "退職された方"}`,
       lastUsedText: k.lastUsedAt ? formatDateTime(k.lastUsedAt) : agentKeyUsageNote(k.lastUsedAt),
       revokedText: k.revokedAt

@@ -12,6 +12,7 @@ import {
   dispositionNeedsReason,
   dispositionReasonError,
   filterImprovementsByView,
+  improvementEventActor,
   improvementDisplayState,
   improvementDisplayStateLabel,
   improvementDisplayStateTone,
@@ -224,5 +225,24 @@ describe("操作の履歴に出す言葉", () => {
   it("知らない記録でも無言にしない", () => {
     expect(improvementEventLabel("status")).toBe("対応状況の変更");
     expect(improvementEventLabel("なにか")).toBe("対応状況の変更");
+  });
+});
+
+describe("履歴を起こしたのが誰か", () => {
+  it("人が押した行は、その人の名前で読む", () => {
+    expect(improvementEventActor("山田 太郎", null)).toBe("山田 太郎");
+  });
+
+  it("鍵が変えた行は、人の操作と読み分けられる", () => {
+    expect(improvementEventActor(null, "自宅の Claude Code")).toBe("作業する側（自宅の Claude Code）");
+  });
+
+  it("どちらも分からない古い行は、これまでどおり", () => {
+    expect(improvementEventActor(null, null)).toBe("退職された方");
+  });
+
+  it("作業する側が書き戻した行は、そうと分かる言葉で出す", () => {
+    expect(improvementEventLabel("agent-done")).toBe("直して公開（作業する側）");
+    expect(improvementEventLabel("agent-failed")).toBe("直しきれず（作業する側）");
   });
 });

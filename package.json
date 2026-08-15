@@ -26,6 +26,7 @@
     "db:sample:remove:local": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning scripts/seed-sample.mjs --remove",
     "db:sample:remove:remote": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning scripts/seed-sample.mjs --remove --remote",
     "db:backup": "wrangler d1 export hr-evaluation-db --remote --output=backup.sql",
+    "improvements": "node scripts/improvements.mjs",
     "user:add": "node scripts/add-user.mjs",
     "db:seed:reference": "node scripts/seed-reference-points.mjs"
   },
