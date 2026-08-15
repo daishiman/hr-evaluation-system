@@ -838,13 +838,7 @@ describe("畳んだものへ必ず手が届く", () => {
     /* 画面ごとに書くと、開く印（＋）・押せる見た目・狭い画面での余白が
        そこだけ揃わなくなる。実際、移行前は14箇所が素の <details> で、
        押せると分かる見た目が付いていないものが混ざっていた。 */
-    /* 例外は1つだけ。lib/domain/improvement-issue.ts が書く <details> は
-       この画面ではなく GitHub の記録票（Markdown）に出るもので、
-       Disclosure に置き換えられない（向こうに React は無い）。 */
-    const MARKDOWN = join(SRC, "lib", "domain", "improvement-issue.ts");
-    const offenders = sourceFiles.filter(
-      (p) => p !== UI && p !== MARKDOWN && /<details[\s>]/.test(readFileSync(p, "utf8")),
-    );
+    const offenders = sourceFiles.filter((p) => p !== UI && /<details[\s>]/.test(readFileSync(p, "utf8")));
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
 

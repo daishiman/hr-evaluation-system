@@ -63,35 +63,27 @@ pnpm run check:bundle-size
 
 [容量検査スクリプト](../scripts/check-bundle-size.mjs) は gzip 後サイズを Cloudflare の設定済み上限と比較します。Deploy workflow でも同じ検査を行い、超過時は配布前に停止します。最新の実測値は workflow log を参照してください。
 
-## 5. 改善要望から記録票（GitHub Issue）を作るための設定
+## 5. 改善要望を作業指示文として払い出すための設定
 
-`/admin/improvements` の詳細画面から Issue を起票する機能は、次の2つが揃ってから動きます。未設定でも要望の投稿・閲覧は動き、起票だけが 503 と設定手順を返します。
+`/admin/improvements` から払い出す指示文と、作業する側が読む `GET /api/improvements` は、鍵が設定されてから動きます。未設定でも要望の投稿・閲覧は動き、払い出しだけが 503 と設定手順を返します。
 
 | 名前 | 置き場所 | 値 |
 |---|---|---|
-| `GITHUB_REPO` | `wrangler.jsonc` の `vars`（秘密ではない） | `owner/repo` |
-| `GITHUB_TOKEN` | Cloudflare Secrets（`wrangler secret put GITHUB_TOKEN`） | Issues への書き込み権限だけを付けた fine-grained token |
+| `AGENT_API_KEY` | Cloudflare Secrets（`wrangler secret put AGENT_API_KEY`） | `openssl rand -base64 32` で作った文字列（32文字未満は未設定と同じ扱い） |
 
-### token の取得手順
+### 鍵の設定手順
 
-1. [fine-grained token の作成画面](https://github.com/settings/personal-access-tokens/new) を開く
-2. Resource owner にリポジトリの持ち主を選ぶ
-3. Repository access を Only select repositories にし、`GITHUB_REPO` に書いたリポジトリだけを選ぶ
-4. Permissions → Repository permissions → Issues を **Read and write** にする（他は No access のまま）
-5. Expiration は運用に合わせて決める。期限を付けた場合、切れたら同じ手順で作り直して入れ直す
-6. Generate token を押し、**一度しか表示されない**値をその場でコピーする
-7. `pnpm exec wrangler secret put GITHUB_TOKEN` を実行し、貼り付ける
+1. `openssl rand -base64 32` を実行する（人が考えた文字列は使わない）
+2. `pnpm exec wrangler secret put AGENT_API_KEY` を実行する
+3. 聞かれたら、1で作った文字列を貼り付ける
+4. 手元にも控えを1つ残す（登録後に画面へ表示する方法はない）
+5. 漏れたと思ったら、同じ手順で入れ直す。古い鍵はその時点で使えなくなる
 
-発行済みの確認・失効は [token の一覧画面](https://github.com/settings/personal-access-tokens) で行います。
-この2つの URL は `src/lib/domain/github-setup.ts` が正本で、画面の設定案内も同じものを出します。
-
-- token はブラウザへ渡らず、Workers 側でのみ使います。client bundle へ入れないため、`NEXT_PUBLIC_` を付けた名前にしません。
-- 権限は対象リポジトリの Issues: Read and write だけに絞ります。contents への書き込みは不要です。
-- ローカルで試すときは `.dev.vars` に `GITHUB_TOKEN=...` を置きます（このファイルは追跡しません。書き方は `.dev.vars.example` にあります）。
-- token を差し替えたら `wrangler secret put` を再実行します。再配布は不要です。
-- 記録票には仕分けの札（label）を自動で付けます（`improvement` / `bug`・`enhancement`・`feature-request` /
-  `severity:high|medium|low` / `area:～`）。リポジトリに無い札は GitHub 側が自動で作るため、事前登録は要りません。
-  色や説明を整えたい場合だけ、あとから GitHub の Labels 画面で設定してください。
+- 鍵はブラウザへ渡らず、Workers 側でのみ使います。client bundle へ入れないため、`NEXT_PUBLIC_` を付けた名前にしません。
+- 管理画面が配る「取得コマンド」も鍵そのものは含みません。作業する側の環境変数 `HR_AGENT_KEY` から読む形で出します。
+- ローカルで試すときは `.dev.vars` に `AGENT_API_KEY=...` を置きます（このファイルは追跡しません。書き方は `.dev.vars.example` にあります）。
+- 鍵を差し替えたら `wrangler secret put` を再実行します。再配布は不要です。
+- この API は要望の生の声と技術情報を返します。鍵が無いとき・鍵が違うときは同じ文面で断り、中身は一切返しません。回線ごとに1分30回までで、それを超えると鍵を確かめる前に断ります。
 
 ## 6. 失敗時
 

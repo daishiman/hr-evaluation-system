@@ -64,19 +64,8 @@ export function improvementDisplayStateTone(
  *  duplicate … 他の要望と同じ内容だと決める（統合先を指す）
  *  discard … 廃棄する（誤送信・テスト投稿など。印を立てて隠すだけ）
  *  restore … 直前の操作を取り消して元に戻す
- *  unlink … 記録票とのひも付けを外す（誤って作ったときの作り直し用）
- *  close-issue … 記録票だけを閉じる
- *  refresh … GitHub 側の開閉をアプリへ取り込む
  */
-export const DISPOSITION_ACTIONS = [
-  "reject",
-  "duplicate",
-  "discard",
-  "restore",
-  "unlink",
-  "close-issue",
-  "refresh",
-] as const;
+export const DISPOSITION_ACTIONS = ["reject", "duplicate", "discard", "restore"] as const;
 export type DispositionAction = (typeof DISPOSITION_ACTIONS)[number];
 
 export function isDispositionAction(value: string): value is DispositionAction {
@@ -88,9 +77,6 @@ const ACTION_LABEL: Record<DispositionAction, string> = {
   duplicate: "重複",
   discard: "廃棄",
   restore: "元に戻す",
-  unlink: "ひも付け解除",
-  "close-issue": "記録票を閉じる",
-  refresh: "記録票の状態を取り込む",
 };
 
 export function dispositionActionLabel(action: DispositionAction): string {
@@ -159,10 +145,10 @@ export function reasonText(action: DispositionAction, code: string, note: string
 /* ───────────────────────── 権限と確認 ───────────────────────── */
 
 /**
- * 落とす・戻す・記録票を触る操作を行ってよいか。
+ * 落とす・戻す操作を行ってよいか。
  *
  * 対応状況のメモ書き（未対応→対応中→完了）は会社の管理者も続けて行える。
- * ここで絞るのは、要望を見えなくする操作と、社外の記録票へ届く操作だけ。
+ * ここで絞るのは、要望を見えなくする操作だけ。
  */
 export function canDisposeImprovements(role: Role): boolean {
   return role === "SUPER_ADMIN";
@@ -249,17 +235,25 @@ export function sortImprovements<T extends ImprovementDisposition & { createdAt:
   );
 }
 
-/* ───────────────────────── 記録票へ添えるコメント ───────────────────────── */
+/* ───────────────────────── 履歴の読み方 ───────────────────────── */
 
 /**
- * 落としたことを記録票へ書き添える文。
+ * 操作の履歴に出す言葉。
  *
- * 閉じるかどうかは押した人が選ぶ。閉じるときも、なぜ閉じたかを本文に残す。
- * 記録票だけを見た人が「黙って閉じられた」と受け取らないようにするため。
+ * 履歴は消さずに積むだけなので、いまは無い操作の行も残っている。
+ * 名前を知らない行を「不明」と出すと、当時の経緯が読めなくなるため、
+ * 過去に使っていた操作の言葉もここに残しておく。
  */
-export function dispositionComment(action: DispositionAction, reason: string, closing: boolean): string {
-  const lines = [`### アプリ側で「${dispositionActionLabel(action)}」にしました`, ``, `理由：${reason}`];
-  if (closing) lines.push(``, `この記録票は「対応しない」として閉じます。`);
-  else lines.push(``, `この記録票は開いたままにしています。`);
-  return lines.join("\n");
+const LEGACY_EVENT_LABEL: Record<string, string> = {
+  status: "対応状況の変更",
+  sync: "記録票へ送信",
+  unlink: "ひも付け解除",
+  "close-issue": "記録票を閉じる",
+  refresh: "記録票の状態を取り込む",
+  handout: "指示文の払い出し",
+};
+
+export function improvementEventLabel(action: string): string {
+  if (isDispositionAction(action)) return dispositionActionLabel(action);
+  return LEGACY_EVENT_LABEL[action] ?? "対応状況の変更";
 }

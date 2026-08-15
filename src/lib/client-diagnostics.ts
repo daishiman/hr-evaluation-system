@@ -9,7 +9,7 @@
  * - 画面の入力欄そのものは**一切見ない**（押した／触れた欄の名前だけ）
  * - 通信は失敗したものだけ。中身は自分のアプリ宛てに限り、ヘッダーとクエリは持たない
  * - 伏せる処理・件数と大きさの上限・種類ごとの収集量は
- *   src/lib/domain/improvement-issue.ts が正本（送信直前にそこを必ず通す）
+ *   src/lib/domain/improvement-instruction.ts が正本（送信直前にそこを必ず通す）
  *
  * 保存先はメモリだけ（配列）。端末に残さないので、閉じれば消える。
  */
@@ -25,7 +25,7 @@ import {
   type DiagnosticsNetworkEntry,
   type ImprovementDiagnostics,
   type ImprovementKind,
-} from "@/lib/domain/improvement-issue";
+} from "@/lib/domain/improvement-instruction";
 
 interface Timed {
   at: number;

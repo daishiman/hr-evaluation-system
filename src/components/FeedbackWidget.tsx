@@ -13,7 +13,7 @@ import {
   IMPROVEMENT_KINDS,
   improvementKindLabel,
   type ImprovementKind,
-} from "@/lib/domain/improvement-issue";
+} from "@/lib/domain/improvement-instruction";
 import { addBreadcrumb, collectDiagnostics, installDiagnostics } from "@/lib/client-diagnostics";
 
 /**

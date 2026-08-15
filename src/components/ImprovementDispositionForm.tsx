@@ -16,7 +16,7 @@ import {
 } from "@/lib/domain/improvement-disposition";
 
 /**
- * 要望1件を落とす・戻す・記録票とのひも付けを直す。
+ * 要望1件を落とす・戻す。
  *
  * 使われる場面: 詳細を開いて中身を読み、その場で「これは直さない」
  * 「これは誤って届いたもの」と判断する。
@@ -25,15 +25,7 @@ import {
  * 説明できないと、同じ要望が何度も届く。理由の判定はサーバー側と
  * 同じ関数（domain）で行うので、画面と保存の判断がずれない。
  */
-export function ImprovementDispositionForm({
-  id,
-  hasIssue,
-  discarded,
-}: {
-  id: string;
-  hasIssue: boolean;
-  discarded: boolean;
-}) {
+export function ImprovementDispositionForm({ id, discarded }: { id: string; discarded: boolean }) {
   const { refresh, refreshing } = useRefreshAfterSave();
   // 廃棄済みの要望を開いたときは「元に戻す」から始める（いちばん要る操作を既定に）。
   const first: DispositionAction = discarded ? "restore" : "reject";
@@ -41,7 +33,6 @@ export function ImprovementDispositionForm({
   const [reasonCode, setReasonCode] = useState(reasonChoices(first)[0]?.code ?? "");
   const [reasonNote, setReasonNote] = useState("");
   const [duplicateOfId, setDuplicateOfId] = useState("");
-  const [closeIssue, setCloseIssue] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -72,7 +63,6 @@ export function ImprovementDispositionForm({
           action,
           reasonCode,
           reasonNote,
-          closeIssue,
           duplicateOfId: duplicateOfId.trim() || null,
         }),
       });
@@ -157,13 +147,6 @@ export function ImprovementDispositionForm({
         }}
         placeholder="例：同じ内容を先週まとめて直しました。"
       />
-
-      {hasIssue && needsReason && (
-        <label className="footnote mt-3 flex items-center gap-2">
-          <input type="checkbox" checked={closeIssue} onChange={(e) => setCloseIssue(e.target.checked)} />
-          記録票も「対応しない」として閉じる
-        </label>
-      )}
 
       <div className="mt-3">
         <ConfirmButton

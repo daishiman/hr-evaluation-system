@@ -3,30 +3,30 @@ import {
   DIAGNOSTICS_LEVEL_NOTE,
   DIAGNOSTICS_LIMITS,
   IMPROVEMENT_KINDS,
-  areaOf,
-  buildIssueBody,
-  buildIssueLabels,
-  buildIssueTitle,
+  buildBulkInstructionDocument,
+  buildInstructionDocument,
+  buildInstructionTitle,
   diagnosticsLevelFor,
   formatJst,
   improvementKindLabel,
   isImprovementKind,
-  issueSeverity,
+  instructionSeverity,
   maskPayload,
   maskSensitive,
   normalizeDiagnostics,
   parseDiagnostics,
   pathOnly,
   serializeDiagnostics,
+  severityLabel,
   sourceCandidatesFor,
   type DiagnosticsNetworkEntry,
   type ImprovementDiagnostics,
-  type IssueDraftInput,
-} from "@/lib/domain/improvement-issue";
+  type InstructionInput,
+} from "@/lib/domain/improvement-instruction";
 
 /**
- * 記録票は社外（GitHub）に残る。だから「載せてよいものだけが載る」ことと、
- * 「載っているものだけで実装に入れる」ことの両方をここで固定する。
+ * 指示文はそのまま作業する側へ渡る。だから「載せてよいものだけが載る」ことと、
+ * 「載っているものだけで作業に入れる」ことの両方をここで固定する。
  */
 
 const netEntry = (over: Partial<DiagnosticsNetworkEntry> = {}): DiagnosticsNetworkEntry => ({
@@ -62,7 +62,8 @@ const diagnostics: ImprovementDiagnostics = {
   performance: { ttfbMs: 120, domContentLoadedMs: 800, loadMs: 1400, largestContentfulPaintMs: 1100 },
 };
 
-const draft: IssueDraftInput = {
+const draft: InstructionInput = {
+  id: "improve_1",
   kind: "bug",
   screenLabel: "評価・結果",
   path: "/manager/evaluations/ev_1",
@@ -317,76 +318,73 @@ describe("読み始めるファイルの候補", () => {
   });
 });
 
-describe("仕分けのための札", () => {
-  it("重大度は本人の言い方ではなく、集めた事実から決める", () => {
-    expect(issueSeverity("bug", diagnostics)).toBe("high");
-    expect(issueSeverity("feature", { ...diagnostics, logs: [], network: [netEntry({ status: null })] })).toBe("high");
-    expect(issueSeverity("bug", { ...diagnostics, logs: [], network: [] })).toBe("medium");
-    expect(issueSeverity("feature", { ...diagnostics, logs: [], network: [netEntry({ status: 404 })] })).toBe("medium");
-    expect(issueSeverity("usability", { ...diagnostics, logs: [], network: [] })).toBe("low");
-    expect(issueSeverity("bug", null)).toBe("medium");
+describe("重大度", () => {
+  it("本人の言い方ではなく、集めた事実から決める", () => {
+    expect(instructionSeverity("bug", diagnostics)).toBe("high");
+    expect(instructionSeverity("feature", { ...diagnostics, logs: [], network: [netEntry({ status: null })] })).toBe("high");
+    expect(instructionSeverity("bug", { ...diagnostics, logs: [], network: [] })).toBe("medium");
+    expect(instructionSeverity("feature", { ...diagnostics, logs: [], network: [netEntry({ status: 404 })] })).toBe("medium");
+    expect(instructionSeverity("usability", { ...diagnostics, logs: [], network: [] })).toBe("low");
+    expect(instructionSeverity("bug", null)).toBe("medium");
   });
 
-  it("機能の領域はURLの最初の区切りから取る", () => {
-    expect(areaOf("/admin/improvements/[id]")).toBe("admin");
-    expect(areaOf("/")).toBeNull();
-    expect(areaOf("/[id]/x")).toBeNull();
-  });
-
-  it("札は仕分けに使う分だけ付ける", () => {
-    expect(buildIssueLabels("bug", diagnostics, "/manager/evaluations/[id]")).toEqual([
-      "improvement",
-      "bug",
-      "severity:high",
-      "area:manager",
-    ]);
-    expect(buildIssueLabels("usability")).toEqual(["improvement", "enhancement", "severity:low"]);
-    expect(buildIssueLabels("feature")).toEqual(["improvement", "feature-request", "severity:low"]);
+  it("高いときだけ理由を添える（並べ替えの根拠が読める）", () => {
+    expect(severityLabel("high")).toContain("壊れている");
+    expect(severityLabel("medium")).toBe("中");
+    expect(severityLabel("low")).toBe("低");
   });
 });
 
-describe("記録票の文面", () => {
+describe("指示文の文面", () => {
   it("日時は読む人の時間（日本時間）で書く", () => {
     expect(formatJst(new Date("2026-08-15T02:34:00Z"))).toBe("2026-08-15 11:34 JST");
   });
 
   it("見出しは「どの画面の何か」だけにし、長い本文は切る", () => {
-    expect(buildIssueTitle(draft)).toBe("[不具合] 評価・結果：保存を押しても、点数が入らないまま前の画面に戻ってしまいます。");
-    expect(buildIssueTitle({ kind: "usability", screenLabel: "社員", body: "あ".repeat(80) })).toBe(
+    expect(buildInstructionTitle(draft)).toBe("[不具合] 評価・結果：保存を押しても、点数が入らないまま前の画面に戻ってしまいます。");
+    expect(buildInstructionTitle({ kind: "usability", screenLabel: "社員", body: "あ".repeat(80) })).toBe(
       `[改善] 社員：${"あ".repeat(60)}…`,
     );
-    expect(buildIssueTitle({ kind: "feature", screenLabel: "社員", body: "検索がほしい" })).toBe(
+    expect(buildInstructionTitle({ kind: "feature", screenLabel: "社員", body: "検索がほしい" })).toBe(
       "[新機能] 社員：検索がほしい",
     );
   });
 
-  it("不具合は、再現手順・環境・完了条件がそろって出る", () => {
-    const body = buildIssueBody(draft);
-    expect(body).toContain("## 再現手順");
-    expect(body).toContain("1. 画面を開く：評価・結果（20秒前）");
-    expect(body).toContain("2. 入力する：目標値");
-    expect(body).toContain("3. 押す：保存する");
-    expect(body).toContain("4. 送信する：評価フォーム（2秒前）");
-    expect(body).toContain("- 送った人の役割：マネージャー");
-    expect(body).toContain("- 届いた日時：2026-08-15 11:34 JST");
-    expect(body).toContain("- アプリの版：v-abc");
-    expect(body).toContain("`src/app/manager/evaluations/[id]/page.tsx`");
-    expect(body).toContain("- [ ] 上の再現手順をなぞっても、報告された症状が出ない");
-    expect(body).toContain("`POST /api/responses/f1` → 500（812ms、3秒前）");
-    expect(body).toContain("本人の書き込みあり");
+  it("進め方が先頭に来る（本文の途中から手を動かし始めない）", () => {
+    const doc = buildInstructionDocument(draft);
+    expect(doc.indexOf("## 作業のやり方")).toBeLessThan(doc.indexOf("## ユーザーの声"));
+    expect(doc).toContain("- 要望は1件ずつ直す。まとめて1回で直さない。");
+    expect(doc).toContain("- 直したら、再発を止めるテストを足す。");
+    expect(doc).toContain("- 手元で確かめてから、公開まで通す。");
   });
 
-  it("人が読む情報が先、技術情報は畳んで後ろに置く", () => {
-    const body = buildIssueBody(draft);
-    expect(body.indexOf("## ユーザーの声")).toBeLessThan(body.indexOf("<details>"));
-    expect(body).toContain("<summary>技術情報（実装に必須）</summary>");
-    for (const heading of ["### 環境", "### コンソールのエラー", "### 失敗した通信", "### 操作の履歴", "### 表示の速さ"]) {
-      expect(body).toContain(heading);
-    }
+  it("不具合は、再現手順・環境・受け入れ条件がそろって出る", () => {
+    const doc = buildInstructionDocument(draft);
+    expect(doc).toContain("- 要望ID：`improve_1`");
+    expect(doc).toContain("- 重大度：高（壊れている記録あり）");
+    expect(doc).toContain("- 会社側の状態：未対応");
+    expect(doc).toContain("- 会社側のメモ：（記入なし）");
+    expect(doc).toContain("## 再現手順（送信直前の操作の自動記録）");
+    expect(doc).toContain("1. 画面を開く：評価・結果（20秒前）");
+    expect(doc).toContain("2. 入力する：目標値");
+    expect(doc).toContain("3. 押す：保存する");
+    expect(doc).toContain("4. 送信する：評価フォーム（2秒前）");
+    expect(doc).toContain("- 送った人の役割：マネージャー");
+    expect(doc).toContain("- 投稿日時：2026-08-15 11:34 JST");
+    expect(doc).toContain("- アプリの版：v-abc");
+    expect(doc).toContain("`src/app/manager/evaluations/[id]/page.tsx`");
+    expect(doc).toContain("- [ ] 上の再現手順をなぞっても、報告された症状が出ない");
+    expect(doc).toContain("`POST /api/responses/f1` → 500（812ms、3秒前）");
+    expect(doc).toContain("本人の書き込みあり");
   });
 
-  it("通信のやりとりは、伏せ字ずみの中身まで畳んで載せる", () => {
-    const body = buildIssueBody({
+  it("ユーザーの声は原文のまま引用する（要約しない）", () => {
+    const doc = buildInstructionDocument({ ...draft, body: "保存できません。\n2回試しました。" });
+    expect(doc).toContain("> 保存できません。\n> 2回試しました。");
+  });
+
+  it("通信のやりとりは、伏せ字ずみの中身まで載せる", () => {
+    const doc = buildInstructionDocument({
       ...draft,
       diagnostics: {
         ...diagnostics,
@@ -396,76 +394,72 @@ describe("記録票の文面", () => {
         ],
       },
     });
-    expect(body).toContain("  送った中身");
-    expect(body).toContain('   "score": 3');
-    expect(body).toContain("  返ってきた中身");
-    expect(body).toContain("（上限を超えたため途中で切っています）");
-    expect(body).toContain("※外部サービス");
+    expect(doc).toContain("  送った中身");
+    expect(doc).toContain("   \"score\": 3");
+    expect(doc).toContain("  返ってきた中身");
+    expect(doc).toContain("（上限を超えたため途中で切っています）");
+    expect(doc).toContain("※外部サービス");
   });
 
   it("氏名・メールは載せない（役割だけを載せる）", () => {
-    const body = buildIssueBody(draft);
-    expect(body).not.toContain("@");
-    expect(body).toContain("氏名・メール・評価の中身は載せていません");
+    expect(buildInstructionDocument(draft)).not.toContain("@");
   });
 
-  it("使いにくいは、本人の望みをそのまま完了条件にし、技術情報は参考扱いにする", () => {
-    const body = buildIssueBody({ ...draft, kind: "usability" });
-    expect(body).toContain("- [ ] 「押したら点数が保存されてほしい。」ができる");
-    expect(body).toContain("使いにくい");
-    expect(body).toContain("<summary>参考情報（自動収集）</summary>");
-    expect(body).not.toContain("### コンソールのエラー");
+  it("使いにくいは、本人の望みをそのまま受け入れ条件にする", () => {
+    const doc = buildInstructionDocument({ ...draft, kind: "usability" });
+    expect(doc).toContain("- [ ] 「押したら点数が保存されてほしい。」ができる");
+    expect(doc).toContain("使いにくい");
+    expect(doc).not.toContain("### コンソールのエラー");
+    expect(doc).toContain("### 失敗した通信（直近）");
   });
 
   it("使いにくいで失敗した通信が無ければ、その欄は「記録なし」で残す", () => {
-    const body = buildIssueBody({
+    const doc = buildInstructionDocument({
       ...draft,
       kind: "usability",
       diagnostics: normalizeDiagnostics({ ...diagnostics, network: [] }, "medium"),
     });
-    expect(body).toContain("### 失敗した通信（直近）\n（記録なし）");
-    expect(body).toContain("### 操作の履歴");
+    expect(doc).toContain("### 失敗した通信（直近）\n（記録なし）");
+    expect(doc).toContain("### 操作の履歴");
   });
 
   it("新機能は、再現手順も通信の記録も置かない", () => {
-    const body = buildIssueBody({ ...draft, kind: "feature", diagnostics: normalizeDiagnostics(diagnostics, "minimal") });
-    expect(body).toContain("この機能がほしい");
-    expect(body).not.toContain("## 再現手順");
-    expect(body).not.toContain("### 失敗した通信");
-    expect(body).toContain("### 環境");
-    expect(body).toContain("### 読み始めるファイルの候補");
-  });
-
-  it("同じ画面・同じ種類ですでに記録票があれば、並べて出す（閉じる判断は人がする）", () => {
-    const body = buildIssueBody({
+    const doc = buildInstructionDocument({
       ...draft,
-      related: [{ number: 42, url: "https://github.com/x/y/issues/42", summary: "保存できない" }],
+      kind: "feature",
+      diagnostics: normalizeDiagnostics(diagnostics, "minimal"),
     });
-    expect(body).toContain("## 似ている記録票");
-    expect(body).toContain("- #42 保存できない（https://github.com/x/y/issues/42）");
+    expect(doc).toContain("この機能がほしい");
+    expect(doc).not.toContain("## 再現手順");
+    expect(doc).not.toContain("### 失敗した通信");
+    expect(doc).toContain("### 環境");
+    expect(doc).toContain("## 影響範囲と読み始めるファイルの候補");
   });
 
-  it("本人の記入・画像・技術情報が無くても、記録票として成り立つ", () => {
-    const body = buildIssueBody({
+  it("本人の記入・画像・技術情報が無くても、指示文として成り立つ", () => {
+    const doc = buildInstructionDocument({
       ...draft,
       kind: "usability",
       expected: null,
       hasShot: false,
       appVersion: null,
+      handledNote: "先週まとめて直す予定",
+      statusLabel: "対応中",
       routePattern: "その他の画面",
       diagnostics: null,
     });
-    expect(body).toContain("（本人からの記入なし");
-    expect(body).toContain("（自動記録なし");
-    expect(body).toContain("画面の写し：なし");
-    expect(body).toContain("- アプリの版：不明");
-    expect(body).toContain("`system-spec/route-ledger.json` を見てください");
-    expect(body).toContain("- [ ] 報告された不便が、その画面の中で解消している");
-    expect(body).toContain("この要望には技術情報が付いていません");
+    expect(doc).toContain("（本人からの記入なし");
+    expect(doc).toContain("（自動記録なし");
+    expect(doc).toContain("画面の写し：なし");
+    expect(doc).toContain("- アプリの版：不明");
+    expect(doc).toContain("- 会社側のメモ：先週まとめて直す予定");
+    expect(doc).toContain("`system-spec/route-ledger.json` を見てください");
+    expect(doc).toContain("- [ ] 報告された不便が、その画面の中で解消している");
+    expect(doc).toContain("この要望には技術情報が付いていません");
   });
 
   it("技術情報が空でも、欠けている箇所が読める形にする", () => {
-    const body = buildIssueBody({
+    const doc = buildInstructionDocument({
       ...draft,
       diagnostics: {
         ...diagnostics,
@@ -482,23 +476,62 @@ describe("記録票の文面", () => {
         performance: { ttfbMs: null, domContentLoadedMs: null, loadMs: null, largestContentfulPaintMs: null },
       },
     });
-    expect(body).toContain("- 通信状態：オフライン");
-    expect(body).toContain("1. 押す：（名前なし）（送信直前）");
-    expect(body).toContain("### コンソールのエラー（直近）\n（記録なし）");
-    expect(body).toContain("`GET /api/x` → 応答なし（30ms、送信直前）");
-    expect(body).toContain("- 最初の応答まで：不明ms");
-    expect(body).toContain("- UserAgent：`不明`");
+    expect(doc).toContain("- 通信状態：オフライン");
+    expect(doc).toContain("1. 押す：（名前なし）（送信直前）");
+    expect(doc).toContain("### コンソールのエラー（直近）\n（記録なし）");
+    expect(doc).toContain("`GET /api/x` → 応答なし（30ms、送信直前）");
+    expect(doc).toContain("- 最初の応答まで：不明ms");
+    expect(doc).toContain("- UserAgent：`不明`");
   });
 
-  it("長すぎる本文は、記録票が作れなくなる前にこちらで切る", () => {
-    const body = buildIssueBody({
+  it("長すぎる指示文は、渡す前にこちらで切る", () => {
+    const doc = buildInstructionDocument({
       ...draft,
       diagnostics: {
         ...diagnostics,
         network: Array.from({ length: 10 }, () => netEntry({ responseBody: "あ".repeat(DIAGNOSTICS_LIMITS.bodyText) })),
       },
     });
-    expect(body.length).toBeLessThan(DIAGNOSTICS_LIMITS.issueBodyText + 100);
-    expect(body).toContain("（長すぎるため、ここで切りました");
+    expect(doc.length).toBeLessThan(DIAGNOSTICS_LIMITS.documentText + 100);
+    expect(doc).toContain("（長すぎるため、ここで切りました");
+  });
+});
+
+describe("まとめて渡す指示文", () => {
+  const low: InstructionInput = {
+    ...draft,
+    id: "improve_2",
+    kind: "feature",
+    screenLabel: "社員",
+    routePattern: "/admin/members",
+    body: "検索がほしい",
+    diagnostics: null,
+  };
+
+  it("着手の順番を先に置き、重大度が高いものから並べる", () => {
+    const doc = buildBulkInstructionDocument([low, draft]);
+    expect(doc).toContain("# 作業指示：改善要望 2件");
+    expect(doc).toContain("1. `improve_1`（重大度：高（壊れている記録あり）／評価・結果）");
+    expect(doc).toContain("2. `improve_2`（重大度：低／社員）");
+    expect(doc).toContain("- 上から順に進める。");
+    expect(doc).toContain("## まとめ方の注意");
+    expect(doc.indexOf("## 着手の順番")).toBeLessThan(doc.indexOf("## [不具合]"));
+  });
+
+  it("1件ぶんの見出しは1段下げる（全体の見出しと混ざらない）", () => {
+    const doc = buildBulkInstructionDocument([draft]);
+    expect(doc).toContain("## [不具合] 評価・結果：");
+    expect(doc).toContain("### 作業のやり方");
+  });
+
+  it("同じ重大度なら、同じ画面が続くように並べる", () => {
+    const a = { ...draft, id: "a", routePattern: "/z", diagnostics: null, kind: "usability" as const };
+    const b = { ...draft, id: "b", routePattern: "/a", diagnostics: null, kind: "usability" as const };
+    const doc = buildBulkInstructionDocument([a, b]);
+    expect(doc.indexOf("`b`（重大度")).toBeLessThan(doc.indexOf("`a`（重大度"));
+  });
+
+  it("0件なら、その旨だけを返す", () => {
+    expect(buildBulkInstructionDocument([])).toContain("対象の要望がありません");
   });
 });

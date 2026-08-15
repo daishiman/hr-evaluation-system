@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
-import { getImprovementRequest, listImprovementEvents, listRelatedIssueLinks } from "@/lib/queries";
+import { getImprovementRequest, listImprovementEvents } from "@/lib/queries";
 import {
   Badge,
   Card,
@@ -15,18 +15,25 @@ import {
   SectionHeading,
 } from "@/components/ui";
 import { ImprovementStatusForm } from "@/components/ImprovementStatusForm";
-import { ImprovementIssueForm } from "@/components/ImprovementIssueForm";
+import { ImprovementHandoutPanel } from "@/components/ImprovementHandoutPanel";
 import { ImprovementDispositionForm } from "@/components/ImprovementDispositionForm";
 import {
   canDisposeImprovements,
-  isDispositionAction,
-  dispositionActionLabel,
+  improvementEventLabel,
   improvementDisplayState,
   improvementDisplayStateLabel,
   improvementDisplayStateTone,
 } from "@/lib/domain/improvement-disposition";
-import { diagnosticsLevelFor, improvementKindLabel, parseDiagnostics } from "@/lib/domain/improvement-issue";
-import { buildImprovementIssueDraft } from "@/lib/improvement-issue-draft";
+import { diagnosticsLevelFor, improvementKindLabel, parseDiagnostics } from "@/lib/domain/improvement-instruction";
+import {
+  handoutNote,
+  handoutState,
+  handoutStateLabel,
+  handoutStateTone,
+} from "@/lib/domain/improvement-handout";
+import { agentPromptText } from "@/lib/domain/agent-api";
+import { buildImprovementInstruction, improvementFingerprintOf } from "@/lib/improvement-instruction-draft";
+import { appOrigin } from "@/lib/origin";
 import { formatDateTime } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -34,11 +41,11 @@ export const dynamic = "force-dynamic";
 /**
  * 届いた改善要望1件。
  *
- * 読む順は「何を直してほしいか → どの画面か → 画像 → 開発へ渡す → 対応状況」。
+ * 読む順は「何を直してほしいか → どの画面か → 画像 → 作業する側へ渡す → 対応状況」。
  * 自社のものだけを引き当て、他社のIDを入れられても404にする。
  *
- * 開発へ渡す（記録票を作る）のはシステム全体管理者だけ。記録票は社外の
- * リポジトリに残るため、出る前に**そのままの文面**をこの画面で確かめられるようにする。
+ * 渡せるのはシステム全体管理者だけ。渡る文面はこの画面でそのまま読める
+ * （渡したあとに「何を渡したのか」を探し直さずに済む）。
  */
 export default async function AdminImprovementDetail({ params }: { params: Promise<{ id: string }> }) {
   const viewer = await requireRole("COMPANY_ADMIN");
@@ -49,18 +56,19 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
   if (!item) notFound();
 
   const diagnostics = parseDiagnostics(item.diagnostics, diagnosticsLevelFor(item.kind));
-  const canPushIssue = viewer.role === "SUPER_ADMIN";
+  const canHandOut = viewer.role === "SUPER_ADMIN";
   const canDispose = canDisposeImprovements(viewer.role);
   const displayState = improvementDisplayState(item);
   // 誰がいつどの状態に変えたかは、上書きせず積み上げてある（→ improvement_status_events）。
   const events = await listImprovementEvents(item.id);
-  // 似ている記録票は、実際に出すときと同じ条件で引く（下見と実物を一致させる）。
-  const draft = canPushIssue && !item.issueUrl
-    ? await buildImprovementIssueDraft(
-        item,
-        await listRelatedIssueLinks(viewer.companyId, item.routePattern, item.kind, item.id),
-      )
-    : null;
+  // 下見と、実際に払い出す文面は同じ関数から作る（確認した内容と渡る内容を一致させる）。
+  const draft = canHandOut ? await buildImprovementInstruction(item) : null;
+  const prompt = canHandOut ? agentPromptText(await appOrigin(), `?id=${item.id}`) : "";
+  const snapshot =
+    item.contentFingerprint === null
+      ? null
+      : { contentFingerprint: item.contentFingerprint, handedOutAt: item.handedOutAt };
+  const handout = handoutState(snapshot, improvementFingerprintOf(item));
 
   return (
     <>
@@ -178,24 +186,29 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
         </ReasonNote>
       )}
 
-      <SectionHeading help="開発が読む作業票です。">開発への記録票</SectionHeading>
-      {item.issueUrl ? (
-        <Card className="card-pad">
-          <p className="m-0">
-            記録票 #{item.issueNumber} を作成済みです。
-          </p>
-          <p className="footnote mt-1 mb-0">{item.issueUrl}</p>
-        </Card>
-      ) : canPushIssue && draft ? (
+      <SectionHeading help="作業する側が読む指示文です。">作業する側へ渡す</SectionHeading>
+      <Card className="card-pad">
+        <DefList
+          rows={[
+            {
+              label: "払い出し",
+              value: <Badge tone={handoutStateTone(handout)}>{handoutStateLabel(handout)}</Badge>,
+            },
+            { label: "渡した日時", value: item.handedOutAt ? formatDateTime(item.handedOutAt) : "—" },
+            { label: "いまの状態", value: handoutNote(handout) },
+          ]}
+        />
+      </Card>
+      {canHandOut && draft ? (
         <>
-          <Disclosure summary="記録票に出る内容をそのまま確認する" meta={draft.title}>
-            <Code block>{draft.body}</Code>
+          <Disclosure summary="渡す指示文をそのまま読む" meta={draft.title}>
+            <Code block>{draft.document}</Code>
           </Disclosure>
-          <ImprovementIssueForm id={item.id} />
+          <ImprovementHandoutPanel id={item.id} document={draft.document} prompt={prompt} />
         </>
       ) : (
         <ReasonNote>
-          記録票づくりはシステム全体管理者が行います。内容の追記が必要なときは、下の対応メモに書いてください。
+          指示文の払い出しはシステム全体管理者が行います。追記が要るときは、下の対応メモに書いてください。
         </ReasonNote>
       )}
 
@@ -207,14 +220,14 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
 
       {item.discarded && (
         <ReasonNote>
-          この要望は廃棄されています。記録票へは送られません。
+          この要望は廃棄されています。指示文としては払い出されません。
         </ReasonNote>
       )}
 
       {canDispose && (
         <>
           <SectionHeading help="落とした判断は、あとから元に戻せます。">この要望の扱い</SectionHeading>
-          <ImprovementDispositionForm id={item.id} hasIssue={Boolean(item.issueNumber)} discarded={item.discarded} />
+          <ImprovementDispositionForm id={item.id} discarded={item.discarded} />
         </>
       )}
 
@@ -225,7 +238,7 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
         <RecordList
           items={events.map((e) => ({
             key: e.id,
-            title: isDispositionAction(e.action) ? dispositionActionLabel(e.action) : "対応状況の変更",
+            title: improvementEventLabel(e.action),
             rows: [
               { label: "日時", value: formatDateTime(e.createdAt) },
               { label: "操作した人", value: e.actorName ?? "退職された方" },

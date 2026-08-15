@@ -1,9 +1,9 @@
-import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { getDb, schema } from "@/lib/db";
 import { isImprovementStatus } from "@/lib/domain/improvement";
-import { improvementFingerprint, issueSyncNote, issueSyncState } from "@/lib/domain/improvement-sync";
-import { isImprovementKind } from "@/lib/domain/improvement-issue";
+import { handoutNote, handoutState, improvementFingerprint } from "@/lib/domain/improvement-handout";
+import { isImprovementKind } from "@/lib/domain/improvement-instruction";
 import { canSeeCriteria, type Viewer } from "@/lib/session";
 import {
   employeePromotionBlockedReason,
@@ -953,35 +953,28 @@ export async function listImprovementRequests(companyId: string) {
       reporterName: reporter.name,
       handledByName: handler.name,
       shotBytes: s.improvementShots.bytes,
-      issueNumber: s.improvementIssueLinks.issueNumber,
-      issueUrl: s.improvementIssueLinks.issueUrl,
-      linkState: s.improvementIssueLinks.linkState,
-      issueState: s.improvementIssueLinks.issueState,
-      contentFingerprint: s.improvementIssueLinks.contentFingerprint,
+      handedOutAt: s.improvementHandouts.handedOutAt,
+      contentFingerprint: s.improvementHandouts.contentFingerprint,
     })
     .from(s.improvementRequests)
     .leftJoin(reporter, eq(reporter.id, s.improvementRequests.reporterId))
     .leftJoin(handler, eq(handler.id, s.improvementRequests.handledById))
     .leftJoin(s.improvementShots, eq(s.improvementShots.requestId, s.improvementRequests.id))
-    .leftJoin(s.improvementIssueLinks, eq(s.improvementIssueLinks.requestId, s.improvementRequests.id))
+    .leftJoin(s.improvementHandouts, eq(s.improvementHandouts.requestId, s.improvementRequests.id))
     .where(eq(s.improvementRequests.companyId, companyId))
     .orderBy(desc(s.improvementRequests.createdAt));
 
   return rows.map((r) => {
     const kind = isImprovementKind(r.kind) ? r.kind : ("usability" as const);
     const status = isImprovementStatus(r.status) ? r.status : ("open" as const);
-    const link =
-      r.issueNumber === null
+    const snapshot =
+      r.contentFingerprint === null
         ? null
-        : {
-            issueNumber: r.issueNumber,
-            linkState: r.linkState ?? "ok",
-            contentFingerprint: r.contentFingerprint ?? "",
-          };
-    // 一覧の1行から「送るとどうなるか」まで読めるようにする
+        : { contentFingerprint: r.contentFingerprint, handedOutAt: r.handedOutAt };
+    // 一覧の1行から「渡すとどうなるか」まで読めるようにする
     // （1件ずつ詳細を開かないと分からない状態を作らない）。
-    const syncState = issueSyncState(
-      link,
+    const state = handoutState(
+      snapshot,
       improvementFingerprint({
         kind,
         screenLabel: r.screenLabel,
@@ -998,63 +991,22 @@ export async function listImprovementRequests(companyId: string) {
       status,
       kind,
       hasShot: r.shotBytes !== null,
-      hasIssue: r.issueNumber !== null,
       // 廃棄は行を消さずに印で表す。一覧はこの印で既定の見え方を切り替える。
       discarded: r.discardedAt !== null,
-      issueClosed: r.issueState === "closed",
-      syncState,
-      syncNote: issueSyncNote(syncState, link),
+      handoutState: state,
+      handoutNote: handoutNote(state),
     };
   });
 }
 
 /**
- * 同じ画面・同じ種類で、すでに記録票になっているもの（新しい順に少しだけ）。
- *
- * 重複を機械が判定して閉じることはしない。文面が似ていても別の話であることが
- * 多く、間違って閉じると声そのものが消える。記録票に「似ているものがある」と
- * 並べるところまでを機械の仕事にし、同じかどうかは読む人が決める。
- */
-export async function listRelatedIssueLinks(
-  companyId: string,
-  routePattern: string,
-  kind: string,
-  excludeId: string,
-) {
-  const db = await getDb();
-  const rows = await db
-    .select({
-      number: s.improvementIssueLinks.issueNumber,
-      url: s.improvementIssueLinks.issueUrl,
-      body: s.improvementRequests.body,
-    })
-    .from(s.improvementIssueLinks)
-    .innerJoin(s.improvementRequests, eq(s.improvementRequests.id, s.improvementIssueLinks.requestId))
-    .where(
-      and(
-        eq(s.improvementRequests.companyId, companyId),
-        eq(s.improvementRequests.routePattern, routePattern),
-        eq(s.improvementRequests.kind, kind),
-        ne(s.improvementRequests.id, excludeId),
-      ),
-    )
-    .orderBy(desc(s.improvementIssueLinks.createdAt))
-    .limit(3);
-  return rows.map((r) => ({
-    number: r.number,
-    url: r.url,
-    summary: r.body.split("\n")[0].slice(0, 60),
-  }));
-}
-
-/**
- * 記録票を作る・更新するために要望1件を読む。画像そのものは読まない。
+ * 指示文を組み立てるために要望1件を読む。画像そのものは読まない。
  *
  * 詳細画面用の getImprovementRequest は画像（data URL）を一緒に引く。
- * 一括送信では1件ごとにこれを呼ぶため、そのまま使うと使わない画像を
- * 件数ぶん読み込むことになる。ここでは「あるか無いか」だけを見る。
+ * まとめて払い出すときは1件ごとにこれを呼ぶため、そのまま使うと
+ * 使わない画像を件数ぶん読み込むことになる。ここでは有無だけを見る。
  */
-export async function getImprovementForSync(companyId: string, id: string) {
+export async function getImprovementForHandout(companyId: string, id: string) {
   const db = await getDb();
   const reporter = alias(s.users, "improvement_reporter");
   const rows = await db
@@ -1074,16 +1026,13 @@ export async function getImprovementForSync(companyId: string, id: string) {
       createdAt: s.improvementRequests.createdAt,
       reporterRole: reporter.role,
       shotBytes: s.improvementShots.bytes,
-      issueNumber: s.improvementIssueLinks.issueNumber,
-      issueUrl: s.improvementIssueLinks.issueUrl,
-      linkState: s.improvementIssueLinks.linkState,
-      issueState: s.improvementIssueLinks.issueState,
-      contentFingerprint: s.improvementIssueLinks.contentFingerprint,
+      handedOutAt: s.improvementHandouts.handedOutAt,
+      contentFingerprint: s.improvementHandouts.contentFingerprint,
     })
     .from(s.improvementRequests)
     .leftJoin(reporter, eq(reporter.id, s.improvementRequests.reporterId))
     .leftJoin(s.improvementShots, eq(s.improvementShots.requestId, s.improvementRequests.id))
-    .leftJoin(s.improvementIssueLinks, eq(s.improvementIssueLinks.requestId, s.improvementRequests.id))
+    .leftJoin(s.improvementHandouts, eq(s.improvementHandouts.requestId, s.improvementRequests.id))
     .where(and(eq(s.improvementRequests.companyId, companyId), eq(s.improvementRequests.id, id)))
     .limit(1);
 
@@ -1107,16 +1056,10 @@ export async function getImprovementForSync(companyId: string, id: string) {
       reporterRole: r.reporterRole,
       hasShot: r.shotBytes !== null,
     },
-    link:
-      r.issueNumber === null
+    handout:
+      r.contentFingerprint === null
         ? null
-        : {
-            issueNumber: r.issueNumber,
-            issueUrl: r.issueUrl ?? "",
-            linkState: r.linkState ?? "ok",
-            issueState: r.issueState ?? "open",
-            contentFingerprint: r.contentFingerprint ?? "",
-          },
+        : { contentFingerprint: r.contentFingerprint, handedOutAt: r.handedOutAt },
   };
 }
 
@@ -1148,15 +1091,14 @@ export async function getImprovementRequest(companyId: string, id: string) {
       reporterRole: reporter.role,
       handledByName: handler.name,
       shot: s.improvementShots.dataUrl,
-      issueNumber: s.improvementIssueLinks.issueNumber,
-      issueUrl: s.improvementIssueLinks.issueUrl,
-      issueState: s.improvementIssueLinks.issueState,
+      handedOutAt: s.improvementHandouts.handedOutAt,
+      contentFingerprint: s.improvementHandouts.contentFingerprint,
     })
     .from(s.improvementRequests)
     .leftJoin(reporter, eq(reporter.id, s.improvementRequests.reporterId))
     .leftJoin(handler, eq(handler.id, s.improvementRequests.handledById))
     .leftJoin(s.improvementShots, eq(s.improvementShots.requestId, s.improvementRequests.id))
-    .leftJoin(s.improvementIssueLinks, eq(s.improvementIssueLinks.requestId, s.improvementRequests.id))
+    .leftJoin(s.improvementHandouts, eq(s.improvementHandouts.requestId, s.improvementRequests.id))
     .where(and(eq(s.improvementRequests.companyId, companyId), eq(s.improvementRequests.id, id)))
     .limit(1);
 
@@ -1168,8 +1110,78 @@ export async function getImprovementRequest(companyId: string, id: string) {
     kind: isImprovementKind(r.kind) ? r.kind : ("usability" as const),
     hasShot: r.shot !== null,
     discarded: r.discardedAt !== null,
-    issueClosed: r.issueState === "closed",
   };
+}
+
+/**
+ * 作業する側（Claude Code）へ払い出すための読み取り。会社をまたいで読む。
+ *
+ * 画面から読むものと違い、鍵を持っているのは運営者だけなので会社で絞らない。
+ * 代わりに、渡してはいけないもの（廃棄・重複・完了・見送り）をここで必ず落とす。
+ * 画面側の絞り込みに任せると、URL を手で書き換えたときに素通りする。
+ */
+export async function listImprovementsForAgent(limit: number) {
+  const db = await getDb();
+  const rows = await db
+    .select({
+      id: s.improvementRequests.id,
+      kind: s.improvementRequests.kind,
+      screenLabel: s.improvementRequests.screenLabel,
+      routePattern: s.improvementRequests.routePattern,
+      body: s.improvementRequests.body,
+      status: s.improvementRequests.status,
+      createdAt: s.improvementRequests.createdAt,
+      companyName: s.companies.name,
+      handedOutAt: s.improvementHandouts.handedOutAt,
+    })
+    .from(s.improvementRequests)
+    .leftJoin(s.companies, eq(s.companies.id, s.improvementRequests.companyId))
+    .leftJoin(s.improvementHandouts, eq(s.improvementHandouts.requestId, s.improvementRequests.id))
+    .where(
+      and(
+        isNull(s.improvementRequests.discardedAt),
+        isNull(s.improvementRequests.duplicateOfId),
+        inArray(s.improvementRequests.status, ["open", "doing"]),
+      ),
+    )
+    .orderBy(desc(s.improvementRequests.createdAt))
+    .limit(limit);
+  return rows.map((r) => ({
+    ...r,
+    kind: isImprovementKind(r.kind) ? r.kind : ("usability" as const),
+    status: isImprovementStatus(r.status) ? r.status : ("open" as const),
+    summary: r.body.split("\n")[0].slice(0, 60),
+  }));
+}
+
+/** 指示文にするための本体。会社をまたいで、指定のIDだけを読む。 */
+export async function getImprovementsForAgent(ids: string[]) {
+  if (ids.length === 0) return [];
+  const db = await getDb();
+  const reporter = alias(s.users, "improvement_reporter");
+  const rows = await db
+    .select({
+      id: s.improvementRequests.id,
+      path: s.improvementRequests.path,
+      routePattern: s.improvementRequests.routePattern,
+      screenLabel: s.improvementRequests.screenLabel,
+      body: s.improvementRequests.body,
+      kind: s.improvementRequests.kind,
+      expected: s.improvementRequests.expected,
+      diagnostics: s.improvementRequests.diagnostics,
+      status: s.improvementRequests.status,
+      handledNote: s.improvementRequests.handledNote,
+      createdAt: s.improvementRequests.createdAt,
+      companyId: s.improvementRequests.companyId,
+      reporterRole: reporter.role,
+      shotBytes: s.improvementShots.bytes,
+    })
+    .from(s.improvementRequests)
+    .leftJoin(reporter, eq(reporter.id, s.improvementRequests.reporterId))
+    .leftJoin(s.improvementShots, eq(s.improvementShots.requestId, s.improvementRequests.id))
+    .where(and(inArray(s.improvementRequests.id, ids), isNull(s.improvementRequests.discardedAt)))
+    .limit(ids.length);
+  return rows.map((r) => ({ ...r, hasShot: r.shotBytes !== null }));
 }
 
 /**

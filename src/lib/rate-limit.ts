@@ -43,6 +43,15 @@ export const AUTH_ATTEMPT_RATE_LIMIT: RateLimitRule = { windowMs: 10_000, max: 3
 export const IMPROVEMENT_SUBMIT_RATE_LIMIT: RateLimitRule = { windowMs: 60_000, max: 5 };
 
 /**
+ * 作業指示文を受け取るAPIの制限。
+ *
+ * 鍵を当てにくるのは1つの回線から連続で来るので、鍵を確かめる前に
+ * 回線ごとで数える。正しい鍵で使う分には、1分に30回もあれば足りる
+ * （一覧を1回、指示文をまとめて数回）。
+ */
+export const AGENT_API_RATE_LIMIT: RateLimitRule = { windowMs: 60_000, max: 30 };
+
+/**
  * key への1回の試行を記録し、許可するかどうかを返す。
  * 固定ウィンドウ方式（ウィンドウが変わったら数え直す）。
  */

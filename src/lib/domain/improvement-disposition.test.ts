@@ -8,7 +8,6 @@ import {
   bulkDispositionConfirm,
   canDisposeImprovements,
   dispositionActionLabel,
-  dispositionComment,
   dispositionConfirm,
   dispositionNeedsReason,
   dispositionReasonError,
@@ -16,6 +15,7 @@ import {
   improvementDisplayState,
   improvementDisplayStateLabel,
   improvementDisplayStateTone,
+  improvementEventLabel,
   improvementSortLabel,
   improvementViewLabel,
   isDispositionAction,
@@ -72,9 +72,9 @@ describe("操作の種類", () => {
 
   it("すべての操作に画面の言葉がある", () => {
     for (const a of DISPOSITION_ACTIONS) expect(dispositionActionLabel(a).length).toBeGreaterThan(0);
-    expect(dispositionActionLabel("close-issue")).toBe("記録票を閉じる");
-    expect(dispositionActionLabel("refresh")).toBe("記録票の状態を取り込む");
-    expect(dispositionActionLabel("unlink")).toBe("ひも付け解除");
+    expect(dispositionActionLabel("reject")).toBe("対応しない");
+    expect(dispositionActionLabel("duplicate")).toBe("重複");
+    expect(dispositionActionLabel("discard")).toBe("廃棄");
     expect(dispositionActionLabel("restore")).toBe("元に戻す");
   });
 
@@ -83,7 +83,6 @@ describe("操作の種類", () => {
     expect(dispositionNeedsReason("duplicate")).toBe(true);
     expect(dispositionNeedsReason("discard")).toBe(true);
     expect(dispositionNeedsReason("restore")).toBe(false);
-    expect(dispositionNeedsReason("unlink")).toBe(false);
   });
 });
 
@@ -119,7 +118,7 @@ describe("落とす理由", () => {
     expect(reasonText("discard", "mistake", "")).toBe("誤送信");
     expect(reasonText("discard", "mistake", " 二重に送られました ")).toBe("誤送信：二重に送られました");
     expect(reasonText("restore", "", "")).toBe("元に戻す");
-    expect(reasonText("unlink", "", "作り直します")).toBe("ひも付け解除：作り直します");
+    expect(reasonText("restore", "", "作り直します")).toBe("元に戻す：作り直します");
   });
 });
 
@@ -204,12 +203,26 @@ describe("並べ替え", () => {
   });
 });
 
-describe("記録票へ添える文", () => {
-  it("閉じるときも、開けたままのときも、理由を必ず書く", () => {
-    const closing = dispositionComment("reject", "仕様どおり", true);
-    expect(closing).toContain("理由：仕様どおり");
-    expect(closing).toContain("「対応しない」として閉じます。");
-    const keeping = dispositionComment("discard", "誤送信", false);
-    expect(keeping).toContain("開いたままにしています。");
+describe("操作の履歴に出す言葉", () => {
+  it("落とす・戻す操作は、そのままの言葉で出る", () => {
+    expect(improvementEventLabel("discard")).toBe("廃棄");
+    expect(improvementEventLabel("restore")).toBe("元に戻す");
+  });
+
+  it("払い出しの記録も読める", () => {
+    expect(improvementEventLabel("handout")).toBe("指示文の払い出し");
+  });
+
+  it("前の仕組みで残った記録も、当時の言葉のまま読める", () => {
+    // 履歴は消さずに積み上げてあるので、Issue へ送っていた頃の行が残っている。
+    expect(improvementEventLabel("sync")).toBe("記録票へ送信");
+    expect(improvementEventLabel("close-issue")).toBe("記録票を閉じる");
+    expect(improvementEventLabel("unlink")).toBe("ひも付け解除");
+    expect(improvementEventLabel("refresh")).toBe("記録票の状態を取り込む");
+  });
+
+  it("知らない記録でも無言にしない", () => {
+    expect(improvementEventLabel("status")).toBe("対応状況の変更");
+    expect(improvementEventLabel("なにか")).toBe("対応状況の変更");
   });
 });

@@ -149,7 +149,7 @@ export default async function AdminImprovements({
       <SectionHeading
         help={
           viewer.role === "SUPER_ADMIN"
-            ? "選んだ要望を、まとめて開発の記録票へ送れます。"
+            ? "選んだ要望の指示文を、まとめて払い出せます。"
             : undefined
         }
       >
@@ -164,7 +164,7 @@ export default async function AdminImprovements({
         <ReasonNote>この絞り込みに当てはまる要望はありません。条件を外してください。</ReasonNote>
       ) : (
         <ImprovementBulkTable
-          canPush={viewer.role === "SUPER_ADMIN"}
+          canHandOut={viewer.role === "SUPER_ADMIN"}
           canDispose={canDisposeImprovements(viewer.role)}
           rows={rows.map((r) => ({
             id: r.id,
@@ -177,11 +177,8 @@ export default async function AdminImprovements({
             discarded: r.discarded,
             duplicateOfId: r.duplicateOfId,
             stateNote: r.discarded ? (r.discardReason ?? "") : r.duplicateOfId ? "他の要望にまとめました" : "",
-            syncState: r.syncState,
-            syncNote: r.syncNote,
-            issueNumber: r.issueNumber,
-            issueUrl: r.issueUrl,
-            issueClosed: r.issueClosed,
+            handoutState: r.handoutState,
+            handoutNote: r.handoutNote,
             off: r.discarded || r.status === "done" || r.status === "dropped",
           }))}
         />
