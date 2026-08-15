@@ -1,7 +1,7 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, Code, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
@@ -15,6 +15,7 @@ import {
   kpiItemDeleteConfirmText,
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 export interface KpiItemCategoryOption {
   id: string;
@@ -96,7 +97,7 @@ export function KpiItemEditor({
   categories: KpiItemCategoryOption[];
   usage: UsageMap;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -152,7 +153,7 @@ export function KpiItemEditor({
     });
     if (result.ok) {
       setCreating(null);
-      router.refresh();
+      refresh();
     }
   };
 
@@ -185,13 +186,13 @@ export function KpiItemEditor({
     if (result.ok) {
       setEditingId(null);
       setEditDraft(null);
-      router.refresh();
+      refresh();
     }
   };
 
   const toggleActive = async (row: KpiItemRow) => {
-    await send({ kind: "kpiItemUpdate", id: row.id, isActive: !row.isActive });
-    router.refresh();
+    const result = await send({ kind: "kpiItemUpdate", id: row.id, isActive: !row.isActive });
+    if (result.ok) refresh();
   };
 
   const remove = async (id: string) => {
@@ -201,7 +202,7 @@ export function KpiItemEditor({
     const result = await requestMasterDelete("kpiItem", id);
     if (result.ok) {
       setMessage(result.message);
-      router.refresh();
+      refresh();
     } else {
       setError(result.message);
     }
@@ -209,9 +210,9 @@ export function KpiItemEditor({
   };
 
   return (
-    <div className="stack">
+    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="stack m-0 min-w-0 border-0 p-0">
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 text-sub text-brand-deep">{message}</p>}
+      <RefreshStatus message={message} refreshing={refreshing} />
 
       {items.map((row) => {
         const mark = blockedMark(usedByOf(row.id));
@@ -310,7 +311,7 @@ export function KpiItemEditor({
           <p className="m-0 mt-1 text-sub">{KPI_ITEM_LOCKED_NOTE}</p>
         </Disclosure>
       )}
-    </div>
+    </fieldset>
   );
 }
 

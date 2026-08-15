@@ -1,13 +1,14 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button, Card, ChoiceChip, ReasonNote } from "@/components/ui";
 import {
   IMPROVEMENT_STATUSES,
   improvementStatusLabel,
   type ImprovementStatus,
 } from "@/lib/domain/improvement";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
  * 要望1件の対応状況を変える。
@@ -24,7 +25,7 @@ export function ImprovementStatusForm({
   status: ImprovementStatus;
   note: string | null;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [next, setNext] = useState<ImprovementStatus>(status);
   const [text, setText] = useState(note ?? "");
   const [savedStatus, setSavedStatus] = useState(status);
@@ -60,7 +61,7 @@ export function ImprovementStatusForm({
       setSavedNote(text.trim());
       setText(text.trim());
       setDone(true);
-      router.refresh();
+      refresh();
     } catch {
       setError("通信できませんでした。入力内容はこの画面に残っています。");
     } finally {
@@ -73,12 +74,12 @@ export function ImprovementStatusForm({
   return (
     <Card className="card-pad">
       {error && <ReasonNote>{error}</ReasonNote>}
-      {done && <ReasonNote>対応状況を更新しました。</ReasonNote>}
+      <RefreshStatus message={done ? "対応状況を更新しました。" : null} refreshing={refreshing} target="画面" />
 
       <p className="footnote m-0">対応状況</p>
       <div className="mt-1 flex flex-wrap gap-2">
         {IMPROVEMENT_STATUSES.map((s) => (
-          <ChoiceChip key={s} selected={next === s} onClick={() => setNext(s)}>
+          <ChoiceChip key={s} selected={next === s} disabled={busy || refreshing} onClick={() => setNext(s)}>
             {improvementStatusLabel(s)}
           </ChoiceChip>
         ))}
@@ -94,6 +95,7 @@ export function ImprovementStatusForm({
         value={text}
         aria-invalid={Boolean(error && next === "dropped" && text.trim().length === 0)}
         maxLength={1000}
+        disabled={busy || refreshing}
         onChange={(e) => {
           setText(e.target.value);
           if (e.target.value.trim()) setError(null);
@@ -102,8 +104,8 @@ export function ImprovementStatusForm({
       />
 
       <div className="mt-3">
-        <Button type="button" variant="primary" onClick={submit} disabled={busy || unchanged}>
-          対応状況を保存する
+        <Button type="button" variant="primary" onClick={submit} disabled={busy || refreshing || unchanged}>
+          {busy ? "保存しています…" : refreshing ? "画面に反映しています…" : "対応状況を保存する"}
         </Button>
       </div>
     </Card>

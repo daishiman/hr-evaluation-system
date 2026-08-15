@@ -1,8 +1,9 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ReasonNote } from "@/components/ui";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
  * システム全体管理者が「いまどの会社を操作しているか」を切り替える。
@@ -21,14 +22,15 @@ export function CompanyScopeSwitcher({
   companies: { id: string; name: string }[];
   currentId: string | null;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   if (companies.length === 0) return null;
 
   return (
-    <div className="grid gap-1 text-note text-ink-muted">
+    <div className="grid gap-1 text-note text-ink-muted" aria-busy={busy || refreshing}>
       <label htmlFor="company-scope">操作する会社</label>
       {/* 高さは付けない。px で決め打ちすると、文字の段を上げたときに下が欠ける（spec §18）。
           文字の大きさも指定しない。入力欄の共通の見た目（.input）が正本で、
@@ -37,11 +39,12 @@ export function CompanyScopeSwitcher({
         id="company-scope"
         className="input w-full"
         value={currentId ?? ""}
-        disabled={busy}
+        disabled={busy || refreshing}
         onChange={async (e) => {
           const companyId = e.target.value;
           setBusy(true);
           setError(null);
+          setMessage(null);
           try {
             const res = await fetch("/api/account/company-scope", {
               method: "POST",
@@ -52,7 +55,8 @@ export function CompanyScopeSwitcher({
               setError("会社を切り替えられませんでした。時間をおいてもう一度お試しください。");
               return;
             }
-            router.refresh();
+            setMessage("操作する会社を切り替えました。");
+            refresh();
           } catch {
             setError("通信できませんでした。時間をおいてもう一度お試しください。");
           } finally {
@@ -66,6 +70,17 @@ export function CompanyScopeSwitcher({
           </option>
         ))}
       </select>
+      {busy && !refreshing && (
+        <p className="m-0 text-note text-ink-muted" role="status" aria-live="polite">
+          会社を切り替えています…
+        </p>
+      )}
+      <RefreshStatus
+        message={message}
+        refreshing={refreshing}
+        target="会社の画面"
+        className="m-0 text-note text-ink-muted"
+      />
       {error && (
         <div className="mt-1" role="alert" aria-live="assertive">
           <ReasonNote>{error}</ReasonNote>

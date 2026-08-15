@@ -1,7 +1,7 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
-import { useRouter } from "next/navigation";
 import { Button, LinkButton, ReasonNote, RevealToggle } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 
@@ -22,7 +22,7 @@ const MIN_LENGTH = 10;
 const MAX_LENGTH = 200;
 
 export function PasswordChangeForm() {
-  const router = useRouter();
+  const { refresh } = useRefreshAfterSave();
   const nextRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
@@ -97,7 +97,7 @@ export function PasswordChangeForm() {
       setNext("");
       setConfirm("");
       setTouched({});
-      router.refresh();
+      refresh();
     } catch {
       setError("通信できませんでした。入力内容はこの画面に残っています。");
     } finally {

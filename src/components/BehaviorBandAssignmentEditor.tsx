@@ -1,9 +1,10 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { behaviorBandLabel, behaviorBandPayloadValue, type BehaviorBandSetRow } from "@/lib/domain/behavior";
 import { Button, Card, CardHead, ReasonNote } from "@/components/ui";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 export interface BehaviorAssignmentGradeRow {
   id: string;
@@ -26,7 +27,7 @@ export function BehaviorBandAssignmentEditor({
   /** 問う内容があり、いま使う設定の基準だけを選択肢にする。 */
   availableBands: readonly string[];
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [baseline, setBaseline] = useState(grade.behaviorBand ?? "");
   const [draft, setDraft] = useState(grade.behaviorBand ?? "");
   const [busy, setBusy] = useState(false);
@@ -68,7 +69,7 @@ export function BehaviorBandAssignmentEditor({
       }
       setBaseline(draft);
       setMessage(json.message ?? "保存しました。");
-      router.refresh();
+      refresh();
     } catch {
       setError("通信できませんでした。選んだ内容はこの画面に残っています。");
     } finally {
@@ -100,6 +101,7 @@ export function BehaviorBandAssignmentEditor({
             <select
               value={draft}
               onChange={(event) => choose(event.target.value)}
+              disabled={busy || refreshing}
               className="input mt-1 w-full"
               aria-label={`${grade.name}に出す行動指針`}
             >
@@ -128,10 +130,10 @@ export function BehaviorBandAssignmentEditor({
           )}
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" variant="primary" disabled={busy || draft === baseline} onClick={() => void save()}>
-              {busy ? "保存しています…" : "この等級の設定を保存"}
+            <Button type="button" variant="primary" disabled={busy || refreshing || draft === baseline} onClick={() => void save()}>
+              {busy ? "保存しています…" : refreshing ? "画面に反映しています…" : "この等級の設定を保存"}
             </Button>
-            <Button type="button" variant="tertiary" disabled={busy || draft === baseline} onClick={() => choose(baseline)}>
+            <Button type="button" variant="tertiary" disabled={busy || refreshing || draft === baseline} onClick={() => choose(baseline)}>
               現在値へ戻す
             </Button>
           </div>
@@ -141,11 +143,7 @@ export function BehaviorBandAssignmentEditor({
               <ReasonNote>{error}</ReasonNote>
             </div>
           )}
-          {message && (
-            <p role="status" aria-live="polite" className="m-0 mt-3 text-sub text-brand-deep">
-              {message}
-            </p>
-          )}
+          <RefreshStatus message={message} refreshing={refreshing} target="画面" className="m-0 mt-3 text-sub text-brand-deep" />
         </div>
       </Card>
     </div>

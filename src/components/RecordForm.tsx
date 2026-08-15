@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button, Card, ReasonNote } from "@/components/ui";
+import { RefreshStatus } from "@/components/RefreshStatus";
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { NumberField } from "@/components/NumberField";
 import { checkBounds, parseNumberInput, type NumberFieldPolicy } from "@/lib/domain/number-input";
 import { generateInitialPassword } from "@/lib/domain/initial-password";
@@ -81,7 +82,7 @@ export function RecordForm({
    */
   boundsPair?: { lower: string; upper: string };
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const formRef = useRef<HTMLFormElement>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -111,7 +112,7 @@ export function RecordForm({
     setCopied(null);
     setMessage(null);
     setError(null);
-    router.refresh();
+    refresh();
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
@@ -198,7 +199,7 @@ export function RecordForm({
       onSaved?.();
       // 発行済みの秘密情報を表示している間は、親の再描画で控えを失う可能性を作らない。
       // 一覧の再読込は「次の入力」を始めるときに行う。
-      if (!(resetAfterSubmit && generateNames !== "")) router.refresh();
+      if (!(resetAfterSubmit && generateNames !== "")) refresh();
     } catch {
       setError("通信できませんでした。入力内容はこの画面に残っています。");
     } finally {
@@ -300,8 +301,9 @@ export function RecordForm({
           </label>
           ))}
           <div className="md:col-span-2">
-            <Button type="submit" variant="primary" disabled={busy}>
-              {busy ? "保存しています…" : submitLabel}
+            {/* 一覧へ反映し終わるまで押せないままにする。二度押しで同じものが2件できるのを防ぐ */}
+            <Button type="submit" variant="primary" disabled={busy || refreshing}>
+              {busy ? "保存しています…" : refreshing ? "一覧に反映しています…" : submitLabel}
             </Button>
           </div>
         </form>
@@ -345,7 +347,10 @@ export function RecordForm({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-sub text-brand-deep">{message}</p>}
+      {/* 保存できたことと、一覧へ出し終えたことを分けて出す。
+          「保存しました」だけを出して黙ると、一覧が古いままの数秒を
+          「反映されていない」と受け取られ、ページの読み直しを促してしまう。 */}
+      <RefreshStatus message={message} refreshing={refreshing} className="m-0 mt-3 text-sub text-brand-deep" />
     </Card>
   );
 }

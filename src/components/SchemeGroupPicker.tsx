@@ -1,5 +1,6 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, DefList, Disclosure, InlineDetail, Num, OptionCard, ProvisionalMark, ReasonNote } from "@/components/ui";
@@ -67,6 +68,7 @@ export function SchemeGroupPicker({
   criteriaPath: string;
 }) {
   const router = useRouter();
+  const { refresh } = useRefreshAfterSave();
   const fixedItem = kpiItems.find((k) => k.isFixedSlot) ?? null;
   const draftKey = `hr-eval:scheme-pick:${schemeId}:${pointGroup}:v1`;
 
@@ -228,7 +230,7 @@ export function SchemeGroupPicker({
       setRestored(false);
       // 保存できたら手順2（選んだ項目の基準）へ送る。ここで止めると次に何をするか分からない
       router.push(criteriaPath);
-      router.refresh();
+      refresh();
     } catch {
       setError("通信できませんでした。選んだ内容はこの画面に残っています。");
     } finally {

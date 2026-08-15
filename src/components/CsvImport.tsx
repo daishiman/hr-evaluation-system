@@ -1,9 +1,10 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button, Card, ReasonNote } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 type RowResult = {
   row: number;
@@ -21,7 +22,7 @@ type RowResult = {
  * 取り込めない行は理由つきで一覧に出し、1行でもあればファイル全体を保存しない。
  */
 export function CsvImport({ formId, formTitle }: { formId: string; formTitle: string }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const fileRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
       setRows(data.rows ?? []);
       setChecked(dryRun);
       setConfirmationToken(dryRun ? (data.confirmationToken ?? null) : null);
-      if (!dryRun) router.refresh();
+      if (!dryRun) refresh();
     } catch {
       setError("通信できませんでした。時間をおいてもう一度お試しください。");
     } finally {
@@ -93,6 +94,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
             type="file"
             accept=".csv,text/csv"
             className="mt-1 block w-full text-sub font-normal"
+            disabled={busy || refreshing}
             onChange={(e) => onFile(e.target.files?.[0])}
           />
           {fileName && <span className="footnote block">選択中：{fileName}</span>}
@@ -104,6 +106,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
             className="input mt-1 w-full font-mono text-note"
             rows={4}
             value={text}
+            disabled={busy || refreshing}
             onChange={(e) => {
               setText(e.target.value);
               setFileName(null);
@@ -124,11 +127,11 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Button variant="tertiary" onClick={() => run(true)} disabled={busy}>
+        <Button variant="tertiary" onClick={() => run(true)} disabled={busy || refreshing}>
           まず内容を確認する
         </Button>
-        <Button onClick={() => run(false)} disabled={busy || !checked || !confirmationToken}>
-          {busy ? "処理しています…" : "この内容を取り込む"}
+        <Button onClick={() => run(false)} disabled={busy || refreshing || !checked || !confirmationToken}>
+          {busy ? "処理しています…" : refreshing ? "一覧に反映しています…" : "この内容を取り込む"}
         </Button>
         <span className="footnote">同じ方の回答がすでにある場合は、新しい内容で置き換えます。</span>
       </div>
@@ -138,7 +141,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="mt-3 m-0 text-sub font-bold">{message}</p>}
+      <RefreshStatus message={message} refreshing={refreshing} className="mt-3 m-0 text-sub font-bold" />
 
       {rows && rows.length > 0 && (
         <div className="mt-3">

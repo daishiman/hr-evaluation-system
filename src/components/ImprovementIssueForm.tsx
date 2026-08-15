@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { RefreshStatus } from "@/components/RefreshStatus";
 import { Button, Card, ReasonNote } from "@/components/ui";
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 
 /**
  * 届いた要望から、開発の記録票（GitHub Issue）を作る。
@@ -52,14 +53,16 @@ function IssueError({ message }: { message: string }) {
 }
 
 export function ImprovementIssueForm({ id }: { id: string }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const submit = async () => {
-    if (busy) return;
+    if (busy || refreshing) return;
     setBusy(true);
     setError(null);
+    setMessage(null);
     try {
       const res = await fetch(`/api/improvements/${id}`, { method: "POST" });
       const json = (await res.json()) as { ok: boolean; message?: string };
@@ -67,7 +70,8 @@ export function ImprovementIssueForm({ id }: { id: string }) {
         setError(json.message ?? "記録票を作れませんでした。");
         return;
       }
-      router.refresh();
+      setMessage("記録票を作成しました。");
+      refresh();
     } catch {
       setError("通信できませんでした。もう一度お試しください。");
     } finally {
@@ -78,12 +82,13 @@ export function ImprovementIssueForm({ id }: { id: string }) {
   return (
     <Card className="card-pad">
       {error && <IssueError message={error} />}
+      <RefreshStatus message={message} refreshing={refreshing} target="画面" />
       <p className="footnote m-0">
         押すと、上の内容で開発の記録票を作ります。氏名・メールアドレス・画面の写しは記録票に載せません。
       </p>
       <div className="mt-3">
-        <Button type="button" variant="primary" onClick={submit} disabled={busy}>
-          {busy ? "作成中…" : "開発の記録票を作る"}
+        <Button type="button" variant="primary" onClick={submit} disabled={busy || refreshing}>
+          {busy ? "作成中…" : refreshing ? "画面に反映しています…" : "開発の記録票を作る"}
         </Button>
       </div>
     </Card>

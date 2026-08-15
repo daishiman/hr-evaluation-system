@@ -1,5 +1,6 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui";
  */
 export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
+  const { refresh } = useRefreshAfterSave();
   const pwRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +39,7 @@ export function LoginForm({ next }: { next?: string }) {
       return;
     }
     router.replace(next ?? "/");
-    router.refresh();
+    refresh();
   }
 
   return (
