@@ -28,6 +28,25 @@ pnpm run preview
 
 改善要望を作業指示文として払い出す読み取り API（`GET /api/improvements`）だけは、鍵が要ります。無くても投稿・閲覧は動き、払い出しのときだけ設定案内が出ます。鍵はシステム全体管理者が画面から発行できます（メニュー「Claude Code 連携の鍵」＝ `/system/agent-keys`。用途の名前を付けて発行すると乱数で作られ、その場で1回だけ表示します。同時に10本まで持て、1本だけ止めても他は動き続けます）。ターミナルから設定する場合は `openssl rand -base64 32` で作り、`.dev.vars` の `AGENT_API_KEY` に置きます（本番は `pnpm exec wrangler secret put AGENT_API_KEY`）。どちらの鍵でも通り、**見る順番は画面発行の鍵 → 環境変数 `AGENT_API_KEY`** です。環境変数の鍵は同じ画面から受け付けを止められます。手順の詳細は [デプロイ注意 §5](docs/deploy-notes.md) にあります。
 
+## Claude Code から改善要望を呼び出して直す
+
+利用者が画面から送った改善要望を、このリポジトリから直接読み出して着手できます。毎回 URL や鍵を打つ必要はありません。
+
+1. **鍵を発行する** — システム全体管理者で [/system/agent-keys](https://hr-evaluation-system.daishimanju.workers.dev/system/agent-keys) を開き、用途の名前（例: 自宅の Claude Code）を付けて「鍵を発行する」を押します。鍵はその場で1回だけ表示されます。
+2. **手元に置く** — `cp env.example .env.local` でファイルを作り、`HR_AGENT_KEY=` の右に控えた鍵を貼ります。`.env.local` は追跡されません。発行画面の「.env.local へ書く1行をコピー」を押すと、この1行がそのまま手に入ります。
+3. **呼び出す** — 次のどれかを実行します。
+
+```bash
+pnpm improvements list             # 手つかずの要望を一覧で見る
+pnpm improvements get <要望ID>     # 1件の作業指示文を読む
+pnpm improvements get <ID> <ID>    # まとめて読む（最大10件）
+pnpm improvements list --json      # 機械処理用にJSONで出す
+```
+
+Claude Code の中からは `/improvements`（一覧を見る）と `/improve-request <要望ID>`（その要望のとおりに直して公開する）で同じことができます。
+
+宛先は既定で本番です。ローカルの `pnpm run preview` に向けるときだけ `--base http://localhost:8787` を付けるか、`.env.local` に `HR_APP_URL` を書きます。鍵が未設定のときは発行画面と書き込み手順を出して止まり、鍵の値そのものは画面にもログにも出しません。
+
 ## 品質確認
 
 ```bash

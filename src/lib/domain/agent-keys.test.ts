@@ -16,7 +16,7 @@ import {
   activeAgentKeys,
   agentKeyCapNote,
   agentKeyDisplayName,
-  agentKeyExportLine,
+  agentKeyEnvFileLine,
   agentKeyLabelError,
   agentKeyMaskedLabel,
   agentKeyPrefix,
@@ -78,8 +78,9 @@ describe("画面に出してよい範囲", () => {
     expect(AGENT_KEY_ONCE_NOTICE).toContain("もう一度表示することはできません");
   });
 
-  it("手元へ貼る1行は、鍵を引用符で囲む", () => {
-    expect(agentKeyExportLine("abc-def")).toBe("export HR_AGENT_KEY='abc-def'");
+  it("設定ファイルへ貼る1行は、変数名と鍵だけにする", () => {
+    // .env.local は行をそのまま読む。引用符や export を足すと読み方が増える。
+    expect(agentKeyEnvFileLine("abc-def")).toBe("HR_AGENT_KEY=abc-def");
   });
 });
 

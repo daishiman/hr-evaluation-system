@@ -46,9 +46,18 @@ export function agentKeyMaskedLabel(prefix: string): string {
   return `${prefix}…（以降は表示しません）`;
 }
 
-/** 手元のターミナルへ貼る1行。鍵を単引用符で囲み、貼り間違いで壊れないようにする。 */
-export function agentKeyExportLine(raw: string): string {
-  return `export HR_AGENT_KEY='${raw}'`;
+/** 鍵を置くファイル。作業する側のリポジトリ直下に作る（共有はされない）。 */
+export const AGENT_KEY_ENV_FILE = ".env.local";
+
+/**
+ * 作業する側の `.env.local` へ貼る1行。
+ *
+ * ターミナルの export ではなくファイルの1行にするのは、export だと
+ * 窓を閉じるたびに消えて、次の日にまた鍵を探すことになるため。
+ * ファイルに置けば `pnpm improvements list` がそのまま通る。
+ */
+export function agentKeyEnvFileLine(raw: string): string {
+  return `HR_AGENT_KEY=${raw}`;
 }
 
 /* ───────────────────────── 用途の名前 ───────────────────────── */

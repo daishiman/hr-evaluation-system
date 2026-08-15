@@ -9,6 +9,7 @@ import {
   AGENT_UNAUTHORIZED_MESSAGE,
   agentAuth,
   agentKeyConfigured,
+  agentCliCommand,
   agentFetchCommand,
   agentFormat,
   agentKeyMissingMessage,
@@ -225,6 +226,20 @@ describe("渡す文面", () => {
     expect(cmd).toContain(`$${AGENT_KEY_SHELL_VAR}`);
     expect(cmd).toContain("https://example.test/api/improvements?id=improve_1");
     expect(cmd).not.toContain(KEY);
+  });
+
+  it("リポジトリで打つコマンドは、要望IDの数で形が変わる", () => {
+    expect(agentCliCommand("")).toBe("pnpm improvements list");
+    expect(agentCliCommand("?id=improve_1")).toBe("pnpm improvements get improve_1");
+    expect(agentCliCommand("?ids=a,b")).toBe("pnpm improvements get a b");
+    // 空の指定は一覧に倒す（要望IDなしで get を案内しない）
+    expect(agentCliCommand("?ids=")).toBe("pnpm improvements list");
+  });
+
+  it("主たる案内は台本のコマンドで、curl は後ろに残す", () => {
+    const text = agentPromptText("https://example.test", "?id=improve_1");
+    expect(text.indexOf("pnpm improvements get improve_1")).toBeLessThan(text.indexOf("curl"));
+    expect(text).toContain(".env.local");
   });
 
   it("貼る文だけで、取得から作業まで進める", () => {

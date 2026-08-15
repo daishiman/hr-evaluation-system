@@ -4,7 +4,7 @@ import { apiViewer, HttpError } from "@/lib/session";
 import { issueAgentKey, revokeAgentKey, setEnvKeyEnabled } from "@/lib/agent-keys";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
 import { agentPromptTextWithKey } from "@/lib/domain/agent-api";
-import { agentKeyExportLine, agentKeyLabelError } from "@/lib/domain/agent-keys";
+import { agentKeyEnvFileLine, agentKeyLabelError } from "@/lib/domain/agent-keys";
 import { appOrigin } from "@/lib/origin";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       // 生の鍵。画面はこれを1回だけ出し、保存しない。
       key: raw,
       prefix,
-      exportLine: agentKeyExportLine(raw),
+      envFileLine: agentKeyEnvFileLine(raw),
       prompt: agentPromptTextWithKey(origin, "", raw),
     };
   });

@@ -39,7 +39,7 @@ import { useRefreshAfterSave } from "@/lib/use-refresh";
 
 interface IssuedKey {
   key: string;
-  exportLine: string;
+  envFileLine: string;
   prompt: string;
 }
 
@@ -60,7 +60,7 @@ interface ApiResult {
   ok: boolean;
   message?: string;
   key?: string;
-  exportLine?: string;
+  envFileLine?: string;
   prompt?: string;
 }
 
@@ -115,8 +115,8 @@ export function AgentKeyPanel({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ label }),
     });
-    if (!json?.key || !json.exportLine || !json.prompt) return;
-    setIssued({ key: json.key, exportLine: json.exportLine, prompt: json.prompt });
+    if (!json?.key || !json.envFileLine || !json.prompt) return;
+    setIssued({ key: json.key, envFileLine: json.envFileLine, prompt: json.prompt });
     setMessage("鍵を発行しました。いまだけ表示しています。");
     setLabel("");
     refresh();
@@ -171,10 +171,10 @@ export function AgentKeyPanel({
                 ariaLabel="Claude Code へ貼る文言"
               />
               <CopyBlock
-                label="手元の設定用の1行をコピー"
-                text={issued.exportLine}
-                summary="設定用の1行を読む"
-                ariaLabel="手元の設定用の1行"
+                label=".env.local へ書く1行をコピー"
+                text={issued.envFileLine}
+                summary=".env.local へ書く1行を読む"
+                ariaLabel="設定ファイルへ書く1行"
                 rows={2}
               />
             </div>

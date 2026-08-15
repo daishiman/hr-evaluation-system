@@ -67,10 +67,10 @@ function issueRequest(label: string) {
 }
 
 /** 発行された生の鍵を取り出す（画面がこの1回だけ受け取るのと同じ経路）。 */
-async function issue(label = "自宅の Claude Code"): Promise<{ key: string; prompt: string; exportLine: string }> {
+async function issue(label = "自宅の Claude Code"): Promise<{ key: string; prompt: string; envFileLine: string }> {
   const response = await POST(issueRequest(label));
   expect(response.status).toBe(200);
-  return (await response.json()) as { key: string; prompt: string; exportLine: string };
+  return (await response.json()) as { key: string; prompt: string; envFileLine: string };
 }
 
 /** 鍵を1本だけ止める。id は画面の一覧から渡されるのと同じ形。 */
@@ -176,10 +176,10 @@ describe("鍵を発行する", () => {
   });
 
   it("その場で使える文言にだけ鍵が入り、記録には入らない", async () => {
-    const { key, prompt, exportLine } = await issue();
+    const { key, prompt, envFileLine } = await issue();
 
     expect(prompt).toContain(key);
-    expect(exportLine).toContain(key);
+    expect(envFileLine).toContain(key);
     expect(JSON.stringify(await testDb.db.select().from(s.agentApiKeys))).not.toContain(key);
   });
 });
