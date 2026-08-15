@@ -98,6 +98,12 @@ export const IMPROVEMENT_BODY_MAX = 1000;
  */
 export const IMPROVEMENT_SHOT_MAX_BYTES = 700_000;
 
+/**
+ * 受付が読み込む本文全体の上限。画像1枚ぶんに余白を足した大きさにする。
+ * 画面の入口で切っておくと、大きすぎる送信でサーバーが詰まらない。
+ */
+export const IMPROVEMENT_REQUEST_MAX_BYTES = 960_000;
+
 /** data URL の文字数から、元の画像のバイト数を見積もる。 */
 export function shotBytesOf(dataUrl: string): number {
   const comma = dataUrl.indexOf(",");

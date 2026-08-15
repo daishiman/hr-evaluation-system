@@ -31,7 +31,8 @@ vi.mock("@opennextjs/cloudflare", () => ({
   getCloudflareContext: async () => ({ env: mocked.env }),
 }));
 
-import { IMPROVEMENT_REQUEST_MAX_BYTES, GET, POST, PUT } from "@/app/api/improvements/route";
+import { GET, POST, PUT } from "@/app/api/improvements/route";
+import { IMPROVEMENT_REQUEST_MAX_BYTES } from "@/lib/domain/improvement";
 import { PATCH } from "@/app/api/improvements/[id]/route";
 
 let testDb: TestDatabase;

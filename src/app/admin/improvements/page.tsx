@@ -3,6 +3,7 @@ import { listImprovementRequests } from "@/lib/queries";
 import { ChipLink, EmptyState, PageTitle, ReasonNote, SectionHeading, StatGrid } from "@/components/ui";
 import { ImprovementBulkTable } from "@/components/ImprovementBulkTable";
 import { formatDateTime } from "@/lib/view";
+import { handoutCountText } from "@/lib/domain/improvement-handout";
 import {
   IMPROVEMENT_STATUSES,
   countImprovementsByStatus,
@@ -179,6 +180,10 @@ export default async function AdminImprovements({
             stateNote: r.discarded ? (r.discardReason ?? "") : r.duplicateOfId ? "他の要望にまとめました" : "",
             handoutState: r.handoutState,
             handoutNote: r.handoutNote,
+            handoutCountText: handoutCountText(
+              r.handoutCount ?? 0,
+              r.handedOutAt ? formatDateTime(r.handedOutAt) : null,
+            ),
             off: r.discarded || r.status === "done" || r.status === "dropped",
           }))}
         />

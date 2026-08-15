@@ -66,14 +66,15 @@ submission keyから投稿者を含む決定的request IDをSHA-256で生成し�
 ## 4-2. GET `/api/improvements`（作業指示文の払い出し）
 
 - 認証は API キー方式。`Authorization: Bearer <key>`。session は使わない（呼ぶのは人ではないため）。
-- 鍵の在り処は2つで**どちらでも通る**。見る順番は ①画面で発行した鍵（`agent_api_keys.key_hash` とハッシュ比較）→ ②Workers の secret `AGENT_API_KEY`（`AGENT_KEY_MIN_LENGTH = 32`未満は未設定扱い）。①を先にするのは、①だけが画面から即座に止められるため。どちらにも無いときだけ未設定（503）。詳細は §4-3。
+- 鍵の在り処は2つで**どちらでも通る**。**優先順位は ①画面で発行した鍵（`agent_api_keys.key_hash` とハッシュ比較。有効な全行が対象）→ ②Workers の secret `AGENT_API_KEY`**（`AGENT_KEY_MIN_LENGTH = 32`未満は未設定扱い）。①を先にするのは、①だけが画面から即座に止められるため。②は `agent_key_settings.env_key_enabled = false` のとき未設定と同じ扱いにする（画面から止める切替。§4-3）。どちらにも無いときだけ未設定（503）。
+- 認証結果は `AgentAuthResult` で経路（`via: "screen" | "env"`）と通った鍵のハッシュを返す。払い出しの履歴に「どの鍵で取られたか」を残すため、通ったかどうかだけにしない。
 - **鍵が無い/違うときは要望の中身を一切返さない**。401の文面は`AGENT_UNAUTHORIZED_MESSAGE`で固定し、未設定(503)と取り違え(401)で言い分けない。503は`agentKeySetupLines()`の設定手順を返す。
 - rate limit（`AGENT_API_RATE_LIMIT` 60秒30回、key は `cf-connecting-ip`）は**鍵の検査より先**に消費する。後にすると外れた試行が数に入らない。判定の入口は`src/lib/agent-api.ts`の`guardAgentRequest()`1本。
 - 純関数の正本は`src/lib/domain/agent-api.ts`（coverage 100%対象）。`readBearer` / `keysMatch`（長さ一致時は全桁比較）/ `agentAuth` / `agentFormat` / `parseAgentIds` / `agentFetchCommand` / `agentPromptText`。
 - 形式は`?format=json|markdown`が`Accept`より優先。既定は markdown。応答は`handle()`を通さず生の`Response`で返し（`{ok:true}`で包むと指示文として読めない）、`cache-control: no-store`を必ず付ける。
 - 取り方は3つ。一覧（引数なし・`AGENT_LIST_MAX = 50`・id/kind/screen/summary/statusのみ）/ 1件（`?id=`）/ まとめて（`?ids=`・`AGENT_BULK_MAX = 10`・重複は落とし、超過分は`dropped`として本文に明記）。
 - 対象は会社を跨ぐ（`listImprovementsForAgent` / `getImprovementsForAgent`）。払い出せるのは開発側なので会社scopeで絞らない。廃棄済み（`discarded_at`）は問い合わせの段階で外す。
-- 受け取れた時点で`recordHandout()`を通す（`handed_out_by_id = null`）。画面からの払い出しだけを控えると、API で直接取った分が未払い出しのまま残る。
+- 受け取れた時点で`recordHandout(db, item, { via: "api", ... })`を通す（`handed_out_by_id = null`）。画面からの払い出しだけを控えると、API で直接取った分が未払い出しのまま残る。履歴の作りは §4-4。
 - 文面は`src/lib/improvement-instruction-draft.ts`が組み立て、管理画面のpreviewとAPIが同じ関数を共有する。
 - titleは`[不具合|改善|新機能] {screenLabel}：{本文1行目}`。severityはconsole error有無・status null/5xx有無から導出し、本人の申告では決めない。
 - 技術情報はsub headingで分ける（環境 / コンソールのエラー / 失敗した通信 / 操作の履歴 / 表示の速さ）。`kind`ごとのDiagnosticsLevelで量を変える。
@@ -87,11 +88,24 @@ submission keyから投稿者を含む決定的request IDをSHA-256で生成し�
 - 目的は「ターミナルを開かずに使い始められること」。SUPER_ADMIN専用（`requireRole` と `apiViewer("SUPER_ADMIN")` の両方で確かめ、画面で隠すだけにしない）。nav ラベルは `AGENT_KEY_PAGE_LABEL = "Claude Code 連携の鍵"`。
 - 鍵は `crypto.getRandomValues(32 bytes)` → base64url（記号なし。シェル・貼付で壊れる文字を含めない）。**人が入力する方式にしない**。
 - 保存するのは `key_hash`（SHA-256 hex）と `key_prefix`（先頭8文字）だけ。生の鍵は `POST /api/agent-keys` の応答が唯一の出口で、DB・ログ・履歴のいずれにも残さない。突き合わせは `keysMatch()`（定数時間）。
-- 使える鍵は常に1本。`issueAgentKey()` が同一呼び出しで既存の active 行を revoke するため、「発行」と「作り直し」が別経路にならない。`DELETE` は止める鍵が無ければ 400（黙って成功にしない）。
+- **同時に有効な鍵は `AGENT_KEY_MAX = 10` 本**。`issueAgentKey()` は他の行を revoke しない（1本漏れたときに全部止めるしかない状態を作らない）。上限判定は画面表示だけでなく `issueAgentKey()` の入口でも行い、超過は 400（`AGENT_KEY_CAP_MESSAGE`）。
+- **用途の名前（`label`、`AGENT_KEY_LABEL_MAX = 30`）は必須**。空欄の発行は 400。先頭8文字だけが並ぶ一覧では「どれを止めてよいか」が判定できず、結果としてどれも止められなくなる。名前は識別のためではなく**失効可能性のため**の項目。空の古い行は `agentKeyDisplayName()` が「名前のない鍵」に置き換える。
+- `DELETE /api/agent-keys?id=` は1本だけ revoke し、他は動き続ける。id 未指定・既に失効済みは 400（黙って成功にしない）。確認文（`agentKeyRevokeConfirmText`）に止める鍵の名前と**残る本数**を書く。
+- **設定値の鍵（`AGENT_API_KEY`）の受け付けは `PUT /api/agent-keys` で止められる**（`agent_key_settings.env_key_enabled`、既定 true）。secret を削除する案を採らないのは、削除が取り消せないうえ、すでに設定値で動いている場所を止めてしまうため。画面には恒久削除の1行（`AGENT_ENV_KEY_DELETE_COMMAND`）も併記し、急ぎは可逆な切替、恒久は削除、と選べるようにする。札は「登録されていません／使えます／止めています」の3つを言い分ける。
 - 行は消さない。`created_by_id` / `created_at` / `revoked_by_id` / `revoked_at` がそのまま操作履歴になる。`last_used_at` は `AGENT_KEY_TOUCH_INTERVAL_MS = 60_000` を下限に書き足す（読むたびの書き込みを避ける）。
 - 画面は発行直後だけ生の鍵を出し、`AGENT_KEY_ONCE_NOTICE` を鍵と同じ場所に先に出す。コピーできるのは3つ（鍵 / Claude Code へ貼る文言＝鍵を埋めた形 / `export HR_AGENT_KEY='...'`）。`localStorage`・`sessionStorage` へ置かない。作り直し・失効は `ConfirmButton` で1回確認する。
-- 純関数の正本は `src/lib/domain/agent-keys.ts`（coverage 100%対象）。保存・乱数は `src/lib/agent-keys.ts`。migration は `0024_agent_api_keys.sql`。
+- 純関数の正本は `src/lib/domain/agent-keys.ts`（coverage 100%対象）。保存・乱数は `src/lib/agent-keys.ts`。migration は `0024_agent_api_keys.sql` と `0025_agent_keys_and_handout_history.sql`。
 - 未設定時の 503 本文（`agentKeySetupLines()`）と `agentPromptText()` の末尾は、この画面の絶対URLを先に案内する。
+- 一覧に出すのは 名前 / 先頭8文字 / 発行日時 / 最終使用日時 / 状態 の5項目。最終使用日時が空のときは `agentKeyUsageNote(null)` で理由を書き、空欄で並べない。
+
+## 4-4. 払い出しの履歴（`improvement_handout_events`）
+
+- 1回の払い出しにつき1行積む。`via`（`screen` = 画面からコピー / `api` = Claude Code が取得）、`actor_id`（画面のとき）、`key_label`（API のとき、通った鍵の名前の写し）を持つ。鍵の行が後で消えても読めるよう、名前は**参照ではなく写し**で持つ。
+- **保持は要望1件につき新しい順に `HANDOUT_HISTORY_MAX = 20` 行**。挿入のたびに超過分を古い順に削る。全体件数で切ると、よく直す1件の履歴が無関係な要望の増加だけで消える。
+- 通算回数の正本は `improvement_handouts.handout_count`（`recordHandout()` が `+ 1` する）。履歴の行数から数えない（丸めた瞬間に回数が減って見える）。
+- 20行を超えたことは `handoutHistoryNote()` で画面に出す。黙って丸めない。
+- 「更新あり（再払い出し推奨）」は従来どおり `improvement_handouts.content_fingerprint`（＝最新の払い出し時点の内容）と今の内容の比較で判定する。履歴を積んでも基準は変えない。
+- 一覧は `handoutCountText(count, 最終日時)`、詳細は `listHandoutEvents()`（新しい順・上限 `HANDOUT_HISTORY_MAX`）を使う。
 
 ## 5. クライアント下書きと回復
 
@@ -111,7 +125,9 @@ diagnosticsと指示文は次を固定する。masking（メール/Bearer/token/
 
 払い出しAPIは次を固定する（最重要は1つ目）。**鍵なしで中身が返らないこと**、取り違えと未設定で断り文が同一であること、未設定・32文字未満で503と設定手順、rate limit超過で429（鍵の検査より前）、markdown既定と`?format=json`、`?id=`/`?ids=`（上限超過の`dropped`表示を含む）、masking済みの技術情報が指示文へそのまま載ること、受け取り時に控えが残り`open→doing`へ進むこと、廃棄済みが払い出されないこと。鍵は`getCloudflareContext`をmockして差し替える。
 
-鍵の発行は次を固定する（`src/app/api/agent-keys/route.integration.test.ts`）。生の鍵がDBにも画面の再表示にも残らないこと、SUPER_ADMIN以外が発行・失効できないこと（サーバー側で）、失効させた鍵で払い出しが通らないこと、作り直すと前の鍵が即座に通らなくなること、環境変数の鍵と画面発行の鍵のどちらでも通ること、鍵の全文が発行の記録に出ないこと。
+鍵の発行は次を固定する（`src/app/api/agent-keys/route.integration.test.ts`）。生の鍵がDBにも画面の再表示にも残らないこと、SUPER_ADMIN以外が発行・失効できないこと（サーバー側で）、失効させた鍵で払い出しが通らないこと、環境変数の鍵と画面発行の鍵のどちらでも通ること、鍵の全文が発行の記録に出ないこと、**名前なしの発行が断られること**、**1本失効させても他の鍵は通ること**、**上限（10本）を超えて発行できないこと**、**環境変数の鍵を画面から止めると通らなくなり、戻すとまた通ること**。
+
+払い出しの履歴は次を固定する。画面からのコピーと API 経由が別の経路として積まれること、API のときに通った鍵の名前が残ること、`HANDOUT_HISTORY_MAX` を超えた古い行が消えること、丸めても通算回数が減らないこと。
 
 ## 7. 一覧からの一括払い出し（PUT /api/improvements）
 

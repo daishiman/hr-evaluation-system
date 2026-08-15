@@ -57,9 +57,6 @@
 | FEATURE-028 | observe | まとめ払い出しは1件ずつ順番に処理するため、100件を超えると待ち時間が長い | 1回の操作で100件を超える運用が定着する | 実測してから、待ち行列に載せて画面を閉じても続く形にするかを決める | [仕様 §26-9](./spec.md) / [払い出しの契約](../../system-spec/improvement-requests.md) |
 | FEATURE-029 | observe | 処理中に画面を閉じると、そこから先の行は払い出されない（済んだ分は確定する） | 中断が繰り返し申告される | 中断した続きを次に開いたとき示すか、サーバー側で続きを引き受けるかを決める | [仕様 §26-9](./spec.md) / [画面](../../src/components/ImprovementBulkTable.tsx) |
 | FEATURE-031 | observe | 重複のまとめ先は要望IDを手で貼る（一覧から選ぶ画面はない） | まとめ先の指定間違いが申告される、または重複の統合が日常運用になる | 直近の似た要望を候補として出す選択欄にする | [仕様 §26-10](./spec.md) / [画面](../../src/components/ImprovementDispositionForm.tsx) |
-| FEATURE-034 | observe | 払い出しの控えは「最後に渡した1回」だけを持つ（誰にいつ何回渡したかの履歴は残らない） | 同じ要望を何度も渡した経緯を追う必要が出る | 控えを履歴として積み上げるか、操作の履歴だけで足りるかを決める | [仕様 §26-9](./spec.md) / [控えの保存](../../src/lib/improvement-handout-write.ts) |
-| FEATURE-035 | observe | 画面から発行できる鍵は同時に1本だけで、作り直すと前の鍵を使っている全員が止まる（発行・失効は画面から行える） | 作業する側が複数に増える、または鍵の入れ替えを定期的に行う運用になる | 鍵を複数本（名前つき）受け付けるか、期限付きにするかを決める | [鍵の発行](../../src/app/system/agent-keys/page.tsx) / [デプロイ注意 §5](../deploy-notes.md) |
-| FEATURE-036 | observe | 画面から発行した鍵を失効させても、サーバーの設定値（`AGENT_API_KEY`）が残っていれば受け取りは止まらない（両方を消す必要がある） | 「止めたつもりが止まっていない」が実際に申告される、または設定値を使う運用が無くなる | 設定値の有無を発行画面に表示するか、設定値そのものを廃止して画面発行に一本化する | [鍵の判定](../../src/lib/domain/agent-api.ts) / [デプロイ注意 §5](../deploy-notes.md) |
 | FEATURE-033 | observe | 廃棄したものは廃棄箱に残り続ける（自動で消える仕組みはない。物理削除は作らない方針） | 廃棄が数百件を超え、廃棄箱が読めなくなる | 期間で畳む表示にするか、まとめて書き出して切り離すかを決める | [仕様 §26-10](./spec.md) / [保存契約](../../system-spec/improvement-requests.md) |
 
 ## UX・アクセシビリティ
@@ -124,7 +121,8 @@
 | PERFORMANCE-001 | observe | 一覧は数百件超でページングが必要 | 対象データが数百件に達する | cursor または keyset 方式を導入 | [旧台帳 D1](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-002 | observe | マスタ参照は都度 D1 を読む | 読取負荷・待ち時間が問題化 | キャッシュ範囲と無効化を設計 | [旧台帳 D11](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-003 | ready | 本番端末・回線で Core Web Vitals を計測していない | 次の性能確認 | 主要画面を実測し基準超過だけ改善 | [旧台帳 UX101](./backlog-history-2026-08-13.md) |
-| PERFORMANCE-004 | ready | 公開バンドルの圧縮後実測が 2,760.1 KiB（無料プラン3,072 KiBの89.8%。鍵の発行画面の追加で 73.1 KiB 増えた）で警告域に入ったまま（改善要望の撮影ライブラリは押したときだけ遅延読込。まとめ払い出し・廃棄・払い出しAPIは API の道を増やさず既存の道へ同居させた） | 次の機能追加・依存更新前 | `wrangler deploy --dry-run` の構成内訳を比較し、未使用・重複コードを優先して3072 KiBまでの余白を戻す | [容量チェック](../../scripts/check-bundle-size.mjs) / [デプロイ注意](../deploy-notes.md) |
+| PERFORMANCE-006 | observe | サーバー側の実行ファイルに、いまの画面では使っていない依存が入っている（`kysely` 313 KiB、`@opentelemetry/semantic-conventions` 98 KiB） | 圧縮後の実測が上限の80%へ戻る | 取り込み元をたどり、読み込まない形にできるかを判定する（動きは変えない） | [容量チェック](../../scripts/check-bundle-size.mjs) / [組み立て設定](../../open-next.config.ts) |
+| PERFORMANCE-007 | observe | 組み立て方を webpack に戻したため、ブラウザへ配る静的ファイルは 440 KiB → 542 KiB（圧縮後）に増えた（本数は43→114に分かれた） | 本番実測で表示が遅いと分かる | `web-perf` で主要画面を実測し、超過したものだけ直す | [容量チェック](../../scripts/check-bundle-size.mjs) / [デプロイ注意](../deploy-notes.md) |
 | PERFORMANCE-005 | observe | 改善要望の画像を R2 ではなく D1 に data URL で持つ（バインディングが無いため）。1件あたり最大 700KB | `SUM(improvement_shots.bytes)`を定期計測し500MB到達、または詳細画像読取p95が500ms超を2週連続で観測 | R2 バインディングを足し、画像本体を移して D1 には鍵だけ残す。移行前に総bytes・件数・p95の内容非保持メトリクスを用意する | [仕様 §26-5](./spec.md) / [保存契約](../../system-spec/improvement-requests.md) |
 | SCALE-001 | observe | 管理画面の件数取得は会社数増加時に要確認 | 20 社または高負荷を観測 | クエリ計画を測り必要箇所だけ集約化 | [回ごとの記録 N4・N6](./backlog-session-notes.md) |
 | SCALE-002 | decision | フォーム数・KPI 項目数の上限が未定義 | 複数フォーム運用を制度化 | ドメイン上限と超過時の案内を決める | [回ごとの記録 R2・R4](./backlog-session-notes.md) |

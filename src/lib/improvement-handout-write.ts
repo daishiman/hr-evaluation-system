@@ -11,12 +11,27 @@
  * 控えの保存と状態の更新は同じ1回の保存で終わり、途中で止まる隙間がない。
  */
 
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema as s, type DB } from "@/lib/db";
+import { newId } from "@/lib/id";
 import { HttpError } from "@/lib/session";
 import { getImprovementForHandout } from "@/lib/queries";
 import { improvementFingerprintOf, type FingerprintSource } from "@/lib/improvement-instruction-draft";
-import { handoutNote, handoutState, plannedAction, type BulkAction } from "@/lib/domain/improvement-handout";
+import {
+  HANDOUT_HISTORY_MAX,
+  handoutNote,
+  handoutState,
+  plannedAction,
+  type BulkAction,
+} from "@/lib/domain/improvement-handout";
+
+/**
+ * 誰が渡したのか。画面から押したときと、API で取りに来たときで別物にする。
+ * 同じ1件として記録すると、コピーしただけと実際に渡ったのが区別できなくなる。
+ */
+export type HandoutSource =
+  | { via: "screen"; actorId: string }
+  | { via: "api"; keyId: string | null; keyLabel: string | null };
 
 export interface HandoutResult {
   id: string;
@@ -32,30 +47,83 @@ function headline(body: string): string {
 }
 
 /**
- * 控えを残し、未対応なら対応中へ進める。
+ * 履歴を積み、あふれた古い行を落とす。
+ *
+ * 上限は「1件の要望につき何行残すか」で決める。全体の行数で切ると、
+ * よく直す要望の履歴が、無関係な要望の増加で消えることになる。
+ */
+async function pushHistory(
+  db: DB,
+  requestId: string,
+  source: HandoutSource,
+): Promise<void> {
+  await db.insert(s.improvementHandoutEvents).values({
+    id: newId("ihe"),
+    requestId,
+    via: source.via,
+    keyId: source.via === "api" ? source.keyId : null,
+    keyLabel: source.via === "api" ? source.keyLabel : null,
+    actorId: source.via === "screen" ? source.actorId : null,
+  });
+
+  const stale = await db
+    .select({ id: s.improvementHandoutEvents.id })
+    .from(s.improvementHandoutEvents)
+    .where(eq(s.improvementHandoutEvents.requestId, requestId))
+    .orderBy(desc(s.improvementHandoutEvents.createdAt), desc(s.improvementHandoutEvents.id))
+    .limit(HANDOUT_HISTORY_MAX * 10)
+    .offset(HANDOUT_HISTORY_MAX);
+  if (stale.length > 0) {
+    await db.delete(s.improvementHandoutEvents).where(
+      inArray(
+        s.improvementHandoutEvents.id,
+        stale.map((r) => r.id),
+      ),
+    );
+  }
+}
+
+/**
+ * 控えを残し、履歴を1件積み、未対応なら対応中へ進める。
  *
  * 指紋は「進めたあとの状態」で作る。送信前の状態のまま残すと、渡した直後に
  * 「更新あり」と表示され、中身が同じものを何度も渡すことになる。
+ * 「更新あり」は、この最後の払い出し時点の内容とだけ比べる。
  *
- * byId は押した人。API で受け取ったときは誰とも結び付かないので null を入れる
- * （渡ったこと自体は日時で残る）。
+ * source は渡した経路。API で受け取ったときは人と結び付かないので、
+ * 代わりに使われた鍵を残す（誰も分からない、にはしない）。
  */
 export async function recordHandout(
   db: DB,
   item: FingerprintSource & { id: string },
-  byId: string | null,
+  source: HandoutSource,
 ): Promise<void> {
   const advanced = item.status === "open" ? { ...item, status: "doing" } : item;
   const fingerprint = improvementFingerprintOf(advanced);
   const now = new Date();
+  const byId = source.via === "screen" ? source.actorId : null;
 
   await db
     .insert(s.improvementHandouts)
-    .values({ requestId: item.id, contentFingerprint: fingerprint, handedOutAt: now, handedOutById: byId })
+    .values({
+      requestId: item.id,
+      contentFingerprint: fingerprint,
+      handedOutAt: now,
+      handedOutById: byId,
+      handoutCount: 1,
+    })
     .onConflictDoUpdate({
       target: s.improvementHandouts.requestId,
-      set: { contentFingerprint: fingerprint, handedOutAt: now, handedOutById: byId },
+      set: {
+        contentFingerprint: fingerprint,
+        handedOutAt: now,
+        handedOutById: byId,
+        // 通算の回数は積み上げる。履歴は古い分を丸めるので、行数からは数えられない。
+        handoutCount: sql`${s.improvementHandouts.handoutCount} + 1`,
+      },
     });
+
+  await pushHistory(db, item.id, source);
 
   // 未対応のまま置き去りにしないよう、渡した時点で「対応中」へ進める。
   if (item.status === "open") {
@@ -92,7 +160,7 @@ export async function handOutImprovement(
   }
 
   const db = await getDb();
-  await recordHandout(db, item, viewer.id);
+  await recordHandout(db, item, { via: "screen", actorId: viewer.id });
   return {
     id,
     label,

@@ -25,8 +25,8 @@ import { AGENT_KEY_PAGE_PATH } from "@/lib/domain/agent-keys";
 const KEY = "k".repeat(AGENT_KEY_MIN_LENGTH);
 /** 画面から発行した鍵は、ハッシュだけが保存される。突き合わせもハッシュどうし。 */
 const HASH = "a".repeat(64);
-const env = { envKey: KEY, activeKeyHash: null };
-const stored = { envKey: null, activeKeyHash: HASH };
+const env = { envKey: KEY, envKeyEnabled: true, activeKeyHashes: [] };
+const stored = { envKey: null, envKeyEnabled: true, activeKeyHashes: [HASH] };
 
 describe("鍵が無ければ中身を返さない", () => {
   it("鍵を付けずに来たら断る", () => {
@@ -54,17 +54,31 @@ describe("鍵が無ければ中身を返さない", () => {
   });
 
   it("サーバーの設定値の鍵なら通す", () => {
-    expect(agentAuth(env, `Bearer ${KEY}`, null)).toEqual({ ok: true });
+    expect(agentAuth(env, `Bearer ${KEY}`, null)).toEqual({ ok: true, via: "env", keyHash: null });
   });
 
   it("鍵の前後の空白は落として比べる", () => {
-    expect(agentAuth({ envKey: `  ${KEY}  `, activeKeyHash: null }, `Bearer ${KEY}`, null)).toEqual({ ok: true });
+    const padded = { ...env, envKey: `  ${KEY}  ` };
+    expect(agentAuth(padded, `Bearer ${KEY}`, null)).toMatchObject({ ok: true, via: "env" });
+  });
+
+  it("設定値の鍵を止めていれば、その鍵では通らない", () => {
+    // v51 の残課題。画面の鍵を全部止めても設定値が残っていて止まらなかった。
+    const stopped = { ...env, envKeyEnabled: false };
+    expect(agentAuth(stopped, `Bearer ${KEY}`, null)).toMatchObject({ ok: false, status: 503 });
+    expect(agentKeyConfigured(stopped)).toBe(false);
+  });
+
+  it("設定値を止めていても、画面の鍵は通り続ける", () => {
+    const stopped = { envKey: KEY, envKeyEnabled: false, activeKeyHashes: [HASH] };
+    expect(agentAuth(stopped, "Bearer 画面の鍵", HASH)).toMatchObject({ ok: true, via: "screen" });
+    expect(agentAuth(stopped, `Bearer ${KEY}`, "b".repeat(64))).toMatchObject({ ok: false, status: 401 });
   });
 });
 
 describe("画面から発行した鍵", () => {
   it("保存してあるハッシュと一致すれば通す（生の鍵は突き合わせに使わない）", () => {
-    expect(agentAuth(stored, "Bearer なんでもよい", HASH)).toEqual({ ok: true });
+    expect(agentAuth(stored, "Bearer なんでもよい", HASH)).toEqual({ ok: true, via: "screen", keyHash: HASH });
   });
 
   it("ハッシュが違えば断る", () => {
@@ -73,37 +87,53 @@ describe("画面から発行した鍵", () => {
 
   it("失効させて保存が空になれば、同じ鍵でも通らない", () => {
     // 失効は「使える鍵が無い」状態。設定値も無ければ未設定と同じ扱いになる。
-    expect(agentAuth({ envKey: null, activeKeyHash: null }, "Bearer なんでもよい", HASH)).toMatchObject({
-      ok: false,
-      status: 503,
-    });
+    const none = { envKey: null, envKeyEnabled: true, activeKeyHashes: [] };
+    expect(agentAuth(none, "Bearer なんでもよい", HASH)).toMatchObject({ ok: false, status: 503 });
+  });
+
+  it("鍵は複数本を同時に使える。1本止めても他の鍵は通る", () => {
+    const other = "c".repeat(64);
+    const many = { envKey: null, envKeyEnabled: true, activeKeyHashes: [HASH, other] };
+    expect(agentAuth(many, "Bearer 1本目", HASH)).toMatchObject({ ok: true, keyHash: HASH });
+    expect(agentAuth(many, "Bearer 2本目", other)).toMatchObject({ ok: true, keyHash: other });
+    // 1本目を止めた状態。残った鍵はそのまま通る。
+    const left = { ...many, activeKeyHashes: [other] };
+    expect(agentAuth(left, "Bearer 1本目", HASH)).toMatchObject({ ok: false, status: 401 });
+    expect(agentAuth(left, "Bearer 2本目", other)).toMatchObject({ ok: true, keyHash: other });
+  });
+
+  it("空文字のハッシュは鍵として数えない", () => {
+    const blank = { envKey: null, envKeyEnabled: true, activeKeyHashes: ["", "  "] };
+    expect(agentKeyConfigured(blank)).toBe(false);
+    expect(agentAuth(blank, "Bearer なんでもよい", "")).toMatchObject({ ok: false, status: 503 });
   });
 
   it("画面の鍵とサーバーの設定値は、どちらでも通る", () => {
-    const both = { envKey: KEY, activeKeyHash: HASH };
-    expect(agentAuth(both, `Bearer ${KEY}`, "b".repeat(64))).toEqual({ ok: true });
-    expect(agentAuth(both, "Bearer 画面の鍵", HASH)).toEqual({ ok: true });
+    const both = { envKey: KEY, envKeyEnabled: true, activeKeyHashes: [HASH] };
+    expect(agentAuth(both, `Bearer ${KEY}`, "b".repeat(64))).toMatchObject({ ok: true, via: "env" });
+    expect(agentAuth(both, "Bearer 画面の鍵", HASH)).toMatchObject({ ok: true, via: "screen" });
   });
 
   it("どちらかに鍵があれば「設定済み」とみなす", () => {
     expect(agentKeyConfigured(env)).toBe(true);
     expect(agentKeyConfigured(stored)).toBe(true);
-    expect(agentKeyConfigured({ envKey: "みじかい", activeKeyHash: null })).toBe(false);
-    expect(agentKeyConfigured({ envKey: null, activeKeyHash: "" })).toBe(false);
+    expect(agentKeyConfigured({ envKey: "みじかい", envKeyEnabled: true, activeKeyHashes: [] })).toBe(false);
+    expect(agentKeyConfigured({ envKey: null, envKeyEnabled: true, activeKeyHashes: [""] })).toBe(false);
   });
 });
 
 describe("鍵が未設定のとき", () => {
   it("使えないことと、設定の手順を返す", () => {
     for (const key of [null, undefined, "", "みじかい鍵"]) {
-      const r = agentAuth({ envKey: key, activeKeyHash: null }, `Bearer ${KEY}`, null);
+      const r = agentAuth({ envKey: key, envKeyEnabled: true, activeKeyHashes: [] }, `Bearer ${KEY}`, null);
       expect(r).toMatchObject({ ok: false, status: 503 });
     }
   });
 
   it("短すぎる鍵は設定されていない扱いにする", () => {
     const short = "k".repeat(AGENT_KEY_MIN_LENGTH - 1);
-    expect(agentAuth({ envKey: short, activeKeyHash: null }, `Bearer ${short}`, null)).toMatchObject({
+    const source = { envKey: short, envKeyEnabled: true, activeKeyHashes: [] };
+    expect(agentAuth(source, `Bearer ${short}`, null)).toMatchObject({
       ok: false,
       status: 503,
     });
