@@ -2,7 +2,13 @@ import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { getDb, schema } from "@/lib/db";
 import { isImprovementStatus } from "@/lib/domain/improvement";
-import { handoutNote, handoutState, improvementFingerprint } from "@/lib/domain/improvement-handout";
+import {
+  HANDOUT_HISTORY_MAX,
+  handoutNote,
+  handoutState,
+  improvementFingerprint,
+  type HandoutEvent,
+} from "@/lib/domain/improvement-handout";
 import { isImprovementKind } from "@/lib/domain/improvement-instruction";
 import { canSeeCriteria, type Viewer } from "@/lib/session";
 import {
@@ -954,6 +960,7 @@ export async function listImprovementRequests(companyId: string) {
       handledByName: handler.name,
       shotBytes: s.improvementShots.bytes,
       handedOutAt: s.improvementHandouts.handedOutAt,
+      handoutCount: s.improvementHandouts.handoutCount,
       contentFingerprint: s.improvementHandouts.contentFingerprint,
     })
     .from(s.improvementRequests)
@@ -1092,6 +1099,7 @@ export async function getImprovementRequest(companyId: string, id: string) {
       handledByName: handler.name,
       shot: s.improvementShots.dataUrl,
       handedOutAt: s.improvementHandouts.handedOutAt,
+      handoutCount: s.improvementHandouts.handoutCount,
       contentFingerprint: s.improvementHandouts.contentFingerprint,
     })
     .from(s.improvementRequests)
@@ -1111,6 +1119,40 @@ export async function getImprovementRequest(companyId: string, id: string) {
     hasShot: r.shot !== null,
     discarded: r.discardedAt !== null,
   };
+}
+
+/**
+ * 払い出しの履歴。新しい順に、残っている分だけを読む。
+ *
+ * 行は古い分から丸めるので、ここに出る件数と通算の回数は一致しないことがある。
+ * 通算は improvement_handouts.handout_count が正本。
+ *
+ * 画面から押したときは人の名前、API で取られたときは鍵の名前を出す。
+ * どちらも空になり得るので、言い換えは domain 側（handoutEventWho）で行う。
+ */
+export async function listHandoutEvents(requestId: string): Promise<HandoutEvent[]> {
+  const db = await getDb();
+  const actor = alias(s.users, "handout_actor");
+  const rows = await db
+    .select({
+      id: s.improvementHandoutEvents.id,
+      via: s.improvementHandoutEvents.via,
+      keyLabel: s.improvementHandoutEvents.keyLabel,
+      actorName: actor.name,
+      createdAt: s.improvementHandoutEvents.createdAt,
+    })
+    .from(s.improvementHandoutEvents)
+    .leftJoin(actor, eq(actor.id, s.improvementHandoutEvents.actorId))
+    .where(eq(s.improvementHandoutEvents.requestId, requestId))
+    .orderBy(desc(s.improvementHandoutEvents.createdAt), desc(s.improvementHandoutEvents.id))
+    .limit(HANDOUT_HISTORY_MAX);
+  return rows.map((r) => ({
+    id: r.id,
+    via: r.via === "api" ? ("api" as const) : ("screen" as const),
+    actorName: r.actorName,
+    keyName: r.keyLabel,
+    createdAt: r.createdAt,
+  }));
 }
 
 /**

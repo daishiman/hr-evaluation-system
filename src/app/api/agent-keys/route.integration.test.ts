@@ -35,8 +35,9 @@ vi.mock("@opennextjs/cloudflare", () => ({
   getCloudflareContext: async () => ({ env: mocked.env }),
 }));
 
-import { DELETE, POST } from "@/app/api/agent-keys/route";
+import { DELETE, POST, PUT } from "@/app/api/agent-keys/route";
 import { GET } from "@/app/api/improvements/route";
+import { AGENT_KEY_MAX } from "@/lib/domain/agent-keys";
 
 let testDb: TestDatabase;
 
@@ -57,11 +58,41 @@ function viewer(role: Viewer["role"] = "SUPER_ADMIN"): Viewer {
   };
 }
 
+function issueRequest(label: string) {
+  return new Request("http://localhost/api/agent-keys", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ label }),
+  });
+}
+
 /** 発行された生の鍵を取り出す（画面がこの1回だけ受け取るのと同じ経路）。 */
-async function issue(): Promise<{ key: string; prompt: string; exportLine: string }> {
-  const response = await POST();
+async function issue(label = "自宅の Claude Code"): Promise<{ key: string; prompt: string; exportLine: string }> {
+  const response = await POST(issueRequest(label));
   expect(response.status).toBe(200);
   return (await response.json()) as { key: string; prompt: string; exportLine: string };
+}
+
+/** 鍵を1本だけ止める。id は画面の一覧から渡されるのと同じ形。 */
+function revoke(id: string) {
+  return DELETE(new Request(`http://localhost/api/agent-keys?id=${encodeURIComponent(id)}`, { method: "DELETE" }));
+}
+
+/** 設定値の鍵を受け付けるかを切り替える。 */
+function setEnv(enabled: boolean) {
+  return PUT(
+    new Request("http://localhost/api/agent-keys", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ envKeyEnabled: enabled }),
+    }),
+  );
+}
+
+/** いま使える鍵のID（新しい順）。 */
+async function activeIds(): Promise<string[]> {
+  const rows = await testDb.db.select().from(s.agentApiKeys);
+  return rows.filter((r) => r.revokedAt === null).map((r) => r.id);
 }
 
 /** 払い出しの入口を、その鍵で叩く。 */
@@ -158,19 +189,33 @@ describe("発行できる人", () => {
     const { HttpError } = await import("@/lib/session");
     mocked.apiViewer.mockRejectedValue(new HttpError(403, "権限がありません。"));
 
-    expect((await POST()).status).toBe(403);
-    expect((await DELETE()).status).toBe(403);
+    expect((await POST(issueRequest("社内PC"))).status).toBe(403);
+    expect((await revoke("agkey_none")).status).toBe(403);
+    expect((await setEnv(false)).status).toBe(403);
     expect(await testDb.db.select().from(s.agentApiKeys)).toHaveLength(0);
   });
 
-  it("止める鍵が無いのに押されたら、黙って成功にしない", async () => {
-    const response = await DELETE();
+  it("止める鍵が選ばれていなければ、黙って成功にしない", async () => {
+    const response = await DELETE(new Request("http://localhost/api/agent-keys", { method: "DELETE" }));
+    expect(response.status).toBe(400);
+    expect(await testDb.db.select().from(s.agentApiKeys)).toHaveLength(0);
+  });
+
+  it("すでに止まっている鍵を押しても、成功にしない", async () => {
+    await issue();
+    const [id] = await activeIds();
+    expect((await revoke(id)).status).toBe(200);
+    expect((await revoke(id)).status).toBe(400);
+  });
+
+  it("用途の名前が無いままでは発行できない", async () => {
+    const response = await POST(issueRequest("   "));
     expect(response.status).toBe(400);
     expect(await testDb.db.select().from(s.agentApiKeys)).toHaveLength(0);
   });
 });
 
-describe("止めた鍵・作り直した鍵", () => {
+describe("鍵は複数本を同時に使える", () => {
   it("発行した鍵で払い出しが通る", async () => {
     await seedImprovement();
     const { key } = await issue();
@@ -180,34 +225,46 @@ describe("止めた鍵・作り直した鍵", () => {
     expect(await response.text()).toContain("保存できません");
   });
 
-  it("失効させたら、同じ鍵では中身が1文字も返らない", async () => {
+  it("1本止めても、他の鍵は動き続ける", async () => {
     await seedImprovement();
-    const { key } = await issue();
-    expect((await DELETE()).status).toBe(200);
+    const home = await issue("自宅の Claude Code");
+    const office = await issue("社内PC");
+    expect(office.key).not.toBe(home.key);
+    // 発行しただけでは他の鍵は止まらない
+    expect(await activeIds()).toHaveLength(2);
+
+    const rows = await testDb.db.select().from(s.agentApiKeys);
+    const homeId = rows.find((r) => r.label === "自宅の Claude Code")!.id;
+    expect((await revoke(homeId)).status).toBe(200);
     _resetRateLimitStoreForTest();
 
-    const response = await fetchWithKey(key);
-    expect(response.status).not.toBe(200);
-    expect(await response.text()).not.toContain("保存できません");
+    const stopped = await fetchWithKey(home.key);
+    expect(stopped.status).toBe(401);
+    expect(await stopped.text()).not.toContain("保存できません");
+    _resetRateLimitStoreForTest();
+    expect((await fetchWithKey(office.key)).status).toBe(200);
   });
 
-  it("作り直したら、前の鍵はその場で通らなくなる", async () => {
-    await seedImprovement();
-    const first = await issue();
-    const second = await issue();
-    expect(second.key).not.toBe(first.key);
-    _resetRateLimitStoreForTest();
+  it("上限を超えては発行できない", async () => {
+    for (let i = 0; i < AGENT_KEY_MAX; i += 1) await issue(`端末${i}`);
+    expect(await activeIds()).toHaveLength(AGENT_KEY_MAX);
 
-    const old = await fetchWithKey(first.key);
-    expect(old.status).toBe(401);
-    expect(await old.text()).not.toContain("保存できません");
-    _resetRateLimitStoreForTest();
-    expect((await fetchWithKey(second.key)).status).toBe(200);
+    const over = await POST(issueRequest("あふれる分"));
+    expect(over.status).toBe(400);
+    expect(await activeIds()).toHaveLength(AGENT_KEY_MAX);
+
+    // 1本止めれば、また発行できる
+    const [id] = await activeIds();
+    await revoke(id);
+    expect((await POST(issueRequest("入れ替えた端末"))).status).toBe(200);
+    expect(await activeIds()).toHaveLength(AGENT_KEY_MAX);
   });
 
   it("止めた記録は消さずに積む（いつ誰が止めたかを追える）", async () => {
-    await issue();
-    await issue();
+    await issue("1本目");
+    await issue("2本目");
+    const [id] = await activeIds();
+    await revoke(id);
     const rows = await testDb.db.select().from(s.agentApiKeys);
 
     expect(rows).toHaveLength(2);
@@ -240,11 +297,45 @@ describe("2つの置き場所", () => {
     await seedImprovement();
     mocked.env = { AGENT_API_KEY: ENV_KEY };
     const { key } = await issue();
-    await DELETE();
+    const [id] = await activeIds();
+    await revoke(id);
     _resetRateLimitStoreForTest();
 
     expect((await fetchWithKey(key)).status).toBe(401);
     _resetRateLimitStoreForTest();
+    expect((await fetchWithKey(ENV_KEY)).status).toBe(200);
+  });
+
+  /* v51 の残課題。上の1件が「止めたはずなのに受け取れる」の形。
+     画面だけで完全に止められる道を用意し、取り消しもできるようにした。 */
+  it("設定値の鍵は、画面から受け付けを止められる", async () => {
+    await seedImprovement();
+    mocked.env = { AGENT_API_KEY: ENV_KEY };
+    expect((await setEnv(false)).status).toBe(200);
+    _resetRateLimitStoreForTest();
+
+    const stopped = await fetchWithKey(ENV_KEY);
+    expect(stopped.status).toBe(503);
+    expect(await stopped.text()).not.toContain("保存できません");
+  });
+
+  it("設定値を止めても、画面の鍵は通り続ける", async () => {
+    await seedImprovement();
+    mocked.env = { AGENT_API_KEY: ENV_KEY };
+    const { key } = await issue();
+    await setEnv(false);
+    _resetRateLimitStoreForTest();
+
+    expect((await fetchWithKey(key)).status).toBe(200);
+  });
+
+  it("止めた設定値は、画面から元に戻せる", async () => {
+    await seedImprovement();
+    mocked.env = { AGENT_API_KEY: ENV_KEY };
+    await setEnv(false);
+    expect((await setEnv(true)).status).toBe(200);
+    _resetRateLimitStoreForTest();
+
     expect((await fetchWithKey(ENV_KEY)).status).toBe(200);
   });
 

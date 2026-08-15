@@ -24,7 +24,7 @@ import { findImprovementBySubmission, saveImprovementRequest } from "@/lib/impro
 import { consumeRateLimit, IMPROVEMENT_SUBMIT_RATE_LIMIT } from "@/lib/rate-limit";
 import { getImprovementsForAgent, listImprovementsForAgent } from "@/lib/queries";
 import { appOrigin } from "@/lib/origin";
-import { guardAgentRequest } from "@/lib/agent-api";
+import { guardAgentRequest, type AgentCaller } from "@/lib/agent-api";
 import {
   AGENT_BULK_MAX,
   AGENT_LIST_MAX,
@@ -239,7 +239,12 @@ async function agentList(format: AgentFormat, origin: string): Promise<Response>
  * 画面のボタンからだけ控えを残すと、API で直接取った分が未払い出しのまま残り、
  * あとから「内容が変わったか」を見られなくなる。
  */
-async function agentDocuments(ids: string[], dropped: number, format: AgentFormat): Promise<Response> {
+async function agentDocuments(
+  ids: string[],
+  dropped: number,
+  format: AgentFormat,
+  caller: AgentCaller,
+): Promise<Response> {
   const items = await getImprovementsForAgent(ids);
   if (items.length === 0) {
     return markdown("# 対象の要望が見つかりません\n\n要望IDを確かめてください。\n");
@@ -251,7 +256,7 @@ async function agentDocuments(ids: string[], dropped: number, format: AgentForma
       : await buildBulkImprovementInstruction(items);
 
   const db = await getDb();
-  for (const item of items) await recordHandout(db, item, null);
+  for (const item of items) await recordHandout(db, item, { via: "api", ...caller });
 
   const notice = dropped > 0 ? `\n\n（一度に渡せるのは${AGENT_BULK_MAX}件までです。${dropped}件は含めていません）\n` : "\n";
   if (format === "json") {
@@ -267,19 +272,19 @@ async function agentDocuments(ids: string[], dropped: number, format: AgentForma
  * 判定は src/lib/agent-api.ts に寄せてあり、ここでは通ったあとだけを書く。
  */
 export async function GET(req: Request) {
-  const denied = await guardAgentRequest(req);
-  if (denied) return denied;
+  const gate = await guardAgentRequest(req);
+  if (gate.denied) return gate.denied;
 
   const url = new URL(req.url);
   const format = agentFormat(url.searchParams.get("format"), req.headers.get("accept"));
   const single = url.searchParams.get("id");
   const many = url.searchParams.get("ids");
 
-  if (single) return agentDocuments([single], 0, format);
+  if (single) return agentDocuments([single], 0, format, gate.caller);
   if (many) {
     const { ids, dropped } = parseAgentIds(many);
     if (ids.length === 0) return markdown("# 要望IDがありません\n\n`?ids=` に要望IDを並べてください。\n");
-    return agentDocuments(ids, dropped, format);
+    return agentDocuments(ids, dropped, format, gate.caller);
   }
   return agentList(format, await appOrigin());
 }

@@ -78,8 +78,8 @@ describe("一覧からまとめて指示文を払い出す", () => {
     // 受け取った鍵は、突き合わせる前にハッシュへ変える（生のまま比べる先を作らない）
     expect(guard).toContain("await hashAgentKey(given)");
     // 判定を通す前に何かを返す道を作らない
-    expect(route).toContain("const denied = await guardAgentRequest(req);");
-    expect(route).toContain("if (denied) return denied;");
+    expect(route).toContain("const gate = await guardAgentRequest(req);");
+    expect(route).toContain("if (gate.denied) return gate.denied;");
     const get = route.slice(route.indexOf("export async function GET"));
     expect(get.indexOf("guardAgentRequest(req)")).toBeLessThan(get.indexOf("agentDocuments("));
     expect(get.indexOf("guardAgentRequest(req)")).toBeLessThan(get.indexOf("agentList("));
@@ -211,9 +211,63 @@ describe("Claude Code 連携の鍵", () => {
 
   it("止める操作は、押す前に何が止まるかを出す", () => {
     const panel = read("src/components/AgentKeyPanel.tsx");
-    expect(panel).toContain('agentKeyConfirmText("reissue")');
-    expect(panel).toContain('agentKeyConfirmText("revoke")');
+    // 止まるのは押した1本だけ。残り何本が動き続けるかを、確認文に入れる。
+    expect(panel).toContain("agentKeyRevokeConfirmText(k.name, activeKeys.length - 1)");
     expect(panel).toContain("<ConfirmButton");
+  });
+
+  /* 2026-08-15、依頼者から「鍵を1本ずつ配れるようにしてほしい」。
+     1本しか持てないと、端末を増やすたびに前の鍵が止まっていた。 */
+  it("発行しても他の鍵は止めない（発行のついでに止まる道を作らない）", () => {
+    const store = read("src/lib/agent-keys.ts");
+    const issue = store.slice(store.indexOf("export async function issueAgentKey"));
+    const revoke = issue.indexOf("export async function revokeAgentKey");
+    expect(issue.slice(0, revoke)).not.toContain("revokedAt: new Date()");
+  });
+
+  it("上限は画面の表示だけに頼らず、入口でも断る", () => {
+    const store = read("src/lib/agent-keys.ts");
+    expect(store).toContain("if (!canIssueAgentKey(active.length)) throw new HttpError(400, AGENT_KEY_CAP_MESSAGE);");
+  });
+
+  it("画面の鍵を全部止めても残る設定値の鍵を、画面から止められる", () => {
+    // ここが無いと「止めたはずなのに受け取れる」が起きる（v51 の残課題）。
+    expect(read("src/lib/agent-api.ts")).toContain("envKeyEnabled: await envKeyEnabled(db)");
+    expect(read("src/lib/domain/agent-api.ts")).toContain("if (!source.envKeyEnabled) return \"\";");
+    const panel = read("src/components/AgentKeyPanel.tsx");
+    expect(panel).toContain("envKeyToggleLabel(envEnabled)");
+    // 完全に消す手順も同じ場所に出す（画面で止めるのは取り消しがきく方の手段）。
+    expect(panel).toContain("AGENT_ENV_KEY_DELETE_COMMAND");
+  });
+});
+
+/* ═══════════ 払い出しの履歴 ═══════════
+ *
+ * 2026-08-15、依頼者から「何度・いつ・誰が・どの鍵で払い出したかを残してほしい」。
+ * それまでは最後の1回分の控えだけで、渡し直しの経緯が読めなかった。
+ */
+describe("払い出しの履歴", () => {
+  it("画面からのコピーと、Claude Code からの取得を区別して積む", () => {
+    const write = read("src/lib/improvement-handout-write.ts");
+    expect(write).toContain("insert(s.improvementHandoutEvents)");
+    expect(write).toContain('via: source.via');
+    expect(read("src/app/api/improvements/route.ts")).toContain('{ via: "api", ...caller }');
+    expect(write).toContain('{ via: "screen", actorId: viewer.id }');
+  });
+
+  it("通算の回数は履歴の行数から数えない（古い分は丸めるため）", () => {
+    const write = read("src/lib/improvement-handout-write.ts");
+    expect(write).toContain("handoutCount: sql`${s.improvementHandouts.handoutCount} + 1`");
+  });
+
+  it("履歴は要望1件ごとに上限を持ち、あふれた古い行を落とす", () => {
+    const write = read("src/lib/improvement-handout-write.ts");
+    expect(write).toContain("HANDOUT_HISTORY_MAX");
+    expect(write).toContain("delete(s.improvementHandoutEvents)");
+  });
+
+  it("残っている件数と通算が食い違うことを画面で言う（無言の欠落を作らない）", () => {
+    expect(read("src/app/admin/improvements/[id]/page.tsx")).toContain("handoutHistoryNote(");
   });
 
   it("鍵が無いときの案内から、発行する画面へ辿れる", () => {

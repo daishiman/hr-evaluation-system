@@ -45,6 +45,8 @@ const submissionKey = crypto.randomUUID();
 const request = {
   path: "/f/e2e-preview-token?employee=hidden",
   body: "preview縦切り確認用の改善要望",
+  // 種類は必須（画面のchip選択と同じ値を送る）。
+  kind: "usability",
   viewport: "375×812",
   shot: null,
   submissionKey,

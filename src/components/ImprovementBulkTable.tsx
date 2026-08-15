@@ -47,6 +47,8 @@ export interface ImprovementRow {
   stateNote: string;
   handoutState: HandoutState;
   handoutNote: string;
+  /** 「3回・最終 2026年8月15日 10:00」。渡し直しが何度あったかは1行目では分からない。 */
+  handoutCountText: string;
   off: boolean;
 }
 
@@ -244,6 +246,7 @@ export function ImprovementBulkTable({
       cell: (r) => (
         <>
           <Badge tone={handoutStateTone(r.handoutState)}>{handoutStateLabel(r.handoutState)}</Badge>
+          <span className="footnote">{r.handoutCountText}</span>
           <span className="footnote">{r.handoutNote}</span>
         </>
       ),

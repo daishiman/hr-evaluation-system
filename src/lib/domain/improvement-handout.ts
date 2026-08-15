@@ -146,6 +146,65 @@ export function handoutNote(state: HandoutState): string {
   return "渡した内容のままです。もう一度渡しても中身は同じです。";
 }
 
+/* ───────────────────────── 払い出しの履歴 ───────────────────────── */
+
+/**
+ * 払い出しの経路。画面からの控えと、API で実際に取りに来たときを分ける。
+ *
+ * 分けないと「コピーしただけ」と「実際に渡った」が同じ1件に見える。
+ * 渡っていないのに渡した気になる取り違えは、この区別でしか防げない。
+ */
+export type HandoutVia = "screen" | "api";
+
+export function handoutViaLabel(via: HandoutVia): string {
+  return via === "screen" ? "画面からコピー" : "Claude Code が取得";
+}
+
+/**
+ * 履歴を1件ぶん読む形。鍵は記録した時点の呼び名を持たせる。
+ *
+ * 鍵のIDだけを持つと、その鍵を止めたあと一覧で「不明」になる。
+ * 誰がどの鍵で取ったかは後から意味を変えないので、呼び名ごと写しておく。
+ */
+export interface HandoutEvent {
+  id: string;
+  via: HandoutVia;
+  actorName: string | null;
+  keyName: string | null;
+  createdAt: Date;
+}
+
+/** 履歴1件の「誰が・どの鍵で」。空欄で並べず、必ず1行の日本語にする。 */
+export function handoutEventWho(event: Pick<HandoutEvent, "via" | "actorName" | "keyName">): string {
+  if (event.via === "screen") return event.actorName ?? "退職された方";
+  return event.keyName ? `鍵「${event.keyName}」` : "サーバーの設定値の鍵";
+}
+
+/**
+ * 1件あたりに残す履歴の上限。
+ *
+ * 履歴は要望1件につき積み上がる。何度も払い出し直す要望ほど増えるので、
+ * 新しい方から20件だけ残し、あふれた古い行は消す。20件は
+ * 「同じ要望を出し直した経緯を追える」と「表が読める」の境目。
+ * 最新の払い出し日時と通算の回数は別に持つので、丸めても総数は消えない。
+ */
+export const HANDOUT_HISTORY_MAX = 20;
+
+/**
+ * 一覧に出す「何回・いつ」。日時は表示用に整えた文字列で受け取る
+ * （日付の書き方はアプリ全体で1箇所に寄せてあるため、ここでは組み立てない）。
+ */
+export function handoutCountText(count: number, lastAtText: string | null): string {
+  if (count <= 0 || !lastAtText) return "まだ渡していません";
+  return `${count}回・最終 ${lastAtText}`;
+}
+
+/** 履歴の丸めの説明。画面で「全部あるはず」と誤解させないために出す。 */
+export function handoutHistoryNote(count: number): string {
+  if (count <= HANDOUT_HISTORY_MAX) return "払い出した記録です。新しい順に並びます。";
+  return "新しい順に20件までを残しています。古い記録は消えています。";
+}
+
 /**
  * 一括操作の結果1件ぶん。指示文の払い出しと、落とす・戻す操作の両方が並ぶ。
  * どちらも同じ表に出すので、実行内容の言葉はここ1箇所で決める。

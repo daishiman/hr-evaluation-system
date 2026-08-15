@@ -13,8 +13,8 @@
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { agentAuth, readBearer } from "@/lib/domain/agent-api";
-import { activeAgentKeyHash, hashAgentKey, touchAgentKey } from "@/lib/agent-keys";
+import { AGENT_KEY_MIN_LENGTH, agentAuth, readBearer } from "@/lib/domain/agent-api";
+import { activeAgentKeyHashes, envKeyEnabled, hashAgentKey, touchAgentKey } from "@/lib/agent-keys";
 import { getDb } from "@/lib/db";
 import { appOrigin } from "@/lib/origin";
 import { AGENT_API_RATE_LIMIT, consumeRateLimit } from "@/lib/rate-limit";
@@ -36,6 +36,15 @@ async function envKey(): Promise<string | null> {
   }
 }
 
+/**
+ * 設定値の鍵が登録されているか。画面で「登録されていません」と言い切るために使う。
+ * 中身は見せない（登録の有無だけで、止める・戻すの判断はできる）。
+ */
+export async function hasEnvKey(): Promise<boolean> {
+  const raw = await envKey();
+  return (raw?.trim().length ?? 0) >= AGENT_KEY_MIN_LENGTH;
+}
+
 function textResponse(status: number, body: string, headers: Record<string, string> = {}): Response {
   return new Response(`${body}\n`, {
     status,
@@ -44,44 +53,63 @@ function textResponse(status: number, body: string, headers: Record<string, stri
 }
 
 /**
- * 通してよいかを判定する。断るときだけ Response を返す（null なら通す）。
+ * どの鍵で通ったか。払い出しの履歴に、そのまま写す。
+ * サーバーの設定値で通ったときは鍵の行が無いので、どちらも null になる。
+ */
+export interface AgentCaller {
+  keyId: string | null;
+  keyLabel: string | null;
+}
+
+export type AgentGate = { denied: Response; caller: null } | { denied: null; caller: AgentCaller };
+
+/**
+ * 通してよいかを判定する。断るときだけ Response が入る（denied が null なら通す）。
  *
  * 返す本文はどれも文字のまま。断り文を JSON で包んでも読みやすくならず、
  * 鍵が違うときは中身を一切返さない、という線だけが大事になる。
+ *
+ * 通ったときは、どの鍵で通ったかを一緒に返す。あとから「この要望は
+ * どの鍵で持って行かれたか」を辿れるようにするため。
  */
-export async function guardAgentRequest(req: Request): Promise<Response | null> {
+export async function guardAgentRequest(req: Request): Promise<AgentGate> {
   const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
   const limit = consumeRateLimit(`agent-api:${ip}`, AGENT_API_RATE_LIMIT);
   if (!limit.allowed) {
-    return textResponse(429, "しばらく待ってからお試しください。", {
+    const denied = textResponse(429, "しばらく待ってからお試しください。", {
       "retry-after": String(limit.retryAfterSeconds),
     });
+    return { denied, caller: null };
   }
 
   const authorization = req.headers.get("authorization");
   const given = readBearer(authorization);
   const db = await getDb();
-  const active = await activeAgentKeyHash(db);
+  const active = await activeAgentKeyHashes(db);
   // 受け取った鍵は、突き合わせる前にハッシュへ変える。生のまま比べる先を作らない。
   const givenHash = given ? await hashAgentKey(given) : null;
 
   const auth = agentAuth(
-    { envKey: await envKey(), activeKeyHash: active?.hash ?? null },
+    {
+      envKey: await envKey(),
+      envKeyEnabled: await envKeyEnabled(db),
+      activeKeyHashes: active.map((k) => k.hash),
+    },
     authorization,
     givenHash,
     await appOrigin(),
   );
   if (!auth.ok) {
-    return textResponse(
+    const denied = textResponse(
       auth.status,
       auth.message,
       auth.status === 401 ? { "www-authenticate": 'Bearer realm="improvements"' } : {},
     );
+    return { denied, caller: null };
   }
 
   // 通った鍵が画面発行のものなら、使われたことを控える（配ったのに届いていない、に気づくため）。
-  if (active && givenHash && active.hash === givenHash) {
-    await touchAgentKey(db, active.id, active.lastUsedAt);
-  }
-  return null;
+  const used = auth.keyHash ? (active.find((k) => k.hash === auth.keyHash) ?? null) : null;
+  if (used) await touchAgentKey(db, used.id, used.lastUsedAt);
+  return { denied: null, caller: { keyId: used?.id ?? null, keyLabel: used?.label ?? null } };
 }

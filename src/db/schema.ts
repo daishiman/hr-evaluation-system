@@ -1386,8 +1386,40 @@ export const improvementHandouts = sqliteTable("improvement_handouts", {
   handedOutAt: integer("handed_out_at", { mode: "timestamp" }),
   /** 払い出した人。そのあと退職しても記録は残す。 */
   handedOutById: text("handed_out_by_id").references(() => users.id),
+  /**
+   * 通算の払い出し回数。履歴の行数ではなく、ここが正本。
+   * 履歴は古い分を丸めるので、行を数えると回数が過去へ向かって減っていく。
+   */
+  handoutCount: integer("handout_count").notNull().default(0),
   createdAt: createdAt(),
 });
+
+/**
+ * 払い出した1回ぶんの記録（追記だけ・書き換えない）。
+ *
+ * 「最後の1回」だけを残すと、何度渡し直したのか・誰が渡したのかが
+ * 次の払い出しで消える。渡した経緯は要望を読み直すときの手がかりになるので、
+ * 1回ごとに積む。無限には増やさず、新しい方から一定件数だけ残す
+ * （上限は src/lib/domain/improvement-handout.ts が正本）。
+ */
+export const improvementHandoutEvents = sqliteTable(
+  "improvement_handout_events",
+  {
+    id: id(),
+    requestId: text("request_id")
+      .notNull()
+      .references(() => improvementRequests.id, { onDelete: "cascade" }),
+    /** screen（画面からコピー）| api（Claude Code が取得）。 */
+    via: text("via").notNull(),
+    /** API で取ったときの鍵。鍵の行が消えても読めるよう、呼び名も写しておく。 */
+    keyId: text("key_id"),
+    keyLabel: text("key_label"),
+    /** 画面から押した人。API 経由では入らない。 */
+    actorId: text("actor_id").references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("idx_ihe_request").on(t.requestId, t.createdAt)],
+);
 
 /**
  * 要望の状態を変えた記録（追記だけ・書き換えない）。
@@ -1436,6 +1468,8 @@ export const agentApiKeys = sqliteTable(
   "agent_api_keys",
   {
     id: id(),
+    /** どこで使う鍵か（例: 自宅の Claude Code）。止める鍵を見分けるために必ず入れる。 */
+    label: text("label").notNull().default(""),
     /** 生の鍵の SHA-256（16進）。ここから元の鍵は戻せない。 */
     keyHash: text("key_hash").notNull(),
     /** 画面に出す先頭数文字。どの鍵のことかを見分けるためだけに使う。 */
@@ -1450,3 +1484,17 @@ export const agentApiKeys = sqliteTable(
   },
   (t) => [index("idx_agent_api_keys_hash").on(t.keyHash)],
 );
+
+/**
+ * 鍵まわりの、アプリ全体で1つだけの設定。行は常に1行（id は "default"）。
+ *
+ * いま持っているのは「サーバーの設定値の鍵を受け付けるか」だけ。
+ * 設定値そのものはターミナルからしか消せないので、画面から止められる
+ * スイッチをここに置く。止めた状態は取り消せる（消すのは取り消せない）。
+ */
+export const agentKeySettings = sqliteTable("agent_key_settings", {
+  id: text("id").primaryKey(),
+  envKeyEnabled: integer("env_key_enabled", { mode: "boolean" }).notNull().default(true),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }),
+  updatedById: text("updated_by_id").references(() => users.id),
+});

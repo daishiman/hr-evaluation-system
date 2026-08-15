@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  HANDOUT_HISTORY_MAX,
+  handoutCountText,
+  handoutEventWho,
+  handoutHistoryNote,
+  handoutViaLabel,
   bulkActionLabel,
   bulkActionTone,
   bulkSummaryText,
@@ -153,5 +158,35 @@ describe("まとめ操作の結果", () => {
 
   it("1件も無ければ、0件の羅列ではなく「対象がありません」と言う", () => {
     expect(bulkSummaryText(summarizeBulk([]))).toBe("対象がありません");
+  });
+});
+
+/* 2026-08-15、依頼者から「何度・いつ・誰が・どの鍵で払い出したかを残してほしい」。
+   最後の1回分の控えだけでは、渡し直しの経緯が読めなかった。 */
+describe("払い出しの履歴", () => {
+  it("画面からのコピーと、Claude Code の取得を別の言葉で言う", () => {
+    expect(handoutViaLabel("screen")).toBe("画面からコピー");
+    expect(handoutViaLabel("api")).toBe("Claude Code が取得");
+  });
+
+  it("誰が渡したかは、経路によって人か鍵のどちらかで言う", () => {
+    expect(handoutEventWho({ via: "screen", actorName: "青木", keyName: null })).toBe("青木");
+    // 退職して行が消えても、無言にしない
+    expect(handoutEventWho({ via: "screen", actorName: null, keyName: null })).toBe("退職された方");
+    expect(handoutEventWho({ via: "api", actorName: null, keyName: "自宅" })).toBe("鍵「自宅」");
+    // サーバーの設定値で通ったときは鍵の行が無い
+    expect(handoutEventWho({ via: "api", actorName: null, keyName: null })).toBe("サーバーの設定値の鍵");
+  });
+
+  it("一覧には回数と最終の日時を1行で出す", () => {
+    expect(handoutCountText(0, null)).toBe("まだ渡していません");
+    expect(handoutCountText(3, null)).toBe("まだ渡していません");
+    expect(handoutCountText(3, "2026年8月15日 10:00")).toBe("3回・最終 2026年8月15日 10:00");
+  });
+
+  it("古い記録を丸めたことを黙って隠さない", () => {
+    expect(HANDOUT_HISTORY_MAX).toBeGreaterThan(0);
+    expect(handoutHistoryNote(HANDOUT_HISTORY_MAX)).toContain("新しい順に並びます");
+    expect(handoutHistoryNote(HANDOUT_HISTORY_MAX + 1)).toContain("古い記録は消えています");
   });
 });

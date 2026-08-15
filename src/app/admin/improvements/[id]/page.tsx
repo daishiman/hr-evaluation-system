@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
-import { getImprovementRequest, listImprovementEvents } from "@/lib/queries";
+import { getImprovementRequest, listHandoutEvents, listImprovementEvents } from "@/lib/queries";
 import {
   Badge,
   Card,
@@ -26,10 +26,14 @@ import {
 } from "@/lib/domain/improvement-disposition";
 import { diagnosticsLevelFor, improvementKindLabel, parseDiagnostics } from "@/lib/domain/improvement-instruction";
 import {
+  handoutCountText,
+  handoutEventWho,
+  handoutHistoryNote,
   handoutNote,
   handoutState,
   handoutStateLabel,
   handoutStateTone,
+  handoutViaLabel,
 } from "@/lib/domain/improvement-handout";
 import { agentPromptText } from "@/lib/domain/agent-api";
 import { buildImprovementInstruction, improvementFingerprintOf } from "@/lib/improvement-instruction-draft";
@@ -61,6 +65,8 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
   const displayState = improvementDisplayState(item);
   // 誰がいつどの状態に変えたかは、上書きせず積み上げてある（→ improvement_status_events）。
   const events = await listImprovementEvents(item.id);
+  // 何度・いつ・誰が・どの鍵で渡したか。最後の1回分だけでは、渡し直しの経緯が読めない。
+  const handouts = await listHandoutEvents(item.id);
   // 下見と、実際に払い出す文面は同じ関数から作る（確認した内容と渡る内容を一致させる）。
   const draft = canHandOut ? await buildImprovementInstruction(item) : null;
   const prompt = canHandOut ? agentPromptText(await appOrigin(), `?id=${item.id}`) : "";
@@ -194,11 +200,38 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
               label: "払い出し",
               value: <Badge tone={handoutStateTone(handout)}>{handoutStateLabel(handout)}</Badge>,
             },
-            { label: "渡した日時", value: item.handedOutAt ? formatDateTime(item.handedOutAt) : "—" },
+            {
+              label: "渡した回数",
+              value: handoutCountText(
+                item.handoutCount ?? 0,
+                item.handedOutAt ? formatDateTime(item.handedOutAt) : null,
+              ),
+            },
             { label: "いまの状態", value: handoutNote(handout) },
           ]}
         />
       </Card>
+
+      <SectionHeading help="画面からコピーした分と、Claude Code が取った分の両方を積んでいます。">
+        払い出しの履歴
+      </SectionHeading>
+      {handouts.length === 0 ? (
+        <ReasonNote>まだ渡していません。渡すと、ここに1件ずつ積み上がります。</ReasonNote>
+      ) : (
+        <>
+          <RecordList
+            items={handouts.map((h) => ({
+              key: h.id,
+              title: handoutViaLabel(h.via),
+              rows: [
+                { label: "日時", value: formatDateTime(h.createdAt) },
+                { label: "誰が・どの鍵で", value: handoutEventWho(h) },
+              ],
+            }))}
+          />
+          <p className="footnote">{handoutHistoryNote(item.handoutCount ?? 0)}</p>
+        </>
+      )}
       {canHandOut && draft ? (
         <>
           <Disclosure summary="渡す指示文をそのまま読む" meta={draft.title}>

@@ -53,7 +53,9 @@ export function agentKeyMissingMessage(origin?: string | null): string {
  */
 export const AGENT_UNAUTHORIZED_MESSAGE = "この API は鍵が要ります。\nAuthorization ヘッダーに鍵を入れてください。";
 
-export type AgentAuthResult = { ok: true } | { ok: false; status: 401 | 503; message: string };
+export type AgentAuthResult =
+  | { ok: true; via: "screen" | "env"; keyHash: string | null }
+  | { ok: false; status: 401 | 503; message: string };
 
 /** `Authorization: Bearer xxx` から鍵だけを取り出す。形が違えば null。 */
 export function readBearer(header: string | null): string | null {
@@ -79,22 +81,35 @@ export function keysMatch(expected: string, given: string): boolean {
 
 /**
  * 鍵の在り処は2つある。どちらで設定した鍵でも通る。
- *  ・envKey       サーバーの設定値（ターミナルから登録したもの）
- *  ・activeKeyHash 画面から発行した鍵の、保存してあるハッシュ
+ *  ・envKey          サーバーの設定値（ターミナルから登録したもの）
+ *  ・envKeyEnabled   その設定値での受け取りを画面から止めていないか
+ *  ・activeKeyHashes 画面から発行した、まだ止めていない鍵のハッシュ（複数本）
  *
- * 見る順番は「画面で発行した鍵 → サーバーの設定値」。画面で作り直したのに
+ * 見る順番は「画面で発行した鍵 → サーバーの設定値」。画面で入れ替えたのに
  * 古い設定値が優先されて通り続ける、という取り違えを作らないため。
+ *
+ * 画面の鍵は複数本ある。1本止めても他は動き続けるのが正しい形なので、
+ * 「1本でも合えば通す」を配列で表す。
  */
 export interface AgentKeySource {
   envKey: string | null | undefined;
-  activeKeyHash: string | null | undefined;
+  envKeyEnabled: boolean;
+  activeKeyHashes: readonly string[];
 }
 
-/** 鍵がどこかに設定されているか。両方とも無ければ 503 で設定手順を返す。 */
-export function agentKeyConfigured(source: AgentKeySource): boolean {
+function usableEnvKey(source: AgentKeySource): string {
+  if (!source.envKeyEnabled) return "";
   const env = source.envKey?.trim() ?? "";
-  const hash = source.activeKeyHash?.trim() ?? "";
-  return env.length >= AGENT_KEY_MIN_LENGTH || hash.length > 0;
+  return env.length >= AGENT_KEY_MIN_LENGTH ? env : "";
+}
+
+function usableHashes(source: AgentKeySource): string[] {
+  return source.activeKeyHashes.map((h) => h.trim()).filter((h) => h.length > 0);
+}
+
+/** 鍵がどこかに設定されているか。1本も無ければ 503 で設定手順を返す。 */
+export function agentKeyConfigured(source: AgentKeySource): boolean {
+  return usableEnvKey(source).length > 0 || usableHashes(source).length > 0;
 }
 
 /**
@@ -102,6 +117,7 @@ export function agentKeyConfigured(source: AgentKeySource): boolean {
  *
  * givenHash は、受け取った鍵をハッシュ化したもの（呼び出し側で作る）。
  * 保存してあるのはハッシュだけなので、突き合わせもハッシュどうしで行う。
+ * 合った鍵のハッシュを返すのは、どの鍵で受け取ったかを記録するため。
  */
 export function agentAuth(
   source: AgentKeySource,
@@ -116,11 +132,14 @@ export function agentAuth(
   const given = readBearer(authorization);
   if (!given) return { ok: false, status: 401, message: AGENT_UNAUTHORIZED_MESSAGE };
 
-  const hash = source.activeKeyHash?.trim() ?? "";
-  if (hash.length > 0 && givenHash && keysMatch(hash, givenHash)) return { ok: true };
+  if (givenHash) {
+    for (const hash of usableHashes(source)) {
+      if (keysMatch(hash, givenHash)) return { ok: true, via: "screen", keyHash: hash };
+    }
+  }
 
-  const env = source.envKey?.trim() ?? "";
-  if (env.length >= AGENT_KEY_MIN_LENGTH && keysMatch(env, given)) return { ok: true };
+  const env = usableEnvKey(source);
+  if (env.length > 0 && keysMatch(env, given)) return { ok: true, via: "env", keyHash: null };
 
   return { ok: false, status: 401, message: AGENT_UNAUTHORIZED_MESSAGE };
 }
