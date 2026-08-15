@@ -33,7 +33,7 @@ pnpm run preview
 利用者が画面から送った改善要望を、このリポジトリから直接読み出して着手できます。毎回 URL や鍵を打つ必要はありません。
 
 1. **鍵を発行する** — システム全体管理者で [/system/agent-keys](https://hr-evaluation-system.daishimanju.workers.dev/system/agent-keys) を開き、用途の名前（例: 自宅の Claude Code）を付けて「鍵を発行する」を押します。鍵はその場で1回だけ表示されます。
-2. **手元に置く** — `cp env.example .env.local` でファイルを作り、`HR_AGENT_KEY=` の右に控えた鍵を貼ります。`.env.local` は追跡されません。発行画面の「.env.local へ書く1行をコピー」を押すと、この1行がそのまま手に入ります。
+2. **手元に置く** — `cp .env.example .env.local` でファイルを作り、`HR_AGENT_KEY=` の右に控えた鍵を貼ります。`.env.local` は追跡されません。発行画面の「.env.local へ書く1行をコピー」を押すと、この1行がそのまま手に入ります。
 3. **呼び出す** — 次のどれかを実行します。
 
 ```bash

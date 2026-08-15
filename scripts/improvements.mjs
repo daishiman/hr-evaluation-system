@@ -178,7 +178,7 @@ export function missingKeyMessage(base) {
     "1. 次の画面をシステム全体管理者で開き、「鍵を発行する」を押します。",
     `   ${base}${KEY_PAGE_PATH}`,
     "2. 出てきた鍵はその場で1回だけ表示されます。控えてください。",
-    `3. このリポジトリの直下で \`cp env.example ${KEY_FILE}\` を実行し、次の1行を書きます。`,
+    `3. このリポジトリの直下で \`cp .env.example ${KEY_FILE}\` を実行し、次の1行を書きます。`,
     `   ${KEY_VAR}=控えた鍵`,
     "4. もう一度 `pnpm improvements list` を実行します。",
     "",
