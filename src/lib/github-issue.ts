@@ -73,6 +73,58 @@ export interface CreatedIssue {
   url: string;
 }
 
+interface IssueFields {
+  title: string;
+  body: string;
+  labels: string[];
+}
+
+/** GitHub の入口。呼び出しの作法（見出し・版・名乗り）を1箇所に閉じる。 */
+async function callGithub(
+  settings: GithubIssueSettings,
+  path: string,
+  method: "GET" | "POST" | "PATCH",
+  payload?: unknown,
+): Promise<Response> {
+  try {
+    return await fetch(`https://api.github.com/repos/${settings.repo}${path}`, {
+      method,
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${settings.token}`,
+        "content-type": "application/json",
+        "user-agent": "hr-evaluation-system",
+        "x-github-api-version": "2022-11-28",
+      },
+      body: method === "GET" ? undefined : JSON.stringify(payload),
+    });
+  } catch {
+    throw new HttpError(502, "GitHub に接続できませんでした。時間をおいてもう一度お試しください。");
+  }
+}
+
+/**
+ * 断られ方を、運営者が自分で直せる言葉にする。
+ *
+ * 応答本文はそのまま画面へ出さない。トークンや内部情報が混ざり得るため。
+ * 429 と 403 は「一度に送りすぎ」でも起きるので、待てば直ることを添える。
+ */
+function raiseGithubError(status: number, repo: string): never {
+  if (status === 401) {
+    throw new HttpError(502, "GitHub に断られました。トークンの権限と有効期限を確認してください。");
+  }
+  if (status === 403 || status === 429) {
+    throw new HttpError(
+      502,
+      "GitHub の受付上限に当たったか、権限が足りません。少し待ってから、失敗した分だけ送り直してください。",
+    );
+  }
+  if (status === 404) {
+    throw new HttpError(502, `リポジトリ ${repo} が見つかりませんでした。GITHUB_REPO の綴りを確認してください。`);
+  }
+  throw new HttpError(502, `GitHub が記録票を受け付けませんでした（応答コード ${status}）。`);
+}
+
 /**
  * 記録票を1件作る。
  *
@@ -81,38 +133,114 @@ export interface CreatedIssue {
  */
 export async function createGithubIssue(
   settings: GithubIssueSettings,
-  issue: { title: string; body: string; labels: string[] },
+  issue: IssueFields,
 ): Promise<CreatedIssue> {
-  let response: Response;
-  try {
-    response = await fetch(`https://api.github.com/repos/${settings.repo}/issues`, {
-      method: "POST",
-      headers: {
-        accept: "application/vnd.github+json",
-        authorization: `Bearer ${settings.token}`,
-        "content-type": "application/json",
-        "user-agent": "hr-evaluation-system",
-        "x-github-api-version": "2022-11-28",
-      },
-      body: JSON.stringify(issue),
-    });
-  } catch {
-    throw new HttpError(502, "GitHub に接続できませんでした。時間をおいてもう一度お試しください。");
-  }
-
-  if (response.status === 401 || response.status === 403) {
-    throw new HttpError(502, "GitHub に断られました。トークンの権限（Issues の書き込み）と有効期限を確認してください。");
-  }
-  if (response.status === 404) {
-    throw new HttpError(502, `リポジトリ ${settings.repo} が見つかりませんでした。GITHUB_REPO の綴りを確認してください。`);
-  }
-  if (!response.ok) {
-    throw new HttpError(502, `GitHub が記録票を受け付けませんでした（応答コード ${response.status}）。`);
-  }
+  const response = await callGithub(settings, "/issues", "POST", issue);
+  if (!response.ok) raiseGithubError(response.status, settings.repo);
 
   const json = (await response.json()) as { number?: number; html_url?: string };
   if (typeof json.number !== "number" || typeof json.html_url !== "string") {
-    throw new HttpError(502, "GitHub の応答を読み取れませんでした。作られているかを GitHub 側で確認してください。");
+    throw new IssueMaybeCreatedError();
   }
   return { number: json.number, url: json.html_url };
+}
+
+/**
+ * 「受け付けられたが、返事を読み取れなかった」失敗。
+ *
+ * 記録票ができているかどうかが分からない状態なので、呼び出し側は
+ * すぐ作り直してはいけない（同じ票が2枚立つ）。他の失敗と区別するために型を分ける。
+ */
+export class IssueMaybeCreatedError extends HttpError {
+  constructor() {
+    super(502, "GitHub の応答を読み取れませんでした。作られているかを GitHub 側で確認してください。");
+  }
+}
+
+/**
+ * すでにある記録票を、いまの内容へ書き換える。
+ *
+ * 開いているか閉じているかは触らない。閉じた記録票を機械が開き直すと、
+ * 「終わったこと」を人の判断なしに差し戻すことになる。閉じていた事実は
+ * 返り値で伝え、コメント側に書き添える。
+ *
+ * GitHub 側で消されていた場合は例外にせず missing を返す。そこで止めると、
+ * 一覧のその行が永久に送れないままになる（作り直す道を残す）。
+ */
+export async function updateGithubIssue(
+  settings: GithubIssueSettings,
+  issueNumber: number,
+  issue: IssueFields,
+): Promise<{ missing: true } | { missing: false; closed: boolean; url: string }> {
+  const response = await callGithub(settings, `/issues/${issueNumber}`, "PATCH", issue);
+  if (response.status === 404 || response.status === 410) return { missing: true };
+  if (!response.ok) raiseGithubError(response.status, settings.repo);
+
+  const json = (await response.json()) as { state?: string; html_url?: string };
+  return {
+    missing: false,
+    closed: json.state === "closed",
+    url: typeof json.html_url === "string" ? json.html_url : `https://github.com/${settings.repo}/issues/${issueNumber}`,
+  };
+}
+
+/**
+ * 記録票を「対応しない」として閉じる。
+ *
+ * 閉じる理由は completed（やり終えた）ではなく not_planned（やらないと決めた）を使う。
+ * GitHub 側では閉じ方が集計や見え方に効くため、直したから閉じたのか、
+ * 直さないと決めたのかを取り違えられない形で残す。
+ *
+ * 理由は閉じる前にコメントとして置く。閉じたあとに書くと、
+ * 通知の並びで「黙って閉じられた」ように見える。
+ */
+export async function closeGithubIssue(
+  settings: GithubIssueSettings,
+  issueNumber: number,
+  comment: string,
+): Promise<{ missing: boolean }> {
+  const commented = await callGithub(settings, `/issues/${issueNumber}/comments`, "POST", { body: comment });
+  if (commented.status === 404 || commented.status === 410) return { missing: true };
+  if (!commented.ok) raiseGithubError(commented.status, settings.repo);
+
+  const closed = await callGithub(settings, `/issues/${issueNumber}`, "PATCH", {
+    state: "closed",
+    state_reason: "not_planned",
+  });
+  if (closed.status === 404 || closed.status === 410) return { missing: true };
+  if (!closed.ok) raiseGithubError(closed.status, settings.repo);
+  return { missing: false };
+}
+
+/**
+ * 記録票が開いているか閉じているかだけを読む。
+ *
+ * GitHub 側で先に閉じられていることがあるため、アプリから見に行く道を残す。
+ * 画面を開くたびに自動で読みには行かない（1画面あたりの外への往復を増やすと、
+ * 受付上限に当たったときに一覧そのものが出なくなる）。
+ */
+export async function readGithubIssueState(
+  settings: GithubIssueSettings,
+  issueNumber: number,
+): Promise<{ missing: true } | { missing: false; closed: boolean; url: string }> {
+  const response = await callGithub(settings, `/issues/${issueNumber}`, "GET");
+  if (response.status === 404 || response.status === 410) return { missing: true };
+  if (!response.ok) raiseGithubError(response.status, settings.repo);
+
+  const json = (await response.json()) as { state?: string; html_url?: string };
+  return {
+    missing: false,
+    closed: json.state === "closed",
+    url: typeof json.html_url === "string" ? json.html_url : `https://github.com/${settings.repo}/issues/${issueNumber}`,
+  };
+}
+
+/** 記録票に「何がいつ変わったか」を足す。本文の置き換えだけだと経緯が消えるため。 */
+export async function commentOnGithubIssue(
+  settings: GithubIssueSettings,
+  issueNumber: number,
+  body: string,
+): Promise<void> {
+  const response = await callGithub(settings, `/issues/${issueNumber}/comments`, "POST", { body });
+  if (!response.ok) raiseGithubError(response.status, settings.repo);
 }

@@ -1,0 +1,435 @@
+"use client";
+
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Badge, Button, Card, ChoiceChip, ReasonNote, SectionHeading } from "@/components/ui";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { StickyActionBar } from "@/components/layout/StickyActionBar";
+import { DataTable, type Column } from "@/components/DataTable";
+import { type ImprovementStatus } from "@/lib/domain/improvement";
+import { improvementKindLabel, type ImprovementKind } from "@/lib/domain/improvement-issue";
+import {
+  bulkActionLabel,
+  bulkActionTone,
+  bulkSummaryText,
+  issueSyncStateLabel,
+  issueSyncStateTone,
+  plannedAction,
+  summarizeBulk,
+  type BulkAction,
+  type IssueSyncState,
+} from "@/lib/domain/improvement-sync";
+import {
+  bulkDispositionConfirm,
+  dispositionActionLabel,
+  dispositionNeedsReason,
+  dispositionReasonError,
+  improvementDisplayState,
+  improvementDisplayStateLabel,
+  improvementDisplayStateTone,
+  reasonChoices,
+  type DispositionAction,
+} from "@/lib/domain/improvement-disposition";
+
+/** 一覧の1行。画面で使う形まで整えたものをサーバーから受け取る。 */
+export interface ImprovementRow {
+  id: string;
+  headline: string;
+  screenLabel: string;
+  reporterName: string;
+  createdAtText: string;
+  kind: ImprovementKind;
+  status: ImprovementStatus;
+  discarded: boolean;
+  duplicateOfId: string | null;
+  stateNote: string;
+  syncState: IssueSyncState;
+  syncNote: string;
+  issueNumber: number | null;
+  issueUrl: string | null;
+  issueClosed: boolean;
+  off: boolean;
+}
+
+interface SyncResult {
+  id: string;
+  label: string;
+  action: BulkAction;
+  issueNumber: number | null;
+  issueUrl: string | null;
+  reason: string;
+}
+
+/** まとめて選べる操作。記録票へ送るのと、落とす・戻すを同じ場所から行う。 */
+type BulkOperation = "sync" | DispositionAction;
+
+/** 記録票へのリンク。番号だけを出し、URL は押す先として持つ。 */
+function IssueLink({ number, url }: { number: number | null; url: string | null }) {
+  if (number === null || number === 0 || !url) return <span className="footnote">—</span>;
+  return (
+    <a href={url} className="underline" target="_blank" rel="noopener noreferrer">
+      #{number}
+    </a>
+  );
+}
+
+/**
+ * 届いた要望の一覧と、そこからのまとめ操作。
+ *
+ * 使われる場面: 週に一度まとめて読み、直すものを開発へ渡し、
+ * 直さないもの・誤って届いたものをその場で片付ける。
+ * 1件ずつ詳細を開く作りだと、20件で20往復する。だから
+ *  ・行を見比べる表（状態・記録票・種類が縦に並ぶ）
+ *  ・選んだぶんをまとめて処理する
+ *  ・処理のあと、行ごとに何が起きたかを表で返す
+ * の3つをこの1画面で完結させる。
+ *
+ * 外へ出る操作（記録票へ送る・記録票を閉じる）と、見えなくする操作（廃棄）は、
+ * どちらも1件も選ばれていない状態から始める。手間を省く操作だけを既定にする。
+ */
+export function ImprovementBulkTable({
+  rows,
+  canPush,
+  canDispose,
+}: {
+  rows: ImprovementRow[];
+  canPush: boolean;
+  canDispose: boolean;
+}) {
+  const router = useRouter();
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [results, setResults] = useState<SyncResult[] | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [pending, setPending] = useState<DispositionAction | null>(null);
+  const [reasonCode, setReasonCode] = useState("");
+  const [reasonNote, setReasonNote] = useState("");
+  const [closeIssue, setCloseIssue] = useState(false);
+  const lastIndex = useRef(-1);
+
+  const ids = useMemo(() => rows.map((r) => r.id), [rows]);
+  const allSelected = ids.length > 0 && ids.every((id) => selected.has(id));
+  const selectable = canPush || canDispose;
+
+  const toggle = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  /** Shift を押しながらだと、前に触った行からここまでをまとめて選ぶ。 */
+  const clickRow = useCallback(
+    (index: number, shiftKey: boolean) => {
+      if (shiftKey && lastIndex.current >= 0) {
+        const [a, b] = [lastIndex.current, index].sort((x, y) => x - y);
+        setSelected((prev) => new Set([...prev, ...rows.slice(a, b + 1).map((r) => r.id)]));
+      } else {
+        toggle(rows[index].id);
+      }
+      lastIndex.current = index;
+    },
+    [rows, toggle],
+  );
+
+  const openPanel = (action: DispositionAction) => {
+    setPending(action);
+    setReasonCode(reasonChoices(action)[0]?.code ?? "");
+    setReasonNote("");
+    setCloseIssue(false);
+  };
+
+  /**
+   * 選んだぶんを、順番に1件ずつ処理する。
+   * まとめて並べて投げると GitHub の受付上限に当たり、まとめて断られる。
+   */
+  const run = async (targets: string[], operation: BulkOperation) => {
+    if (targets.length === 0 || progress) return;
+    setResults(null);
+    setProgress({ done: 0, total: targets.length });
+    const collected: SyncResult[] = [];
+    for (const id of targets) {
+      const row = rows.find((r) => r.id === id);
+      try {
+        const res = await fetch("/api/improvements", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(
+            operation === "sync"
+              ? { id }
+              : { id, action: operation, reasonCode, reasonNote, closeIssue },
+          ),
+        });
+        const json = (await res.json()) as { ok?: boolean; result?: SyncResult; message?: string };
+        if (res.ok && json.ok && json.result) collected.push(json.result);
+        else {
+          collected.push({
+            id,
+            label: row?.headline ?? id,
+            action: "failed",
+            issueNumber: row?.issueNumber ?? null,
+            issueUrl: row?.issueUrl ?? null,
+            reason: json.message ?? "処理できませんでした。",
+          });
+        }
+      } catch {
+        collected.push({
+          id,
+          label: row?.headline ?? id,
+          action: "failed",
+          issueNumber: row?.issueNumber ?? null,
+          issueUrl: row?.issueUrl ?? null,
+          reason: "通信できませんでした。この行だけやり直せます。",
+        });
+      }
+      // 済んだ分はここで確定している。途中でやめても、済んだものは残る。
+      setProgress({ done: collected.length, total: targets.length });
+      setResults([...collected]);
+    }
+    setProgress(null);
+    setSelected(new Set());
+    setPending(null);
+    router.refresh();
+  };
+
+  /** 選んだぶんを記録票へ送る（まとめ送りと、失敗した行の送り直しの両方で使う）。 */
+  const send = (ids: string[]) => run(ids, "sync");
+
+  const chosen = rows.filter((r) => selected.has(r.id));
+  const count = (plan: string) => chosen.filter((r) => plannedAction(r.syncState) === plan).length;
+
+  // 理由の判定は画面とサーバーで同じ関数を使う（片方だけ緩い状態を作らない）。
+  // 足りないうちは実行ボタンを押せなくし、何が足りないかをその場に出す。
+  const reasonError = pending ? dispositionReasonError(pending, reasonCode, reasonNote) : null;
+
+  const columns: Column<ImprovementRow>[] = [
+    {
+      key: "body",
+      role: "title",
+      header: selectable ? (
+        <span className="inline-flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={() => setSelected(allSelected ? new Set() : new Set(ids))}
+            aria-label="表示中の要望をすべて選ぶ"
+          />
+          要望
+        </span>
+      ) : (
+        "要望"
+      ),
+      cell: (r) => (
+        <span className="flex items-start gap-2">
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={selected.has(r.id)}
+              onChange={() => undefined}
+              onClick={(e) => clickRow(rows.indexOf(r), e.shiftKey)}
+              aria-label={`この要望を選ぶ：${r.headline}`}
+            />
+          )}
+          <Link href={`/admin/improvements/${r.id}`} className="min-w-0">
+            {r.headline}
+          </Link>
+        </span>
+      ),
+    },
+    {
+      key: "kind",
+      role: "mark",
+      header: "種類",
+      cell: (r) => <Badge tone={r.kind === "bug" ? "alert" : "closed"}>{improvementKindLabel(r.kind)}</Badge>,
+    },
+    {
+      key: "status",
+      header: "対応状況",
+      cell: (r) => {
+        const state = improvementDisplayState(r);
+        return (
+          <>
+            <Badge tone={improvementDisplayStateTone(state)}>{improvementDisplayStateLabel(state)}</Badge>
+            {r.stateNote && <span className="footnote">{r.stateNote}</span>}
+          </>
+        );
+      },
+    },
+    {
+      key: "issue",
+      header: "記録票",
+      cell: (r) => (
+        <>
+          <span className="flex items-center gap-2">
+            <Badge tone={issueSyncStateTone(r.syncState)}>{issueSyncStateLabel(r.syncState)}</Badge>
+            <IssueLink number={r.issueNumber} url={r.issueUrl} />
+            {r.issueClosed && <Badge tone="closed">閉</Badge>}
+          </span>
+          <span className="footnote">{r.syncNote}</span>
+        </>
+      ),
+    },
+    { key: "screen", header: "画面", cell: (r) => r.screenLabel },
+    { key: "reporter", header: "送った人", cell: (r) => r.reporterName },
+    { key: "at", header: "届いた日時", cell: (r) => r.createdAtText },
+  ];
+
+  const failed = (results ?? []).filter((r) => r.action === "failed");
+
+  return (
+    <>
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.id}
+        rowOff={(r) => r.off}
+        caption="届いた改善要望の一覧"
+      />
+
+      {pending && (
+        <>
+          <SectionHeading help="理由は履歴に残り、あとから読み返せます。">
+            {dispositionNeedsReason(pending) ? `${dispositionActionLabel(pending)}にする理由` : "実行の確認"}
+          </SectionHeading>
+          <Card className="card-pad">
+            {reasonError && <ReasonNote>{reasonError}</ReasonNote>}
+            <p className="footnote m-0">{`選んだ${chosen.length}件をまとめて処理します。`}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {reasonChoices(pending).map((r) => (
+                <ChoiceChip
+                  key={r.code}
+                  selected={reasonCode === r.code}
+                  onClick={() => {
+                    setReasonCode(r.code);
+                  }}
+                >
+                  {r.label}
+                </ChoiceChip>
+              ))}
+            </div>
+            <label className="footnote mt-3 block" htmlFor="bulk_reason_note">
+              補足（その他を選んだときは必須）
+            </label>
+            <textarea
+              id="bulk_reason_note"
+              className="input min-h-[64px] w-full"
+              value={reasonNote}
+              maxLength={1000}
+              onChange={(e) => {
+                setReasonNote(e.target.value);
+              }}
+              placeholder="例：同じ内容を先週まとめて直しました。"
+            />
+            {pending === "reject" && (
+              <label className="footnote mt-3 flex items-center gap-2">
+                <input type="checkbox" checked={closeIssue} onChange={(e) => setCloseIssue(e.target.checked)} />
+                記録票も「対応しない」として閉じる
+              </label>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <ConfirmButton
+                label={`${chosen.length}件に実行する`}
+                variant={pending === "discard" ? "danger-outline" : "primary"}
+                disabled={progress !== null || reasonError !== null || chosen.length === 0}
+                confirm={bulkDispositionConfirm(pending, chosen.length)}
+                onConfirm={() => void run(chosen.map((r) => r.id), pending)}
+              >
+                <Button type="button" variant="tertiary" disabled={progress !== null} onClick={() => setPending(null)}>
+                  やめる
+                </Button>
+              </ConfirmButton>
+            </div>
+          </Card>
+        </>
+      )}
+
+      {results && (
+        <>
+          <SectionHeading help="処理した1件ずつの結果です。">処理の結果</SectionHeading>
+          <p className="footnote">{bulkSummaryText(summarizeBulk(results))}</p>
+          <DataTable
+            caption="まとめ処理の結果"
+            rows={results}
+            rowKey={(r) => r.id}
+            columns={[
+              {
+                key: "label",
+                role: "title",
+                header: "対象",
+                cell: (r) => <Link href={`/admin/improvements/${r.id}`}>{r.label}</Link>,
+              },
+              {
+                key: "action",
+                role: "mark",
+                header: "実行内容",
+                cell: (r) => <Badge tone={bulkActionTone(r.action)}>{bulkActionLabel(r.action)}</Badge>,
+              },
+              { key: "issue", header: "記録票", cell: (r) => <IssueLink number={r.issueNumber} url={r.issueUrl} /> },
+              { key: "reason", header: "理由", cell: (r) => r.reason },
+            ]}
+          />
+          {failed.length > 0 && (
+            <ReasonNote
+              action={
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={progress !== null}
+                  onClick={() => send(failed.map((r) => r.id))}
+                >
+                  {`失敗した${failed.length}件を送り直す`}
+                </Button>
+              }
+            >
+              できなかった行があります。理由を直してからやり直してください。
+            </ReasonNote>
+          )}
+        </>
+      )}
+
+      {selectable && selected.size > 0 && (
+        <StickyActionBar
+          status={
+            progress
+              ? `処理しています（${progress.done}/${progress.total}件目）`
+              : `${selected.size}件を選択中／新規${count("create")}・更新${count("update")}・作り直し${count("recreate")}・スキップ${count("skip")}`
+          }
+        >
+          <Button type="button" variant="tertiary" disabled={progress !== null} onClick={() => setSelected(new Set())}>
+            選択をすべて解除
+          </Button>
+          {canDispose && (
+            <>
+              <Button type="button" variant="secondary" disabled={progress !== null} onClick={() => openPanel("restore")}>
+                元に戻す
+              </Button>
+              <Button type="button" variant="secondary" disabled={progress !== null} onClick={() => openPanel("reject")}>
+                対応しない
+              </Button>
+              <Button
+                type="button"
+                variant="danger-outline"
+                disabled={progress !== null}
+                onClick={() => openPanel("discard")}
+              >
+                廃棄する
+              </Button>
+            </>
+          )}
+          {canPush && (
+            <Button
+              type="button"
+              variant="primary"
+              disabled={progress !== null}
+              onClick={() => send(chosen.map((r) => r.id))}
+            >
+              {progress ? "処理しています…" : `${selected.size}件を記録票へ送る`}
+            </Button>
+          )}
+        </StickyActionBar>
+      )}
+    </>
+  );
+}

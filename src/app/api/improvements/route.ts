@@ -19,6 +19,19 @@ import { routeIdentityOf } from "@/lib/nav";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
 import { findImprovementBySubmission, saveImprovementRequest } from "@/lib/improvement-write";
 import { consumeRateLimit, IMPROVEMENT_SUBMIT_RATE_LIMIT } from "@/lib/rate-limit";
+import { requireGithubSettings, type GithubIssueSettings } from "@/lib/github-issue";
+import { syncImprovementIssue } from "@/lib/improvement-issue-sync";
+import { applyDisposition } from "@/lib/improvement-disposition";
+import { DISPOSITION_ACTIONS } from "@/lib/domain/improvement-disposition";
+
+/** 記録票の設定。未設定なら null（落とす・戻す操作はそれでも進める）。 */
+async function githubSettingsIfReady(): Promise<GithubIssueSettings | null> {
+  try {
+    return await requireGithubSettings();
+  } catch {
+    return null;
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -103,5 +116,64 @@ export async function POST(req: Request) {
     }
 
     return { id, message: "改善要望を送りました。ありがとうございます。" };
+  });
+}
+
+const syncSchema = z
+  .object({
+    id: z.string().min(1).max(60),
+    /** 既定は記録票への反映。落とす・戻す操作は action で選ぶ。 */
+    action: z.enum(["sync", ...DISPOSITION_ACTIONS]).default("sync"),
+    reasonCode: z.string().max(40).default(""),
+    reasonNote: z.string().max(1000).default(""),
+    closeIssue: z.boolean().default(false),
+    duplicateOfId: z.string().max(60).nullish(),
+  })
+  .strict();
+
+/**
+ * 選んだ要望1件を、開発の記録票（GitHub Issue）へ反映する。
+ *
+ * 一覧の一括送信は、画面がこの入口を**1件ずつ順番に**呼ぶ。まとめて1回で
+ * 送らないのは3つの理由から。
+ *  ・どこまで進んだかを件数で見せられる（50件を無言で待たせない）
+ *  ・成功した分はその時点で確定し、失敗した行だけ送り直せる
+ *  ・GitHub を一度に叩かない（並べて投げると受付上限で断られる）
+ *
+ * できるのはシステム全体管理者だけ。画面側でボタンを隠すだけにしない。
+ * 記録票の置き場所は会社ごとではなく開発側のリポジトリなので、
+ * 会社の管理者が押せると「自社の中の操作」のつもりで社外へ文章が出る。
+ *
+ * 入口を増やさず PUT として同居させている（道を1本増やすと、同じ依存一式を
+ * 束ねた塊が配布物に増え、無料枠の上限まで約0.5MB食う）。
+ */
+export async function PUT(req: Request) {
+  return handle(async () => {
+    const viewer = await apiViewer("SUPER_ADMIN");
+    if (!viewer.companyId) throw new HttpError(400, "操作する会社が選ばれていません。");
+
+    const input = syncSchema.parse(await readJsonBodyWithinLimit(req, 4_000));
+    const actor = { id: viewer.id, companyId: viewer.companyId };
+
+    if (input.action !== "sync") {
+      // 落とす・戻すはアプリの中だけで完結できる。記録票の設定が無くても止めない
+      // （設定不足で要望を1件も片付けられない状態を作らない）。
+      const settings = await githubSettingsIfReady();
+      const result = await applyDisposition(settings, actor, input.id, {
+        action: input.action,
+        reasonCode: input.reasonCode,
+        reasonNote: input.reasonNote,
+        closeIssue: input.closeIssue,
+        duplicateOfId: input.duplicateOfId ?? null,
+      });
+      return { result };
+    }
+
+    const settings = await requireGithubSettings();
+    const result = await syncImprovementIssue(settings, actor, input.id);
+
+    // 1件ごとの失敗は、この入口では成功として返す（結果の表に行として並ぶ）。
+    // ここで例外にすると、続きの行が送られないまま画面が止まる。
+    return { result };
   });
 }

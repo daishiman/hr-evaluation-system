@@ -11,6 +11,10 @@ const mocked = vi.hoisted(() => ({
   getDb: vi.fn(),
   requireGithubSettings: vi.fn(),
   createGithubIssue: vi.fn(),
+  updateGithubIssue: vi.fn(),
+  commentOnGithubIssue: vi.fn(),
+  closeGithubIssue: vi.fn(),
+  readGithubIssueState: vi.fn(),
 }));
 
 vi.mock("@/lib/session", async () => ({
@@ -25,13 +29,21 @@ vi.mock("@/lib/db", async () => ({
 
 // 記録票づくりは社外（GitHub）へ出す操作。テストからは一歩も外へ出さず、
 // 「どんな文面を渡したか」と「返事をどう扱ったか」だけをここで確かめる。
-vi.mock("@/lib/github-issue", () => ({
+vi.mock("@/lib/github-issue", async () => ({
+  // 失敗の見分け（作られたかもしれない／確実に届いていない）は本物の型で判定するので、
+  // 例外クラスだけは本物を使う。
+  IssueMaybeCreatedError: (await vi.importActual<typeof import("@/lib/github-issue")>("@/lib/github-issue"))
+    .IssueMaybeCreatedError,
   requireGithubSettings: mocked.requireGithubSettings,
   createGithubIssue: mocked.createGithubIssue,
+  updateGithubIssue: mocked.updateGithubIssue,
+  commentOnGithubIssue: mocked.commentOnGithubIssue,
+  closeGithubIssue: mocked.closeGithubIssue,
+  readGithubIssueState: mocked.readGithubIssueState,
   appVersion: async () => "v-test",
 }));
 
-import { IMPROVEMENT_REQUEST_MAX_BYTES, POST } from "@/app/api/improvements/route";
+import { IMPROVEMENT_REQUEST_MAX_BYTES, POST, PUT } from "@/app/api/improvements/route";
 import { PATCH, POST as POST_ISSUE } from "@/app/api/improvements/[id]/route";
 
 let testDb: TestDatabase;
@@ -95,6 +107,22 @@ beforeEach(async () => {
   mocked.requireGithubSettings.mockResolvedValue({ repo: "owner/repo", token: "dummy" });
   mocked.createGithubIssue.mockReset();
   mocked.createGithubIssue.mockResolvedValue({ number: 123, url: "https://github.com/owner/repo/issues/123" });
+  mocked.updateGithubIssue.mockReset();
+  mocked.updateGithubIssue.mockResolvedValue({
+    missing: false,
+    closed: false,
+    url: "https://github.com/owner/repo/issues/123",
+  });
+  mocked.commentOnGithubIssue.mockReset();
+  mocked.commentOnGithubIssue.mockResolvedValue(undefined);
+  mocked.closeGithubIssue.mockReset();
+  mocked.closeGithubIssue.mockResolvedValue({ missing: false });
+  mocked.readGithubIssueState.mockReset();
+  mocked.readGithubIssueState.mockResolvedValue({
+    missing: false,
+    closed: false,
+    url: "https://github.com/owner/repo/issues/123",
+  });
   _resetRateLimitStoreForTest();
 });
 
@@ -354,5 +382,343 @@ describe("POST /api/improvements/[id]（記録票を作る）", () => {
 
     expect(response.status).toBe(404);
     expect(mocked.createGithubIssue).not.toHaveBeenCalled();
+  });
+});
+
+/*
+ * 一覧からのまとめ送りは、この入口を1件ずつ順番に呼ぶ。
+ * つまり「いろいろなパターン」は、この1件ぶんの結果の並びとして現れる。
+ * 依頼で挙がった場面をここで固定する。
+ */
+describe("PUT /api/improvements（一覧から記録票へ送る）", () => {
+  async function seed(status = "open") {
+    await testDb.db.insert(s.improvementRequests).values({
+      id: "improve_target",
+      companyId: IDS.company,
+      reporterId: IDS.employee,
+      submissionKey: crypto.randomUUID(),
+      path: "/admin/members",
+      routePattern: "/admin/members",
+      screenLabel: "社員",
+      kind: "bug",
+      body: "保存できません",
+      expected: "保存できてほしい",
+      status,
+    });
+  }
+
+  function putRequest(id = "improve_target") {
+    return new Request("http://localhost/api/improvements", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+  }
+
+  const resultOf = async (response: Response) =>
+    ((await response.json()) as { result: { action: string; issueNumber: number | null; reason: string } }).result;
+
+  it("未起票なら新規に作り、行き先と送った時点の内容を控える", async () => {
+    await seed();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    const result = await resultOf(await PUT(putRequest()));
+
+    expect(result).toMatchObject({ action: "created", issueNumber: 123 });
+    const link = (await testDb.db.select().from(s.improvementIssueLinks))[0];
+    expect(link.contentFingerprint).not.toBe("");
+    expect(link.syncedAt).not.toBeNull();
+  });
+
+  it("内容が変わっていない起票済みは、送っても何もしない", async () => {
+    await seed();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    await PUT(putRequest());
+    const again = await resultOf(await PUT(putRequest()));
+
+    expect(again.action).toBe("skipped");
+    expect(mocked.createGithubIssue).toHaveBeenCalledTimes(1);
+    expect(mocked.updateGithubIssue).not.toHaveBeenCalled();
+  });
+
+  it("起票後に内容が変わったら、同じ記録票を書き換えて経緯をコメントに残す", async () => {
+    await seed();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    await PUT(putRequest());
+    await testDb.db
+      .update(s.improvementRequests)
+      .set({ handledNote: "来週の版で直します" })
+      .where(eq(s.improvementRequests.id, "improve_target"));
+    const result = await resultOf(await PUT(putRequest()));
+
+    expect(result).toMatchObject({ action: "updated", issueNumber: 123 });
+    expect(mocked.createGithubIssue).toHaveBeenCalledTimes(1);
+    expect(mocked.updateGithubIssue).toHaveBeenCalledTimes(1);
+    expect(mocked.commentOnGithubIssue.mock.calls[0][2]).toContain("対応メモ");
+  });
+
+  it("閉じている記録票でも、こちらから開き直さずコメントだけ添える", async () => {
+    await seed();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    await PUT(putRequest());
+    mocked.updateGithubIssue.mockResolvedValue({
+      missing: false,
+      closed: true,
+      url: "https://github.com/owner/repo/issues/123",
+    });
+    await testDb.db
+      .update(s.improvementRequests)
+      .set({ body: "やはり保存できません" })
+      .where(eq(s.improvementRequests.id, "improve_target"));
+    const result = await resultOf(await PUT(putRequest()));
+
+    expect(result.action).toBe("updated");
+    expect(mocked.updateGithubIssue.mock.calls[0][2]).not.toHaveProperty("state");
+    expect(mocked.commentOnGithubIssue.mock.calls[0][2]).toContain("開き直すことはしていません");
+  });
+
+  it("GitHub 側に記録票が無いときは、止めずにリンク切れとして次の一手を示す", async () => {
+    await seed();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    await PUT(putRequest());
+    mocked.updateGithubIssue.mockResolvedValue({ missing: true });
+    await testDb.db
+      .update(s.improvementRequests)
+      .set({ body: "やはり保存できません" })
+      .where(eq(s.improvementRequests.id, "improve_target"));
+    const broken = await resultOf(await PUT(putRequest()));
+
+    expect(broken.action).toBe("failed");
+    expect(broken.reason).toContain("もう一度送ると作り直します");
+    expect((await testDb.db.select().from(s.improvementIssueLinks))[0].linkState).toBe("missing");
+
+    // もう一度押すと作り直す（行き止まりにしない）
+    const again = await resultOf(await PUT(putRequest()));
+    expect(again.action).toBe("created");
+    expect(mocked.createGithubIssue).toHaveBeenCalledTimes(2);
+    expect(await testDb.db.select().from(s.improvementIssueLinks)).toHaveLength(1);
+  });
+
+  it("1件が失敗しても例外にせず、結果として返す（続きの行が止まらない）", async () => {
+    await seed();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    mocked.createGithubIssue.mockRejectedValue(new HttpError(403, "受付の上限に達しました。"));
+    const response = await PUT(putRequest());
+    const result = await resultOf(response);
+
+    expect(response.status).toBe(200);
+    expect(result.action).toBe("failed");
+    // 席は空けてある（同じ行をすぐ送り直せる）
+    expect(await testDb.db.select().from(s.improvementIssueLinks)).toHaveLength(0);
+  });
+
+  it("会社の管理者は押せない（社外へ出る操作のため）", async () => {
+    await seed();
+    mocked.apiViewer.mockRejectedValue(new HttpError(403, "権限がありません。"));
+    const response = await PUT(putRequest());
+
+    expect(response.status).toBe(403);
+    expect(mocked.createGithubIssue).not.toHaveBeenCalled();
+  });
+
+  it("他社の要望は404にして外へ送らない", async () => {
+    await seed();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN", "cmp_other"));
+    const response = await PUT(putRequest());
+
+    expect(response.status).toBe(404);
+    expect(mocked.createGithubIssue).not.toHaveBeenCalled();
+  });
+});
+
+/*
+ * 誤って届いたもの・対応しないものの片付け。
+ *
+ * ここで守りたいのは「戻せること」。落とす操作そのものより、
+ * 取り消しが効かなくなる壊れ方のほうが困る（依頼者の指摘、2026-08-15）。
+ */
+describe("PUT /api/improvements（落とす・戻す）", () => {
+  async function seed(over: Record<string, unknown> = {}) {
+    await testDb.db.insert(s.improvementRequests).values({
+      id: "improve_target",
+      companyId: IDS.company,
+      reporterId: IDS.employee,
+      submissionKey: crypto.randomUUID(),
+      path: "/admin/members",
+      routePattern: "/admin/members",
+      screenLabel: "社員",
+      kind: "bug",
+      body: "保存できません",
+      expected: "保存できてほしい",
+      status: "doing",
+      ...over,
+    });
+  }
+
+  function act(body: Record<string, unknown>) {
+    return new Request("http://localhost/api/improvements", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: "improve_target", ...body }),
+    });
+  }
+
+  const resultOf = async (response: Response) =>
+    ((await response.json()) as { result: { action: string; issueNumber: number | null; reason: string } }).result;
+
+  const target = () =>
+    testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_target"));
+
+  const events = () =>
+    testDb.db.select().from(s.improvementStatusEvents).where(eq(s.improvementStatusEvents.requestId, "improve_target"));
+
+  beforeEach(() => {
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+  });
+
+  it("廃棄しても行は消さず、印を立てるだけにする", async () => {
+    await seed();
+    const result = await resultOf(await PUT(act({ action: "discard", reasonCode: "mistake" })));
+
+    expect(result.action).toBe("discarded");
+    const row = (await target())[0];
+    expect(row.discardedAt).not.toBeNull();
+    expect(row.discardReason).toBe("誤送信");
+    // 対応状況は触らない（戻す先が消えるため）
+    expect(row.status).toBe("doing");
+  });
+
+  it("廃棄を取り消すと、廃棄する前の状態に戻る", async () => {
+    await seed();
+    await PUT(act({ action: "discard", reasonCode: "mistake" }));
+    const result = await resultOf(await PUT(act({ action: "restore" })));
+
+    expect(result.action).toBe("restored");
+    const row = (await target())[0];
+    expect(row.discardedAt).toBeNull();
+    expect(row.status).toBe("doing");
+    // 経緯は上書きせず積み上がる
+    expect(await events()).toHaveLength(2);
+  });
+
+  it("対応しないを取り消すと、落とす前の状態に戻る", async () => {
+    await seed({ status: "open" });
+    await PUT(act({ action: "reject", reasonCode: "by-design" }));
+    expect((await target())[0].status).toBe("dropped");
+
+    const result = await resultOf(await PUT(act({ action: "restore" })));
+    expect(result.action).toBe("restored");
+    expect((await target())[0].status).toBe("open");
+  });
+
+  it("戻すものが無ければ、何もしないと言って終わる", async () => {
+    await seed();
+    expect((await resultOf(await PUT(act({ action: "restore" })))).action).toBe("skipped");
+  });
+
+  it("廃棄したものは、まとめ送りの対象から自動的に外れる", async () => {
+    await seed();
+    await PUT(act({ action: "discard", reasonCode: "test" }));
+    const result = await resultOf(await PUT(act({ action: "sync" })));
+
+    expect(result.action).toBe("skipped");
+    expect(result.reason).toContain("記録票へ送りません");
+    expect(mocked.createGithubIssue).not.toHaveBeenCalled();
+  });
+
+  it("理由を選ばなければ落とせない（画面で隠すだけにしない）", async () => {
+    await seed();
+    const response = await PUT(act({ action: "discard" }));
+
+    expect(response.status).toBe(400);
+    expect((await target())[0].discardedAt).toBeNull();
+  });
+
+  it("「その他」を選んだのに書いていなければ落とせない", async () => {
+    await seed();
+    expect((await PUT(act({ action: "reject", reasonCode: "other" }))).status).toBe(400);
+  });
+
+  it("記録票を閉じられなくても、アプリ側の判断は残す", async () => {
+    await seed();
+    await PUT(act({ action: "sync" }));
+    mocked.closeGithubIssue.mockRejectedValue(new HttpError(502, "GitHub に届きませんでした。"));
+    const response = await PUT(act({ action: "reject", reasonCode: "infeasible", closeIssue: true }));
+    const result = await resultOf(response);
+
+    expect(response.status).toBe(200);
+    expect(result.action).toBe("rejected");
+    expect(result.reason).toContain("GitHub に届きませんでした");
+    // アプリ側は確定している（外の失敗で巻き戻さない）
+    expect((await target())[0].status).toBe("dropped");
+  });
+
+  it("閉じるときは、閉じる理由を記録票にも残す", async () => {
+    await seed();
+    await PUT(act({ action: "sync" }));
+    await PUT(act({ action: "reject", reasonCode: "by-design", closeIssue: true }));
+
+    expect(mocked.closeGithubIssue.mock.calls[0][2]).toContain("理由：仕様どおり");
+    const link = (await testDb.db.select().from(s.improvementIssueLinks))[0];
+    expect(link.issueState).toBe("closed");
+  });
+
+  it("閉じるを選ばなければ、記録票は開いたままにする", async () => {
+    await seed();
+    await PUT(act({ action: "sync" }));
+    await PUT(act({ action: "discard", reasonCode: "spam" }));
+
+    expect(mocked.closeGithubIssue).not.toHaveBeenCalled();
+  });
+
+  it("誤って作った記録票は、ひも付けを外して作り直せる", async () => {
+    await seed();
+    await PUT(act({ action: "sync" }));
+    const result = await resultOf(await PUT(act({ action: "unlink" })));
+
+    expect(result.action).toBe("unlinked");
+    expect(await testDb.db.select().from(s.improvementIssueLinks)).toHaveLength(0);
+
+    const again = await resultOf(await PUT(act({ action: "sync" })));
+    expect(again.action).toBe("created");
+  });
+
+  it("GitHub 側で先に閉じられていたら、アプリ側も追いつく", async () => {
+    await seed();
+    await PUT(act({ action: "sync" }));
+    mocked.readGithubIssueState.mockResolvedValue({
+      missing: false,
+      closed: true,
+      url: "https://github.com/owner/repo/issues/123",
+    });
+    const result = await resultOf(await PUT(act({ action: "refresh" })));
+
+    expect(result.action).toBe("refreshed");
+    expect((await target())[0].status).toBe("done");
+  });
+
+  it("記録票がまだ無ければ、取り込みは何もしない", async () => {
+    await seed();
+    expect((await resultOf(await PUT(act({ action: "refresh" })))).action).toBe("skipped");
+    expect(mocked.readGithubIssueState).not.toHaveBeenCalled();
+  });
+
+  it("統合先が無い重複は受け付けない", async () => {
+    await seed();
+    expect((await PUT(act({ action: "duplicate", reasonCode: "duplicate" }))).status).toBe(400);
+  });
+
+  it("会社の管理者は落とせない（要望が見えなくなる操作のため）", async () => {
+    await seed();
+    mocked.apiViewer.mockRejectedValue(new HttpError(403, "権限がありません。"));
+    const response = await PUT(act({ action: "discard", reasonCode: "mistake" }));
+
+    expect(response.status).toBe(403);
+    expect((await target())[0].discardedAt).toBeNull();
+  });
+
+  it("他社の要望は404にする", async () => {
+    await seed();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN", "cmp_other"));
+    expect((await PUT(act({ action: "discard", reasonCode: "mistake" }))).status).toBe(404);
   });
 });
