@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
-import { getImprovementRequest } from "@/lib/queries";
+import { getImprovementRequest, listRelatedIssueLinks } from "@/lib/queries";
 import {
   Badge,
   Card,
@@ -16,7 +16,7 @@ import {
 import { ImprovementStatusForm } from "@/components/ImprovementStatusForm";
 import { ImprovementIssueForm } from "@/components/ImprovementIssueForm";
 import { improvementStatusLabel, improvementStatusTone } from "@/lib/domain/improvement";
-import { improvementKindLabel, parseDiagnostics } from "@/lib/domain/improvement-issue";
+import { diagnosticsLevelFor, improvementKindLabel, parseDiagnostics } from "@/lib/domain/improvement-issue";
 import { buildImprovementIssueDraft } from "@/lib/improvement-issue-draft";
 import { formatDateTime } from "@/lib/view";
 
@@ -39,9 +39,15 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
   const item = await getImprovementRequest(viewer.companyId, id);
   if (!item) notFound();
 
-  const diagnostics = parseDiagnostics(item.diagnostics);
+  const diagnostics = parseDiagnostics(item.diagnostics, diagnosticsLevelFor(item.kind));
   const canPushIssue = viewer.role === "SUPER_ADMIN";
-  const draft = canPushIssue && !item.issueUrl ? await buildImprovementIssueDraft(item) : null;
+  // 似ている記録票は、実際に出すときと同じ条件で引く（下見と実物を一致させる）。
+  const draft = canPushIssue && !item.issueUrl
+    ? await buildImprovementIssueDraft(
+        item,
+        await listRelatedIssueLinks(viewer.companyId, item.routePattern, item.kind, item.id),
+      )
+    : null;
 
   return (
     <>
@@ -138,6 +144,9 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
                       {diagnostics.network.map((n, i) => (
                         <li key={`${n.agoMs}-${i}`}>
                           {n.method} {n.path}（{n.status === null ? "応答なし" : n.status}）
+                          {/* やりとりの中身は伏せ字ずみのものだけを持っている（→ maskPayload）。 */}
+                          {n.requestBody && <Code block>{n.requestBody}</Code>}
+                          {n.responseBody && <Code block>{n.responseBody}</Code>}
                         </li>
                       ))}
                     </ul>

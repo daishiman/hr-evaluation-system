@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Button, ChoiceChip, InlineDetail, ReasonNote } from "@/components/ui";
 import { routeMetaOf } from "@/lib/nav";
 import { IMPROVEMENT_BODY_MAX, IMPROVEMENT_SHOT_MAX_BYTES, shotBytesOf } from "@/lib/domain/improvement";
 import {
+  DIAGNOSTICS_LEVEL_NOTE,
+  diagnosticsLevelFor,
   IMPROVEMENT_EXPECTED_MAX,
   IMPROVEMENT_KINDS,
   improvementKindLabel,
@@ -132,7 +134,7 @@ export function FeedbackWidget() {
   const [color, setColor] = useState<ColorKey>("red");
   const [textDraft, setTextDraft] = useState("");
   const [body, setBody] = useState("");
-  const [kind, setKind] = useState<ImprovementKind>("request");
+  const [kind, setKind] = useState<ImprovementKind>("usability");
   const [expected, setExpected] = useState("");
   const [draftPath, setDraftPath] = useState("");
   const [busy, setBusy] = useState(false);
@@ -143,6 +145,10 @@ export function FeedbackWidget() {
   const [sent, setSent] = useState(false);
 
   const screenLabel = routeMetaOf(draftPath || pathname)?.label ?? "その他の画面";
+
+  /* 送る前に本人が読めるよう、いま添えられる技術情報を組み立てておく。
+     文字を打つたびに作り直すと重くなるので、窓と種類が変わったときだけ。 */
+  const preview = useMemo(() => (open && !sent ? collectDiagnostics(kind) : null), [open, sent, kind]);
 
   /* ───── 直前の操作・エラーを控えておく ─────
    *
@@ -173,7 +179,7 @@ export function FeedbackWidget() {
     setShot(null);
     setShapes([]);
     setBody("");
-    setKind("request");
+    setKind("usability");
     setExpected("");
     setDraftPath(pathname);
     setTextDraft("");
@@ -462,7 +468,7 @@ export function FeedbackWidget() {
           kind,
           expected: expected.trim() || null,
           // 直すのに要る技術情報は、こちらで集めて添える（利用者に調べさせない）。
-          diagnostics: collectDiagnostics(),
+          diagnostics: collectDiagnostics(kind),
           viewport: `${window.innerWidth}×${window.innerHeight}`,
           shot: image,
           submissionKey,
@@ -582,12 +588,35 @@ export function FeedbackWidget() {
                       直すのに要る情報を自動で添えます。氏名・メールアドレス・評価の中身・パスワードは送りません。
                     </p>
                     <ul className="footnote mt-1 mb-0">
-                      <li>いま開いている画面のURL・画面の広さ・お使いのブラウザと OS</li>
-                      <li>この画面で出たエラーの記録と、失敗した通信の宛先（打ち込んだ内容は含みません）</li>
-                      <li>直前に押したもの・移った画面の順番（表示の名前だけ）</li>
-                      <li>画面が出るまでにかかった時間</li>
+                      {DIAGNOSTICS_LEVEL_NOTE[diagnosticsLevelFor(kind)].map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
                       <li>上で撮った画面の写し（外したときは送りません）</li>
                     </ul>
+                    {/* 説明だけでなく、いま実際に送られる中身をそのまま出す。
+                        通信のやりとりまで添えるので、「書いてある」では足りない。 */}
+                    {preview && (
+                      <>
+                        <p className="footnote mt-2 mb-0">
+                          いまこの窓を開いた時点の中身です。伏せ字（***）は送る前に消したものです。
+                        </p>
+                        <ul className="footnote mt-1 mb-0">
+                          <li>
+                            {preview.browser} / {preview.os} / {preview.viewport}
+                          </li>
+                          <li>エラーの記録：{preview.logs.length}件</li>
+                          <li>失敗した通信：{preview.network.length}件</li>
+                          <li>操作の記録：{preview.breadcrumbs.length}件</li>
+                        </ul>
+                        {preview.network.map((n, i) => (
+                          <pre className="feedback-preview" key={`${n.path}-${i}`}>
+                            {`${n.method} ${n.path} → ${n.status ?? "応答なし"}`}
+                            {n.requestBody ? `\n送った中身\n${n.requestBody}` : ""}
+                            {n.responseBody ? `\n返ってきた中身\n${n.responseBody}` : ""}
+                          </pre>
+                        ))}
+                      </>
+                    )}
                   </InlineDetail>
                 </div>
 

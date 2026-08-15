@@ -1293,11 +1293,12 @@ export const improvementRequests = sqliteTable(
     screenLabel: text("screen_label").notNull(),
     body: text("body").notNull(),
     /**
-     * bug（困っている）| request（こうしてほしい）。
-     * 直す優先順位と、記録票の書き出し方（再現手順を要るか）を分ける唯一の入力。
-     * 種類を聞いていなかった既存行は 'request' 扱い（→ 0020 の既定値）。
+     * bug（動かない）| usability（使いにくい）| feature（機能がほしい）。
+     * 直す優先順位・記録票の書き出し方・**自動で集めてよい技術情報の量**を
+     * 分ける唯一の入力（→ src/lib/domain/improvement-issue.ts の収集レベル）。
+     * 種類を聞いていなかった既存行は 'usability' 扱い（→ 0020 の既定値）。
      */
-    kind: text("kind").notNull().default("request"),
+    kind: text("kind").notNull().default("usability"),
     /** 「どうなってほしいか」。自動では絶対に集められないので、任意で1行だけ受ける。 */
     expected: text("expected"),
     /**

@@ -22,7 +22,7 @@ function input(overrides: Partial<Parameters<typeof saveImprovementRequest>[1]> 
     path: "/f/acme-secret-token",
     routePattern: "/f/[token]",
     screenLabel: "配布されたアンケート",
-    kind: "request" as const,
+    kind: "usability" as const,
     body: "送信ボタンが分かりにくい",
     expected: null,
     diagnostics: null,

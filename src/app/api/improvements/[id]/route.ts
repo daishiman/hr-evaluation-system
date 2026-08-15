@@ -10,7 +10,7 @@ import {
   isImprovementStatus,
 } from "@/lib/domain/improvement";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
-import { getImprovementRequest } from "@/lib/queries";
+import { getImprovementRequest, listRelatedIssueLinks } from "@/lib/queries";
 import { buildImprovementIssueDraft } from "@/lib/improvement-issue-draft";
 import { createGithubIssue, requireGithubSettings } from "@/lib/github-issue";
 
@@ -97,7 +97,10 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
     // 設定の不足は、外へ送る前に確かめる（送ってから気づくと二重投稿になる）。
     const settings = await requireGithubSettings();
-    const draft = await buildImprovementIssueDraft(item);
+    const draft = await buildImprovementIssueDraft(
+      item,
+      await listRelatedIssueLinks(viewer.companyId, item.routePattern, item.kind, item.id),
+    );
     const created = await createGithubIssue(settings, {
       title: draft.title,
       body: draft.body,

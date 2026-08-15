@@ -13,9 +13,11 @@ import {
   buildIssueBody,
   buildIssueLabels,
   buildIssueTitle,
+  diagnosticsLevelFor,
   isImprovementKind,
   parseDiagnostics,
   type ImprovementKind,
+  type RelatedIssue,
 } from "@/lib/domain/improvement-issue";
 
 export interface ImprovementForIssue {
@@ -44,9 +46,13 @@ function roleLabelOf(role: string | null): string {
   return role && role in ROLE_LABEL ? ROLE_LABEL[role as Role] : "不明";
 }
 
-export async function buildImprovementIssueDraft(item: ImprovementForIssue): Promise<IssueDraft> {
-  const kind: ImprovementKind = isImprovementKind(item.kind) ? item.kind : "request";
+export async function buildImprovementIssueDraft(
+  item: ImprovementForIssue,
+  related: RelatedIssue[] = [],
+): Promise<IssueDraft> {
+  const kind: ImprovementKind = isImprovementKind(item.kind) ? item.kind : "usability";
   const origin = await appOrigin();
+  const diagnostics = parseDiagnostics(item.diagnostics, diagnosticsLevelFor(kind));
   const input = {
     kind,
     screenLabel: item.screenLabel,
@@ -59,12 +65,13 @@ export async function buildImprovementIssueDraft(item: ImprovementForIssue): Pro
     hasShot: item.hasShot,
     adminUrl: `${origin}/admin/improvements/${item.id}`,
     appVersion: await appVersion(),
-    diagnostics: parseDiagnostics(item.diagnostics),
+    diagnostics,
+    related,
   };
   return {
     title: buildIssueTitle(input),
     body: buildIssueBody(input),
-    labels: buildIssueLabels(kind),
+    labels: buildIssueLabels(kind, diagnostics, item.routePattern),
     kind,
   };
 }

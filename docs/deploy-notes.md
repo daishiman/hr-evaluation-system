@@ -76,6 +76,9 @@ pnpm run check:bundle-size
 - 権限は対象リポジトリの Issues: Read and write だけに絞ります。contents への書き込みは不要です。
 - ローカルで試すときは `.dev.vars` に `GITHUB_TOKEN=...` を置きます（このファイルは追跡しません）。
 - token を差し替えたら `wrangler secret put` を再実行します。再配布は不要です。
+- 記録票には仕分けの札（label）を自動で付けます（`improvement` / `bug`・`enhancement`・`feature-request` /
+  `severity:high|medium|low` / `area:～`）。リポジトリに無い札は GitHub 側が自動で作るため、事前登録は要りません。
+  色や説明を整えたい場合だけ、あとから GitHub の Labels 画面で設定してください。
 
 ## 6. 失敗時
 

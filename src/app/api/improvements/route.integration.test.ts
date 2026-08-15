@@ -59,7 +59,7 @@ function postRequest(overrides: Record<string, unknown> = {}) {
     headers: { "content-type": "application/json", "user-agent": "integration-test" },
     body: JSON.stringify({
       path: "/f/acme-secret-token?employee=someone",
-      kind: "request",
+      kind: "usability",
       body: "送信ボタンの位置が分かりにくいです。",
       viewport: "375×812",
       shot: null,
@@ -301,7 +301,7 @@ describe("POST /api/improvements/[id]（記録票を作る）", () => {
     expect(sent.body).toContain("保存できません");
     expect(sent.body).toContain("保存できてほしい");
     expect(sent.body).toContain("`src/app/admin/members/page.tsx`");
-    expect(sent.labels).toEqual(["改善要望", "不具合"]);
+    expect(sent.labels).toEqual(["improvement", "bug", "severity:medium", "area:admin"]);
     expect(link).toMatchObject({ requestId: "improve_target", issueNumber: 123 });
     expect((await testDb.db.select().from(s.improvementRequests))[0].status).toBe("doing");
   });

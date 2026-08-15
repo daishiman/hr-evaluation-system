@@ -9,6 +9,7 @@ import {
   shotBytesOf,
 } from "@/lib/domain/improvement";
 import {
+  diagnosticsLevelFor,
   IMPROVEMENT_EXPECTED_MAX,
   IMPROVEMENT_KINDS,
   normalizeDiagnostics,
@@ -86,7 +87,11 @@ export async function POST(req: Request) {
         kind: input.kind,
         expected: input.expected?.trim() || null,
         // 技術情報が大きすぎたり壊れていたりしても、要望そのものは必ず保存する。
-        diagnostics: input.diagnostics ? serializeDiagnostics(normalizeDiagnostics(input.diagnostics)) : null,
+        // 種類ごとの収集量はここで決め直す。送信側が「全部集めた」と名乗っても、
+        // 新機能の要望に通信の中身が付いてくることはない（判断はサーバーが正本）。
+        diagnostics: input.diagnostics
+          ? serializeDiagnostics(normalizeDiagnostics(input.diagnostics, diagnosticsLevelFor(input.kind)))
+          : null,
         viewport: input.viewport ?? null,
         userAgent: req.headers.get("user-agent")?.slice(0, 300) ?? null,
         shot: input.shot ?? null,

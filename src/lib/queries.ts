@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { getDb, schema } from "@/lib/db";
 import { isImprovementStatus } from "@/lib/domain/improvement";
@@ -959,9 +959,48 @@ export async function listImprovementRequests(companyId: string) {
   return rows.map((r) => ({
     ...r,
     status: isImprovementStatus(r.status) ? r.status : ("open" as const),
-    kind: isImprovementKind(r.kind) ? r.kind : ("request" as const),
+    kind: isImprovementKind(r.kind) ? r.kind : ("usability" as const),
     hasShot: r.shotBytes !== null,
     hasIssue: r.issueNumber !== null,
+  }));
+}
+
+/**
+ * 同じ画面・同じ種類で、すでに記録票になっているもの（新しい順に少しだけ）。
+ *
+ * 重複を機械が判定して閉じることはしない。文面が似ていても別の話であることが
+ * 多く、間違って閉じると声そのものが消える。記録票に「似ているものがある」と
+ * 並べるところまでを機械の仕事にし、同じかどうかは読む人が決める。
+ */
+export async function listRelatedIssueLinks(
+  companyId: string,
+  routePattern: string,
+  kind: string,
+  excludeId: string,
+) {
+  const db = await getDb();
+  const rows = await db
+    .select({
+      number: s.improvementIssueLinks.issueNumber,
+      url: s.improvementIssueLinks.issueUrl,
+      body: s.improvementRequests.body,
+    })
+    .from(s.improvementIssueLinks)
+    .innerJoin(s.improvementRequests, eq(s.improvementRequests.id, s.improvementIssueLinks.requestId))
+    .where(
+      and(
+        eq(s.improvementRequests.companyId, companyId),
+        eq(s.improvementRequests.routePattern, routePattern),
+        eq(s.improvementRequests.kind, kind),
+        ne(s.improvementRequests.id, excludeId),
+      ),
+    )
+    .orderBy(desc(s.improvementIssueLinks.createdAt))
+    .limit(3);
+  return rows.map((r) => ({
+    number: r.number,
+    url: r.url,
+    summary: r.body.split("\n")[0].slice(0, 60),
   }));
 }
 
@@ -1006,7 +1045,7 @@ export async function getImprovementRequest(companyId: string, id: string) {
   return {
     ...r,
     status: isImprovementStatus(r.status) ? r.status : ("open" as const),
-    kind: isImprovementKind(r.kind) ? r.kind : ("request" as const),
+    kind: isImprovementKind(r.kind) ? r.kind : ("usability" as const),
     hasShot: r.shot !== null,
   };
 }
