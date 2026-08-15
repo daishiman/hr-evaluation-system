@@ -125,7 +125,7 @@
 | PERFORMANCE-001 | observe | 一覧は数百件超でページングが必要 | 対象データが数百件に達する | cursor または keyset 方式を導入 | [旧台帳 D1](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-002 | observe | マスタ参照は都度 D1 を読む | 読取負荷・待ち時間が問題化 | キャッシュ範囲と無効化を設計 | [旧台帳 D11](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-003 | ready | 本番端末・回線で Core Web Vitals を計測していない | 次の性能確認 | 主要画面を実測し基準超過だけ改善 | [旧台帳 UX101](./backlog-history-2026-08-13.md) |
-| PERFORMANCE-004 | ready | 公開バンドルの圧縮後実測が 2,709.6 KiB（無料プラン3,072 KiBの88.2%。CIと同じ本番ビルド実測）で警告域に入った（改善要望の撮影ライブラリは押したときだけ遅延読込。2026-08-15 のメニュー・画面の絵と保存後反映の導入後、直前の本番実測から +40.7 KiB） | 次の機能追加・依存更新前 | `wrangler deploy --dry-run` の構成内訳を比較し、未使用・重複コードを優先して3072 KiBまでの余白を戻す | [容量チェック](../../scripts/check-bundle-size.mjs) / [デプロイ注意](../deploy-notes.md) |
+| PERFORMANCE-004 | ready | 公開バンドルの圧縮後実測が 2,687.0 KiB（無料プラン3,072 KiBの87.5%。CIと同じ本番ビルド実測）で警告域に入った（改善要望の撮影ライブラリは押したときだけ遅延読込。まとめ送り・廃棄の追加は API の道を増やさず既存の道へ同居させた） | 次の機能追加・依存更新前 | `wrangler deploy --dry-run` の構成内訳を比較し、未使用・重複コードを優先して3072 KiBまでの余白を戻す | [容量チェック](../../scripts/check-bundle-size.mjs) / [デプロイ注意](../deploy-notes.md) |
 | PERFORMANCE-005 | observe | 改善要望の画像を R2 ではなく D1 に data URL で持つ（バインディングが無いため）。1件あたり最大 700KB | `SUM(improvement_shots.bytes)`を定期計測し500MB到達、または詳細画像読取p95が500ms超を2週連続で観測 | R2 バインディングを足し、画像本体を移して D1 には鍵だけ残す。移行前に総bytes・件数・p95の内容非保持メトリクスを用意する | [仕様 §26-5](./spec.md) / [保存契約](../../system-spec/improvement-requests.md) |
 | SCALE-001 | observe | 管理画面の件数取得は会社数増加時に要確認 | 20 社または高負荷を観測 | クエリ計画を測り必要箇所だけ集約化 | [回ごとの記録 N4・N6](./backlog-session-notes.md) |
 | SCALE-002 | decision | フォーム数・KPI 項目数の上限が未定義 | 複数フォーム運用を制度化 | ドメイン上限と超過時の案内を決める | [回ごとの記録 R2・R4](./backlog-session-notes.md) |

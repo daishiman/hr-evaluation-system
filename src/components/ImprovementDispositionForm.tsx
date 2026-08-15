@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card, ChoiceChip, ReasonNote } from "@/components/ui";
+import { RefreshStatus } from "@/components/RefreshStatus";
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import {
   DISPOSITION_ACTIONS,
@@ -33,7 +34,7 @@ export function ImprovementDispositionForm({
   hasIssue: boolean;
   discarded: boolean;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   // 廃棄済みの要望を開いたときは「元に戻す」から始める（いちばん要る操作を既定に）。
   const first: DispositionAction = discarded ? "restore" : "reject";
   const [action, setAction] = useState<DispositionAction>(first);
@@ -58,7 +59,7 @@ export function ImprovementDispositionForm({
   };
 
   const submit = async () => {
-    if (busy || reasonError) return;
+    if (busy || refreshing || reasonError) return;
     setBusy(true);
     setError(null);
     setDone(null);
@@ -82,7 +83,8 @@ export function ImprovementDispositionForm({
       }
       setDone(json.result.reason);
       setReasonNote("");
-      router.refresh();
+      // 履歴と状態はサーバー側で作っている。作り直しが終わるまで結果を出し続ける。
+      refresh();
     } catch {
       setError("通信できませんでした。入力内容はこの画面に残っています。");
     } finally {
@@ -94,7 +96,7 @@ export function ImprovementDispositionForm({
     <Card className="card-pad">
       {error && <ReasonNote>{error}</ReasonNote>}
       {reasonError && <ReasonNote>{reasonError}</ReasonNote>}
-      {done && <ReasonNote>{done}</ReasonNote>}
+      <RefreshStatus message={done} refreshing={refreshing} target="履歴" />
 
       <p className="footnote m-0">この要望をどうするか</p>
       <div className="mt-1 flex flex-wrap gap-2">
@@ -167,7 +169,7 @@ export function ImprovementDispositionForm({
         <ConfirmButton
           label={needsReason ? `${dispositionActionLabel(action)}にする` : dispositionActionLabel(action)}
           variant={action === "discard" ? "danger-outline" : "primary"}
-          disabled={busy || reasonError !== null}
+          disabled={busy || refreshing || reasonError !== null}
           busy={busy}
           confirm={dispositionConfirm(action)}
           onConfirm={() => void submit()}

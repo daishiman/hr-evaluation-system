@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Badge, Button, Card, ChoiceChip, ReasonNote, SectionHeading } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
+import { RefreshStatus } from "@/components/RefreshStatus";
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { DataTable, type Column } from "@/components/DataTable";
 import { type ImprovementStatus } from "@/lib/domain/improvement";
 import { improvementKindLabel, type ImprovementKind } from "@/lib/domain/improvement-issue";
@@ -97,7 +98,7 @@ export function ImprovementBulkTable({
   canPush: boolean;
   canDispose: boolean;
 }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [results, setResults] = useState<SyncResult[] | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -146,7 +147,7 @@ export function ImprovementBulkTable({
    * まとめて並べて投げると GitHub の受付上限に当たり、まとめて断られる。
    */
   const run = async (targets: string[], operation: BulkOperation) => {
-    if (targets.length === 0 || progress) return;
+    if (targets.length === 0 || progress || refreshing) return;
     setResults(null);
     setProgress({ done: 0, total: targets.length });
     const collected: SyncResult[] = [];
@@ -191,7 +192,9 @@ export function ImprovementBulkTable({
     setProgress(null);
     setSelected(new Set());
     setPending(null);
-    router.refresh();
+    // 一覧はサーバー側で作っている。処理しただけでは古いままなので作り直させ、
+    // 終わるまで「反映しています…」を出す（読み直しに走らせない）。
+    refresh();
   };
 
   /** 選んだぶんを記録票へ送る（まとめ送りと、失敗した行の送り直しの両方で使う）。 */
@@ -332,11 +335,11 @@ export function ImprovementBulkTable({
               <ConfirmButton
                 label={`${chosen.length}件に実行する`}
                 variant={pending === "discard" ? "danger-outline" : "primary"}
-                disabled={progress !== null || reasonError !== null || chosen.length === 0}
+                disabled={progress !== null || refreshing || reasonError !== null || chosen.length === 0}
                 confirm={bulkDispositionConfirm(pending, chosen.length)}
                 onConfirm={() => void run(chosen.map((r) => r.id), pending)}
               >
-                <Button type="button" variant="tertiary" disabled={progress !== null} onClick={() => setPending(null)}>
+                <Button type="button" variant="tertiary" disabled={progress !== null || refreshing} onClick={() => setPending(null)}>
                   やめる
                 </Button>
               </ConfirmButton>
@@ -348,7 +351,7 @@ export function ImprovementBulkTable({
       {results && (
         <>
           <SectionHeading help="処理した1件ずつの結果です。">処理の結果</SectionHeading>
-          <p className="footnote">{bulkSummaryText(summarizeBulk(results))}</p>
+          <RefreshStatus message={bulkSummaryText(summarizeBulk(results))} refreshing={refreshing} />
           <DataTable
             caption="まとめ処理の結果"
             rows={results}
@@ -376,7 +379,7 @@ export function ImprovementBulkTable({
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={progress !== null}
+                  disabled={progress !== null || refreshing}
                   onClick={() => send(failed.map((r) => r.id))}
                 >
                   {`失敗した${failed.length}件を送り直す`}
@@ -397,21 +400,21 @@ export function ImprovementBulkTable({
               : `${selected.size}件を選択中／新規${count("create")}・更新${count("update")}・作り直し${count("recreate")}・スキップ${count("skip")}`
           }
         >
-          <Button type="button" variant="tertiary" disabled={progress !== null} onClick={() => setSelected(new Set())}>
+          <Button type="button" variant="tertiary" disabled={progress !== null || refreshing} onClick={() => setSelected(new Set())}>
             選択をすべて解除
           </Button>
           {canDispose && (
             <>
-              <Button type="button" variant="secondary" disabled={progress !== null} onClick={() => openPanel("restore")}>
+              <Button type="button" variant="secondary" disabled={progress !== null || refreshing} onClick={() => openPanel("restore")}>
                 元に戻す
               </Button>
-              <Button type="button" variant="secondary" disabled={progress !== null} onClick={() => openPanel("reject")}>
+              <Button type="button" variant="secondary" disabled={progress !== null || refreshing} onClick={() => openPanel("reject")}>
                 対応しない
               </Button>
               <Button
                 type="button"
                 variant="danger-outline"
-                disabled={progress !== null}
+                disabled={progress !== null || refreshing}
                 onClick={() => openPanel("discard")}
               >
                 廃棄する
@@ -422,7 +425,7 @@ export function ImprovementBulkTable({
             <Button
               type="button"
               variant="primary"
-              disabled={progress !== null}
+              disabled={progress !== null || refreshing}
               onClick={() => send(chosen.map((r) => r.id))}
             >
               {progress ? "処理しています…" : `${selected.size}件を記録票へ送る`}
