@@ -4,7 +4,8 @@
 // 使い方:
 //   pnpm improvements list                  # 手つかずの要望を一覧で見る
 //   pnpm improvements get <ID> [<ID>…]      # 作業指示文を読む（最大10件まとめて）
-//   pnpm improvements done <ID> --release … # 直して公開したことを書き戻す
+//   pnpm improvements review <ID> --pr …    # 確認依頼を作ったことを書き戻す
+//   pnpm improvements done <ID> --pr …      # その確認依頼が取り込まれたことを書き戻す
 //   pnpm improvements failed <ID> --reason … # 直しきれなかった理由を残す
 //   pnpm improvements key                   # 鍵の在り処だけを確かめる（値は出さない）
 //
@@ -55,14 +56,15 @@ export const USAGE = [
   "使い方:",
   "  pnpm improvements list                    手つかずの改善要望を一覧で見る",
   "  pnpm improvements get <ID> [<ID>…]        作業指示文を読む（最大10件）",
-  "  pnpm improvements done <ID> --release …   直して公開したことを書き戻す",
+  "  pnpm improvements review <ID> --pr …      確認依頼を作ったことを書き戻す",
+  "  pnpm improvements done <ID> --pr …        確認依頼が取り込まれたことを書き戻す",
   "  pnpm improvements failed <ID> --reason …  直しきれなかった理由を残す",
   "  pnpm improvements key                     鍵の在り処だけを確かめる",
   "",
   "付けられるもの:",
   "  --json        機械処理用にJSONのまま出す",
   `  --base <URL>  宛先を変える（既定は本番。環境変数 ${BASE_VAR} でも指定できる）`,
-  "  --release …   公開した先（本番URL・版の名前・確認依頼の番号）",
+  "  --pr …        確認依頼の場所（URL・番号のどちらか。--release でも同じ）",
   "  --reason …    直しきれなかった理由",
 ].join("\n");
 
@@ -91,10 +93,11 @@ export function parseArgs(argv) {
       i += 1;
     } else if (arg.startsWith("--base=")) {
       base = arg.slice("--base=".length);
-    } else if (arg === "--release" || arg === "--reason") {
+    } else if (arg === "--pr" || arg === "--release" || arg === "--reason") {
+      // --release は v53 までの書き方。使い続けている手順書のために受け続ける。
       detail = argv[i + 1] ?? "";
       i += 1;
-    } else if (arg.startsWith("--release=") || arg.startsWith("--reason=")) {
+    } else if (arg.startsWith("--pr=") || arg.startsWith("--release=") || arg.startsWith("--reason=")) {
       detail = arg.slice(arg.indexOf("=") + 1);
     } else if (arg === "--help" || arg === "-h" || arg === "help") {
       return { command: "help", ids: [], json: false, base: null, detail: null, dropped: 0 };
@@ -132,13 +135,13 @@ export function parseArgs(argv) {
 
   // 書き戻しは必ず1件ずつ。まとめて「対応済み」にできる形にすると、
   // 直していないものまで一括で完了になり、あとから見分けられない。
-  if (command === "done" || command === "failed") {
+  if (command === "review" || command === "done" || command === "failed") {
     if (ids.length !== 1) return fail(`${command} は要望IDを1つだけ指定してください。`);
     if ((detail ?? "").trim() === "") {
       return fail(
-        command === "done"
-          ? "--release に公開した先を書いてください（本番URL・版の名前・確認依頼の番号）。"
-          : "--reason に直しきれなかった理由を書いてください。",
+        command === "failed"
+          ? "--reason に直しきれなかった理由を書いてください。"
+          : "--pr に確認依頼の場所を書いてください（URL・番号のどちらか）。",
       );
     }
     return ok(command, ids);
@@ -369,7 +372,8 @@ export async function run({
     return 0;
   }
 
-  const writing = parsed.command === "done" || parsed.command === "failed";
+  const writing =
+    parsed.command === "review" || parsed.command === "done" || parsed.command === "failed";
   const url = writing ? `${base}/api/improvements` : buildUrl(base, parsed);
   const init = writing
     ? {
@@ -381,7 +385,7 @@ export async function run({
         },
         body: JSON.stringify({
           id: parsed.ids[0],
-          result: parsed.command === "done" ? "done" : "failed",
+          result: parsed.command,
           detail: parsed.detail.trim(),
         }),
       }

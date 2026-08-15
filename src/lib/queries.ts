@@ -952,6 +952,9 @@ export async function listImprovementRequests(companyId: string) {
       viewport: s.improvementRequests.viewport,
       handledNote: s.improvementRequests.handledNote,
       duplicateOfId: s.improvementRequests.duplicateOfId,
+      // レビュー待ちの判定（→ improvementDisplayState）と、どの確認依頼で直ったかの表示に使う。
+      reviewRef: s.improvementRequests.reviewRef,
+      reviewedAt: s.improvementRequests.reviewedAt,
       discardedAt: s.improvementRequests.discardedAt,
       discardReason: s.improvementRequests.discardReason,
       createdAt: s.improvementRequests.createdAt,
@@ -1090,6 +1093,9 @@ export async function getImprovementRequest(companyId: string, id: string) {
       userAgent: s.improvementRequests.userAgent,
       handledNote: s.improvementRequests.handledNote,
       duplicateOfId: s.improvementRequests.duplicateOfId,
+      // レビュー待ちの判定（→ improvementDisplayState）と、どの確認依頼で直ったかの表示に使う。
+      reviewRef: s.improvementRequests.reviewRef,
+      reviewedAt: s.improvementRequests.reviewedAt,
       discardedAt: s.improvementRequests.discardedAt,
       discardReason: s.improvementRequests.discardReason,
       createdAt: s.improvementRequests.createdAt,

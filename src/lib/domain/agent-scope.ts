@@ -130,29 +130,37 @@ export function canWriteImprovement(
 /* ───────────────────────── 終わったときの書き戻し ───────────────────────── */
 
 /**
- * 作業する側が返せる結果。
- *  done   … 直して公開まで済んだ（対応済みにする）
+ * 作業する側が返せる結果。要望は「未対応 → 対応中 → レビュー待ち → 対応済み」と進む。
+ *  review … 変更内容の確認依頼を作った（レビュー待ちにする）
+ *  done   … その確認依頼が取り込まれた（対応済みにする）
  *  failed … 直しきれなかった（対応中のまま、理由を残す）
+ *
+ * done を「取り込まれたとき」だけに絞るのが要。作業が終わった時点で
+ * 対応済みにすると、取り込まれずに終わった変更まで完了扱いで一覧から消え、
+ * 送ってくれた人の声がそのまま行方不明になる。
  */
-export const AGENT_RESULTS = ["done", "failed"] as const;
+export const AGENT_RESULTS = ["review", "done", "failed"] as const;
 export type AgentResult = (typeof AGENT_RESULTS)[number];
 
 export const RELEASE_REF_MAX = 200;
 
+/** 対応済みにするには、先にレビュー待ちを通す。順番を飛ばせないことの唯一の判定。 */
+export const AGENT_NOT_REVIEWED_MESSAGE =
+  "まだ確認依頼が出ていないので、対応済みにできません。\n先にレビュー待ちにしてください。\n`pnpm improvements review 要望ID --pr URL`";
+
 /**
- * 「対応済み」にするには、公開した先の証跡を必ず書かせる。
+ * 確認依頼の場所（PRのURLや番号）を必ず書かせる。
  *
- * テストが通っただけで対応済みにすると、直っていないものが完了扱いで
- * 一覧から消える。ここで証跡（本番URL・版の名前・確認依頼の番号など）を
- * 必須にしておけば、あとから人が「本当に出たか」を確かめられる。
+ * 場所が無いと、あとから人が「本当に取り込まれたか」を確かめられない。
+ * レビュー待ちにするときも、対応済みにするときも同じ検査を通す。
  */
 export function releaseRefError(raw: string): string | null {
   const value = raw.trim();
   if (value.length === 0) {
-    return "公開した先を書いてください（本番URL・版の名前・確認依頼の番号のどれか）。";
+    return "確認依頼の場所を書いてください（URL・番号のどちらか）。";
   }
   if (value.length > RELEASE_REF_MAX) {
-    return `公開した先は${RELEASE_REF_MAX}文字以内で書いてください。`;
+    return `確認依頼の場所は${RELEASE_REF_MAX}文字以内で書いてください。`;
   }
   return null;
 }
@@ -171,12 +179,15 @@ export function failedNoteError(raw: string): string | null {
 /** 履歴と一覧に出す1文。あとから読む人が、何が起きたかだけで分かる形にする。 */
 export function agentResultNote(result: AgentResult, detail: string, keyLabel: string | null): string {
   const who = keyLabel ? `「${keyLabel}」の鍵` : "作業する側";
-  return result === "done"
-    ? `${who}が直して公開しました（${detail.trim()}）`
-    : `${who}が直しきれませんでした（${detail.trim()}）`;
+  const body = detail.trim();
+  if (result === "review") return `${who}が直して確認を依頼しました（${body}）`;
+  if (result === "done") return `確認依頼が取り込まれました（${body}）`;
+  return `${who}が直しきれませんでした（${body}）`;
 }
 
 /** 履歴に残す操作の名前。人の操作（status）と混ぜない。 */
-export function agentResultAction(result: AgentResult): "agent-done" | "agent-failed" {
-  return result === "done" ? "agent-done" : "agent-failed";
+export function agentResultAction(result: AgentResult): "agent-review" | "agent-done" | "agent-failed" {
+  if (result === "review") return "agent-review";
+  if (result === "done") return "agent-done";
+  return "agent-failed";
 }

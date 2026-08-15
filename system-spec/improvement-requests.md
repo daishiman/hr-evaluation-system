@@ -96,7 +96,7 @@ submission keyから投稿者を含む決定的request IDをSHA-256で生成し�
 - **設定値の鍵（`AGENT_API_KEY`）の受け付けは `PUT /api/agent-keys` で止められる**（`agent_key_settings.env_key_enabled`、既定 true）。secret を削除する案を採らないのは、削除が取り消せないうえ、すでに設定値で動いている場所を止めてしまうため。画面には恒久削除の1行（`AGENT_ENV_KEY_DELETE_COMMAND`）も併記し、急ぎは可逆な切替、恒久は削除、と選べるようにする。札は「登録されていません／使えます／止めています」の3つを言い分ける。
 - 行は消さない。`created_by_id` / `created_at` / `revoked_by_id` / `revoked_at` がそのまま操作履歴になる。`last_used_at` は `AGENT_KEY_TOUCH_INTERVAL_MS = 60_000` を下限に書き足す（読むたびの書き込みを避ける）。
 - 画面は発行直後だけ生の鍵を出し、`AGENT_KEY_ONCE_NOTICE` を鍵と同じ場所に先に出す。コピーできるのは3つ（鍵 / Claude Code へ貼る文言＝鍵を埋めた形 / `export HR_AGENT_KEY='...'`）。`localStorage`・`sessionStorage` へ置かない。作り直し・失効は `ConfirmButton` で1回確認する。
-- 純関数の正本は `src/lib/domain/agent-keys.ts`（coverage 100%対象）。保存・乱数は `src/lib/agent-keys.ts`。migration は `0024_agent_api_keys.sql`、`0025_agent_keys_and_handout_history.sql`、`0026_agent_key_scope.sql`（会社の焼き込みと権限、履歴の `key_id` / `key_label` / `release_ref`）。一覧には「届く範囲」（`agentKeyScopeNote()` = 会社名／できること）も出す。何を持たせた鍵なのかが画面から読めないと、止めてよい鍵の判定ができない。
+- 純関数の正本は `src/lib/domain/agent-keys.ts`（coverage 100%対象）。保存・乱数は `src/lib/agent-keys.ts`。migration は `0024_agent_api_keys.sql`、`0025_agent_keys_and_handout_history.sql`、`0026_agent_key_scope.sql`（会社の焼き込みと権限、履歴の `key_id` / `key_label` / `release_ref`）、`0027_improvement_review.sql`（`improvement_requests.review_ref` / `reviewed_at`）。一覧には「届く範囲」（`agentKeyScopeNote()` = 会社名／できること）も出す。何を持たせた鍵なのかが画面から読めないと、止めてよい鍵の判定ができない。
 - 未設定時の 503 本文（`agentKeySetupLines()`）と `agentPromptText()` の末尾は、この画面の絶対URLを先に案内する。
 - 一覧に出すのは 名前 / 先頭8文字 / 発行日時 / 最終使用日時 / 状態 の5項目。最終使用日時が空のときは `agentKeyUsageNote(null)` で理由を書き、空欄で並べない。
 
@@ -111,14 +111,17 @@ submission keyから投稿者を含む決定的request IDをSHA-256で生成し�
 
 ## 4-5. PATCH `/api/improvements`（作業する側の書き戻し）
 
-- 目的は「取ったら対応中、公開できたら対応済み」を人の手を介さず閉じること。人が画面から直す `PATCH /api/improvements/[id]`（session＋COMPANY_ADMIN）とは**別の入口**で、こちらは鍵（Bearer）だけで通る。入口を共用しないのは、人の差し戻しまで鍵で行えてしまうと自動更新の取り消し先が無くなるため。
-- 本体は `src/lib/improvement-agent-write.ts` の `applyAgentResult(caller, id, input)`。body は `{ id, result, detail }` の strict（`result` は `AGENT_RESULTS = ["done","failed"]`、`detail` は1〜1000文字）。上限は `readJsonBodyWithinLimit(req, 4_000)`。
+- 目的は「取ったら対応中、確認依頼を出したらレビュー待ち、取り込まれたら対応済み」を人の手を介さず閉じること。人が画面から直す `PATCH /api/improvements/[id]`（session＋COMPANY_ADMIN）とは**別の入口**で、こちらは鍵（Bearer）だけで通る。入口を共用しないのは、人の差し戻しまで鍵で行えてしまうと自動更新の取り消し先が無くなるため。
+- 本体は `src/lib/improvement-agent-write.ts` の `applyAgentResult(caller, id, input)`。body は `{ id, result, detail }` の strict（`result` は `AGENT_RESULTS = ["review","done","failed"]`、`detail` は1〜1000文字）。上限は `readJsonBodyWithinLimit(req, 4_000)`。
 - **`improvements:write-own` を持つ鍵だけ**が通る。持たない鍵は403（`AGENT_NO_WRITE_SCOPE_MESSAGE`）。`company_id` が null の鍵（移行期間・設定値の鍵）は読めても**書けない**。誰の代わりに書いたか特定できない鍵に状態を変えさせない。
 - **「自分が取得した要望」の判定根拠は `improvement_handout_events.key_id`**。所有テーブルを新設せず、既に積んでいる払い出しの控えを唯一の根拠にする（控えと権限が食い違う状態を作らないため）。受け取っていなければ403（`AGENT_NOT_CLAIMED_MESSAGE`、受け取り直すコマンドを本文に書く）。
 - 会社違い・不存在・廃棄済み（`discarded_at`）はすべて404（`AGENT_NOT_FOUND_MESSAGE`）で言い分けない。判定の正本は `canWriteImprovement()`（`src/lib/domain/agent-scope.ts`）。
-- **`done` は「公開まで到達したときだけ」**。`detail` は公開先（本番URL・版の名前・確認依頼の番号）として `release_ref`（`RELEASE_REF_MAX = 200`）に入れ、空なら400で状態は `doing` のまま据え置く。テストが通っただけで対応済みにできる作りにしない。
+- **状態は「未対応 → 対応中 → レビュー待ち → 対応済み」の一方通行**。`review` は確認依頼（PR）を作った合図で、`detail`（URL か番号）を `improvement_requests.review_ref` と `reviewed_at` に入れ、`status` は `doing` のまま置く。`done` は**その確認依頼が取り込まれたとき**だけで、`review_ref` が空の行に対しては409（`AGENT_NOT_REVIEWED_MESSAGE`、次に打つコマンドを本文に書く）で断る。順番を飛ばせないことの判定は `applyAgentResult` の1箇所だけに置く。
+- **`status` に `review` という値は足さない**。この列は CHECK 制約（`open`/`doing`/`done`/`dropped`）を持ち、値を増やすには SQLite ではテーブルの作り直し（DROP を含む）が要る。本番データに対して釣り合わないので、`review_ref` の有無を列の外から重ねて読む（`improvementDisplayState()`。廃棄・重複と同じ作法）。既存行の移し替えも不要になる。
+- `review_ref` は `done` になっても消さない。**どの確認依頼で直ったか**を詳細画面から読むため。そのぶん「レビュー待ち」と読むのは `status === "doing"` のときだけに限る。
+- `detail` の検査は `review`／`done` とも `releaseRefError()`（`RELEASE_REF_MAX = 200`）で、空なら400。状態は `doing` のまま据え置く。テストが通っただけで対応済みにできる作りにしない。
 - **`failed` は状態を変えない**（`doing` のまま理由だけ残す）。`AGENT_FAILED_NOTE_MAX = 1000`。直っていない要望が一覧から消えると、送ってくれた人の声がそのまま行方不明になる。
-- 変更は必ず `improvement_status_events` に1行積む。`actor_id = null` / `key_id` / `key_label`（写し）/ `release_ref` / `action`（`agent-done` | `agent-failed`）。詳細画面は `improvementEventActor(actorName, keyLabel)` で「作業する側（鍵の名前）」と出し、`release_ref` があれば「公開した先」の行を足す。**人が同じ画面から差し戻せること**が自動更新を許す条件で、履歴と差し戻し導線はセットで外さない。
+- 変更は必ず `improvement_status_events` に1行積む。`actor_id = null` / `key_id` / `key_label`（写し）/ `release_ref` / `action`（`agent-review` | `agent-done` | `agent-failed`）。詳細画面は `improvementEventActor(actorName, keyLabel)` で「作業する側（鍵の名前）」と出し、`release_ref` があれば「確認依頼」の行を足す。`agent-done` の1文だけは鍵の名前を主語にしない（取り込むのは人で、鍵は取り込まれた事実を報告しているだけ）。**人が同じ画面から差し戻せること**が自動更新を許す条件で、履歴と差し戻し導線はセットで外さない。
 
 ## 5. クライアント下書きと回復
 
@@ -142,9 +145,9 @@ diagnosticsと指示文は次を固定する。masking（メール/Bearer/token/
 
 払い出しの履歴は次を固定する。画面からのコピーと API 経由が別の経路として積まれること、API のときに通った鍵の名前が残ること、`HANDOUT_HISTORY_MAX` を超えた古い行が消えること、丸めても通算回数が減らないこと。
 
-鍵の届く範囲と書き戻しは次を固定する（`src/app/api/improvements/route.integration.test.ts`）。**他社の要望が一覧に出ないこと・IDを直接指しても404で本文が1文字も返らないこと・状態も変えられないこと**、会社を焼き込む前の鍵と設定値の鍵はこれまでどおり読めること、**受け取っていない要望は403で変えられないこと**、`improvements:read` だけの鍵と会社なしの鍵が403になること、受け取り済み＋公開先ありの `done` で `done` になり履歴に `key_id`／`key_label`／`release_ref`／`actor_id = null` が残ること、**公開先が空なら400で `doing` のまま**であること、`failed` が `doing` を保ったまま理由だけ残すこと、そのあと人が `PATCH /api/improvements/[id]` で差し戻せること。
+鍵の届く範囲と書き戻しは次を固定する（`src/app/api/improvements/route.integration.test.ts`）。**他社の要望が一覧に出ないこと・IDを直接指しても404で本文が1文字も返らないこと・状態も変えられないこと**、会社を焼き込む前の鍵と設定値の鍵はこれまでどおり読めること、**受け取っていない要望は403で変えられないこと**、`improvements:read` だけの鍵と会社なしの鍵が403になること、受け取り済みの `review` で「レビュー待ち」になり `review_ref` が残ること、そのあとの `done` で `done` になり履歴に `key_id`／`key_label`／`release_ref`／`actor_id = null` が残ること、**`review` を通っていない `done` が409で断られること**、**確認依頼の場所が空なら400で `doing` のまま**であること、`failed` が `doing` を保ったまま理由だけ残すこと、そのあと人が `PATCH /api/improvements/[id]` で差し戻せること。
 
-受け取り側の台本（`scripts/improvements.test.mjs`）は次を固定する。**鍵の値が標準出力・エラー出力・案内文のどこにも出ないこと**（応答本文に鍵が混ざっていても `redact()` が伏せる）、鍵を載せるのは `Authorization` ヘッダだけであること、在り処の優先順（環境変数 → 1Password → キーチェーン → `.env.local`）、`HR_AGENT_KEY_OP_REF` 未設定なら `op` を起動しないこと、`key` が置き場所の名前しか出さないこと、`done`／`failed` の引数検査と PATCH の body、断り文をサーバーの文面のまま出すこと。
+受け取り側の台本（`scripts/improvements.test.mjs`）は次を固定する。**鍵の値が標準出力・エラー出力・案内文のどこにも出ないこと**（応答本文に鍵が混ざっていても `redact()` が伏せる）、鍵を載せるのは `Authorization` ヘッダだけであること、在り処の優先順（環境変数 → 1Password → キーチェーン → `.env.local`）、`HR_AGENT_KEY_OP_REF` 未設定なら `op` を起動しないこと、`key` が置き場所の名前しか出さないこと、`review`／`done`／`failed` の引数検査と PATCH の body、v53 までの `--release` も後方互換で受けること、断り文（順番を飛ばした `done` の409を含む）をサーバーの文面のまま出すこと。
 
 ## 7. 一覧からの一括払い出し（PUT /api/improvements）
 

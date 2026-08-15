@@ -247,6 +247,15 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
       )}
 
       <SectionHeading>対応状況</SectionHeading>
+      {/* 自動で進んだ状態は、根拠（どの確認依頼か）を人が追える場所に出す。
+          追えないまま状態だけ変わると、差し戻してよいかを判断できない。 */}
+      {item.reviewRef && (
+        <ReasonNote>
+          {displayState === "review"
+            ? `確認依頼が出ています：${item.reviewRef}　取り込まれると対応済みになります。`
+            : `この要望は次の確認依頼で直りました：${item.reviewRef}`}
+        </ReasonNote>
+      )}
       <ImprovementStatusForm id={item.id} status={item.status} note={item.handledNote} />
       {item.handledByName && (
         <p className="footnote">最後に更新した人：{item.handledByName}（{formatDateTime(item.updatedAt)}）</p>
@@ -276,7 +285,7 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
             rows: [
               { label: "日時", value: formatDateTime(e.createdAt) },
               { label: "操作した人", value: improvementEventActor(e.actorName, e.keyLabel) },
-              ...(e.releaseRef ? [{ label: "公開した先", value: e.releaseRef }] : []),
+              ...(e.releaseRef ? [{ label: "確認依頼", value: e.releaseRef }] : []),
             ],
             note: e.reason ?? undefined,
           }))}

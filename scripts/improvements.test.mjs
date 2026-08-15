@@ -373,8 +373,9 @@ describe("鍵が出力に混ざらない", () => {
 /* ───────────────────────── 終わったことを書き戻す ───────────────────────── */
 
 describe("書き戻しの引数", () => {
-  it("done は公開先を省けない", () => {
-    expect(parseArgs(["done", "req_1"]).error).toContain("--release");
+  it("review と done は確認依頼の場所を省けない", () => {
+    expect(parseArgs(["review", "req_1"]).error).toContain("--pr");
+    expect(parseArgs(["done", "req_1"]).error).toContain("--pr");
   });
 
   it("failed は理由を省けない", () => {
@@ -382,21 +383,28 @@ describe("書き戻しの引数", () => {
   });
 
   it("書き戻しは1件ずつしか受け付けない", () => {
-    expect(parseArgs(["done", "a", "b", "--release", "v9"]).error).toContain("1つだけ");
+    expect(parseArgs(["done", "a", "b", "--pr", "#81"]).error).toContain("1つだけ");
+    expect(parseArgs(["review", "a", "b", "--pr", "#81"]).error).toContain("1つだけ");
   });
 
-  it("公開先は値の形をどちらでも受ける", () => {
-    expect(parseArgs(["done", "a", "--release", "v9"])).toMatchObject({ command: "done", detail: "v9" });
-    expect(parseArgs(["done", "a", "--release=v9"])).toMatchObject({ command: "done", detail: "v9" });
+  it("確認依頼の場所は値の形をどちらでも受ける", () => {
+    expect(parseArgs(["review", "a", "--pr", "#81"])).toMatchObject({ command: "review", detail: "#81" });
+    expect(parseArgs(["review", "a", "--pr=#81"])).toMatchObject({ command: "review", detail: "#81" });
+  });
+
+  it("v53 までの --release も受け続ける", () => {
+    // 手順書やメモに残っている書き方で、いきなり動かなくならないようにする。
+    expect(parseArgs(["done", "a", "--release", "#81"])).toMatchObject({ command: "done", detail: "#81" });
+    expect(parseArgs(["done", "a", "--release=#81"])).toMatchObject({ command: "done", detail: "#81" });
   });
 });
 
 describe("書き戻しの実行", () => {
-  it("done は結果と公開先を送る", async () => {
-    const fetchImpl = fakeFetch(textResponse('{"ok":true,"message":"対応済みにしました。"}'));
+  it("review は結果と確認依頼の場所を送る", async () => {
+    const fetchImpl = fakeFetch(textResponse('{"ok":true,"message":"レビュー待ちにしました。"}'));
     const out = vi.fn();
     const code = await run({
-      argv: ["done", "req_1", "--release", "v53"],
+      argv: ["review", "req_1", "--pr", "https://example.com/pull/81"],
       env: { [KEY_VAR]: KEY },
       fetchImpl,
       out,
@@ -407,8 +415,51 @@ describe("書き戻しの実行", () => {
     expect(code).toBe(0);
     expect(url).toBe(`${DEFAULT_BASE}/api/improvements`);
     expect(init.method).toBe("PATCH");
-    expect(JSON.parse(init.body)).toEqual({ id: "req_1", result: "done", detail: "v53" });
+    expect(JSON.parse(init.body)).toEqual({
+      id: "req_1",
+      result: "review",
+      detail: "https://example.com/pull/81",
+    });
+    expect(out.mock.calls[0][0]).toContain("レビュー待ち");
+  });
+
+  it("done は結果と確認依頼の場所を送る", async () => {
+    const fetchImpl = fakeFetch(textResponse('{"ok":true,"message":"対応済みにしました。"}'));
+    const out = vi.fn();
+    const code = await run({
+      argv: ["done", "req_1", "--pr", "#81"],
+      env: { [KEY_VAR]: KEY },
+      fetchImpl,
+      out,
+      err: vi.fn(),
+    });
+
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(code).toBe(0);
+    expect(url).toBe(`${DEFAULT_BASE}/api/improvements`);
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body)).toEqual({ id: "req_1", result: "done", detail: "#81" });
     expect(out.mock.calls[0][0]).toContain("対応済み");
+  });
+
+  it("順番を飛ばした断りは、サーバーの文をそのまま出す", async () => {
+    // 「先にレビュー待ちにしてください」が次の一手そのものになる。訳し直さない。
+    const fetchImpl = fakeFetch(
+      textResponse('{"ok":false,"message":"まだ確認依頼が出ていないので、対応済みにできません。"}', {
+        status: 409,
+      }),
+    );
+    const err = vi.fn();
+    const code = await run({
+      argv: ["done", "req_1", "--pr", "#81"],
+      env: { [KEY_VAR]: KEY },
+      fetchImpl,
+      out: vi.fn(),
+      err,
+    });
+
+    expect(code).toBe(1);
+    expect(err.mock.calls[0][0]).toContain("対応済みにできません");
   });
 
   it("failed は理由を送る", async () => {

@@ -18,29 +18,37 @@ import { improvementStatusLabel, type ImprovementStatus } from "@/lib/domain/imp
 /* ───────────────────────── 画面に出す状態 ───────────────────────── */
 
 /**
- * 画面で読む状態。DBの列そのままではなく、次の3つを重ねて決める。
+ * 画面で読む状態。DBの列そのままではなく、次の4つを重ねて決める。
  *  ・廃棄の印が立っていれば「廃棄」（元の対応状況は履歴に残す）
  *  ・統合先が指してあれば「重複」
- *  ・どちらでもなければ、対応状況をそのまま出す
- * 廃棄を対応状況の1つにすると、戻すときに「どこへ戻すか」が消える。
+ *  ・対応中で、確認依頼の場所が入っていれば「レビュー待ち」
+ *  ・どれでもなければ、対応状況をそのまま出す
+ * 廃棄・重複・レビュー待ちを対応状況の1つにすると、戻すときに
+ * 「どこへ戻すか」が消える。だから列に焼かず、重ねて判定する。
  */
-export type ImprovementDisplayState = ImprovementStatus | "duplicate" | "discarded";
+export type ImprovementDisplayState = ImprovementStatus | "duplicate" | "discarded" | "review";
 
 export interface ImprovementDisposition {
   status: ImprovementStatus;
   discarded: boolean;
   duplicateOfId: string | null;
+  /** 確認依頼（PR）の場所。未作成なら null。既存の行はすべて null。 */
+  reviewRef?: string | null;
 }
 
 export function improvementDisplayState(item: ImprovementDisposition): ImprovementDisplayState {
   if (item.discarded) return "discarded";
   if (item.duplicateOfId) return "duplicate";
+  // 対応済みまで進んだあとも review_ref は残る。そこで「対応中のときだけ」
+  // レビュー待ちと読む。残した値は詳細画面で「どの確認依頼で直ったか」を出すために使う。
+  if (item.status === "doing" && (item.reviewRef ?? "").trim().length > 0) return "review";
   return item.status;
 }
 
 export function improvementDisplayStateLabel(state: ImprovementDisplayState): string {
   if (state === "discarded") return "廃棄";
   if (state === "duplicate") return "重複";
+  if (state === "review") return "レビュー待ち";
   if (state === "dropped") return "対応しない";
   return improvementStatusLabel(state);
 }
@@ -51,6 +59,10 @@ export function improvementDisplayStateTone(
 ): "required" | "active" | "done" | "dropped" | "closed" {
   if (state === "open") return "required";
   if (state === "doing") return "active";
+  // 色は「人の手番かどうか」で分ける。未対応（着手が要る）とレビュー待ち
+  // （確認して取り込むのが要る）はどちらも人の番なので同じ色にし、
+  // 作業中（手が離れている）だけを別の色にする。どちらかは言葉で読める。
+  if (state === "review") return "required";
   if (state === "done") return "done";
   if (state === "discarded") return "closed";
   return "dropped";
@@ -178,7 +190,7 @@ export function isImprovementView(value: string): value is ImprovementView {
 }
 
 const VIEW_LABEL: Record<ImprovementView, string> = {
-  active: "未対応・対応中",
+  active: "終わっていないもの",
   all: "すべて",
   trash: "廃棄箱",
 };
@@ -214,11 +226,14 @@ export function improvementSortLabel(sort: ImprovementSort): string {
 /** 状態順に並べるときの順番。手が要るものから先に読ませる。 */
 const STATE_ORDER: Record<ImprovementDisplayState, number> = {
   open: 0,
-  doing: 1,
-  done: 2,
-  duplicate: 3,
-  dropped: 4,
-  discarded: 5,
+  // レビュー待ちは対応中より前。放っておくと止まったままになるのは、
+  // 作業中のものではなく「取り込み待ちで誰も見ていないもの」のほう。
+  review: 1,
+  doing: 2,
+  done: 3,
+  duplicate: 4,
+  dropped: 5,
+  discarded: 6,
 };
 
 export function sortImprovements<T extends ImprovementDisposition & { createdAt: Date }>(
@@ -255,7 +270,8 @@ const LEGACY_EVENT_LABEL: Record<string, string> = {
 
 /** 作業する側（Claude Code）が書き戻した行。人の操作と読み分けられるようにする。 */
 const AGENT_EVENT_LABEL: Record<string, string> = {
-  "agent-done": "直して公開（作業する側）",
+  "agent-review": "確認を依頼（作業する側）",
+  "agent-done": "確認依頼が取り込まれた",
   "agent-failed": "直しきれず（作業する側）",
 };
 

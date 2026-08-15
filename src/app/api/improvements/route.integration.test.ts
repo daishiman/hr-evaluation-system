@@ -830,10 +830,10 @@ describe("鍵の届く範囲（会社と、自分が取った分だけ）", () =
     expect(response.status).toBe(403);
   });
 
-  it("受け取った要望は、公開先を添えれば対応済みにできる", async () => {
+  it("受け取った要望は、確認依頼を出せばレビュー待ちになる", async () => {
     await GET(scoped("?id=improve_mine"));
     const response = await agentWriteBack(
-      writeBack({ id: "improve_mine", result: "done", detail: "https://example.com/v53" }),
+      writeBack({ id: "improve_mine", result: "review", detail: "https://example.com/pull/81" }),
     );
     const row = (
       await testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_mine"))
@@ -844,30 +844,67 @@ describe("鍵の届く範囲（会社と、自分が取った分だけ）", () =
       .where(eq(s.improvementStatusEvents.requestId, "improve_mine"));
 
     expect(response.status).toBe(200);
-    expect(row.status).toBe("done");
-    // 誰が・いつ・どの公開で変えたかを残す。人が差し戻すときに読む材料になる。
+    // 対応状況の列は「対応中」のまま。レビュー待ちは確認依頼の場所で表す
+    // （列に焼くと、取り消したときにどこへ戻すかが消える）。
+    expect(row.status).toBe("doing");
+    expect(row.reviewRef).toBe("https://example.com/pull/81");
+    expect(row.reviewedAt).not.toBeNull();
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      action: "agent-done",
-      fromStatus: "doing",
-      toStatus: "done",
+      action: "agent-review",
+      toStatus: "doing",
       keyId: "agkey_scoped",
       keyLabel: "自宅の Claude Code",
-      releaseRef: "https://example.com/v53",
+      releaseRef: "https://example.com/pull/81",
       actorId: null,
     });
   });
 
-  it("公開先が空なら、対応済みにしない", async () => {
+  it("確認依頼が取り込まれて、はじめて対応済みになる", async () => {
     await GET(scoped("?id=improve_mine"));
-    const response = await agentWriteBack(writeBack({ id: "improve_mine", result: "done", detail: "   " }));
+    await agentWriteBack(writeBack({ id: "improve_mine", result: "review", detail: "#81" }));
+    const response = await agentWriteBack(writeBack({ id: "improve_mine", result: "done", detail: "#81" }));
+    const row = (
+      await testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_mine"))
+    )[0];
+    const events = await testDb.db
+      .select()
+      .from(s.improvementStatusEvents)
+      .where(eq(s.improvementStatusEvents.requestId, "improve_mine"));
+
+    expect(response.status).toBe(200);
+    expect(row.status).toBe("done");
+    // どの確認依頼で直ったかは、対応済みになったあとも残す。
+    expect(row.reviewRef).toBe("#81");
+    expect(events).toHaveLength(2);
+    expect(events[1]).toMatchObject({ action: "agent-done", fromStatus: "doing", toStatus: "done" });
+  });
+
+  it("確認依頼を出さずに対応済みにはできない", async () => {
+    // 「取り込まれるまで完了にしない」の関所。ここを通すと、取り込まれずに
+    // 終わった変更まで完了扱いで一覧から消える。
+    await GET(scoped("?id=improve_mine"));
+    const response = await agentWriteBack(writeBack({ id: "improve_mine", result: "done", detail: "#81" }));
+    const row = (
+      await testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_mine"))
+    )[0];
+
+    expect(response.status).toBe(409);
+    expect(await response.text()).toContain("対応済みにできません");
+    expect(row.status).toBe("doing");
+  });
+
+  it("確認依頼の場所が空なら、レビュー待ちにしない", async () => {
+    await GET(scoped("?id=improve_mine"));
+    const response = await agentWriteBack(writeBack({ id: "improve_mine", result: "review", detail: "   " }));
     const row = (
       await testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_mine"))
     )[0];
 
     expect(response.status).toBe(400);
-    expect(await response.text()).toContain("公開した先");
+    expect(await response.text()).toContain("確認依頼の場所");
     expect(row.status).toBe("doing");
+    expect(row.reviewRef).toBeNull();
   });
 
   it("直しきれなかったときは、対応中のまま理由だけを残す", async () => {
@@ -886,7 +923,8 @@ describe("鍵の届く範囲（会社と、自分が取った分だけ）", () =
 
   it("人はあとから差し戻せる（対応済みを対応中へ戻す）", async () => {
     await GET(scoped("?id=improve_mine"));
-    await agentWriteBack(writeBack({ id: "improve_mine", result: "done", detail: "v53" }));
+    await agentWriteBack(writeBack({ id: "improve_mine", result: "review", detail: "#81" }));
+    await agentWriteBack(writeBack({ id: "improve_mine", result: "done", detail: "#81" }));
 
     mocked.apiViewer.mockResolvedValue(viewer("COMPANY_ADMIN"));
     const back = new Request("http://localhost/api/improvements/improve_mine", {

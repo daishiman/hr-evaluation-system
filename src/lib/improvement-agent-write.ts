@@ -6,9 +6,10 @@
  * 受け取った証跡は improvement_handout_events に既にあるので、それを唯一の
  * 根拠にする。ここが「自分のものか」を決める1箇所。
  *
- * 「対応済み」にするには公開先を必ず書かせる。直しただけ・テストが通っただけで
- * 完了にすると、直っていないものが一覧から消える。公開まで届かなかったときは
- * 「対応中」のまま理由だけを積む。
+ * 進み方は「対応中 →（確認依頼を作る）→ レビュー待ち →（取り込まれる）→ 対応済み」。
+ * 直しただけ・テストが通っただけで完了にすると、取り込まれずに終わった変更まで
+ * 一覧から消える。だから対応済みにできるのはレビュー待ちを通ったものだけにし、
+ * 直しきれなかったときは「対応中」のまま理由だけを積む。
  */
 
 import { and, eq } from "drizzle-orm";
@@ -19,6 +20,7 @@ import type { AgentCaller } from "@/lib/agent-api";
 import { isImprovementStatus, type ImprovementStatus } from "@/lib/domain/improvement";
 import {
   AGENT_NOT_FOUND_MESSAGE,
+  AGENT_NOT_REVIEWED_MESSAGE,
   agentResultAction,
   agentResultNote,
   canWriteImprovement,
@@ -29,7 +31,7 @@ import {
 
 export interface AgentResultInput {
   result: AgentResult;
-  /** done なら公開先、failed なら直しきれなかった理由。どちらも必須。 */
+  /** review と done なら確認依頼の場所、failed なら理由。どれも必須。 */
   detail: string;
 }
 
@@ -64,7 +66,7 @@ export async function applyAgentResult(
   input: AgentResultInput,
 ): Promise<AgentResultOutcome> {
   const detailError =
-    input.result === "done" ? releaseRefError(input.detail) : failedNoteError(input.detail);
+    input.result === "failed" ? failedNoteError(input.detail) : releaseRefError(input.detail);
   if (detailError) throw new HttpError(400, detailError);
 
   const db = await getDb();
@@ -74,6 +76,7 @@ export async function applyAgentResult(
         id: s.improvementRequests.id,
         companyId: s.improvementRequests.companyId,
         status: s.improvementRequests.status,
+        reviewRef: s.improvementRequests.reviewRef,
         discardedAt: s.improvementRequests.discardedAt,
       })
       .from(s.improvementRequests)
@@ -91,12 +94,23 @@ export async function applyAgentResult(
   const detail = input.detail.trim();
   const note = agentResultNote(input.result, detail, caller.keyLabel);
 
-  // 公開まで届かなかったときは「対応済み」にしない。対応中のまま理由だけ残す。
+  // 順番を飛ばせない。確認依頼が出ていないものは対応済みにできない。
+  // ここが「取り込まれるまで完了にしない」の唯一の関所で、画面のボタンではなくサーバーで断る。
+  const reviewed = (row.reviewRef ?? "").trim().length > 0;
+  if (input.result === "done" && !reviewed) throw new HttpError(409, AGENT_NOT_REVIEWED_MESSAGE);
+
+  // review と failed は「まだ終わっていない」ので対応中に留める。
+  // レビュー待ちかどうかは status ではなく review_ref で表す（→ improvementDisplayState）。
   const to: ImprovementStatus = input.result === "done" ? "done" : "doing";
 
   await db
     .update(s.improvementRequests)
-    .set({ status: to, handledNote: note })
+    .set({
+      status: to,
+      handledNote: note,
+      // 確認依頼の場所は、取り込まれたあとも消さない。どの依頼で直ったかを詳細画面で読む。
+      ...(input.result === "review" ? { reviewRef: detail, reviewedAt: new Date() } : {}),
+    })
     .where(and(eq(s.improvementRequests.id, id), eq(s.improvementRequests.companyId, row.companyId)));
 
   await db.insert(s.improvementStatusEvents).values({
@@ -111,15 +125,14 @@ export async function applyAgentResult(
     actorId: null,
     keyId: caller.keyId,
     keyLabel: caller.keyLabel,
-    releaseRef: input.result === "done" ? detail : null,
+    releaseRef: input.result === "failed" ? null : detail,
   });
 
-  return {
-    id,
-    status: to,
-    message:
-      input.result === "done"
-        ? "対応済みにしました。取り消すときは画面から差し戻せます。"
-        : "対応中のまま、直しきれなかった理由を残しました。",
-  };
+  return { id, status: to, message: RESULT_MESSAGE[input.result] };
 }
+
+const RESULT_MESSAGE: Record<AgentResult, string> = {
+  review: "レビュー待ちにしました。取り込まれたら対応済みになります。",
+  done: "対応済みにしました。取り消すときは画面から差し戻せます。",
+  failed: "対応中のまま、直しきれなかった理由を残しました。",
+};
