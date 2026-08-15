@@ -54,6 +54,8 @@ export interface AgentKeyView {
   createdText: string;
   lastUsedText: string;
   revokedText: string | null;
+  /** この鍵が届く範囲（どの会社の要望に、何をしてよいか）。 */
+  scopeText: string;
 }
 
 interface ApiResult {
@@ -230,6 +232,7 @@ export function AgentKeyPanel({
             off: !k.active,
             rows: [
               { label: "鍵の先頭", value: k.masked },
+              { label: "届く範囲", value: k.scopeText },
               { label: "発行した人と日時", value: k.createdText },
               { label: "最後に使われた日時", value: k.lastUsedText },
               ...(k.revokedText ? [{ label: "止めた人と日時", value: k.revokedText }] : []),

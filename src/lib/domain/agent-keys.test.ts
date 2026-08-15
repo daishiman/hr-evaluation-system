@@ -18,6 +18,7 @@ import {
   agentKeyDisplayName,
   agentKeyEnvFileLine,
   agentKeyLabelError,
+  agentKeyScopeNote,
   agentKeyMaskedLabel,
   agentKeyPrefix,
   agentKeyRevokeConfirmText,
@@ -216,5 +217,23 @@ describe("案内の行き先", () => {
   it("発行の場所と呼び名は1か所で決める", () => {
     expect(AGENT_KEY_PAGE_PATH).toBe("/system/agent-keys");
     expect(AGENT_KEY_PAGE_LABEL).toContain("鍵");
+  });
+});
+
+describe("鍵が届く範囲の1行", () => {
+  it("会社と、できることを並べる", () => {
+    expect(
+      agentKeyScopeNote({ companyName: "テスト社", scopes: ["improvements:read", "improvements:write-own"] }),
+    ).toBe("テスト社の要望／要望の読み取り・自分が取得した要望の状態更新");
+  });
+
+  it("会社が焼き込まれていない古い鍵は、全社が読めると分かるように書く", () => {
+    expect(agentKeyScopeNote({ companyName: null, scopes: ["improvements:read"] })).toBe(
+      "すべての会社の要望／要望の読み取り",
+    );
+  });
+
+  it("できることが1つも無い鍵は、そう書く（空欄にしない）", () => {
+    expect(agentKeyScopeNote({ companyName: "テスト社", scopes: [] })).toBe("テスト社の要望／権限なし");
   });
 });

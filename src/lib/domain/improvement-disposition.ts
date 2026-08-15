@@ -253,7 +253,25 @@ const LEGACY_EVENT_LABEL: Record<string, string> = {
   handout: "指示文の払い出し",
 };
 
+/** 作業する側（Claude Code）が書き戻した行。人の操作と読み分けられるようにする。 */
+const AGENT_EVENT_LABEL: Record<string, string> = {
+  "agent-done": "直して公開（作業する側）",
+  "agent-failed": "直しきれず（作業する側）",
+};
+
 export function improvementEventLabel(action: string): string {
   if (isDispositionAction(action)) return dispositionActionLabel(action);
-  return LEGACY_EVENT_LABEL[action] ?? "対応状況の変更";
+  return AGENT_EVENT_LABEL[action] ?? LEGACY_EVENT_LABEL[action] ?? "対応状況の変更";
+}
+
+/**
+ * その行を起こしたのは誰か。人・鍵・分からない、の3つを言い分ける。
+ *
+ * 鍵で変えた行を空欄のままにすると「退職された方」と出て、実際には
+ * 自動で変わったものが、人が変えたように読めてしまう。
+ */
+export function improvementEventActor(actorName: string | null, keyLabel: string | null): string {
+  if (actorName) return actorName;
+  if (keyLabel) return `作業する側（${keyLabel}）`;
+  return "退職された方";
 }

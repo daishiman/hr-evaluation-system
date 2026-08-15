@@ -39,6 +39,8 @@ import {
   buildImprovementInstruction,
 } from "@/lib/improvement-instruction-draft";
 import { handOutImprovement, recordHandout } from "@/lib/improvement-handout-write";
+import { applyAgentResult } from "@/lib/improvement-agent-write";
+import { AGENT_RESULTS } from "@/lib/domain/agent-scope";
 import { applyDisposition } from "@/lib/improvement-disposition";
 import { DISPOSITION_ACTIONS } from "@/lib/domain/improvement-disposition";
 
@@ -189,8 +191,8 @@ function json(body: unknown): Response {
 }
 
 /** 未対応の要望の一覧。中身は返さず、どれを取りにいくかを選ぶためだけに使う。 */
-async function agentList(format: AgentFormat, origin: string): Promise<Response> {
-  const rows = await listImprovementsForAgent(AGENT_LIST_MAX);
+async function agentList(format: AgentFormat, origin: string, caller: AgentCaller): Promise<Response> {
+  const rows = await listImprovementsForAgent(AGENT_LIST_MAX, caller.companyId);
   if (format === "json") {
     return json({
       count: rows.length,
@@ -255,7 +257,9 @@ async function agentDocuments(
   format: AgentFormat,
   caller: AgentCaller,
 ): Promise<Response> {
-  const items = await getImprovementsForAgent(ids);
+  // 会社が焼き込まれた鍵では、他社の要望はここで1件も返らない。
+  // 「見つかりません」と「他社のものです」を言い分けない（IDを当てる手がかりにさせない）。
+  const items = await getImprovementsForAgent(ids, caller.companyId);
   if (items.length === 0) {
     return markdown("# 対象の要望が見つかりません\n\n要望IDを確かめてください。\n");
   }
@@ -266,7 +270,9 @@ async function agentDocuments(
       : await buildBulkImprovementInstruction(items);
 
   const db = await getDb();
-  for (const item of items) await recordHandout(db, item, { via: "api", ...caller });
+  for (const item of items) {
+    await recordHandout(db, item, { via: "api", keyId: caller.keyId, keyLabel: caller.keyLabel });
+  }
 
   const notice = dropped > 0 ? `\n\n（一度に渡せるのは${AGENT_BULK_MAX}件までです。${dropped}件は含めていません）\n` : "\n";
   if (format === "json") {
@@ -296,5 +302,37 @@ export async function GET(req: Request) {
     if (ids.length === 0) return markdown("# 要望IDがありません\n\n`?ids=` に要望IDを並べてください。\n");
     return agentDocuments(ids, dropped, format, gate.caller);
   }
-  return agentList(format, await appOrigin());
+  return agentList(format, await appOrigin(), gate.caller);
+}
+
+/* ───────────────────────── 終わったことを書き戻す ───────────────────────── */
+
+const agentResultSchema = z
+  .object({
+    id: z.string().min(1).max(60),
+    result: z.enum(AGENT_RESULTS),
+    /** done なら公開先、failed なら直しきれなかった理由。 */
+    detail: z.string().min(1).max(1000),
+  })
+  .strict();
+
+/**
+ * 作業する側（Claude Code）が、直した結果を書き戻す入口。
+ *
+ * 通す条件は3つとも**ここではなく** src/lib/domain/agent-scope.ts で決める。
+ *  ・鍵に状態を変える権限がある
+ *  ・鍵に焼き込んだ会社と、要望の会社が同じ
+ *  ・その鍵で実際に受け取った要望である
+ *
+ * 「対応済み」にできるのは公開まで届いたときだけ。届かなかったときは
+ * 対応中のまま理由を積む（直っていないものを一覧から消さないため）。
+ */
+export async function PATCH(req: Request) {
+  const gate = await guardAgentRequest(req);
+  if (gate.denied) return gate.denied;
+
+  return handle(async () => {
+    const input = agentResultSchema.parse(await readJsonBodyWithinLimit(req, 4_000));
+    return await applyAgentResult(gate.caller, input.id, { result: input.result, detail: input.detail });
+  });
 }

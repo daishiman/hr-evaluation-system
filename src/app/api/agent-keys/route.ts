@@ -28,7 +28,9 @@ export async function POST(req: Request) {
     const labelError = agentKeyLabelError(input.label);
     if (labelError) throw new HttpError(400, labelError);
 
-    const { raw, prefix } = await issueAgentKey(viewer.id, input.label);
+    // 会社は発行の時点で焼き込む。あとから広げられないので、ここで必ず決める。
+    if (!viewer.companyId) throw new HttpError(400, "操作する会社が選ばれていません。");
+    const { raw, prefix } = await issueAgentKey(viewer.id, viewer.companyId, input.label);
     const origin = await appOrigin();
     return {
       // 生の鍵。画面はこれを1回だけ出し、保存しない。

@@ -5,6 +5,8 @@ import {
   DEFAULT_BASE,
   KEY_FILE,
   KEY_VAR,
+  OP_REF_VAR,
+  REDACTED,
   buildUrl,
   describeFailure,
   describeNetworkError,
@@ -268,5 +270,177 @@ describe("受け取れたとき", () => {
 
     expect(code).toBe(0);
     expect(out.mock.calls[0][0]).toContain("pnpm improvements list");
+  });
+});
+
+/* ───────────────────────── 鍵の在り処と、値の漏れ ───────────────────────── */
+
+describe("鍵の在り処", () => {
+  it("環境変数がいちばん強い（その場だけ差し替えられる）", () => {
+    const config = resolveConfig({
+      env: { [KEY_VAR]: "env-key", [OP_REF_VAR]: "op://v/i/credential" },
+      envFileText: `${KEY_VAR}=file-key`,
+      secrets: { onePassword: () => "op-key", keychain: () => "chain-key" },
+    });
+    expect(config).toMatchObject({ key: "env-key", source: "環境変数" });
+  });
+
+  it("環境変数が無ければ 1Password を読む", () => {
+    const onePassword = vi.fn(() => "op-key");
+    const config = resolveConfig({
+      env: { [OP_REF_VAR]: "op://保管庫/鍵/credential" },
+      secrets: { onePassword, keychain: () => "chain-key" },
+    });
+    expect(config).toMatchObject({ key: "op-key", source: "1Password" });
+    expect(onePassword).toHaveBeenCalledWith("op://保管庫/鍵/credential");
+  });
+
+  it("1Password が入っていなくてもキーチェーンへ落ちる", () => {
+    const config = resolveConfig({
+      env: {},
+      secrets: { onePassword: () => null, keychain: () => "chain-key" },
+    });
+    expect(config).toMatchObject({ key: "chain-key", source: "キーチェーン" });
+  });
+
+  it("どの道具も無ければ設定ファイルを読む", () => {
+    const config = resolveConfig({ env: {}, envFileText: `${KEY_VAR}=file-key` });
+    expect(config).toMatchObject({ key: "file-key", source: KEY_FILE });
+  });
+
+  it("参照先が未設定なら 1Password は呼ばない", () => {
+    const onePassword = vi.fn(() => "op-key");
+    resolveConfig({ env: {}, secrets: { onePassword, keychain: () => "chain-key" } });
+    expect(onePassword).not.toHaveBeenCalled();
+  });
+
+  it("key は在り処だけを言い、鍵の値は出さない", async () => {
+    const out = vi.fn();
+    const code = await run({
+      argv: ["key"],
+      env: {},
+      secrets: { onePassword: () => null, keychain: () => KEY },
+      fetchImpl: vi.fn(),
+      out,
+      err: vi.fn(),
+    });
+
+    expect(code).toBe(0);
+    expect(out.mock.calls[0][0]).toContain("キーチェーン");
+    expect(out.mock.calls[0][0]).not.toContain(KEY);
+  });
+});
+
+describe("鍵が出力に混ざらない", () => {
+  it("応答本文に鍵が入っていても伏せて出す", async () => {
+    const out = vi.fn();
+    await run({
+      argv: ["list"],
+      env: { [KEY_VAR]: KEY },
+      fetchImpl: fakeFetch(textResponse(`控え: ${KEY} です`)),
+      out,
+      err: vi.fn(),
+    });
+
+    expect(out.mock.calls[0][0]).not.toContain(KEY);
+    expect(out.mock.calls[0][0]).toContain(REDACTED);
+  });
+
+  it("失敗の案内にも鍵は出さない", async () => {
+    const err = vi.fn();
+    await run({
+      argv: ["list"],
+      env: { [KEY_VAR]: KEY },
+      fetchImpl: fakeFetch(textResponse(`鍵 ${KEY} は無効です`, { status: 401 })),
+      out: vi.fn(),
+      err,
+    });
+
+    expect(err.mock.calls[0][0]).not.toContain(KEY);
+  });
+
+  it("鍵は Authorization ヘッダー以外のどこにも載せない", async () => {
+    const fetchImpl = fakeFetch(textResponse("本文"));
+    await run({ argv: ["list"], env: { [KEY_VAR]: KEY }, fetchImpl, out: vi.fn(), err: vi.fn() });
+
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).not.toContain(KEY);
+    expect(init.headers.authorization).toBe(`Bearer ${KEY}`);
+    expect(JSON.stringify({ ...init.headers, authorization: "" })).not.toContain(KEY);
+  });
+});
+
+/* ───────────────────────── 終わったことを書き戻す ───────────────────────── */
+
+describe("書き戻しの引数", () => {
+  it("done は公開先を省けない", () => {
+    expect(parseArgs(["done", "req_1"]).error).toContain("--release");
+  });
+
+  it("failed は理由を省けない", () => {
+    expect(parseArgs(["failed", "req_1"]).error).toContain("--reason");
+  });
+
+  it("書き戻しは1件ずつしか受け付けない", () => {
+    expect(parseArgs(["done", "a", "b", "--release", "v9"]).error).toContain("1つだけ");
+  });
+
+  it("公開先は値の形をどちらでも受ける", () => {
+    expect(parseArgs(["done", "a", "--release", "v9"])).toMatchObject({ command: "done", detail: "v9" });
+    expect(parseArgs(["done", "a", "--release=v9"])).toMatchObject({ command: "done", detail: "v9" });
+  });
+});
+
+describe("書き戻しの実行", () => {
+  it("done は結果と公開先を送る", async () => {
+    const fetchImpl = fakeFetch(textResponse('{"ok":true,"message":"対応済みにしました。"}'));
+    const out = vi.fn();
+    const code = await run({
+      argv: ["done", "req_1", "--release", "v53"],
+      env: { [KEY_VAR]: KEY },
+      fetchImpl,
+      out,
+      err: vi.fn(),
+    });
+
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(code).toBe(0);
+    expect(url).toBe(`${DEFAULT_BASE}/api/improvements`);
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body)).toEqual({ id: "req_1", result: "done", detail: "v53" });
+    expect(out.mock.calls[0][0]).toContain("対応済み");
+  });
+
+  it("failed は理由を送る", async () => {
+    const fetchImpl = fakeFetch(textResponse('{"ok":true,"message":"対応中のまま残しました。"}'));
+    await run({
+      argv: ["failed", "req_1", "--reason", "再現できませんでした"],
+      env: { [KEY_VAR]: KEY },
+      fetchImpl,
+      out: vi.fn(),
+      err: vi.fn(),
+    });
+
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
+      id: "req_1",
+      result: "failed",
+      detail: "再現できませんでした",
+    });
+  });
+
+  it("断られたときはサーバーの理由をそのまま次の一手にする", async () => {
+    const err = vi.fn();
+    const code = await run({
+      argv: ["done", "req_1", "--release", "v53"],
+      env: { [KEY_VAR]: KEY },
+      fetchImpl: fakeFetch(
+        textResponse('{"ok":false,"message":"この要望は、この鍵ではまだ受け取っていません。"}', { status: 403 }),
+      ),
+      out: vi.fn(),
+      err,
+    });
+
+    expect(code).toBe(1);
+    expect(err.mock.calls[0][0]).toContain("まだ受け取っていません");
   });
 });

@@ -2,17 +2,24 @@
 // 届いた改善要望を、この作業ディレクトリから直接読み出す。
 //
 // 使い方:
-//   pnpm improvements list              # 手つかずの要望を一覧で見る
-//   pnpm improvements get <ID> [<ID>…]  # 作業指示文を読む（最大10件まとめて）
-//   pnpm improvements list --json       # 機械処理用（JSONのまま出す）
+//   pnpm improvements list                  # 手つかずの要望を一覧で見る
+//   pnpm improvements get <ID> [<ID>…]      # 作業指示文を読む（最大10件まとめて）
+//   pnpm improvements done <ID> --release … # 直して公開したことを書き戻す
+//   pnpm improvements failed <ID> --reason … # 直しきれなかった理由を残す
+//   pnpm improvements key                   # 鍵の在り処だけを確かめる（値は出さない）
 //
-// 鍵は画面（/system/agent-keys）で発行し、リポジトリ直下の .env.local に
-//   HR_AGENT_KEY=発行された鍵
-// と書いて置く。.env.local は .gitignore で除外済みで、共有されない。
+// 鍵の探し方は上から順に4つ。最初に見つかったものを使う。
+//   1. 環境変数 HR_AGENT_KEY（その場だけ差し替えたいとき）
+//   2. 1Password（HR_AGENT_KEY_OP_REF に op://… を書き、op コマンドで読む）
+//   3. OSのキーチェーン（macOS の security コマンド）
+//   4. リポジトリ直下の .env.local の HR_AGENT_KEY=…
+// 1Password が入っていない環境でも 3・4 で動く。どこにも無ければ設定手順を出す。
 //
-// この台本は鍵の値を一切表示しない。出すのは「設定されているか」だけ。
-// 失敗したときも、返ってきた本文をそのまま流さず、原因と次の一手に訳して出す。
+// **この台本の外へ鍵の値を出さない。** 標準出力・エラー出力の両方を通す前に、
+// 鍵と同じ文字列は必ず伏せ字へ置き換える（→ redactor）。取り違えて画面へ流すと、
+// そこから先はログにも履歴にも残ってしまい、取り消せない。
 
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,14 +42,28 @@ export const KEY_FILE = ".env.local";
 /** まとめて取れる件数の上限（サーバー側の AGENT_BULK_MAX と同じ）。 */
 export const BULK_MAX = 10;
 
+/** 1Password の場所を書く変数の名前。値ではなく「どこにあるか」だけを持つ。 */
+export const OP_REF_VAR = "HR_AGENT_KEY_OP_REF";
+
+/** OSのキーチェーンに入れるときの名前。手順書と合わせる。 */
+export const KEYCHAIN_SERVICE = "hr-agent-key";
+
+/** 出力に鍵が混じったときの置き換え先。長さも伏せる。 */
+export const REDACTED = "********";
+
 export const USAGE = [
   "使い方:",
-  "  pnpm improvements list              手つかずの改善要望を一覧で見る",
-  "  pnpm improvements get <ID> [<ID>…]  作業指示文を読む（最大10件）",
+  "  pnpm improvements list                    手つかずの改善要望を一覧で見る",
+  "  pnpm improvements get <ID> [<ID>…]        作業指示文を読む（最大10件）",
+  "  pnpm improvements done <ID> --release …   直して公開したことを書き戻す",
+  "  pnpm improvements failed <ID> --reason …  直しきれなかった理由を残す",
+  "  pnpm improvements key                     鍵の在り処だけを確かめる",
   "",
   "付けられるもの:",
   "  --json        機械処理用にJSONのまま出す",
   `  --base <URL>  宛先を変える（既定は本番。環境変数 ${BASE_VAR} でも指定できる）`,
+  "  --release …   公開した先（本番URL・版の名前・確認依頼の番号）",
+  "  --reason …    直しきれなかった理由",
 ].join("\n");
 
 /* ───────────────────────── 入力を読む ───────────────────────── */
@@ -56,6 +77,10 @@ export function parseArgs(argv) {
   const rest = [];
   let json = false;
   let base = null;
+  let detail = null;
+
+  const fail = (message) => ({ error: message, command: null, ids: [], json, base, detail: null, dropped: 0 });
+  const ok = (command, ids, dropped = 0) => ({ command, ids, dropped, json, base, detail });
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -66,35 +91,60 @@ export function parseArgs(argv) {
       i += 1;
     } else if (arg.startsWith("--base=")) {
       base = arg.slice("--base=".length);
+    } else if (arg === "--release" || arg === "--reason") {
+      detail = argv[i + 1] ?? "";
+      i += 1;
+    } else if (arg.startsWith("--release=") || arg.startsWith("--reason=")) {
+      detail = arg.slice(arg.indexOf("=") + 1);
     } else if (arg === "--help" || arg === "-h" || arg === "help") {
-      return { command: "help", ids: [], json: false, base: null };
+      return { command: "help", ids: [], json: false, base: null, detail: null, dropped: 0 };
     } else if (arg.startsWith("-")) {
-      return { error: `${arg} は使えません。`, command: null, ids: [], json: false, base: null };
+      return fail(`${arg} は使えません。`);
     } else {
       rest.push(arg);
     }
   }
 
-  if (base !== null && base.trim() === "") {
-    return { error: "--base のあとに宛先のURLがありません。", command: null, ids: [], json, base: null };
-  }
+  if (base !== null && base.trim() === "") return fail("--base のあとに宛先のURLがありません。");
 
   const [command, ...ids] = rest;
-  if (!command) return { command: "help", ids: [], json, base };
+  if (!command) return { command: "help", ids: [], json, base, detail, dropped: 0 };
+
   if (command === "list") {
     if (ids.length > 0) {
-      return { error: "list に要望IDは付けられません。1件読むときは get を使ってください。", command: null, ids: [], json, base };
+      return fail("list に要望IDは付けられません。1件読むときは get を使ってください。");
     }
-    return { command: "list", ids: [], json, base };
+    return ok("list", []);
   }
+
+  if (command === "key") {
+    if (ids.length > 0) return fail("key に要望IDは付けられません。");
+    return ok("key", []);
+  }
+
   if (command === "get") {
     if (ids.length === 0) {
-      return { error: "要望IDがありません。`pnpm improvements list` で番号を確かめてください。", command: null, ids: [], json, base };
+      return fail("要望IDがありません。`pnpm improvements list` で番号を確かめてください。");
     }
     const unique = [...new Set(ids)];
-    return { command: "get", ids: unique.slice(0, BULK_MAX), dropped: Math.max(0, unique.length - BULK_MAX), json, base };
+    return ok("get", unique.slice(0, BULK_MAX), Math.max(0, unique.length - BULK_MAX));
   }
-  return { error: `${command} という操作はありません。`, command: null, ids: [], json, base };
+
+  // 書き戻しは必ず1件ずつ。まとめて「対応済み」にできる形にすると、
+  // 直していないものまで一括で完了になり、あとから見分けられない。
+  if (command === "done" || command === "failed") {
+    if (ids.length !== 1) return fail(`${command} は要望IDを1つだけ指定してください。`);
+    if ((detail ?? "").trim() === "") {
+      return fail(
+        command === "done"
+          ? "--release に公開した先を書いてください（本番URL・版の名前・確認依頼の番号）。"
+          : "--reason に直しきれなかった理由を書いてください。",
+      );
+    }
+    return ok(command, ids);
+  }
+
+  return fail(`${command} という操作はありません。`);
 }
 
 /**
@@ -132,23 +182,97 @@ export function missingKeyMessage(base) {
     `   ${KEY_VAR}=控えた鍵`,
     "4. もう一度 `pnpm improvements list` を実行します。",
     "",
+    "1Password を使うときは、控えた鍵を保管庫に入れ、その場所だけを次の形で渡します。",
+    `   ${OP_REF_VAR}=op://保管庫/項目名/credential`,
+    "OSのキーチェーンに入れるときは、次の1行で登録できます。",
+    `   security add-generic-password -s ${KEYCHAIN_SERVICE} -a "$USER" -w`,
+    "",
     `${KEY_FILE} は共有されない設定ファイルです（除外済み）。鍵を他のファイルへ書かないでください。`,
   ].join("\n");
 }
 
+/* ───────────────────────── 鍵を解決する ───────────────────────── */
+
 /**
- * 鍵と宛先を決める。
- * 鍵の在り処は「環境変数 → .env.local」の順。手元で一時的に差し替えたいときに
- * ファイルを書き換えずに済む形にしておく。
+ * 外の道具を1回だけ呼ぶ。失敗は理由を捨てて null にする。
+ *
+ * エラー出力を持ち帰らないのは、道具によっては失敗の文言に参照先や
+ * 項目名が入るため。原因は「見つからなかった」だけで足り、それ以上を
+ * 持ち歩くと、そのままどこかへ出てしまう。
  */
-export function resolveConfig({ env = {}, envFileText = null, baseOverride = null } = {}) {
-  const key = (env[KEY_VAR] ?? "").trim() || readEnvValue(envFileText, KEY_VAR) || null;
+function runCommandSafely(command, args) {
+  try {
+    const out = execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    const value = out.trim();
+    return value.length > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 実際に 1Password とキーチェーンを読む係。テストではここを差し替える。 */
+export function systemSecretReader(runCommand = runCommandSafely) {
+  return {
+    onePassword: (ref) => runCommand("op", ["read", "--no-newline", ref]),
+    keychain: (service) => runCommand("security", ["find-generic-password", "-w", "-s", service]),
+  };
+}
+
+/** どこにも読みにいかない係。テストと、道具を使わせたくないときの既定。 */
+export const noSecretReader = { onePassword: () => null, keychain: () => null };
+
+/**
+ * 鍵と宛先を決める。鍵の在り処は次の順で、最初に見つかったものを使う。
+ *   環境変数 → 1Password → キーチェーン → .env.local
+ *
+ * 環境変数を先頭にしているのは、その場だけ別の鍵で試したいときに、
+ * 保管庫の中身を書き換えずに済ませるため。
+ * 1Password が入っていない環境でも、そのまま下へ落ちて動く（詰まらせない）。
+ *
+ * 返すのは鍵そのものと、**どこから来たか**の名前だけ。名前は画面に出してよい。
+ */
+export function resolveConfig({
+  env = {},
+  envFileText = null,
+  baseOverride = null,
+  secrets = noSecretReader,
+} = {}) {
+  const opRef = (env[OP_REF_VAR] ?? "").trim();
+  const candidates = [
+    ["環境変数", () => (env[KEY_VAR] ?? "").trim() || null],
+    ["1Password", () => (opRef ? secrets.onePassword(opRef) : null)],
+    ["キーチェーン", () => secrets.keychain(KEYCHAIN_SERVICE)],
+    [KEY_FILE, () => readEnvValue(envFileText, KEY_VAR)],
+  ];
+
+  let key = null;
+  let source = null;
+  for (const [name, read] of candidates) {
+    const found = (read() ?? "").trim();
+    if (found.length > 0) {
+      key = found;
+      source = name;
+      break;
+    }
+  }
+
   const base =
     (baseOverride ?? "").trim() ||
     (env[BASE_VAR] ?? "").trim() ||
     readEnvValue(envFileText, BASE_VAR) ||
     DEFAULT_BASE;
-  return { key, base: base.replace(/\/+$/, "") };
+  return { key, source, base: base.replace(/\/+$/, "") };
+}
+
+/**
+ * 出力に鍵が混じっていたら伏せる。
+ *
+ * 訳した文だけを出す作りにはしてあるが、それは「いま」正しいだけで、
+ * あとから追加した1行が鍵を含む可能性は消せない。最後の1枚をここに置く。
+ */
+export function redact(text, key) {
+  if (!key || key.length === 0) return text;
+  return String(text).split(key).join(REDACTED);
 }
 
 /* ───────────────────────── 宛先を組み立てる ───────────────────────── */
@@ -213,10 +337,16 @@ export async function run({
   env = {},
   envFileText = null,
   fetchImpl = fetch,
-  out = console.log,
-  err = console.error,
+  secrets = noSecretReader,
+  out: rawOut = console.log,
+  err: rawErr = console.error,
 } = {}) {
   const parsed = parseArgs(argv ?? []);
+  // 鍵を解決する前の出力にも、同じ関数を通す（あとから分岐が増えても素通りしない）。
+  let secret = null;
+  const out = (text) => rawOut(redact(text, secret));
+  const err = (text) => rawErr(redact(text, secret));
+
   if (parsed.error) {
     err(`${parsed.error}\n\n${USAGE}`);
     return 1;
@@ -226,37 +356,76 @@ export async function run({
     return 0;
   }
 
-  const { key, base } = resolveConfig({ env, envFileText, baseOverride: parsed.base });
+  const { key, source, base } = resolveConfig({ env, envFileText, baseOverride: parsed.base, secrets });
+  secret = key;
   if (!key) {
     err(missingKeyMessage(base));
     return 1;
   }
 
-  const url = buildUrl(base, parsed);
+  // 在り処だけを言う。値は出さない（出さないことは、この関数の外でも試験する）。
+  if (parsed.command === "key") {
+    out([`鍵は ${source} から読めています。`, `宛先: ${base}`].join("\n"));
+    return 0;
+  }
+
+  const writing = parsed.command === "done" || parsed.command === "failed";
+  const url = writing ? `${base}/api/improvements` : buildUrl(base, parsed);
+  const init = writing
+    ? {
+        method: "PATCH",
+        headers: {
+          authorization: `Bearer ${key}`,
+          "content-type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          id: parsed.ids[0],
+          result: parsed.command === "done" ? "done" : "failed",
+          detail: parsed.detail.trim(),
+        }),
+      }
+    : {
+        headers: {
+          authorization: `Bearer ${key}`,
+          accept: parsed.json ? "application/json" : "text/markdown",
+        },
+      };
+
   let response;
   try {
-    response = await fetchImpl(url, {
-      headers: {
-        authorization: `Bearer ${key}`,
-        accept: parsed.json ? "application/json" : "text/markdown",
-      },
-    });
+    response = await fetchImpl(url, init);
   } catch (error) {
     err(describeNetworkError(base, error));
     return 1;
   }
 
+  const body = await response.text();
+
   if (!response.ok) {
-    err(describeFailure(response.status, response.headers?.get?.("retry-after") ?? null, base));
+    // 書き戻しの断りは、サーバーが出す日本語の理由がそのまま次の一手になる
+    // （権限が無い・受け取っていない・公開先が空、など）。訳し直すと薄くなる。
+    const reason = writing ? serverMessage(body) : null;
+    err(reason ?? describeFailure(response.status, response.headers?.get?.("retry-after") ?? null, base));
     return 1;
   }
 
-  const body = await response.text();
-  out(body.trimEnd());
+  out(writing ? (serverMessage(body) ?? "書き戻しました。") : body.trimEnd());
   if (parsed.dropped > 0) {
     err(`一度に読めるのは${BULK_MAX}件までです。${parsed.dropped}件は今回含めていません。`);
   }
   return 0;
+}
+
+/** 応答の JSON から日本語の1文だけを取り出す。読めなければ null。 */
+export function serverMessage(body) {
+  try {
+    const parsed = JSON.parse(body);
+    const message = typeof parsed?.message === "string" ? parsed.message.trim() : "";
+    return message.length > 0 ? message : null;
+  } catch {
+    return null;
+  }
 }
 
 /* ───────────────────────── 入口 ───────────────────────── */
@@ -275,5 +444,7 @@ if (isDirectExecution) {
     argv: process.argv.slice(2),
     env: process.env,
     envFileText: readEnvFile(),
+    // 保管庫を読むのは、実際に走らせたときだけ。試験では差し替える。
+    secrets: systemSecretReader(),
   });
 }

@@ -119,6 +119,8 @@
 | OPS-004 | observe | KPI ランク境界・係数は初回半期後の再調整候補 | 初回半期が終了 | 実分布と端数影響を確認して制度値を見直す | [回ごとの記録 N2・S4](./backlog-session-notes.md) |
 | OPS-005 | ready | サーバー描画でクライアント API 混入を検出する専用 CI がない | 同種の回帰を予防 | 静的スキャナーを CI に追加 | [回ごとの記録 T3](./backlog-session-notes.md) |
 | OPS-006 | ready | 鍵の見本ファイルが `.env.example` ではなく `env.example`（先頭のドット付きファイルを作れない実行環境があったため） | 名前の食い違いに気づく人が出る | `.env.example` へ改名し、README と鍵未設定の案内文を合わせる | [見本ファイル](../../env.example) / [呼び出し台本](../../scripts/improvements.mjs) |
+| OPS-007 | ready | 鍵は長命のまま（ブラウザでログインして短命の鍵を自動更新する形になっていない） | 鍵の配布が人手で回らなくなったとき | 端末ごとの認可（device authorization grant 相当）と自動更新を実装し、長命の鍵は非推奨にする | [鍵の権限](../../src/lib/domain/agent-scope.ts) / [呼び出し台本](../../scripts/improvements.mjs) |
+| OPS-008 | observe | 会社を焼き込む前に発行した鍵は、全社の要望を読めるまま（状態は変えられない） | 既存の鍵が使われなくなったら | 発行し直したうえで古い鍵を止め、会社なしの鍵を受け付けなくする | [鍵の一覧画面](../../src/app/system/agent-keys/page.tsx) / [鍵の権限](../../src/lib/domain/agent-scope.ts) |
 | PERFORMANCE-001 | observe | 一覧は数百件超でページングが必要 | 対象データが数百件に達する | cursor または keyset 方式を導入 | [旧台帳 D1](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-002 | observe | マスタ参照は都度 D1 を読む | 読取負荷・待ち時間が問題化 | キャッシュ範囲と無効化を設計 | [旧台帳 D11](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-003 | ready | 本番端末・回線で Core Web Vitals を計測していない | 次の性能確認 | 主要画面を実測し基準超過だけ改善 | [旧台帳 UX101](./backlog-history-2026-08-13.md) |

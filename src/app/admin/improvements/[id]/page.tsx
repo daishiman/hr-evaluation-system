@@ -19,6 +19,7 @@ import { ImprovementHandoutPanel } from "@/components/ImprovementHandoutPanel";
 import { ImprovementDispositionForm } from "@/components/ImprovementDispositionForm";
 import {
   canDisposeImprovements,
+  improvementEventActor,
   improvementEventLabel,
   improvementDisplayState,
   improvementDisplayStateLabel,
@@ -274,7 +275,8 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
             title: improvementEventLabel(e.action),
             rows: [
               { label: "日時", value: formatDateTime(e.createdAt) },
-              { label: "操作した人", value: e.actorName ?? "退職された方" },
+              { label: "操作した人", value: improvementEventActor(e.actorName, e.keyLabel) },
+              ...(e.releaseRef ? [{ label: "公開した先", value: e.releaseRef }] : []),
             ],
             note: e.reason ?? undefined,
           }))}

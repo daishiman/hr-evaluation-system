@@ -27,6 +27,12 @@ import {
   shouldTouchLastUsed,
   type AgentKeyRecord,
 } from "@/lib/domain/agent-keys";
+import {
+  DEFAULT_AGENT_SCOPES,
+  parseAgentScopes,
+  serializeAgentScopes,
+  type AgentScope,
+} from "@/lib/domain/agent-scope";
 
 /** 設定の行はアプリ全体で1つ。IDを固定して、行が増えないようにする。 */
 const SETTINGS_ID = "default";
@@ -43,9 +49,16 @@ export async function hashAgentKey(raw: string): Promise<string> {
  * 上限に達しているときは発行しない。ここで断らないと、画面の表示だけを
  * 信じた呼び出しで上限を超えられる。
  *
+ * 会社は発行の時点で焼き込む。あとから広げられる作りにしない。広げられると、
+ * 1本漏れたときに漏れる範囲が「その会社」から「全社」へ変わってしまう。
+ *
  * 返す生の鍵は、この戻り値が唯一の出口。保存もログ出力もしない。
  */
-export async function issueAgentKey(actorId: string, rawLabel: string): Promise<{ raw: string; prefix: string }> {
+export async function issueAgentKey(
+  actorId: string,
+  companyId: string,
+  rawLabel: string,
+): Promise<{ raw: string; prefix: string }> {
   const label = normalizeAgentKeyLabel(rawLabel);
   const db = await getDb();
   const active = await db
@@ -64,6 +77,8 @@ export async function issueAgentKey(actorId: string, rawLabel: string): Promise<
     label,
     keyHash: await hashAgentKey(raw),
     keyPrefix: prefix,
+    companyId,
+    scopes: serializeAgentScopes(DEFAULT_AGENT_SCOPES),
     createdById: actorId,
   });
 
@@ -103,8 +118,12 @@ export async function listAgentKeys(): Promise<AgentKeyRecord[]> {
       lastUsedAt: s.agentApiKeys.lastUsedAt,
       revokedAt: s.agentApiKeys.revokedAt,
       revokedById: s.agentApiKeys.revokedById,
+      companyId: s.agentApiKeys.companyId,
+      companyName: s.companies.name,
+      scopes: s.agentApiKeys.scopes,
     })
     .from(s.agentApiKeys)
+    .leftJoin(s.companies, eq(s.companies.id, s.agentApiKeys.companyId))
     .orderBy(desc(s.agentApiKeys.createdAt))
     .limit(50);
   const names = new Map((await db.select(creators).from(s.users)).map((u) => [u.id, u.name]));
@@ -117,22 +136,39 @@ export async function listAgentKeys(): Promise<AgentKeyRecord[]> {
     lastUsedAt: r.lastUsedAt,
     revokedAt: r.revokedAt,
     revokedByName: r.revokedById ? (names.get(r.revokedById) ?? null) : null,
+    companyName: r.companyId ? (r.companyName ?? null) : null,
+    scopes: parseAgentScopes(r.scopes),
   }));
 }
 
-/** いま使える鍵すべて。突き合わせに使うので、ハッシュと呼び名だけを読む。 */
-export async function activeAgentKeyHashes(
-  db: DB,
-): Promise<{ id: string; label: string; hash: string; lastUsedAt: Date | null }[]> {
-  return db
+/**
+ * いま使える鍵すべて。突き合わせのほか、通ったあとに「どこまでしてよいか」を
+ * 決めるために、会社と権限も一緒に読む。
+ *
+ * 通ったあとで別途読み直す作りにすると、読み直しを忘れた入口が全社を見る。
+ */
+export async function activeAgentKeyHashes(db: DB): Promise<
+  {
+    id: string;
+    label: string;
+    hash: string;
+    lastUsedAt: Date | null;
+    companyId: string | null;
+    scopes: AgentScope[];
+  }[]
+> {
+  const rows = await db
     .select({
       id: s.agentApiKeys.id,
       label: s.agentApiKeys.label,
       hash: s.agentApiKeys.keyHash,
       lastUsedAt: s.agentApiKeys.lastUsedAt,
+      companyId: s.agentApiKeys.companyId,
+      scopes: s.agentApiKeys.scopes,
     })
     .from(s.agentApiKeys)
     .where(isNull(s.agentApiKeys.revokedAt));
+  return rows.map((r) => ({ ...r, scopes: parseAgentScopes(r.scopes) }));
 }
 
 /**

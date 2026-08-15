@@ -251,7 +251,10 @@ describe("払い出しの履歴", () => {
     const write = read("src/lib/improvement-handout-write.ts");
     expect(write).toContain("insert(s.improvementHandoutEvents)");
     expect(write).toContain('via: source.via');
-    expect(read("src/app/api/improvements/route.ts")).toContain('{ via: "api", ...caller }');
+    // 鍵は会社と権限も持つようになったため、履歴へ写すのは鍵の身元だけに絞る。
+    expect(read("src/app/api/improvements/route.ts")).toContain(
+      '{ via: "api", keyId: caller.keyId, keyLabel: caller.keyLabel }',
+    );
     expect(write).toContain('{ via: "screen", actorId: viewer.id }');
   });
 

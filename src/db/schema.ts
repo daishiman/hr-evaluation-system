@@ -1449,6 +1449,14 @@ export const improvementStatusEvents = sqliteTable(
     /** 定型と自由記述をまとめた1文。画面と記録票のコメントにそのまま出す。 */
     reason: text("reason"),
     actorId: text("actor_id").references(() => users.id),
+    /**
+     * 人ではなく鍵が変えたときの、その鍵。呼び名も写す（鍵を止めたあとも読めるように）。
+     * ここが入っている行は、画面から人が差し戻せる行でもある。
+     */
+    keyId: text("key_id"),
+    keyLabel: text("key_label"),
+    /** 「対応済み」にしたときの公開先。ここが空の完了は作らせない。 */
+    releaseRef: text("release_ref"),
     createdAt: createdAt(),
   },
   (t) => [index("idx_ise_request").on(t.requestId, t.createdAt)],
@@ -1474,6 +1482,16 @@ export const agentApiKeys = sqliteTable(
     keyHash: text("key_hash").notNull(),
     /** 画面に出す先頭数文字。どの鍵のことかを見分けるためだけに使う。 */
     keyPrefix: text("key_prefix").notNull(),
+    /**
+     * この鍵で扱える会社。発行した時点で固定し、あとから変えない。
+     * 空なのは、会社を焼き込む前に発行した鍵だけ。その鍵は読み取りしかできない。
+     */
+    companyId: text("company_id").references(() => companies.id),
+    /**
+     * できること（コンマ区切り）。improvements:read と improvements:write-own の2つだけ。
+     * 言葉の正本は src/lib/domain/agent-scope.ts。
+     */
+    scopes: text("scopes").notNull().default("improvements:read"),
     createdAt: createdAt(),
     createdById: text("created_by_id").references(() => users.id),
     /** 最後にこの鍵で受け取った時刻。配ったのに使われていない、に気づくため。 */
@@ -1482,7 +1500,10 @@ export const agentApiKeys = sqliteTable(
     revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
     revokedById: text("revoked_by_id").references(() => users.id),
   },
-  (t) => [index("idx_agent_api_keys_hash").on(t.keyHash)],
+  (t) => [
+    index("idx_agent_api_keys_hash").on(t.keyHash),
+    index("idx_agent_api_keys_company").on(t.companyId),
+  ],
 );
 
 /**
