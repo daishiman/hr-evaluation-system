@@ -6,7 +6,12 @@ import { _resetRateLimitStoreForTest } from "@/lib/rate-limit";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
 import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
 
-const mocked = vi.hoisted(() => ({ apiViewer: vi.fn(), getDb: vi.fn() }));
+const mocked = vi.hoisted(() => ({
+  apiViewer: vi.fn(),
+  getDb: vi.fn(),
+  requireGithubSettings: vi.fn(),
+  createGithubIssue: vi.fn(),
+}));
 
 vi.mock("@/lib/session", async () => ({
   ...(await vi.importActual<typeof import("@/lib/session")>("@/lib/session")),
@@ -18,8 +23,16 @@ vi.mock("@/lib/db", async () => ({
   getDb: mocked.getDb,
 }));
 
+// 記録票づくりは社外（GitHub）へ出す操作。テストからは一歩も外へ出さず、
+// 「どんな文面を渡したか」と「返事をどう扱ったか」だけをここで確かめる。
+vi.mock("@/lib/github-issue", () => ({
+  requireGithubSettings: mocked.requireGithubSettings,
+  createGithubIssue: mocked.createGithubIssue,
+  appVersion: async () => "v-test",
+}));
+
 import { IMPROVEMENT_REQUEST_MAX_BYTES, POST } from "@/app/api/improvements/route";
-import { PATCH } from "@/app/api/improvements/[id]/route";
+import { PATCH, POST as POST_ISSUE } from "@/app/api/improvements/[id]/route";
 
 let testDb: TestDatabase;
 
@@ -46,6 +59,7 @@ function postRequest(overrides: Record<string, unknown> = {}) {
     headers: { "content-type": "application/json", "user-agent": "integration-test" },
     body: JSON.stringify({
       path: "/f/acme-secret-token?employee=someone",
+      kind: "usability",
       body: "送信ボタンの位置が分かりにくいです。",
       viewport: "375×812",
       shot: null,
@@ -77,6 +91,10 @@ beforeEach(async () => {
   mocked.getDb.mockResolvedValue(testDb.db);
   mocked.apiViewer.mockReset();
   mocked.apiViewer.mockResolvedValue(viewer());
+  mocked.requireGithubSettings.mockReset();
+  mocked.requireGithubSettings.mockResolvedValue({ repo: "owner/repo", token: "dummy" });
+  mocked.createGithubIssue.mockReset();
+  mocked.createGithubIssue.mockResolvedValue({ number: 123, url: "https://github.com/owner/repo/issues/123" });
   _resetRateLimitStoreForTest();
 });
 
@@ -95,6 +113,41 @@ describe("POST /api/improvements", () => {
       screenLabel: "配布されたアンケート",
     });
     expect(await testDb.db.select().from(s.improvementShots)).toHaveLength(0);
+  });
+
+  it("技術情報は受け取ったまま保存せず、伏せて件数を切ってから保存する", async () => {
+    const response = await POST(
+      postRequest({
+        kind: "bug",
+        expected: "押したら保存されてほしい",
+        diagnostics: {
+          userAgent: "integration",
+          logs: [{ agoMs: 10, level: "error", text: "failed for taro@example.com token=abcdefgh" }],
+          network: Array.from({ length: 30 }, (_, i) => ({
+            agoMs: i,
+            method: "GET",
+            path: `https://hr.example.com/api/x${i}?q=1`,
+            status: 500,
+            durationMs: 5,
+          })),
+        },
+      }),
+    );
+    const row = (await testDb.db.select().from(s.improvementRequests))[0];
+    const saved = JSON.parse(row.diagnostics!) as { logs: { text: string }[]; network: { path: string }[] };
+
+    expect(response.status).toBe(200);
+    expect(row.kind).toBe("bug");
+    expect(row.expected).toBe("押したら保存されてほしい");
+    expect(saved.logs[0].text).not.toContain("taro@example.com");
+    expect(saved.logs[0].text).toContain("***");
+    expect(saved.network).toHaveLength(20);
+    expect(saved.network[0].path).toBe("/api/x10");
+  });
+
+  it("技術情報が付かない送信もそのまま受け取る", async () => {
+    expect((await POST(postRequest())).status).toBe(200);
+    expect((await testDb.db.select().from(s.improvementRequests))[0].diagnostics).toBeNull();
   });
 
   it("画像あり投稿を本文と同じbatchで保存する", async () => {
@@ -207,5 +260,99 @@ describe("PATCH /api/improvements/[id]", () => {
       expect(response.status).toBe(403);
     }
     expect((await testDb.db.select().from(s.improvementRequests))[0].status).toBe("doing");
+  });
+});
+
+describe("POST /api/improvements/[id]（記録票を作る）", () => {
+  const params = { params: Promise.resolve({ id: "improve_target" }) };
+
+  async function seedRequest(companyId: string = IDS.company) {
+    if (companyId !== IDS.company) {
+      await testDb.db.insert(s.companies).values({ id: companyId, name: "別会社", slug: "other" });
+    }
+    await testDb.db.insert(s.improvementRequests).values({
+      id: "improve_target",
+      companyId,
+      reporterId: IDS.employee,
+      submissionKey: crypto.randomUUID(),
+      path: "/admin/members",
+      routePattern: "/admin/members",
+      screenLabel: "社員",
+      kind: "bug",
+      body: "保存できません",
+      expected: "保存できてほしい",
+      status: "open",
+    });
+  }
+
+  function issueRequest() {
+    return new Request("http://localhost/api/improvements/improve_target", { method: "POST" });
+  }
+
+  it("要望の中身を記録票の文面にして送り、行き先を残して対応中へ進める", async () => {
+    await seedRequest();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    const response = await POST_ISSUE(issueRequest(), params);
+    const sent = mocked.createGithubIssue.mock.calls[0][1] as { title: string; body: string; labels: string[] };
+    const link = (await testDb.db.select().from(s.improvementIssueLinks))[0];
+
+    expect(response.status).toBe(200);
+    expect(sent.title).toContain("社員");
+    expect(sent.body).toContain("保存できません");
+    expect(sent.body).toContain("保存できてほしい");
+    expect(sent.body).toContain("`src/app/admin/members/page.tsx`");
+    expect(sent.labels).toEqual(["improvement", "bug", "severity:medium", "area:admin"]);
+    expect(link).toMatchObject({ requestId: "improve_target", issueNumber: 123 });
+    expect((await testDb.db.select().from(s.improvementRequests))[0].status).toBe("doing");
+  });
+
+  it("氏名・メールアドレス・画面の写しは記録票へ出さない", async () => {
+    await seedRequest();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    await POST_ISSUE(issueRequest(), params);
+    const sent = mocked.createGithubIssue.mock.calls[0][1] as { body: string };
+
+    expect(sent.body).not.toContain("@");
+    expect(sent.body).not.toContain("data:image");
+  });
+
+  it("二度押しても記録票は1つだけにする", async () => {
+    await seedRequest();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    await POST_ISSUE(issueRequest(), params);
+    const second = await POST_ISSUE(issueRequest(), params);
+
+    expect(second.status).toBe(200);
+    expect(mocked.createGithubIssue).toHaveBeenCalledTimes(1);
+    expect(await testDb.db.select().from(s.improvementIssueLinks)).toHaveLength(1);
+  });
+
+  it("出し先やトークンが未設定なら、外へ送る前に止める", async () => {
+    await seedRequest();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    mocked.requireGithubSettings.mockRejectedValue(new HttpError(503, "GITHUB_TOKEN が未設定です。"));
+    const response = await POST_ISSUE(issueRequest(), params);
+
+    expect(response.status).toBe(503);
+    expect(mocked.createGithubIssue).not.toHaveBeenCalled();
+    expect(await testDb.db.select().from(s.improvementIssueLinks)).toHaveLength(0);
+  });
+
+  it("会社の管理者は押せない（社外へ出る操作のため）", async () => {
+    await seedRequest();
+    mocked.apiViewer.mockRejectedValue(new HttpError(403, "権限がありません。"));
+    const response = await POST_ISSUE(issueRequest(), params);
+
+    expect(response.status).toBe(403);
+    expect(mocked.createGithubIssue).not.toHaveBeenCalled();
+  });
+
+  it("他社IDは404にして外へ送らない", async () => {
+    await seedRequest("cmp_other");
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    const response = await POST_ISSUE(issueRequest(), params);
+
+    expect(response.status).toBe(404);
+    expect(mocked.createGithubIssue).not.toHaveBeenCalled();
   });
 });

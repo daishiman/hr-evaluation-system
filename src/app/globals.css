@@ -2744,6 +2744,24 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .feedback-fab .btn:focus-visible { opacity: 1; }
 
 /* 撮っている間の待ち表示。押した直後に何が起きているかを黙らせない。 */
+/* 送る前の下見。長い記録が窓を押し広げないよう、高さを決めて中で送る。 */
+.feedback-preview {
+  max-height: 160px;
+  overflow: auto;
+  margin: var(--space-tight) 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--subtle);
+  color: var(--ink-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: var(--text-note);
+  white-space: pre-wrap;
+  /* 長いURLやトークン風の文字列がはみ出さないよう、入りきらないときだけ折る。
+     break-all は和文まで途中で割るため使わない（ui-rules の検査どおり）。 */
+  overflow-wrap: anywhere;
+}
+
 .feedback-shooting {
   display: flex;
   align-items: center;

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { DB } from "@/lib/db";
 import { schema as s } from "@/lib/db";
+import type { ImprovementKind } from "@/lib/domain/improvement-issue";
 
 export interface ImprovementWriteInput {
   companyId: string;
@@ -10,6 +11,10 @@ export interface ImprovementWriteInput {
   routePattern: string;
   screenLabel: string;
   body: string;
+  kind: ImprovementKind;
+  expected: string | null;
+  /** 自動収集した技術情報のJSON文字列。大きすぎた・取れなかったときは null */
+  diagnostics: string | null;
   viewport: string | null;
   userAgent: string | null;
   shot: string | null;
@@ -42,6 +47,9 @@ export async function saveImprovementRequest(db: DB, input: ImprovementWriteInpu
       routePattern: input.routePattern,
       screenLabel: input.screenLabel,
       body: input.body,
+      kind: input.kind,
+      expected: input.expected,
+      diagnostics: input.diagnostics,
       viewport: input.viewport,
       userAgent: input.userAgent,
       status: "open",

@@ -1292,6 +1292,20 @@ export const improvementRequests = sqliteTable(
     /** その画面の呼び名（→ system-spec/route-ledger.json） */
     screenLabel: text("screen_label").notNull(),
     body: text("body").notNull(),
+    /**
+     * bug（動かない）| usability（使いにくい）| feature（機能がほしい）。
+     * 直す優先順位・記録票の書き出し方・**自動で集めてよい技術情報の量**を
+     * 分ける唯一の入力（→ src/lib/domain/improvement-issue.ts の収集レベル）。
+     * 種類を聞いていなかった既存行は 'usability' 扱い（→ 0020 の既定値）。
+     */
+    kind: text("kind").notNull().default("usability"),
+    /** 「どうなってほしいか」。自動では絶対に集められないので、任意で1行だけ受ける。 */
+    expected: text("expected"),
+    /**
+     * 送信時にブラウザ側で自動収集した技術情報（JSON文字列）。
+     * 中身の形と上限、伏せ方は src/lib/domain/improvement-issue.ts が正本。
+     */
+    diagnostics: text("diagnostics"),
     /** 「1280×720」の形。狭い画面だけで起きる崩れを切り分けるために残す。 */
     viewport: text("viewport"),
     userAgent: text("user_agent"),
@@ -1327,5 +1341,25 @@ export const improvementShots = sqliteTable("improvement_shots", {
   /** data:image/jpeg;base64,… の形 */
   dataUrl: text("data_url").notNull(),
   bytes: integer("bytes").notNull(),
+  createdAt: createdAt(),
+});
+
+/**
+ * 要望から作った記録票（GitHub Issue）。
+ *
+ * 「まだ作っていない」を null 列の組み合わせで表すと、作りかけと作り済みの
+ * 見分けが画面ごとにぶれる。行があれば作り済み、無ければ未作成、で1つに固定する。
+ * 二重に立てないための境界は request_id の主キーそのもの。
+ */
+export const improvementIssueLinks = sqliteTable("improvement_issue_links", {
+  requestId: text("request_id")
+    .primaryKey()
+    .references(() => improvementRequests.id, { onDelete: "cascade" }),
+  /** どのリポジトリへ出したか（owner/repo）。出し先を変えても過去の行き先が追える。 */
+  repo: text("repo").notNull(),
+  issueNumber: integer("issue_number").notNull(),
+  issueUrl: text("issue_url").notNull(),
+  /** 記録票を作った人。作成後に退職しても記録は残す。 */
+  createdById: text("created_by_id").references(() => users.id),
   createdAt: createdAt(),
 });

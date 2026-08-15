@@ -14,10 +14,16 @@
   //   BETTER_AUTH_URL … ログインの折り返し先
   //   APP_ORIGIN       … 画面に出す配布用URLの組み立て元。設定しないと Host ヘッダー（呼び出し側が
   //                      自由に付けられる）から作ることになるため、本番では必ず固定しておく
+  //   GITHUB_REPO      … 改善要望から作る記録票（Issue）の出し先。owner/repo の形。
+  //                      書き込み用トークンは秘密の値なので、ここには置かず
+  //                      `wrangler secret put GITHUB_TOKEN` で登録する。
   "vars": {
     "BETTER_AUTH_URL": "https://hr-evaluation-system.daishimanju.workers.dev",
-    "APP_ORIGIN": "https://hr-evaluation-system.daishimanju.workers.dev"
+    "APP_ORIGIN": "https://hr-evaluation-system.daishimanju.workers.dev",
+    "GITHUB_REPO": "daishiman/hr-evaluation-system"
   },
+  // 配っているアプリの版を実行中に知るため（記録票に「どの版で起きたか」を載せる）。
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   // 版ごとの下見用URLは作らない（本番と同じデータに別の入口を増やさないため）
   "preview_urls": false,
   "upload_source_maps": true,

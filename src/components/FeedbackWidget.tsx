@@ -1,10 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Button, ChoiceChip, ReasonNote } from "@/components/ui";
+import { Button, ChoiceChip, InlineDetail, ReasonNote } from "@/components/ui";
 import { routeMetaOf } from "@/lib/nav";
 import { IMPROVEMENT_BODY_MAX, IMPROVEMENT_SHOT_MAX_BYTES, shotBytesOf } from "@/lib/domain/improvement";
+import {
+  DIAGNOSTICS_LEVEL_NOTE,
+  diagnosticsLevelFor,
+  IMPROVEMENT_EXPECTED_MAX,
+  IMPROVEMENT_KINDS,
+  improvementKindLabel,
+  type ImprovementKind,
+} from "@/lib/domain/improvement-issue";
+import { addBreadcrumb, collectDiagnostics, installDiagnostics } from "@/lib/client-diagnostics";
 
 /**
  * 全画面共通の「改善要望」。
@@ -125,6 +134,8 @@ export function FeedbackWidget() {
   const [color, setColor] = useState<ColorKey>("red");
   const [textDraft, setTextDraft] = useState("");
   const [body, setBody] = useState("");
+  const [kind, setKind] = useState<ImprovementKind>("usability");
+  const [expected, setExpected] = useState("");
   const [draftPath, setDraftPath] = useState("");
   const [busy, setBusy] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -134,6 +145,23 @@ export function FeedbackWidget() {
   const [sent, setSent] = useState(false);
 
   const screenLabel = routeMetaOf(draftPath || pathname)?.label ?? "その他の画面";
+
+  /* 送る前に本人が読めるよう、いま添えられる技術情報を組み立てておく。
+     文字を打つたびに作り直すと重くなるので、窓と種類が変わったときだけ。 */
+  const preview = useMemo(() => (open && !sent ? collectDiagnostics(kind) : null), [open, sent, kind]);
+
+  /* ───── 直前の操作・エラーを控えておく ─────
+   *
+   * 送るときになってから集めても、そのときにはもう「何をしていたか」は残っていない。
+   * 画面が出た時点から控え始める（→ src/lib/client-diagnostics.ts）。
+   * 控えるのはメモリの上だけで、端末には残さない。 */
+  useEffect(() => {
+    installDiagnostics();
+  }, []);
+
+  useEffect(() => {
+    addBreadcrumb("route", routeMetaOf(pathname)?.label ?? pathname);
+  }, [pathname]);
 
   /* ───── 窓の開け閉め ───── */
 
@@ -151,6 +179,8 @@ export function FeedbackWidget() {
     setShot(null);
     setShapes([]);
     setBody("");
+    setKind("usability");
+    setExpected("");
     setDraftPath(pathname);
     setTextDraft("");
     setError(null);
@@ -435,6 +465,10 @@ export function FeedbackWidget() {
         body: JSON.stringify({
           path: draftPath || pathname,
           body: body.trim(),
+          kind,
+          expected: expected.trim() || null,
+          // 直すのに要る技術情報は、こちらで集めて添える（利用者に調べさせない）。
+          diagnostics: collectDiagnostics(kind),
           viewport: `${window.innerWidth}×${window.innerHeight}`,
           shot: image,
           submissionKey,
@@ -447,6 +481,7 @@ export function FeedbackWidget() {
       }
       setSent(true);
       setBody("");
+      setExpected("");
       setShot(null);
       setShapes([]);
       setTextDraft("");
@@ -468,7 +503,7 @@ export function FeedbackWidget() {
           type="button"
           variant="secondary"
           onClick={() => {
-            const hasDraft = Boolean(body.trim() || shot || shapes.length > 0 || capturing);
+            const hasDraft = Boolean(body.trim() || expected.trim() || shot || shapes.length > 0 || capturing);
             if (sent || !hasDraft) {
               reset();
               // 押した時点で撮る。窓が開いたときには、もう書き込める状態にする。
@@ -498,8 +533,18 @@ export function FeedbackWidget() {
                 {error && <ReasonNote>{error}</ReasonNote>}
                 {notice && <ReasonNote>{notice}</ReasonNote>}
 
+                {/* 直す順番と、開発側に渡す書式が変わる唯一の選択。1回押すだけで済ませる。 */}
+                <p className="footnote m-0">どちらに近いですか</p>
+                <div className="mt-1 mb-3 flex flex-wrap gap-1" role="group" aria-label="要望の種類">
+                  {IMPROVEMENT_KINDS.map((k) => (
+                    <ChoiceChip key={k} selected={kind === k} onClick={() => setKind(k)}>
+                      {improvementKindLabel(k)}
+                    </ChoiceChip>
+                  ))}
+                </div>
+
                 <label className="footnote" htmlFor="feedback_body">
-                  改善したいこと
+                  {kind === "bug" ? "どこで、何が起きましたか" : "改善したいこと"}
                 </label>
                 <textarea
                   ref={bodyRef}
@@ -521,6 +566,59 @@ export function FeedbackWidget() {
                     {bodyError}
                   </p>
                 )}
+
+                {/* 「どうなってほしいか」だけは、こちらで推し量ると別物を作ってしまう。
+                    ただし書けないときもあるので、任意のままにする（空でも送れる）。 */}
+                <label className="footnote mt-3 block" htmlFor="feedback_expected">
+                  どうなってほしいですか（任意・1行）
+                </label>
+                <input
+                  id="feedback_expected"
+                  type="text"
+                  className="input w-full"
+                  maxLength={IMPROVEMENT_EXPECTED_MAX}
+                  value={expected}
+                  onChange={(e) => setExpected(e.target.value)}
+                  placeholder={kind === "bug" ? "例：押したら次の画面へ進んでほしい。" : "例：担当者で絞り込めるようにしてほしい。"}
+                />
+
+                <div className="mt-2">
+                  <InlineDetail summary="この画面から一緒に送られるもの">
+                    <p className="footnote m-0">
+                      直すのに要る情報を自動で添えます。氏名・メールアドレス・評価の中身・パスワードは送りません。
+                    </p>
+                    <ul className="footnote mt-1 mb-0">
+                      {DIAGNOSTICS_LEVEL_NOTE[diagnosticsLevelFor(kind)].map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                      <li>上で撮った画面の写し（外したときは送りません）</li>
+                    </ul>
+                    {/* 説明だけでなく、いま実際に送られる中身をそのまま出す。
+                        通信のやりとりまで添えるので、「書いてある」では足りない。 */}
+                    {preview && (
+                      <>
+                        <p className="footnote mt-2 mb-0">
+                          いまこの窓を開いた時点の中身です。伏せ字（***）は送る前に消したものです。
+                        </p>
+                        <ul className="footnote mt-1 mb-0">
+                          <li>
+                            {preview.browser} / {preview.os} / {preview.viewport}
+                          </li>
+                          <li>エラーの記録：{preview.logs.length}件</li>
+                          <li>失敗した通信：{preview.network.length}件</li>
+                          <li>操作の記録：{preview.breadcrumbs.length}件</li>
+                        </ul>
+                        {preview.network.map((n, i) => (
+                          <pre className="feedback-preview" key={`${n.path}-${i}`}>
+                            {`${n.method} ${n.path} → ${n.status ?? "応答なし"}`}
+                            {n.requestBody ? `\n送った中身\n${n.requestBody}` : ""}
+                            {n.responseBody ? `\n返ってきた中身\n${n.responseBody}` : ""}
+                          </pre>
+                        ))}
+                      </>
+                    )}
+                  </InlineDetail>
+                </div>
 
                 {capturing && (
                   <div className="feedback-shooting mt-3" role="status">

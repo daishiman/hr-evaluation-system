@@ -13,6 +13,7 @@ import {
   isImprovementPeriod,
   isImprovementStatus,
 } from "@/lib/domain/improvement";
+import { improvementKindLabel } from "@/lib/domain/improvement-issue";
 
 export const dynamic = "force-dynamic";
 
@@ -126,10 +127,12 @@ export default async function AdminImprovements({
                 <p className="footnote m-0">
                   {formatDateTime(r.createdAt)}
                   {r.hasShot ? "／画像あり" : ""}
+                  {r.hasIssue ? "／記録票あり" : ""}
                 </p>
               }
               marks={
                 <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={r.kind === "bug" ? "alert" : "closed"}>{improvementKindLabel(r.kind)}</Badge>
                   <Badge tone={improvementStatusTone(r.status)}>{improvementStatusLabel(r.status)}</Badge>
                   <LinkButton href={`/admin/improvements/${r.id}`}>開く</LinkButton>
                 </div>
