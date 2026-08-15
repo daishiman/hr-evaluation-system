@@ -58,6 +58,8 @@ describe("画面に出す状態", () => {
   it("色は状態ごとに1つに決まる", () => {
     expect(improvementDisplayStateTone("open")).toBe("required");
     expect(improvementDisplayStateTone("doing")).toBe("active");
+    // 人の手番という点で未対応と同じ。手が離れている「対応中」だけ色を変える。
+    expect(improvementDisplayStateTone("review")).toBe("required");
     expect(improvementDisplayStateTone("done")).toBe("done");
     expect(improvementDisplayStateTone("discarded")).toBe("closed");
     expect(improvementDisplayStateTone("dropped")).toBe("dropped");
@@ -242,7 +244,55 @@ describe("履歴を起こしたのが誰か", () => {
   });
 
   it("作業する側が書き戻した行は、そうと分かる言葉で出す", () => {
-    expect(improvementEventLabel("agent-done")).toBe("直して公開（作業する側）");
+    expect(improvementEventLabel("agent-review")).toBe("確認を依頼（作業する側）");
+    expect(improvementEventLabel("agent-done")).toBe("確認依頼が取り込まれた");
     expect(improvementEventLabel("agent-failed")).toBe("直しきれず（作業する側）");
+  });
+});
+
+describe("レビュー待ちの読み方", () => {
+  const base = { status: "doing" as const, discarded: false, duplicateOfId: null };
+
+  it("対応中で確認依頼が出ていれば、レビュー待ちと読む", () => {
+    expect(improvementDisplayState({ ...base, reviewRef: "#81" })).toBe("review");
+    expect(improvementDisplayStateLabel("review")).toBe("レビュー待ち");
+  });
+
+  it("確認依頼が無ければ、これまでどおり対応中のまま", () => {
+    expect(improvementDisplayState({ ...base, reviewRef: null })).toBe("doing");
+    // 空白だけの値で状態が変わらないこと（書き損じで状態が動くと戻し方が分からない）
+    expect(improvementDisplayState({ ...base, reviewRef: "   " })).toBe("doing");
+    // 列を持っていない古い呼び出し元でも、これまでどおり動く
+    expect(improvementDisplayState(base)).toBe("doing");
+  });
+
+  it("取り込まれたあとは、確認依頼が残っていても対応済みと読む", () => {
+    // review_ref は消さない（どの依頼で直ったかを詳細画面で出すため）。
+    // 消さないぶん、ここで「対応中のときだけ」と絞らないと、完了が永久にレビュー待ちに見える。
+    expect(improvementDisplayState({ ...base, status: "done", reviewRef: "#81" })).toBe("done");
+  });
+
+  it("廃棄と重複は、確認依頼より先に決まる", () => {
+    expect(improvementDisplayState({ ...base, discarded: true, reviewRef: "#81" })).toBe("discarded");
+    expect(improvementDisplayState({ ...base, duplicateOfId: "improve_x", reviewRef: "#81" })).toBe("duplicate");
+  });
+
+  it("レビュー待ちは、終わっていないものとして一覧に残る", () => {
+    const rows = [
+      { id: "a", status: "doing" as const, discarded: false, duplicateOfId: null, reviewRef: "#81" },
+      { id: "b", status: "done" as const, discarded: false, duplicateOfId: null, reviewRef: "#80" },
+    ];
+    expect(filterImprovementsByView(rows, "active").map((r) => r.id)).toEqual(["a"]);
+  });
+
+  it("状態順では、レビュー待ちを対応中より前に置く", () => {
+    // 止まりやすいのは作業中のものではなく、取り込み待ちで誰も見ていないもの。
+    const at = (n: number) => new Date(2026, 0, n);
+    const rows = [
+      { id: "doing", status: "doing" as const, discarded: false, duplicateOfId: null, reviewRef: null, createdAt: at(1) },
+      { id: "review", status: "doing" as const, discarded: false, duplicateOfId: null, reviewRef: "#81", createdAt: at(2) },
+      { id: "open", status: "open" as const, discarded: false, duplicateOfId: null, reviewRef: null, createdAt: at(3) },
+    ];
+    expect(sortImprovements(rows, "state").map((r) => r.id)).toEqual(["open", "review", "doing"]);
   });
 });

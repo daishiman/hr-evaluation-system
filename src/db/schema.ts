@@ -1331,6 +1331,18 @@ export const improvementRequests = sqliteTable(
     discardedById: text("discarded_by_id").references(() => users.id),
     /** 廃棄の理由（定型の理由＋自由記述を1文にしたもの）。一覧で理由を出すために持つ。 */
     discardReason: text("discard_reason"),
+    /**
+     * 変更内容の確認依頼（PR）の場所。「レビュー待ち」の唯一の根拠。
+     *
+     * 状態の値に 'review' を足さないのは、SQLite の CHECK に値を足すには
+     * テーブルの作り直し（DROP を含む）が要り、本番データに対して危険が
+     * 見合わないため。加えて、重複・廃棄と同じく「取り消したときにどこへ
+     * 戻すか」を残せる（→ improvementDisplayState が重ねて判定する）。
+     * 取り込まれたあとも消さない。どの確認依頼で直ったかを後から読むため。
+     */
+    reviewRef: text("review_ref"),
+    /** 確認依頼が作られた時刻。レビュー待ちがいつから続いているかを読む。 */
+    reviewedAt: integer("reviewed_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

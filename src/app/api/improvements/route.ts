@@ -311,7 +311,7 @@ const agentResultSchema = z
   .object({
     id: z.string().min(1).max(60),
     result: z.enum(AGENT_RESULTS),
-    /** done なら公開先、failed なら直しきれなかった理由。 */
+    /** review と done なら確認依頼の場所、failed なら直しきれなかった理由。 */
     detail: z.string().min(1).max(1000),
   })
   .strict();
@@ -324,8 +324,9 @@ const agentResultSchema = z
  *  ・鍵に焼き込んだ会社と、要望の会社が同じ
  *  ・その鍵で実際に受け取った要望である
  *
- * 「対応済み」にできるのは公開まで届いたときだけ。届かなかったときは
- * 対応中のまま理由を積む（直っていないものを一覧から消さないため）。
+ * 進み方は「対応中 → レビュー待ち → 対応済み」。対応済みにできるのは
+ * 確認依頼が取り込まれたときだけで、順番を飛ばした要求は 409 で断る
+ * （直っていないものを一覧から消さないため）。
  */
 export async function PATCH(req: Request) {
   const gate = await guardAgentRequest(req);
