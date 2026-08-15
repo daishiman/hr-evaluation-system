@@ -1421,3 +1421,32 @@ export const improvementStatusEvents = sqliteTable(
   },
   (t) => [index("idx_ise_request").on(t.requestId, t.createdAt)],
 );
+
+/**
+ * 作業指示文を受け取るための鍵（画面から発行する）。
+ *
+ * 生の鍵はここに入れない。入れると、データベースを見られた時点で
+ * そのまま使える鍵が手に入る。保存するのはハッシュと先頭数文字だけで、
+ * 突き合わせもハッシュどうしで行う（→ src/lib/domain/agent-keys.ts）。
+ *
+ * 行は消さない。失効させた鍵も残しておくことで、「誰がいつ発行し、
+ * 誰がいつ止めたか」がそのまま操作の履歴になる。
+ */
+export const agentApiKeys = sqliteTable(
+  "agent_api_keys",
+  {
+    id: id(),
+    /** 生の鍵の SHA-256（16進）。ここから元の鍵は戻せない。 */
+    keyHash: text("key_hash").notNull(),
+    /** 画面に出す先頭数文字。どの鍵のことかを見分けるためだけに使う。 */
+    keyPrefix: text("key_prefix").notNull(),
+    createdAt: createdAt(),
+    createdById: text("created_by_id").references(() => users.id),
+    /** 最後にこの鍵で受け取った時刻。配ったのに使われていない、に気づくため。 */
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+    /** 失効させた時刻。入っていれば、それだけでこの鍵は通らない。 */
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    revokedById: text("revoked_by_id").references(() => users.id),
+  },
+  (t) => [index("idx_agent_api_keys_hash").on(t.keyHash)],
+);

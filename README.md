@@ -26,7 +26,7 @@ pnpm run preview
 
 `preview` は Workers 相当のローカル環境を `http://localhost:8787` で起動します。日常の UI 開発で `pnpm dev` を使う場合は、`.dev.vars` の `BETTER_AUTH_URL` を Next.js が表示する URL に合わせてください。
 
-改善要望を作業指示文として払い出す読み取り API（`GET /api/improvements`）だけは、鍵が要ります。無くても投稿・閲覧は動き、払い出しのときだけ設定案内が出ます。鍵は `openssl rand -base64 32` で作り、`.dev.vars` の `AGENT_API_KEY` に置きます（本番は `pnpm exec wrangler secret put AGENT_API_KEY`）。手順の詳細は [デプロイ注意 §5](docs/deploy-notes.md) にあります。
+改善要望を作業指示文として払い出す読み取り API（`GET /api/improvements`）だけは、鍵が要ります。無くても投稿・閲覧は動き、払い出しのときだけ設定案内が出ます。鍵はシステム全体管理者が画面から発行できます（メニュー「Claude Code 連携の鍵」＝ `/system/agent-keys`。押すと乱数で作られ、その場で1回だけ表示します）。ターミナルから設定する場合は `openssl rand -base64 32` で作り、`.dev.vars` の `AGENT_API_KEY` に置きます（本番は `pnpm exec wrangler secret put AGENT_API_KEY`）。どちらの鍵でも通り、見る順番は画面発行 → 環境変数です。手順の詳細は [デプロイ注意 §5](docs/deploy-notes.md) にあります。
 
 ## 品質確認
 

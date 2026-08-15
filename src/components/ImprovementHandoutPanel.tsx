@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { CopyBlock } from "@/components/CopyBlock";
 import { RefreshStatus } from "@/components/RefreshStatus";
-import { Button, Card, InlineDetail, ReasonNote } from "@/components/ui";
+import { Button, Card, ReasonNote } from "@/components/ui";
 import { useRefreshAfterSave } from "@/lib/use-refresh";
 
 /**
@@ -17,58 +18,6 @@ import { useRefreshAfterSave } from "@/lib/use-refresh";
  * そのときの内容を控える。控えがあるので、あとで内容が変わったときに
  * 「更新あり」と出せる。
  */
-
-type CopyResult = "idle" | "copied" | "manual";
-
-/** コピーの押しもの1つ分。うまくいかない環境では、選んで取れる形に切り替える。 */
-function CopyBlock({
-  label,
-  text,
-  summary,
-  ariaLabel,
-}: {
-  label: string;
-  text: string;
-  summary: string;
-  ariaLabel: string;
-}) {
-  const [result, setResult] = useState<CopyResult>("idle");
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setResult("copied");
-    } catch {
-      // クリップボードが使えない環境では、選んでコピーできる形で出す
-      setResult("manual");
-    }
-  };
-
-  return (
-    <div>
-      <InlineDetail summary={summary} open={result === "manual"}>
-        <textarea
-          aria-label={ariaLabel}
-          className="input mt-2 w-full font-mono text-note"
-          rows={8}
-          readOnly
-          value={text}
-        />
-      </InlineDetail>
-      <div className="mt-2">
-        <Button type="button" variant="secondary" onClick={() => void copy()}>
-          {label}
-        </Button>
-      </div>
-      {result === "copied" && <p className="m-0 mt-2 text-sub text-brand-deep">コピーしました。そのまま貼り付けてください。</p>}
-      {result === "manual" && (
-        <div className="mt-2" role="alert" aria-live="assertive">
-          <ReasonNote>この環境では自動でコピーできませんでした。上で開いた文面を選んでコピーしてください。</ReasonNote>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function ImprovementHandoutPanel({
   id,

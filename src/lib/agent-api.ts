@@ -6,10 +6,17 @@
  *
  * 数える順番は「回線 → 鍵」。鍵を確かめてから数えると、鍵を当てにくる相手は
  * 何度でも試せてしまう（外れた回が数に入らないため）。
+ *
+ * 鍵の在り処は2つある。画面から発行した鍵（ハッシュで保存）と、
+ * サーバーの設定値。どちらでも通す。片方だけにすると、すでに設定値で
+ * 動いている場所が止まるか、画面から使い始められないかのどちらかになる。
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { agentAuth } from "@/lib/domain/agent-api";
+import { agentAuth, readBearer } from "@/lib/domain/agent-api";
+import { activeAgentKeyHash, hashAgentKey, touchAgentKey } from "@/lib/agent-keys";
+import { getDb } from "@/lib/db";
+import { appOrigin } from "@/lib/origin";
 import { AGENT_API_RATE_LIMIT, consumeRateLimit } from "@/lib/rate-limit";
 
 interface AgentEnv {
@@ -17,10 +24,10 @@ interface AgentEnv {
 }
 
 /**
- * 鍵を読む。実行コンテキストが無い場所（テスト・手元の一部）では読めないので、
- * その場合は「未設定」と同じ扱いにする（設定手順を返して止まる）。
+ * サーバーの設定値の鍵を読む。実行コンテキストが無い場所（テスト・手元の一部）では
+ * 読めないので、その場合は「無い」として扱う（画面で発行した鍵だけで判定する）。
  */
-async function agentKey(): Promise<string | null> {
+async function envKey(): Promise<string | null> {
   try {
     const { env } = await getCloudflareContext({ async: true });
     return (env as unknown as AgentEnv).AGENT_API_KEY ?? null;
@@ -51,11 +58,30 @@ export async function guardAgentRequest(req: Request): Promise<Response | null> 
     });
   }
 
-  const auth = agentAuth(await agentKey(), req.headers.get("authorization"));
-  if (auth.ok) return null;
-  return textResponse(
-    auth.status,
-    auth.message,
-    auth.status === 401 ? { "www-authenticate": 'Bearer realm="improvements"' } : {},
+  const authorization = req.headers.get("authorization");
+  const given = readBearer(authorization);
+  const db = await getDb();
+  const active = await activeAgentKeyHash(db);
+  // 受け取った鍵は、突き合わせる前にハッシュへ変える。生のまま比べる先を作らない。
+  const givenHash = given ? await hashAgentKey(given) : null;
+
+  const auth = agentAuth(
+    { envKey: await envKey(), activeKeyHash: active?.hash ?? null },
+    authorization,
+    givenHash,
+    await appOrigin(),
   );
+  if (!auth.ok) {
+    return textResponse(
+      auth.status,
+      auth.message,
+      auth.status === 401 ? { "www-authenticate": 'Bearer realm="improvements"' } : {},
+    );
+  }
+
+  // 通った鍵が画面発行のものなら、使われたことを控える（配ったのに届いていない、に気づくため）。
+  if (active && givenHash && active.hash === givenHash) {
+    await touchAgentKey(db, active.id, active.lastUsedAt);
+  }
+  return null;
 }
