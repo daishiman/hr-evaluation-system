@@ -511,6 +511,51 @@ describe("PUT /api/improvements（一覧から記録票へ送る）", () => {
     expect(await testDb.db.select().from(s.improvementIssueLinks)).toHaveLength(0);
   });
 
+  it("たくさん選んでも、1件ずつ別の記録票になる（取り違えない）", async () => {
+    // 画面での目視確認の代わりに、まとめ送りの現実量をここで通す。
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    const ids = Array.from({ length: 30 }, (_, i) => `improve_bulk_${i}`);
+    for (const id of ids) {
+      await testDb.db.insert(s.improvementRequests).values({
+        id,
+        companyId: IDS.company,
+        reporterId: IDS.employee,
+        submissionKey: crypto.randomUUID(),
+        path: "/admin/members",
+        routePattern: "/admin/members",
+        screenLabel: "社員",
+        kind: "bug",
+        body: `保存できません（${id}）`,
+        status: "open",
+      });
+    }
+    let next = 200;
+    mocked.createGithubIssue.mockImplementation(async () => {
+      next += 1;
+      return { number: next, url: `https://github.com/owner/repo/issues/${next}` };
+    });
+
+    const actions: string[] = [];
+    for (const id of ids) actions.push((await resultOf(await PUT(putRequest(id)))).action);
+
+    expect(actions.every((a) => a === "created")).toBe(true);
+    const links = await testDb.db.select().from(s.improvementIssueLinks);
+    expect(links).toHaveLength(30);
+    // 番号の使い回しが起きていない（1つの記録票に複数の要望が乗らない）
+    expect(new Set(links.map((l) => l.issueNumber)).size).toBe(30);
+  });
+
+  it("同時に2回押されても、記録票は1つしか立たない", async () => {
+    await seed();
+    mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
+    const responses = await Promise.all([PUT(putRequest()), PUT(putRequest())]);
+    const actions = await Promise.all(responses.map(async (r) => (await resultOf(r)).action));
+
+    expect(actions.filter((a) => a === "created")).toHaveLength(1);
+    expect(mocked.createGithubIssue).toHaveBeenCalledTimes(1);
+    expect(await testDb.db.select().from(s.improvementIssueLinks)).toHaveLength(1);
+  });
+
   it("会社の管理者は押せない（社外へ出る操作のため）", async () => {
     await seed();
     mocked.apiViewer.mockRejectedValue(new HttpError(403, "権限がありません。"));
