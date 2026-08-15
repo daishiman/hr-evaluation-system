@@ -2,9 +2,14 @@ import { requireRole } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { envKeyEnabled, listAgentKeys } from "@/lib/agent-keys";
 import { hasEnvKey } from "@/lib/agent-api";
-import { AgentKeyPanel, type AgentKeyView } from "@/components/AgentKeyPanel";
+import { listAgentSessions } from "@/lib/agent-device";
+import { AgentKeyPanel, type AgentKeyView, type AgentSessionView } from "@/components/AgentKeyPanel";
 import { PageTitle } from "@/components/ui";
 import { formatDateTime } from "@/lib/view";
+import {
+  sessionDisplayName,
+  sessionExpiryNote,
+} from "@/lib/domain/agent-device";
 import {
   AGENT_KEY_PAGE_LABEL,
   agentKeyDisplayName,
@@ -33,6 +38,7 @@ export const dynamic = "force-dynamic";
 export default async function SystemAgentKeys() {
   await requireRole("SUPER_ADMIN");
   const keys = await listAgentKeys();
+  const sessions = await listAgentSessions();
   const db = await getDb();
   const [envConfigured, envEnabled] = await Promise.all([hasEnvKey(), envKeyEnabled(db)]);
 
@@ -54,13 +60,31 @@ export default async function SystemAgentKeys() {
     };
   });
 
+  const now = new Date();
+  const sessionViews: AgentSessionView[] = sessions.map((v) => ({
+    id: v.id,
+    name: sessionDisplayName(v.label),
+    active: v.revokedAt === null,
+    stateLabel: v.revokedAt ? "止めました" : "使えます",
+    tone: v.revokedAt ? "dropped" : "done",
+    scopeText: agentKeyScopeNote({ companyName: v.companyName, scopes: v.scopes }),
+    createdText: `${formatDateTime(v.createdAt)}／${v.createdByName ?? "退職された方"}`,
+    lastUsedText: v.lastUsedAt ? formatDateTime(v.lastUsedAt) : agentKeyUsageNote(v.lastUsedAt),
+    expiryText: v.revokedAt ? "止めた端末です。" : sessionExpiryNote(v.refreshExpiresAt, now),
+  }));
+
   return (
     <>
       <PageTitle
         title={AGENT_KEY_PAGE_LABEL}
-        lede="届いた改善要望を Claude Code が受け取るための鍵を、ここで発行します。"
+        lede="Claude Code が改善要望を受け取るための、端末と鍵の管理です。"
       />
-      <AgentKeyPanel keys={views} envConfigured={envConfigured} envEnabled={envEnabled} />
+      <AgentKeyPanel
+        keys={views}
+        sessions={sessionViews}
+        envConfigured={envConfigured}
+        envEnabled={envEnabled}
+      />
     </>
   );
 }

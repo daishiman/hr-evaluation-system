@@ -21,6 +21,14 @@ import {
   envKeyToggleConfirm,
   envKeyToggleLabel,
 } from "@/lib/domain/agent-keys";
+import {
+  DEVICE_APPROVE_NOTE,
+  DEVICE_UNKNOWN_MESSAGE,
+  LEGACY_KEY_NOTICE,
+  SESSION_LIST_EMPTY_TITLE,
+  normalizeUserCode,
+  sessionRevokeConfirmText,
+} from "@/lib/domain/agent-device";
 import { useRefreshAfterSave } from "@/lib/use-refresh";
 
 /**
@@ -64,14 +72,30 @@ interface ApiResult {
   key?: string;
   envFileLine?: string;
   prompt?: string;
+  question?: string;
+}
+
+/** 通した端末の1台ぶん。日時は画面側で文字にしてから渡す。 */
+export interface AgentSessionView {
+  id: string;
+  name: string;
+  active: boolean;
+  stateLabel: string;
+  tone: "done" | "dropped";
+  scopeText: string;
+  createdText: string;
+  lastUsedText: string;
+  expiryText: string;
 }
 
 export function AgentKeyPanel({
   keys,
+  sessions,
   envConfigured,
   envEnabled,
 }: {
   keys: AgentKeyView[];
+  sessions: AgentSessionView[];
   envConfigured: boolean;
   envEnabled: boolean;
 }) {
@@ -81,6 +105,8 @@ export function AgentKeyPanel({
   const [message, setMessage] = useState<string | null>(null);
   const [issued, setIssued] = useState<IssuedKey | null>(null);
   const [label, setLabel] = useState("");
+  const [userCode, setUserCode] = useState("");
+  const [question, setQuestion] = useState<string | null>(null);
 
   const activeKeys = keys.filter((k) => k.active);
   const canIssue = canIssueAgentKey(activeKeys.length);
@@ -131,6 +157,44 @@ export function AgentKeyPanel({
     refresh();
   };
 
+  /**
+   * 打ち込まれた合言葉が何なのかを、押す前に確かめる。
+   * 合言葉だけを見て通すと、心当たりのない端末をそのまま通してしまう。
+   */
+  const checkCode = async () => {
+    setQuestion(null);
+    const code = normalizeUserCode(userCode);
+    if (!code) {
+      setError(DEVICE_UNKNOWN_MESSAGE);
+      return;
+    }
+    const json = await send(`/api/agent-keys/approve?userCode=${encodeURIComponent(code)}`, {
+      method: "GET",
+    });
+    if (!json?.question) return;
+    setQuestion(json.question);
+  };
+
+  const decideCode = async (approve: boolean) => {
+    const json = await send("/api/agent-keys/approve", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ userCode, approve }),
+    });
+    if (!json) return;
+    setMessage(json.message ?? "受け付けました。");
+    setQuestion(null);
+    setUserCode("");
+    refresh();
+  };
+
+  const revokeSession = async (id: string) => {
+    const json = await send(`/api/agent-keys/approve?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!json) return;
+    setMessage(json.message ?? "止めました。");
+    refresh();
+  };
+
   const toggleEnvKey = async () => {
     const json = await send("/api/agent-keys", {
       method: "PUT",
@@ -144,8 +208,103 @@ export function AgentKeyPanel({
 
   return (
     <>
-      <SectionHeading help="鍵が1本も無い間は、受け取りの入口は何も返しません。">鍵を発行する</SectionHeading>
+      <SectionHeading help="ターミナルに出た合言葉を、ここに打ち込みます。">端末を通す</SectionHeading>
       <Card className="card-pad">
+        {error && <ReasonNote>{error}</ReasonNote>}
+        <RefreshStatus message={message} refreshing={refreshing} target="画面" />
+        <p className="m-0">手元で `pnpm improvements login` を実行すると、合言葉が出ます。</p>
+        <label className="footnote mt-3 block" htmlFor="agent_user_code">
+          合言葉（8文字）
+        </label>
+        <input
+          id="agent_user_code"
+          className="input w-full"
+          type="text"
+          value={userCode}
+          maxLength={20}
+          placeholder="ABCD-2345"
+          autoComplete="off"
+          onChange={(e) => {
+            setUserCode(e.target.value);
+            setQuestion(null);
+          }}
+        />
+        {question ? (
+          <div className="mt-4">
+            <p className="m-0 font-bold">{question}</p>
+            <p className="footnote m-0 mt-2">{DEVICE_APPROVE_NOTE}</p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => void decideCode(true)}
+                disabled={busy || refreshing}
+              >
+                {busy ? "送っています…" : "この端末を通す"}
+              </Button>
+              <Button
+                type="button"
+                variant="danger-outline"
+                onClick={() => void decideCode(false)}
+                disabled={busy || refreshing}
+              >
+                通さない
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void checkCode()}
+              disabled={busy || refreshing}
+            >
+              {busy ? "確かめています…" : "合言葉を確かめる"}
+            </Button>
+          </div>
+        )}
+      </Card>
+
+      <SectionHeading help="通行証は15分で切れ、手元で自動的に取り直します。">通した端末</SectionHeading>
+      {sessions.length === 0 ? (
+        <EmptyState
+          title={SESSION_LIST_EMPTY_TITLE}
+          body="上の「端末を通す」で合言葉を通すと、ここに並びます。"
+        />
+      ) : (
+        <RecordList
+          items={sessions.map((v) => ({
+            key: v.id,
+            title: v.name,
+            marks: <Badge tone={v.tone}>{v.stateLabel}</Badge>,
+            off: !v.active,
+            rows: [
+              { label: "届く範囲", value: v.scopeText },
+              { label: "通した人と日時", value: v.createdText },
+              { label: "最後に使われた日時", value: v.lastUsedText },
+              { label: "入り直しの時期", value: v.expiryText },
+            ],
+            action: v.active ? (
+              <ConfirmButton
+                label="この端末を止める"
+                confirm={sessionRevokeConfirmText(v.name)}
+                variant="danger-outline"
+                busy={busy}
+                busyLabel="止めています…"
+                disabled={refreshing}
+                onConfirm={() => void revokeSession(v.id)}
+              />
+            ) : undefined,
+          }))}
+        />
+      )}
+
+      <SectionHeading help="鍵が1本も無い間は、受け取りの入口は何も返しません。">
+        鍵を発行する（古い方式）
+      </SectionHeading>
+      <Card className="card-pad">
+        <ReasonNote>{LEGACY_KEY_NOTICE}</ReasonNote>
         {error && <ReasonNote>{error}</ReasonNote>}
         <RefreshStatus message={message} refreshing={refreshing} target="画面" />
 

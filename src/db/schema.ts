@@ -1531,3 +1531,66 @@ export const agentKeySettings = sqliteTable("agent_key_settings", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }),
   updatedById: text("updated_by_id").references(() => users.id),
 });
+
+/**
+ * ブラウザで承認して端末を通すときの、承認待ちの1件。
+ *
+ * 合言葉（user_code）は人が画面に打ち込むもので短い。だから10分で切れる
+ * 使い捨てにし、通行証そのものは device_code_hash 側でしか引き取れない。
+ * 短い方だけを知っても何も取り出せないようにするための分け方。
+ */
+export const agentDeviceGrants = sqliteTable(
+  "agent_device_grants",
+  {
+    id: id(),
+    /** 画面に打ち込む8文字。読み違えない文字だけを使う（→ domain/agent-device.ts）。 */
+    userCode: text("user_code").notNull(),
+    /** 台本だけが持つ長い文字列の SHA-256。引き取りにはこちらが要る。 */
+    deviceCodeHash: text("device_code_hash").notNull(),
+    /** どの端末か（例: 自宅の Claude Code）。承認する人はこの名前を見て判断する。 */
+    label: text("label").notNull().default(""),
+    createdAt: createdAt(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    approvedAt: integer("approved_at", { mode: "timestamp_ms" }),
+    approvedById: text("approved_by_id").references(() => users.id),
+    /** 承認した人の会社を焼き込む。あとから広げられる作りにしない。 */
+    companyId: text("company_id").references(() => companies.id),
+    deniedAt: integer("denied_at", { mode: "timestamp_ms" }),
+    /** 承認のときに作った通行証。引き取りは1回だけで、そのあとは消す。 */
+    sessionId: text("session_id"),
+  },
+  (t) => [
+    uniqueIndex("idx_agent_device_grants_code").on(t.userCode),
+    index("idx_agent_device_grants_hash").on(t.deviceCodeHash),
+  ],
+);
+
+/**
+ * 承認が済んだ端末の通行証。短い方（access）と長い方（refresh）を1行で持つ。
+ *
+ * 短い方は15分で切れ、台本が長い方で黙って取り直す。漏れても15分で
+ * 使えなくなるので、鍵を手で配って回る運用をやめられる。
+ * 保存するのはどちらもハッシュだけで、平文は発行の応答1回きり。
+ */
+export const agentSessions = sqliteTable(
+  "agent_sessions",
+  {
+    id: id(),
+    label: text("label").notNull().default(""),
+    companyId: text("company_id").references(() => companies.id),
+    scopes: text("scopes").notNull().default("improvements:read"),
+    refreshHash: text("refresh_hash").notNull(),
+    refreshExpiresAt: integer("refresh_expires_at", { mode: "timestamp_ms" }).notNull(),
+    accessHash: text("access_hash"),
+    accessExpiresAt: integer("access_expires_at", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+    createdById: text("created_by_id").references(() => users.id),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    revokedById: text("revoked_by_id").references(() => users.id),
+  },
+  (t) => [
+    index("idx_agent_sessions_access").on(t.accessHash),
+    index("idx_agent_sessions_refresh").on(t.refreshHash),
+  ],
+);
