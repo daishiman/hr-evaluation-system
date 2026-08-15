@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { getDb, schema } from "@/lib/db";
 import { isImprovementStatus } from "@/lib/domain/improvement";
+import { isImprovementKind } from "@/lib/domain/improvement-issue";
 import { canSeeCriteria, type Viewer } from "@/lib/session";
 import {
   employeePromotionBlockedReason,
@@ -936,6 +937,7 @@ export async function listImprovementRequests(companyId: string) {
       routePattern: s.improvementRequests.routePattern,
       screenLabel: s.improvementRequests.screenLabel,
       body: s.improvementRequests.body,
+      kind: s.improvementRequests.kind,
       status: s.improvementRequests.status,
       viewport: s.improvementRequests.viewport,
       handledNote: s.improvementRequests.handledNote,
@@ -944,18 +946,22 @@ export async function listImprovementRequests(companyId: string) {
       reporterName: reporter.name,
       handledByName: handler.name,
       shotBytes: s.improvementShots.bytes,
+      issueNumber: s.improvementIssueLinks.issueNumber,
     })
     .from(s.improvementRequests)
     .leftJoin(reporter, eq(reporter.id, s.improvementRequests.reporterId))
     .leftJoin(handler, eq(handler.id, s.improvementRequests.handledById))
     .leftJoin(s.improvementShots, eq(s.improvementShots.requestId, s.improvementRequests.id))
+    .leftJoin(s.improvementIssueLinks, eq(s.improvementIssueLinks.requestId, s.improvementRequests.id))
     .where(eq(s.improvementRequests.companyId, companyId))
     .orderBy(desc(s.improvementRequests.createdAt));
 
   return rows.map((r) => ({
     ...r,
     status: isImprovementStatus(r.status) ? r.status : ("open" as const),
+    kind: isImprovementKind(r.kind) ? r.kind : ("request" as const),
     hasShot: r.shotBytes !== null,
+    hasIssue: r.issueNumber !== null,
   }));
 }
 
@@ -971,6 +977,9 @@ export async function getImprovementRequest(companyId: string, id: string) {
       routePattern: s.improvementRequests.routePattern,
       screenLabel: s.improvementRequests.screenLabel,
       body: s.improvementRequests.body,
+      kind: s.improvementRequests.kind,
+      expected: s.improvementRequests.expected,
+      diagnostics: s.improvementRequests.diagnostics,
       status: s.improvementRequests.status,
       viewport: s.improvementRequests.viewport,
       userAgent: s.improvementRequests.userAgent,
@@ -978,17 +987,26 @@ export async function getImprovementRequest(companyId: string, id: string) {
       createdAt: s.improvementRequests.createdAt,
       updatedAt: s.improvementRequests.updatedAt,
       reporterName: reporter.name,
+      reporterRole: reporter.role,
       handledByName: handler.name,
       shot: s.improvementShots.dataUrl,
+      issueNumber: s.improvementIssueLinks.issueNumber,
+      issueUrl: s.improvementIssueLinks.issueUrl,
     })
     .from(s.improvementRequests)
     .leftJoin(reporter, eq(reporter.id, s.improvementRequests.reporterId))
     .leftJoin(handler, eq(handler.id, s.improvementRequests.handledById))
     .leftJoin(s.improvementShots, eq(s.improvementShots.requestId, s.improvementRequests.id))
+    .leftJoin(s.improvementIssueLinks, eq(s.improvementIssueLinks.requestId, s.improvementRequests.id))
     .where(and(eq(s.improvementRequests.companyId, companyId), eq(s.improvementRequests.id, id)))
     .limit(1);
 
   const r = rows[0];
   if (!r) return null;
-  return { ...r, status: isImprovementStatus(r.status) ? r.status : ("open" as const) };
+  return {
+    ...r,
+    status: isImprovementStatus(r.status) ? r.status : ("open" as const),
+    kind: isImprovementKind(r.kind) ? r.kind : ("request" as const),
+    hasShot: r.shot !== null,
+  };
 }

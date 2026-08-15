@@ -1,6 +1,6 @@
 # 現在の残課題
 
-最終更新: 2026-08-14
+最終更新: 2026-08-15
 
 この文書は、未解決事項だけを扱う current SSOT です。完了した内容と判断の経緯は [統合台帳の履歴](./backlog-history-2026-08-13.md) と [回ごとの記録](./backlog-session-notes.md) に保存します。
 
@@ -51,6 +51,8 @@
 | FEATURE-020 | observe | アーカイブ済みイベントの UI が限定的 | 一覧・復元要求が発生 | 読み取り専用一覧と復元権限を設計 | [回ごとの記録 V2](./backlog-session-notes.md) |
 | FEATURE-021 | observe | 等級の変遷は評価行からしか辿れず、評価のない期の昇格は推移に出ない | 期中昇格の可視化が要求される | 等級履歴を独立して持つか、評価行からの導出のままとするかを決める | [実装](../../src/lib/domain/evaluation-trend.ts) |
 | FEATURE-022 | observe | 改善要望を送った本人に、その後の対応状況が返らない（読めるのは管理者だけ） | 「送ったが放置されているのでは」という申告が出る | 送った本人の画面に自分の要望と状態を出すか、状態変更時に通知するかを決める | [仕様 §26-6](./spec.md) / [実装](../../src/app/admin/improvements/page.tsx) |
+| FEATURE-023 | observe | 記録票を作ったあと GitHub 側で閉じても、アプリ側の状態は「対応中」のまま残る | 記録票の件数が増え、二重管理の手間が申告される | 状態を GitHub から取り込むか、アプリ側の状態を記録票の有無だけに縮めるかを決める | [仕様 §26-8](./spec.md) / [実装](../../src/app/api/improvements/[id]/route.ts) |
+| FEATURE-024 | observe | 記録票を作れるのはシステム全体管理者だけで、会社の管理者から開発へ渡す導線がない | 会社の管理者から「これを先に直してほしい」という指名が繰り返し発生 | 会社の管理者が「開発へ回す」と印を付け、全体管理者がまとめて起票する形にするかを決める | [仕様 §26-8](./spec.md) / [実装](../../src/app/admin/improvements/[id]/page.tsx) |
 
 ## UX・アクセシビリティ
 
@@ -111,7 +113,7 @@
 | PERFORMANCE-001 | observe | 一覧は数百件超でページングが必要 | 対象データが数百件に達する | cursor または keyset 方式を導入 | [旧台帳 D1](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-002 | observe | マスタ参照は都度 D1 を読む | 読取負荷・待ち時間が問題化 | キャッシュ範囲と無効化を設計 | [旧台帳 D11](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-003 | ready | 本番端末・回線で Core Web Vitals を計測していない | 次の性能確認 | 主要画面を実測し基準超過だけ改善 | [旧台帳 UX101](./backlog-history-2026-08-13.md) |
-| PERFORMANCE-004 | ready | 公開バンドルの圧縮後実測が 2,632.0 KiB（無料プラン3,072 KiBの85.7%）で警告域に入った（改善要望の撮影ライブラリは押したときだけ遅延読込） | 次の機能追加・依存更新前 | `wrangler deploy --dry-run` の構成内訳を比較し、未使用・重複コードを優先して3072 KiBまでの余白を戻す | [容量チェック](../../scripts/check-bundle-size.mjs) / [デプロイ注意](../deploy-notes.md) |
+| PERFORMANCE-004 | ready | 公開バンドルの圧縮後実測が 2,665.8 KiB（無料プラン3,072 KiBの86.8%）で警告域に入った（改善要望の撮影ライブラリは押したときだけ遅延読込。API の道を1本増やすと依存一式が重複し約0.5MB増えるため、記録票の起票は既存の道へ同居させた） | 次の機能追加・依存更新前 | `wrangler deploy --dry-run` の構成内訳を比較し、未使用・重複コードを優先して3072 KiBまでの余白を戻す | [容量チェック](../../scripts/check-bundle-size.mjs) / [デプロイ注意](../deploy-notes.md) |
 | PERFORMANCE-005 | observe | 改善要望の画像を R2 ではなく D1 に data URL で持つ（バインディングが無いため）。1件あたり最大 700KB | `SUM(improvement_shots.bytes)`を定期計測し500MB到達、または詳細画像読取p95が500ms超を2週連続で観測 | R2 バインディングを足し、画像本体を移して D1 には鍵だけ残す。移行前に総bytes・件数・p95の内容非保持メトリクスを用意する | [仕様 §26-5](./spec.md) / [保存契約](../../system-spec/improvement-requests.md) |
 | SCALE-001 | observe | 管理画面の件数取得は会社数増加時に要確認 | 20 社または高負荷を観測 | クエリ計画を測り必要箇所だけ集約化 | [回ごとの記録 N4・N6](./backlog-session-notes.md) |
 | SCALE-002 | decision | フォーム数・KPI 項目数の上限が未定義 | 複数フォーム運用を制度化 | ドメイン上限と超過時の案内を決める | [回ごとの記録 R2・R4](./backlog-session-notes.md) |

@@ -63,6 +63,20 @@ pnpm run check:bundle-size
 
 [容量検査スクリプト](../scripts/check-bundle-size.mjs) は gzip 後サイズを Cloudflare の設定済み上限と比較します。Deploy workflow でも同じ検査を行い、超過時は配布前に停止します。最新の実測値は workflow log を参照してください。
 
-## 5. 失敗時
+## 5. 改善要望から記録票（GitHub Issue）を作るための設定
+
+`/admin/improvements` の詳細画面から Issue を起票する機能は、次の2つが揃ってから動きます。未設定でも要望の投稿・閲覧は動き、起票だけが 503 と設定手順を返します。
+
+| 名前 | 置き場所 | 値 |
+|---|---|---|
+| `GITHUB_REPO` | `wrangler.jsonc` の `vars`（秘密ではない） | `owner/repo` |
+| `GITHUB_TOKEN` | Cloudflare Secrets（`wrangler secret put GITHUB_TOKEN`） | Issues への書き込み権限だけを付けた fine-grained token |
+
+- token はブラウザへ渡らず、Workers 側でのみ使います。client bundle へ入れないため、`NEXT_PUBLIC_` を付けた名前にしません。
+- 権限は対象リポジトリの Issues: Read and write だけに絞ります。contents への書き込みは不要です。
+- ローカルで試すときは `.dev.vars` に `GITHUB_TOKEN=...` を置きます（このファイルは追跡しません）。
+- token を差し替えたら `wrangler secret put` を再実行します。再配布は不要です。
+
+## 6. 失敗時
 
 自動ロールバックは行いません。migration適用後にDeployだけが失敗した場合は、まず同じDeploy workflowを再実行します。適用済みmigrationは再適用されず、未適用0件の確認後に配布から再開します。旧 isolate、認証・設定不備を切り分けてから `wrangler rollback` を選び、DBを戻す必要がある場合はArtifactのバックアップとmigrationの互換性を確認してください。

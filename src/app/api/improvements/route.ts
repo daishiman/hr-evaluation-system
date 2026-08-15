@@ -8,6 +8,12 @@ import {
   normalizeImprovementBody,
   shotBytesOf,
 } from "@/lib/domain/improvement";
+import {
+  IMPROVEMENT_EXPECTED_MAX,
+  IMPROVEMENT_KINDS,
+  normalizeDiagnostics,
+  serializeDiagnostics,
+} from "@/lib/domain/improvement-issue";
 import { routeIdentityOf } from "@/lib/nav";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
 import { findImprovementBySubmission, saveImprovementRequest } from "@/lib/improvement-write";
@@ -22,6 +28,10 @@ const bodySchema = z.object({
     message: "画面のパスを確認してください",
   }),
   body: z.string().min(1, "改善したいことを入力してください").max(IMPROVEMENT_BODY_MAX),
+  kind: z.enum(IMPROVEMENT_KINDS),
+  expected: z.string().max(IMPROVEMENT_EXPECTED_MAX).nullish(),
+  /** 形は信用せず、中身は normalizeDiagnostics で切り直す（ここでは器だけ確かめる）。 */
+  diagnostics: z.record(z.string(), z.unknown()).nullish(),
   viewport: z.string().regex(/^\d{2,5}×\d{2,5}$/).nullish(),
   shot: z.string().nullish(),
   submissionKey: z.string().uuid(),
@@ -73,6 +83,10 @@ export async function POST(req: Request) {
         routePattern: route.routePattern,
         screenLabel: route.label,
         body,
+        kind: input.kind,
+        expected: input.expected?.trim() || null,
+        // 技術情報が大きすぎたり壊れていたりしても、要望そのものは必ず保存する。
+        diagnostics: input.diagnostics ? serializeDiagnostics(normalizeDiagnostics(input.diagnostics)) : null,
         viewport: input.viewport ?? null,
         userAgent: req.headers.get("user-agent")?.slice(0, 300) ?? null,
         shot: input.shot ?? null,

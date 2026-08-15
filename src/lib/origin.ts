@@ -20,10 +20,17 @@ export async function appOrigin(): Promise<string> {
   const configured = (process.env.APP_ORIGIN ?? (await cloudflareAppOrigin()))?.trim();
   if (configured) return configured.replace(/\/+$/, "");
 
-  const h = await headers();
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  const host = h.get("host") ?? "";
-  return host ? `${proto}://${host}` : "";
+  // ヘッダーは「リクエストの中」でしか読めない。テストやバックグラウンド処理から
+  // 呼ばれると例外になるが、そこで落とすと URL を1つ出せないだけで処理全体が失敗する。
+  // 設定（APP_ORIGIN）が入っている本番では、そもそもここまで来ない。
+  try {
+    const h = await headers();
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    const host = h.get("host") ?? "";
+    return host ? `${proto}://${host}` : "";
+  } catch {
+    return "";
+  }
 }
 
 /**
