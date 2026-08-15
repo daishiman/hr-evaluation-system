@@ -4,6 +4,7 @@ import { apiViewer, HttpError } from "@/lib/session";
 import { handle } from "@/lib/api";
 import {
   IMPROVEMENT_BODY_MAX,
+  IMPROVEMENT_REQUEST_MAX_BYTES,
   improvementStatusLabel,
   isAcceptableShot,
   normalizeImprovementBody,
@@ -41,8 +42,6 @@ import { applyDisposition } from "@/lib/improvement-disposition";
 import { DISPOSITION_ACTIONS } from "@/lib/domain/improvement-disposition";
 
 export const dynamic = "force-dynamic";
-
-export const IMPROVEMENT_REQUEST_MAX_BYTES = 960_000;
 
 const bodySchema = z.object({
   path: z.string().min(1).max(300).refine((value) => value.startsWith("/") && !value.startsWith("//"), {
