@@ -1,5 +1,6 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -34,6 +35,7 @@ export function AccountMenu({
   needsPasswordChange: boolean;
 }) {
   const router = useRouter();
+  const { refresh } = useRefreshAfterSave();
   const pathname = usePathname();
   const popoverId = useId();
   const [open, setOpen] = useState(false);
@@ -163,7 +165,7 @@ export function AccountMenu({
                   const result = await signOut();
                   if (result.error) throw new Error(result.error.message);
                   router.replace("/login");
-                  router.refresh();
+                  refresh();
                 } catch {
                   setError("ログアウトできませんでした。通信状況を確認して、もう一度お試しください。");
                   setBusy(false);

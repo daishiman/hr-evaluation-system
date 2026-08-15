@@ -1,7 +1,7 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
@@ -14,6 +14,7 @@ import {
   kpiCategoryDeleteConfirmText,
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 export interface KpiCategoryRow {
   id: string;
@@ -30,7 +31,7 @@ export interface KpiCategoryRow {
  * 既存7カテゴリはすべて何らかのKPI項目に紐づいているため、常に消せない（＝壊れない）。
  */
 export function KpiCategoryEditor({ categories, usage }: { categories: KpiCategoryRow[]; usage: UsageMap }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
       }
       setMessage(json.message ?? "追加しました。");
       setNewName(null);
-      router.refresh();
+      refresh();
     } catch {
       setError("通信できませんでした。もう一度お試しください。");
     } finally {
@@ -69,7 +70,7 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
     const result = await requestMasterDelete("kpiCategory", id);
     if (result.ok) {
       setMessage(result.message);
-      router.refresh();
+      refresh();
     } else {
       setError(result.message);
     }
@@ -82,7 +83,7 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
   return (
     <div className="stack">
       {error && <ReasonNote>{error}</ReasonNote>}
-      {message && <p className="m-0 text-sub text-brand-deep">{message}</p>}
+      <RefreshStatus message={message} refreshing={refreshing} />
 
       {categories.map((c) => {
         const mark = blockedMark(usedByOf(c.id));
@@ -99,7 +100,8 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
                     <ConfirmButton
                       label={DELETE_LABEL}
                       variant="danger-outline"
-                      busy={busy}
+                      busy={busy || refreshing}
+                      busyLabel={busy ? "削除しています…" : "一覧に反映しています…"}
                       confirm={kpiCategoryDeleteConfirmText(c.name)}
                       onConfirm={() => void remove(c.id)}
                     />
@@ -115,7 +117,7 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
       <Card className="card-pad">
         {newName === null ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" disabled={busy} onClick={() => setNewName("")}>
+            <Button variant="secondary" disabled={busy || refreshing} onClick={() => setNewName("")}>
               カテゴリを追加する
             </Button>
             <span className="footnote">新しいKPIの分類を1つ増やします。</span>
@@ -132,10 +134,10 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
               />
             </label>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button variant="primary" disabled={busy || newName.trim() === ""} onClick={() => void create()}>
-                追加する
+              <Button variant="primary" disabled={busy || refreshing || newName.trim() === ""} onClick={() => void create()}>
+                {busy ? "追加しています…" : refreshing ? "一覧に反映しています…" : "追加する"}
               </Button>
-              <Button variant="tertiary" disabled={busy} onClick={() => setNewName(null)}>
+              <Button variant="tertiary" disabled={busy || refreshing} onClick={() => setNewName(null)}>
                 やめる
               </Button>
             </div>

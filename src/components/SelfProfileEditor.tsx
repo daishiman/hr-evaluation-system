@@ -1,9 +1,10 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { hasIcon, Icon } from "@/components/Icon";
 import { Button, HintToggle, RowAction } from "@/components/ui";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
  * 自分の登録内容の一覧と、その場での書き換え。
@@ -31,7 +32,7 @@ export interface ProfileRow {
 }
 
 export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [editing, setEditing] = useState<string | null>(null);
   const [openHint, setOpenHint] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -68,7 +69,7 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
       }
       setEditing(null);
       setSaved(row.key);
-      router.refresh();
+      refresh();
     } catch {
       setError("通信できませんでした。入力した内容はこの画面に残っています。");
     } finally {
@@ -77,7 +78,7 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
   };
 
   return (
-    <div className="profile-rows">
+    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="profile-rows m-0 min-w-0 border-0 p-0">
       {rows.map((row) => {
         const isEditing = editing === row.key;
         const hintOpen = openHint === row.key;
@@ -126,12 +127,12 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
                     }}
                   />
                   <Button type="submit" variant="primary" disabled={busy}>
-                    {busy ? "保存しています…" : "保存"}
+                    {busy ? "保存しています…" : refreshing ? "表示に反映しています…" : "保存"}
                   </Button>
                   <Button
                     type="button"
                     variant="tertiary"
-                    disabled={busy}
+                    disabled={busy || refreshing}
                     onClick={() => {
                       setEditing(null);
                       setError(null);
@@ -144,10 +145,12 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
                 <p className="profile-row-value">
                   {row.value ?? <span className="text-ink-muted">未設定</span>}
                   {saved === row.key && (
-                    <span className="profile-saved pop-in" role="status">
-                      <Icon name="check" size={13} />
-                      保存しました
-                    </span>
+                    <RefreshStatus
+                      message="保存しました。"
+                      refreshing={refreshing}
+                      target="表示"
+                      className="profile-saved pop-in"
+                    />
                   )}
                 </p>
               )}
@@ -181,6 +184,6 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
           {error}
         </p>
       )}
-    </div>
+    </fieldset>
   );
 }

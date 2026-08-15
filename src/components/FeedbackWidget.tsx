@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Button, ChoiceChip, InlineDetail, ReasonNote } from "@/components/ui";
 import { routeMetaOf } from "@/lib/nav";
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { IMPROVEMENT_BODY_MAX, IMPROVEMENT_SHOT_MAX_BYTES, shotBytesOf } from "@/lib/domain/improvement";
 import {
   DIAGNOSTICS_LEVEL_NOTE,
@@ -118,6 +119,7 @@ function exportCanvas(canvas: HTMLCanvasElement): string | null {
 
 export function FeedbackWidget() {
   const pathname = usePathname();
+  const { refresh } = useRefreshAfterSave();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLImageElement | null>(null);
@@ -480,6 +482,9 @@ export function FeedbackWidget() {
         return;
       }
       setSent(true);
+      /* 管理者が「届いた改善要望」を開いたまま送ることがある。
+         その場で一覧へ載せる（読み直しを求めない）。 */
+      refresh();
       setBody("");
       setExpected("");
       setShot(null);

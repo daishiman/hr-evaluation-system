@@ -1,12 +1,13 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button, Card, ReasonNote } from "@/components/ui";
 import { DetailDialogButton } from "@/components/ConfirmButton";
 import { DataTable } from "@/components/DataTable";
 import { toCsv } from "@/lib/csv";
 import type { IssuedMemberCredential } from "@/lib/domain/initial-password";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 type MemberRowResult = {
   row: number;
@@ -60,7 +61,7 @@ const CSV_COLUMNS = [
  * 読み切るものなので窓に畳む（発注者の指摘、2026-08-12。消さずに置き場所を変える）。
  */
 export function MembersCsvImport() {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -108,7 +109,7 @@ export function MembersCsvImport() {
       setRows(data.rows ?? []);
       setCredentials(dryRun ? [] : (data.credentials ?? []));
       setChecked(dryRun);
-      if (!dryRun) router.refresh();
+      if (!dryRun) refresh();
     } catch {
       setError("通信できませんでした。時間をおいてもう一度お試しください。");
     } finally {
@@ -147,6 +148,7 @@ export function MembersCsvImport() {
             type="file"
             accept=".csv,text/csv"
             className="mt-1 block w-full text-sub font-normal"
+            disabled={busy || refreshing}
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
@@ -164,6 +166,7 @@ export function MembersCsvImport() {
             className="input mt-1 w-full font-mono text-note"
             rows={4}
             value={text}
+            disabled={busy || refreshing}
             onChange={(e) => {
               setText(e.target.value);
               setFileName(null);
@@ -179,11 +182,11 @@ export function MembersCsvImport() {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Button variant="tertiary" onClick={() => run(true)} disabled={busy}>
+        <Button variant="tertiary" onClick={() => run(true)} disabled={busy || refreshing}>
           まず内容を確認する
         </Button>
-        <Button onClick={() => run(false)} disabled={busy}>
-          {busy ? "処理しています…" : "この内容を取り込む"}
+        <Button onClick={() => run(false)} disabled={busy || refreshing}>
+          {busy ? "処理しています…" : refreshing ? "一覧に反映しています…" : "この内容を取り込む"}
         </Button>
       </div>
 
@@ -192,7 +195,7 @@ export function MembersCsvImport() {
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="mt-3 m-0 text-sub font-bold">{message}</p>}
+      <RefreshStatus message={message} refreshing={refreshing} className="mt-3 m-0 text-sub font-bold" />
 
       {credentials.length > 0 && (
         <div className="mt-3">
@@ -200,7 +203,7 @@ export function MembersCsvImport() {
             仮パスワードは今回だけ表示します。この画面を離れる前に一覧を保存し、それぞれご本人へ安全な方法でお伝えください。
           </ReasonNote>
           <div className="mt-2">
-            <Button type="button" variant="tertiary" onClick={() => downloadCredentials(credentials)}>
+            <Button type="button" variant="tertiary" disabled={refreshing} onClick={() => downloadCredentials(credentials)}>
               仮パスワード一覧を保存する
             </Button>
           </div>

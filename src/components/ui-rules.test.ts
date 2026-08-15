@@ -1051,3 +1051,77 @@ describe("色と選択肢の見た目は1箇所で決める（画面に直書き
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
 });
+
+describe("絵の作法", () => {
+  it("絵の実物を持ってよいのは Icon.tsx だけ（画面が絵の名前を直接呼ばない）", () => {
+    /* 画面ごとに絵の部品を名指しすると、同じ意味に違う絵が付き、
+       あとから絵を差し替えるときに全画面を追うことになる。
+       意味の名前（save / users / warning …）と実物の対応は Icon.tsx の1枚の表に置く。 */
+    const owner = join(SRC, "components", "Icon.tsx");
+    const offenders = sourceFiles.filter((p) => p !== owner && readFileSync(p, "utf8").includes("lucide-react"));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("絵文字を画面に書かない（環境ごとに絵柄も色も変わり、読み上げも揃わない）", () => {
+    /* 対象は画面と部品（.tsx）だけ。計算式の解析は「×」「✕」を入力として受け取るので、
+       文字そのものを扱う lib は対象外にする（そこは表示ではなく入力の話）。 */
+    const emoji = /\p{Extended_Pictographic}/u;
+    const offenders = sourceFiles.filter((p) => p.endsWith(".tsx") && emoji.test(readFileSync(p, "utf8")));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+});
+
+describe("保存したあとの反映", () => {
+  it("画面の読み直しを頼むのは useRefreshAfterSave だけ（router.refresh を直接呼ばない）", () => {
+    /* 直接呼ぶと投げっぱなしになり、一覧が入れ替わるまでが無音になる。
+       利用者はそれを「反映されていない」と読み、自分でページを読み直していた。
+       useRefreshAfterSave は待っている間を refreshing として返し、
+       ボタンの文言（「一覧に反映しています…」）と押せない状態に必ず結び付ける。 */
+    const owner = join(SRC, "lib", "use-refresh.ts");
+    const offenders = sourceFiles.filter((p) => p !== owner && readFileSync(p, "utf8").includes("router.refresh("));
+    expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("refresh の完了待ちは React transition の1箇所で作る", () => {
+    const source = readFileSync(join(SRC, "lib", "use-refresh.ts"), "utf8");
+    expect(source).toContain("useTransition()");
+    expect(source).toContain("startTransition(() => {");
+    expect(source).toContain("router.refresh();");
+    expect(source).toContain("return { refresh, refreshing }");
+  });
+
+  it("その場で更新する操作は、反映完了まで状態を見せて二度押しを防ぐ", () => {
+    /*
+     * refresh には2種類ある。
+     * - 保存した同じ画面の一覧・数値を出し直す: 反映完了まで操作を止め、文言を出す
+     * - ログイン/ログアウト/次の手順への移動: 現在の画面に反映するUIは不要
+     *
+     * 後者をあいまいな例外にせず、ファイル単位で固定する。
+     */
+    const navigationOnly = new Set([
+      "app/login/LoginForm.tsx",
+      "components/AccountMenu.tsx",
+      "components/FeedbackWidget.tsx",
+      "components/PasswordChangeForm.tsx",
+      "components/SchemeGroupPicker.tsx",
+      "components/SignOutButton.tsx",
+    ]);
+    const owner = "lib/use-refresh.ts";
+    const users = sourceFiles
+      .filter((p) => p !== join(SRC, owner) && readFileSync(p, "utf8").includes("useRefreshAfterSave()"))
+      .map((p) => p.replace(`${SRC}/`, ""));
+    const inPlace = users.filter((p) => !navigationOnly.has(p));
+
+    expect(users.filter((p) => navigationOnly.has(p)).sort()).toEqual([...navigationOnly].sort());
+
+    const offenders = inPlace.filter((relative) => {
+      const source = readFileSync(join(SRC, relative), "utf8");
+      const receivesRefreshing = /\{\s*refresh\s*,\s*refreshing\s*\}/.test(source);
+      const blocksRepeat = /(?:disabled|busy)=\{[^}]*refreshing[^}]*\}/.test(source);
+      const showsProgress = source.includes("<RefreshStatus");
+      return !receivesRefreshing || !blocksRepeat || !showsProgress;
+    });
+
+    expect(offenders).toEqual([]);
+  });
+});

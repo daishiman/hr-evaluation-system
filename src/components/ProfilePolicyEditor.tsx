@@ -1,9 +1,10 @@
 "use client";
 
+import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { hasIcon, Icon } from "@/components/Icon";
 import { HintToggle, Segmented } from "@/components/ui";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
  * 「この項目を本人にも変えさせるか」の切り替え。
@@ -22,7 +23,7 @@ export interface PolicyItem {
 }
 
 export function ProfilePolicyEditor({ items }: { items: PolicyItem[] }) {
-  const router = useRouter();
+  const { refresh, refreshing } = useRefreshAfterSave();
   const [values, setValues] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(items.map((item) => [item.key, item.selfEditable])),
   );
@@ -56,13 +57,12 @@ export function ProfilePolicyEditor({ items }: { items: PolicyItem[] }) {
         return;
       }
       setValues((current) => ({ ...current, [item.key]: selfEditable }));
-      setSaved((current) => ({
-        ...current,
+      setSaved(() => ({
         [item.key]: selfEditable
           ? "本人も変更できるようになりました。"
           : "会社の管理者だけが変更できるようになりました。",
       }));
-      router.refresh();
+      refresh();
     } catch {
       setErrors((current) => ({
         ...current,
@@ -101,18 +101,18 @@ export function ProfilePolicyEditor({ items }: { items: PolicyItem[] }) {
                   {errors[item.key]}
                 </p>
               )}
-              {saved[item.key] && (
-                <p className="profile-saved pop-in" role="status">
-                  <Icon name="check" size={13} />
-                  {saved[item.key]}
-                </p>
-              )}
+              <RefreshStatus
+                message={saved[item.key] ?? null}
+                refreshing={refreshing}
+                target="画面"
+                className="profile-saved pop-in"
+              />
             </div>
 
             <Segmented
               label={`${item.label}を変更できる人`}
               value={selfEditable ? "self" : "admin"}
-              disabled={busy}
+              disabled={busy || refreshing}
               onChange={(next) => void setPolicy(item, next === "self")}
               options={[
                 {

@@ -5,6 +5,7 @@ import {
   homeItemFor,
   isCurrent,
   navGroupsFor,
+  navIconFor,
   resolveTrail,
   ROUTE_META,
   routeMetaOf,
@@ -41,6 +42,26 @@ describe("サイドバーのメニュー", () => {
       expect(hrefs.some((h) => h.startsWith("/account"))).toBe(false);
       expect(navGroupsFor(role).some((g) => g.title === "アカウント")).toBe(false);
     }
+  });
+
+  it("どの項目にも絵が付いていて、同じメニューの中で絵が重複しない", () => {
+    /* メニューを畳むと絵だけの列になる。同じ絵が2つあると、そのとき見分けが付かない
+       （吹き出しは乗せて初めて出るので、見分けの手がかりにならない）。 */
+    for (const role of ["EMPLOYEE", "MANAGER", "COMPANY_ADMIN", "SUPER_ADMIN"] as const) {
+      const items = navGroupsFor(role).flatMap((g) => g.items);
+      expect(items.filter((i) => !i.icon).map((i) => i.href), `${role} に絵の無い項目がある`).toEqual([]);
+      const icons = items.map((i) => i.icon);
+      const dup = icons.filter((n, idx) => icons.indexOf(n) !== idx);
+      expect([...new Set(dup)], `${role} のメニューで同じ絵が重複している`).toEqual([]);
+    }
+  });
+
+  it("見出しの絵は、左のメニューで使っている絵と同じものを引く", () => {
+    // 「左のこの絵＝この画面」を突き合わせて覚えられるようにするため、対応表は1つ。
+    expect(navIconFor("/admin/members")).toBe("users");
+    expect(navIconFor("/criteria")).toBe("criteria");
+    // メニューに無いURLでは、意味の無い絵を埋め草に置かない
+    expect(navIconFor("/admin/nowhere")).toBeNull();
   });
 
   it("マネージャーには制度の設定を出さない（評価基準は見てよい）", () => {
@@ -130,7 +151,7 @@ describe("サイドバーのメニュー", () => {
 describe("現在地の判定", () => {
   const hrefs = hrefsOf(navGroupsFor("COMPANY_ADMIN"));
   const at = (pathname: string, href: string) =>
-    isCurrent(pathname, { href, label: href, exact: href === "/admin" }, hrefs);
+    isCurrent(pathname, { href, label: href, icon: "home", exact: href === "/admin" }, hrefs);
 
   it("詳細画面にいるときも、その一覧が現在地になる", () => {
     expect(at("/admin/forms/f1", "/admin/forms")).toBe(true);
