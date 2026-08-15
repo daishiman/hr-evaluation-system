@@ -72,9 +72,22 @@ pnpm run check:bundle-size
 | `GITHUB_REPO` | `wrangler.jsonc` の `vars`（秘密ではない） | `owner/repo` |
 | `GITHUB_TOKEN` | Cloudflare Secrets（`wrangler secret put GITHUB_TOKEN`） | Issues への書き込み権限だけを付けた fine-grained token |
 
+### token の取得手順
+
+1. [fine-grained token の作成画面](https://github.com/settings/personal-access-tokens/new) を開く
+2. Resource owner にリポジトリの持ち主を選ぶ
+3. Repository access を Only select repositories にし、`GITHUB_REPO` に書いたリポジトリだけを選ぶ
+4. Permissions → Repository permissions → Issues を **Read and write** にする（他は No access のまま）
+5. Expiration は運用に合わせて決める。期限を付けた場合、切れたら同じ手順で作り直して入れ直す
+6. Generate token を押し、**一度しか表示されない**値をその場でコピーする
+7. `pnpm exec wrangler secret put GITHUB_TOKEN` を実行し、貼り付ける
+
+発行済みの確認・失効は [token の一覧画面](https://github.com/settings/personal-access-tokens) で行います。
+この2つの URL は `src/lib/domain/github-setup.ts` が正本で、画面の設定案内も同じものを出します。
+
 - token はブラウザへ渡らず、Workers 側でのみ使います。client bundle へ入れないため、`NEXT_PUBLIC_` を付けた名前にしません。
 - 権限は対象リポジトリの Issues: Read and write だけに絞ります。contents への書き込みは不要です。
-- ローカルで試すときは `.dev.vars` に `GITHUB_TOKEN=...` を置きます（このファイルは追跡しません）。
+- ローカルで試すときは `.dev.vars` に `GITHUB_TOKEN=...` を置きます（このファイルは追跡しません。書き方は `.dev.vars.example` にあります）。
 - token を差し替えたら `wrangler secret put` を再実行します。再配布は不要です。
 - 記録票には仕分けの札（label）を自動で付けます（`improvement` / `bug`・`enhancement`・`feature-request` /
   `severity:high|medium|low` / `area:～`）。リポジトリに無い札は GitHub 側が自動で作るため、事前登録は要りません。

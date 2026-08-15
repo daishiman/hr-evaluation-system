@@ -39,6 +39,22 @@ describe("改善した画面の回復経路と用語", () => {
     expect(source).toContain("<PasswordChangeForm />");
   });
 
+  it("設定が要りますの案内は、取得先を押せる形で出す（外部サイトなので新しいタブ）", () => {
+    const source = read("src/components/ImprovementIssueForm.tsx");
+    expect(source).toContain('target="_blank"');
+    expect(source).toContain('rel="noopener noreferrer"');
+    // URL は案内の正本（domain/github-setup.ts）だけが持つ。画面へ書き写さない
+    expect(source).not.toContain("https://github.com/settings");
+  });
+
+  it("トークンの取得先URLは1か所で決め、案内する場所すべてが同じものを指す", () => {
+    const url = "https://github.com/settings/personal-access-tokens/new";
+    expect(read("src/lib/domain/github-setup.ts")).toContain(url);
+    for (const path of ["README.md", "docs/deploy-notes.md", ".dev.vars.example", "wrangler.jsonc"]) {
+      expect(read(path)).toContain(url);
+    }
+  });
+
   it("設問の直後追加は位置と自由設問であることを画面上でも明示する", () => {
     const source = read("src/components/FormBuilder.tsx");
     expect(source).toContain("この下に追加");
