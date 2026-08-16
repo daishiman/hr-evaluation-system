@@ -1,4 +1,5 @@
 import {
+  Activity,
   BookOpenText,
   Building2,
   CalendarDays,
@@ -108,6 +109,8 @@ const ICONS = {
   report: PenLine,
   /** システム全体の利用者＝アカウントの管理 */
   userAdmin: UserCog,
+  /** 利用状況＝日々の動きの波形 */
+  usage: Activity,
 
   /* ── 状態（色だけで状態を伝えないための添え物） ── */
   /** うまくいった */

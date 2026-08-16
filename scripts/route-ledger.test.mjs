@@ -25,12 +25,12 @@ function toRoute(file) {
   return route ? `/${route}` : "/";
 }
 
-test("45個の page.tsx とルート台帳が完全に一致する", () => {
+test("46個の page.tsx とルート台帳が完全に一致する", () => {
   const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
   const implemented = walkPages(join(root, "src/app")).map(toRoute).sort();
   const documented = ledger.routes.map((route) => route.path).sort();
 
-  assert.equal(implemented.length, 45);
+  assert.equal(implemented.length, 46);
   assert.equal(new Set(documented).size, documented.length, "台帳のパスが重複しています");
   assert.deepEqual(documented, implemented);
 });
