@@ -276,7 +276,10 @@ export function pickNextScreenToFix<T extends { counters: UsageScreenCounters }>
 export function rankByDwell<T extends { counters: UsageScreenCounters }>(rows: T[]): T[] {
   return rows
     .filter((r) => r.counters.dwellSamples >= USAGE_MIN_VIEWS_FOR_RANKING)
-    .sort((a, b) => (averageDwellMs(b.counters) ?? 0) - (averageDwellMs(a.counters) ?? 0));
+    // 上で「測れた回数が1以上」に絞ってあるので、ここは必ず割り算できる。
+    // `averageDwellMs(...) ?? 0` と書くと、決して通らない逃げ道が1本残る。
+    // 並べるだけなので丸めない（丸めると1秒未満の差が消えて順番がぶれる）。
+    .sort((a, b) => b.counters.dwellMs / b.counters.dwellSamples - a.counters.dwellMs / a.counters.dwellSamples);
 }
 
 /* ───────────────────────── 表示用の加工 ───────────────────────── */

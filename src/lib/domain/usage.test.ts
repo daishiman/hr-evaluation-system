@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  addApiCounters,
   addScreenCounters,
+  averageApiMs,
   averageDwellMs,
+  EMPTY_API_COUNTERS,
   dateKeyRange,
   EMPTY_SCREEN_COUNTERS,
   fillUnusedScreens,
@@ -61,6 +64,28 @@ describe("足し込み", () => {
     );
     expect(sum).toEqual(counters({ views: 5, dwellMs: 1500, dwellSamples: 3, errors: 1, rageClicks: 4 }));
   });
+
+  it("同じ宛先への通信を足し合わせる", () => {
+    const sum = addApiCounters(
+      { ...EMPTY_API_COUNTERS, calls: 3, durationMs: 900, errors: 1 },
+      { ...EMPTY_API_COUNTERS, calls: 2, durationMs: 600, slowCalls: 2 },
+    );
+    expect(sum).toEqual({ calls: 5, durationMs: 1500, errors: 1, slowCalls: 2 });
+  });
+});
+
+describe("通信の平均時間", () => {
+  it("1回あたりの時間を四捨五入して返す", () => {
+    expect(averageApiMs({ ...EMPTY_API_COUNTERS, calls: 4, durationMs: 3000 })).toBe(750);
+    // 割り切れないときは近い方の整数（表示はミリ秒までしか出さない）
+    expect(averageApiMs({ ...EMPTY_API_COUNTERS, calls: 3, durationMs: 1000 })).toBe(333);
+  });
+
+  it("一度も呼ばれていない通信は平均を出さない（0ミリ秒と区別する）", () => {
+    // 0 を返すと「速い通信」として表に並んでしまう。呼ばれていないことは
+    // 速いことではないので、画面では「—」に落ちるよう null を返す。
+    expect(averageApiMs(EMPTY_API_COUNTERS)).toBeNull();
+  });
 });
 
 describe("迷いの読み方", () => {
@@ -83,6 +108,13 @@ describe("迷いの読み方", () => {
 
   it("一度も開かれていない画面の率は0にする（0で割らない）", () => {
     expect(frictionPer100Views(EMPTY_SCREEN_COUNTERS)).toBe(0);
+  });
+
+  it("同じ件数の兆候は、決めた順で並べる（表示のたびに入れ替わらない）", () => {
+    // 内訳は毎回同じ順で読めることが要る。件数が並んだときに順番が揺れると、
+    // 「増えた」のか「並び替わっただけ」なのかが分からなくなる。
+    const tie = frictionBreakdown(counters({ views: 10, longStays: 2, errors: 2 }));
+    expect(tie.map((x) => x.kind)).toEqual(["longStays", "errors"]);
   });
 
   it("滞在を測れていない画面は平均を出さない（0秒と区別する）", () => {
@@ -127,6 +159,24 @@ describe("先に直す画面の並び", () => {
       { routePattern: "/unmeasured", counters: counters({ views: 10 }) },
     ];
     expect(rankByDwell(dwell).map((r) => r.routePattern)).toEqual(["/long", "/short"]);
+  });
+
+  it("合計ではなく1回あたりで並べる（よく開かれる画面が上に来ない）", () => {
+    const dwell = [
+      // 合計は同じだが、1回あたりは /heavy の方が長い
+      { routePattern: "/light", counters: counters({ views: 20, dwellMs: 60_000, dwellSamples: 20 }) },
+      { routePattern: "/heavy", counters: counters({ views: 6, dwellMs: 60_000, dwellSamples: 6 }) },
+    ];
+    expect(rankByDwell(dwell).map((r) => r.routePattern)).toEqual(["/heavy", "/light"]);
+  });
+
+  it("1秒に満たない差でも順番が決まる", () => {
+    // 丸めてから比べると、この2つは同じ「6秒」になって順番が入れ替わりうる。
+    const dwell = [
+      { routePattern: "/a", counters: counters({ views: 10, dwellMs: 55_600, dwellSamples: 10 }) },
+      { routePattern: "/b", counters: counters({ views: 10, dwellMs: 55_800, dwellSamples: 10 }) },
+    ];
+    expect(rankByDwell(dwell).map((r) => r.routePattern)).toEqual(["/b", "/a"]);
   });
 });
 
