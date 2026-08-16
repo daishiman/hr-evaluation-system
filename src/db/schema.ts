@@ -1594,3 +1594,78 @@ export const agentSessions = sqliteTable(
     index("idx_agent_sessions_refresh").on(t.refreshHash),
   ],
 );
+
+/* ───────────────────────── 利用状況（どこで詰まっているか） ─────────────────────────
+ *
+ * システム全体管理者が「どの画面が使われ、どこで人が迷っているか」を読むための記録。
+ *
+ * 出来事を1行ずつ残さない。「日 × 会社 × 画面 × 役割」で1行にまとめ、同じ日の
+ * 同じ画面は行を増やさず数だけを足す。こうしておくと、利用が何倍に増えても
+ * 1日あたりの行数は「画面数 × 役割4 × 会社数」で頭打ちになり、
+ * 無料の範囲（書き込み回数・保存容量）に収まり続ける。
+ *
+ * 利用者IDは持たない。誰が何をしたかではなく、どの立場の人がどの画面で
+ * 詰まっているかだけを残す。古い日は USAGE_RETENTION_DAYS で消す
+ * （→ src/lib/domain/usage.ts）。
+ */
+export const usageScreenDaily = sqliteTable(
+  "usage_screen_daily",
+  {
+    /** `${date}:${companyId}:${routePattern}:${role}`。1つの組み合わせを1行にするための自然キー。 */
+    key: text("key").primaryKey(),
+    /** 日本時間で切った日付（YYYY-MM-DD） */
+    date: text("date").notNull(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    /** 動的IDを正規化した集計用ルート（→ system-spec/route-ledger.json） */
+    routePattern: text("route_pattern").notNull(),
+    /** SUPER_ADMIN | COMPANY_ADMIN | MANAGER | EMPLOYEE */
+    role: text("role").notNull(),
+    views: integer("views").notNull().default(0),
+    /** 滞在時間の合計。平均は dwell_samples で割って出す */
+    dwellMs: integer("dwell_ms").notNull().default(0),
+    dwellSamples: integer("dwell_samples").notNull().default(0),
+    longStays: integer("long_stays").notNull().default(0),
+    backtracks: integer("backtracks").notNull().default(0),
+    rageClicks: integer("rage_clicks").notNull().default(0),
+    abandons: integer("abandons").notNull().default(0),
+    errors: integer("errors").notNull().default(0),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("idx_usage_screen_date").on(t.date),
+    index("idx_usage_screen_company").on(t.companyId, t.date),
+  ],
+);
+
+/**
+ * 通信（画面から呼ばれるAPI）の利用状況。
+ *
+ * 呼び出しのたびにDBへ書くと、記録のための書き込みが本来の業務より多くなる。
+ * 画面側で数えてまとめて送り、ここでも日ごとに足し込む。
+ */
+export const usageApiDaily = sqliteTable(
+  "usage_api_daily",
+  {
+    /** `${date}:${companyId}:${method}:${routePattern}` */
+    key: text("key").primaryKey(),
+    date: text("date").notNull(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    /** GET | POST | PUT | PATCH | DELETE */
+    method: text("method").notNull(),
+    /** 動的IDを正規化した宛先（/api/evaluations/[id] など） */
+    routePattern: text("route_pattern").notNull(),
+    calls: integer("calls").notNull().default(0),
+    durationMs: integer("duration_ms").notNull().default(0),
+    errors: integer("errors").notNull().default(0),
+    slowCalls: integer("slow_calls").notNull().default(0),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("idx_usage_api_date").on(t.date),
+    index("idx_usage_api_company").on(t.companyId, t.date),
+  ],
+);

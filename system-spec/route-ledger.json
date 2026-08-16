@@ -832,6 +832,14 @@
       "subject": "存在する利用者"
     },
     {
+      "path": "/system/usage",
+      "label": "利用状況",
+      "accessClass": "superStatic",
+      "widthPolicy": "all",
+      "purpose": "どの画面で人が詰まっているかを見て、次に直す1画面を決める",
+      "subject": "全会社の利用状況"
+    },
+    {
       "path": "/system/agent-keys",
       "label": "Claude Code 連携の鍵",
       "accessClass": "superStatic",

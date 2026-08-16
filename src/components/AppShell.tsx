@@ -10,6 +10,7 @@ import { homeItemFor, navGroupsFor, searchableScreens } from "@/lib/nav";
 import { LinkButton, ReasonNote } from "@/components/ui";
 import { StickyOffset } from "@/components/StickyOffset";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
+import { UsageTracker } from "@/components/UsageTracker";
 
 /**
  * 画面の骨格。
@@ -88,6 +89,9 @@ export async function AppShell({ viewer, children }: { viewer: Viewer; children:
 
           {/* 改善要望はここ1箇所だけ。画面ごとに置くと、置き忘れた画面ができる */}
           <FeedbackWidget />
+
+          {/* 利用状況の記録も同じ理由でここ1箇所。画面には何も出ない */}
+          <UsageTracker />
         </div>
       </div>
     </SidebarDrawerProvider>

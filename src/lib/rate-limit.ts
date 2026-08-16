@@ -43,6 +43,15 @@ export const AUTH_ATTEMPT_RATE_LIMIT: RateLimitRule = { windowMs: 10_000, max: 3
 export const IMPROVEMENT_SUBMIT_RATE_LIMIT: RateLimitRule = { windowMs: 60_000, max: 5 };
 
 /**
+ * 利用状況の記録を受け取るAPIの制限。
+ *
+ * 画面側は貯めてからまとめて送るので、普通に使っている限り1分に数回しか来ない。
+ * 画面を次々に開いても足りるよう20回まで見ておき、それを超える分は数えない
+ * （記録が多少欠けても業務は止まらないが、書き込みが増え続けるのは困る）。
+ */
+export const USAGE_INGEST_RATE_LIMIT: RateLimitRule = { windowMs: 60_000, max: 20 };
+
+/**
  * 作業指示文を受け取るAPIの制限。
  *
  * 鍵を当てにくるのは1つの回線から連続で来るので、鍵を確かめる前に
