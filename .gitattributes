@@ -1,1 +1,10 @@
 * text=auto eol=lf
+
+# AIDD エージェントキットの配布物を、GitHub の言語統計と差分表示でアプリのコードと区別する。
+# aidd-agent-kit/ は外部由来の編集元、下の4つは sync が manifest どおりに書き出す複製。
+# .claude/commands は手書きのコマンドが混在するため対象にしない。
+aidd-agent-kit/** linguist-vendored
+.claude/skills/** linguist-generated
+.claude/agents/** linguist-generated
+.agents/skills/** linguist-generated
+.codex/agents/** linguist-generated
