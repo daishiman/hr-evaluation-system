@@ -29,29 +29,31 @@ function initializedPalette(saved: string | null, throws = false): string | unde
 }
 
 describe("配色の共有契約", () => {
-  it("決めた5系統以外を受け入れない", () => {
-    expect(PALETTES).toEqual(["graphite", "azure", "sand", "moss", "midnight"]);
-    expect(PALETTES.map(isPalette)).toEqual([true, true, true, true, true]);
+  it("決めた6系統以外を受け入れない", () => {
+    expect(PALETTES).toEqual(["indigo", "graphite", "azure", "sand", "moss", "midnight"]);
+    expect(PALETTES.map(isPalette)).toEqual([true, true, true, true, true, true]);
     expect(isPalette("crimson")).toBe(false);
     expect(isPalette(null)).toBe(false);
   });
 
-  it("既定はグラファイトで、html へ書き出すのは残りの4系統だけ", () => {
-    expect(DEFAULT_PALETTE).toBe("graphite");
-    expect(EXPLICIT_PALETTES).toEqual(["azure", "sand", "moss", "midnight"]);
-    expect(explicitPalette("graphite")).toBeNull();
+  it("既定はインディゴ（選ぶ画面の先頭）で、html へ書き出すのは残りの5系統だけ", () => {
+    expect(DEFAULT_PALETTE).toBe("indigo");
+    expect(PALETTES[0]).toBe(DEFAULT_PALETTE);
+    expect(EXPLICIT_PALETTES).toEqual(["graphite", "azure", "sand", "moss", "midnight"]);
+    expect(explicitPalette("indigo")).toBeNull();
     for (const palette of EXPLICIT_PALETTES) expect(explicitPalette(palette)).toBe(palette);
   });
 
   it("壊れた保存値は既定へ戻す", () => {
     expect(storedPalette("azure")).toBe("azure");
-    expect(storedPalette("crimson")).toBe("graphite");
-    expect(storedPalette(null)).toBe("graphite");
+    expect(storedPalette("graphite")).toBe("graphite");
+    expect(storedPalette("crimson")).toBe("indigo");
+    expect(storedPalette(null)).toBe("indigo");
   });
 
   it("描画前初期化は、保存済みの明示配色だけを html へ反映する", () => {
     for (const palette of EXPLICIT_PALETTES) expect(initializedPalette(palette)).toBe(palette);
-    expect(initializedPalette("graphite")).toBeUndefined();
+    expect(initializedPalette("indigo")).toBeUndefined();
     expect(initializedPalette("crimson")).toBeUndefined();
     expect(initializedPalette(null)).toBeUndefined();
   });

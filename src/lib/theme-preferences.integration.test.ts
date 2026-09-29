@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { schema as s } from "@/lib/db";
+import { PALETTES } from "@/lib/palette";
 import {
   readThemePreferenceUsage,
   themePreferenceSchema,
@@ -60,6 +61,21 @@ describe("現在の配色設定", () => {
         "INSERT INTO theme_user_preferences (user_id, palette, mode, resolved, updated_at) VALUES ('nobody', 'azure', 'light', 'dark', 0)",
       ),
     ).toThrow(/ck_theme_user_preferences_consistent/);
+  });
+
+  it("選べる全系統を保存できる（DB の制約が PALETTES と食い違わない）", async () => {
+    const testDb = database();
+    for (const palette of PALETTES) {
+      await addUser(testDb, `user-${palette}`);
+      await upsertThemePreference(testDb.db, `user-${palette}`, { palette, mode: "auto", resolved: "light" });
+    }
+    const saved = testDb.raw.prepare("SELECT palette FROM theme_user_preferences ORDER BY palette").all();
+    expect(saved.map((row) => String(row.palette))).toEqual([...PALETTES].sort());
+    expect(() =>
+      testDb.raw.exec(
+        "INSERT INTO theme_user_preferences (user_id, palette, mode, resolved, updated_at) VALUES ('user-indigo', 'crimson', 'auto', 'light', 0)",
+      ),
+    ).toThrow(/ck_theme_user_preferences_palette/);
   });
 
   it("同じ利用者の選択を1行で上書きし、同値の再選択は更新時刻も変えない", async () => {

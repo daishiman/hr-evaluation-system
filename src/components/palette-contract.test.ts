@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { EXPLICIT_PALETTES, PALETTES } from "@/lib/palette";
+import { DEFAULT_PALETTE, EXPLICIT_PALETTES, PALETTES } from "@/lib/palette";
 
 /**
  * 配色（系統）の契約。
@@ -16,8 +16,9 @@ const ROOT = process.cwd();
 const CSS_PATH = join(ROOT, "src", "app", "globals.css");
 const SPEC_PATH = join(ROOT, "docs", "product", "spec.md");
 const GALLERY_PATH = join(ROOT, "docs", "product", "theme-gallery.md");
+const CAPTURE_PATH = join(ROOT, "scripts", "capture-theme-gallery.mjs");
 
-/** 系統ごとに入れ替える「骨格」。ここに無いものは既定（グラファイト）から受け継ぐ。 */
+/** 系統ごとに入れ替える「骨格」。ここに無いものは既定の系統（:root）から受け継ぐ。 */
 const STRUCTURAL_TOKENS = [
   "brand",
   "brand-deep",
@@ -122,12 +123,13 @@ function contrast(foreground: string, background: string): number {
 }
 
 const css = readFileSync(CSS_PATH, "utf8");
-const graphite = {
+/** 既定の系統（DEFAULT_PALETTE）。属性を付けずに :root と html[data-theme="dark"] が持つ。 */
+const base = {
   light: declarations(blockAfter(css, ":root")),
   dark: declarations(blockAfter(css, 'html[data-theme="dark"]')),
 };
 
-/** 系統の値を、受け継ぐ側（グラファイト）へ重ねた「実際に当たる色」を作る。 */
+/** 系統の値を、受け継ぐ側（既定の系統）へ重ねた「実際に当たる色」を作る。 */
 function effective(base: Map<string, string>, override: Map<string, string>): Map<string, string> {
   return new Map([...base, ...override]);
 }
@@ -142,13 +144,13 @@ function paletteBlocks(palette: string) {
 }
 
 describe("配色（テーマの系統）の契約", () => {
-  it("既定はグラファイトのままで、属性を足したときだけ系統が変わる", () => {
-    // 既定の系統は :root と html[data-theme="dark"] が持つ（＝これまでと同じ）
-    expect(PALETTES[0]).toBe("graphite");
-    expect(css).not.toContain('html[data-palette="graphite"]');
+  it("既定の系統は属性なしで当たり、属性を足したときだけ系統が変わる", () => {
+    // 既定の系統は :root と html[data-theme="dark"] が持つ。属性側に重複して置かない
+    expect(PALETTES[0]).toBe(DEFAULT_PALETTE);
+    expect(css).not.toContain(`html[data-palette="${DEFAULT_PALETTE}"]`);
     for (const token of STRUCTURAL_TOKENS) {
-      expect(graphite.light.get(token), `light --${token}`).toBeTruthy();
-      expect(graphite.dark.get(token), `dark --${token}`).toBeTruthy();
+      expect(base.light.get(token), `light --${token}`).toBeTruthy();
+      expect(base.dark.get(token), `dark --${token}`).toBeTruthy();
     }
   });
 
@@ -173,13 +175,13 @@ describe("配色（テーマの系統）の契約", () => {
 
   it("整合性あり: 全系統・明暗ともに WCAG AA（本文4.5:1 / 境界線3:1）を満たす", () => {
     const themes: [string, Map<string, string>][] = [
-      ["graphite/light", graphite.light],
-      ["graphite/dark", graphite.dark],
+      [`${DEFAULT_PALETTE}/light`, base.light],
+      [`${DEFAULT_PALETTE}/dark`, base.dark],
     ];
     for (const palette of EXPLICIT_PALETTES) {
       const { light, dark } = paletteBlocks(palette);
-      themes.push([`${palette}/light`, effective(graphite.light, light)]);
-      themes.push([`${palette}/dark`, effective(graphite.dark, dark)]);
+      themes.push([`${palette}/light`, effective(base.light, light)]);
+      themes.push([`${palette}/dark`, effective(base.dark, dark)]);
     }
 
     for (const [name, colors] of themes) {
@@ -200,7 +202,7 @@ describe("配色（テーマの系統）の契約", () => {
     const signatures = new Set<string>();
     for (const mode of ["light", "dark"] as const) {
       signatures.clear();
-      const all: [string, Map<string, string>][] = [["graphite", graphite[mode]]];
+      const all: [string, Map<string, string>][] = [[DEFAULT_PALETTE, base[mode]]];
       for (const palette of EXPLICIT_PALETTES) all.push([palette, paletteBlocks(palette)[mode]]);
       for (const [palette, colors] of all) {
         const signature = ["page-bg", "surface", "brand", "cta-bg"]
@@ -218,7 +220,7 @@ describe("配色（テーマの系統）の契約", () => {
     expect(print).toContain("html:root[data-palette]");
     const printLight = declarations(blockAfter(print, "html:root"));
     for (const token of STRUCTURAL_TOKENS) {
-      expect(printLight.get(token), `print --${token}`).toBe(graphite.light.get(token));
+      expect(printLight.get(token), `print --${token}`).toBe(base.light.get(token));
     }
   });
 
@@ -232,5 +234,14 @@ describe("配色（テーマの系統）の契約", () => {
       expect(gallery, `gallery: ${palette}-light`).toContain(`${palette}-light.png`);
       expect(gallery, `gallery: ${palette}-dark`).toContain(`${palette}-dark.png`);
     }
+  });
+
+  it("見本の撮影スクリプトが、全系統と既定の系統を同じ並びで知っている", () => {
+    // 撮影スクリプトは TypeScript を読めないため値を写してある。系統を足したときの写し漏れを止める
+    const capture = readFileSync(CAPTURE_PATH, "utf8");
+    const listed = capture.match(/const GALLERY_PALETTES = (\[[^\]]*\]);/)?.[1];
+    const fallback = capture.match(/const DEFAULT_PALETTE = ("[a-z]+");/)?.[1];
+    expect(listed && JSON.parse(listed), "GALLERY_PALETTES").toEqual([...PALETTES]);
+    expect(fallback && JSON.parse(fallback), "DEFAULT_PALETTE").toBe(DEFAULT_PALETTE);
   });
 });

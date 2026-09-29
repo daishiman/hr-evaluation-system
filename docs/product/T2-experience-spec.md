@@ -68,7 +68,7 @@ catalog-default判定: REPORT_ONLY(理由: 承認済みのアプリ独自配色�
 
 ### この機能での適用
 
-配色: Graphite × Amber（アプリ独自。正本は上の配色契約） / primary: 既存primary / accent: 状態と主要操作だけ / テーマ: auto・light・dark / 永続化: 既存テーマのみ。改善下書きはReact state内のみ。
+配色: Indigo × Amber（アプリ独自。既定の系統。正本は上の配色契約） / primary: 既存primary / accent: 状態と主要操作だけ / テーマ: auto・light・dark / 永続化: 既存テーマのみ。改善下書きはReact state内のみ。
 フォント: 既存IBM Plex Sans+端末和文 / ID・URL: 既存mono / ナビ骨格: 既存sidebar。Widgetはsafe-area内右下。
 44px操作領域: coarse pointerの既存ルールを継承 / Light-Dark: 意味色token、注釈色は画像へ焼くため固定 / 黒塗り: `--mark-ink`固定。
 

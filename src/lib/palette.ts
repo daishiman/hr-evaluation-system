@@ -4,23 +4,26 @@
  * 明るさ（自動・明るい・暗い＝ src/lib/theme.ts）とは別の軸として、
  * 色の系統だけを持つ。2つを1つの値にまとめないのは、
  * 「暗いまま系統だけ変える」「系統はそのままで明るさだけ変える」を
- * それぞれ独立して選べるようにするため（組み合わせは 5 × 3 通り）。
+ * それぞれ独立して選べるようにするため（組み合わせは 6 × 3 通り）。
  *
  * theme.ts と同じく、このファイルは DOM や React に依存させない。
  * 実際の色は globals.css の html[data-palette] が持ち、
  * ここが持つのは「どの名前が有効か・どこへ保存するか・描画前にどう反映するか」だけ。
  */
-export const PALETTES = ["graphite", "azure", "sand", "moss", "midnight"] as const;
+/** 並びは選ぶ画面の並び。先頭を既定（DEFAULT_PALETTE）にする。 */
+export const PALETTES = ["indigo", "graphite", "azure", "sand", "moss", "midnight"] as const;
 
 export type Palette = (typeof PALETTES)[number];
-/** 既定（グラファイト）以外。html へ属性として書き出すのはこれだけ。 */
-export type ExplicitPalette = Exclude<Palette, "graphite">;
+/** 既定（インディゴ）以外。html へ属性として書き出すのはこれだけ。 */
+export type ExplicitPalette = Exclude<Palette, typeof DEFAULT_PALETTE>;
 
 // リテラル型のまま持つ（Palette へ広げない）。広げると「既定と一致しない側＝明示配色」
 // という絞り込みが効かず、explicitPalette の戻り値が型で保証できなくなる。
-export const DEFAULT_PALETTE = "graphite" satisfies Palette;
+// 2026-09-29 にグラファイトから変えた（docs/product/design-decisions.md DD-003）。
+// 既定は「保存値なし」で表すため、変えると、グレーを選んで保存値を消していた人もインディゴになる。
+export const DEFAULT_PALETTE = "indigo" satisfies Palette;
 
-/** 既定は属性を付けない状態にする（＝これまでと1バイトも変わらない見た目にする）。 */
+/** 既定は属性を付けない状態にする（色は globals.css の :root がそのまま当たる）。 */
 export const EXPLICIT_PALETTES: readonly ExplicitPalette[] = PALETTES.filter(
   (palette): palette is ExplicitPalette => palette !== DEFAULT_PALETTE,
 );
@@ -29,6 +32,7 @@ export const PALETTE_STORAGE_KEY = "hr-palette";
 
 /** 選ぶ画面に出す名前。色そのものではなく「印象」で呼べる短い語にする。 */
 export const PALETTE_LABELS: Record<Palette, string> = {
+  indigo: "インディゴ",
   graphite: "グレー",
   azure: "ブルー",
   sand: "ベージュ",
@@ -38,7 +42,8 @@ export const PALETTE_LABELS: Record<Palette, string> = {
 
 /** 読み上げと吹き出しに渡す一言。色の名前だけでは何が変わるか分からないため。 */
 export const PALETTE_NOTES: Record<Palette, string> = {
-  graphite: "色みのない標準の配色",
+  indigo: "鮮やかな青のくっきりした標準の配色",
+  graphite: "色みのない控えめな配色",
   azure: "青みのある涼しい配色",
   sand: "黄みのある暖かい配色",
   moss: "緑みのある落ち着いた配色",

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_PALETTE } from "@/lib/palette";
 import {
   appliedChoice,
   recordAppliedThemeChoice,
@@ -22,8 +23,8 @@ function captureChoices(): ThemeChoice[] {
 
 describe("見た目の選択の記録", () => {
   it("html の属性が正本になり、属性が無いときは既定の組み合わせになる", () => {
-    expect(appliedChoice({}, false)).toEqual({ palette: "graphite", mode: "auto", resolved: "light" });
-    expect(appliedChoice({}, true)).toEqual({ palette: "graphite", mode: "auto", resolved: "dark" });
+    expect(appliedChoice({}, false)).toEqual({ palette: DEFAULT_PALETTE, mode: "auto", resolved: "light" });
+    expect(appliedChoice({}, true)).toEqual({ palette: DEFAULT_PALETTE, mode: "auto", resolved: "dark" });
   });
 
   it("「自動」のときだけ、実際に表示された明るさを端末の設定から補う", () => {
@@ -38,8 +39,10 @@ describe("見た目の選択の記録", () => {
       mode: "dark",
       resolved: "dark",
     });
+    // 既定でなくなったグレーは属性として付き、そのまま記録される
+    expect(appliedChoice({ palette: "graphite" }, false).palette).toBe("graphite");
     expect(appliedChoice({ theme: "sepia", palette: "crimson" }, false)).toEqual({
-      palette: "graphite",
+      palette: DEFAULT_PALETTE,
       mode: "auto",
       resolved: "light",
     });
@@ -62,7 +65,7 @@ describe("見た目の選択の記録", () => {
 
     recordAppliedThemeChoice();
 
-    expect(seen).toEqual([{ palette: "graphite", mode: "auto", resolved: "light" }]);
+    expect(seen).toEqual([{ palette: DEFAULT_PALETTE, mode: "auto", resolved: "light" }]);
   });
 
   it("ブラウザの外（サーバー側の描画）では何も送らない", () => {

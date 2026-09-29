@@ -171,11 +171,56 @@ describe("全画面のテーマ契約", () => {
     }
   });
 
-  it("大人っぽさ: 操作・面・グラフは無彩色、人物識別色は低彩度に限定する", () => {
+  it("コントラストを強める設定の補正は、補正前より必ず強く、罫線も4.5:1以上にする", () => {
+    const css = readFileSync(CSS_PATH, "utf8");
+    const base = {
+      light: declarations(blockAfter(css, ":root")),
+      dark: declarations(blockAfter(css, 'html[data-theme="dark"]')),
+    };
+    const more = blockAfter(css, "@media (prefers-contrast: more)");
+    const boosted = {
+      light: declarations(blockAfter(more, 'html:not([data-theme="dark"])')),
+      dark: declarations(blockAfter(more, 'html[data-theme="dark"]')),
+    };
+    // 端末追従のダークは明示ダークと同じ補正にする
+    const autoDark = declarations(
+      blockAfter(blockAfter(css, "@media (prefers-contrast: more) and (prefers-color-scheme: dark)"), "html:not"),
+    );
+    expect(Object.fromEntries(autoDark)).toEqual(Object.fromEntries(boosted.dark));
+
+    const pairs: [string, string, number][] = [
+      ["ink-muted", "surface", 7],
+      ["ink-muted", "page-bg", 7],
+      ["line", "surface", 4.5],
+      ["line", "page-bg", 4.5],
+      ["off-line", "off-surface", 4.5],
+    ];
+    for (const mode of ["light", "dark"] as const) {
+      expect([...boosted[mode].keys()].sort(), mode).toEqual(["ink-muted", "line", "off-line"]);
+      for (const [foreground, background, minimum] of pairs) {
+        const surface = base[mode].get(background) as string;
+        const before = contrast(base[mode].get(foreground) as string, surface);
+        const after = contrast(boosted[mode].get(foreground) as string, surface);
+        expect(after, `${mode}: ${foreground} on ${background} は補正前（${before.toFixed(2)}）より強い`).toBeGreaterThan(before);
+        expect(after, `${mode}: ${foreground} on ${background}`).toBeGreaterThanOrEqual(minimum);
+      }
+    }
+  });
+
+  it("大人っぽさ: グレーの系統は操作・面・グラフを無彩色に保ち、人物識別色は低彩度に限定する", () => {
     const css = readFileSync(CSS_PATH, "utf8");
     const themes = {
       light: themeColors(blockAfter(css, ":root")),
       dark: themeColors(blockAfter(css, 'html[data-theme="dark"]')),
+    };
+    // 既定はインディゴ（色みあり）に変えたため、無彩色の約束は系統「グレー」が引き継ぐ。
+    // 系統は骨格だけを上書きするので、既定の値へ重ねたものが実際に当たる色になる。
+    const graphite = {
+      light: { ...themes.light, ...Object.fromEntries(declarations(blockAfter(css, 'html[data-palette="graphite"]'))) },
+      dark: {
+        ...themes.dark,
+        ...Object.fromEntries(declarations(blockAfter(css, 'html[data-palette="graphite"][data-theme="dark"]'))),
+      },
     };
     const neutralTokens = [
       "brand",
@@ -198,10 +243,12 @@ describe("全画面のテーマ契約", () => {
       "chart-band",
     ] as const;
 
-    for (const [name, colors] of Object.entries(themes)) {
+    for (const [name, colors] of Object.entries(graphite)) {
       for (const token of neutralTokens) {
-        expect(chroma(colors[token]), `${name}: ${token}`).toBeLessThanOrEqual(12);
+        expect(chroma(colors[token]), `graphite/${name}: ${token}`).toBeLessThanOrEqual(12);
       }
+    }
+    for (const [name, colors] of Object.entries(themes)) {
       for (const tone of [1, 2, 3, 4, 5]) {
         expect(chroma(colors[`avatar-${tone}-fg` as keyof typeof colors]), `${name}: avatar ${tone} fg`).toBeLessThanOrEqual(16);
         expect(chroma(colors[`avatar-${tone}-bg` as keyof typeof colors]), `${name}: avatar ${tone} bg`).toBeLessThanOrEqual(16);

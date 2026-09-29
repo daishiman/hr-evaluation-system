@@ -23,7 +23,10 @@ const DEFAULT_ORIGIN = "http://localhost:8787";
 const DEFAULT_EMAIL = "manager@kyufu.hyoka-demo.jp";
 const DEFAULT_PASSWORD = "Hyoka2026!demo";
 
-const GALLERY_PALETTES = ["azure", "sand", "moss", "midnight"];
+// src/lib/palette.ts の PALETTES・DEFAULT_PALETTE と同じ値（palette-contract.test.ts が一致を検査する）。
+// 既定の系統は保存値を消した状態で表すため、撮るときも html に属性が付かない。
+const GALLERY_PALETTES = ["indigo", "graphite", "azure", "sand", "moss", "midnight"];
+const DEFAULT_PALETTE = "indigo";
 const GALLERY_THEMES = ["light", "dark"];
 const GALLERY_VIEWPORT = { width: 1280, height: 900, dpr: 1.25 };
 const RESPONSIVE_VIEWPORTS = [
@@ -42,6 +45,8 @@ options:
   --email <address>    撮影用 MANAGER（既定: ${DEFAULT_EMAIL}）
   --password <value>   撮影用パスワード（既定: ローカル seed のデモ値）
   --chrome <path>      Google Chrome 実行ファイル
+  --palettes <list>    撮り直す系統をカンマ区切りで指定（既定: ${GALLERY_PALETTES.join(",")}）
+                       系統を足したときに、既存の系統の画像を撮り直さないために使う
   --help               この説明を表示
 
 環境変数 THEME_GALLERY_EMAIL / THEME_GALLERY_PASSWORD / THEME_GALLERY_CHROME
@@ -54,6 +59,7 @@ function parseArgs(argv) {
     email: process.env.THEME_GALLERY_EMAIL || DEFAULT_EMAIL,
     password: process.env.THEME_GALLERY_PASSWORD || DEFAULT_PASSWORD,
     chrome: process.env.THEME_GALLERY_CHROME || DEFAULT_CHROME,
+    palettes: GALLERY_PALETTES.join(","),
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -61,13 +67,18 @@ function parseArgs(argv) {
       usage();
       process.exit(0);
     }
-    if (!["--origin", "--email", "--password", "--chrome"].includes(arg)) {
+    if (!["--origin", "--email", "--password", "--chrome", "--palettes"].includes(arg)) {
       throw new Error(`不明な引数です: ${arg}`);
     }
     const value = argv[index + 1];
     if (!value) throw new Error(`${arg} の値がありません。`);
     options[arg.slice(2)] = value;
     index += 1;
+  }
+  options.palettes = options.palettes.split(",").map((palette) => palette.trim()).filter(Boolean);
+  const unknownPalettes = options.palettes.filter((palette) => !GALLERY_PALETTES.includes(palette));
+  if (unknownPalettes.length > 0 || options.palettes.length === 0) {
+    throw new Error(`--palettes には ${GALLERY_PALETTES.join(" / ")} から指定してください: ${unknownPalettes.join(",")}`);
   }
   options.origin = options.origin.replace(/\/$/, "");
   const parsedOrigin = new URL(options.origin);
@@ -286,7 +297,8 @@ async function applyAppearance(client, palette, theme) {
   await evaluate(
     client,
     `(() => {
-      localStorage.setItem("hr-palette", ${JSON.stringify(palette)});
+      if (${JSON.stringify(palette === DEFAULT_PALETTE)}) localStorage.removeItem("hr-palette");
+      else localStorage.setItem("hr-palette", ${JSON.stringify(palette)});
       localStorage.setItem("hr-theme", ${JSON.stringify(theme)});
       return true;
     })()`,
@@ -295,7 +307,7 @@ async function applyAppearance(client, palette, theme) {
   await waitForCondition(client, `document.readyState === "complete"`, `${palette}-${theme} の再表示`);
   await waitForCondition(
     client,
-    `document.documentElement.dataset.palette === ${JSON.stringify(palette)} && document.documentElement.dataset.theme === ${JSON.stringify(theme)}`,
+    `document.documentElement.dataset.palette === ${palette === DEFAULT_PALETTE ? "undefined" : JSON.stringify(palette)} && document.documentElement.dataset.theme === ${JSON.stringify(theme)}`,
     `${palette}-${theme} の配色反映`,
   );
   await settle(client);
@@ -412,7 +424,7 @@ async function main() {
     await login(client, options);
 
     console.log("\n配色ギャラリー:");
-    for (const palette of GALLERY_PALETTES) {
+    for (const palette of options.palettes) {
       for (const theme of GALLERY_THEMES) {
         await applyAppearance(client, palette, theme);
         await capture(client, `${palette}-${theme}.png`, GALLERY_VIEWPORT);
@@ -437,7 +449,7 @@ async function main() {
       console.log(`    overflow: none / account menu: visible / scrollWidth: ${layout.scrollWidth}px`);
     }
 
-    console.log("\n完了: 既存の graphite 画像は削除せず、今回の対象外として残しています。");
+    console.log("\n完了");
   } finally {
     chrome.client.close();
     chrome.processHandle.kill("SIGTERM");

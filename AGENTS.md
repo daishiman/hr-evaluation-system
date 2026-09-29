@@ -12,7 +12,7 @@
 ## 配色とテーマ（キット規範より優先する）
 
 - 正本は [製品仕様](./docs/product/spec.md) の「テーマ契約（全画面共通）」「配色（テーマの系統）」。キットの `jp-web-design` は既存アプリも平賀配色（ライトのみ）へ移すことを既定にしているが、このアプリは移さない。経緯は [design-decisions.md](./docs/product/design-decisions.md) の DD-003。
-- 平賀配色への移行をしない。`migrate-legacy-colors.mjs` の `--apply`、`catalog-default.mjs` の `apply`、`--eligibility=eligible` の指定（plan でも）はどれも使わない。判定の dry-run だけは下の受け入れ確認で使う。
+- 平賀配色への移行をしない。`migrate-legacy-colors.mjs` の `--apply`、`catalog-default.mjs` の `apply`、`--eligibility=eligible` の指定（plan でも）はどれも使わない。判定の dry-run だけは下の受け入れ確認で使う。平賀配色の値は、既定の系統 `indigo` の明るいほうとして `globals.css` に置いてある。暗い表示と系統の選択・保存は残すので移行ではない（DD-003）。
 - 移行を通すために、テーマの契約テスト（`src/components/theme-contract.test.ts`・`src/components/palette-contract.test.ts`・`scripts/aidd-kit-boundary.test.mjs`）や、`docs/product/T2-experience-spec.md` §5・`src/app/globals.css` 冒頭の `brand_color_*` 宣言を書き換えない。
 - 文字組み・レイアウト・操作領域・a11y・情報設計は `jp-web-design` に従ってよい（spec.md や DD に別の決めがある箇所はそちらが優先）。
 - `report-design-system` 系の見本やレポートに実データ（社員名・評価値など）を入れない。公開リポジトリとしての扱いは README「本番運用とデータの注意」に従う。
