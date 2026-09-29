@@ -13,6 +13,7 @@
 | [routes-and-access.md](./routes-and-access.md) | 全44画面の目的・対象、ロール×状態×結果、4幅の受入契約 |
 | [imports-and-readiness.md](./imports-and-readiness.md) | CSV一括取込の原子性・復元点、評価セット/期間/アンケートの共通readiness |
 | [improvement-requests.md](./improvement-requests.md) | 画面内改善要望のroute identity、API/DB、原子保存、冪等、管理更新契約 |
+| [appearance-theme.md](./appearance-theme.md) | 明るさ・配色の値集合（画面/API/DBで一致）、既定の表し方、現在設定の記録API、開発キットとの配色境界 |
 
 機械可読なルート正本は [`route-ledger.json`](./route-ledger.json)。`page.tsx` との完全一致を `pnpm run check:docs` で検査する。
 
