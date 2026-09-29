@@ -52,7 +52,23 @@ APIは有効session→role→company→対象行の順で検証し、更新`WHER
 
 ## 5. デザインシステム適用
 
-Mode: A Graphite × Amber / primary: 既存primary / accent: 状態と主要操作だけ / テーマ: auto・light・dark / 永続化: 既存テーマのみ。改善下書きはReact state内のみ。
+### アプリ全体の配色契約
+
+brand_color_status: approved
+
+brand_color_source: app-theme-contract
+
+brand_color_approver: daishiman
+
+brand_color_approved_at: 2026-09-29
+
+この小見出しの宣言だけは、本書の対象である画面内改善要望に限らず、アプリの全画面の配色とテーマに効く（本書のほかの節はこの機能の範囲）。配色とテーマの正本は `docs/product/spec.md` の「テーマ契約（全画面共通）」「配色（テーマの系統）」で、キット `jp-web-design` の平賀配色（ライトのみ）へは移行しない。
+
+catalog-default判定: REPORT_ONLY(理由: 承認済みのアプリ独自配色。経緯は `docs/product/design-decisions.md` DD-003)
+
+### この機能での適用
+
+配色: Graphite × Amber（アプリ独自。正本は上の配色契約） / primary: 既存primary / accent: 状態と主要操作だけ / テーマ: auto・light・dark / 永続化: 既存テーマのみ。改善下書きはReact state内のみ。
 フォント: 既存IBM Plex Sans+端末和文 / ID・URL: 既存mono / ナビ骨格: 既存sidebar。Widgetはsafe-area内右下。
 44px操作領域: coarse pointerの既存ルールを継承 / Light-Dark: 意味色token、注釈色は画像へ焼くため固定 / 黒塗り: `--mark-ink`固定。
 
