@@ -33,7 +33,7 @@
    ```
 
 8. キットの差し替えは単独コミットにする。`aidd-agent-kit/` と実配置に加え、同梱のライセンス文書（`aidd-agent-kit/` の `LICENSE` `NOTICE` `ATTRIBUTION.md` と、`.claude/` `.agents/skills/` `.codex/` に置かれる `aidd-agent-kit.LICENSE` などの写し）も含める。
-9. ユーザー全体に古いキットが入っていないか確かめる。`~/.claude/aidd-agent-kit.version`・`~/.codex/aidd-agent-kit.version` があればユーザー全体にも入っている（4 の doctor は Codex 側しか見ない）。`aidd-agent-kit/VERSION` と比べて古ければ、4 の WARN 一覧と合わせて本人に知らせる。ユーザー全体のファイルは勝手に消さない。
+9. ユーザー全体に古いキットが入っていないか確かめる。`~/.claude/aidd-agent-kit.version`・`~/.codex/aidd-agent-kit.version` があればユーザー全体にも入っている（4 の doctor は Codex 側しか見ない）。`aidd-agent-kit/VERSION` と比べて古ければその旨を知らせる。古くなくても、4 で WARN が出ていればその一覧を本人に知らせる。ユーザー全体のファイルは勝手に消さない。
 10. 7 を済ませてから、sync が作った古い backup（`.claude/backup-*` `.codex/backup-*`。git 管理外）を削除する。
 
 ## 改善要望の扱い
