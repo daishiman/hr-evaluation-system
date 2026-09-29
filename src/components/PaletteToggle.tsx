@@ -20,8 +20,8 @@ import { recordAppliedThemeChoice } from "@/lib/theme-usage";
  *
  * 作りは ThemeToggle と同じ。色そのものは globals.css の
  * html[data-palette] が持っていて、ここがやるのは属性の付け外しだけ。
- * ・グレー（既定） … 属性を外す。これまでと同じ見た目に戻る
- * ・それ以外       … data-palette を入れて、その系統の値へ入れ替える
+ * ・既定（インディゴ） … 属性を外す。:root の値がそのまま当たる
+ * ・それ以外           … data-palette を入れて、その系統の値へ入れ替える
  *
  * 明るさ（自動・明るい・暗い）とは独立している。
  * どちらを変えても、もう片方の選択はそのまま残る。

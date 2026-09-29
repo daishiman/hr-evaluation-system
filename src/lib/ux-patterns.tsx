@@ -2,6 +2,7 @@
  * ux-design 実装パターン集(React + TypeScript)
  * SKILL.md の各節に対応する、ドメイン非依存の hooks / ユーティリティ。
  * vanilla JS の参照実装は Skill jp-web-design の assets/reference/app.js。
+ * 出典は aidd-agent-kit の ux-design / jp-web-design(編集元はリポジトリ内 aidd-agent-kit/skills/ 配下。原本は ux-design/assets/ux-patterns.tsx)。
  *
  * 依存: react のみ。コピーして使う(npmパッケージ化しない)。
  */
@@ -284,7 +285,7 @@ export function isEmail(value: string): boolean {
 }
 
 /* ============================================================
- * 数値表示 — jp-web-design §3-2 の文法(値=変数の描き分け)
+ * 数値表示 — jp-web-design references/typography-numerals.md「値(変数)とラベル(固定)の描き分け」の文法
  * カンマは .num-sep で縮小、単位は .unit。dangerouslySetInnerHTML を避けた配列版。
  * ============================================================ */
 const NUM_FORMAT = new Intl.NumberFormat('ja-JP')

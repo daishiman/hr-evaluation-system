@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { PALETTES } from "@/lib/palette";
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -21,12 +22,12 @@ describe("外観選択UIの契約", () => {
     expect(theme).toContain("if (next === theme) return");
   });
 
-  it("外観の全選択肢を44px以上にし、色見本は5系統すべてに定義する", () => {
+  it("外観の全選択肢を44px以上にし、色見本は6系統すべてに定義する", () => {
     const css = read("src/app/globals.css");
 
     expect(css).toMatch(/\.account-pop-theme\s+\.segmented-btn\s*\{[^}]*min-height:\s*44px/s);
     expect(css).toMatch(/\.palette-choices\s+\.chip\s*\{[^}]*min-height:\s*44px/s);
-    for (const palette of ["graphite", "azure", "sand", "moss", "midnight"]) {
+    for (const palette of PALETTES) {
       expect(css).toContain(`.palette-swatch[data-palette="${palette}"]`);
     }
   });

@@ -9,11 +9,9 @@
 
 # AI開発エージェントキットの導入結果
 # .agents/skills はCodex用スキルの正式な配置先。チーム共有のため追跡する。
-# manifest/version は導入時刻を含むローカル固有ファイルなので除外する。
-.claude/aidd-agent-kit.manifest
-.claude/aidd-agent-kit.version
-.codex/aidd-agent-kit.manifest
-.codex/aidd-agent-kit.version
+# .claude/ .codex/ の aidd-agent-kit.manifest / aidd-agent-kit.version も追跡する。
+# 中身は sync の結果（配布先の path・hash・版番号）だけで、導入時刻も HOME も含まない。
+# verify-codex-layout.sh がこの4つを必須とするため、無視すると CI の検査が必ず落ちる。
 
 # === OS ===
 .DS_Store

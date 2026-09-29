@@ -1226,12 +1226,12 @@ export const constitutionEvents = sqliteTable(
  *
  * 誰が選んだかは持たない（user_id も company_id も無い）。個人の設定は
  * これまでどおりブラウザの中だけにあり、ここへ来るのは回数だけ。
- * 行は組み合わせの数（配色5 × 明るさ3 × 実表示2）だけで、増え続けない。
+ * 行は組み合わせの数（配色6 × 明るさ3 × 実表示2）だけで、増え続けない。
  */
 export const themeChoiceCounts = sqliteTable("theme_choice_counts", {
   /** `${palette}:${mode}:${resolved}`。組み合わせ1つにつき1行にするための自然キー。 */
   key: text("key").primaryKey(),
-  /** graphite | azure | sand | moss | midnight（→ src/lib/palette.ts） */
+  /** indigo | graphite | azure | sand | moss | midnight（→ src/lib/palette.ts） */
   palette: text("palette").notNull(),
   /** 利用者が選んだ明るさ: auto | light | dark（→ src/lib/theme.ts） */
   mode: text("mode").notNull(),
@@ -1261,7 +1261,11 @@ export const themeUserPreferences = sqliteTable(
     updatedAt: updatedAt(),
   },
   (t) => [
-    check("ck_theme_user_preferences_palette", sql`${t.palette} IN ('graphite', 'azure', 'sand', 'moss', 'midnight')`),
+    // 許可値は src/lib/palette.ts の PALETTES と同じ（indigo は 0030 で追加）。
+    check(
+      "ck_theme_user_preferences_palette",
+      sql`${t.palette} IN ('indigo', 'graphite', 'azure', 'sand', 'moss', 'midnight')`,
+    ),
     check("ck_theme_user_preferences_mode", sql`${t.mode} IN ('auto', 'light', 'dark')`),
     check("ck_theme_user_preferences_resolved", sql`${t.resolved} IN ('light', 'dark')`),
     check("ck_theme_user_preferences_consistent", sql`${t.mode} = 'auto' OR ${t.mode} = ${t.resolved}`),

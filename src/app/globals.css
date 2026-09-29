@@ -1,14 +1,24 @@
 @import "tailwindcss";
 
 /* ============================================================
-   jp-web-design モデルケース — 役割ベーストークン (§1)
+   このアプリの配色の正本 — 役割ベーストークン
    値は差し替え可・役割の割り当ては変えない
+   仕様: docs/product/spec.md「テーマ契約（全画面共通）」「配色（テーマの系統）」
+   判断: docs/product/design-decisions.md DD-003
+   キット jp-web-design の平賀配色へは自動移行しない（下の3行がその宣言）。
+   brand_color_status: approved
+   brand_color_source: app-theme-contract
+   aidd-color-migration: exclude-brand
    ============================================================ */
 :root {
-  /* 操作・選択・リンク。業務内容より前に色が立たない Graphite に限定する。 */
-  --brand: #3d3d42;
-  --brand-deep: #27272a;
-  --brand-soft: #e4e4e1;
+  /* 既定の系統はインディゴ（2026-09-29 にグラファイトから変更。DD-003）。
+     骨格18個の明るいほうは、キット jp-web-design の平賀配色（hiraga-color-system.css v0.3）の値。
+     線（--line）は平賀の --p-line が罫線用で 3:1 に届かないため、--p-line-strong を当てている。
+     無彩色のグラファイトは、下の「配色（テーマの系統）」で選べる系統の1つとして残している。 */
+  /* 操作・選択・リンク。 */
+  --brand: #1747b5;
+  --brand-deep: #0e2f7a;
+  --brand-soft: #dce9fc;
 
   /* ------------------------------------------------------------
      面の3段階（ページ地 → 面 → 面の中の面）。
@@ -16,26 +26,26 @@
      画面側は #fff を直接書かず、必ずこの2つを使う。
      ダークテーマでも同じ役割のまま値だけが入れ替わる。
      ------------------------------------------------------------ */
-  --page-bg: #f1f1ef;      /* ページ地（body の背景） */
+  --page-bg: #f3f7fd;      /* ページ地（body の背景） */
   --surface: #ffffff;      /* カード・ヘッダー・入力欄など「載せる面」 */
 
   /* 結果のキー数字。押す面は用途が違うので --cta-* に分ける。 */
-  --accent: #202024;
-  --cta-bg: #2a2a2e;
-  --cta-bg-hover: #404046;
+  --accent: #0e2f7a;
+  --cta-bg: #1465e1;
+  --cta-bg-hover: #154dab;
   --cta-fg: #ffffff;
 
   /* テキストと構造(画面の90%) */
-  --ink: #17171a;
-  --ink-muted: #5f5f66;
-  --line: #85858c;
-  --subtle: #f5f5f3;
+  --ink: #14233b;
+  --ink-muted: #45576f;
+  --line: #7189a8;
+  --subtle: #f9fbfe;
   /* 「いまは使わない設定にしてあるもの」の面と枠（使用しない・利用停止・締め切り済み）。
-     白い面と並べて一目で違うと分かる濃さにする。文字（--ink #16191d）との
+     白い面と並べて一目で違うと分かる濃さにする。文字（--ink）との
      コントラストは 13:1 以上あり、読みやすさの下限は割らない。 */
-  --off-surface: #e5e5e2;
-  --off-surface-soft: #efefed;
-  --off-line: #7d7d84;
+  --off-surface: #e9eef4;
+  --off-surface-soft: #f0f4f9;
+  --off-line: #667e9d;
 
   /* 意味を持つ状態色 */
   --danger: #c5221f;
@@ -52,8 +62,8 @@
      Charts.tsx がここを読んで描く。テーマを変えたら対で見直すこと。
      ・soft … 比較用の2本目の線（主役の線より一段弱い同系色）
      ・band … 等級の区間を1つおきに敷く面（面の中でいちばん弱い段） */
-  --chart-line-soft: #76767e;
-  --chart-band: #f2f2ef;
+  --chart-line-soft: #6f87a8;
+  --chart-band: #edf3fc;
 
   /* 人物識別は色相ではなく、ごく弱い温度差で区別する。 */
   --avatar-1-fg: #53535a;
@@ -109,28 +119,29 @@
    ・利用者が選ぶ … html[data-theme="light"|"dark"]（ThemeToggle.tsx が付ける）
    同じ値を2箇所に書いているのは、CSSに変数の集合を使い回す仕組みが無いため。
    片方だけ直すと「自動のときだけ色が違う」という気づきにくい壊れ方をする。
+   既定（インディゴ）の暗いほうの骨格18個は、平賀配色がライトのみのため、このアプリで作った。
    ============================================================ */
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) {
-    --brand: #d7d7dc;
-    --brand-deep: #f1f1f3;
-    --brand-soft: #35353a;
+    --brand: #8fb1f5;
+    --brand-deep: #d3e1fc;
+    --brand-soft: #1e3160;
 
-    --page-bg: #1c1c20;
-    --surface: #28282d;
+    --page-bg: #0f1729;
+    --surface: #172238;
 
-    --accent: #f4f4f5;
-    --cta-bg: #ececef;
-    --cta-bg-hover: #ffffff;
-    --cta-fg: #202024;
+    --accent: #e6eefd;
+    --cta-bg: #afcbff;
+    --cta-bg-hover: #c8dbff;
+    --cta-fg: #0e1b33;
 
-    --ink: #f4f4f5;
-    --ink-muted: #b9b9c0;
-    --line: #85858e;
-    --off-line: #96969f;
-    --off-surface: #38383e;
-    --off-surface-soft: #323237;
-    --subtle: #303035;
+    --ink: #edf2fb;
+    --ink-muted: #aebbd2;
+    --line: #7485a6;
+    --off-line: #8595b5;
+    --off-surface: #243251;
+    --off-surface-soft: #1f2c49;
+    --subtle: #1c2842;
 
     --danger: #fca5a0;
     --danger-soft: #3b201f;
@@ -140,8 +151,8 @@
 
     --status-progress: #e0b66e;
 
-    --chart-line-soft: #8d8d96;
-    --chart-band: #303035;
+    --chart-line-soft: #8193b3;
+    --chart-band: #1c2842;
 
     --avatar-1-fg: #ddd9d2;
     --avatar-1-bg: #4a4640;
@@ -158,25 +169,25 @@
   }
 }
 html[data-theme="dark"] {
-  --brand: #d7d7dc;
-  --brand-deep: #f1f1f3;
-  --brand-soft: #35353a;
+  --brand: #8fb1f5;
+  --brand-deep: #d3e1fc;
+  --brand-soft: #1e3160;
 
-  --page-bg: #1c1c20;
-  --surface: #28282d;
+  --page-bg: #0f1729;
+  --surface: #172238;
 
-  --accent: #f4f4f5;
-  --cta-bg: #ececef;
-  --cta-bg-hover: #ffffff;
-  --cta-fg: #202024;
+  --accent: #e6eefd;
+  --cta-bg: #afcbff;
+  --cta-bg-hover: #c8dbff;
+  --cta-fg: #0e1b33;
 
-  --ink: #f4f4f5;
-  --ink-muted: #b9b9c0;
-  --line: #85858e;
-  --off-line: #96969f;
-  --off-surface: #38383e;
-  --off-surface-soft: #323237;
-  --subtle: #303035;
+  --ink: #edf2fb;
+  --ink-muted: #aebbd2;
+  --line: #7485a6;
+  --off-line: #8595b5;
+  --off-surface: #243251;
+  --off-surface-soft: #1f2c49;
+  --subtle: #1c2842;
 
   --danger: #fca5a0;
   --danger-soft: #3b201f;
@@ -186,8 +197,8 @@ html[data-theme="dark"] {
 
   --status-progress: #e0b66e;
 
-  --chart-line-soft: #8d8d96;
-  --chart-band: #303035;
+  --chart-line-soft: #8193b3;
+  --chart-band: #1c2842;
 
   --avatar-1-fg: #ddd9d2;
   --avatar-1-bg: #4a4640;
@@ -213,31 +224,36 @@ html[data-theme="dark"] .user-row[data-muted="true"] { filter: brightness(0.9); 
 }
 
 /* ============================================================
-   コントラストを強める設定にしている人向け (§9)
+   コントラストを強める設定にしている人向け
+   出典: jp-web-design references/motion-a11y.md「reduced motion / contrast / forced colors」
 
    弱い罫線と補助文字だけを濃くする。レイアウトは変えない
    （太らせると行の高さが動き、固定物の実測値がずれる）。
+   値は既定の系統（インディゴ）の色相のまま、罫線を面と4.5:1以上にしたもの。
+   既定以外の系統には当たらない（→ 残課題 UX-024）。
+   補正前より必ず強いことは theme-contract.test.ts が固定する
+   （2026-09-29 までの灰色の値は罫線を逆に薄くし、3:1 を割っていた）。
    ============================================================ */
 @media (prefers-contrast: more) {
   html:not([data-theme="dark"]) {
-    --ink-muted: #3b434e;
-    --line: #9aa3ae;
-    --off-line: #6b7480;
+    --ink-muted: #384961;
+    --line: #5d7390;
+    --off-line: #566d8a;
   }
   html[data-theme="dark"] {
-    --ink-muted: #d8d8de;
-    --line: #6e6e78;
-    --off-line: #8a8a94;
+    --ink-muted: #c3cee0;
+    --line: #7989a9;
+    --off-line: #8b9bb9;
   }
   :where(a, button, input, select, textarea, summary):focus-visible { outline-width: 3px; }
 }
 /* 端末の設定でダークになっている（明示指定なし）ときは、上の light 向けの
-   濃い灰色が当たったままになる。暗い面では逆に読めなくなるので打ち消す。 */
+   濃い値が当たったままになる。暗い面では逆に読めなくなるので打ち消す。 */
 @media (prefers-contrast: more) and (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) {
-    --ink-muted: #d8d8de;
-    --line: #6e6e78;
-    --off-line: #8a8a94;
+    --ink-muted: #c3cee0;
+    --line: #7989a9;
+    --off-line: #8b9bb9;
   }
 }
 
@@ -245,7 +261,7 @@ html[data-theme="dark"] .user-row[data-muted="true"] { filter: brightness(0.9); 
    配色（テーマの系統）
 
    明るさ（自動・明るい・暗い）とは別の軸として、色の系統を選べるようにする。
-   既定はここまでのグラファイト（無彩色）で、html に data-palette が無い状態。
+   既定は上の :root が持つインディゴで、html に data-palette が無い状態。
    PaletteToggle.tsx が html[data-palette] を付け外しし、値だけが入れ替わる。
 
    なぜこの形か
@@ -253,7 +269,7 @@ html[data-theme="dark"] .user-row[data-muted="true"] { filter: brightness(0.9); 
      画面側は var(--surface) 等しか見ていないので、画面のコードは1行も変わらない。
    ・系統が上書きするのは「骨格の18個」だけにする。
      状態色（danger / caution / status-progress）と人物識別色（avatar-*）は
-     意味が系統に依存しないので、上のグラファイトの値をそのまま受け継ぐ。
+     意味が系統に依存しないので、上の既定（:root）の値をそのまま受け継ぐ。
      ここを系統ごとに書くと、危険色が系統ごとに変わって意味が読めなくなる。
    ・暗いほうは「明示（data-theme="dark"）」と「端末に従う」の2箇所へ同じ値を書く。
      CSSに変数の集合を使い回す仕組みが無いため。ずれると気づきにくい壊れ方をするので、
@@ -524,6 +540,72 @@ html[data-palette="midnight"][data-theme="dark"] {
   }
 }
 
+/* ---- グラファイト（グレー） ----
+   2026-09-29 まで既定だった無彩色の系統。既定をインディゴへ変えたあとも、
+   業務内容より前に色が立たない配色を選べるよう、値を変えずにここへ移した（DD-003）。 */
+html[data-palette="graphite"] {
+  --brand: #3d3d42;
+  --brand-deep: #27272a;
+  --brand-soft: #e4e4e1;
+  --page-bg: #f1f1ef;
+  --surface: #ffffff;
+  --accent: #202024;
+  --cta-bg: #2a2a2e;
+  --cta-bg-hover: #404046;
+  --cta-fg: #ffffff;
+  --ink: #17171a;
+  --ink-muted: #5f5f66;
+  --line: #85858c;
+  --subtle: #f5f5f3;
+  --off-surface: #e5e5e2;
+  --off-surface-soft: #efefed;
+  --off-line: #7d7d84;
+  --chart-line-soft: #76767e;
+  --chart-band: #f2f2ef;
+}
+html[data-palette="graphite"][data-theme="dark"] {
+  --brand: #d7d7dc;
+  --brand-deep: #f1f1f3;
+  --brand-soft: #35353a;
+  --page-bg: #1c1c20;
+  --surface: #28282d;
+  --accent: #f4f4f5;
+  --cta-bg: #ececef;
+  --cta-bg-hover: #ffffff;
+  --cta-fg: #202024;
+  --ink: #f4f4f5;
+  --ink-muted: #b9b9c0;
+  --line: #85858e;
+  --subtle: #303035;
+  --off-surface: #38383e;
+  --off-surface-soft: #323237;
+  --off-line: #96969f;
+  --chart-line-soft: #8d8d96;
+  --chart-band: #303035;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-palette="graphite"]:not([data-theme="light"]) {
+    --brand: #d7d7dc;
+    --brand-deep: #f1f1f3;
+    --brand-soft: #35353a;
+    --page-bg: #1c1c20;
+    --surface: #28282d;
+    --accent: #f4f4f5;
+    --cta-bg: #ececef;
+    --cta-bg-hover: #ffffff;
+    --cta-fg: #202024;
+    --ink: #f4f4f5;
+    --ink-muted: #b9b9c0;
+    --line: #85858e;
+    --subtle: #303035;
+    --off-surface: #38383e;
+    --off-surface-soft: #323237;
+    --off-line: #96969f;
+    --chart-line-soft: #8d8d96;
+    --chart-band: #303035;
+  }
+}
+
 /* ============================================================
    文字の大きさ（このアプリで使ってよい段はこれだけ）
 
@@ -607,7 +689,7 @@ body {
   word-break: normal;
 }
 
-/* 数値の禁則 (§3-2) */
+/* 数値の禁則 (出典: jp-web-design references/typography-numerals.md「数値の表記 — Excel基準・シャープに」) */
 .tnum { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .num {
   font-family: var(--font-num);
@@ -668,7 +750,7 @@ body {
 }
 .kbd-hint { font-size: var(--text-note); color: var(--ink-muted); display: inline-flex; align-items: center; gap: 3px; }
 
-/* フォーカス可視化 (§9) */
+/* フォーカス可視化 (出典: jp-web-design references/motion-a11y.md「アクセシビリティ」) */
 :where(a, button, input, select, textarea, summary):focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
@@ -713,7 +795,8 @@ body {
 }
 
 /* ============================================================
-   モーション (§8) — 因果の説明のみ
+   モーション — 因果の説明のみ
+   出典: jp-web-design references/motion-a11y.md「モーション時間とイージング」
    ============================================================ */
 @keyframes rise-in {
   from { opacity: 0; transform: translateY(10px); }
@@ -740,7 +823,8 @@ body {
 }
 
 /* ============================================================
-   アプリシェル (§4) — 左メニュー + ヘッダー + 本文
+   アプリシェル — 左メニュー + ヘッダー + 本文
+   出典: jp-web-design references/layout-responsive.md「レイアウト」「ナビゲーション骨格」
    ============================================================ */
 .app-layout {
   display: grid;
@@ -1347,7 +1431,8 @@ main {
 }
 
 /* ============================================================
-   面・カード (§4)
+   面・カード
+   出典: jp-web-design references/layout-responsive.md「レイアウト」
    ============================================================ */
 .card {
   background: var(--surface);
@@ -1570,7 +1655,8 @@ tr[data-off="true"] > td {
 .stat-grid dd { margin: 2px 0 0; }
 
 /* ============================================================
-   ボタン (§5) — 3階層 + 破壊的
+   ボタン — 3階層 + 破壊的
+   出典: jp-web-design references/components.md「ボタン(3階層 + 破壊的)」
    ============================================================ */
 .btn {
   appearance: none;
@@ -1648,7 +1734,8 @@ tr[data-off="true"] > td {
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 1.6s; } }
 
 /* ============================================================
-   バッジ (§5) — 色相を増やさず塗り/罫線/打消しで区別
+   バッジ — 色相を増やさず塗り/罫線/打消しで区別
+   出典: jp-web-design references/components.md「ステータスバッジ(色 + 文言 + borderで区別)」
    ============================================================ */
 .badge {
   display: inline-flex;
@@ -1689,7 +1776,8 @@ tr[data-off="true"] > td {
 }
 
 /* ============================================================
-   テーブル (§5)
+   テーブル
+   出典: jp-web-design references/components.md「テーブル」
    ============================================================ */
 /* 表は「同じ属性の行を見比べる」ときだけ使う。判断基準は docs/product/spec.md §5-5。
    表を出すかカードに落とすかは容器の幅で切り替える（.data-table / DataTable が唯一の実装）。 */
@@ -1778,7 +1866,8 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .list-card-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: var(--space-tight); }
 
 /* ============================================================
-   フォーム (§5)
+   フォーム
+   出典: jp-web-design references/components.md「フォーム」
    ============================================================ */
 /* ------------------------------------------------------------
    入力項目が数個しかない画面（ログイン・パスワードの変更）の幅。
@@ -1864,7 +1953,8 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 }
 
 /* ============================================================
-   空状態 / 注意の面 (§5)
+   空状態 / 注意の面
+   出典: jp-web-design references/components.md「空状態 / スケルトン / 注意の面」
    ============================================================ */
 .empty-state {
   border: 1px dashed var(--line);
@@ -1892,7 +1982,8 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .caution-panel .reason-note-mark { flex: none; margin-top: 3px; color: var(--caution-border); }
 
 /* ============================================================
-   確認ダイアログ (§5)
+   確認ダイアログ
+   出典: jp-web-design references/components.md「モーダル / トースト」
 
    取り消しのきかない操作の確認は、押した場所の幅に左右されない中央の
    ダイアログで出す（ConfirmButton だけがこれを使う）。
@@ -1997,7 +2088,8 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .mail-preview .mp-body { padding: 12px 14px; white-space: pre-line; line-height: 1.9; }
 
 /* ============================================================
-   トースト (§5)
+   トースト
+   出典: jp-web-design references/components.md「モーダル / トースト」
    ============================================================ */
 .toast-region {
   position: fixed;
@@ -2063,7 +2155,8 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .todo-row-sub { font-size: var(--text-note); color: var(--ink-muted); }
 
 /* ============================================================
-   結果・レポート (jp-web-design §10)
+   結果・レポート
+   出典: jp-web-design references/layout-responsive.md「結果・レポート画面の情報階層」
    ============================================================ */
 .hero-number { text-align: center; padding: 36px 20px 28px; }
 .hero-number .hn-label { font-size: var(--text-note); color: var(--ink-muted); }
@@ -2440,6 +2533,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .palette-swatch[data-palette="sand"] { background: linear-gradient(135deg, #6d5137 0 50%, #efe6da 50%); }
 .palette-swatch[data-palette="moss"] { background: linear-gradient(135deg, #3a5442 0 50%, #dfe9e0 50%); }
 .palette-swatch[data-palette="midnight"] { background: linear-gradient(135deg, #35405a 0 50%, #dde0ea 50%); }
+.palette-swatch[data-palette="indigo"] { background: linear-gradient(135deg, #1747b5 0 50%, #dce9fc 50%); }
 @media (hover: hover) and (pointer: fine) {
   .palette-choices .chip:hover { border-color: var(--brand); }
 }
@@ -2704,30 +2798,30 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
      同じ強さの html:root[data-palette] を並べて、最後に置いたこちらを勝たせる。 */
   html:root,
   html:root[data-palette] {
-    --brand: #3d3d42;
-    --brand-deep: #27272a;
-    --brand-soft: #e4e4e1;
-    --page-bg: #f1f1ef;
+    --brand: #1747b5;
+    --brand-deep: #0e2f7a;
+    --brand-soft: #dce9fc;
+    --page-bg: #f3f7fd;
     --surface: #ffffff;
-    --accent: #202024;
-    --cta-bg: #2a2a2e;
-    --cta-bg-hover: #404046;
+    --accent: #0e2f7a;
+    --cta-bg: #1465e1;
+    --cta-bg-hover: #154dab;
     --cta-fg: #ffffff;
-    --ink: #17171a;
-    --ink-muted: #5f5f66;
-    --line: #85858c;
-    --subtle: #f5f5f3;
-    --off-line: #7d7d84;
-    --off-surface: #e5e5e2;
-    --off-surface-soft: #efefed;
+    --ink: #14233b;
+    --ink-muted: #45576f;
+    --line: #7189a8;
+    --subtle: #f9fbfe;
+    --off-line: #667e9d;
+    --off-surface: #e9eef4;
+    --off-surface-soft: #f0f4f9;
     --danger: #c5221f;
     --danger-soft: #fdecea;
     --danger-fg: #ffffff;
     --caution-soft: #fdf6e3;
     --caution-border: #947000;
     --status-progress: #815508;
-    --chart-line-soft: #76767e;
-    --chart-band: #f2f2ef;
+    --chart-line-soft: #6f87a8;
+    --chart-band: #edf3fc;
     --avatar-1-fg: #53535a;
     --avatar-1-bg: #f1f1ef;
     --avatar-2-fg: #4c5353;

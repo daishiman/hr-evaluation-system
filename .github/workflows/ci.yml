@@ -80,6 +80,12 @@ jobs:
       - name: 文書 drift 検査
         run: ${{ steps.pm.outputs.run }} check:docs
 
+      # キット（aidd-agent-kit/）と実配置（.claude/ .agents/ .codex/）が manifest の path/hash と一致するか。
+      # 配布物を直接書き換えた・sync し忘れた、をここで止める。HOME と認証情報には依存しない。
+      # 中で python3（tomllib を使うので 3.11 以上）を呼ぶ。ubuntu-latest には最初から入っている。
+      - name: AIDD エージェントキットの配置検査
+        run: bash aidd-agent-kit/verify-codex-layout.sh
+
       # Cloudflare の環境変数の型定義（cloudflare-env.d.ts）を作る。
       # このファイルは .gitignore されているため、CI のまっさらなチェックアウトには存在しない。
       # 生成せずに typecheck すると「Property 'DB' does not exist on type 'CloudflareEnv'」で必ず落ちる。

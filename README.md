@@ -103,6 +103,7 @@ Cloudflare へ配る構成をローカルで確認するときは `pnpm run cf:d
 - [アーキテクチャ](./architecture/index.md) — 構成と設計判断
 - [デプロイ時の注意](./docs/deploy-notes.md) — migration、配布、スモーク確認
 - [30思考法レビュー](./docs/reviews/elegant-review-2026-08-13.md) — 今回の検証方法・改善・PASS根拠
+- [エージェント向けの規約](./AGENTS.md) — Claude Code・Codex 共通。キットの扱い、配色の優先順位、改善要望の手順
 
 ## 本番運用とデータの注意
 
@@ -113,3 +114,5 @@ Cloudflare へ配る構成をローカルで確認するときは `pnpm run cf:d
 ## ライセンス
 
 MIT License. 詳細は [LICENSE](./LICENSE) を参照してください。
+
+`aidd-agent-kit/` 配下（と、そこから `.claude/` `.agents/skills/` `.codex/agents/` へ配置されるキット由来のファイル）は同梱の Apache License 2.0 に従います。詳細は [aidd-agent-kit/LICENSE](./aidd-agent-kit/LICENSE) と [NOTICE](./aidd-agent-kit/NOTICE) を参照してください。
