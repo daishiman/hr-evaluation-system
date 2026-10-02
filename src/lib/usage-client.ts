@@ -200,6 +200,30 @@ export function flush(): void {
   }).catch(() => {});
 }
 
+/** 画面からの保存（Server Action）を数えるときの宛先の頭。/api/ と同じ表に並べる */
+export const ACTION_USAGE_PREFIX = "/actions/";
+
+/**
+ * 画面からの保存を1回ぶん数える。
+ *
+ * Server Action は表示中の画面のURLへ送られるので、下の fetch の見張りでは
+ * APIとして数えられない。保存の口（useSaveAction）から種類名で直接数える。
+ * 送るのは種類名（"members" など）と所要時間だけで、入力した中身は送らない。
+ */
+export function recordActionCall(resource: string, elapsedMs: number, ok: boolean): void {
+  if (!installed) return;
+  const path = `${ACTION_USAGE_PREFIX}${resource}`;
+  const key = `POST ${path}`;
+  const elapsed = Math.max(0, Math.round(elapsedMs));
+  const entry = apis.get(key) ?? { method: "POST", path, counters: { ...EMPTY_API_COUNTERS } };
+  entry.counters.calls += 1;
+  entry.counters.durationMs += elapsed;
+  if (!ok) entry.counters.errors += 1;
+  if (elapsed >= USAGE_SLOW_API_MS) entry.counters.slowCalls += 1;
+  apis.set(key, entry);
+  if (!ok) noteError();
+}
+
 /* ───────────────────────── 取り付け ───────────────────────── */
 
 /**

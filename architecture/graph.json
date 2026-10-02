@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0.0",
+  "source": "architecture/data-freshness.md",
+  "source_sections": [
+    "Container and component view",
+    "層分け",
+    "Architecture decisions"
+  ],
+  "graph_node_ref": "arch-data-freshness",
+  "nodes": [
+    {
+      "id": "ui-save-hooks",
+      "kind": "frontend",
+      "name": "useSaveAction / useReadAction",
+      "source_ref": "src/lib/use-refresh.ts",
+      "summary": "送信中の表示・失敗の文面・利用状況の記録・他のタブへの知らせ・描き終わりまで結果を待たせる（createCommitGate）"
+    },
+    {
+      "id": "freshness-sync",
+      "kind": "frontend",
+      "name": "FreshnessSync / watchFreshness",
+      "source_ref": "src/components/FreshnessSync.tsx",
+      "summary": "BroadcastChannel の知らせ・visibilitychange・pageshow（persisted）・online で取り直す。1.5 秒に1回へ間引く"
+    },
+    {
+      "id": "action-entry",
+      "kind": "backend",
+      "name": "runAction / runRead",
+      "source_ref": "src/lib/action.ts",
+      "summary": "権限・大きさ・入力の形・本体の順に通し、成功したときだけ refresh() で同じ応答に新しい画面を同梱する"
+    },
+    {
+      "id": "server-actions",
+      "kind": "backend",
+      "name": "サーバーアクション",
+      "source_ref": "src/actions",
+      "summary": "資源ごとの書き込み37本と読み出し4本。画面からの書き込みはすべてここを通る"
+    },
+    {
+      "id": "write-patterns",
+      "kind": "data",
+      "name": "書き込みの型（db.batch・writeMasterBatch・withCompensation・rollForward）",
+      "source_ref": "src/lib/compensation.ts",
+      "summary": "複数の表を書く保存を3つの型のどれかに入れ、書きかけを残さない（D-003）"
+    },
+    {
+      "id": "credential-vault",
+      "kind": "security",
+      "name": "初期パスワードの控え",
+      "source_ref": "src/lib/credential-vault.ts",
+      "summary": "控えを AES-GCM で暗号化し、発行から14日で開けなくする。鍵が無い環境では控えを作らず発行は止めない"
+    },
+    {
+      "id": "route-handlers",
+      "kind": "backend",
+      "name": "Route Handler（9系統）",
+      "source_ref": "src/app/api",
+      "summary": "画面の外の相手（Claude Code・認証・書き出し）向けの口。形は変えない"
+    },
+    {
+      "id": "api-exit",
+      "kind": "backend",
+      "name": "API の出口 handle / jsonError",
+      "source_ref": "src/lib/api.ts",
+      "summary": "成功・失敗の両方に private, no-store を付ける（ADR-004）"
+    },
+    {
+      "id": "worker-entry",
+      "kind": "infrastructure",
+      "name": "worker.ts",
+      "source_ref": "worker.ts",
+      "summary": "応答に x-generated-at（Worker が応答を作った時刻）を付ける"
+    },
+    {
+      "id": "d1",
+      "kind": "data",
+      "name": "D1 hr-evaluation-db",
+      "source_ref": "wrangler.jsonc",
+      "summary": "正本のデータ。binding DB だけで接続する"
+    }
+  ],
+  "edges": [
+    {"from": "ui-save-hooks", "to": "action-entry", "relation": "calls", "note": "サーバーアクションの呼び出し（next-action ヘッダー）"},
+    {"from": "ui-save-hooks", "to": "freshness-sync", "relation": "notifies", "note": "成功したら BroadcastChannel hr-evaluation:freshness へ saved を送る"},
+    {"from": "action-entry", "to": "server-actions", "relation": "invokes"},
+    {"from": "server-actions", "to": "write-patterns", "relation": "writes-through"},
+    {"from": "server-actions", "to": "credential-vault", "relation": "uses"},
+    {"from": "write-patterns", "to": "d1", "relation": "persists"},
+    {"from": "credential-vault", "to": "d1", "relation": "persists"},
+    {"from": "route-handlers", "to": "api-exit", "relation": "responds-through"},
+    {"from": "route-handlers", "to": "d1", "relation": "reads-writes"},
+    {"from": "worker-entry", "to": "action-entry", "relation": "serves"},
+    {"from": "worker-entry", "to": "route-handlers", "relation": "serves"}
+  ],
+  "decisions": ["D-001", "D-002", "D-003", "ADR-004", "ADR-005", "ADR-006", "ADR-007", "ADR-008"]
+}

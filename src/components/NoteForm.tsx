@@ -1,43 +1,32 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useSaveAction } from "@/lib/use-refresh";
+import { createNote } from "@/actions/notes";
 import { useState } from "react";
 import { Button, Card, ReasonNote } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
 
 /** 評価メモの記入。⌘/Ctrl+Enter でも送信できるが、主経路は見えるボタン。 */
 export function NoteForm({ employeeId }: { employeeId: string }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(createNote, { resource: "notes" });
   const [body, setBody] = useState("");
   const [visibility, setVisibility] = useState<"manager" | "admin">("manager");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const submit = async () => {
-    if (!body.trim() || busy || refreshing) return;
-    setBusy(true);
+    if (!body.trim() || saving) return;
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch("/api/notes", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ employeeId, body, visibility }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "保存できませんでした。");
-        return;
-      }
-      setBody("");
-      setMessage("メモを保存しました。");
-      refresh();
-    } catch {
-      setError("通信できませんでした。入力内容はこの画面に残っています。");
-    } finally {
-      setBusy(false);
+    // 保存の応答には、メモを足したあとの一覧が同梱される（サーバー側の refresh()）
+    const result = await save({ employeeId, body, visibility });
+    // 失敗したときは書いた内容を消さない
+    if (!result.ok) {
+      setError(result.message);
+      return;
     }
+    setBody("");
+    setMessage(result.message);
   };
 
   // テキストエリアなので Enter は改行。送信は見えるボタンと ⌘/Ctrl+Enter だけ。
@@ -54,25 +43,25 @@ export function NoteForm({ employeeId }: { employeeId: string }) {
   return (
     <Card className="card-pad">
       {error && <ReasonNote>{error}</ReasonNote>}
-      <RefreshStatus message={message} refreshing={refreshing} />
+      <RefreshStatus message={message} refreshing={saving} />
       <textarea
         id="note_body"
         className="input min-h-[80px] w-full"
         value={body}
-        disabled={busy || refreshing}
+        disabled={saving}
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={onKeyDown}
         placeholder="例：4月の面談で、来期はチーム内の勉強会を主導したいと話していた。"
       />
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Button variant="primary" onClick={submit} disabled={busy || refreshing || !body.trim()}>
-          {busy ? "保存しています…" : refreshing ? "一覧に反映しています…" : "メモを残す"}
+        <Button variant="primary" onClick={() => void submit()} disabled={saving || !body.trim()}>
+          {saving ? "保存しています…" : "メモを残す"}
         </Button>
         <label className="flex items-center gap-2 text-note">
           <input
             type="checkbox"
             checked={visibility === "admin"}
-            disabled={busy || refreshing}
+            disabled={saving}
             onChange={(e) => setVisibility(e.target.checked ? "admin" : "manager")}
           />
           管理者だけが読めるようにする

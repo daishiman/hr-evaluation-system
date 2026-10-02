@@ -1,6 +1,8 @@
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { z } from "zod";
 import { chunkRowsForD1, schema as s, type DB } from "@/lib/db";
+import { batchAll } from "@/lib/db-batch";
 import { routeIdentityOf, routeMetaOf, ROUTE_META } from "@/lib/nav";
 import type { Role } from "@/lib/session";
 import {
@@ -81,7 +83,7 @@ function screenRouteOf(path: string): string | null {
 }
 
 /**
- * APIの宛先を集計用の形にする。
+ * APIの宛先（と画面からの保存の種類）を集計用の形にする。
  *
  * 画面の台帳（route-ledger）はAPIを持たないので、ID部分を自前で潰す。
  * ランダムなIDをそのまま残すと、同じAPIが呼ばれるたびに新しい行が増えて
@@ -89,7 +91,9 @@ function screenRouteOf(path: string): string | null {
  */
 export function apiRoutePatternOf(path: string): string | null {
   const clean = path.split(/[?#]/)[0] || "";
-  if (!clean.startsWith("/api/")) return null;
+  /* /actions/ は画面からの保存（Server Action）。宛先URLを持たないので、
+     ブラウザ側が種類名で数えて送ってくる（src/lib/usage-client.ts の recordActionCall）。 */
+  if (!clean.startsWith("/api/") && !clean.startsWith("/actions/")) return null;
   const normalized = clean
     .split("/")
     .map((seg) =>
@@ -190,42 +194,50 @@ export async function recordUsageBatch(
   }));
 
   /* 既にある行には足す（上書きしない）。SQLite の upsert で、
-     いま送られてきた値（excluded）を今の値に加算する。 */
+     いま送られてきた値（excluded）を今の値に加算する。
+     画面と API の両方を1回の batch で書く。途中で止まると片方だけ数が増え、
+     同じ送信をやり直したときに二重に数えてしまう。 */
+  const statements: BatchItem<"sqlite">[] = [];
   for (const chunk of chunkRowsForD1(screenRows)) {
-    await db
-      .insert(s.usageScreenDaily)
-      .values(chunk)
-      .onConflictDoUpdate({
-        target: s.usageScreenDaily.key,
-        set: {
-          views: sql`${s.usageScreenDaily.views} + excluded.views`,
-          dwellMs: sql`${s.usageScreenDaily.dwellMs} + excluded.dwell_ms`,
-          dwellSamples: sql`${s.usageScreenDaily.dwellSamples} + excluded.dwell_samples`,
-          longStays: sql`${s.usageScreenDaily.longStays} + excluded.long_stays`,
-          backtracks: sql`${s.usageScreenDaily.backtracks} + excluded.backtracks`,
-          rageClicks: sql`${s.usageScreenDaily.rageClicks} + excluded.rage_clicks`,
-          abandons: sql`${s.usageScreenDaily.abandons} + excluded.abandons`,
-          errors: sql`${s.usageScreenDaily.errors} + excluded.errors`,
-          updatedAt: now,
-        },
-      });
+    statements.push(
+      db
+        .insert(s.usageScreenDaily)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: s.usageScreenDaily.key,
+          set: {
+            views: sql`${s.usageScreenDaily.views} + excluded.views`,
+            dwellMs: sql`${s.usageScreenDaily.dwellMs} + excluded.dwell_ms`,
+            dwellSamples: sql`${s.usageScreenDaily.dwellSamples} + excluded.dwell_samples`,
+            longStays: sql`${s.usageScreenDaily.longStays} + excluded.long_stays`,
+            backtracks: sql`${s.usageScreenDaily.backtracks} + excluded.backtracks`,
+            rageClicks: sql`${s.usageScreenDaily.rageClicks} + excluded.rage_clicks`,
+            abandons: sql`${s.usageScreenDaily.abandons} + excluded.abandons`,
+            errors: sql`${s.usageScreenDaily.errors} + excluded.errors`,
+            updatedAt: now,
+          },
+        }),
+    );
   }
 
   for (const chunk of chunkRowsForD1(apiRows)) {
-    await db
-      .insert(s.usageApiDaily)
-      .values(chunk)
-      .onConflictDoUpdate({
-        target: s.usageApiDaily.key,
-        set: {
-          calls: sql`${s.usageApiDaily.calls} + excluded.calls`,
-          durationMs: sql`${s.usageApiDaily.durationMs} + excluded.duration_ms`,
-          errors: sql`${s.usageApiDaily.errors} + excluded.errors`,
-          slowCalls: sql`${s.usageApiDaily.slowCalls} + excluded.slow_calls`,
-          updatedAt: now,
-        },
-      });
+    statements.push(
+      db
+        .insert(s.usageApiDaily)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: s.usageApiDaily.key,
+          set: {
+            calls: sql`${s.usageApiDaily.calls} + excluded.calls`,
+            durationMs: sql`${s.usageApiDaily.durationMs} + excluded.duration_ms`,
+            errors: sql`${s.usageApiDaily.errors} + excluded.errors`,
+            slowCalls: sql`${s.usageApiDaily.slowCalls} + excluded.slow_calls`,
+            updatedAt: now,
+          },
+        }),
+    );
   }
+  await batchAll(db, statements);
 
   await pruneOldUsageOncePerDay(db, now);
 
@@ -247,8 +259,11 @@ async function pruneOldUsageOncePerDay(db: DB, now: Date): Promise<void> {
   lastPrunedDate = today;
   const cutoff = usageRetentionCutoff(now);
   try {
-    await db.delete(s.usageScreenDaily).where(lt(s.usageScreenDaily.date, cutoff));
-    await db.delete(s.usageApiDaily).where(lt(s.usageApiDaily.date, cutoff));
+    // 画面と API の古い日は1回の batch で消す。片方だけ消えて期間がずれるのを避ける。
+    await db.batch([
+      db.delete(s.usageScreenDaily).where(lt(s.usageScreenDaily.date, cutoff)),
+      db.delete(s.usageApiDaily).where(lt(s.usageApiDaily.date, cutoff)),
+    ]);
   } catch (e) {
     // 掃除に失敗しても、記録そのものは受け取れている。業務を止めない。
     console.warn("利用状況の古い記録を消せませんでした", e);

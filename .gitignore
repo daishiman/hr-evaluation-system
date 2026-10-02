@@ -38,10 +38,11 @@ __pycache__/
 venv/
 dist/
 build/
-# ただしソースの中の build は成果物ではない。
-# /api/evaluations/build は「評価を作る」APIの受け口で、URLの一部としてこの名前になる。
-!src/app/api/evaluations/build/
 *.log
+# 画面の通し試験（Playwright）の結果・報告・ログイン状態（毎回作り直す。ログイン状態は Cookie を含む）
+test-results/
+playwright-report/
+e2e/.auth/
 
 # === 人事評価の実データ（個人情報・評価内容）===
 # 実データはデータベース側で管理するため、リポジトリでは一切追跡しない。

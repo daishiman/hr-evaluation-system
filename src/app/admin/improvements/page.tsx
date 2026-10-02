@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/session";
 import { listImprovementRequests } from "@/lib/queries";
-import { ChipLink, EmptyState, PageTitle, ReasonNote, SectionHeading, StatGrid } from "@/components/ui";
+import { ChipLink, EmptyState, PageTitle, SectionHeading, StatGrid } from "@/components/ui";
 import { ImprovementBulkTable } from "@/components/ImprovementBulkTable";
 import { formatDateTime } from "@/lib/view";
 import { handoutCountText } from "@/lib/domain/improvement-handout";
@@ -161,10 +161,10 @@ export default async function AdminImprovements({
           title="まだ要望は届いていません"
           body="どの画面でも右下の「改善要望」から送れます。届くとここに並びます。"
         />
-      ) : rows.length === 0 ? (
-        <ReasonNote>この絞り込みに当てはまる要望はありません。条件を外してください。</ReasonNote>
       ) : (
+        // 絞り込みで0件になっても部品は外さない。表示中の要望を全て処理した直後に外すと、結果の表まで消える
         <ImprovementBulkTable
+          emptyNote="この絞り込みに当てはまる要望はありません。条件を外してください。"
           canHandOut={viewer.role === "SUPER_ADMIN"}
           canDispose={canDisposeImprovements(viewer.role)}
           rows={rows.map((r) => ({

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { handle } from "@/lib/api";
+import { handle, SMALL_JSON_MAX_BYTES } from "@/lib/api";
 import { HttpError } from "@/lib/session";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
 import { redeemDeviceGrant, startDeviceGrant } from "@/lib/agent-device";
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
         "retry-after": String(limit.retryAfterSeconds),
       });
     }
-    const input = startSchema.parse(await readJsonBodyWithinLimit(req, 4_000));
+    const input = startSchema.parse(await readJsonBodyWithinLimit(req, SMALL_JSON_MAX_BYTES));
     const grant = await startDeviceGrant(input.label);
     // 案内に出す場所は、いま話している相手そのものにする。設定値の本番URLを
     // 出すと、ローカルで確かめている人を、合言葉の無い本番へ送ってしまう。
@@ -68,7 +68,7 @@ export async function PUT(req: Request) {
         "retry-after": String(limit.retryAfterSeconds),
       });
     }
-    const input = redeemSchema.parse(await readJsonBodyWithinLimit(req, 4_000));
+    const input = redeemSchema.parse(await readJsonBodyWithinLimit(req, SMALL_JSON_MAX_BYTES));
     const result = await redeemDeviceGrant(input.deviceCode);
     if (result.state === "approved") {
       return {

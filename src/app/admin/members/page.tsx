@@ -8,6 +8,9 @@ import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
 import { MembersCsvImport } from "@/components/MembersCsvImport";
 import { MembersFilter } from "@/components/MembersFilter";
+import { createMember } from "@/actions/members";
+import { listMemoHolderIds } from "@/lib/credential-vault";
+import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +26,14 @@ export default async function AdminMembers() {
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
-  const [members, grades, policies] = await Promise.all([
+  const [members, grades, policies, memoHolders] = await Promise.all([
     listMembers(companyId),
     listGrades(companyId),
     listProfileFieldPolicies(companyId),
+    getDb().then((db) => listMemoHolderIds(db, companyId)),
   ]);
+  // 初期パスワードの控えがある人（中身は押したときにだけ開く）
+  const hasMemo = new Set(memoHolders);
   const managers = members.filter((m) => m.role !== "EMPLOYEE" && m.isActive);
   const active = members.filter((m) => m.isActive);
   const inactive = members.filter((m) => !m.isActive);
@@ -84,6 +90,7 @@ export default async function AdminMembers() {
             roleLabel: ROLE_LABEL[m.role as keyof typeof ROLE_LABEL] ?? m.role,
             gradeName: m.gradeName,
             department: m.department,
+            hasMemo: hasMemo.has(m.id),
           }))}
         />
       )}
@@ -119,8 +126,8 @@ export default async function AdminMembers() {
       </SectionHeading>
       <Disclosure summary="アカウントを発行する" meta="1人ずつ登録します">
       <RecordForm
-        url="/api/members"
-        method="POST"
+        action={createMember}
+        resource="members"
         submitLabel="この内容でアカウントを作る"
         description="発行後、メールアドレスと最初のパスワードをご本人にお伝えください。"
         resetAfterSubmit

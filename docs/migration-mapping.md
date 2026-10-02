@@ -125,30 +125,32 @@
 
 現行GASの機能を1つずつ、置き換え先の画面とAPIまで書き出したもの。「代替なし」の行はない。
 
-| 元の仕組み（GAS・スプレッドシート） | 置き換えた画面 | 動かしているAPI | 実装 |
+画面からの保存は、2026-10-01 からサーバーアクション（`src/actions/`）を通る。表の英字の名前はその関数名。外から読む口（書き出し・認証）だけが `/api/*` として残る。
+
+| 元の仕組み（GAS・スプレッドシート） | 置き換えた画面 | 動かしている入口（サーバーアクション・API） | 実装 |
 |---|---|---|---|
-| 「フォーム管理」シートのA列チェック＝等級別フォームを作成・同期 | `/admin/forms`（アンケートの発行・公開） | `POST /api/forms`／`POST /api/forms/{id}/questions` | `src/lib/form-build.ts` |
+| 「フォーム管理」シートのA列チェック＝等級別フォームを作成・同期 | `/admin/forms`（アンケートの発行・公開） | `createForms`／`saveFormQuestions`・`rebuildFormQuestions` | `src/lib/form-build.ts` |
 | 等級ごとに7本あるGoogleフォーム | 同上（1画面でサイクル×等級を一覧） | 同上 | `forms` テーブル。等級は `grade_id` という属性にして、フォームの分散をやめた |
-| フォームの回答用URL（Googleフォーム） | `/f/{公開トークン}`（ログイン後、自分の等級の回答画面へ案内） | `POST /api/responses/{formId}` | `src/app/f/[token]/` |
+| フォームの回答用URL（Googleフォーム） | `/f/{公開トークン}`（ログイン後、自分の等級の回答画面へ案内） | `saveResponse` | `src/app/f/[token]/` |
 | 回答一覧スプレッドシート | `/admin/forms/{id}/responses`（未回答者も並ぶ） | `GET /api/export?type=responses` | `src/lib/export.ts` |
-| 回答一覧の手動貼り付け・過去分の持ち込み | 同画面の「回答をまとめて取り込む」 | `POST /api/import/responses` | `src/lib/import.ts` |
-| 社員名簿シート（手入力・コピー） | `/admin/members`（名簿をまとめて取り込む／書き出す） | `POST /api/import/members`／`GET /api/export?type=members` | `src/lib/import-members.ts`・`src/lib/export.ts`。新規行の仮パスワードはサーバーが自動発行し、レスポンスで一度だけ返す |
-| VLOOKUP（検索キー `1-A` でランク閾値を引く） | 画面には出さない（サーバー側で判定） | `POST /api/evaluations/build` | `src/lib/evaluate.ts`（`kpi_rank_criteria` をDBから読む） |
-| 「フォーム管理」シートのI列＝最新KPIで再集計 | `/manager/cycles`・個人ページの「再集計」 | `POST /api/evaluations/build` | 同上 |
-| 手作業の等級要件・昇格要件チェック | `/manager/evaluations/{id}` | `GET・PATCH /api/evaluations/{id}` | `evaluation_requirements` / `evaluation_gates` に判定結果を保存 |
+| 回答一覧の手動貼り付け・過去分の持ち込み | 同画面の「回答をまとめて取り込む」 | `previewResponsesImport`／`importResponses` | `src/lib/import.ts` |
+| 社員名簿シート（手入力・コピー） | `/admin/members`（名簿をまとめて取り込む／書き出す） | `previewMembersImport`／`importMembers`／`GET /api/export?type=members` | `src/lib/import-members.ts`・`src/lib/export.ts`。新規行の仮パスワードはサーバーが自動発行し、取り込み結果で返す。鍵があれば暗号化した控えも残す |
+| VLOOKUP（検索キー `1-A` でランク閾値を引く） | 画面には出さない（サーバー側で判定） | `buildEvaluations` | `src/lib/evaluate.ts`（`kpi_rank_criteria` をDBから読む） |
+| 「フォーム管理」シートのI列＝最新KPIで再集計 | `/manager/cycles`・個人ページの「再集計」 | `buildEvaluations` | 同上 |
+| 手作業の等級要件・昇格要件チェック | `/manager/evaluations/{id}` | `updateEvaluation` | `evaluation_requirements` / `evaluation_gates` に判定結果を保存 |
 | GASが書き出していたHTML評価票 | `/manager/evaluations/{id}`（8角形レーダー付き） | 同上 | `src/components/Charts.tsx` |
 | 「評価結果」シート・「KPI明細」シート | 同画面＋書き出し | `GET /api/export?type=results`／`type=kpi` | 列構成は元シートに合わせてある |
-| 上長コメント欄（シートに直接記入） | 同画面のコメント欄 | `POST /api/notes` | `employee_notes` |
-| KPI項目の選択・ランク基準の直接編集 | `/admin/scheme`（KPI・評価セット） | `POST /api/scheme`／`PUT /api/masters`（`rankCriteria`） | `scheme_items` / `scheme_rank_ratios` / `kpi_rank_criteria`。変更時刻を記録して再集計の要否を出す |
-| 等級要件の直接編集 | `/admin/masters/requirements`（等級要件） | `PUT /api/masters`（`gradeRequirement*`） | `grade_requirements`。変更時刻を記録して再集計の要否を出す |
-| 昇格条件・昇格要件の直接編集 | `/admin/masters/promotion`（昇格の条件・要件） | `PUT /api/masters`（`threshold` / `promotionRequirement*`） | `promotion_thresholds` / `promotion_requirements`。変更時刻を記録して再集計の要否を出す |
-| 行動指針の直接編集 | `/admin/behavior`（行動指針） | `PUT /api/masters`（`grade` / `behaviorGuideline` / `behaviorLevel`） | 各等級の行で「この等級に出す行動指針」または「出さない」を選ぶ。次に作るアンケートへ写し、作成済み・公開済みアンケート・既存評価は変更しない |
-| 配点表（KPI基準定義_配点）の書き換え | `/admin/scheme`（等級区分ごとの項目・100点の組み替え） | `POST /api/scheme` | `scheme_items` / `scheme_rank_ratios` |
-| 昇給設定シート（管理者） | `/admin/raises` | `POST /api/masters`（`raise_*`） | 金額を変えると改定履歴が1行残る |
-| 半期の開始・締めの手作業 | `/manager/cycles` | `POST /api/cycles` | `evaluation_cycles` |
-| 新しい会社ごとにスプレッドシートを複製する運用 | `/system/companies` | `POST /api/companies` | システム標準テンプレート（`cmp_template`）を丸ごと複製 |
+| 上長コメント欄（シートに直接記入） | 同画面のコメント欄 | `createNote` | `employee_notes` |
+| KPI項目の選択・ランク基準の直接編集 | `/admin/scheme`（KPI・評価セット） | `saveScheme`／`saveMaster`（`rankCriteria`） | `scheme_items` / `scheme_rank_ratios` / `kpi_rank_criteria`。変更時刻を記録して再集計の要否を出す |
+| 等級要件の直接編集 | `/admin/masters/requirements`（等級要件） | `saveMaster`（`gradeRequirement*`） | `grade_requirements`。変更時刻を記録して再集計の要否を出す |
+| 昇格条件・昇格要件の直接編集 | `/admin/masters/promotion`（昇格の条件・要件） | `saveMaster`（`threshold` / `promotionRequirement*`） | `promotion_thresholds` / `promotion_requirements`。変更時刻を記録して再集計の要否を出す |
+| 行動指針の直接編集 | `/admin/behavior`（行動指針） | `saveMaster`（`grade` / `behaviorGuideline` / `behaviorLevel`） | 各等級の行で「この等級に出す行動指針」または「出さない」を選ぶ。次に作るアンケートへ写し、作成済み・公開済みアンケート・既存評価は変更しない |
+| 配点表（KPI基準定義_配点）の書き換え | `/admin/scheme`（等級区分ごとの項目・100点の組み替え） | `saveScheme` | `scheme_items` / `scheme_rank_ratios` |
+| 昇給設定シート（管理者） | `/admin/raises` | `saveMaster`（`raise_*`） | 金額を変えると改定履歴が1行残る |
+| 半期の開始・締めの手作業 | `/manager/cycles` | `createCycle`／`updateCycleStatus` | `evaluation_cycles` |
+| 新しい会社ごとにスプレッドシートを複製する運用 | `/system/companies` | `createCompany` | システム標準テンプレート（`cmp_template`）を丸ごと複製 |
 | URLを配って回答してもらう運用（誰でも見られる） | ログイン＋ロール制御 | `/api/auth/*`（Better Auth） | SUPER_ADMIN / COMPANY_ADMIN / MANAGER / EMPLOYEE。**評価基準・配点・昇格の閾値は EMPLOYEE のAPIレスポンスから除外** |
-| 基準を直したときの手作業の再集計 | `/manager/cycles` の再集計のお知らせ | `POST /api/evaluations/build` | `src/lib/impact.ts`＝基準の更新時刻と評価の計算時刻を比べ、再集計が必要なサイクルを自動で出す |
+| 基準を直したときの手作業の再集計 | `/manager/cycles` の再集計のお知らせ | `buildEvaluations` | `src/lib/impact.ts`＝基準の更新時刻と評価の計算時刻を比べ、再集計が必要なサイクルを自動で出す |
 
 ## 3. アンケート設問の組み立て（`form_questions`）
 
@@ -381,7 +383,7 @@
 
 不足していたのは構造ではなく **上限の担保と画面**の2点で、次のように直した。
 
-1. **上限10をサーバー側で担保**（`/api/masters` の `gradeRequirement`）。画面で追加ボタンを止めるだけでは、直接APIを叩かれたときに超えられるため。
+1. **上限10をサーバー側で担保**（`saveMaster` の `gradeRequirement`）。画面で追加ボタンを止めるだけでは、直接APIを叩かれたときに超えられるため。
 2. **等級要件の専用画面を新設**（`/admin/masters/requirements`）。旧・制度マスタ画面に混ざっていた一覧を切り出し、2区分を別の塊にして「いま何項目 / あと何項目」を常時表示、追加・並べ替え・見直し・回答者プレビューをその場でできるようにした。
 
 #### 「わかりにくい」の原因（実装を見て特定したもの）
@@ -437,7 +439,7 @@
 
 | 見つかったこと | どう間違っていたか | 直し方 |
 |---|---|---|
-| **昇給の「年間の上昇額」が3倍だった** | 正本は「1回あたりの昇給額 × 年間の昇給機会（2回）」＝ Beginner 3,000円→6,000円。実装は「昇給額 × 6ヶ月」＝18,000円になっていた。月額基本給が1年で上がる額ではなく、半期の支給総額を出していた | `0006_authoritative_alignment.sql` で全社分を再計算。`src/app/api/masters/route.ts` の保存時の式も `chances_per_year` を使うよう修正 |
+| **昇給の「年間の上昇額」が3倍だった** | 正本は「1回あたりの昇給額 × 年間の昇給機会（2回）」＝ Beginner 3,000円→6,000円。実装は「昇給額 × 6ヶ月」＝18,000円になっていた。月額基本給が1年で上がる額ではなく、半期の支給総額を出していた | `0006_authoritative_alignment.sql` で全社分を再計算。`src/app/api/masters/route.ts`（現在は `src/lib/masters/apply-master-update.ts`）の保存時の式も `chances_per_year` を使うよう修正 |
 | **設問の「計算での役割」が2件ずれていた** | `q19_4`（分母から控除）と `c_3`（配点・分母の自動決定）が、どちらもただの「分母」として入っていた。シードの判定が `includes("分子")→includes("分母")` の順で、より限定的な「控除」「自動決定」を先に見ていなかったため | `denominator_subtract` / `identify` に修正。シード側の判定順も直した。**実績値の計算は計算式が正なので数値は変わらない**（表示と説明の修正） |
 | **No.4 昇給率の自己言及が未解消だった** | 正本【9】に「本人分を除外し部下分のみで算出する」と指示があるのに、設問文は「自身＋自身以下スタッフ」のままだった。この項目自体が昇給の判定に使われるため、自分の昇給が自分の評価を上げる循環になっていた | `0007_raise_rate_self_reference.sql` で設問文を「自身を除く配下スタッフ」に変更。配布済みアンケートの文言は据え置き（過去評価の不変性） |
 | **計算式の文字列に注釈が混ざっていた** | No.10 / 22 / 24 の式に「※利用率90%達成で100%」などが付いていた（計算エンジンは ※ 以降を落とすので結果は正しかった） | 式と注釈を分け、注釈は `formula_note` へ移した |

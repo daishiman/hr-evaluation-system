@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/session";
 import { listCycles, listFormKpiCoverage, listForms, listGrades } from "@/lib/queries";
 import { describeFormKpiDiff, diffFormKpiItems, effectiveAskedItems } from "@/lib/domain/form-sync";
 import { ActionButton } from "@/components/ActionButton";
+import { createForms, rebuildFormQuestions, updateForm } from "@/actions/forms";
 import { CopyUrl } from "@/components/CopyUrl";
 import { appOrigin, formUrl } from "@/lib/origin";
 import { Badge, Card, CardHead, ChipLink, EmptyState, LinkButton, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
@@ -85,8 +86,9 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
         </p>
         <div className="mt-3">
           <ActionButton
-            url="/api/forms"
-            body={{ cycleId: selected.id }}
+            action={createForms}
+            resource="forms"
+            input={{ cycleId: selected.id }}
             label="等級ごとの下書きをまとめて作る"
             confirm="等級ごとのアンケート下書きを作ります。もとにするのは、等級要件・昇格要件・行動指針・評価セットです。既存のアンケートは残し、新しい版として追加します。よろしいですか？"
           />
@@ -148,18 +150,18 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
               <div className="mt-3 flex flex-wrap gap-3">
                 {f.status === "draft" && publication.ready && (
                   <ActionButton
-                    url="/api/forms"
-                    method="PATCH"
-                    body={{ formId: f.id, status: "published" }}
+                    action={updateForm}
+                    resource="forms"
+                    input={{ formId: f.id, status: "published" }}
                     label="公開する"
                     confirm={`「${f.title}」を公開します。${f.gradeName ?? ""}の方の画面に表示され、回答できるようになります。同じ等級で公開中の古い版は自動で締め切られます。よろしいですか？`}
                   />
                 )}
                 {f.status === "published" && (
                   <ActionButton
-                    url="/api/forms"
-                    method="PATCH"
-                    body={{ formId: f.id, status: "closed" }}
+                    action={updateForm}
+                    resource="forms"
+                    input={{ formId: f.id, status: "closed" }}
                     label="締め切る"
                     variant="secondary"
                     confirm={`「${f.title}」を締め切ります。以後は回答できません。提出済みの回答は残ります。よろしいですか？`}
@@ -177,8 +179,9 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                     action={
                       Number(f.responseCount ?? 0) === 0 && f.status === "draft" ? (
                         <ActionButton
-                          url={`/api/forms/${f.id}/questions`}
-                          body={{}}
+                          action={rebuildFormQuestions}
+                          resource="forms"
+                          input={{ formId: f.id }}
                           label="いまの評価項目に合わせて設問を作り直す"
                           variant="secondary"
                           confirm={`「${f.title}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ公開前で、回答は1件もありません。よろしいですか？`}

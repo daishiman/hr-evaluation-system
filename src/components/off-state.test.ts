@@ -23,14 +23,7 @@ const ALLOWED: Record<string, string> = {
   "src/app/manager/page.tsx": "件数の集計だけ",
   "src/app/system/page.tsx": "SystemDashboard に渡すだけ",
   "src/app/admin/masters/page.tsx": "等級を選ぶチップ。等級に停止状態は出していない",
-  "src/app/api/companies/route.ts": "画面ではない",
-  "src/app/api/forms/route.ts": "画面ではない",
-  "src/app/api/members/route.ts": "画面ではない",
-  "src/app/api/system/users/route.ts": "画面ではない",
-  "src/app/api/masters/apply-master-update.ts": "画面ではない",
-  "src/app/api/masters/delete-master-item.ts": "画面ではない",
   "src/lib/domain/master-delete.ts": "画面ではない",
-  "src/app/api/forms/[id]/extensions/route.ts": "画面ではない",
   "src/components/FormAnswer.tsx": "回答画面そのもの。答えられないときは画面全体で理由を出しており、沈める1件が無い",
   "src/app/admin/forms/[id]/responses/page.tsx":
     "「取り消し済み」は延長申請の RecordList 行が持つ off プロパティ（オブジェクトリテラルの off: 、data-off ではない）で沈めている。対象者一覧は利用停止中の人をクエリの時点で除外しており（在籍中の人だけを渡す）、沈める行自体が無い",
@@ -58,6 +51,17 @@ describe("使わない設定のものは、どの画面でも同じ見た目で�
     /* 落ちたときは、その画面に off / rowOff を渡すか、
        沈める対象が無いなら ALLOWED に理由を書いて足す（黙って消さない）。 */
     expect(missing).toEqual([]);
+  });
+
+  it("例外の一覧に、もう存在しないファイルを残さない（置き場所を移したら一覧も直す）", () => {
+    const gone = Object.keys(ALLOWED).filter((rel) => {
+      try {
+        return !statSync(join(ROOT, rel)).isFile();
+      } catch {
+        return true;
+      }
+    });
+    expect(gone).toEqual([]);
   });
 
   it("沈める見た目の定義は1箇所だけで、色以外の手がかりも持つ", () => {

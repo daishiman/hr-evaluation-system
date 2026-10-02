@@ -3,7 +3,7 @@
 - graph_node_id: `feat-master-settings-responsibility-split` / `feat-master-definition-revisions` / `chore-release-safety-and-ssot`
 - beads: `hr-hco` / `hr-2qk` / `hr-0p4`
 - 正本（製品）: `docs/product/spec.md` §3、§5-1、§7 / `docs/product/spec-master-definition-revisions.md`
-- 実装入口: `src/app/admin/` / `src/app/api/masters/` / `src/lib/impact.ts`
+- 実装入口: `src/app/admin/` / `src/actions/masters.ts` / `src/lib/masters/` / `src/lib/impact.ts`
 
 ## 1. 権限と会社境界
 
@@ -62,7 +62,8 @@
 
 ### 5-2. API command
 
-`PUT /api/masters` は操作の意味を `kind` で分離する。
+サーバーアクション `saveMaster`（`src/actions/masters.ts`）は操作の意味を `kind` で分離する。
+本体と監査記録は1回の D1 batch で書き（`writeMasterBatch`）、同じ実体の監査番号が重なる同時保存は 409 で断る（`uq_ce_entity_seq`、移行 0032）。
 
 | 対象 | 新規 | 意味の改訂 | 使用停止・再開 | 過去内容の再採用 | 並べ替え |
 |---|---|---|---|---|---|
@@ -95,4 +96,4 @@
 
 - 現在状態の正本は各制度マスタテーブルとし、`constitution_events` は変更履歴表示・障害調査用の append-only 監査ジャーナルとする。
 - 監査記録の再生結果を画面・計算・復旧の正本にしない。監査欠落または同一 `seq` があっても現在状態の読み取りへ波及させない。
-- 現状は本体更新と監査 INSERT が同じ D1 batch ではない。完全な監査証跡を要件化するときは、全更新 command を同一 batch に統合し、同一実体の順序をDB制約で保証してから利用する。
+- 制度マスタの更新 command は、本体更新と監査 INSERT を同じ D1 batch（`writeMasterBatch`）で書く。移行0032の `uq_ce_entity_seq` が同一実体の監査番号の重複を拒否し、競合時は本体ごと取り消して409を返す。過去の監査欠落を補完する保証ではない。

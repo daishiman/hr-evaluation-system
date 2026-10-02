@@ -114,6 +114,14 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
     <>
       {header}
       {form.description && <p className="mb-4 text-sub leading-relaxed">{form.description}</p>}
+      {/* 操作の帯（FormAnswer の中）はページの一番下に置く決まり。後ろに置くと帯の下に隠れて押せない */}
+      <p className="footnote mb-4">
+        ほかの回では答えた内容も見返せます。
+        <Link href="/me/forms" className="text-brand-deep">
+          実績を報告する
+        </Link>
+        の一覧から開いてください。
+      </p>
 
       <FormAnswer
         formId={form.id}
@@ -146,14 +154,6 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
         deadlineNote={deadlineNote}
         note={response?.respondentNote ?? null}
       />
-
-      <p className="footnote mt-3">
-        ほかの回では答えた内容も見返せます。
-        <Link href="/me/forms" className="text-brand-deep">
-          実績を報告する
-        </Link>
-        の一覧から開いてください。
-      </p>
     </>
   );
 }

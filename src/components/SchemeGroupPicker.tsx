@@ -1,9 +1,11 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { saveScheme } from "@/actions/scheme";
 import { Badge, Button, Card, DefList, Disclosure, InlineDetail, Num, OptionCard, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { RefreshStatus } from "@/components/RefreshStatus";
+import { useSaveAction } from "@/lib/use-refresh";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { validateScheme, type SchemeSelection } from "@/lib/domain/scheme";
 import { RULE_NOTES, expectedItemCount, pointsForSlot, ruleBreakdown, type GradePointRule } from "@/lib/domain/grade-points";
@@ -68,7 +70,9 @@ export function SchemeGroupPicker({
   criteriaPath: string;
 }) {
   const router = useRouter();
-  const { refresh } = useRefreshAfterSave();
+  /* 保存の応答に保存後の画面が同梱されるので、別に取り直しを頼まない。
+     保存できたら手順2へ移る（移り先は開いたときに新しく読む）。 */
+  const { save, saving } = useSaveAction(saveScheme, { resource: "scheme" });
   const fixedItem = kpiItems.find((k) => k.isFixedSlot) ?? null;
   const draftKey = `hr-eval:scheme-pick:${schemeId}:${pointGroup}:v1`;
 
@@ -82,7 +86,6 @@ export function SchemeGroupPicker({
 
   const [pick, setPickState] = useState<Pick>(savedPick);
   const [restored, setRestored] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -198,44 +201,33 @@ export function SchemeGroupPicker({
     );
   };
 
-  const save = async () => {
-    setBusy(true);
+  const submit = async () => {
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch("/api/scheme", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          schemeId,
-          pointGroup,
-          items: selections.map((x) => ({
-            kpiItemId: x.kpiItemId,
-            categoryId: x.categoryId,
-            isFixedSlot: x.isFixedSlot,
-            isMajorSlot: x.isMajorSlot,
-          })),
-        }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "保存できませんでした。");
-        return;
-      }
-      try {
-        window.localStorage.removeItem(draftKey);
-      } catch {
-        /* 保存はできているので、控えが残っても次に開いたときに同じ内容に戻るだけ */
-      }
-      setRestored(false);
-      // 保存できたら手順2（選んだ項目の基準）へ送る。ここで止めると次に何をするか分からない
-      router.push(criteriaPath);
-      refresh();
-    } catch {
-      setError("通信できませんでした。選んだ内容はこの画面に残っています。");
-    } finally {
-      setBusy(false);
+    const result = await save({
+      schemeId,
+      pointGroup,
+      items: selections.map((x) => ({
+        kpiItemId: x.kpiItemId,
+        categoryId: x.categoryId,
+        isFixedSlot: x.isFixedSlot,
+        isMajorSlot: x.isMajorSlot,
+      })),
+    });
+    if (!result.ok) {
+      // 選んだ内容はそのまま残す（直して押し直せるように）
+      setError(result.message);
+      return;
     }
+    try {
+      window.localStorage.removeItem(draftKey);
+    } catch {
+      /* 保存はできているので、控えが残っても次に開いたときに同じ内容に戻るだけ */
+    }
+    setRestored(false);
+    setMessage(result.message);
+    // 保存できたら手順2（選んだ項目の基準）へ送る。ここで止めると次に何をするか分からない
+    router.push(criteriaPath);
   };
 
   /** いま選んでいる項目（外す操作つき）。長い候補一覧を上まで戻らずに見直せるようにする。 */
@@ -346,7 +338,7 @@ export function SchemeGroupPicker({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      {message && <p className="m-0 mt-3 text-sub text-brand-deep">{message}</p>}
+      <RefreshStatus message={message} refreshing={saving} target="画面" className="m-0 mt-3 text-sub text-brand-deep" />
 
       {fixedItem && (
         <Card className="card-pad mt-4">
@@ -581,8 +573,8 @@ export function SchemeGroupPicker({
           </>
         }
       >
-        <Button variant="primary" onClick={save} disabled={busy || !v.ok}>
-          {busy ? "保存しています…" : "保存して次は基準を決める"}
+        <Button variant="primary" onClick={() => void submit()} disabled={saving || !v.ok}>
+          {saving ? "保存しています…" : "保存して次は基準を決める"}
         </Button>
       </StickyActionBar>
     </>

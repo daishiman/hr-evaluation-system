@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Button, ChoiceChip, InlineDetail, ReasonNote } from "@/components/ui";
+import { RefreshStatus } from "@/components/RefreshStatus";
+import { submitImprovement } from "@/actions/improvements";
 import { routeMetaOf } from "@/lib/nav";
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useSaveAction } from "@/lib/use-refresh";
 import { IMPROVEMENT_BODY_MAX, IMPROVEMENT_SHOT_MAX_BYTES, shotBytesOf } from "@/lib/domain/improvement";
 import {
   DIAGNOSTICS_LEVEL_NOTE,
@@ -119,7 +121,7 @@ function exportCanvas(canvas: HTMLCanvasElement): string | null {
 
 export function FeedbackWidget() {
   const pathname = usePathname();
-  const { refresh } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(submitImprovement, { resource: "improvements" });
   const dialogRef = useRef<HTMLDialogElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLImageElement | null>(null);
@@ -139,7 +141,6 @@ export function FeedbackWidget() {
   const [kind, setKind] = useState<ImprovementKind>("usability");
   const [expected, setExpected] = useState("");
   const [draftPath, setDraftPath] = useState("");
-  const [busy, setBusy] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bodyError, setBodyError] = useState<string | null>(null);
@@ -442,61 +443,49 @@ export function FeedbackWidget() {
   /* ───── 送る ───── */
 
   const submit = async () => {
-    if (busy) return;
+    if (saving) return;
     if (!body.trim()) {
       setBodyError("改善したいことを入力してください。");
       bodyRef.current?.focus();
       return;
     }
-    setBusy(true);
     setError(null);
-    try {
-      let image: string | null = null;
-      if (shot && canvasRef.current) {
-        image = exportCanvas(canvasRef.current);
-        if (!image) {
-          setError("画像が大きすぎます。範囲を狭めて撮り直してください。");
-          return;
-        }
-      }
-      const submissionKey = submissionKeyRef.current || crypto.randomUUID();
-      submissionKeyRef.current = submissionKey;
-      const res = await fetch("/api/improvements", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          path: draftPath || pathname,
-          body: body.trim(),
-          kind,
-          expected: expected.trim() || null,
-          // 直すのに要る技術情報は、こちらで集めて添える（利用者に調べさせない）。
-          diagnostics: collectDiagnostics(kind),
-          viewport: `${window.innerWidth}×${window.innerHeight}`,
-          shot: image,
-          submissionKey,
-        }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "送れませんでした。");
+    let image: string | null = null;
+    if (shot && canvasRef.current) {
+      image = exportCanvas(canvasRef.current);
+      if (!image) {
+        setError("画像が大きすぎます。範囲を狭めて撮り直してください。");
         return;
       }
-      setSent(true);
-      /* 管理者が「届いた改善要望」を開いたまま送ることがある。
-         その場で一覧へ載せる（読み直しを求めない）。 */
-      refresh();
-      setBody("");
-      setExpected("");
-      setShot(null);
-      setShapes([]);
-      setTextDraft("");
-      baseRef.current = null;
-      submissionKeyRef.current = "";
-    } catch {
-      setError("通信できませんでした。入力内容はこの窓に残っています。");
-    } finally {
-      setBusy(false);
     }
+    const submissionKey = submissionKeyRef.current || crypto.randomUUID();
+    submissionKeyRef.current = submissionKey;
+    /* 管理者が「届いた改善要望」を開いたまま送ることがある。
+       Server Action の返事に描き直した画面が同梱されるので、その場で一覧へ載る
+       （読み直しを求めない）。失敗したときは入力をこの窓に残す。 */
+    const result = await save({
+      path: draftPath || pathname,
+      body: body.trim(),
+      kind,
+      expected: expected.trim() || null,
+      // 直すのに要る技術情報は、こちらで集めて添える（利用者に調べさせない）。
+      diagnostics: collectDiagnostics(kind),
+      viewport: `${window.innerWidth}×${window.innerHeight}`,
+      shot: image,
+      submissionKey,
+    });
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setSent(true);
+    setBody("");
+    setExpected("");
+    setShot(null);
+    setShapes([]);
+    setTextDraft("");
+    baseRef.current = null;
+    submissionKeyRef.current = "";
   };
 
   /* ───── 見た目 ───── */
@@ -537,6 +526,7 @@ export function FeedbackWidget() {
               <>
                 {error && <ReasonNote>{error}</ReasonNote>}
                 {notice && <ReasonNote>{notice}</ReasonNote>}
+                <RefreshStatus message={null} refreshing={saving} target="画面" />
 
                 {/* 直す順番と、開発側に渡す書式が変わる唯一の選択。1回押すだけで済ませる。 */}
                 <p className="footnote m-0">どちらに近いですか</p>
@@ -687,11 +677,11 @@ export function FeedbackWidget() {
 
                 {/* 撮り直しと、撮れなかったときの逃げ道。主役ではないので下に小さく置く。 */}
                 <div className="feedback-alt mt-3">
-                  <Button type="button" onClick={capture} disabled={busy || capturing}>
+                  <Button type="button" onClick={capture} disabled={saving || capturing}>
                     {shot ? "撮り直す" : "もう一度撮る"}
                   </Button>
                   {(shot || capturing) && (
-                    <Button type="button" onClick={removeShot} disabled={busy}>
+                    <Button type="button" onClick={removeShot} disabled={saving}>
                       画像を外す（文章だけで送る）
                     </Button>
                   )}
@@ -713,7 +703,7 @@ export function FeedbackWidget() {
               閉じる
             </Button>
             {!sent && (
-              <Button type="button" variant="primary" onClick={submit} disabled={busy || capturing}>
+              <Button type="button" variant="primary" onClick={submit} disabled={saving || capturing}>
                 送る
               </Button>
             )}

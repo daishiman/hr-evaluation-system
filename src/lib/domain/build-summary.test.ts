@@ -44,8 +44,8 @@ describe("集計し直しの結果の要約", () => {
   });
 });
 
-describe("集計し直しの受け口（/api/evaluations/build）", () => {
-  const route = read("src/app/api/evaluations/build/route.ts");
+describe("集計し直しの受け口（buildEvaluations）", () => {
+  const route = read("src/actions/evaluations.ts");
 
   it("既存の集計処理を呼ぶ（計算をここに書き直さない）", () => {
     expect(route).toContain('import { buildEvaluationsForCycle } from "@/lib/evaluate"');
@@ -56,7 +56,7 @@ describe("集計し直しの受け口（/api/evaluations/build）", () => {
   });
 
   it("マネージャー以上でなければ実行できない（サーバー側で判定）", () => {
-    expect(route).toContain('apiViewer("MANAGER")');
+    expect(route).toContain('role: "MANAGER", input: buildSchema');
   });
 
   it("会社の境界を守る（サイクルを自社に絞ってから集計する）", () => {
@@ -103,10 +103,10 @@ describe("確定済みの評価は集計し直しで上書きされない", () =
 });
 
 describe("画面の3つのボタン", () => {
-  it("すべて /api/evaluations/build を呼び、実行前の確認文がある", () => {
+  it("すべて buildEvaluations を呼び、実行前の確認文がある", () => {
     for (const path of ["src/app/manager/cycles/page.tsx", "src/app/manager/evaluations/[id]/page.tsx"]) {
       const page = read(path);
-      const blocks = page.split("<ActionButton").filter((b) => b.includes("/api/evaluations/build"));
+      const blocks = page.split("<ActionButton").filter((b) => b.includes("action={buildEvaluations}"));
       expect(blocks.length).toBeGreaterThan(0);
       for (const b of blocks) {
         expect(b.slice(0, b.indexOf("/>"))).toContain("confirm=");

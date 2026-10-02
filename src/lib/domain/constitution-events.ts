@@ -59,16 +59,7 @@ function diffColumns(before: Snapshot | null, after: Snapshot | null): [Snapshot
   return [hasBefore ? beforeDiff : null, hasAfter ? afterDiff : null];
 }
 
-/**
- * 制度マスタ1件の変更を、append-only の監査記録として残す。
- *
- * 呼び出し側は「変更前の全体」「変更後の全体」を渡すだけでよい。実際に変わった列だけを
- * このなかで抜き出して保存する（丸ごとの複製は持たない）。before/after のどちらも
- * 変わっていない場合（created/deleted を除く）は、意味のない行を増やさないため何もしない。
- * 現在状態の正本は各制度マスタテーブルであり、この関数の記録を状態復元の正本にしない。
- * 呼び出し側の本体更新とこのINSERTは現状同じD1 batchではないため、原子性も保証しない。
- */
-export async function recordConstitutionEvent(args: {
+type ConstitutionEventArgs = {
   db: Db;
   companyId: string;
   entityType: ConstitutionEntityType;
@@ -77,12 +68,28 @@ export async function recordConstitutionEvent(args: {
   actorId: string | null;
   before?: Snapshot | null;
   after?: Snapshot | null;
-}): Promise<void> {
+};
+
+/**
+ * 制度マスタ1件の変更を、append-only の監査記録として残すための INSERT 文を作る（まだ実行しない）。
+ *
+ * 呼び出し側は「変更前の全体」「変更後の全体」を渡すだけでよい。実際に変わった列だけを
+ * このなかで抜き出して保存する（丸ごとの複製は持たない）。before/after のどちらも
+ * 変わっていない場合（created/deleted を除く）は、意味のない行を増やさないため空の配列を返す。
+ * 現在状態の正本は各制度マスタテーブルであり、この記録を状態復元の正本にしない。
+ *
+ * 返した文は、呼び出し側が本体の書き込みと同じ D1 batch に入れて実行する
+ * （本体だけ書かれて記録が欠ける、を作らないため）。
+ * 配列で返すのは、Drizzle の文が thenable で、async 関数から素のまま返すと実行されてしまうため。
+ * seq は文を作る時点の最新値から採番するので、同じ実体の記録を1つの batch に2つ入れない
+ * （入れると一意索引 uq_ce_entity_seq で batch ごと失敗する）。
+ */
+export async function constitutionEventStatements(args: ConstitutionEventArgs) {
   const { db, companyId, entityType, entityId, eventType, actorId } = args;
   const [beforeDiff, afterDiff] = diffColumns(args.before ?? null, args.after ?? null);
 
   if (eventType !== "created" && eventType !== "deleted" && beforeDiff === null && afterDiff === null) {
-    return;
+    return [];
   }
 
   const last = (
@@ -100,17 +107,52 @@ export async function recordConstitutionEvent(args: {
       .limit(1)
   )[0];
 
-  await db.insert(s.constitutionEvents).values({
-    id: newId("cevt"),
-    companyId,
-    entityType,
-    entityId,
-    eventType,
-    actorId,
-    beforeJson: beforeDiff ? JSON.stringify(beforeDiff) : null,
-    afterJson: afterDiff ? JSON.stringify(afterDiff) : null,
-    seq: (last?.seq ?? 0) + 1,
-  });
+  return [
+    db.insert(s.constitutionEvents).values({
+      id: newId("cevt"),
+      companyId,
+      entityType,
+      entityId,
+      eventType,
+      actorId,
+      beforeJson: beforeDiff ? JSON.stringify(beforeDiff) : null,
+      afterJson: afterDiff ? JSON.stringify(afterDiff) : null,
+      seq: (last?.seq ?? 0) + 1,
+    }),
+  ];
+}
+
+/**
+ * D1/SQLite が返す原因チェーンから、監査記録の番号の一意索引（uq_ce_entity_seq）だけを判別する。
+ * 同じ実体を2人が同時に保存したときに起きる。ほかの一意制約や通信エラーとは区別する。
+ */
+export function isConstitutionSeqConflict(error: unknown): boolean {
+  const messages: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current !== undefined && current !== null; depth += 1) {
+    if (current instanceof Error) {
+      messages.push(current.message);
+      current = current.cause;
+    } else {
+      messages.push(String(current));
+      break;
+    }
+  }
+  const message = messages.join(" ");
+  return (
+    message.includes("uq_ce_entity_seq") ||
+    (/unique constraint failed/i.test(message) &&
+      message.includes("constitution_events.entity_id") &&
+      message.includes("constitution_events.seq"))
+  );
+}
+
+/**
+ * 監査記録だけを単独で書く。本体の書き込みと原子的にしたいときは
+ * constitutionEventStatements の文を同じ batch に入れる。
+ */
+export async function recordConstitutionEvent(args: ConstitutionEventArgs): Promise<void> {
+  for (const statement of await constitutionEventStatements(args)) await statement;
 }
 
 /**

@@ -1,11 +1,11 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useSaveAction } from "@/lib/use-refresh";
 import { useState } from "react";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
-import { requestMasterDelete } from "@/components/master-delete-request";
+import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
 import {
   DELETE_LABEL,
   KPI_CATEGORY_BLOCKED_KEEP,
@@ -31,50 +31,31 @@ export interface KpiCategoryRow {
  * 既存7カテゴリはすべて何らかのKPI項目に紐づいているため、常に消せない（＝壊れない）。
  */
 export function KpiCategoryEditor({ categories, usage }: { categories: KpiCategoryRow[]; usage: UsageMap }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
-  const [busy, setBusy] = useState(false);
+  const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [newName, setNewName] = useState<string | null>(null);
 
   const create = async () => {
     if (newName === null || newName.trim() === "") return;
-    setBusy(true);
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch("/api/masters", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind: "kpiCategoryCreate", name: newName.trim() }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "追加できませんでした。");
-        return;
-      }
-      setMessage(json.message ?? "追加しました。");
-      setNewName(null);
-      refresh();
-    } catch {
-      setError("通信できませんでした。もう一度お試しください。");
-    } finally {
-      setBusy(false);
+    const result = await save(masterSave({ kind: "kpiCategoryCreate", name: newName.trim() }));
+    if (!result.ok) {
+      // 入力した名前は残す（直してもう一度押せるように）
+      setError(result.message);
+      return;
     }
+    setMessage(result.message);
+    setNewName(null);
   };
 
   const remove = async (id: string) => {
-    setBusy(true);
     setError(null);
     setMessage(null);
-    const result = await requestMasterDelete("kpiCategory", id);
-    if (result.ok) {
-      setMessage(result.message);
-      refresh();
-    } else {
-      setError(result.message);
-    }
-    setBusy(false);
+    const result = await save(masterDelete("kpiCategory", id));
+    if (result.ok) setMessage(result.message);
+    else setError(result.message);
   };
 
   const usedByOf = (id: string) => usage[id] ?? [];
@@ -83,7 +64,7 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
   return (
     <div className="stack">
       {error && <ReasonNote>{error}</ReasonNote>}
-      <RefreshStatus message={message} refreshing={refreshing} />
+      <RefreshStatus message={message} refreshing={saving} />
 
       {categories.map((c) => {
         const mark = blockedMark(usedByOf(c.id));
@@ -100,8 +81,8 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
                     <ConfirmButton
                       label={DELETE_LABEL}
                       variant="danger-outline"
-                      busy={busy || refreshing}
-                      busyLabel={busy ? "削除しています…" : "一覧に反映しています…"}
+                      busy={saving}
+                      busyLabel="削除しています…"
                       confirm={kpiCategoryDeleteConfirmText(c.name)}
                       onConfirm={() => void remove(c.id)}
                     />
@@ -117,7 +98,7 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
       <Card className="card-pad">
         {newName === null ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" disabled={busy || refreshing} onClick={() => setNewName("")}>
+            <Button variant="secondary" disabled={saving} onClick={() => setNewName("")}>
               カテゴリを追加する
             </Button>
             <span className="footnote">新しいKPIの分類を1つ増やします。</span>
@@ -134,10 +115,10 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
               />
             </label>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button variant="primary" disabled={busy || refreshing || newName.trim() === ""} onClick={() => void create()}>
-                {busy ? "追加しています…" : refreshing ? "一覧に反映しています…" : "追加する"}
+              <Button variant="primary" disabled={saving || newName.trim() === ""} onClick={() => void create()}>
+                {saving ? "追加しています…" : "追加する"}
               </Button>
-              <Button variant="tertiary" disabled={busy || refreshing} onClick={() => setNewName(null)}>
+              <Button variant="tertiary" disabled={saving} onClick={() => setNewName(null)}>
                 やめる
               </Button>
             </div>

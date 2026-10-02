@@ -4,27 +4,33 @@ import { useState, type ReactNode } from "react";
 import { Button, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { RefreshStatus } from "@/components/RefreshStatus";
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import type { SaveAction } from "@/lib/action-result";
+import type { FreshnessResource } from "@/lib/freshness";
+import { useSaveAction } from "@/lib/use-refresh";
 
 /**
  * サーバーに1回だけ送る操作のボタン。
  *
  * 取り消しのきかない操作（確定・締め切り・削除）には confirm を渡し、
  * 「何が起きるか」をその場に出してから実行する。確認は1回だけにする。
+ * 送り先は Server Action（action）。成功の応答に実行後の画面が同梱される。
  */
 export function ActionButton({
-  url,
-  method = "POST",
-  body,
+  action,
+  resource,
+  input,
   label,
   confirm,
   variant = "primary",
   onDoneMessage,
   children,
 }: {
-  url: string;
-  method?: "POST" | "PUT" | "PATCH";
-  body: Record<string, unknown>;
+  /** 実行する Server Action（src/actions/*） */
+  action: SaveAction<Record<string, unknown>>;
+  /** 変わるものの種類。他のタブへの知らせと利用状況の集計に使う */
+  resource: FreshnessResource;
+  /** 一緒に送る値（対象のIDなど） */
+  input: Record<string, unknown>;
   label: string;
   /** 実行前に出す確認文。省略すると即実行。 */
   confirm?: string;
@@ -32,32 +38,19 @@ export function ActionButton({
   onDoneMessage?: string;
   children?: ReactNode;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
-  const [busy, setBusy] = useState(false);
+  const { save, saving } = useSaveAction(action, { resource });
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const run = async () => {
-    setBusy(true);
     setError(null);
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "実行できませんでした。");
-        return;
-      }
-      setResult(onDoneMessage ?? json.message ?? "完了しました。");
-      refresh();
-    } catch {
-      setError("通信できませんでした。時間をおいてもう一度お試しください。");
-    } finally {
-      setBusy(false);
+    setResult(null);
+    const outcome = await save(input);
+    if (!outcome.ok) {
+      setError(outcome.message);
+      return;
     }
+    setResult(onDoneMessage ?? outcome.message);
   };
 
   return (
@@ -72,7 +65,7 @@ export function ActionButton({
       {/* 実行できたことと、画面へ出し終えたことを分けて出す（RecordForm と同じ作法） */}
       <RefreshStatus
         message={result}
-        refreshing={refreshing}
+        refreshing={saving}
         target="画面"
         className="m-0 mb-2 max-w-[22rem] text-note text-brand-deep"
       />
@@ -81,16 +74,16 @@ export function ActionButton({
           label={label}
           confirm={confirm}
           variant={variant}
-          busy={busy || refreshing}
-          busyLabel={busy ? "実行しています…" : "画面に反映しています…"}
+          busy={saving}
+          busyLabel="実行しています…"
           onConfirm={() => void run()}
         >
           {children}
         </ConfirmButton>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant={variant} disabled={busy || refreshing} onClick={() => void run()}>
-            {busy ? "実行しています…" : refreshing ? "画面に反映しています…" : label}
+          <Button variant={variant} disabled={saving} onClick={() => void run()}>
+            {saving ? "実行しています…" : label}
           </Button>
           {children}
         </div>

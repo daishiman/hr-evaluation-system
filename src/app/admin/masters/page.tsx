@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/session";
 import { listBehaviorBandSets, listGradeRequirements, listGrades, listPromotionThresholds, listRaiseSettings } from "@/lib/queries";
 import { detectStaleCycles } from "@/lib/impact";
+import { saveMaster } from "@/actions/masters";
 import { RecordForm } from "@/components/RecordForm";
 import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
 import { behaviorBandLabel } from "@/lib/domain/behavior";
@@ -76,8 +77,8 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
           そのまま残り、それを保存して別の等級の内容を上書きしてしまう */}
       <RecordForm
         key={grade.id}
-        url="/api/masters"
-        method="PUT"
+        action={saveMaster}
+        resource="masters"
         fixed={{ kind: "grade", id: grade.id }}
         submitLabel="等級の設定を保存する"
         description="「半期の目標設定上限数」は、本人が半期に立てられる目標の件数の目安です。等級要件達成率には使いません。達成率の分母は、そのアンケートを作った時点で実際に出題した等級要件の項目数です。"

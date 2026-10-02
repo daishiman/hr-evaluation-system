@@ -9,6 +9,7 @@ import { listFormExtensions } from "@/lib/response-access";
 import { CsvImport } from "@/components/CsvImport";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
+import { grantFormExtension, revokeFormExtension } from "@/actions/form-extensions";
 import { Badge, Card, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, RecordList, SectionHeading, StatGrid } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
 import { FORM_STATUS_LABEL, formatDate } from "@/lib/view";
@@ -204,8 +205,9 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
 
       {active.length > 0 && (
         <RecordForm
-          url={`/api/forms/${form.id}/extensions`}
-          method="POST"
+          action={grantFormExtension}
+          resource="form-extensions"
+          fixed={{ formId: form.id }}
           submitLabel="この内容で期限を延ばす"
           fields={[
             {
@@ -254,9 +256,9 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
               note: e.reason ? `理由：${e.reason}` : null,
               action: e.revokedAt ? null : (
                 <ActionButton
-                  url={`/api/forms/${form.id}/extensions`}
-                  method="PATCH"
-                  body={{ extensionId: e.id }}
+                  action={revokeFormExtension}
+                  resource="form-extensions"
+                  input={{ formId: form.id, extensionId: e.id }}
                   label="延長を取り消す"
                   variant="tertiary"
                   confirm={`${e.employeeName ?? "この方"}の延長を取り消すと、締切を過ぎている場合はその場で回答できなくなります。記録は履歴として残ります。`}

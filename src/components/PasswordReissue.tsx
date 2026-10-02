@@ -1,3 +1,5 @@
+import type { SaveAction } from "@/lib/action-result";
+import type { FreshnessResource } from "@/lib/freshness";
 import { RecordForm } from "@/components/RecordForm";
 import { Disclosure } from "@/components/ui";
 
@@ -15,19 +17,31 @@ import { Disclosure } from "@/components/ui";
  *  - 「作り直す」「写す」を添える
  *  - 送信後は今回の値だけを残して表示し、「次の入力を始める」まで作り直さない
  *  - 発行後は仮のもの扱い（mustChangePassword）になり、本人に変更のお願いが出る
+ *  - 値は暗号化した控えにも残し、一覧の行から開き直せる（鍵の設定があるとき）
  */
-export function PasswordReissue({ url, userId, name }: { url: string; userId: string; name: string }) {
+export function PasswordReissue({
+  action,
+  resource,
+  userId,
+  name,
+}: {
+  /** 再発行を受け付ける Server Action（社員の変更・利用者の変更） */
+  action: SaveAction<Record<string, unknown>>;
+  resource: FreshnessResource;
+  userId: string;
+  name: string;
+}) {
   return (
     <Disclosure summary="仮パスワードを再発行する" meta="ご本人がログインできなくなったときに使います">
       <RecordForm
-        url={url}
-        method="PATCH"
+        action={action}
+        resource={resource}
         fixed={{ userId }}
         submitLabel="この仮パスワードを発行する"
         /* 取り返しのつかない操作の警告なので畳まない。
            1文に2つのこと（①いまの値が使えなくなる ②本人がログインし直しになる）を
            詰めると、差し込む氏名のぶんだけ伸びて読み飛ばされる。1文＝1つのことにする。 */
-        description={`発行すると、いまのパスワードは使えなくなります。${name}さんは、次からログインし直しになります。発行後の画面に出る値を、この画面を離れる前にご本人へ安全な方法でお伝えください。最初のログインのあと、変更のお願いが表示されます。`}
+        description={`発行すると、いまのパスワードは使えなくなります。${name}さんは、次からログインし直しになります。発行後に出る値を、ご本人へ安全な方法でお伝えください。最初のログインのあと、変更のお願いが表示されます。`}
         resetAfterSubmit
         fields={[
           {

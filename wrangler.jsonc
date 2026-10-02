@@ -1,7 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "hr-evaluation-system",
-  "main": ".open-next/worker.js",
+  // OpenNext の .open-next/worker.js を包み、応答に生成時刻（x-generated-at）を足す入口
+  "main": "worker.ts",
   // ローカル実行用のランタイム（workerd）が対応している最新日付に合わせる
   "compatibility_date": "2026-08-08",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],

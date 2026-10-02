@@ -1,6 +1,6 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useSaveAction } from "@/lib/use-refresh";
 import { useState } from "react";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -16,7 +16,7 @@ import {
   blockedMark,
   deleteConfirmText,
 } from "@/lib/domain/master-delete";
-import { requestMasterDelete } from "@/components/master-delete-request";
+import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
 import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
@@ -52,53 +52,34 @@ export interface BehaviorBandSetRow {
 }
 
 export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBandSetRow[]; currentBand: string | null }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
-  const [busy, setBusy] = useState(false);
+  const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<Record<string, string>>({});
   /** 「新しく作る」を開いているときだけ持つ下書き。閉じているときは null。 */
   const [draft, setDraft] = useState<{ name: string; copyFromBand: string } | null>(null);
 
+  /* 保存の応答に保存後の画面が同梱されるので、別に読み直しを頼まない。
+     失敗したときは入力欄を閉じずに残す（呼び出し側は true のときだけ閉じる）。 */
   const send = async (payload: Record<string, unknown>) => {
-    setBusy(true);
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch("/api/masters", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind: "behaviorBandSet", ...payload }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "保存できませんでした。");
-        return false;
-      }
-      setMessage(json.message ?? "保存しました。");
-      refresh();
-      return true;
-    } catch {
-      setError("通信できませんでした。入力した内容はこの画面に残っています。");
+    const result = await save(masterSave({ kind: "behaviorBandSet", ...payload }));
+    if (!result.ok) {
+      setError(result.message);
       return false;
-    } finally {
-      setBusy(false);
     }
+    setMessage(result.message);
+    return true;
   };
 
   /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
   const remove = async (id: string) => {
-    setBusy(true);
     setError(null);
     setMessage(null);
-    const result = await requestMasterDelete("behaviorBandSet", id);
-    if (result.ok) {
-      setMessage(result.message);
-      refresh();
-    } else {
-      setError(result.message);
-    }
-    setBusy(false);
+    const result = await save(masterDelete("behaviorBandSet", id));
+    if (result.ok) setMessage(result.message);
+    else setError(result.message);
   };
 
   const openDraft = () => {
@@ -118,11 +99,11 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
         sub="等級ごとに問う内容を変えたいときは、基準を分けて作ります。よく使うのは、いまの基準を複製して一部だけ書き換えるやり方です。"
         actions={
           draft === null ? (
-            <Button variant="secondary" disabled={busy || refreshing} onClick={openDraft}>
+            <Button variant="secondary" disabled={saving} onClick={openDraft}>
               基準を新しく作る
             </Button>
           ) : (
-            <Button variant="tertiary" disabled={busy || refreshing} onClick={() => setDraft(null)}>
+            <Button variant="tertiary" disabled={saving} onClick={() => setDraft(null)}>
               やめる
             </Button>
           )
@@ -134,7 +115,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      <RefreshStatus message={message} refreshing={refreshing} className="m-0 mt-3 text-sub text-brand-deep" />
+      <RefreshStatus message={message} refreshing={saving} className="m-0 mt-3 text-sub text-brand-deep" />
 
       {draft !== null && (
         <div className="mt-3 rounded-lg border border-line p-3">
@@ -172,7 +153,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
               variant="primary"
-              disabled={busy || refreshing || draft.name.trim() === ""}
+              disabled={saving || draft.name.trim() === ""}
               onClick={async () => {
                 const ok = await send({
                   name: draft.name.trim(),
@@ -181,7 +162,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                 if (ok) setDraft(null);
               }}
             >
-              {busy ? "作っています…" : refreshing ? "一覧に反映しています…" : "この内容で作る"}
+              {saving ? "作っています…" : "この内容で作る"}
             </Button>
           </div>
         </div>
@@ -231,7 +212,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button
                       variant="primary"
-                      disabled={busy || refreshing || nameDraft.trim() === ""}
+                      disabled={saving || nameDraft.trim() === ""}
                       onClick={async () => {
                         const ok = await send({ id: set.id, name: nameDraft.trim() });
                         if (ok) setEditingName((s) => { const n = { ...s }; delete n[set.id]; return n; });
@@ -241,7 +222,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     </Button>
                     <Button
                       variant="tertiary"
-                      disabled={busy || refreshing}
+                      disabled={saving}
                       onClick={() => setEditingName((s) => { const n = { ...s }; delete n[set.id]; return n; })}
                     >
                       やめる
@@ -254,7 +235,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                   <Badge tone={set.isActive ? "active" : "dropped"}>{set.isActive ? "使用中" : "使用しない"}</Badge>
                   <Button
                     variant="tertiary"
-                    disabled={busy || refreshing}
+                    disabled={saving}
                     onClick={() => setEditingName((s) => ({ ...s, [set.id]: set.name }))}
                   >
                     呼び名を直す
@@ -266,14 +247,14 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       <ConfirmButton
                         label="使わない"
                         variant="danger-outline"
-                        busy={busy || refreshing}
-                        busyLabel={busy ? "保存しています…" : "一覧に反映しています…"}
+                        busy={saving}
+                        busyLabel="保存しています…"
                         confirm={`「${set.name}」を次に作るアンケートで選べないようにします。中身は残るので、あとからもう一度使えます。すでに公開したアンケートと確定済みの評価はそのまま残ります。`}
                         onConfirm={() => void send({ id: set.id, isActive: false })}
                       />
                     )
                   ) : (
-                    <Button variant="secondary" disabled={busy || refreshing} onClick={() => void send({ id: set.id, isActive: true })}>
+                    <Button variant="secondary" disabled={saving} onClick={() => void send({ id: set.id, isActive: true })}>
                       もう一度使う
                     </Button>
                   )}
@@ -281,8 +262,8 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     <ConfirmButton
                       label={DELETE_LABEL}
                       variant="danger-outline"
-                      busy={busy || refreshing}
-                      busyLabel={busy ? "削除しています…" : "一覧に反映しています…"}
+                      busy={saving}
+                      busyLabel="削除しています…"
                       confirm={deleteConfirmText(
                         set.name,
                         set.totalAspectCount > 0 ? `中に入っている観点${set.totalAspectCount}件も一緒に消えます。` : undefined,

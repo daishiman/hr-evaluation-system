@@ -9,6 +9,8 @@ import {
   listOfficeKgiRevisions,
 } from "@/lib/queries";
 import { kgiRangeLabel, matchKgiCoefficient } from "@/lib/domain/kgi";
+import { saveMaster } from "@/actions/masters";
+import { saveKgiResult } from "@/actions/kgi-results";
 import { RecordForm } from "@/components/RecordForm";
 import { Badge, Card, ChipLink, Disclosure, EmptyState, InlineDetail, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
@@ -160,8 +162,8 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
             return (
               <div key={o.id}>
                 <RecordForm
-                  url="/api/kgi-results"
-                  method="PUT"
+                  action={saveKgiResult}
+                  resource="kgi-results"
                   fixed={{ officeId: o.id, cycleId: cycle.id }}
                   title={o.name}
                   submitLabel="この事業所の達成率を保存する"
@@ -265,8 +267,8 @@ export default async function AdminKgi({ searchParams }: { searchParams: Promise
               {coefficients.map((k) => (
                 <RecordForm
                   key={k.id}
-                  url="/api/masters"
-                  method="PUT"
+                  action={saveMaster}
+                  resource="masters"
                   fixed={{ kind: "kgi", id: k.id }}
                   submitLabel="係数を保存する"
                   title={kgiRangeLabel(k)}

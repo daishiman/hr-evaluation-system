@@ -1,6 +1,7 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { saveMaster } from "@/actions/masters";
+import { useSaveAction } from "@/lib/use-refresh";
 import { useState } from "react";
 import { Button, ReasonNote } from "@/components/ui";
 import { NumberField } from "@/components/NumberField";
@@ -33,7 +34,7 @@ export function RankCriteriaSetForm({
   direction: Direction;
   rows: { id: string; rank: string; lowerBound: number | null; upperBound: number | null; displayLabel: string }[];
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(saveMaster, { resource: "masters" });
   const [values, setValues] = useState(() =>
     sortByRank(rows).map((r) => ({ id: r.id, rank: r.rank, lowerBound: r.lowerBound, upperBound: r.upperBound })),
   );
@@ -41,7 +42,6 @@ export function RankCriteriaSetForm({
      入力欄は打っている途中の文字を自分で持っているので、外から値を変えたことを
      こうして伝えないと、画面の文字だけ古いまま残る。 */
   const [version, setVersion] = useState(0);
-  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,37 +64,26 @@ export function RankCriteriaSetForm({
       setError("ランクの境界が繋がっていません。下の案内のとおりに直してから保存してください。");
       return;
     }
-    setBusy(true);
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch("/api/masters", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          kind: "rankCriteriaSet",
-          kpiItemId,
-          rows: values.map((r) => ({ id: r.id, lowerBound: r.lowerBound, upperBound: r.upperBound })),
-        }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "保存できませんでした。入力内容をご確認ください。");
-        return;
-      }
-      setMessage(json.message ?? "保存しました。");
-      refresh();
-    } catch {
-      setError("通信できませんでした。入力内容はこの画面に残っています。");
-    } finally {
-      setBusy(false);
+    // 保存の応答に保存後の画面が同梱されるので、別に読み直しを頼まない
+    const result = await save({
+      kind: "rankCriteriaSet",
+      kpiItemId,
+      rows: values.map((r) => ({ id: r.id, lowerBound: r.lowerBound, upperBound: r.upperBound })),
+    });
+    if (!result.ok) {
+      // 入力した値は画面に残す
+      setError(result.message);
+      return;
     }
+    setMessage(result.message);
   };
 
   const current = new Map(rows.map((r) => [r.id, r.displayLabel]));
 
   return (
-    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="m-0 mt-3 min-w-0 border-0 p-0">
+    <fieldset disabled={saving} aria-busy={saving} className="m-0 mt-3 min-w-0 border-0 p-0">
       <div className="stack-tight">
         {values.map((r) => (
           <div key={r.id} className="flex flex-wrap items-center gap-2">
@@ -149,8 +138,8 @@ export function RankCriteriaSetForm({
       )}
 
       <div className="mt-3">
-        <Button type="button" variant="primary" disabled={busy || refreshing} onClick={() => void submit()}>
-          {busy ? "保存しています…" : refreshing ? "画面に反映しています…" : "ランクA〜Eの基準を保存"}
+        <Button type="button" variant="primary" disabled={saving} onClick={() => void submit()}>
+          {saving ? "保存しています…" : "ランクA〜Eの基準を保存"}
         </Button>
       </div>
 
@@ -159,7 +148,7 @@ export function RankCriteriaSetForm({
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      <RefreshStatus message={message} refreshing={refreshing} target="画面" className="m-0 mt-3 text-sub text-brand-deep" />
+      <RefreshStatus message={message} refreshing={saving} target="画面" className="m-0 mt-3 text-sub text-brand-deep" />
     </fieldset>
   );
 }

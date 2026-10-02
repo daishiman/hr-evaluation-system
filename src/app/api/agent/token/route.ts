@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { handle } from "@/lib/api";
+import { handle, SMALL_JSON_MAX_BYTES } from "@/lib/api";
 import { HttpError } from "@/lib/session";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
 import { refreshAgentAccess } from "@/lib/agent-device";
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         "retry-after": String(limit.retryAfterSeconds),
       });
     }
-    const input = schema.parse(await readJsonBodyWithinLimit(req, 4_000));
+    const input = schema.parse(await readJsonBodyWithinLimit(req, SMALL_JSON_MAX_BYTES));
     const issued = await refreshAgentAccess(input.refreshToken);
     if (!issued) throw new HttpError(401, DEVICE_REFRESH_EXPIRED_MESSAGE);
     return { accessToken: issued.accessToken, expiresInSeconds: issued.expiresInSeconds };

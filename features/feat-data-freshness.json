@@ -1,0 +1,56 @@
+{
+  "graph_node_id": "feat-data-freshness",
+  "artifact_kind": "feature",
+  "purpose": "「会社を追加したと出たのに、一覧に出ない。再読み込みしても出ない」を、会社の追加だけでなく作る・変える・消す操作の全部で起きない作りにする。画面ごとの呼び忘れを1件ずつ直すのではなく、保存の入口を1つにして、鮮度の保証を共通の契約にする。",
+  "goal": "画面からの書き込みはすべてサーバーアクションの入口 runAction を通り、成功した保存の応答に新しい画面が同梱され、成功の知らせは新しい一覧が描き終わってから出る。別のタブ・画面復帰・戻る・bfcache の復元・通信復帰でも画面を取り直し、応答は private, no-store と生成時刻 x-generated-at を持つ。複数の表を書く保存は3つの書き込みの型のどれかに入り、片方だけが残る状態を作らない。連続作成で消える初期パスワードは暗号化した控えとして14日だけ開き直せる。これらを単体・結合テストと画面の通し試験（パソコン・375px・768px）が固定している。",
+  "scope_in": [
+    "画面から使っていた Route Handler 22本（FR-014）をサーバーアクションへ移し、付随する部品と試験の11ファイルを src/lib/masters/・src/actions/ へ移す（旧ファイルは作業ツリーの外へ退避。退避した経路は 404）",
+    "runAction / runRead / useSaveAction / useReadAction と、その契約テスト",
+    "成功の結果を新しい画面が描き終わってから返す createCommitGate",
+    "API の共通出口（handle / jsonError）での Cache-Control: private, no-store",
+    "FreshnessSync と watchFreshness（BroadcastChannel・visibilitychange・pageshow・online）",
+    "応答の生成時刻 x-generated-at（worker.ts / src/lib/generated-at.ts）",
+    "withCompensation（会社の追加）・rollForward（パスワードの変更）・writeMasterBatch（制度マスタ、移行 0032）と書き込みの型の契約テスト",
+    "別々の await で2つの表を書いていた4か所の batch 化と、端末の承認の引き換えの条件付き更新",
+    "送信元の二重の検査を固定する試験（action-origin.test.ts。allowedOrigins は足さない）",
+    "初期パスワードの控え（AES-GCM、表 initial_credential_memos、移行 0031、14日の期限）とパスワード変更時の他端末ログアウト",
+    "連続作成の画面（RecordForm）で、発行した控えを成功の知らせの後ろに畳む",
+    "アカウント設定と会社管理の保存の監査（SECURITY-001）",
+    "画面の通し試験（Playwright。ローカルの preview だけを相手にする。パソコン・375px・768px）",
+    "製品仕様 §27・system-spec・architecture・backlog・デプロイ時の注意の同期"
+  ],
+  "scope_out": [
+    "別の利用者・別の端末の画面へ保存を押し出すこと（W1）",
+    "本番での作成直後の ⌘+Shift+R の確認（W2。配布後に行う）",
+    "本番の CREDENTIAL_ENC_KEY の設定（W3。外部への変更なので利用者の確認を通す）",
+    "仮パスワードそのものの失効（W4 / SECURITY-005。控えの14日の期限は含む）"
+  ],
+  "acceptance": [
+    "画面の部品に書き込みの fetch が無く、どのサーバーアクションも runAction か runRead を通る（契約テスト）",
+    "成功した保存だけが1回描き直し、断られた保存は1行も書かず描き直さない",
+    "ログイン後の画面と /api/* の応答が private, no-store",
+    "保存の知らせが他のタブに届き、送ったタブには届かない。取り直しは1.5秒に1回へ間引かれる",
+    "会社の追加が最後の段で失敗しても、会社・制度・管理者・控えが1行も残らない",
+    "制度マスタの同時保存で後のほうが 409 になり、監査記録の番号が重ならない",
+    "控えを開けるのはシステム全体管理者と同じ会社の管理者だけで、本人のパスワード変更で消える",
+    "ローカルの preview で、会社の追加の応答に新しい会社が載り、直後の再読み込みにも出る",
+    "check:docs が通り、system-spec の要件定義（U1・G1〜G5）から8章へ辿れる",
+    "成功の知らせが出た瞬間の画面に、新しい会社の行・1つ増えた件数・会社切替の選択肢がある（E2E 1。待機なし）",
+    "作成直後のキャッシュを使わない再読み込みで新しい会社が出て、応答の x-generated-at が作成より後（E2E 2）",
+    "他のタブ・画面復帰・戻る・bfcache の復元で、新しい会社が1秒以内に出る（E2E 3a・3b・4a・4b）",
+    "発行した控えは成功の知らせの後ろに畳まれて始まり、押したときだけ値が出る。控えを保存できなかったときは最初から開いている（E2E 5・RecordForm.test.ts）",
+    "別々の await で2つ以上の表を書く関数が無い。パスワード変更の続きが2回とも失敗しても変更済みと伝え rollforward_failed を残す。端末の承認を同時に2回引き換えても1回だけ通る",
+    "別のサイト・ポート違いからの書き込みと読み出しを、ログインを確かめる前に断る。allowedOrigins を足していない（action-origin.test.ts）",
+    "発行から14日を過ぎた控えは一覧に出ず、開こうとすると 410 と再発行を頼む文面になり、次の発行で消える",
+    "会社の変更・会社の切替・利用者の追加と変更は、システム全体管理者以外だと1行も書かず描き直さない。応答に仮パスワードが無い（SECURITY-001）",
+    "スマホ（375px）・タブレット（768px）の幅でも、E2E 1 と 5 が同じに通る（E2E 6-1・6-5）"
+  ],
+  "architecture_refs": [
+    "architecture/data-freshness.md",
+    "architecture/graph.json",
+    "specs/data-freshness.md",
+    "system-spec/index.md",
+    "system-spec/00-requirements-definition.md"
+  ],
+  "updated_at": "2026-10-01T11:58:00Z"
+}

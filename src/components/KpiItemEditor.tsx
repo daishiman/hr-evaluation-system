@@ -1,11 +1,11 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useSaveAction } from "@/lib/use-refresh";
 import { useState } from "react";
 import { Badge, Button, Card, CardHead, Code, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
-import { requestMasterDelete } from "@/components/master-delete-request";
+import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
 import {
   DELETE_LABEL,
   KPI_ITEM_BLOCKED_KEEP,
@@ -97,8 +97,7 @@ export function KpiItemEditor({
   categories: KpiItemCategoryOption[];
   usage: UsageMap;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
-  const [busy, setBusy] = useState(false);
+  const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [creating, setCreating] = useState<Draft | null>(null);
@@ -108,32 +107,15 @@ export function KpiItemEditor({
   const usedByOf = (id: string) => usage[id] ?? [];
   const anyBlocked = items.some((i) => usedByOf(i.id).length > 0);
 
+  /* 保存の応答に保存後の画面が同梱されるので、別に読み直しを頼まない。
+     失敗したときは入力欄を閉じずに残す（呼び出し側は ok のときだけ閉じる）。 */
   const send = async (payload: Record<string, unknown>): Promise<{ ok: boolean; message: string }> => {
-    setBusy(true);
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch("/api/masters", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        const msg = json.message ?? "保存できませんでした。";
-        setError(msg);
-        return { ok: false, message: msg };
-      }
-      const msg = json.message ?? "保存しました。";
-      setMessage(msg);
-      return { ok: true, message: msg };
-    } catch {
-      const msg = "通信できませんでした。入力した内容はこの画面に残っています。";
-      setError(msg);
-      return { ok: false, message: msg };
-    } finally {
-      setBusy(false);
-    }
+    const result = await save(masterSave(payload));
+    if (!result.ok) setError(result.message);
+    else setMessage(result.message);
+    return { ok: result.ok, message: result.message };
   };
 
   const create = async () => {
@@ -151,10 +133,7 @@ export function KpiItemEditor({
       remarks: creating.remarks.trim() || null,
       isMonetary: creating.isMonetary,
     });
-    if (result.ok) {
-      setCreating(null);
-      refresh();
-    }
+    if (result.ok) setCreating(null);
   };
 
   const startEdit = (row: KpiItemRow) => {
@@ -164,7 +143,7 @@ export function KpiItemEditor({
     setMessage(null);
   };
 
-  const save = async (row: KpiItemRow) => {
+  const saveEdit = async (row: KpiItemRow) => {
     if (editDraft === null) return;
     const locked = usedByOf(row.id).length > 0;
     const payload: Record<string, unknown> = {
@@ -186,33 +165,25 @@ export function KpiItemEditor({
     if (result.ok) {
       setEditingId(null);
       setEditDraft(null);
-      refresh();
     }
   };
 
   const toggleActive = async (row: KpiItemRow) => {
-    const result = await send({ kind: "kpiItemUpdate", id: row.id, isActive: !row.isActive });
-    if (result.ok) refresh();
+    await send({ kind: "kpiItemUpdate", id: row.id, isActive: !row.isActive });
   };
 
   const remove = async (id: string) => {
-    setBusy(true);
     setError(null);
     setMessage(null);
-    const result = await requestMasterDelete("kpiItem", id);
-    if (result.ok) {
-      setMessage(result.message);
-      refresh();
-    } else {
-      setError(result.message);
-    }
-    setBusy(false);
+    const result = await save(masterDelete("kpiItem", id));
+    if (result.ok) setMessage(result.message);
+    else setError(result.message);
   };
 
   return (
-    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="stack m-0 min-w-0 border-0 p-0">
+    <fieldset disabled={saving} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
       {error && <ReasonNote>{error}</ReasonNote>}
-      <RefreshStatus message={message} refreshing={refreshing} />
+      <RefreshStatus message={message} refreshing={saving} />
 
       {items.map((row) => {
         const mark = blockedMark(usedByOf(row.id));
@@ -245,17 +216,17 @@ export function KpiItemEditor({
                 {mark !== null && <UsedByDetail mark={mark} usedBy={usedByOf(row.id)} />}
                 {!row.isFixedSlot && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <Button variant="tertiary" disabled={busy} onClick={() => startEdit(row)}>
+                    <Button variant="tertiary" disabled={saving} onClick={() => startEdit(row)}>
                       内容を直す
                     </Button>
-                    <Button variant="tertiary" disabled={busy} onClick={() => void toggleActive(row)}>
+                    <Button variant="tertiary" disabled={saving} onClick={() => void toggleActive(row)}>
                       {row.isActive ? "使わない" : "もう一度使う"}
                     </Button>
                     {mark === null && (
                       <ConfirmButton
                         label={DELETE_LABEL}
                         variant="danger-outline"
-                        busy={busy}
+                        busy={saving}
                         confirm={kpiItemDeleteConfirmText(row.name)}
                         onConfirm={() => void remove(row.id)}
                       />
@@ -269,9 +240,9 @@ export function KpiItemEditor({
                 onChange={setEditDraft}
                 categories={categories}
                 locked={locked}
-                busy={busy}
+                busy={saving}
                 submitLabel="保存する"
-                onSubmit={() => void save(row)}
+                onSubmit={() => void saveEdit(row)}
                 onCancel={() => {
                   setEditingId(null);
                   setEditDraft(null);
@@ -285,7 +256,7 @@ export function KpiItemEditor({
       <Card className="card-pad">
         {creating === null ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" disabled={busy} onClick={() => setCreating(emptyDraft())}>
+            <Button variant="secondary" disabled={saving} onClick={() => setCreating(emptyDraft())}>
               KPI項目を追加する
             </Button>
             <span className="footnote">名前・単位・向き・分類などを決めて、新しい項目を1件増やします。</span>
@@ -296,7 +267,7 @@ export function KpiItemEditor({
             onChange={setCreating}
             categories={categories}
             locked={false}
-            busy={busy}
+            busy={saving}
             submitLabel="追加する"
             onSubmit={() => void create()}
             onCancel={() => setCreating(null)}

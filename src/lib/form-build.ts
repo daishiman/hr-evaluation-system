@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
+import { batchAll } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
 import { HttpError } from "@/lib/session";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
@@ -461,12 +462,10 @@ export async function syncFormQuestions(opts: {
    * D1 batchは途中のstatementが失敗すると全体をrollbackするため、
    * 古い設問だけ消えた状態や、新旧が一部だけ混ざった状態を作らない。
    */
-  await db.batch(
-    [
-      db.delete(s.formQuestions).where(eq(s.formQuestions.formId, form.id)),
-      ...questionInsertStatements(db, rows),
-    ] as unknown as Parameters<typeof db.batch>[0],
-  );
+  await batchAll(db, [
+    db.delete(s.formQuestions).where(eq(s.formQuestions.formId, form.id)),
+    ...questionInsertStatements(db, rows),
+  ]);
 
   return { questionCount: rows.length, removed: before.length };
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useReadAction, useSaveAction } from "@/lib/use-refresh";
+import { importResponses, previewResponsesImport } from "@/actions/response-import";
 import { useRef, useState } from "react";
 import { Button, Card, ReasonNote } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
@@ -20,13 +21,16 @@ type RowResult = {
  *
  * ファイルを選ぶか、スプレッドシートからそのまま貼り付けて取り込む。
  * 取り込めない行は理由つきで一覧に出し、1行でもあればファイル全体を保存しない。
+ *
+ * 「まず内容を確認する」は何も保存しない読み出し（画面は描き直さない）。
+ * 「この内容を取り込む」は書き込みで、応答に取り込み後の回答一覧が同梱される。
  */
 export function CsvImport({ formId, formTitle }: { formId: string; formTitle: string }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(importResponses, { resource: "responses" });
+  const { read: check, reading } = useReadAction(previewResponsesImport, { resource: "responses" });
   const fileRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<RowResult[] | null>(null);
@@ -52,30 +56,30 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
       setError("取り込む内容がありません。ファイルを選ぶか、表を貼り付けてください。");
       return;
     }
-    setBusy(true);
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch("/api/import/responses", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ formId, csv: text, dryRun, confirmationToken: dryRun ? undefined : confirmationToken }),
-      });
-      const data = (await res.json()) as { ok: boolean; message?: string; rows?: RowResult[]; confirmationToken?: string };
-      if (!res.ok || !data.ok) {
-        setError(data.message ?? "取り込みできませんでした。");
+    if (dryRun) {
+      const result = await check({ formId, csv: text });
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
-      setMessage(data.message ?? "取り込みました。");
-      setRows(data.rows ?? []);
-      setChecked(dryRun);
-      setConfirmationToken(dryRun ? (data.confirmationToken ?? null) : null);
-      if (!dryRun) refresh();
-    } catch {
-      setError("通信できませんでした。時間をおいてもう一度お試しください。");
-    } finally {
-      setBusy(false);
+      setMessage(result.message);
+      setRows(result.rows);
+      setChecked(true);
+      setConfirmationToken(result.confirmationToken);
+      return;
     }
+    const result = await save({ formId, csv: text, confirmationToken: confirmationToken ?? undefined });
+    // 失敗しても貼り付けた内容は消さない（直してもう一度確認できるように）
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setMessage(result.message);
+    setRows(result.rows);
+    setChecked(false);
+    setConfirmationToken(null);
   };
 
   return (
@@ -94,7 +98,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
             type="file"
             accept=".csv,text/csv"
             className="mt-1 block w-full text-sub font-normal"
-            disabled={busy || refreshing}
+            disabled={saving || reading}
             onChange={(e) => onFile(e.target.files?.[0])}
           />
           {fileName && <span className="footnote block">選択中：{fileName}</span>}
@@ -106,7 +110,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
             className="input mt-1 w-full font-mono text-note"
             rows={4}
             value={text}
-            disabled={busy || refreshing}
+            disabled={saving || reading}
             onChange={(e) => {
               setText(e.target.value);
               setFileName(null);
@@ -127,11 +131,11 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Button variant="tertiary" onClick={() => run(true)} disabled={busy || refreshing}>
-          まず内容を確認する
+        <Button variant="tertiary" onClick={() => void run(true)} disabled={saving || reading}>
+          {reading ? "確認しています…" : "まず内容を確認する"}
         </Button>
-        <Button onClick={() => run(false)} disabled={busy || refreshing || !checked || !confirmationToken}>
-          {busy ? "処理しています…" : refreshing ? "一覧に反映しています…" : "この内容を取り込む"}
+        <Button onClick={() => void run(false)} disabled={saving || reading || !checked || !confirmationToken}>
+          {saving ? "取り込んでいます…" : "この内容を取り込む"}
         </Button>
         <span className="footnote">同じ方の回答がすでにある場合は、新しい内容で置き換えます。</span>
       </div>
@@ -141,7 +145,7 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      <RefreshStatus message={message} refreshing={refreshing} className="mt-3 m-0 text-sub font-bold" />
+      <RefreshStatus message={message} refreshing={saving} className="mt-3 m-0 text-sub font-bold" />
 
       {rows && rows.length > 0 && (
         <div className="mt-3">

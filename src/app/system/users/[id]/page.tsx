@@ -9,6 +9,7 @@ import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
 import { ActionButton } from "@/components/ActionButton";
 import { formatDate } from "@/lib/view";
+import { updateSystemUser } from "@/actions/system-users";
 
 export const dynamic = "force-dynamic";
 
@@ -87,8 +88,8 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
 
       <SectionHeading>登録内容を変える</SectionHeading>
       <RecordForm
-        url="/api/system/users"
-        method="PATCH"
+        action={updateSystemUser}
+        resource="system-users"
         fixed={{ userId: user.id }}
         submitLabel="この内容で保存する"
         description="所属会社を変えると、等級と上長は付け直しになります。会社をまたいだ組み合わせは保存できません。"
@@ -136,7 +137,7 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
       />
 
       <SectionHeading>パスワードの再発行</SectionHeading>
-      <PasswordReissue url="/api/system/users" userId={user.id} name={user.name} />
+      <PasswordReissue action={updateSystemUser} resource="system-users" userId={user.id} name={user.name} />
 
       <SectionHeading>利用の停止と再開</SectionHeading>
       <Card className="card-pad">
@@ -148,17 +149,17 @@ export default async function SystemUserDetail({ params }: { params: Promise<{ i
         <div className="mt-3">
           {user.isActive ? (
             <ActionButton
-              url="/api/system/users"
-              method="PATCH"
-              body={{ userId: user.id, isActive: false }}
+              action={updateSystemUser}
+              resource="system-users"
+              input={{ userId: user.id, isActive: false }}
               label="利用を停止する"
               confirm={`${user.name}さんはログインできなくなります。記録は残ります。よろしいですか？`}
             />
           ) : (
             <ActionButton
-              url="/api/system/users"
-              method="PATCH"
-              body={{ userId: user.id, isActive: true }}
+              action={updateSystemUser}
+              resource="system-users"
+              input={{ userId: user.id, isActive: true }}
               label="利用を再開する"
             />
           )}

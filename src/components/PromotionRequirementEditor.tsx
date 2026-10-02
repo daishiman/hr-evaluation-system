@@ -1,12 +1,11 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
 import { classifyVersionedItems, VersionedMasterSections } from "@/components/VersionedMasterSections";
-import { requestMasterDelete } from "@/components/master-delete-request";
 import {
   BLOCKED_HELP_LABEL,
   BLOCKED_KEEP,
@@ -56,53 +55,9 @@ export function PromotionRequirementEditor({
   /** 項目ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const { send, remove, saving, error, message } = useMasterAction("promotionRequirement");
   const [drafts, setDrafts] = useState<Record<string, { open: boolean; text: string; gate: boolean; label: string }>>({});
   const [editing, setEditing] = useState<Record<string, string>>({});
-
-  const send = async (payload: Record<string, unknown>) => {
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const res = await fetch("/api/masters", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "保存できませんでした。");
-        return false;
-      }
-      setMessage(json.message ?? "保存しました。");
-      refresh();
-      return true;
-    } catch {
-      setError("通信できませんでした。入力した内容はこの画面に残っています。");
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
-  const remove = async (id: string) => {
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    const result = await requestMasterDelete("promotionRequirement", id);
-    if (result.ok) {
-      setMessage(result.message);
-      refresh();
-    } else {
-      setError(result.message);
-    }
-    setBusy(false);
-  };
 
   /* 使っている場所があるなら消させない。
      行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
@@ -165,7 +120,7 @@ export function PromotionRequirementEditor({
                   <div className="mt-2 flex gap-2">
                     <Button
                       variant="primary"
-                      disabled={busy || editing[r.id].trim() === ""}
+                      disabled={saving || editing[r.id].trim() === ""}
                       onClick={async () => {
                         const ok = await send({
                           kind: "promotionRequirementRevise",
@@ -179,7 +134,7 @@ export function PromotionRequirementEditor({
                     >
                       新版として保存
                     </Button>
-                    <Button variant="tertiary" disabled={busy} onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}>
+                    <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}>
                       やめる
                     </Button>
                   </div>
@@ -191,7 +146,7 @@ export function PromotionRequirementEditor({
                 {r.isGate ? <Badge tone="alert">必須</Badge> : <Badge tone="done">任意</Badge>}
                 <Button
                   variant="tertiary"
-                  disabled={busy || i === 0}
+                  disabled={saving || i === 0}
                   aria-label="先頭に移動"
                   onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, direction: "top" })}
                 >
@@ -199,7 +154,7 @@ export function PromotionRequirementEditor({
                 </Button>
                 <Button
                   variant="tertiary"
-                  disabled={busy || i === 0}
+                  disabled={saving || i === 0}
                   aria-label="1つ上に移動"
                   onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, direction: "up" })}
                 >
@@ -207,7 +162,7 @@ export function PromotionRequirementEditor({
                 </Button>
                 <Button
                   variant="tertiary"
-                  disabled={busy || i === list.length - 1}
+                  disabled={saving || i === list.length - 1}
                   aria-label="1つ下に移動"
                   onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, direction: "down" })}
                 >
@@ -215,18 +170,18 @@ export function PromotionRequirementEditor({
                 </Button>
                 <Button
                   variant="tertiary"
-                  disabled={busy || i === list.length - 1}
+                  disabled={saving || i === list.length - 1}
                   aria-label="末尾に移動"
                   onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, direction: "bottom" })}
                 >
                   ⇊
                 </Button>
-                <Button variant="tertiary" disabled={busy} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
+                <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
                   内容を直す
                 </Button>
                 <Button
                   variant="tertiary"
-                  disabled={busy}
+                  disabled={saving}
                   onClick={() =>
                     void send({
                       kind: "promotionRequirementRevise",
@@ -242,7 +197,7 @@ export function PromotionRequirementEditor({
                 <ConfirmButton
                   label="今後使わない"
                   variant="danger-outline"
-                  busy={busy}
+                  busy={saving}
                   confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
                   onConfirm={() => void send({ kind: "promotionRequirementActivation", id: r.id, isActive: false })}
                 />
@@ -250,7 +205,7 @@ export function PromotionRequirementEditor({
                   <ConfirmButton
                     label={DELETE_LABEL}
                     variant="danger-outline"
-                    busy={busy}
+                    busy={saving}
                     confirm={deleteConfirmText(r.text)}
                     onConfirm={() => void remove(r.id)}
                   />
@@ -291,7 +246,7 @@ export function PromotionRequirementEditor({
               <div className="flex gap-2">
                 <Button
                   variant="primary"
-                  disabled={busy || draft.text.trim() === ""}
+                  disabled={saving || draft.text.trim() === ""}
                   onClick={async () => {
                     const ok = await send({
                       kind: "promotionRequirementCreate",
@@ -306,13 +261,13 @@ export function PromotionRequirementEditor({
                 >
                   この内容で追加する
                 </Button>
-                <Button variant="tertiary" disabled={busy} onClick={() => setDrafts((s) => ({ ...s, [kind]: { open: false, text: "", gate: true, label: "" } }))}>
+                <Button variant="tertiary" disabled={saving} onClick={() => setDrafts((s) => ({ ...s, [kind]: { open: false, text: "", gate: true, label: "" } }))}>
                   閉じる
                 </Button>
               </div>
             </div>
           ) : (
-            <Button variant="secondary" disabled={busy} onClick={() => setDrafts((s) => ({ ...s, [kind]: { open: true, text: "", gate: true, label: "" } }))}>
+            <Button variant="secondary" disabled={saving} onClick={() => setDrafts((s) => ({ ...s, [kind]: { open: true, text: "", gate: true, label: "" } }))}>
               ＋ 項目を追加
             </Button>
           )}
@@ -322,7 +277,7 @@ export function PromotionRequirementEditor({
           <VersionedMasterSections
             sectionId={`promotion-${gradeId}-${kind}`}
             rows={rows.filter((row) => row.kind === kind)}
-            busy={busy}
+            busy={saving}
             renderDetail={(row) => (
               <>
                 {row.transitionLabel && <p className="footnote m-0">{row.transitionLabel}</p>}
@@ -335,7 +290,7 @@ export function PromotionRequirementEditor({
                 <ConfirmButton
                   label={DELETE_LABEL}
                   variant="danger-outline"
-                  busy={busy}
+                  busy={saving}
                   confirm={deleteConfirmText(row.text)}
                   onConfirm={() => void remove(row.id)}
                 />
@@ -354,14 +309,14 @@ export function PromotionRequirementEditor({
   };
 
   return (
-    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="stack m-0 min-w-0 border-0 p-0">
+    <fieldset disabled={saving} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
       <p className="footnote m-0">
         いま編集しているのは <b>{gradeName}</b> の昇格要件です。ここでの変更は次に作るアンケートから反映されます。
         すでに作成・公開したアンケートと確定済みの評価は変わりません。
       </p>
       <p className="footnote m-0">内容を直すと、新版を作ります。</p>
       {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
-      <RefreshStatus message={message} refreshing={refreshing} />
+      <RefreshStatus message={message} refreshing={saving} />
       {block("report")}
       {block("test")}
       {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。

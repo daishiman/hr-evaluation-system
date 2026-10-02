@@ -29,7 +29,16 @@ import {
   normalizeUserCode,
   sessionRevokeConfirmText,
 } from "@/lib/domain/agent-device";
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import {
+  approveDevice,
+  checkDeviceCode,
+  createAgentKey,
+  revokeAgentKey,
+  revokeAgentSession,
+  setAgentEnvKey,
+} from "@/actions/agent-keys";
+import { dispatchAction } from "@/lib/action-dispatch";
+import { useReadAction, useSaveAction } from "@/lib/use-refresh";
 
 /**
  * 作業指示文を受け取るための鍵を、画面から発行・管理する。
@@ -66,14 +75,22 @@ export interface AgentKeyView {
   scopeText: string;
 }
 
-interface ApiResult {
-  ok: boolean;
-  message?: string;
-  key?: string;
-  envFileLine?: string;
-  prompt?: string;
-  question?: string;
-}
+/** この画面から行う書き込み。どれも Server Action（src/actions/agent-keys.ts）を呼ぶ。 */
+type KeyOperation =
+  | { op: "issue"; input: { label: string } }
+  | { op: "revoke"; input: { id: string } }
+  | { op: "decide"; input: { userCode: string; approve: boolean } }
+  | { op: "revokeSession"; input: { id: string } }
+  | { op: "env"; input: { envKeyEnabled: boolean } };
+
+/** 書き込みを1つの入口にまとめる。送信中の印（saving）を全部の操作で共有するため。 */
+const operate = dispatchAction<KeyOperation, Partial<IssuedKey>>({
+  issue: createAgentKey,
+  revoke: revokeAgentKey,
+  decide: approveDevice,
+  revokeSession: revokeAgentSession,
+  env: setAgentEnvKey,
+});
 
 /** 通した端末の1台ぶん。日時は画面側で文字にしてから渡す。 */
 export interface AgentSessionView {
@@ -99,8 +116,8 @@ export function AgentKeyPanel({
   envConfigured: boolean;
   envEnabled: boolean;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
-  const [busy, setBusy] = useState(false);
+  const { save, saving } = useSaveAction(operate, { resource: "agent-keys" });
+  const { read, reading } = useReadAction(checkDeviceCode, { resource: "agent-keys" });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [issued, setIssued] = useState<IssuedKey | null>(null);
@@ -111,25 +128,17 @@ export function AgentKeyPanel({
   const activeKeys = keys.filter((k) => k.active);
   const canIssue = canIssueAgentKey(activeKeys.length);
 
-  const send = async (path: string, init: RequestInit): Promise<ApiResult | null> => {
-    if (busy || refreshing) return null;
-    setBusy(true);
+  /** 送って、失敗なら理由を出す。入力欄はそのまま残す。 */
+  const send = async (operation: KeyOperation) => {
+    if (saving || reading) return null;
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch(path, init);
-      const json = (await res.json()) as ApiResult;
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "処理できませんでした。もう一度お試しください。");
-        return null;
-      }
-      return json;
-    } catch {
-      setError("通信できませんでした。もう一度お試しください。");
+    const result = await save(operation);
+    if (!result.ok) {
+      setError(result.message);
       return null;
-    } finally {
-      setBusy(false);
     }
+    return result;
   };
 
   const issue = async () => {
@@ -138,23 +147,17 @@ export function AgentKeyPanel({
       setError(labelError);
       return;
     }
-    const json = await send("/api/agent-keys", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ label }),
-    });
-    if (!json?.key || !json.envFileLine || !json.prompt) return;
-    setIssued({ key: json.key, envFileLine: json.envFileLine, prompt: json.prompt });
-    setMessage("鍵を発行しました。いまだけ表示しています。");
+    const result = await send({ op: "issue", input: { label } });
+    if (!result?.key || !result.envFileLine || !result.prompt) return;
+    setIssued({ key: result.key, envFileLine: result.envFileLine, prompt: result.prompt });
+    setMessage(result.message);
     setLabel("");
-    refresh();
   };
 
   const revoke = async (id: string) => {
-    const json = await send(`/api/agent-keys?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-    if (!json) return;
-    setMessage(json.message ?? "鍵を止めました。");
-    refresh();
+    const result = await send({ op: "revoke", input: { id } });
+    if (!result) return;
+    setMessage(result.message);
   };
 
   /**
@@ -168,42 +171,35 @@ export function AgentKeyPanel({
       setError(DEVICE_UNKNOWN_MESSAGE);
       return;
     }
-    const json = await send(`/api/agent-keys/approve?userCode=${encodeURIComponent(code)}`, {
-      method: "GET",
-    });
-    if (!json?.question) return;
-    setQuestion(json.question);
+    if (saving || reading) return;
+    setError(null);
+    setMessage(null);
+    const result = await read({ userCode: code });
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setQuestion(result.question);
   };
 
   const decideCode = async (approve: boolean) => {
-    const json = await send("/api/agent-keys/approve", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ userCode, approve }),
-    });
-    if (!json) return;
-    setMessage(json.message ?? "受け付けました。");
+    const result = await send({ op: "decide", input: { userCode, approve } });
+    if (!result) return;
+    setMessage(result.message);
     setQuestion(null);
     setUserCode("");
-    refresh();
   };
 
   const revokeSession = async (id: string) => {
-    const json = await send(`/api/agent-keys/approve?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-    if (!json) return;
-    setMessage(json.message ?? "止めました。");
-    refresh();
+    const result = await send({ op: "revokeSession", input: { id } });
+    if (!result) return;
+    setMessage(result.message);
   };
 
   const toggleEnvKey = async () => {
-    const json = await send("/api/agent-keys", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ envKeyEnabled: !envEnabled }),
-    });
-    if (!json) return;
-    setMessage(json.message ?? "切り替えました。");
-    refresh();
+    const result = await send({ op: "env", input: { envKeyEnabled: !envEnabled } });
+    if (!result) return;
+    setMessage(result.message);
   };
 
   return (
@@ -211,7 +207,7 @@ export function AgentKeyPanel({
       <SectionHeading help="ターミナルに出た合言葉を、ここに打ち込みます。">端末を通す</SectionHeading>
       <Card className="card-pad">
         {error && <ReasonNote>{error}</ReasonNote>}
-        <RefreshStatus message={message} refreshing={refreshing} target="画面" />
+        <RefreshStatus message={message} refreshing={saving} target="画面" />
         <p className="m-0">手元で `pnpm improvements login` を実行すると、合言葉が出ます。</p>
         <label className="footnote mt-3 block" htmlFor="agent_user_code">
           合言葉（8文字）
@@ -238,15 +234,15 @@ export function AgentKeyPanel({
                 type="button"
                 variant="primary"
                 onClick={() => void decideCode(true)}
-                disabled={busy || refreshing}
+                disabled={saving || reading}
               >
-                {busy ? "送っています…" : "この端末を通す"}
+                {saving ? "送っています…" : "この端末を通す"}
               </Button>
               <Button
                 type="button"
                 variant="danger-outline"
                 onClick={() => void decideCode(false)}
-                disabled={busy || refreshing}
+                disabled={saving || reading}
               >
                 通さない
               </Button>
@@ -258,9 +254,9 @@ export function AgentKeyPanel({
               type="button"
               variant="secondary"
               onClick={() => void checkCode()}
-              disabled={busy || refreshing}
+              disabled={saving || reading}
             >
-              {busy ? "確かめています…" : "合言葉を確かめる"}
+              {reading ? "確かめています…" : "合言葉を確かめる"}
             </Button>
           </div>
         )}
@@ -290,9 +286,9 @@ export function AgentKeyPanel({
                 label="この端末を止める"
                 confirm={sessionRevokeConfirmText(v.name)}
                 variant="danger-outline"
-                busy={busy}
+                busy={saving}
                 busyLabel="止めています…"
-                disabled={refreshing}
+                disabled={reading}
                 onConfirm={() => void revokeSession(v.id)}
               />
             ) : undefined,
@@ -306,7 +302,7 @@ export function AgentKeyPanel({
       <Card className="card-pad">
         <ReasonNote>{LEGACY_KEY_NOTICE}</ReasonNote>
         {error && <ReasonNote>{error}</ReasonNote>}
-        <RefreshStatus message={message} refreshing={refreshing} target="画面" />
+        <RefreshStatus message={message} refreshing={saving} target="画面" />
 
         {issued ? (
           <div>
@@ -367,9 +363,9 @@ export function AgentKeyPanel({
                 type="button"
                 variant="primary"
                 onClick={() => void issue()}
-                disabled={busy || refreshing || !canIssue}
+                disabled={saving || reading || !canIssue}
               >
-                {busy ? "発行しています…" : "鍵を発行する"}
+                {saving ? "発行しています…" : "鍵を発行する"}
               </Button>
             </div>
           </div>
@@ -401,9 +397,9 @@ export function AgentKeyPanel({
                 label="この鍵を止める"
                 confirm={agentKeyRevokeConfirmText(k.name, activeKeys.length - 1)}
                 variant="danger-outline"
-                busy={busy}
+                busy={saving}
                 busyLabel="止めています…"
-                disabled={refreshing}
+                disabled={reading}
                 onConfirm={() => void revoke(k.id)}
               />
             ) : undefined,
@@ -429,9 +425,9 @@ export function AgentKeyPanel({
                 label={envKeyToggleLabel(envEnabled)}
                 confirm={envKeyToggleConfirm(envEnabled)}
                 variant={envEnabled ? "danger-outline" : "secondary"}
-                busy={busy}
+                busy={saving}
                 busyLabel="切り替えています…"
-                disabled={refreshing}
+                disabled={reading}
                 onConfirm={() => void toggleEnvKey()}
               />
             </div>

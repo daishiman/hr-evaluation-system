@@ -1,0 +1,212 @@
+{
+  "references": [
+    {
+      "target_id": "nextjs-client-cache",
+      "retrieved_at": "2026-09-30T21:09:10Z",
+      "source_url": "https://nextjs.org/docs/app/api-reference/functions/use-router",
+      "official_publisher": "Vercel (Next.js)",
+      "official_host": "nextjs.org",
+      "version": "16.3.8",
+      "last_updated": "2026-07-01",
+      "latest_checked_at": "2026-09-30T21:09:12Z",
+      "summary": "router.refresh() は現在のルートをサーバーへ取り直し、Server Components を作り直す。更新された RSC の結果を、影響を受けない useState やスクロール位置を失わずに合成する。現在のルートのクライアントキャッシュ（Client Cache）を消すが、サーバー側のキャッシュは無効化しない。サーバー側は revalidatePath / revalidateTag を使う。refresh は呼んだタブの中だけで効き、他のタブには及ばない。router.bfcacheId は戻る・進むと refresh では変わらない。文書は 16.3.8 の版。GitHub の最新リリースも v16.3.8（2026-09-30 公開、画像最適化の SSRF など複数の脆弱性の修正）で、アプリは 16.3.3。（2026-10-01T08:59:24Z 注記：上の『アプリは 16.3.3』は取得時点の記述。その後アプリを 16.3.8 へ上げた。同じタブの反映は、Server Function の中で呼ぶ refresh（nextjs-refresh）が同じ応答で画面を作り直す形に移り、router.refresh は他タブの通知・タブ復帰・通信の回復・bfcache 復元のときの取り直しに使っている。）"
+    },
+    {
+      "target_id": "nextjs-revalidate-path",
+      "retrieved_at": "2026-09-30T21:09:17Z",
+      "source_url": "https://nextjs.org/docs/app/api-reference/functions/revalidatePath",
+      "official_publisher": "Vercel (Next.js)",
+      "official_host": "nextjs.org",
+      "version": "16.3.8",
+      "last_updated": "2026-06-25",
+      "latest_checked_at": "2026-09-30T21:09:17Z",
+      "summary": "revalidatePath は Server Functions と Route Handlers で呼べる。Server Functions から呼ぶと、表示中の該当パスの画面をすぐ更新する。Route Handlers から呼ぶと、パスに再検証の印を付けるだけで、次にそのパスを訪れたときに作り直す（画面は即時には変わらない）。revalidatePath('/', 'layout') はクライアントキャッシュを消し、全データを次回訪問時の再検証対象にする。このアプリの書き込みは Route Handler なので、画面の即時更新は router.refresh が担い、revalidatePath は将来のサーバーキャッシュへの備えになる。（2026-10-01T08:59:24Z 注記：上の『このアプリの書き込みは Route Handler』は取得時点の記述。その後、画面から呼ぶ書き込みを Server Functions（src/actions）へ移し、成功したときは refresh（nextjs-refresh）で同じ応答の中で画面を作り直す。revalidatePath は、将来サーバー側にキャッシュを入れるときの無効化の置き場として共通の入口に残している。）"
+    },
+    {
+      "target_id": "cloudflare-d1-batch",
+      "retrieved_at": "2026-09-30T14:46:29Z",
+      "source_url": "https://developers.cloudflare.com/d1/worker-api/d1-database/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-06-22",
+      "latest_checked_at": "2026-09-30T14:47:49Z",
+      "summary": "batch() は複数の SQL 文を 1 回の呼び出しで送り、SQL のトランザクションとして扱う。途中の文が失敗すると、その文のエラーを返して一連の文をすべて取り消す。文は順番に 1 つずつ実行・確定し、並行しない。withSession() は読み取りの複製を使う場合に順序の一貫性を保つ仕組みで、bookmark を次の Session に渡すと、少なくともその版以降のデータを読める。"
+    },
+    {
+      "target_id": "opennext-cloudflare-caching",
+      "retrieved_at": "2026-09-30T14:46:29Z",
+      "source_url": "https://opennext.js.org/cloudflare/caching",
+      "official_publisher": "OpenNext",
+      "official_host": "opennext.js.org",
+      "version": "@opennextjs/cloudflare 1.20.7",
+      "last_updated": "2026-05-07",
+      "latest_checked_at": "2026-09-30T14:47:49Z",
+      "summary": "OpenNext for Cloudflare のキャッシュは、Incremental Cache（R2・Workers KV・Static Assets）、時間での再検証を扱う Queue（Durable Objects）、要求時の再検証を扱う Tag Cache（D1・Durable Objects）の 3 つで、それぞれ明示的に設定する。App Router で revalidateTag / revalidatePath を使う場合は Tag Cache が必要。このアプリは既定の defineCloudflareConfig() のまま 3 つとも設定していない。version は GitHub の最新リリース（2026-09-29 公開、アプリは 1.20.2）、last_updated は文書リポジトリ上のこのページの最終更新日。"
+    },
+    {
+      "target_id": "better-auth-session",
+      "retrieved_at": "2026-10-01T01:28:01Z",
+      "source_url": "https://www.better-auth.com/docs/concepts/session-management",
+      "official_publisher": "Better Auth",
+      "official_host": "www.better-auth.com",
+      "version": "1.7.7",
+      "latest_checked_at": "2026-10-01T01:28:03Z",
+      "summary": "Better Auth はクッキーでセッションを管理し、セッションは既定で 7 日（expiresIn）で切れます。使われたときに updateAge を過ぎていれば期限が『今から expiresIn 後』に延び、updateAge の既定は 1 日（86400 秒）だと公式のオプション一覧（https://www.better-auth.com/docs/reference/options）に書かれています。session.cookieCache を有効にすると、セッション情報を短い間クッキーに保存して毎回のデータベース確認を省けますが、取り消したセッションが他の端末ではクッキーキャッシュの期限（maxAge）まで有効なまま残ることがあります。すぐに取り消しを効かせたいときは、cookieCache を使わない、maxAge を短くする（例 60 秒）、大事な操作では disableCookieCache: true を使う、のどれかを公式は勧めており、disableCookieCache: true を渡すとデータベースからセッションを取り直してクッキーキャッシュも更新します。最新リリースは 1.7.7（GitHub releases で 2026-09-30 公開、npm の latest、公式 changelog にも掲載）です。アプリは ^1.6.26。（2026-10-01 確認：版と更新日の出どころ。last_updated を記録していないのは、この公式ページに更新日の表示も版の表示も無いため（2026-10-01T09:36Z ごろ WebFetch で確認）。version の 1.7.7 は GitHub releases・npm の latest・公式 changelog から取った値で、ページの版ではない。）"
+    },
+    {
+      "target_id": "mdn-broadcast-channel",
+      "retrieved_at": "2026-09-30T14:46:29Z",
+      "source_url": "https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel",
+      "official_publisher": "Mozilla (MDN Web Docs)",
+      "official_host": "developer.mozilla.org",
+      "last_updated": "2024-06-03",
+      "latest_checked_at": "2026-09-30T14:47:49Z",
+      "summary": "BroadcastChannel は、同じオリジンの閲覧コンテキスト（ウィンドウ・タブ・フレーム・iframe）が購読できる名前付きのチャネルで、Web Workers でも使える。Baseline の Widely available で、2022 年 3 月から主要ブラウザで使える。同じオリジンの中でしか届かないため、別のオリジンや別のブラウザ・別の端末には届かない。"
+    },
+    {
+      "target_id": "webdev-bfcache",
+      "retrieved_at": "2026-09-30T14:46:29Z",
+      "source_url": "https://web.dev/articles/bfcache",
+      "official_publisher": "Google (web.dev)",
+      "official_host": "web.dev",
+      "last_updated": "2026-09-03",
+      "latest_checked_at": "2026-09-30T14:47:49Z",
+      "summary": "bfcache から復元されたかは、pageshow イベントの event.persisted で判定する。persisted が true なら、古い情報や機微な情報を見せないよう、常に画面を更新することを勧める。unload ハンドラー、ページ自体の Cache-Control: no-store、開いたままの IndexedDB・fetch・WebSocket などは bfcache の対象外になる理由になる。no-store は機微な情報を含むページにだけ付けるべきとされ、Chrome ではこの扱いを見直す作業が進んでいる。このアプリはログイン後の HTML を no-store で返すため、bfcache に入らないブラウザが多いが、入った場合に備えて pageshow で取り直す。last_updated の 2026-09-03 はページ末尾の更新日で、記事冒頭に表示される日付（2026-07-02）とは別のものである。"
+    },
+    {
+      "target_id": "cloudflare-workers-logs",
+      "retrieved_at": "2026-09-30T14:46:29Z",
+      "source_url": "https://developers.cloudflare.com/workers/observability/logs/workers-logs/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-09-30",
+      "latest_checked_at": "2026-09-30T14:47:49Z",
+      "summary": "wrangler の設定で observability.enabled を true にして配備すると、Workers Logs が要求と応答の記録（invocation logs）、console.log の独自ログ、エラーと捕まえていない例外を集める。構造化した JSON は検索できる項目として索引される。保存期間は Free で 3 日、Paid で 7 日。head_sampling_rate の既定は 1（全要求）。ダッシュボードの Workers & Pages から対象の Worker を選び、Observability タブで見る。"
+    },
+    {
+      "target_id": "cloudflare-workers-pricing",
+      "retrieved_at": "2026-09-30T14:54:25Z",
+      "source_url": "https://developers.cloudflare.com/workers/platform/pricing/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-08-28",
+      "latest_checked_at": "2026-09-30T14:54:25Z",
+      "summary": "Workers の Paid 版は月 5 USD で、要求は月 1,000 万件まで含み、超えた分は 100 万件あたり 0.30 USD。Free 版は 1 日 10 万要求まで。Durable Objects は Paid 版で要求が月 100 万件まで含み、超えた分は 100 万件あたり 0.15 USD（HTTP 要求・RPC・WebSocket の受信メッセージ・alarm を含み、受信メッセージは 20:1 で数える）。実行時間は月 40 万 GB-s まで含み、超えた分は 100 万 GB-s あたり 12.50 USD。Free 版で使えるのは SQLite を保存先にする Durable Objects だけ。D1 は Paid 版で読み取り行が月 250 億行、書き込み行が月 5,000 万行まで含む。他タブ通知の方式を比べる decision（polling の要求増と Durable Objects による push の費用）の根拠に使う。"
+    },
+    {
+      "target_id": "cloudflare-d1-limits",
+      "retrieved_at": "2026-09-30T21:05:42Z",
+      "source_url": "https://developers.cloudflare.com/d1/platform/limits/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-04-21",
+      "latest_checked_at": "2026-09-30T21:05:42Z",
+      "summary": "D1 の 1 つの SQL 文の bound parameter は最大 100 個、SQL 文の長さは最大 100 KB。1 回の Worker 呼び出しで出せるクエリは Paid で 1,000、Free で 50。batch では、個々の文の上限が batch 内の各文にそのままかかり、最大 30 秒の実行時間は batch 呼び出し全体にかかる。batch に入れられる文の数そのものの上限は書かれていない。アプリは src/lib/db.ts で 1 文あたり 99 個までに抑えており、会社追加の batch（制度ひな形の複製を含む）もこの上限の内側で文を分ける必要がある。"
+    },
+    {
+      "target_id": "drizzle-orm-d1",
+      "retrieved_at": "2026-09-30T21:07:32Z",
+      "source_url": "https://orm.drizzle.team/docs/connect-cloudflare-d1",
+      "official_publisher": "Drizzle Team",
+      "official_host": "orm.drizzle.team",
+      "version": "drizzle-orm 0.45.3",
+      "latest_checked_at": "2026-09-30T21:08:20Z",
+      "summary": "D1 へは drizzle-orm/d1 の drizzle(env.<BINDING>) でつなぐ。文書のインストール手順は drizzle-orm@rc（1.0 の候補版）を指しており、アプリの ^0.45.2 とは系列が違う。batch の文書（/docs/batch-api、2026-09-30T21:08:13Z に確認）は D1 に触れていない。一方、導入済みの 0.45.2 の d1 ドライバーは batch() を型として持ち、アプリも 4 つの Route Handler ですでに db.batch を使っている。途中で失敗したときに全体を取り消す動きは、Drizzle ではなく Cloudflare の D1 batch の仕様（cloudflare-d1-batch）に拠るので、O5 の単体テストで確かめる。version は GitHub の最新の安定版（0.45.3）で、アプリは 0.45.2。"
+    },
+    {
+      "target_id": "nextjs-caching-previous-model",
+      "retrieved_at": "2026-09-30T21:56:32Z",
+      "source_url": "https://nextjs.org/docs/app/guides/caching-without-cache-components",
+      "official_publisher": "Vercel (Next.js)",
+      "official_host": "nextjs.org",
+      "version": "16.3.8",
+      "last_updated": "2026-08-25",
+      "latest_checked_at": "2026-09-30T21:56:32Z",
+      "summary": "Cache Components を使わない従来の方式のキャッシュ設定。fetch は既定でキャッシュしない。dynamic = 'force-dynamic' は、要求のたびに利用者ごとに描画させ、全ての fetch を no-store・revalidate 0 にするのと同じ。ORM の結果をキャッシュするのは unstable_cache を包んだときだけで、tags を付ければ revalidateTag で消せる。revalidatePath / revalidateTag は Server Action か Route Handler で呼ぶ。React の cache は 1 回の描画の中で重複を省くだけ。このアプリは force-dynamic で D1 を直接読むため、サーバー側にデータのキャッシュは無く、反映の遅れはクライアント側（Router Cache・他タブ・bfcache）に起きる。"
+    },
+    {
+      "target_id": "nextjs-route-segment-config",
+      "retrieved_at": "2026-09-30T21:05:42Z",
+      "source_url": "https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config",
+      "official_publisher": "Vercel (Next.js)",
+      "official_host": "nextjs.org",
+      "version": "16.3.8",
+      "last_updated": "2026-04-30",
+      "latest_checked_at": "2026-09-30T21:05:42Z",
+      "summary": "Route Segment Config は Page・Layout・Route Handler から変数を export して設定する。現行の表に並ぶのは dynamicParams・runtime・preferredRegion（非推奨）・maxDuration と、instant・prefetch。v16.0.0 から、Cache Components（cacheComponents フラグ）を有効にすると dynamic・dynamicParams・revalidate・fetchCache は使えなくなる。このアプリは force-dynamic に頼っているので、将来 Cache Components へ移るときは鮮度の共通口ごと見直す必要がある。"
+    },
+    {
+      "target_id": "nextjs-route-handlers",
+      "retrieved_at": "2026-09-30T21:05:43Z",
+      "source_url": "https://nextjs.org/docs/app/api-reference/file-conventions/route",
+      "official_publisher": "Vercel (Next.js)",
+      "official_host": "nextjs.org",
+      "version": "16.3.8",
+      "last_updated": "2026-04-30",
+      "latest_checked_at": "2026-09-30T21:05:43Z",
+      "summary": "Route Handler は GET・POST・PUT・PATCH・DELETE・HEAD・OPTIONS を扱い、Page・Layout と同じ Route Segment Config を使う。v15.0.0-RC で GET の既定が静的から動的に変わった。このアプリの書き込みは全て Route Handler（POST・PATCH・DELETE）で、応答はキャッシュされない。書き込み後の画面の更新は、呼んだ側のクライアントが行う必要がある。（2026-10-01T08:59:24Z 注記：上の『このアプリの書き込みは全て Route Handler』は取得時点の記述。その後、画面から呼ぶ書き込みを Server Functions（nextjs-server-functions）へ移し、移した Route Handler は消した。Route Handler に残るのは、認証ライブラリの入口、Bearer 鍵で呼ぶ外部の API（改善要望・端末の承認とトークン）、読み取り（検索・CSV の書き出し）、応答を待たない記録（利用状況・明るさと配色の選択。server-actions-contract.test.ts に理由付きで列挙）だけ。）"
+    },
+    {
+      "target_id": "cloudflare-wrangler-config",
+      "retrieved_at": "2026-09-30T21:05:51Z",
+      "source_url": "https://developers.cloudflare.com/workers/wrangler/configuration/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-09-30",
+      "latest_checked_at": "2026-09-30T21:05:51Z",
+      "summary": "D1 は d1_databases に binding・database_name・database_id を書いて結び付ける（preview_database_id・migrations_dir は任意）。observability.enabled を true にすると Worker のログを保存し、新しい Worker では既定で true。head_sampling_rate で記録する要求の割合を 0〜1 で決める。observability.issues.enabled で本番の失敗をまとめて検出できる。Cloudflare は新しいプロジェクトに wrangler.jsonc を勧めており、新しい機能の一部は JSON の設定でしか使えない。"
+    },
+    {
+      "target_id": "opennext-cloudflare-get-started",
+      "retrieved_at": "2026-09-30T21:08:18Z",
+      "source_url": "https://opennext.js.org/cloudflare/get-started",
+      "official_publisher": "OpenNext",
+      "official_host": "opennext.js.org",
+      "version": "@opennextjs/cloudflare 1.20.7",
+      "latest_checked_at": "2026-09-30T21:08:18Z",
+      "summary": "open-next.config.ts は任意で、無ければビルド時に @opennextjs/cloudflare が作る。文書の例は defineCloudflareConfig({ incrementalCache: r2IncrementalCache }) で、R2 を明示している。文書は設定しなかったときの動きを書いていない。導入済みの 1.20.2 の dist/api/config.js では、incrementalCache・tagCache・queue・cachePurge の既定がいずれも \"dummy\" で、このアプリの defineCloudflareConfig() は ISR とデータのキャッシュを持たない。version は同日 14:47:49Z に GitHub の最新リリースで確認した値で、アプリは 1.20.2。（2026-10-01 確認：版と更新日の出どころ。last_updated を記録していないのは、この公式ページに更新日の表示も版の表示も無いため（手順は @latest を入れる形で、設定例の compatibility_date は 2024-12-30。2026-10-01T09:36Z ごろ WebFetch で確認）。version の 1.20.7 は GitHub の最新リリースから取った値で、ページの版ではない。）"
+    },
+    {
+      "target_id": "nextjs-refresh",
+      "retrieved_at": "2026-10-01T01:27:56Z",
+      "source_url": "https://nextjs.org/docs/app/api-reference/functions/refresh",
+      "official_publisher": "Vercel",
+      "official_host": "nextjs.org",
+      "version": "16.3.8",
+      "last_updated": "2026-06-25",
+      "latest_checked_at": "2026-10-01T01:28:03Z",
+      "summary": "next/cache から読み込む refresh() は、Server Action の中から今の画面（クライアントルーター）を新しく作り直すための関数です。呼べるのは Server Action の中だけで、Route Handler やクライアントコンポーネントなどで呼ぶとエラーになり、引数も戻り値もありません。公式の Server Actions ガイド（https://nextjs.org/docs/app/guides/server-actions）によると、updateTag や revalidatePath はキャッシュを無効にするのに対し、refresh はキャッシュを無効にせず、今のルートの画面データ（RSC Payload）だけを取り直します。refresh・updateTag・revalidatePath を呼ぶと作り直した画面が同じ応答で返りますが、revalidateTag（stale-while-revalidate の指定）は画面の作り直しを同じ応答に含めません。refresh のページには版の履歴の表はありませんが、公式の『バージョン16への移行ガイド』の Caching APIs の節で紹介されており、バージョン15の資料には refresh のページがありません（404）。（2026-10-01 確認：版と更新日の出どころ。version の 16.3.8 は、記録した時点（latest_checked_at）でのパッケージ next の最新版で、この文書ページ自身も frontmatter に version: 16.3.8 を出している（2026-10-01T09:36Z ごろ WebFetch で確認）。last_updated の 2026-06-25 は文書ページの frontmatter の lastUpdated で、パッケージの公開日ではない。アプリが使う next も 16.3.8。）"
+    },
+    {
+      "target_id": "nextjs-server-functions",
+      "retrieved_at": "2026-10-01T01:27:58Z",
+      "source_url": "https://nextjs.org/docs/app/guides/server-actions",
+      "official_publisher": "Vercel",
+      "official_host": "nextjs.org",
+      "version": "16.3.8",
+      "last_updated": "2026-06-17",
+      "latest_checked_at": "2026-10-01T01:28:03Z",
+      "summary": "Server Action は 'use server' で作るサーバー側の関数で、呼び出したページへの POST リクエストとして動くため、公式はだれでも同じ POST を送れる『信用できない入口』として扱うよう注意しています。Next.js は CSRF 対策として、リクエストの Origin ヘッダーを Host（または X-Forwarded-Host）と比べ、違えば拒否します。プロキシや CDN の別ドメインから呼ぶときは、next.config.js の serverActions.allowedOrigins に許可するホストを書きます（設定例では experimental.serverActions の中に書いています）。Server Action に送る本文の大きさは既定で 1MB までで、serverActions.bodySizeLimit（例 '2mb'）で変えられます。この 2 つの設定の詳しい説明は https://nextjs.org/docs/app/api-reference/config/next-config-js/serverActions （最終更新 2026-09-07）にあり、Origin ヘッダーがまったく無いリクエストは拒否されず警告付きで通ると書かれています。こうした仕組みとは別に、各 Action の中で認証・認可と入力チェックを必ず行うよう公式は求めています。（2026-10-01 確認：版と更新日の出どころ。version の 16.3.8 は、記録した時点（latest_checked_at）でのパッケージ next の最新版で、この文書ページ自身も frontmatter に version: 16.3.8 を出している（2026-10-01T09:36Z ごろ WebFetch で確認）。last_updated の 2026-06-17 は文書ページの frontmatter の lastUpdated で、パッケージの公開日ではない。アプリが使う next も 16.3.8。）"
+    },
+    {
+      "target_id": "cloudflare-workers-web-crypto",
+      "retrieved_at": "2026-10-01T01:28:01Z",
+      "source_url": "https://developers.cloudflare.com/workers/runtime-apis/web-crypto/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-09-30",
+      "latest_checked_at": "2026-10-01T01:28:03Z",
+      "summary": "Cloudflare Workers では、グローバルな crypto.subtle から Web Crypto API（SubtleCrypto）を使えます。encrypt と decrypt で暗号化と復号ができ、対応表では AES-GCM が encrypt/decrypt・generateKey・wrapKey/unwrapKey・exportKey・importKey のすべてに対応（✓）しています。importKey は、外から持ってきた形式の鍵を Web Crypto で使える CryptoKey に変える関数です。crypto.getRandomValues は渡した型付き配列（Uint8Array など）を暗号として安全な乱数で埋め、crypto.randomUUID も使えます。Web Crypto は Node.js の crypto とは大きく違い、Node.js の crypto を使いたいときは nodejs_compat 互換フラグを有効にします。"
+    },
+    {
+      "target_id": "cloudflare-workers-secrets",
+      "retrieved_at": "2026-10-01T01:28:01Z",
+      "source_url": "https://developers.cloudflare.com/workers/configuration/secrets/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-07-03",
+      "latest_checked_at": "2026-10-01T01:28:03Z",
+      "summary": "Secret は Worker に暗号化した文字列を渡すしくみ（バインディング）で、API キーや認証トークンなどの秘密の値に使います。本番の Worker には npx wrangler secret put <KEY> で登録でき（すぐに新しい版がデプロイされます。段階的デプロイでは wrangler versions secret put を使います）、ダッシュボードからも追加できます。コードでは fetch ハンドラーの env 引数（例 env.DB_CONNECTION_STRING）か、cloudflare:workers から import した env で読みます。ローカル開発では Wrangler の設定ファイルと同じフォルダの .dev.vars か .env のどちらか片方に書き、これらのファイルは git に入れず .gitignore に加えます。秘密の値を Wrangler 設定ファイルの vars に書いてはいけず、secret を使うよう公式は注意しています。"
+    }
+  ]
+}

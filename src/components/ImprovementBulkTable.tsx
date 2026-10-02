@@ -6,7 +6,9 @@ import { Badge, Button, Card, ChoiceChip, ReasonNote, SectionHeading } from "@/c
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { RefreshStatus } from "@/components/RefreshStatus";
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { disposeImprovement, handOutImprovement } from "@/actions/improvements";
+import { dispatchAction } from "@/lib/action-dispatch";
+import { useSaveAction } from "@/lib/use-refresh";
 import { DataTable, type Column } from "@/components/DataTable";
 import { type ImprovementStatus } from "@/lib/domain/improvement";
 import { improvementKindLabel, type ImprovementKind } from "@/lib/domain/improvement-instruction";
@@ -62,6 +64,20 @@ interface BulkResult {
 /** まとめて選べる操作。指示文を払い出すのと、落とす・戻すを同じ場所から行う。 */
 type BulkOperation = "handout" | DispositionAction;
 
+/** 1件ぶんの依頼。落とす・戻すときだけ理由を添える。 */
+type BulkRequest =
+  | { op: "handout"; input: { id: string } }
+  | { op: "dispose"; input: { id: string; action: DispositionAction; reasonCode: string; reasonNote: string } };
+
+/**
+ * 1件ぶんを処理する。払い出しと、落とす・戻すで呼ぶ Server Action が違う。
+ * 1つの入口にまとめるのは、送信中の印（saving）を両方で共有するため。
+ */
+const operateOne = dispatchAction<BulkRequest, { result: BulkResult }>({
+  handout: handOutImprovement,
+  dispose: disposeImprovement,
+});
+
 /**
  * 届いた要望の一覧と、そこからのまとめ操作。
  *
@@ -78,14 +94,17 @@ type BulkOperation = "handout" | DispositionAction;
  */
 export function ImprovementBulkTable({
   rows,
+  emptyNote,
   canHandOut,
   canDispose,
 }: {
   rows: ImprovementRow[];
+  /** 絞り込みで0件のときに表の代わりに出す案内。結果の表は0件でも残す */
+  emptyNote: string;
   canHandOut: boolean;
   canDispose: boolean;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(operateOne, { resource: "improvements" });
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [results, setResults] = useState<BulkResult[] | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -133,36 +152,26 @@ export function ImprovementBulkTable({
    * 済んだ分はその場で確定し、失敗した行だけをやり直せる。
    */
   const run = async (targets: string[], operation: BulkOperation) => {
-    if (targets.length === 0 || progress || refreshing) return;
+    if (targets.length === 0 || progress || saving) return;
     setResults(null);
     setProgress({ done: 0, total: targets.length });
     const collected: BulkResult[] = [];
     for (const id of targets) {
       const row = rows.find((r) => r.id === id);
-      try {
-        const res = await fetch("/api/improvements", {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(
-            operation === "handout" ? { id, action: "handout" } : { id, action: operation, reasonCode, reasonNote },
-          ),
-        });
-        const json = (await res.json()) as { ok?: boolean; result?: BulkResult; message?: string };
-        if (res.ok && json.ok && json.result) collected.push(json.result);
-        else {
-          collected.push({
-            id,
-            label: row?.headline ?? id,
-            action: "failed",
-            reason: json.message ?? "処理できませんでした。",
-          });
-        }
-      } catch {
+      // 1件ずつ送る。成功した分はサーバー側で確定し、返事と一緒に一覧も描き直される。
+      // 失敗（理由の不足・通信の失敗など）は例外にせず、その行の結果として並べる。
+      const result = await save(
+        operation === "handout"
+          ? { op: "handout", input: { id } }
+          : { op: "dispose", input: { id, action: operation, reasonCode, reasonNote } },
+      );
+      if (result.ok) collected.push(result.result);
+      else {
         collected.push({
           id,
           label: row?.headline ?? id,
           action: "failed",
-          reason: "通信できませんでした。この行だけやり直せます。",
+          reason: result.message,
         });
       }
       // 済んだ分はここで確定している。途中でやめても、済んだものは残る。
@@ -172,9 +181,6 @@ export function ImprovementBulkTable({
     setProgress(null);
     setSelected(new Set());
     setPending(null);
-    // 一覧はサーバー側で作っている。処理しただけでは古いままなので作り直させ、
-    // 終わるまで「反映しています…」を出す（読み直しに走らせない）。
-    refresh();
   };
 
   /** 選んだぶんの指示文を払い出す（まとめ払い出しと、失敗した行のやり直しの両方で使う）。 */
@@ -260,13 +266,17 @@ export function ImprovementBulkTable({
 
   return (
     <>
-      <DataTable
-        columns={columns}
-        rows={rows}
-        rowKey={(r) => r.id}
-        rowOff={(r) => r.off}
-        caption="届いた改善要望の一覧"
-      />
+      {rows.length === 0 ? (
+        <ReasonNote>{emptyNote}</ReasonNote>
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey={(r) => r.id}
+          rowOff={(r) => r.off}
+          caption="届いた改善要望の一覧"
+        />
+      )}
 
       {pending && (
         <>
@@ -306,11 +316,11 @@ export function ImprovementBulkTable({
               <ConfirmButton
                 label={`${chosen.length}件に実行する`}
                 variant={pending === "discard" ? "danger-outline" : "primary"}
-                disabled={progress !== null || refreshing || reasonError !== null || chosen.length === 0}
+                disabled={progress !== null || saving || reasonError !== null || chosen.length === 0}
                 confirm={bulkDispositionConfirm(pending, chosen.length)}
                 onConfirm={() => void run(chosen.map((r) => r.id), pending)}
               >
-                <Button type="button" variant="tertiary" disabled={progress !== null || refreshing} onClick={() => setPending(null)}>
+                <Button type="button" variant="tertiary" disabled={progress !== null || saving} onClick={() => setPending(null)}>
                   やめる
                 </Button>
               </ConfirmButton>
@@ -322,7 +332,7 @@ export function ImprovementBulkTable({
       {results && (
         <>
           <SectionHeading help="処理した1件ずつの結果です。">処理の結果</SectionHeading>
-          <RefreshStatus message={bulkSummaryText(summarizeBulk(results))} refreshing={refreshing} />
+          <RefreshStatus message={bulkSummaryText(summarizeBulk(results))} refreshing={saving} />
           <DataTable
             caption="まとめ処理の結果"
             rows={results}
@@ -349,7 +359,7 @@ export function ImprovementBulkTable({
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={progress !== null || refreshing}
+                  disabled={progress !== null || saving}
                   onClick={() => send(failed.map((r) => r.id))}
                 >
                   {`失敗した${failed.length}件をやり直す`}
@@ -370,21 +380,21 @@ export function ImprovementBulkTable({
               : `${selected.size}件を選択中／払い出し${count("handout")}・再払い出し${count("rehandout")}・スキップ${count("skip")}`
           }
         >
-          <Button type="button" variant="tertiary" disabled={progress !== null || refreshing} onClick={() => setSelected(new Set())}>
+          <Button type="button" variant="tertiary" disabled={progress !== null || saving} onClick={() => setSelected(new Set())}>
             選択をすべて解除
           </Button>
           {canDispose && (
             <>
-              <Button type="button" variant="secondary" disabled={progress !== null || refreshing} onClick={() => openPanel("restore")}>
+              <Button type="button" variant="secondary" disabled={progress !== null || saving} onClick={() => openPanel("restore")}>
                 元に戻す
               </Button>
-              <Button type="button" variant="secondary" disabled={progress !== null || refreshing} onClick={() => openPanel("reject")}>
+              <Button type="button" variant="secondary" disabled={progress !== null || saving} onClick={() => openPanel("reject")}>
                 対応しない
               </Button>
               <Button
                 type="button"
                 variant="danger-outline"
-                disabled={progress !== null || refreshing}
+                disabled={progress !== null || saving}
                 onClick={() => openPanel("discard")}
               >
                 廃棄する
@@ -395,7 +405,7 @@ export function ImprovementBulkTable({
             <Button
               type="button"
               variant="primary"
-              disabled={progress !== null || refreshing}
+              disabled={progress !== null || saving}
               onClick={() => send(chosen.map((r) => r.id))}
             >
               {progress ? "処理しています…" : `${selected.size}件をまとめて払い出す`}

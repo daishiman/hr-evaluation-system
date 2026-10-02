@@ -83,11 +83,11 @@ describe("自分の評価かどうかの判定", () => {
 });
 
 describe("自分の評価を自分で確定できないこと（サーバー側）", () => {
-  const route = read("src/app/api/evaluations/[id]/route.ts");
+  const route = read("src/actions/evaluations.ts");
 
   it("確定・差し戻し・コメントのどの分岐よりも前で、本人からの書き込みを止める", () => {
     const guard = route.indexOf("isOwnEvaluation(viewer.id, row.employeeId)");
-    const firstAction = route.indexOf('body.action === "comment"');
+    const firstAction = route.indexOf('input.action === "comment"');
     expect(guard).toBeGreaterThanOrEqual(0);
     expect(firstAction).toBeGreaterThan(guard);
   });
@@ -109,8 +109,8 @@ describe("自分の評価を自分で確定できないこと（サーバー側�
 
 describe("対象者ごとの契約がすべての入口で使われること", () => {
   it("評価のbuild・確定・再開・コメントは直属範囲をサーバー側で検査する", () => {
-    const build = read("src/app/api/evaluations/build/route.ts");
-    const update = read("src/app/api/evaluations/[id]/route.ts");
+    const build = read("src/actions/evaluations.ts");
+    const update = read("src/actions/evaluations.ts");
     expect(build).toContain("eq(s.users.managerId, viewer.id)");
     expect(build).toContain("直属メンバー以外の評価は集計できません");
     expect(update).toContain("canManageEmployee(viewer, row.employeeId)");
@@ -123,8 +123,8 @@ describe("対象者ごとの契約がすべての入口で使われること", (
   });
 
   it("メモと個別期限も直属範囲へ閉じる", () => {
-    expect(read("src/app/api/notes/route.ts")).toContain("canManageEmployee(viewer, body.employeeId)");
-    const deadline = read("src/app/api/forms/[id]/extensions/route.ts");
+    expect(read("src/actions/notes.ts")).toContain("canManageEmployee(viewer, input.employeeId)");
+    const deadline = read("src/actions/form-extensions.ts");
     expect(deadline).toContain("canManageEmployee(viewer, employee.id)");
     expect(deadline).toContain("canManageEmployee(viewer, row.employeeId)");
   });

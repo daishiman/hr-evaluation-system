@@ -3,8 +3,10 @@ import { Icon } from "@/components/Icon";
 /**
  * 保存できたことと、Server Component の画面へ反映し終えたことを分けて伝える。
  *
- * router.refresh の待ち時間は画面ごとに書き分けず、この短い live region に集約する。
- * 操作を押せなくする責務は、対象ボタンの `busy || refreshing` が持つ。
+ * 保存を送ってから、応答に同梱された新しい画面を描き終えるまでの待ち時間は、
+ * 画面ごとに書き分けず、この短い live region に集約する。
+ * refreshing には useSaveAction の saving（その間ずっと true）を渡す。
+ * 操作を押せなくする責務は、対象ボタンの `disabled={saving}`（または busy）が持つ。
  */
 export function RefreshStatus({
   message,

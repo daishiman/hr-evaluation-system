@@ -7,12 +7,13 @@
 
 ## 1. ロールと画面境界
 
-| 画面 / API | 最小ロール | 会社スコープ |
+| 画面 / サーバーアクション | 最小ロール | 会社スコープ |
 |---|---|---|
-| `GET/PATCH` 相当の `/account`、`/api/account/profile` | EMPLOYEE（全ログイン利用者） | **実所属** `users.company_id`（操作対象会社ではない） |
-| `/admin/members/policy`、`PUT /api/masters/profile-policy` | COMPANY_ADMIN | 自社、または SUPER_ADMIN の操作対象会社 |
-| `/admin/members`、`/api/members` | COMPANY_ADMIN | 自社 / 操作対象会社の社員のみ |
-| `/system/users`、`/system/users/[id]`、`/api/system/users` | SUPER_ADMIN | 全社・全ロール（評価の中身は出さない） |
+| `/account`、`updateOwnProfile`・`changeOwnPassword` | EMPLOYEE（全ログイン利用者） | **実所属** `users.company_id`（操作対象会社ではない） |
+| `/admin/members/policy`、`saveProfilePolicy` | COMPANY_ADMIN | 自社、または SUPER_ADMIN の操作対象会社 |
+| `/admin/members`、`createMember`・`updateMember` | COMPANY_ADMIN | 自社 / 操作対象会社の社員のみ |
+| `/system/users`、`/system/users/[id]`、`createSystemUser`・`updateSystemUser` | SUPER_ADMIN | 全社・全ロール（評価の中身は出さない） |
+| 一覧の行の「控えを見る」、`revealCredentialMemo`（読むだけ） | COMPANY_ADMIN | SUPER_ADMIN は全社、COMPANY_ADMIN は同じ会社の利用者だけ |
 
 ## 2. 本人編集ポリシー
 
@@ -38,7 +39,7 @@
 
 ### UI と API の一致
 
-- `/account` の入力可否と `PATCH /api/account/profile` の受理可否は、同じ会社の同じ policy 解決結果を使う
+- `/account` の入力可否と `updateOwnProfile` の受理可否は、同じ会社の同じ policy 解決結果を使う
 - 禁止項目を 1 件でも含む要求は 403（部分適用しない）
 
 ## 3. 利用者保存の不変条件

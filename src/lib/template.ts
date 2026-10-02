@@ -217,3 +217,41 @@ export async function copyCompanyMasters(
 
   return counts;
 }
+
+/**
+ * copyCompanyMasters で写した制度マスタを、会社ごと消す（会社の追加が途中で失敗したときの取り消し）。
+ *
+ * 写した順の逆に消す。後から写した表ほど前の表を参照しているため、
+ * 参照される側を先に消すと外部キーで止まる。途中まで写した状態でも、
+ * 何度呼んでも同じ結果になる（無い行は消すだけで終わる）。
+ *
+ * 会社の行を消せば本番（D1）は連鎖して消えるが、連鎖に頼らずここで明示的に消す。
+ * 外部キーの扱いが違う環境（テスト・手作業の復旧）でも同じ結果にするため。
+ */
+export async function deleteCompanyMasters(db: DB, companyId: string): Promise<void> {
+  const tables = [
+    s.kgiCoefficients,
+    s.raiseSettings,
+    s.raiseExceptions,
+    s.raisePatterns,
+    s.raisePolicies,
+    s.schemeRankRatios,
+    s.schemeItems,
+    s.evaluationSchemes,
+    s.kpiQuestions,
+    s.kpiRankCriteria,
+    s.kpiItems,
+    s.kpiCategories,
+    s.behaviorLevels,
+    s.behaviorGuidelines,
+    s.behaviorBandSets,
+    s.promotionThresholds,
+    s.promotionRequirements,
+    s.gradeRequirements,
+    s.grades,
+    s.offices,
+  ];
+  await db.batch(
+    tables.map((t) => db.delete(t).where(eq(t.companyId as never, companyId))) as unknown as Parameters<DB["batch"]>[0],
+  );
+}

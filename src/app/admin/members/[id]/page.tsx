@@ -10,6 +10,7 @@ import { Icon } from "@/components/Icon";
 import { PasswordReissue } from "@/components/PasswordReissue";
 import { Card, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
 import { formatDate } from "@/lib/view";
+import { updateMember } from "@/actions/members";
 
 export const dynamic = "force-dynamic";
 
@@ -102,8 +103,8 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
         登録内容を変える
       </SectionHeading>
       <RecordForm
-        url="/api/members"
-        method="PATCH"
+        action={updateMember}
+        resource="members"
         fixed={{ userId: member.id }}
         submitLabel="この内容で保存する"
         description="等級を変えると、次に作るアンケートと評価の計算に反映されます。確定済みの評価は変わりません。"
@@ -143,7 +144,7 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
       />
 
       <SectionHeading>パスワードの再発行</SectionHeading>
-      <PasswordReissue url="/api/members" userId={member.id} name={member.name} />
+      <PasswordReissue action={updateMember} resource="members" userId={member.id} name={member.name} />
 
       <SectionHeading>利用の停止と再開</SectionHeading>
       <Card className="card-pad">
@@ -155,17 +156,17 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
         <div className="mt-3">
           {member.isActive ? (
             <ActionButton
-              url="/api/members"
-              method="PATCH"
-              body={{ userId: member.id, isActive: false }}
+              action={updateMember}
+              resource="members"
+              input={{ userId: member.id, isActive: false }}
               label="利用を停止する"
               confirm={`${member.name}さんはログインできなくなります。これまでの回答と評価の記録は残ります。よろしいですか？`}
             />
           ) : (
             <ActionButton
-              url="/api/members"
-              method="PATCH"
-              body={{ userId: member.id, isActive: true }}
+              action={updateMember}
+              resource="members"
+              input={{ userId: member.id, isActive: true }}
               label="利用を再開する"
             />
           )}

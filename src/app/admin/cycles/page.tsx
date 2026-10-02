@@ -9,6 +9,7 @@ import { listUnfinalizedNamesInCycle } from "@/lib/stalled";
 import { cycleCloseConfirmText } from "@/lib/domain/stalled-evaluations";
 import { cycleOpenReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
+import { createCycle, updateCycleStatus } from "@/actions/cycles";
 
 export const dynamic = "force-dynamic";
 
@@ -63,8 +64,8 @@ export default async function AdminCycles() {
 
       <SectionHeading>評価期間を作る</SectionHeading>
       <RecordForm
-        url="/api/cycles"
-        method="POST"
+        action={createCycle}
+        resource="cycles"
         submitLabel="この期間を作る"
         description="いま有効な評価セット（KPIの項目と配点）がこの期間に紐づきます。あとで配点を変えても、この期間の判定条件は作成時のまま残ります。"
         resetAfterSubmit
@@ -130,17 +131,17 @@ export default async function AdminCycles() {
                 <div className="mt-3 flex flex-wrap gap-3">
                   {c.status !== "open" && c.status !== "closed" && openReadiness.ready && (
                     <ActionButton
-                      url="/api/cycles"
-                      method="PATCH"
-                      body={{ cycleId: c.id, status: "open" }}
+                      action={updateCycleStatus}
+                      resource="cycles"
+                      input={{ cycleId: c.id, status: "open" }}
                       label="回答の受付を始める"
                     />
                   )}
                   {c.status === "open" && (
                     <ActionButton
-                      url="/api/cycles"
-                      method="PATCH"
-                      body={{ cycleId: c.id, status: "closed" }}
+                      action={updateCycleStatus}
+                      resource="cycles"
+                      input={{ cycleId: c.id, status: "closed" }}
                       label="受付を締め切る"
                       variant="secondary"
                       confirm={cycleCloseConfirmText(pending)}
@@ -148,9 +149,9 @@ export default async function AdminCycles() {
                   )}
                   {c.status === "closed" && (
                     <ActionButton
-                      url="/api/cycles"
-                      method="PATCH"
-                      body={{ cycleId: c.id, status: "open" }}
+                      action={updateCycleStatus}
+                      resource="cycles"
+                      input={{ cycleId: c.id, status: "open" }}
                       label="受付を再開する"
                       variant="tertiary"
                       confirm="受付を再開すると、この期間の回答を再び受け付けます。アンケートは個別に公開し直してください。よろしいですか？"
