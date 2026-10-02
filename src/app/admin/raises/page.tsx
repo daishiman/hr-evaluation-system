@@ -8,6 +8,7 @@ import {
   listRaiseRevisions,
   listRaiseSettings,
 } from "@/lib/queries";
+import { saveMaster } from "@/actions/masters";
 import { RecordForm } from "@/components/RecordForm";
 import { Badge, Card, CardRow, ChipLink, Disclosure, EmptyState, Num, PageTitle, ProvisionalMark, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
@@ -62,8 +63,8 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
             </div>
           )}
           <RecordForm
-            url="/api/masters"
-            method="PUT"
+            action={saveMaster}
+            resource="masters"
             fixed={{ kind: "raisePolicy", id: policy.id }}
             submitLabel="昇給の条件を保存する"
             description={`判定の単位：${policy.judgeUnit}${policy.judgeTimingNote ? `（${policy.judgeTimingNote}）` : ""}`}
@@ -129,8 +130,8 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
                 </div>
               )}
               <RecordForm
-                url="/api/masters"
-                method="PUT"
+                action={saveMaster}
+                resource="masters"
                 fixed={{ kind: "raise", id: raise.id }}
                 submitLabel="昇給額を保存する"
                 description={`年額は「月額 × 月数」で自動計算します（いまの年額 ${raise.annualAmount.toLocaleString("ja-JP")}円）。${
@@ -225,8 +226,8 @@ export default async function AdminRaises({ searchParams }: { searchParams: Prom
               offices.map((o) => (
                 <RecordForm
                   key={o.id}
-                  url="/api/masters"
-                  method="PUT"
+                  action={saveMaster}
+                  resource="masters"
                   fixed={{ kind: "office", id: o.id }}
                   title={o.name}
                   submitLabel="この事業所の設定を保存する"

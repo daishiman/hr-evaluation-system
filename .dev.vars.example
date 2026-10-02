@@ -12,3 +12,15 @@ BETTER_AUTH_URL=http://localhost:8787
 #
 # 本番へ入れるときは、このファイルではなく `wrangler secret put AGENT_API_KEY` を使う。
 AGENT_API_KEY=openssl-rand-base64-32-で作った文字列
+
+# 初期パスワードの控えを暗号化する鍵（src/lib/credential-vault.ts）。
+# 無くても利用者の追加・初期パスワードの再発行は動く。
+# そのときは控えを保存しないので、発行した画面でその場でメモしてもらう。
+#
+# 作り方: openssl rand -base64 32
+#   ちょうど32バイト（base64で44文字）の値だけを鍵として使う。それ以外は未設定と同じ扱い。
+#   鍵を入れ替えると、それまでの控えは開けなくなる（再発行すれば新しい鍵で控えが作られる）。
+#   控えは本人がパスワードを変えると消える。平文はどこにも保存しない。
+#
+# 本番へ入れるときは、このファイルではなく `wrangler secret put CREDENTIAL_ENC_KEY` を使う。
+CREDENTIAL_ENC_KEY=openssl-rand-base64-32-で作った文字列

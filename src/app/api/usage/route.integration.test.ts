@@ -199,6 +199,24 @@ describe("/api/usage", () => {
     expect(rows[0].slowCalls).toBe(1);
   });
 
+  it("画面からの保存（Server Action）は種類名の宛先で数え、それ以外の宛先は数えない", async () => {
+    mocked.apiViewer.mockResolvedValue(viewer());
+
+    await POST(
+      usageRequest({
+        apis: [
+          { method: "POST", path: "/actions/members", calls: 2, durationMs: 400, errors: 1, slowCalls: 0 },
+          { method: "POST", path: "/admin/members", calls: 9, durationMs: 9, errors: 0, slowCalls: 0 },
+        ],
+      }),
+    );
+
+    const rows = await testDb.db.select().from(s.usageApiDaily);
+    expect(rows.map((r) => [r.method, r.routePattern, r.calls, r.errors])).toEqual([
+      ["POST", "/actions/members", 2, 1],
+    ]);
+  });
+
   it("読み出しは会社で絞れて、絞らなければ全社を合算する", async () => {
     const screen = {
       path: "/me",

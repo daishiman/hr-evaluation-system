@@ -64,8 +64,8 @@ describe("改善した画面の回復経路と用語", () => {
 describe("一覧からまとめて指示文を払い出す", () => {
   it("払い出せるのはシステム全体管理者だけ（画面で隠すだけにしない）", () => {
     // ボタンを隠すのは見た目の話。誰でも直接呼べるので、入口でも役割を確かめる。
-    const api = read("src/app/api/improvements/route.ts");
-    expect(api).toContain('apiViewer("SUPER_ADMIN")');
+    const api = read("src/actions/improvements.ts");
+    expect(api).toMatch(/handOutImprovement[\s\S]*?role: "SUPER_ADMIN"/);
     const page = read("src/app/admin/improvements/page.tsx");
     expect(page).toContain('canHandOut={viewer.role === "SUPER_ADMIN"}');
   });
@@ -121,6 +121,15 @@ describe("一覧からまとめて指示文を払い出す", () => {
     expect(table).toContain("selectable && selected.size > 0");
   });
 
+  it("表示中の要望を全て処理して0件になっても、結果の表は消えない", () => {
+    // 0件の案内に差し替えると部品ごと外れ、処理の結果（成功・失敗の行）も消える
+    const page = read("src/app/admin/improvements/page.tsx");
+    const table = read("src/components/ImprovementBulkTable.tsx");
+    expect(page).not.toMatch(/rows\.length === 0 \?/);
+    expect(page).toContain("emptyNote=");
+    expect(table).toContain("<ReasonNote>{emptyNote}</ReasonNote>");
+  });
+
   it("行ごとに、払い出すとどうなるかの理由が出る（無言の行を作らない）", () => {
     const table = read("src/components/ImprovementBulkTable.tsx");
     expect(table).toContain("{r.handoutNote}");
@@ -160,7 +169,7 @@ describe("要望を落とす・戻す", () => {
   });
 
   it("落とす・戻すもシステム全体管理者だけ", () => {
-    expect(read("src/app/api/improvements/route.ts")).toContain('apiViewer("SUPER_ADMIN")');
+    expect(read("src/actions/improvements.ts")).toMatch(/disposeImprovement[\s\S]*?role: "SUPER_ADMIN"/);
     expect(read("src/app/admin/improvements/page.tsx")).toContain("canDispose={canDisposeImprovements(viewer.role)}");
   });
 
@@ -180,7 +189,7 @@ describe("要望を落とす・戻す", () => {
  */
 describe("Claude Code 連携の鍵", () => {
   it("発行できるのはシステム全体管理者だけ（画面でもサーバー側でも確かめる）", () => {
-    expect(read("src/app/api/agent-keys/route.ts")).toContain('apiViewer("SUPER_ADMIN")');
+    expect(read("src/actions/agent-keys.ts")).toMatch(/createAgentKey[\s\S]*?role: "SUPER_ADMIN"/);
     expect(read("src/app/system/agent-keys/page.tsx")).toContain('requireRole("SUPER_ADMIN")');
   });
 
@@ -190,7 +199,7 @@ describe("Claude Code 連携の鍵", () => {
     expect(store).not.toMatch(/keyRaw|rawKey|key: raw/);
     // 鍵を書き出す道を作らない（ログに出れば、保存していないことの意味がなくなる）
     expect(store).not.toContain("console.");
-    expect(read("src/app/api/agent-keys/route.ts")).not.toContain("console.");
+    expect(read("src/actions/agent-keys.ts")).not.toContain("console.");
   });
 
   it("突き合わせは、長さで早く抜けない比べ方を通す", () => {

@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
+import { batchAll, type BatchStatement } from "@/lib/db-batch";
 import { computeActualValue, FormulaError } from "@/lib/domain/formula";
 import {
   gradeRequirementRate,
@@ -471,7 +472,7 @@ export async function buildEvaluationsForCycle(
           levelLabel: b.label,
         }));
 
-      const statements: unknown[] = [];
+      const statements: BatchStatement[] = [];
       if (existing) statements.push(db.delete(s.evaluations).where(eq(s.evaluations.id, existing.id)));
       statements.push(db.insert(s.evaluations).values(evaluationRow));
       statements.push(...chunkRowsForD1(itemRows).map((rows) => db.insert(s.evaluationItems).values(rows)));
@@ -486,7 +487,7 @@ export async function buildEvaluationsForCycle(
       );
       /* 削除・評価本体・全根拠行を1つのD1 transactionで確定する。
          子行の保存に失敗した場合は、変更前の評価全体へrollbackする。 */
-      await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+      await batchAll(db, statements);
 
       out.push({
         evaluationId: evalId,

@@ -135,6 +135,27 @@ export const accounts = sqliteTable(
   (t) => [index("idx_accounts_user").on(t.userId)],
 );
 
+/**
+ * 初期パスワードの控え（暗号文だけ）。
+ *
+ * 平文は持たない。鍵は Workers の秘密の値 CREDENTIAL_ENC_KEY にだけ置き、
+ * ここには暗号文・初期化ベクトル・鍵の指紋を残す（src/lib/credential-vault.ts）。
+ * 1人1行。再発行で置き換え、本人がパスワードを変えたら消す。
+ * 利用者を消したら一緒に消える。
+ */
+export const initialCredentialMemos = sqliteTable("initial_credential_memos", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  ciphertext: text("ciphertext").notNull(),
+  iv: text("iv").notNull(),
+  /** 暗号化に使った鍵の指紋。鍵を入れ替えたら古い控えは開けない */
+  keyVersion: text("key_version").notNull(),
+  /** 発行した人（記録用。参照の制約は付けない） */
+  issuedBy: text("issued_by"),
+  issuedAt: integer("issued_at", { mode: "timestamp_ms" }).notNull(),
+});
+
 export const verifications = sqliteTable("verifications", {
   id: id(),
   identifier: text("identifier").notNull(),
@@ -1186,7 +1207,8 @@ export const profileFieldPolicies = sqliteTable(
  *
  * 各テーブル（grades / grade_requirements / kpi_rank_criteria …）が現在状態の正本である。
  * この列は変更履歴の表示と障害調査を補助する append-only の監査記録であり、状態復元の
- * 正本ではない。現状は本体更新と同じD1 batchで書いていないため、完全性を仮定しない。
+ * 正本ではない。本体の更新と同じ D1 batch で書く（src/lib/masters/write-batch.ts）。
+ * ただし導入前（0014 のバックフィル以前）の変更は記録に無いので、完全性は仮定しない。
  *
  * 1件のイベントは「誰が・いつ・どの実体の・どの種別の変更で・どの列がどう変わったか」を持つ。
  * before/after は変更のあった列だけを持つ差分（丸ごとの複製はしない）。
@@ -1209,12 +1231,12 @@ export const constitutionEvents = sqliteTable(
     beforeJson: text("before_json"),
     /** 変更後の値（変わった列だけ、または削除時は消えた行の全体）。 */
     afterJson: text("after_json"),
-    /** 同じ実体の中での表示順。現状はDB一意制約を持たないため、復元順序の正本にはしない。 */
+    /** 同じ実体の中での順番。一意索引で重なりを防ぐ（同時保存は後のほうが失敗する。0032）。 */
     seq: integer("seq").notNull(),
     occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },
   (t) => [
-    index("idx_ce_entity").on(t.companyId, t.entityType, t.entityId, t.seq),
+    uniqueIndex("uq_ce_entity_seq").on(t.companyId, t.entityType, t.entityId, t.seq),
     index("idx_ce_company_time").on(t.companyId, t.occurredAt),
   ],
 );
@@ -1660,7 +1682,7 @@ export const usageApiDaily = sqliteTable(
       .references(() => companies.id, { onDelete: "cascade" }),
     /** GET | POST | PUT | PATCH | DELETE */
     method: text("method").notNull(),
-    /** 動的IDを正規化した宛先（/api/evaluations/[id] など） */
+    /** 動的IDを正規化した宛先（/api/improvements/[id] など） */
     routePattern: text("route_pattern").notNull(),
     calls: integer("calls").notNull().default(0),
     durationMs: integer("duration_ms").notNull().default(0),

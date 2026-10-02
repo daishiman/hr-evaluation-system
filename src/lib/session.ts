@@ -245,6 +245,33 @@ export function resolveCompanyId(v: Viewer, requested?: string | null): string |
   return v.companyId;
 }
 
+/**
+ * 会社が決まらないまま書き込もうとしたときの断り文句。
+ *
+ * getViewer は会社のない SUPER_ADMIN 以外を通さないので、ここに当たるのは
+ * 「会社を選んでいないシステム全体管理者」だけ。画面の「操作する会社」に合わせて呼ぶ。
+ */
+const NO_COMPANY_MESSAGE = "操作する会社が選ばれていません。";
+
+/**
+ * 操作する会社が決まっていることを確かめる（決まっていなければ 400）。
+ *
+ * 同じ条件を各 action が手で書くと、文言が入口ごとにばらける（以前は4通りあった）。
+ * 条件と言い方をここ1か所に置き、通ったあとは companyId を string として扱えるようにする。
+ */
+export function assertCompanyChosen<T extends { companyId: string | null }>(
+  v: T,
+): asserts v is T & { companyId: string } {
+  if (!v.companyId) throw new HttpError(400, NO_COMPANY_MESSAGE);
+}
+
+/** 会社を指定できる入口（取り込み・書き出し）で、対象の会社を確定する。決まらなければ 400。 */
+export function requireTargetCompany(v: Viewer, requested?: string | null): string {
+  const companyId = resolveCompanyId(v, requested);
+  if (!companyId) throw new HttpError(400, NO_COMPANY_MESSAGE);
+  return companyId;
+}
+
 /** 指定した利用者を閲覧してよいか。 */
 export async function canViewEmployee(v: Viewer, employeeId: string): Promise<boolean> {
   const db = await getDb();

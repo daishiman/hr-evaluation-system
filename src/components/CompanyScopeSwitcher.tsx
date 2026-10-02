@@ -1,7 +1,8 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
+import { switchCompanyScope } from "@/actions/company-scope";
+import { useSaveAction } from "@/lib/use-refresh";
 import { ReasonNote } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
 
@@ -14,6 +15,10 @@ import { RefreshStatus } from "@/components/RefreshStatus";
  * 置き場所はサイドバーの上部。以前はヘッダーに置いて横幅1024px未満では隠していたため、
  * スマートフォンでは会社を切り替えられなかった。サイドバーは狭い画面では引き出しとして
  * 開けるので、どの画面幅でも切り替えられる。
+ *
+ * 切り替えは Server Action（src/actions/company-scope.ts）で行う。切り替えた後の画面は
+ * 返事と一緒に届くので、別に取り直さない。送っている間は select を押せなくし、
+ * 「会社の画面に反映しています…」を出す。
  */
 export function CompanyScopeSwitcher({
   companies,
@@ -22,15 +27,14 @@ export function CompanyScopeSwitcher({
   companies: { id: string; name: string }[];
   currentId: string | null;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
-  const [busy, setBusy] = useState(false);
+  const { save, saving } = useSaveAction(switchCompanyScope, { resource: "company-scope" });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   if (companies.length === 0) return null;
 
   return (
-    <div className="grid gap-1 text-note text-ink-muted" aria-busy={busy || refreshing}>
+    <div className="grid gap-1 text-note text-ink-muted" aria-busy={saving}>
       <label htmlFor="company-scope">操作する会社</label>
       {/* 高さは付けない。px で決め打ちすると、文字の段を上げたときに下が欠ける（spec §18）。
           文字の大きさも指定しない。入力欄の共通の見た目（.input）が正本で、
@@ -39,29 +43,17 @@ export function CompanyScopeSwitcher({
         id="company-scope"
         className="input w-full"
         value={currentId ?? ""}
-        disabled={busy || refreshing}
+        disabled={saving}
         onChange={async (e) => {
           const companyId = e.target.value;
-          setBusy(true);
           setError(null);
           setMessage(null);
-          try {
-            const res = await fetch("/api/account/company-scope", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ companyId }),
-            });
-            if (!res.ok) {
-              setError("会社を切り替えられませんでした。時間をおいてもう一度お試しください。");
-              return;
-            }
-            setMessage("操作する会社を切り替えました。");
-            refresh();
-          } catch {
-            setError("通信できませんでした。時間をおいてもう一度お試しください。");
-          } finally {
-            setBusy(false);
+          const result = await save({ companyId });
+          if (!result.ok) {
+            setError(result.message);
+            return;
           }
+          setMessage("操作する会社を切り替えました。");
         }}
       >
         {companies.map((c) => (
@@ -70,14 +62,9 @@ export function CompanyScopeSwitcher({
           </option>
         ))}
       </select>
-      {busy && !refreshing && (
-        <p className="m-0 text-note text-ink-muted" role="status" aria-live="polite">
-          会社を切り替えています…
-        </p>
-      )}
       <RefreshStatus
         message={message}
-        refreshing={refreshing}
+        refreshing={saving}
         target="会社の画面"
         className="m-0 text-note text-ink-muted"
       />

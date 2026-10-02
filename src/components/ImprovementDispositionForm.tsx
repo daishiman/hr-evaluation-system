@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Card, ChoiceChip, ReasonNote } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { disposeImprovement } from "@/actions/improvements";
+import { useSaveAction } from "@/lib/use-refresh";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import {
   DISPOSITION_ACTIONS,
@@ -26,14 +27,13 @@ import {
  * 同じ関数（domain）で行うので、画面と保存の判断がずれない。
  */
 export function ImprovementDispositionForm({ id, discarded }: { id: string; discarded: boolean }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(disposeImprovement, { resource: "improvements" });
   // 廃棄済みの要望を開いたときは「元に戻す」から始める（いちばん要る操作を既定に）。
   const first: DispositionAction = discarded ? "restore" : "reject";
   const [action, setAction] = useState<DispositionAction>(first);
   const [reasonCode, setReasonCode] = useState(reasonChoices(first)[0]?.code ?? "");
   const [reasonNote, setReasonNote] = useState("");
   const [duplicateOfId, setDuplicateOfId] = useState("");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
@@ -50,43 +50,31 @@ export function ImprovementDispositionForm({ id, discarded }: { id: string; disc
   };
 
   const submit = async () => {
-    if (busy || refreshing || reasonError) return;
-    setBusy(true);
+    if (saving || reasonError) return;
     setError(null);
     setDone(null);
-    try {
-      const res = await fetch("/api/improvements", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          id,
-          action,
-          reasonCode,
-          reasonNote,
-          duplicateOfId: duplicateOfId.trim() || null,
-        }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string; result?: { reason: string } };
-      if (!res.ok || !json.ok || !json.result) {
-        setError(json.message ?? "実行できませんでした。");
-        return;
-      }
-      setDone(json.result.reason);
-      setReasonNote("");
-      // 履歴と状態はサーバー側で作っている。作り直しが終わるまで結果を出し続ける。
-      refresh();
-    } catch {
-      setError("通信できませんでした。入力内容はこの画面に残っています。");
-    } finally {
-      setBusy(false);
+    const result = await save({
+      id,
+      action,
+      reasonCode,
+      reasonNote,
+      duplicateOfId: duplicateOfId.trim() || null,
+    });
+    if (!result.ok) {
+      // 入力内容はこの画面に残す（直してもう一度押せるように）
+      setError(result.message);
+      return;
     }
+    // 履歴と状態はサーバー側で作っている。描き直した画面は返事と一緒に届く。
+    setDone(result.result.reason);
+    setReasonNote("");
   };
 
   return (
     <Card className="card-pad">
       {error && <ReasonNote>{error}</ReasonNote>}
       {reasonError && <ReasonNote>{reasonError}</ReasonNote>}
-      <RefreshStatus message={done} refreshing={refreshing} target="履歴" />
+      <RefreshStatus message={done} refreshing={saving} target="履歴" />
 
       <p className="footnote m-0">この要望をどうするか</p>
       <div className="mt-1 flex flex-wrap gap-2">
@@ -152,8 +140,8 @@ export function ImprovementDispositionForm({ id, discarded }: { id: string; disc
         <ConfirmButton
           label={needsReason ? `${dispositionActionLabel(action)}にする` : dispositionActionLabel(action)}
           variant={action === "discard" ? "danger-outline" : "primary"}
-          disabled={busy || refreshing || reasonError !== null}
-          busy={busy}
+          disabled={reasonError !== null}
+          busy={saving}
           confirm={dispositionConfirm(action)}
           onConfirm={() => void submit()}
         />

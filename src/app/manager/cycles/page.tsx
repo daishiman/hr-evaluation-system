@@ -6,6 +6,7 @@ import { detectStaleCycles } from "@/lib/impact";
 import { ActionButton } from "@/components/ActionButton";
 import { Badge, Card, CardRow, ChipLink, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
+import { buildEvaluations } from "@/actions/evaluations";
 
 export const dynamic = "force-dynamic";
 
@@ -97,8 +98,9 @@ export default async function ManagerCycles({
             {stale.recomputable > 0 && (
               <div className="mt-3">
                 <ActionButton
-                  url="/api/evaluations/build"
-                  body={{ cycleId: selected.id }}
+                  action={buildEvaluations}
+                  resource="evaluations"
+                  input={{ cycleId: selected.id }}
                   label="いまの基準で集計し直す"
                   confirm={`確認中の${stale.recomputable}件を、いまの基準・配点で計算し直します。確定済みの評価は変わりません。よろしいですか？`}
                 />
@@ -131,8 +133,9 @@ export default async function ManagerCycles({
         </p>
         <div className="mt-3">
           <ActionButton
-            url="/api/evaluations/build"
-            body={{ cycleId: selected.id }}
+            action={buildEvaluations}
+            resource="evaluations"
+            input={{ cycleId: selected.id }}
             label="提出済みの回答から評価を作る"
             confirm={`提出済み${submitted.length}人分の評価を作り直します。確認中の評価があれば、最新の回答で上書きされます。よろしいですか？`}
           />

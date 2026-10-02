@@ -2576,6 +2576,31 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   .user-row { flex-wrap: wrap; }
   .user-row-tags { flex-basis: 100%; justify-content: flex-start; }
 }
+/* 行（リンク）と、その行の控えを開く操作の組。
+   ボタンをリンクの中へ入れると押す先が入れ子になるので、リンクの下に並べる。
+   左端は名前の書き出し（顔写真 36px ＋ 間 12px）に揃える。 */
+.user-row-group { border-bottom: 1px solid var(--line); }
+.user-row-group:last-child { border-bottom: none; }
+.user-row-group > .user-row { border-bottom: none; }
+.credential-memo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--pad-card) 12px calc(var(--pad-card) + 48px);
+}
+/* 書体・面・枠は共通の .code に任せ、読み上げ・書き写しやすい大きさだけ足す */
+.credential-memo-value .code {
+  font-size: var(--text-body);
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  color: var(--ink);
+  user-select: all;
+}
+.credential-memo-error { flex-basis: 100%; margin: 0; font-size: var(--text-note); color: var(--danger); }
+@media (max-width: 640px) {
+  .credential-memo { padding-left: var(--pad-card); }
+}
 
 /* ---- 項目ごとの行（自分の情報・本人が変更できる項目）----
    最初に見えるのは「アイコン・項目名・値・変えられるかどうか」だけ。

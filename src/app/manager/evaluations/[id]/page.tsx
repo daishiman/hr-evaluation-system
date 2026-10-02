@@ -7,6 +7,7 @@ import { ActionButton } from "@/components/ActionButton";
 import { EvaluationDetail } from "@/components/EvaluationDetail";
 import { EvaluatorPanel } from "@/components/EvaluatorPanel";
 import { Card, InlineDetail, ReasonNote, SectionHeading } from "@/components/ui";
+import { buildEvaluations } from "@/actions/evaluations";
 import {
   isOwnEvaluation,
   canReviewEmployeeEvaluation,
@@ -92,8 +93,9 @@ export default async function ManagerEvaluation({ params }: { params: Promise<{ 
         </p>
         <div className="mt-3">
           <ActionButton
-            url="/api/evaluations/build"
-            body={{ cycleId: detail.head.cycleId, employeeIds: [detail.head.employeeId] }}
+            action={buildEvaluations}
+            resource="evaluations"
+            input={{ cycleId: detail.head.cycleId, employeeIds: [detail.head.employeeId] }}
             label="この人の評価を集計し直す"
             variant="primary"
             confirm={`${detail.head.employeeName ?? "この方"}の評価を、いまの基準で計算し直します。いま画面に出ている点数・判定は上書きされます。よろしいですか？`}
@@ -109,8 +111,9 @@ export default async function ManagerEvaluation({ params }: { params: Promise<{ 
         </p>
         <div className="mt-3">
           <ActionButton
-            url="/api/evaluations/build"
-            body={{ cycleId: detail.head.cycleId, employeeIds: [detail.head.employeeId] }}
+            action={buildEvaluations}
+            resource="evaluations"
+            input={{ cycleId: detail.head.cycleId, employeeIds: [detail.head.employeeId] }}
             label="この人の評価を集計し直す"
             variant="secondary"
             confirm={`${detail.head.employeeName ?? "この方"}の評価を、いまの基準で計算し直します。いま画面に出ている点数・判定は上書きされます。よろしいですか？`}

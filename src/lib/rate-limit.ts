@@ -6,7 +6,7 @@
  * （サーバー側から `auth.api.xxx` を直接呼ぶ場所）にも適用するための小さな仕組み。
  *
  * Better Auth 自身の制限は `auth.handler` を通したときだけ効く。
- * `src/app/api/account/password/route.ts` のように `auth.api.changePassword` を
+ * `src/actions/account.ts`（パスワード変更）のように `auth.api.changePassword` を
  * 直接呼ぶ経路は、その仕組みの外側にあるため素通りしてしまう。ここではその抜け穴を、
  * 同じウィンドウ・同じ上限で塞ぐ。
  *

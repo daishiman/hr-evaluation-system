@@ -17,11 +17,12 @@ beads: `hr-hco` / `hr-2qk` / `hr-0p4`
   StaleCyclesNotice              … 再集計通知（共通）
         │
         ▼
-[API]
-  PUT /api/masters
+[サーバーアクション]（src/actions/masters.ts → src/lib/masters/）
+  saveMaster / deleteMasterItem / saveProfilePolicy
     body-schema.ts          … kind 判別の入力契約
     apply-master-update.ts  … 会社境界確認と保存
-  GET /api/masters/rank-criteria … 遅延取得
+    write-batch.ts          … 本体と監査記録を1回の D1 batch で書く
+  ランク基準はページのデータ取得（admin/scheme/data.ts の listRankCriteria）で読む
         │
         ▼
 [ドメイン]
@@ -125,8 +126,9 @@ id指定commandに `gradeId` / `category` / `reqKind` を再送させない。
 
 `constitution_events` は現在状態を再構築するイベントストアではなく、変更履歴の表示と障害調査を
 補助する append-only の監査ジャーナルである。現在状態の正本は各制度マスタテーブルに置く。
-本体更新と監査記録は現状同じ D1 batch ではないため、監査の完全性を前提とする機能は作らない。
-原子的な監査が必要になった時点で、更新 command と監査 INSERT を同じ batch へ統合する。
+本体更新と監査 INSERT は同じ D1 batch で書く（`src/lib/masters/write-batch.ts`、2026-10-01）。
+監査の `seq` は実体ごとに一意（`uq_ce_entity_seq`、移行 0032）で、同じ項目の同時保存は後のほうが batch ごと失敗し 409 になる。
+0014 のバックフィルより前の変更は記録が欠けうるため、過去分の完全性を前提とする機能は作らない。
 
 ## 主要ファイル
 
@@ -134,7 +136,7 @@ id指定commandに `gradeId` / `category` / `reqKind` を再送させない。
 |---|---|
 | ナビ | `src/lib/nav.ts` |
 | 影響検知 | `src/lib/impact.ts` |
-| 更新API | `src/app/api/masters/`（`apply-master-update.ts` / `versioned-requirement-update.ts` / `apply-behavior-master-update.ts`） |
+| 更新（サーバーアクション） | `src/actions/masters.ts` → `src/lib/masters/`（`apply-master-update.ts` / `versioned-requirement-update.ts` / `apply-behavior-master-update.ts` / `write-batch.ts`） |
 | 版の系譜（現在版判定の正本） | `src/lib/domain/versioned-master.ts`（`currentVersionRows` / `classifyVersionedRows`） |
 | 版UI共通（domain を呼ぶだけ） | `src/components/VersionedMasterSections.tsx` |
 | 監査ジャーナル | `src/lib/domain/constitution-events.ts` / `constitution_events` テーブル |

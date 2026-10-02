@@ -1,6 +1,7 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useSaveAction } from "@/lib/use-refresh";
+import { saveFormQuestions } from "@/actions/forms";
 import { useRef, useState } from "react";
 import { Badge, Button, Card, CardHead, CardRow, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
@@ -46,9 +47,8 @@ export function FormBuilder({
   editable: boolean;
   lockReason?: string;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(saveFormQuestions, { resource: "forms" });
   const [rows, setRows] = useState<BuilderQuestionDraft[]>(() => withClientKeys(initial));
-  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -87,54 +87,44 @@ export function FormBuilder({
     setOpenKey(clientKey);
   };
 
-  const save = async () => {
+  const submit = async () => {
     const blank = rows.findIndex((r) => !r.title.trim());
     if (blank >= 0) {
       setError(`${blank + 1}問目の設問文が空です。入力してから保存してください。`);
       setOpenKey(rows[blank].clientKey);
       return;
     }
-    setBusy(true);
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch(`/api/forms/${formId}/questions`, {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          questions: rows.map((r) => ({
-            id: r.id,
-            section: r.section,
-            questionType: r.questionType,
-            title: r.title,
-            helpText: r.helpText,
-            unit: r.unit,
-            required: r.required,
-            validationMin: r.validationMin,
-            validationMax: r.validationMax,
-            validationInteger: r.validationInteger,
-            options: r.options.length > 0 ? r.options : undefined,
-            isGate: r.isGate,
-            gradeRequirementId: r.gradeRequirementId,
-            promotionRequirementId: r.promotionRequirementId,
-            behaviorGuidelineId: r.behaviorGuidelineId,
-            kpiItemId: r.kpiItemId,
-            kpiQuestionKey: r.kpiQuestionKey,
-          })),
-        }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "保存できませんでした。");
-        return;
-      }
-      setMessage(json.message ?? "保存しました。");
-      refresh();
-    } catch {
-      setError("通信できませんでした。入力内容はこの画面に残っています。");
-    } finally {
-      setBusy(false);
+    // 保存の応答には保存後の画面が同梱される（サーバー側の refresh()）
+    const result = await save({
+      formId,
+      questions: rows.map((r) => ({
+        id: r.id,
+        section: r.section,
+        questionType: r.questionType,
+        title: r.title,
+        helpText: r.helpText,
+        unit: r.unit,
+        required: r.required,
+        validationMin: r.validationMin,
+        validationMax: r.validationMax,
+        validationInteger: r.validationInteger,
+        options: r.options.length > 0 ? r.options : undefined,
+        isGate: r.isGate,
+        gradeRequirementId: r.gradeRequirementId,
+        promotionRequirementId: r.promotionRequirementId,
+        behaviorGuidelineId: r.behaviorGuidelineId,
+        kpiItemId: r.kpiItemId,
+        kpiQuestionKey: r.kpiQuestionKey,
+      })),
+    });
+    // 失敗しても入力した設問は消さない（直してもう一度保存できるように）
+    if (!result.ok) {
+      setError(result.message);
+      return;
     }
+    setMessage(result.message);
   };
 
   if (!editable) {
@@ -142,16 +132,17 @@ export function FormBuilder({
       <>
         <ReasonNote>{lockReason ?? "このアンケートは編集できません。"}</ReasonNote>
         <div className="mt-3">
-          <QuestionList rows={rows} />
+          {/* 編集中の下書きは保持し、公開後の表示は最新の保存済み設問を使う。 */}
+          <QuestionList rows={initial} />
         </div>
       </>
     );
   }
 
   return (
-    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="m-0 min-w-0 border-0 p-0">
+    <fieldset disabled={saving} aria-busy={saving} className="m-0 min-w-0 border-0 p-0">
       {error && <ReasonNote>{error}</ReasonNote>}
-      <RefreshStatus message={message} refreshing={refreshing} target="画面" className="m-0 mb-3 text-sub text-brand-deep" />
+      <RefreshStatus message={message} refreshing={saving} target="画面" className="m-0 mb-3 text-sub text-brand-deep" />
 
       <div className="grid gap-3">
         {rows.map((r, i) => {
@@ -361,8 +352,8 @@ export function FormBuilder({
           </>
         }
       >
-        <Button variant="primary" onClick={save} disabled={busy || refreshing}>
-          {busy ? "保存しています…" : refreshing ? "画面に反映しています…" : "設問を保存する"}
+        <Button variant="primary" onClick={() => void submit()} disabled={saving}>
+          {saving ? "保存しています…" : "設問を保存する"}
         </Button>
       </StickyActionBar>
     </fieldset>

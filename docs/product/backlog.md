@@ -1,6 +1,6 @@
 # 現在の残課題
 
-最終更新: 2026-09-29
+最終更新: 2026-10-02
 
 この文書は、未解決事項だけを扱う current SSOT です。完了した内容と判断の経緯は [統合台帳の履歴](./backlog-history-2026-08-13.md) と [回ごとの記録](./backlog-session-notes.md) に保存します。
 
@@ -90,25 +90,24 @@
 | UX-027 | observe | 375px幅の「次にやること」カードは本文と主要ボタンが横並びのため、横溢れや重なりはないが本文列が細い | モバイルで読みにくいと申告される | 広い幅の横並びは保ち、カード容器が狭いときだけ主要ボタンを本文の下へ縦積みにする | [375px確認画像](./theme-gallery/responsive-375.png) |
 | UX-028 | observe | 画面の撮影は DOM を描き直す方式のため、**いま見えている範囲だけ**が写る（画面外までは撮れない）。また、将来 `canvas`・`iframe`・別ドメインの画像を画面に足すと、その部分だけ白く抜ける（現時点では0件） | 画面外まで撮りたいという申告が出る、または `canvas`・`iframe`・外部画像を使う画面を追加する | 前者はスクロールしながら複数枚撮って繋ぐ方式を検討する。後者は追加時に該当画面で撮影を実測し、必要なら `canvas` を画像に置き換える下ごしらえを撮影前に入れる | [仕様 §26-3](./spec.md) / [実装](../../src/components/FeedbackWidget.tsx) |
 | UX-029 | observe | 絵だけの列（68px）は 1024px 以上でだけ出す。640〜1023px は従来どおり重ねて開く引き出しのまま | タブレットでメニューの開閉が煩わしいという申告が出る | この幅は本文1カラムが既に狭く、68px を削ると表が潰れる。引き出しの開閉回数を観測してから縮小幅を決める | [判断記録 DD-001](./design-decisions.md) / [実装](../../src/components/AppSidebar.tsx) |
-| UX-030 | observe | 保存したあとの一覧反映はサーバー再描画で、完了まで対象操作を押せず「一覧／画面に反映しています…」と表示する。先に画面だけ書き換える方式（楽観更新）は入れていない | 反映待ちが体感で長いという申告、または連続入力の画面で待ちが積み上がる | 楽観更新は失敗時の巻き戻しが要る。まず反映にかかる実測値を主要画面で取り、遅い画面だけを対象にする | [実装](../../src/lib/use-refresh.ts) |
+| UX-030 | observe | 保存はサーバーアクションで行い、保存の応答に描き直した画面を同梱して返す（往復は1回）。応答が届くまで対象操作を押せず「一覧／画面に反映しています…」と表示する。先に画面だけ書き換える方式（楽観更新）は入れていない | 反映待ちが体感で長いという申告、または連続入力の画面で待ちが積み上がる | 楽観更新は失敗時の巻き戻しが要る。まず保存から表示までの実測値を主要画面で取り、遅い画面だけを対象にする | [仕様 §27-2](./spec.md) / [実装](../../src/lib/use-refresh.ts) |
+| UX-031 | ready | 画面下の操作の帯の状態表示（「保存しました」など）が読み上げに届かない。`role="status"` も `aria-live` も持たない | 読み上げで保存の成否を聞き取りたい申告、または a11y の点検 | 帯は5画面で共有し、選択件数のように頻繁に変わる表示も載る。全画面で読み上げるか、保存状態だけを別の知らせへ出すかを決める。画面の通し試験は今は場所（`.action-bar-status`）で指しており、役割を足すと `getByRole("status")` が複数に当たる箇所を絞り直す必要がある | [実装](../../src/components/layout/StickyActionBar.tsx) / [通し試験](../../e2e/data-freshness-component-types.spec.ts) |
+| UX-032 | ready | アンケート回答の「補足（任意）」の入力欄が見出しと結び付いておらず、読み上げでの名前が案内文（placeholder）だけになる | a11y の点検、または回答画面を触るとき | 見出しの id を `aria-labelledby` で欄に結ぶ。直すときは通し試験の指し方（placeholder）もラベルへ移す | [実装](../../src/components/FormAnswer.tsx) / [通し試験](../../e2e/data-freshness-component-types.spec.ts) |
 
 ## セキュリティ・信頼性
 
 | ID | 状態 | 現在の論点 | 着手トリガー | 次アクション | 根拠 |
 |---|---|---|---|---|---|
-| SECURITY-001 | ready | アカウント設定と会社管理 API の重点監査が残る | 次のセキュリティ確認 | 認可・CSRF・漏えいをテスト付きで監査 | [回ごとの記録 E7・V3](./backlog-session-notes.md) |
 | SECURITY-002 | ready | ログインのレート制限が isolate 内メモリに依存 | 本番の分散防御を強化 | Durable Object または KV 等の共有方式を選定 | [旧台帳 UX95](./backlog-history-2026-08-13.md) |
 | SECURITY-003 | observe | ログイン以外の操作別レート制限は暫定値 | 429 率または負荷の実測が得られる | 操作別に閾値を調整 | [旧台帳 UX97](./backlog-history-2026-08-13.md) |
 | SECURITY-004 | ready | 2 段階認証がない | 認証強化を優先 | 対象ロール・復旧手段を含めて導入 | [旧台帳 UX35](./backlog-history-2026-08-13.md) |
-| SECURITY-005 | ready | 仮パスワードに期限がない | 招待運用を本格化 | 発行・期限・失効・再発行を実装 | [旧台帳 UX36](./backlog-history-2026-08-13.md) |
+| SECURITY-005 | decision | 仮パスワードそのものに期限がない（変えないままでもログインできる）。控えは 2026-10-01 から発行後14日で開けなくなり、次の発行で消える（[仕様 §27-5](./spec.md)） | 招待運用を本格化、または失効させる日数を事業側が決める | 失効させるとログインできなくなるため、日数と、期限切れの人の見分け方（一覧の印・再発行への案内）を先に決める。控えの14日と揃えるかもここで決める | [旧台帳 UX36](./backlog-history-2026-08-13.md) / [回ごとの記録 W4](./backlog-session-notes.md) |
 | SECURITY-007 | decision | ロールは 4 種固定 | 権限分離の追加要件が出る | ロール追加ではなく権限集合として再設計 | [旧台帳 UX98](./backlog-history-2026-08-13.md) |
 | SECURITY-008 | observe | 最新版 `drizzle-kit` の開発用依存が、古い esbuild の開発サーバー経路を含む（production Workerには同梱・使用しない） | upstreamが依存を更新、または開発用serveを外部公開する構成へ変える | 最新版を再確認し、互換性を保てる更新だけを適用 | [最終監査](./elegant-review.md#launch-security) |
 | SECURITY-009 | ready | CSP は nonce 方式ではない | inline script をさらに制限 | Next.js・OpenNext の制約を確認して nonce 化 | [旧台帳 UX99](./backlog-history-2026-08-13.md) |
 | SECURITY-011 | observe | ローカルpreviewではBetter Authがclient IPを解決できず、共有bucketへfallbackする警告が出る | productionログでも同じ警告を1件以上観測 | Cloudflareの信頼済みIP header/proxy設定をBetter Auth公式契約で検証し、認証方式を変えず最小設定する | [リリース判定](./T4-release-readiness.md) / [認証設定](../../src/lib/auth.ts) |
 | SECURITY-012 | observe | 通信の中身は鍵の名前で伏せるため、氏名・評価コメント以外の無害な値まで `***` になり、原因の特定に届かないことがある | 指示文を読んでも原因が分からず、開発ツールでの再取得を繰り返す事例が出る | 伏せた件数を数え、過剰な鍵名を実データで見直す。緩める場合は評価データ本文を除外できる形だけを採る | [伏せ方の正本](../../src/lib/domain/improvement-instruction.ts) / [仕様 §26-7](./spec.md) |
-| RELIABILITY-001 | ready | Route Handler の統合テストが薄い | API 変更前 | 認証・DB を含む代表経路を追加 | [回ごとの記録 H4・J4](./backlog-session-notes.md) |
 | RELIABILITY-002 | observe | 安全側の代替表示が発生しても運用で気づきにくい | 発生率を観測可能にする | 構造化ログ・通知閾値を追加 | [回ごとの記録 Q4](./backlog-session-notes.md) |
-| RELIABILITY-003 | ready | 制度マスタ本体の更新と監査記録が同じ原子的保存単位ではない | 完全な監査証跡を要件化 | 全更新 command と監査 INSERT を同じ D1 batch に統合し、実体内の順序をDB制約で保証 | [システム仕様](../../system-spec/master-settings.md) / [実装](../../src/lib/domain/constitution-events.ts) |
 | RELIABILITY-004 | ready | 昇格制約の翻訳ロジックが画面に近い | 次の条件追加前 | ドメイン関数へ移し境界値テストを追加 | [回ごとの記録 U3](./backlog-session-notes.md) |
 | RELIABILITY-005 | observe | 通信の記録は `fetch` だけで、XMLHttpRequest・WebSocket・画像やスクリプトの読込失敗は残らない | それらの経路で起きた不具合が、記録票を見ても原因に届かない事例が出る | 失敗した通信の取りこぼしを実測し、必要なら `XMLHttpRequest` と `PerformanceObserver` の resource 監視を足す | [収集の実装](../../src/lib/client-diagnostics.ts) / [仕様 §26-7](./spec.md) |
 

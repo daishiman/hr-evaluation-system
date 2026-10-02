@@ -18,6 +18,7 @@ import type { AgentCallerScope } from "@/lib/domain/agent-scope";
 import { activeAgentKeyHashes, envKeyEnabled, hashAgentKey, touchAgentKey } from "@/lib/agent-keys";
 import { agentSessionKnown, resolveAgentSession } from "@/lib/agent-device";
 import { AGENT_SESSION_ENDED_MESSAGE } from "@/lib/domain/agent-device";
+import { API_CACHE_CONTROL } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { appOrigin } from "@/lib/origin";
 import { AGENT_API_RATE_LIMIT, consumeRateLimit } from "@/lib/rate-limit";
@@ -51,7 +52,7 @@ export async function hasEnvKey(): Promise<boolean> {
 function textResponse(status: number, body: string, headers: Record<string, string> = {}): Response {
   return new Response(`${body}\n`, {
     status,
-    headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", ...headers },
+    headers: { "content-type": "text/plain; charset=utf-8", "cache-control": API_CACHE_CONTROL, ...headers },
   });
 }
 

@@ -1,11 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
 import { getDb, schema as s } from "@/lib/db";
+import { batchAll, type BatchStatement } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
 import { parseCsv } from "@/lib/csv";
 import { HttpError } from "@/lib/session";
 import { generateUniqueInitialPassword, type IssuedMemberCredential } from "@/lib/domain/initial-password";
 import { normalizeKey } from "@/lib/csv-normalize";
+import { memoPurgeExpired, memoUpsert, sealMemo, type VaultKey } from "@/lib/credential-vault";
 
 /* ───────────────── 社員一覧の取り込み ───────────────── */
 
@@ -26,6 +28,8 @@ export type MemberImportResult = {
   rows: MemberRowResult[];
   /** 今回新規作成した人に一度だけ渡す資格情報。dry-run と既存利用者には返さない。 */
   credentials: IssuedMemberCredential[];
+  /** 仮パスワードの控えを暗号化して保存したか（鍵が無ければ false） */
+  memoStored: boolean;
   dryRun?: boolean;
 };
 
@@ -71,13 +75,17 @@ function toIsoDate(raw: string): string | null {
  *
  * 1行でも不備があれば、その行だけを理由つきで止めて、揃っている行は取り込む。
  * `dryRun` を true にすると、同じ検査をしたうえで保存だけを行わない（取り込み前の確認用）。
+ *
+ * `vault` を渡すと、新しく作った人の仮パスワードを暗号化した控えも同じ batch で残す
+ * （一覧の行から開き直せる）。鍵の読み込みは呼び出し側（Server Action）が行う。
  */
 export async function importMembersCsv(
   companyId: string,
   csvText: string,
-  options: { dryRun?: boolean; actorId?: string | null } = {},
+  options: { dryRun?: boolean; actorId?: string | null; vault?: VaultKey | null } = {},
 ): Promise<MemberImportResult> {
   const dryRun = options.dryRun === true;
+  const vault = dryRun ? null : (options.vault ?? null);
   const db = await getDb();
 
   const table = parseCsv(csvText);
@@ -289,7 +297,9 @@ export async function importMembersCsv(
   }
 
   if (!dryRun) {
-    const statements: Parameters<typeof db.batch>[0][number][] = [];
+    const statements: BatchStatement[] = [];
+    // 期限を過ぎた控えの掃除も同じ batch に入れる（このあと書く新しい控えより前に置く）
+    if (credentials.length > 0) statements.push(memoPurgeExpired(db));
     for (const p of plans) {
       const selfId = newIdByRow.get(p.row)!;
       const mp = managerPlan.get(p.row)!;
@@ -303,11 +313,15 @@ export async function importMembersCsv(
           role: p.role ?? "EMPLOYEE", gradeId: p.gradeId, officeId: p.officeId,
           employeeCode: p.employeeCode, department: p.department, hiredAt: p.hiredAt,
           isActive: p.isActive ?? true, mustChangePassword: true, managerId: managerId ?? null,
-        }) as unknown as (typeof statements)[number]);
+        }));
         statements.push(db.insert(s.accounts).values({
           id: newId("acc"), accountId: selfId, providerId: "credential", userId: selfId,
           password: await hashPassword(credential.initialPassword),
-        }) as unknown as (typeof statements)[number]);
+        }));
+        if (vault) {
+          const sealed = await sealMemo(vault, selfId, credential.initialPassword);
+          statements.push(memoUpsert(db, { userId: selfId, issuedBy: options.actorId ?? null, ...sealed }));
+        }
       } else {
         const patch: Record<string, unknown> = { name: p.name };
         if (p.managerSpecified) patch.managerId = managerId ?? null;
@@ -318,7 +332,7 @@ export async function importMembersCsv(
         if (p.department !== null) patch.department = p.department;
         if (p.hiredAt !== null) patch.hiredAt = p.hiredAt;
         if (p.isActive !== null) patch.isActive = p.isActive;
-        statements.push(db.update(s.users).set(patch).where(eq(s.users.id, selfId)) as unknown as (typeof statements)[number]);
+        statements.push(db.update(s.users).set(patch).where(eq(s.users.id, selfId)));
       }
     }
     const beforeJson = JSON.stringify(plans.map((plan) => ({
@@ -333,10 +347,19 @@ export async function importMembersCsv(
     statements.push(db.insert(s.importBatches).values({
       id: newId("import"), companyId, kind: "members", subjectId: companyId,
       actorId: options.actorId ?? null, beforeJson, sourceHash, rowCount: plans.length,
-    }) as unknown as (typeof statements)[number]);
-    await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+    }));
+    await batchAll(db, statements);
   }
 
   results.sort((a, b) => a.row - b.row);
-  return { created, updated, failed, unmatchedHeaders, rows: results, credentials: dryRun ? [] : credentials, dryRun };
+  return {
+    created,
+    updated,
+    failed,
+    unmatchedHeaders,
+    rows: results,
+    credentials: dryRun ? [] : credentials,
+    memoStored: vault !== null && credentials.length > 0,
+    dryRun,
+  };
 }

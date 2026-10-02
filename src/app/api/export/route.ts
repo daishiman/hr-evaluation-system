@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema as s } from "@/lib/db";
-import { apiViewer, HttpError, resolveCompanyId } from "@/lib/session";
+import { apiViewer, HttpError, requireTargetCompany } from "@/lib/session";
 import { jsonError } from "@/lib/api";
 import { csvResponse } from "@/lib/csv";
 import { buildKpiDetailCsv, buildMembersCsv, buildResponsesCsv, buildResultsCsv } from "@/lib/export";
@@ -26,8 +26,7 @@ export async function GET(req: Request) {
     const q = querySchema.parse(Object.fromEntries(url.searchParams));
     const viewer = await apiViewer(q.type === "responses" || q.type === "members" ? "COMPANY_ADMIN" : "MANAGER");
 
-    const companyId = resolveCompanyId(viewer, q.companyId);
-    if (!companyId) throw new HttpError(400, "会社を指定してください。");
+    const companyId = requireTargetCompany(viewer, q.companyId);
 
     const db = await getDb();
 

@@ -18,7 +18,7 @@ beads: `hr-0p4`
         │
         ▼
 [アプリ保存]
-  POST /api/forms
+  createForms（サーバーアクション src/actions/forms.ts）
     → buildFormDrafts
       prepare(全等級) → 1 D1 batch → (版競合時のみ1回再準備)
         │

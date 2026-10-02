@@ -1,6 +1,7 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useSaveAction } from "@/lib/use-refresh";
+import { saveResponse } from "@/actions/responses";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, CardHead, ChoiceChip, OptionCard, OptionCheck, ReasonNote, SectionHeading } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
@@ -68,17 +69,24 @@ export function FormAnswer({
   deadlineNote: string | null;
   note: string | null;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  /* 提出と下書きの自動保存は同じ書き込みだが、待っている間の扱いを分けるため2つに受ける。
+     提出中は入力欄ごと止める。下書きの保存中は止めない（打っている欄から focus が外れるため）。 */
+  const { save, saving } = useSaveAction(saveResponse, { resource: "responses" });
+  const { save: saveDraft, saving: savingDraft } = useSaveAction(saveResponse, { resource: "responses" });
   const [values, setValues] = useState<Record<string, AnswerValue>>(() =>
     Object.fromEntries(initial.map((a) => [a.questionId, a])),
   );
   const [memo, setMemo] = useState(note ?? "");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const readOnly = submitted || lockedReason !== null;
+  const canSaveDraft = useRef(!readOnly);
+  const queuedSave = useRef<Promise<unknown>>(Promise.resolve());
+  const editVersion = useRef(0);
+  const latestInput = useRef({ values, memo });
 
   const ordered = useMemo(
     () =>
@@ -95,60 +103,71 @@ export function FormAnswer({
   // 「答えた」の数え方は設問の形式ごとに変える（自由記述は文字、複数選択は選んだ数）
   const answeredCount = questions.filter((q) => isAnswered(q.questionType, values[q.id])).length;
 
-  const save = useCallback(
-    async (status: "draft" | "submitted", nextValues: Record<string, AnswerValue>, nextMemo: string) => {
-      setSaving(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/responses/${formId}`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            status,
-            note: nextMemo || null,
-            answers: Object.values(nextValues).filter(
-              (a) => a.valueNumber !== null || a.valueText || (a.valueChoices?.length ?? 0) > 0,
-            ),
-          }),
-        });
-        const json = (await res.json()) as { ok: boolean; message?: string };
-        if (!res.ok || !json.ok) {
-          setError(json.message ?? "保存できませんでした。");
+  const persist = useCallback(
+    (status: "draft" | "submitted", nextValues: Record<string, AnswerValue>, nextMemo: string, version = editVersion.current) => {
+      // 保存中も入力を受け付けるが、送信は順番に行う。古い下書きが後から上書きしない。
+      const task = queuedSave.current.then(async () => {
+        if (status === "draft" && !canSaveDraft.current) return false;
+        setError(null);
+        const payload = {
+          formId,
+          status,
+          note: nextMemo || null,
+          answers: Object.values(nextValues).filter(
+            (a) => a.valueNumber !== null || a.valueText || (a.valueChoices?.length ?? 0) > 0,
+          ),
+        };
+        // 提出の応答には、提出後の画面（提出済みの表示）が同梱される（サーバー側の refresh()）
+        const result = status === "submitted" ? await save(payload) : await saveDraft(payload);
+        // 失敗しても入力内容は消さない（この画面に残したまま直してもらう）
+        if (!result.ok) {
+          setError(result.message);
           return false;
         }
-        setSavedAt(new Date());
-        if (status === "submitted") refresh();
+        if (version === editVersion.current) setSavedAt(new Date());
+        if (status === "submitted") setMessage(result.message);
         return true;
-      } catch {
-        setError("通信できませんでした。電波の状況を確認して、もう一度お試しください。入力内容はこの画面に残っています。");
-        return false;
-      } finally {
-        setSaving(false);
-      }
+      });
+      // 失敗した保存が、次の送信を止めないようにする。
+      queuedSave.current = task.then(() => {}, () => {});
+      return task;
     },
-    [formId, refresh],
+    [formId, save, saveDraft],
   );
+
+  const scheduleDraft = useCallback((nextValues: Record<string, AnswerValue>, nextMemo: string) => {
+    latestInput.current = { values: nextValues, memo: nextMemo };
+    const version = ++editVersion.current;
+    setSavedAt(null);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => void persist("draft", nextValues, nextMemo, version), 1000);
+  }, [persist]);
 
   const update = useCallback(
     (questionId: string, patch: Partial<AnswerValue>) => {
-      setValues((prev) => {
-        const next = {
-          ...prev,
-          [questionId]: {
-            ...{ questionId, valueNumber: null, valueText: null, valueChoices: null },
-            ...prev[questionId],
-            ...patch,
-          },
-        };
-        clearTimeout(timer.current);
-        timer.current = setTimeout(() => void save("draft", next, memo), 1000);
-        return next;
-      });
+      const prev = latestInput.current.values;
+      const next = {
+        ...prev,
+        [questionId]: {
+          ...{ questionId, valueNumber: null, valueText: null, valueChoices: null },
+          ...prev[questionId],
+          ...patch,
+        },
+      };
+      setValues(next);
+      scheduleDraft(next, latestInput.current.memo);
     },
-    [memo, save],
+    [scheduleDraft],
   );
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => {
+    canSaveDraft.current = !readOnly;
+    if (readOnly) clearTimeout(timer.current);
+    return () => {
+      canSaveDraft.current = false;
+      clearTimeout(timer.current);
+    };
+  }, [readOnly]);
 
   const focusNext = (id: string) => {
     const i = fieldOrder.indexOf(id);
@@ -168,18 +187,19 @@ export function FormAnswer({
             : lockedReason}
         </ReasonNote>
         <div className="mt-4">
-          <AnswerReadOnly ordered={ordered} values={values} />
+          {/* 編集中の値は保持し、提出済み・締切後の表示は最新の保存値を使う。 */}
+          <AnswerReadOnly ordered={ordered} values={Object.fromEntries(initial.map((a) => [a.questionId, a]))} />
         </div>
       </>
     );
   }
 
   return (
-    <fieldset disabled={refreshing} aria-busy={refreshing} className="m-0 min-w-0 border-0 p-0">
+    <fieldset disabled={saving} aria-busy={saving} className="m-0 min-w-0 border-0 p-0">
       {error && <ReasonNote>{error}</ReasonNote>}
       <RefreshStatus
-        message={refreshing ? "提出しました。" : null}
-        refreshing={refreshing}
+        message={message}
+        refreshing={saving}
         target="画面"
         className="m-0 mb-3 text-sub text-brand-deep"
       />
@@ -228,9 +248,7 @@ export function FormAnswer({
             value={memo}
             onChange={(e) => {
               setMemo(e.target.value);
-              clearTimeout(timer.current);
-              const v = e.target.value;
-              timer.current = setTimeout(() => void save("draft", values, v), 1000);
+              scheduleDraft(latestInput.current.values, e.target.value);
             }}
             placeholder="例：4月に担当が交代したため、前半の実績が少なくなっています。"
           />
@@ -263,9 +281,9 @@ export function FormAnswer({
               <span className="unit"> / {questions.length}</span>
             </span>
             <span className="mx-2 text-line">|</span>
-            {refreshing
-              ? "提出内容を画面に反映しています…"
-              : saving
+            {saving
+              ? "提出しています…"
+              : savingDraft
               ? "保存しています…"
               : savedAt
                 ? `保存済み ${savedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`
@@ -277,20 +295,22 @@ export function FormAnswer({
       >
         {confirming ? (
           <>
-            <Button disabled={refreshing} onClick={() => setConfirming(false)}>入力に戻る</Button>
+            <Button disabled={saving} onClick={() => setConfirming(false)}>入力に戻る</Button>
             <Button
               variant="primary"
-              disabled={saving || refreshing}
+              disabled={saving || savingDraft}
               onClick={async () => {
-                const ok = await save("submitted", values, memo);
+                // 待っている下書きの保存は捨てる（提出のあとに届くと「提出済み」で断られるため）
+                clearTimeout(timer.current);
+                const ok = await persist("submitted", values, memo);
                 if (ok) setConfirming(false);
               }}
             >
-              {saving ? "提出しています…" : refreshing ? "画面に反映しています…" : "提出する"}
+              {saving ? "提出しています…" : "提出する"}
             </Button>
           </>
         ) : (
-          <Button variant="primary" disabled={refreshing} onClick={() => setConfirming(true)}>
+          <Button variant="primary" disabled={saving} onClick={() => setConfirming(true)}>
             内容を確認して提出する
           </Button>
         )}

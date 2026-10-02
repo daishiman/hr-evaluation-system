@@ -1,7 +1,8 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
+import { updateOwnProfile } from "@/actions/account";
+import { useSaveAction } from "@/lib/use-refresh";
 import { hasIcon, Icon } from "@/components/Icon";
 import { Button, HintToggle, RowAction } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
@@ -32,11 +33,11 @@ export interface ProfileRow {
 }
 
 export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  // 成功の応答には保存後の画面（ヘッダーの名前を含む）が同梱される（runAction の refresh）
+  const { save, saving } = useSaveAction(updateOwnProfile, { resource: "account" });
   const [editing, setEditing] = useState<string | null>(null);
   const [openHint, setOpenHint] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
 
@@ -47,38 +48,23 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
     setSaved(null);
   };
 
-  const save = async (row: ProfileRow) => {
-    setBusy(true);
+  const submit = async (row: ProfileRow) => {
     setError(null);
-    try {
-      const res = await fetch("/api/account/profile", {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          [row.key]: row.key === "name" ? draft.trim() : draft.trim() === "" ? null : draft.trim(),
-        }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(
-          res.status === 403
-            ? "この項目は会社の管理者だけが変更できます。変更が必要なときは会社の管理者にご相談ください。"
-            : (json.message ?? "保存できませんでした。"),
-        );
-        return;
-      }
-      setEditing(null);
-      setSaved(row.key);
-      refresh();
-    } catch {
-      setError("通信できませんでした。入力した内容はこの画面に残っています。");
-    } finally {
-      setBusy(false);
+    const result = await save({
+      [row.key]: row.key === "name" ? draft.trim() : draft.trim() === "" ? null : draft.trim(),
+    });
+    // 会社の管理者だけが変えられる項目の断りも、サーバーの言葉をそのまま出す。
+    // 失敗したときは入力欄を開いたまま残す。
+    if (!result.ok) {
+      setError(result.message);
+      return;
     }
+    setEditing(null);
+    setSaved(row.key);
   };
 
   return (
-    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="profile-rows m-0 min-w-0 border-0 p-0">
+    <fieldset disabled={saving} aria-busy={saving} className="profile-rows m-0 min-w-0 border-0 p-0">
       {rows.map((row) => {
         const isEditing = editing === row.key;
         const hintOpen = openHint === row.key;
@@ -104,7 +90,7 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
                   className="mt-1 flex flex-wrap items-center gap-2"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    void save(row);
+                    void submit(row);
                   }}
                 >
                   <label htmlFor={inputId} className="sr-only">
@@ -126,13 +112,13 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
                       }
                     }}
                   />
-                  <Button type="submit" variant="primary" disabled={busy}>
-                    {busy ? "保存しています…" : refreshing ? "表示に反映しています…" : "保存"}
+                  <Button type="submit" variant="primary" disabled={saving}>
+                    {saving ? "保存しています…" : "保存"}
                   </Button>
                   <Button
                     type="button"
                     variant="tertiary"
-                    disabled={busy || refreshing}
+                    disabled={saving}
                     onClick={() => {
                       setEditing(null);
                       setError(null);
@@ -147,7 +133,7 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
                   {saved === row.key && (
                     <RefreshStatus
                       message="保存しました。"
-                      refreshing={refreshing}
+                      refreshing={saving}
                       target="表示"
                       className="profile-saved pop-in"
                     />

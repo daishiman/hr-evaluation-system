@@ -87,13 +87,13 @@ submission keyから投稿者を含む決定的request IDをSHA-256で生成し�
 
 ## 4-3. 鍵の発行画面（`/system/agent-keys`）
 
-- 目的は「ターミナルを開かずに使い始められること」。SUPER_ADMIN専用（`requireRole` と `apiViewer("SUPER_ADMIN")` の両方で確かめ、画面で隠すだけにしない）。nav ラベルは `AGENT_KEY_PAGE_LABEL = "Claude Code 連携の鍵"`。
+- 目的は「ターミナルを開かずに使い始められること」。SUPER_ADMIN専用（`requireRole` と、サーバーアクションの `runAction({ role: "SUPER_ADMIN" })` の両方で確かめ、画面で隠すだけにしない）。nav ラベルは `AGENT_KEY_PAGE_LABEL = "Claude Code 連携の鍵"`。
 - 鍵は `crypto.getRandomValues(32 bytes)` → base64url（記号なし。シェル・貼付で壊れる文字を含めない）。**人が入力する方式にしない**。
-- 保存するのは `key_hash`（SHA-256 hex）と `key_prefix`（先頭8文字）だけ。生の鍵は `POST /api/agent-keys` の応答が唯一の出口で、DB・ログ・履歴のいずれにも残さない。突き合わせは `keysMatch()`（定数時間）。
+- 保存するのは `key_hash`（SHA-256 hex）と `key_prefix`（先頭8文字）だけ。生の鍵はサーバーアクション `createAgentKey` の応答が唯一の出口で、DB・ログ・履歴のいずれにも残さない。突き合わせは `keysMatch()`（定数時間）。
 - **同時に有効な鍵は `AGENT_KEY_MAX = 10` 本**。`issueAgentKey()` は他の行を revoke しない（1本漏れたときに全部止めるしかない状態を作らない）。上限判定は画面表示だけでなく `issueAgentKey()` の入口でも行い、超過は 400（`AGENT_KEY_CAP_MESSAGE`）。
 - **用途の名前（`label`、`AGENT_KEY_LABEL_MAX = 30`）は必須**。空欄の発行は 400。先頭8文字だけが並ぶ一覧では「どれを止めてよいか」が判定できず、結果としてどれも止められなくなる。名前は識別のためではなく**失効可能性のため**の項目。空の古い行は `agentKeyDisplayName()` が「名前のない鍵」に置き換える。
-- `DELETE /api/agent-keys?id=` は1本だけ revoke し、他は動き続ける。id 未指定・既に失効済みは 400（黙って成功にしない）。確認文（`agentKeyRevokeConfirmText`）に止める鍵の名前と**残る本数**を書く。
-- **設定値の鍵（`AGENT_API_KEY`）の受け付けは `PUT /api/agent-keys` で止められる**（`agent_key_settings.env_key_enabled`、既定 true）。secret を削除する案を採らないのは、削除が取り消せないうえ、すでに設定値で動いている場所を止めてしまうため。画面には恒久削除の1行（`AGENT_ENV_KEY_DELETE_COMMAND`）も併記し、急ぎは可逆な切替、恒久は削除、と選べるようにする。札は「登録されていません／使えます／止めています」の3つを言い分ける。
+- `revokeAgentKey` は1本だけ revoke し、他は動き続ける。id 未指定・既に失効済みは 400（黙って成功にしない）。確認文（`agentKeyRevokeConfirmText`）に止める鍵の名前と**残る本数**を書く。
+- **設定値の鍵（`AGENT_API_KEY`）の受け付けは `setAgentEnvKey` で止められる**（`agent_key_settings.env_key_enabled`、既定 true）。secret を削除する案を採らないのは、削除が取り消せないうえ、すでに設定値で動いている場所を止めてしまうため。画面には恒久削除の1行（`AGENT_ENV_KEY_DELETE_COMMAND`）も併記し、急ぎは可逆な切替、恒久は削除、と選べるようにする。札は「登録されていません／使えます／止めています」の3つを言い分ける。
 - 行は消さない。`created_by_id` / `created_at` / `revoked_by_id` / `revoked_at` がそのまま操作履歴になる。`last_used_at` は `AGENT_KEY_TOUCH_INTERVAL_MS = 60_000` を下限に書き足す（読むたびの書き込みを避ける）。
 - 画面は発行直後だけ生の鍵を出し、`AGENT_KEY_ONCE_NOTICE` を鍵と同じ場所に先に出す。コピーできるのは3つ（鍵 / Claude Code へ貼る文言＝鍵を埋めた形 / `export HR_AGENT_KEY='...'`）。`localStorage`・`sessionStorage` へ置かない。作り直し・失効は `ConfirmButton` で1回確認する。
 - 純関数の正本は `src/lib/domain/agent-keys.ts`（coverage 100%対象）。保存・乱数は `src/lib/agent-keys.ts`。migration は `0024_agent_api_keys.sql`、`0025_agent_keys_and_handout_history.sql`、`0026_agent_key_scope.sql`（会社の焼き込みと権限、履歴の `key_id` / `key_label` / `release_ref`）、`0027_improvement_review.sql`（`improvement_requests.review_ref` / `reviewed_at`）。一覧には「届く範囲」（`agentKeyScopeNote()` = 会社名／できること）も出す。何を持たせた鍵なのかが画面から読めないと、止めてよい鍵の判定ができない。
@@ -107,11 +107,11 @@ submission keyから投稿者を含む決定的request IDをSHA-256で生成し�
 - `POST /api/agent/device` は**認証不要**（まだ何も持っていない端末が最初に呼ぶ）。返すのは合言葉と引き取り用の長い文字列だけで、これだけでは何も読めない。rate limit は `agent-device:${ip}`。
 - `PUT /api/agent/device` は引き取り。**待ちも断りも 200 + `state`** で返す（待っている間ずっと失敗を返すと、本当の失敗と区別できない）。`state` は `pending` / `approved` / `denied` / `taken` / `expired`。
 - 引き取りは**1回だけ**（`agent_device_grants.session_id` が入ったら `taken`）。何度でも引き取れると、長い文字列が漏れたときに何度でも作り直せてしまう。
-- 承認は `POST /api/agent-keys/approve`（SUPER_ADMIN）。**会社は承認した人の会社を焼き込む**。ここで決めないと、通ったあとに「どの会社の話か」が決まらない端末ができる。GET は押す前に見せる1文（`deviceApprovalQuestion`）だけを返す。
+- 承認はサーバーアクション `approveDevice`（SUPER_ADMIN）。**会社は承認した人の会社を焼き込む**。ここで決めないと、通ったあとに「どの会社の話か」が決まらない端末ができる。押す前に見せる1文（`deviceApprovalQuestion`）は読むだけの `checkDeviceCode`（`runRead`）が返す。
 - 通行証は2本。短い方（`ACCESS_TOKEN_TTL_MS = 15分`）は毎回 `POST /api/agent/token` で取り直し、ディスクに書かない。長い方（`REFRESH_TOKEN_TTL_MS = 90日`）だけを保管する。**長い方は取り直しのたびに作り替えない**（保管庫への書き戻しに失敗した端末が、その場で締め出されるため）。
 - 保存するのはハッシュだけ（`device_code_hash` / `access_hash` / `refresh_hash`）。平文は発行時の応答が唯一の出口。**この線を保つのが要件の本質で、データベースは既存の D1 のまま**（保存先の移行はしない）。
 - `guardAgentRequest` は**通行証を鍵より先に**見る。逆にすると、鍵が1本も無い場所で通行証まで「鍵が未設定」（503）で断られる。通らなかったが配った覚えのある通行証（期限切れ・停止）は `AGENT_SESSION_ENDED_MESSAGE` で 401（鍵の話に落とすと直しようのない案内になる）。
-- 端末は `DELETE /api/agent-keys/approve?id=` で1台ずつ止める。止めると読み取りも取り直しも同時に閉じる（片方だけでは止めたことにならない）。
+- 端末は `revokeAgentSession` で1台ずつ止める。止めると読み取りも取り直しも同時に閉じる（片方だけでは止めたことにならない）。
 - 純関数の正本は `src/lib/domain/agent-device.ts`（coverage 100%対象）、保存・乱数は `src/lib/agent-device.ts`、migration は `0028_agent_device_login.sql`（`agent_device_grants` / `agent_sessions`）。
 - 長命の鍵は**止めずに残す**（画面の見出しは「鍵を発行する（古い方式）」）。使うと実行のたびに `LEGACY_KEY_NOTICE` が出る。止めるのは移行が済んでから（→ backlog OPS-008）。
 
@@ -163,7 +163,7 @@ diagnosticsと指示文は次を固定する。masking（メール/Bearer/token/
 
 払い出しAPIは次を固定する（最重要は1つ目）。**鍵なしで中身が返らないこと**、取り違えと未設定で断り文が同一であること、未設定・32文字未満で503と設定手順、rate limit超過で429（鍵の検査より前）、markdown既定と`?format=json`、`?id=`/`?ids=`（上限超過の`dropped`表示を含む）、masking済みの技術情報が指示文へそのまま載ること、受け取り時に控えが残り`open→doing`へ進むこと、廃棄済みが払い出されないこと。鍵は`getCloudflareContext`をmockして差し替える。
 
-鍵の発行は次を固定する（`src/app/api/agent-keys/route.integration.test.ts`）。生の鍵がDBにも画面の再表示にも残らないこと、SUPER_ADMIN以外が発行・失効できないこと（サーバー側で）、失効させた鍵で払い出しが通らないこと、環境変数の鍵と画面発行の鍵のどちらでも通ること、鍵の全文が発行の記録に出ないこと、**名前なしの発行が断られること**、**1本失効させても他の鍵は通ること**、**上限（10本）を超えて発行できないこと**、**環境変数の鍵を画面から止めると通らなくなり、戻すとまた通ること**。
+鍵の発行は次を固定する（`src/actions/agent-keys.integration.test.ts`）。生の鍵がDBにも画面の再表示にも残らないこと、SUPER_ADMIN以外が発行・失効できないこと（サーバー側で）、失効させた鍵で払い出しが通らないこと、環境変数の鍵と画面発行の鍵のどちらでも通ること、鍵の全文が発行の記録に出ないこと、**名前なしの発行が断られること**、**1本失効させても他の鍵は通ること**、**上限（10本）を超えて発行できないこと**、**環境変数の鍵を画面から止めると通らなくなり、戻すとまた通ること**。
 
 払い出しの履歴は次を固定する。画面からのコピーと API 経由が別の経路として積まれること、API のときに通った鍵の名前が残ること、`HANDOUT_HISTORY_MAX` を超えた古い行が消えること、丸めても通算回数が減らないこと。
 

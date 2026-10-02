@@ -1,6 +1,7 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { saveProfilePolicy } from "@/actions/masters";
+import { useSaveAction } from "@/lib/use-refresh";
 import { useState } from "react";
 import { hasIcon, Icon } from "@/components/Icon";
 import { HintToggle, Segmented } from "@/components/ui";
@@ -12,6 +13,8 @@ import { RefreshStatus } from "@/components/RefreshStatus";
  * 状態を文で書かず、2択のスイッチそのものを状態表示にする。
  * 押した瞬間に保存し、取り消しは同じ場所をもう一度押すだけにする
  * （保存ボタンを別に置くと「押したのに変わっていない」が起きる）。
+ *
+ * 保存は1件ずつ。保存中はすべてのスイッチを止め、押した項目の横にだけ状態を出す。
  */
 
 export interface PolicyItem {
@@ -23,18 +26,19 @@ export interface PolicyItem {
 }
 
 export function ProfilePolicyEditor({ items }: { items: PolicyItem[] }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(saveProfilePolicy, { resource: "masters" });
   const [values, setValues] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(items.map((item) => [item.key, item.selfEditable])),
   );
-  const [pending, setPending] = useState<Set<string>>(() => new Set());
+  /** いま保存している項目。状態の表示をその項目の横にだけ出すために持つ。 */
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<Record<string, string>>({});
   const [openHint, setOpenHint] = useState<string | null>(null);
 
   const setPolicy = async (item: PolicyItem, selfEditable: boolean) => {
-    if ((values[item.key] ?? item.selfEditable) === selfEditable || pending.has(item.key)) return;
-    setPending((current) => new Set(current).add(item.key));
+    if ((values[item.key] ?? item.selfEditable) === selfEditable || saving) return;
+    setPendingKey(item.key);
     setErrors((current) => {
       const next = { ...current };
       delete next[item.key];
@@ -45,43 +49,24 @@ export function ProfilePolicyEditor({ items }: { items: PolicyItem[] }) {
       delete next[item.key];
       return next;
     });
-    try {
-      const res = await fetch("/api/masters/profile-policy", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ field: item.key, selfEditable }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setErrors((current) => ({ ...current, [item.key]: json.message ?? "保存できませんでした。" }));
-        return;
-      }
-      setValues((current) => ({ ...current, [item.key]: selfEditable }));
-      setSaved(() => ({
-        [item.key]: selfEditable
-          ? "本人も変更できるようになりました。"
-          : "会社の管理者だけが変更できるようになりました。",
-      }));
-      refresh();
-    } catch {
-      setErrors((current) => ({
-        ...current,
-        [item.key]: "通信できませんでした。もう一度お試しください。",
-      }));
-    } finally {
-      setPending((current) => {
-        const next = new Set(current);
-        next.delete(item.key);
-        return next;
-      });
+    const result = await save({ field: item.key, selfEditable });
+    if (!result.ok) {
+      setErrors((current) => ({ ...current, [item.key]: result.message }));
+      return;
     }
+    setValues((current) => ({ ...current, [item.key]: selfEditable }));
+    setSaved(() => ({
+      [item.key]: selfEditable
+        ? "本人も変更できるようになりました。"
+        : "会社の管理者だけが変更できるようになりました。",
+    }));
   };
 
   return (
     <div className="profile-rows">
       {items.map((item) => {
         const selfEditable = values[item.key] ?? item.selfEditable;
-        const busy = pending.has(item.key);
+        const savingThis = saving && pendingKey === item.key;
         return (
           <div key={item.key} className="profile-row">
             <span className="profile-row-icon">
@@ -103,7 +88,7 @@ export function ProfilePolicyEditor({ items }: { items: PolicyItem[] }) {
               )}
               <RefreshStatus
                 message={saved[item.key] ?? null}
-                refreshing={refreshing}
+                refreshing={savingThis}
                 target="画面"
                 className="profile-saved pop-in"
               />
@@ -112,7 +97,7 @@ export function ProfilePolicyEditor({ items }: { items: PolicyItem[] }) {
             <Segmented
               label={`${item.label}を変更できる人`}
               value={selfEditable ? "self" : "admin"}
-              disabled={busy || refreshing}
+              disabled={saving}
               onChange={(next) => void setPolicy(item, next === "self")}
               options={[
                 {

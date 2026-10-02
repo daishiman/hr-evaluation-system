@@ -1,6 +1,6 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useRouterRefresh } from "@/lib/use-refresh";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -35,7 +35,7 @@ export function AccountMenu({
   needsPasswordChange: boolean;
 }) {
   const router = useRouter();
-  const { refresh } = useRefreshAfterSave();
+  const { refresh } = useRouterRefresh();
   const pathname = usePathname();
   const popoverId = useId();
   const [open, setOpen] = useState(false);

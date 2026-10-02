@@ -1,10 +1,15 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { requireRole, ROLE_LABEL, type Role } from "@/lib/session";
 import { listAllUsers, listCompanies } from "@/lib/queries";
 import { Card, ChipLink, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
+import { CredentialMemoButton } from "@/components/CredentialMemoButton";
+import { createSystemUser } from "@/actions/system-users";
+import { listMemoHolderIds } from "@/lib/credential-vault";
+import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +22,13 @@ export const dynamic = "force-dynamic";
  */
 export default async function SystemUsers({ searchParams }: { searchParams: Promise<{ company?: string }> }) {
   await requireRole("SUPER_ADMIN");
-  const [companies, all] = await Promise.all([listCompanies(), listAllUsers()]);
+  const [companies, all, memoHolders] = await Promise.all([
+    listCompanies(),
+    listAllUsers(),
+    getDb().then((db) => listMemoHolderIds(db, null)),
+  ]);
+  // 初期パスワードの控えがある人（中身は押したときにだけ開く）
+  const hasMemo = new Set(memoHolders);
   const sp = await searchParams;
 
   const superAdmins = all.filter((u) => u.role === "SUPER_ADMIN");
@@ -53,8 +64,8 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
         defaultOpen={superAdmins.filter((u) => u.isActive).length <= 1}
       >
         <RecordForm
-          url="/api/system/users"
-          method="POST"
+          action={createSystemUser}
+          resource="system-users"
           submitLabel="この内容でアカウントを作る"
           description="発行後、メールアドレスと仮パスワードをご本人にお伝えください。最初のログイン後に変更をお願いする表示が出ます。"
           resetAfterSubmit
@@ -116,34 +127,44 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
         />
       ) : (
         <Card>
-          {scoped.map((u) => (
-            <Link
-              key={u.id}
-              href={`/system/users/${u.id}`}
-              className="user-row no-underline"
-              /* 利用停止の方は、札だけでなく行の面と枠でも分かるようにする（全画面共通の作法） */
-              data-off={u.isActive ? undefined : "true"}
-            >
-              <Avatar name={u.name} seed={u.id} size={36} />
-              <div className="min-w-0 flex-1">
-                <p className="m-0 truncate text-body font-semibold text-ink">
-                  {u.name}
-                  {!u.isActive && <span className="ml-2 badge badge-closed">利用停止</span>}
-                </p>
-                <p className="m-0 truncate text-note text-ink-muted">{u.email}</p>
+          {scoped.map((u) => {
+            const row = (
+              <Link
+                href={`/system/users/${u.id}`}
+                className="user-row no-underline"
+                /* 利用停止の方は、札だけでなく行の面と枠でも分かるようにする（全画面共通の作法） */
+                data-off={u.isActive ? undefined : "true"}
+              >
+                <Avatar name={u.name} seed={u.id} size={36} />
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 truncate text-body font-semibold text-ink">
+                    {u.name}
+                    {!u.isActive && <span className="ml-2 badge badge-closed">利用停止</span>}
+                  </p>
+                  <p className="m-0 truncate text-note text-ink-muted">{u.email}</p>
+                </div>
+                <span className="user-row-tags">
+                  <span className="tag">
+                    <Icon name="shield" size={13} />
+                    {ROLE_LABEL[u.role as Role] ?? u.role}
+                  </span>
+                  <span className="tag">
+                    <Icon name="building" size={13} />
+                    {u.companyName ?? "所属なし"}
+                  </span>
+                </span>
+              </Link>
+            );
+            // 控えがある行だけ、リンクの下に「控えを見る」を並べる（リンクの中には入れない）
+            return hasMemo.has(u.id) ? (
+              <div key={u.id} className="user-row-group">
+                {row}
+                <CredentialMemoButton userId={u.id} name={u.name} />
               </div>
-              <span className="user-row-tags">
-                <span className="tag">
-                  <Icon name="shield" size={13} />
-                  {ROLE_LABEL[u.role as Role] ?? u.role}
-                </span>
-                <span className="tag">
-                  <Icon name="building" size={13} />
-                  {u.companyName ?? "所属なし"}
-                </span>
-              </span>
-            </Link>
-          ))}
+            ) : (
+              <Fragment key={u.id}>{row}</Fragment>
+            );
+          })}
         </Card>
       )}
 

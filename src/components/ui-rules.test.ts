@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { splitSource, stripComments } from "@/test-support/source-code";
+import { ACTION_HOOKS } from "@/test-support/action-hooks";
 
 /**
  * 画面の器（表・カード・定義リスト・サマリー）の作法を、コードのほうで固定する。
@@ -194,7 +196,7 @@ describe("画面の器の作法", () => {
     expect(source).toContain("shot: image");
     // 空欄時にボタンを黙って無効化せず、理由を出して本文へ戻す。
     expect(source).toContain("bodyRef.current?.focus()");
-    expect(source).toMatch(/disabled=\{busy \|\| capturing\}/);
+    expect(source).toMatch(/disabled=\{saving \|\| capturing\}/);
   });
 
   it("黒塗りは選択中の注釈色に左右されず、送信には冪等キーを付ける", () => {
@@ -392,6 +394,34 @@ describe("画面の器の作法", () => {
       return /className=\{?["`][^"`]*\bsticky\b/.test(s) || /position:\s*["']?sticky/.test(s);
     });
     expect(rogue.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("画面下の操作の帯は、それを持つ部品ごと画面の一番下に置く", () => {
+    // .action-bar は下の余白に食い込ませて貼り付く（globals.css の margin-bottom: -64px）。
+    // 帯の後ろに置いた注記やリンクは帯の下に隠れて押せない（回答画面の「実績を報告する」がそうなっていた）。
+    const barFile = join(SRC, "components", "layout", "StickyActionBar.tsx");
+    const carriers = sourceFiles
+      .filter((p) => p !== barFile && p.includes(`${SRC}/components/`) && stripComments(readFileSync(p, "utf8")).includes("<StickyActionBar"))
+      .map((p) => p.slice(p.lastIndexOf("/") + 1).replace(/\.tsx$/, ""));
+    expect(carriers.length).toBeGreaterThan(0);
+    const closingOnly = /^\s*(<\/[\w.]*>|\)\}|\)|\})?\s*$/;
+    const offenders: string[] = [];
+    for (const p of sourceFiles) {
+      const lines = stripComments(readFileSync(p, "utf8")).split("\n");
+      for (const name of ["StickyActionBar", ...carriers]) {
+        lines.forEach((line, i) => {
+          const open = line.match(new RegExp(`^(\\s*)<${name}\\b`));
+          if (!open) return;
+          const end = lines.findIndex((l, j) => j >= i && new RegExp(`^${open[1]}(\\/>|<\\/${name}>)\\s*$`).test(l));
+          const rest = lines.slice(end + 1);
+          const returnEnd = rest.findIndex((l) => /^\s*\);\s*$/.test(l));
+          if (end < 0 || returnEnd < 0 || !rest.slice(0, returnEnd).every((l) => closingOnly.test(l))) {
+            offenders.push(`${p.replace(`${SRC}/`, "")}:${i + 1} ${name}`);
+          }
+        });
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
   it("固定表示の帯には、一度読めば済む注記を載せられない（型で縛る）", () => {
@@ -659,47 +689,6 @@ const MAX_SENTENCE = 40;
 const JP_CHAR = /[ぁ-ゟ゠-ヿ一-鿿]/;
 
 /**
- * コード・注釈・文字列を1文字ずつ見分ける。
- *
- * 注釈（このコメントのような開発者向けの文）は利用者に見えないので数えない。
- * 正規表現で雑に消すと "https://" の // を注釈と誤認する・
- * 注釈の中の「」がカッコの対応を壊す、といった取りこぼしが出るため、
- * 状態を持って端から読む。
- */
-function splitSource(src: string): { literals: string[]; code: string } {
-  const literals: string[] = [];
-  let code = "";
-  let i = 0;
-  const n = src.length;
-  const blank = (s: string) => { code += s.replace(/[^\n]/g, " "); };
-  while (i < n) {
-    const c = src[i];
-    const d = src[i + 1];
-    if (c === "/" && d === "/") { const j = src.indexOf("\n", i); const e = j < 0 ? n : j; blank(src.slice(i, e)); i = e; continue; }
-    if (c === "/" && d === "*") { const j = src.indexOf("*/", i + 2); const e = j < 0 ? n : j + 2; blank(src.slice(i, e)); i = e; continue; }
-    if (c === '"' || c === "'" || c === "`") {
-      const q = c;
-      let j = i + 1;
-      let buf = "";
-      while (j < n) {
-        if (src[j] === "\\") { buf += src[j] + src[j + 1]; j += 2; continue; }
-        if (src[j] === q) break;
-        if (q !== "`" && src[j] === "\n") break;
-        buf += src[j];
-        j++;
-      }
-      literals.push(buf);
-      blank(src.slice(i, j + 1));
-      i = j + 1;
-      continue;
-    }
-    code += c;
-    i++;
-  }
-  return { literals, code };
-}
-
-/**
  * 差し込まれる値（`${…}` と JSX の `{…}`）を入れ子ごと落とす。
  *
  * ＝ 例外の線引き。アンケート名・会社名・等級名・設問名・件数は
@@ -756,6 +745,7 @@ function sentencesOfJsx(code: string): string[] {
 }
 
 function longSentencesOf(src: string, isJsx: boolean): string[] {
+  // 注釈（開発者向けの文）は利用者に見えないので数えない。splitSource が注釈を空白にする
   const { literals, code } = splitSource(src);
   const all = [...literals.flatMap(sentencesOfLiteral), ...(isJsx ? sentencesOfJsx(code) : [])];
   return all.filter((s) => s.length > MAX_SENTENCE);
@@ -1066,54 +1056,84 @@ describe("絵の作法", () => {
 });
 
 describe("保存したあとの反映", () => {
-  it("画面の読み直しを頼むのは useRefreshAfterSave だけ（router.refresh を直接呼ばない）", () => {
-    /* 直接呼ぶと投げっぱなしになり、一覧が入れ替わるまでが無音になる。
+  it("画面の読み直しを頼むのは useRouterRefresh だけ（router.refresh を直接呼ばない）", () => {
+    /* 部品が直接呼ぶと投げっぱなしになり、一覧が入れ替わるまでが無音になる。
        利用者はそれを「反映されていない」と読み、自分でページを読み直していた。
-       useRefreshAfterSave は待っている間を refreshing として返し、
-       ボタンの文言（「一覧に反映しています…」）と押せない状態に必ず結び付ける。 */
+       保存後の描き直しは保存の応答に同梱される（useSaveAction）ので、部品が呼ぶ必要はない。
+       それ以外の取り直しの頼み方は use-refresh.ts の1か所に集める。 */
     const owner = join(SRC, "lib", "use-refresh.ts");
     const offenders = sourceFiles.filter((p) => p !== owner && readFileSync(p, "utf8").includes("router.refresh("));
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
 
-  it("refresh の完了待ちは React transition の1箇所で作る", () => {
+  it("画面の取り直しは React transition の1箇所（useRouterRefresh）で作る", () => {
     const source = readFileSync(join(SRC, "lib", "use-refresh.ts"), "utf8");
+    expect(source).toContain("export function useRouterRefresh(): { refresh: () => void }");
     expect(source).toContain("useTransition()");
     expect(source).toContain("startTransition(() => {");
     expect(source).toContain("router.refresh();");
-    expect(source).toContain("return { refresh, refreshing }");
   });
 
-  it("その場で更新する操作は、反映完了まで状態を見せて二度押しを防ぐ", () => {
+  it("保存後の描き直しは、その場で refresh を呼ばない（useRouterRefresh を使うのは画面の切り替えと追従だけ）", () => {
     /*
-     * refresh には2種類ある。
-     * - 保存した同じ画面の一覧・数値を出し直す: 反映完了まで操作を止め、文言を出す
+     * 画面の取り直しには3種類ある。
+     * - 保存した同じ画面の一覧・数値を出し直す: 保存の応答に新しい画面が同梱される（useSaveAction）。
+     *   保存中の状態・二度押し防止・結果の文言は、下の useSaveAction の検査が受け持つ。
+     *   ここで別に refresh を呼ぶと、同じ取り直しが二重に走り、待っている状態も見せられない
      * - ログイン/ログアウト/次の手順への移動: 現在の画面に反映するUIは不要
+     * - 他のタブ・端末で起きた変更への追従（FreshnessSync）: 利用者が押したものではないので
+     *   ボタンも文言も持たない。取り直しの間も入力欄・スクロール位置はそのまま残る
      *
-     * 後者をあいまいな例外にせず、ファイル単位で固定する。
+     * useRouterRefresh を使ってよいのは後2者だけ。あいまいな例外にせず、ファイル単位で固定する。
      */
     const navigationOnly = new Set([
       "app/login/LoginForm.tsx",
       "components/AccountMenu.tsx",
-      "components/FeedbackWidget.tsx",
-      "components/PasswordChangeForm.tsx",
-      "components/SchemeGroupPicker.tsx",
+      "components/FreshnessSync.tsx",
       "components/SignOutButton.tsx",
     ]);
     const owner = "lib/use-refresh.ts";
     const users = sourceFiles
-      .filter((p) => p !== join(SRC, owner) && readFileSync(p, "utf8").includes("useRefreshAfterSave()"))
+      .filter((p) => p !== join(SRC, owner) && readFileSync(p, "utf8").includes("useRouterRefresh()"))
       .map((p) => p.replace(`${SRC}/`, ""));
     const inPlace = users.filter((p) => !navigationOnly.has(p));
 
     expect(users.filter((p) => navigationOnly.has(p)).sort()).toEqual([...navigationOnly].sort());
+    expect(inPlace).toEqual([]);
+  });
 
-    const offenders = inPlace.filter((relative) => {
-      const source = readFileSync(join(SRC, relative), "utf8");
-      const receivesRefreshing = /\{\s*refresh\s*,\s*refreshing\s*\}/.test(source);
-      const blocksRepeat = /(?:disabled|busy)=\{[^}]*refreshing[^}]*\}/.test(source);
+  it("画面からの保存は useSaveAction を通し、保存中の状態・二度押し防止・結果の文言をそろえて持つ", () => {
+    /*
+     * 保存の応答そのものに新しい画面が載って返る（Server Action の refresh）。
+     * そのぶん「押した → 保存中 → 反映済み」の間に、押し直しや古い表示が入り込む余地が残る。
+     * 保存する部品は例外なく、同じ3点を持つ:
+     * - save と saving を受け取る（保存中かどうかを自分で数えない）
+     * - saving の間は押せない（disabled か busy に saving を入れる）
+     * - 結果を RefreshStatus で出す（反映中・反映済みを同じ言い方で）
+     */
+    const owner = "lib/use-refresh.ts";
+    // 使い方を説明するコメントだけのファイル（master-request.ts など）は数えない
+    const code = (p: string) => stripComments(readFileSync(p, "utf8"));
+    const users = sourceFiles
+      .filter((p) => p !== join(SRC, owner) && (
+        code(p).includes("useSaveAction(") || ACTION_HOOKS.some(({ name }) => code(p).includes(`${name}(`))
+      ))
+      .map((p) => p.replace(`${SRC}/`, ""));
+    expect(users.length).toBeGreaterThan(20);
+
+    const offenders = users.filter((relative) => {
+      const source = code(join(SRC, relative));
+      const sharedHook = ACTION_HOOKS.find(({ file }) => file === relative);
+      if (sharedHook) {
+        // hookは保存状態を返す。二度押し防止と状態表示は、上で走査に含めた利用側が受け持つ。
+        return !source.includes("const { save, saving } = useSaveAction(") ||
+          !/return\s*\{[^}]*\bsaving\b/.test(source);
+      }
+      const receivesSaving = source.includes("const { save, saving } = useSaveAction(") ||
+        ACTION_HOOKS.some(({ name }) => new RegExp(`const\\s*\\{[^}]*\\bsaving\\b[^}]*\\}\\s*=\\s*${name}\\(`).test(source));
+      const blocksRepeat = /(?:disabled|busy)=\{[^}]*saving[^}]*\}/.test(source);
       const showsProgress = source.includes("<RefreshStatus");
-      return !receivesRefreshing || !blocksRepeat || !showsProgress;
+      return !receivesSaving || !blocksRepeat || !showsProgress;
     });
 
     expect(offenders).toEqual([]);

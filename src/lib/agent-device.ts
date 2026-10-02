@@ -217,21 +217,36 @@ export async function redeemDeviceGrant(deviceCode: string): Promise<RedeemResul
   const accessToken = randomToken();
   const refreshToken = randomToken();
   const sessionId = newId("agses");
-  await db.insert(s.agentSessions).values({
-    id: sessionId,
-    label: row.label,
-    companyId: row.companyId,
-    scopes: serializeAgentScopes(DEFAULT_AGENT_SCOPES),
-    refreshHash: await hashAgentKey(refreshToken),
-    refreshExpiresAt: new Date(now.getTime() + REFRESH_TOKEN_TTL_MS),
-    accessHash: await hashAgentKey(accessToken),
-    accessExpiresAt: new Date(now.getTime() + ACCESS_TOKEN_TTL_MS),
-    createdById: row.approvedById,
-  });
-  await db
-    .update(s.agentDeviceGrants)
-    .set({ sessionId })
-    .where(eq(s.agentDeviceGrants.id, row.id));
+  const refreshHash = await hashAgentKey(refreshToken);
+  const accessHash = await hashAgentKey(accessToken);
+
+  // 印付けと通行証の追加は1回の batch で書く。途中で止まって「通行証だけある」を残さない。
+  // 印は「まだ誰も引き取っていない」ときだけ付く。同時に来た2つの要求は D1 が順に通すので、
+  // 後の方は0行になる。
+  const [claimed] = await db.batch([
+    db
+      .update(s.agentDeviceGrants)
+      .set({ sessionId })
+      .where(and(eq(s.agentDeviceGrants.id, row.id), isNull(s.agentDeviceGrants.sessionId)))
+      .returning({ id: s.agentDeviceGrants.id }),
+    db.insert(s.agentSessions).values({
+      id: sessionId,
+      label: row.label,
+      companyId: row.companyId,
+      scopes: serializeAgentScopes(DEFAULT_AGENT_SCOPES),
+      refreshHash,
+      refreshExpiresAt: new Date(now.getTime() + REFRESH_TOKEN_TTL_MS),
+      accessHash,
+      accessExpiresAt: new Date(now.getTime() + ACCESS_TOKEN_TTL_MS),
+      createdById: row.approvedById,
+    }),
+  ]);
+  if (claimed.length === 0) {
+    // 先に引き取られていた。いま足した行は平文を誰にも渡していないので、
+    // 消し損ねても使えない行が残るだけ。
+    await db.delete(s.agentSessions).where(eq(s.agentSessions.id, sessionId));
+    return { state: "taken", tokens: null };
+  }
 
   return {
     state: "approved",

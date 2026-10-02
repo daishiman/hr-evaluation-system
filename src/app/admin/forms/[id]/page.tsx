@@ -8,6 +8,7 @@ import { FormBuilder, type BuilderQuestion } from "@/components/FormBuilder";
 import { FormPreview } from "@/components/FormPreview";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
+import { rebuildFormQuestions, updateForm } from "@/actions/forms";
 import { Badge, Card, Disclosure, InlineDetail, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL } from "@/lib/view";
 
@@ -137,8 +138,9 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
         {editable && form.status === "draft" && (
           <div className="mt-3">
             <ActionButton
-              url={`/api/forms/${form.id}/questions`}
-              body={{}}
+              action={rebuildFormQuestions}
+              resource="forms"
+              input={{ formId: form.id }}
               label="いまの評価項目に合わせて設問を作り直す"
               variant="secondary"
               confirm={`「${form.title}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ回答は1件もありません。よろしいですか？`}
@@ -161,8 +163,8 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
       <SectionHeading>タイトルと説明</SectionHeading>
       {editable ? (
         <RecordForm
-          url="/api/forms"
-          method="PATCH"
+          action={updateForm}
+          resource="forms"
           fixed={{ formId: form.id }}
           submitLabel="保存する"
           fields={[
@@ -192,8 +194,8 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
         締切日を過ぎると回答できなくなります（締切日は当日いっぱいまで回答できます）。回答があっても、この期間はあとから直せます。個別に期限を延ばしたいときは「回答一覧を見る」から設定してください。
       </p>
       <RecordForm
-        url="/api/forms"
-        method="PATCH"
+        action={updateForm}
+        resource="forms"
         fixed={{ formId: form.id }}
         submitLabel="回答期間を保存する"
         fields={[

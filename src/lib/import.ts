@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { getDb, schema as s } from "@/lib/db";
+import { batchAll } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
 import { parseCsv } from "@/lib/csv";
 import { HttpError } from "@/lib/session";
@@ -15,8 +16,17 @@ export { normalizeKey } from "@/lib/csv-normalize";
  * 1行が1人の回答。列の見出しを設問文と突き合わせて、どの設問への答えかを決める。
  * 見出しの表記ゆれ（全角空白・記号違い）で外れないよう、突き合わせ前に文字を揃える。
  *
- * 取り込めなかった行は捨てず、理由つきで返す（全部を止めずに、揃った分だけ取り込む）。
+ * 取り込めない行は捨てず、確認（dryRun）で理由つきで返す。本取込では1行でもあれば
+ * ファイル全体を保存せずに 409 で断る（揃った分だけ取り込むことはしない）。
  */
+
+/**
+ * 取り込み（確認・本取込）で受け取る大きさの上限（バイト）と、超えたときの文言。
+ * 200万文字の日本語（1文字3バイト）に、JSON の囲みと確認トークンの分を足した値。
+ * 社員と回答の2つの入口が同じ値を使うので、片方だけ変わらないようにここ1か所に置く。
+ */
+export const IMPORT_MAX_BYTES = 6_100_000;
+export const IMPORT_TOO_LARGE_MESSAGE = "取り込む内容が大きすぎます。ファイルを分けて取り込んでください。";
 
 /**
  * 「1,200」「１２」などを、その設問の決まり（0以上・整数だけ・上限、桁の大きさ）に照らして読む。
@@ -331,8 +341,8 @@ export async function importResponsesCsv(
   statements.push(db.insert(s.importBatches).values({
     id: newId("import"), companyId, kind: "responses", subjectId: formId,
     actorId: options.actorId ?? null, beforeJson, sourceHash, rowCount: plans.length,
-  }) as unknown as (typeof statements)[number]);
-  await db.batch(statements as unknown as Parameters<typeof db.batch>[0]);
+  }));
+  await batchAll(db, statements);
 
   return { imported, skipped: 0, unmatchedHeaders, rows, dryRun };
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useRef, useState } from "react";
+import { updateImprovementStatus } from "@/actions/improvements";
+import { useSaveAction } from "@/lib/use-refresh";
 import { Button, Card, ChoiceChip, ReasonNote } from "@/components/ui";
 import {
   IMPROVEMENT_STATUSES,
@@ -25,48 +26,35 @@ export function ImprovementStatusForm({
   status: ImprovementStatus;
   note: string | null;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(updateImprovementStatus, { resource: "improvements" });
   const [next, setNext] = useState<ImprovementStatus>(status);
   const [text, setText] = useState(note ?? "");
   const [savedStatus, setSavedStatus] = useState(status);
   const [savedNote, setSavedNote] = useState(note ?? "");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
   const submit = async () => {
-    if (busy) return;
+    if (saving) return;
     if (next === "dropped" && text.trim().length === 0) {
       setError("見送りにする理由を入力してください。");
       setDone(false);
       noteRef.current?.focus();
       return;
     }
-    setBusy(true);
     setError(null);
     setDone(false);
-    try {
-      const res = await fetch(`/api/improvements/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status: next, note: text }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "更新できませんでした。");
-        return;
-      }
-      setSavedStatus(next);
-      setSavedNote(text.trim());
-      setText(text.trim());
-      setDone(true);
-      refresh();
-    } catch {
-      setError("通信できませんでした。入力内容はこの画面に残っています。");
-    } finally {
-      setBusy(false);
+    // 失敗しても入力欄は消さない（直してもう一度押せるように）
+    const result = await save({ id, status: next, note: text });
+    if (!result.ok) {
+      setError(result.message);
+      return;
     }
+    setSavedStatus(next);
+    setSavedNote(text.trim());
+    setText(text.trim());
+    setDone(true);
   };
 
   const unchanged = next === savedStatus && text.trim() === savedNote;
@@ -74,12 +62,12 @@ export function ImprovementStatusForm({
   return (
     <Card className="card-pad">
       {error && <ReasonNote>{error}</ReasonNote>}
-      <RefreshStatus message={done ? "対応状況を更新しました。" : null} refreshing={refreshing} target="画面" />
+      <RefreshStatus message={done ? "対応状況を更新しました。" : null} refreshing={saving} target="画面" />
 
       <p className="footnote m-0">対応状況</p>
       <div className="mt-1 flex flex-wrap gap-2">
         {IMPROVEMENT_STATUSES.map((s) => (
-          <ChoiceChip key={s} selected={next === s} disabled={busy || refreshing} onClick={() => setNext(s)}>
+          <ChoiceChip key={s} selected={next === s} disabled={saving} onClick={() => setNext(s)}>
             {improvementStatusLabel(s)}
           </ChoiceChip>
         ))}
@@ -95,7 +83,7 @@ export function ImprovementStatusForm({
         value={text}
         aria-invalid={Boolean(error && next === "dropped" && text.trim().length === 0)}
         maxLength={1000}
-        disabled={busy || refreshing}
+        disabled={saving}
         onChange={(e) => {
           setText(e.target.value);
           if (e.target.value.trim()) setError(null);
@@ -104,8 +92,8 @@ export function ImprovementStatusForm({
       />
 
       <div className="mt-3">
-        <Button type="button" variant="primary" onClick={submit} disabled={busy || refreshing || unchanged}>
-          {busy ? "保存しています…" : refreshing ? "画面に反映しています…" : "対応状況を保存する"}
+        <Button type="button" variant="primary" onClick={submit} disabled={saving || unchanged}>
+          {saving ? "保存しています…" : "対応状況を保存する"}
         </Button>
       </div>
     </Card>

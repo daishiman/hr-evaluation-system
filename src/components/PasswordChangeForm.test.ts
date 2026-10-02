@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 const SRC = join(process.cwd(), "src");
 const FORM = readFileSync(join(SRC, "components", "PasswordChangeForm.tsx"), "utf8");
-const ROUTE = readFileSync(join(SRC, "app", "api", "account", "password", "route.ts"), "utf8");
+const ROUTE = readFileSync(join(SRC, "actions", "account.ts"), "utf8");
 const CSS = readFileSync(join(SRC, "app", "globals.css"), "utf8");
 
 describe("パスワード変更画面", () => {

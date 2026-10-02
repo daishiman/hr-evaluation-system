@@ -1,10 +1,11 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
+import { updateEvaluation } from "@/actions/evaluations";
 import { ActionButton } from "@/components/ActionButton";
 import { Button, Card, ReasonNote } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
+import { useSaveAction } from "@/lib/use-refresh";
 
 /**
  * 上長のコメントと、確定／確認中に戻す操作。
@@ -24,34 +25,24 @@ export function EvaluatorPanel({
   /** 手を入れられない理由。渡されたら操作は出さず、理由だけを出す（自分自身の評価など）。 */
   blockedReason?: string | null;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  /* 保存の応答に保存後の画面が同梱されるので、別に取り直しを頼まない。
+     saving は「保存して画面に出し終えるまで」の間ずっと true。 */
+  const { save, saving } = useSaveAction(updateEvaluation, { resource: "evaluations" });
   const [text, setText] = useState(comment);
-  const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const finalized = status === "finalized";
 
   const saveComment = async () => {
-    setBusy(true);
     setError(null);
-    try {
-      const res = await fetch(`/api/evaluations/${evaluationId}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "comment", comment: text }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "保存できませんでした。");
-        return;
-      }
-      setSaved("コメントを保存しました。");
-      refresh();
-    } catch {
-      setError("通信できませんでした。入力内容はこの画面に残っています。");
-    } finally {
-      setBusy(false);
+    setSaved(null);
+    const result = await save({ evaluationId, action: "comment", comment: text });
+    if (!result.ok) {
+      // 入力欄はそのまま残す（直して押し直せるように）
+      setError(result.message);
+      return;
     }
+    setSaved(result.message);
   };
 
   if (blockedReason) {
@@ -79,7 +70,7 @@ export function EvaluatorPanel({
         id="ev_comment"
         className="input min-h-[88px] w-full"
         value={text}
-        disabled={busy || refreshing}
+        disabled={saving}
         onChange={(e) => {
           setText(e.target.value);
           setSaved(null);
@@ -87,10 +78,10 @@ export function EvaluatorPanel({
         placeholder="例：未達の項目について、期首に分母と行動計画をすり合わせましょう。"
       />
       <div className="mt-2 flex flex-wrap items-center gap-3">
-        <Button onClick={saveComment} disabled={busy || refreshing}>
-          {busy ? "保存しています…" : refreshing ? "画面に反映しています…" : "コメントを保存する"}
+        <Button onClick={() => void saveComment()} disabled={saving}>
+          {saving ? "保存しています…" : "コメントを保存する"}
         </Button>
-        <RefreshStatus message={saved} refreshing={refreshing} target="画面" className="footnote" />
+        <RefreshStatus message={saved} refreshing={saving} target="画面" className="footnote" />
       </div>
 
       <div className="mt-5 border-t border-line pt-4">
@@ -100,8 +91,9 @@ export function EvaluatorPanel({
               この評価は確定済みです。{employeeName} さんの画面に結果が表示されています。
             </p>
             <ActionButton
-              url={`/api/evaluations/${evaluationId}`}
-              body={{ action: "reopen" }}
+              action={updateEvaluation}
+              resource="evaluations"
+              input={{ evaluationId, action: "reopen" }}
               label="確認中に戻す"
               variant="secondary"
               confirm={`確認中に戻すと、${employeeName} さんの画面から結果が見えなくなります。よろしいですか？`}
@@ -113,8 +105,9 @@ export function EvaluatorPanel({
               内容を確認したら確定してください。確定すると {employeeName} さんの画面に結果が表示されます。
             </p>
             <ActionButton
-              url={`/api/evaluations/${evaluationId}`}
-              body={{ action: "finalize", comment: text }}
+              action={updateEvaluation}
+              resource="evaluations"
+              input={{ evaluationId, action: "finalize", comment: text }}
               label="確定して本人に公開する"
               confirm={`${employeeName} さんの評価を確定し、本人に公開します。あとから「確認中に戻す」で取り消せます。`}
             />

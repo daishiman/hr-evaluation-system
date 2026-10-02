@@ -1,11 +1,11 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useSaveAction } from "@/lib/use-refresh";
 import { useState } from "react";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
-import { requestMasterDelete } from "@/components/master-delete-request";
+import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
 import { behaviorBandLabel, type BehaviorBandSetRow } from "@/lib/domain/behavior";
 import {
   BLOCKED_HELP_LABEL,
@@ -62,8 +62,7 @@ export function BehaviorGuidelineEditor({
   /** 観点ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
-  const [busy, setBusy] = useState(false);
+  const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   /** 開いている入力欄。行のidをキーにして、開いているものだけを持つ */
@@ -72,45 +71,27 @@ export function BehaviorGuidelineEditor({
   /** 「観点を追加する」を開いているときだけ持つ下書き。 */
   const [newAspectName, setNewAspectName] = useState<string | null>(null);
 
+  /* 保存の応答に保存後の画面が同梱されるので、別に読み直しを頼まない。
+     失敗したときは入力欄を閉じずに残す（呼び出し側は true のときだけ閉じる）。 */
   const send = async (payload: Record<string, unknown>) => {
-    setBusy(true);
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch("/api/masters", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "保存できませんでした。");
-        return false;
-      }
-      setMessage(json.message ?? "保存しました。");
-      refresh();
-      return true;
-    } catch {
-      setError("通信できませんでした。入力した内容はこの画面に残っています。");
+    const result = await save(masterSave(payload));
+    if (!result.ok) {
+      setError(result.message);
       return false;
-    } finally {
-      setBusy(false);
     }
+    setMessage(result.message);
+    return true;
   };
 
   /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
   const remove = async (id: string) => {
-    setBusy(true);
     setError(null);
     setMessage(null);
-    const result = await requestMasterDelete("behaviorGuideline", id);
-    if (result.ok) {
-      setMessage(result.message);
-      refresh();
-    } else {
-      setError(result.message);
-    }
-    setBusy(false);
+    const result = await save(masterDelete("behaviorGuideline", id));
+    if (result.ok) setMessage(result.message);
+    else setError(result.message);
   };
 
   const list = rows.filter((r) => r.band === band).sort((a, b) => a.seq - b.seq);
@@ -121,9 +102,9 @@ export function BehaviorGuidelineEditor({
   const anyBlocked = list.some((g) => usedByOf(g.id).length > 0);
 
   return (
-    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="stack m-0 min-w-0 border-0 p-0">
+    <fieldset disabled={saving} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
       {error && <ReasonNote>{error}</ReasonNote>}
-      <RefreshStatus message={message} refreshing={refreshing} />
+      <RefreshStatus message={message} refreshing={saving} />
 
       {list.length === 0 && (
         <ReasonNote>
@@ -164,28 +145,28 @@ export function BehaviorGuidelineEditor({
                   <ConfirmButton
                     label="使わない"
                     variant="danger-outline"
-                    busy={busy}
+                    busy={saving}
                     confirm={`「${g.aspectName}」を次に作るアンケートから出さないようにします。すでに公開したアンケートと確定済みの評価はそのまま残ります。`}
                     onConfirm={() => void send({ kind: "behaviorGuideline", id: g.id, isActive: false })}
                   />
                 ) : (
                   <Button
                     variant="secondary"
-                    disabled={busy}
+                    disabled={saving}
                     onClick={() => void send({ kind: "behaviorGuideline", id: g.id, isActive: true })}
                   >
                     もう一度使う
                   </Button>
                 )}
                 {editingName[g.id] === undefined ? (
-                  <Button variant="tertiary" disabled={busy} onClick={() => setEditingName((s) => ({ ...s, [g.id]: g.aspectName }))}>
+                  <Button variant="tertiary" disabled={saving} onClick={() => setEditingName((s) => ({ ...s, [g.id]: g.aspectName }))}>
                     呼び名を直す
                   </Button>
                 ) : (
                   <>
                     <Button
                       variant="primary"
-                      disabled={busy || editingName[g.id].trim() === ""}
+                      disabled={saving || editingName[g.id].trim() === ""}
                       onClick={async () => {
                         const ok = await send({ kind: "behaviorGuideline", id: g.id, aspectName: editingName[g.id].trim() });
                         if (ok) setEditingName((s) => { const n = { ...s }; delete n[g.id]; return n; });
@@ -195,7 +176,7 @@ export function BehaviorGuidelineEditor({
                     </Button>
                     <Button
                       variant="tertiary"
-                      disabled={busy}
+                      disabled={saving}
                       onClick={() => setEditingName((s) => { const n = { ...s }; delete n[g.id]; return n; })}
                     >
                       やめる
@@ -206,7 +187,7 @@ export function BehaviorGuidelineEditor({
                   <ConfirmButton
                     label={DELETE_LABEL}
                     variant="danger-outline"
-                    busy={busy}
+                    busy={saving}
                     confirm={deleteConfirmText(g.aspectName, `5段階の文章${g.levels.length}件も一緒に消えます。`)}
                     onConfirm={() => void remove(g.id)}
                   />
@@ -257,7 +238,7 @@ export function BehaviorGuidelineEditor({
                           <div className="mt-2 flex flex-wrap gap-2">
                             <Button
                               variant="primary"
-                              disabled={busy || draft.label.trim() === "" || draft.text.trim() === ""}
+                              disabled={saving || draft.label.trim() === "" || draft.text.trim() === ""}
                               onClick={async () => {
                                 const ok = await send({
                                   kind: "behaviorLevel",
@@ -272,7 +253,7 @@ export function BehaviorGuidelineEditor({
                             </Button>
                             <Button
                               variant="tertiary"
-                              disabled={busy}
+                              disabled={saving}
                               onClick={() => setEditingLevel((s) => { const n = { ...s }; delete n[lv.id]; return n; })}
                             >
                               やめる
@@ -286,7 +267,7 @@ export function BehaviorGuidelineEditor({
                         <Badge tone={lv.score >= 1 ? "done" : "dropped"}>{lv.score}点</Badge>
                         <Button
                           variant="tertiary"
-                          disabled={busy}
+                          disabled={saving}
                           onClick={() => setEditingLevel((s) => ({ ...s, [lv.id]: { label: lv.label, text: lv.text } }))}
                         >
                           直す
@@ -304,7 +285,7 @@ export function BehaviorGuidelineEditor({
       <Card className="card-pad">
         {newAspectName === null ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" disabled={busy} onClick={() => setNewAspectName("")}>
+            <Button variant="secondary" disabled={saving} onClick={() => setNewAspectName("")}>
               観点を追加する
             </Button>
             <span className="footnote">この基準で問う項目を1つ増やします（5段階の文章は下書きが入ります）。</span>
@@ -323,7 +304,7 @@ export function BehaviorGuidelineEditor({
             <div className="mt-3 flex flex-wrap gap-2">
               <Button
                 variant="primary"
-                disabled={busy || newAspectName.trim() === ""}
+                disabled={saving || newAspectName.trim() === ""}
                 onClick={async () => {
                   const ok = await send({ kind: "behaviorGuideline", band, aspectName: newAspectName.trim() });
                   if (ok) setNewAspectName(null);
@@ -331,7 +312,7 @@ export function BehaviorGuidelineEditor({
               >
                 追加する
               </Button>
-              <Button variant="tertiary" disabled={busy} onClick={() => setNewAspectName(null)}>
+              <Button variant="tertiary" disabled={saving} onClick={() => setNewAspectName(null)}>
                 やめる
               </Button>
             </div>

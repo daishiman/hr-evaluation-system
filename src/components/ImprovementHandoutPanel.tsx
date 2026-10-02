@@ -4,7 +4,8 @@ import { useState } from "react";
 import { CopyBlock } from "@/components/CopyBlock";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { Button, Card, ReasonNote } from "@/components/ui";
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { handOutImprovement } from "@/actions/improvements";
+import { useSaveAction } from "@/lib/use-refresh";
 
 /**
  * 届いた要望1件を、作業する側（Claude Code）へ渡す。
@@ -30,40 +31,27 @@ export function ImprovementHandoutPanel({
   /** 作業する側に貼る文。取得コマンドを含む。 */
   prompt: string;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
-  const [busy, setBusy] = useState(false);
+  const { save, saving } = useSaveAction(handOutImprovement, { resource: "improvements" });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const submit = async () => {
-    if (busy || refreshing) return;
-    setBusy(true);
+    if (saving) return;
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch("/api/improvements", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id, action: "handout" }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string; result?: { reason?: string } };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "払い出しを記録できませんでした。");
-        return;
-      }
-      setMessage(json.result?.reason ?? "払い出しを記録しました。");
-      refresh();
-    } catch {
-      setError("通信できませんでした。もう一度お試しください。");
-    } finally {
-      setBusy(false);
+    const result = await save({ id });
+    if (!result.ok) {
+      setError(result.message);
+      return;
     }
+    // 渡さなかったとき（廃棄済み・内容が同じ）も、その理由をそのまま出す
+    setMessage(result.result.reason);
   };
 
   return (
     <Card className="card-pad">
       {error && <ReasonNote>{error}</ReasonNote>}
-      <RefreshStatus message={message} refreshing={refreshing} target="画面" />
+      <RefreshStatus message={message} refreshing={saving} target="画面" />
       <p className="footnote m-0">
         下の内容をそのまま渡します。氏名とメールアドレスは含めません。画面の写しも渡しません。
       </p>
@@ -82,8 +70,8 @@ export function ImprovementHandoutPanel({
         />
       </div>
       <div className="mt-4">
-        <Button type="button" variant="primary" onClick={() => void submit()} disabled={busy || refreshing}>
-          {busy ? "記録中…" : refreshing ? "画面に反映しています…" : "払い出し済みにする"}
+        <Button type="button" variant="primary" onClick={() => void submit()} disabled={saving}>
+          {saving ? "記録中…" : "払い出し済みにする"}
         </Button>
       </div>
       <p className="footnote m-0 mt-2">押すと、渡した日時とそのときの内容を控えます。未対応のものは対応中に進みます。</p>

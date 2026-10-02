@@ -1,12 +1,11 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
 import { Button, Card, CardHead, Disclosure, InlineDetail, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
 import { VersionedMasterSections } from "@/components/VersionedMasterSections";
-import { requestMasterDelete } from "@/components/master-delete-request";
 import {
   BLOCKED_HELP_LABEL,
   BLOCKED_KEEP,
@@ -35,7 +34,7 @@ import {
  *   - 各区分は 0〜10 項目。10個ちょうどにする必要はないので、空欄を10個並べない。
  *   - 「いま何個 / あと何個」を常に出す。ここが達成率の分母になるため、数が見えないと制度が読めない。
  *
- * 保存はすべて /api/masters（PUT）。止め方は2段階:
+ * 保存はすべて制度マスタの Server Action（saveMaster）。止め方は2段階:
  *   - 「使わない」: 次に作るアンケートから外すだけ。あとから戻せる。
  *   - 「完全に消す」: まだ一度もアンケートに出しておらず、評価の記録にも無いときだけ出る。
  * 一度でも使った項目は消せない（過去のアンケート・確定済みの評価がこの行を参照しているため、
@@ -56,54 +55,10 @@ export function GradeRequirementEditor({
   /** 項目ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const { send, remove, saving, error, message } = useMasterAction("gradeRequirement");
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState(false);
-
-  const send = async (payload: Record<string, unknown>) => {
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const res = await fetch("/api/masters", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "保存できませんでした。");
-        return false;
-      }
-      setMessage(json.message ?? "保存しました。");
-      refresh();
-      return true;
-    } catch {
-      setError("通信できませんでした。入力した内容はこの画面に残っています。");
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
-  const remove = async (id: string) => {
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    const result = await requestMasterDelete("gradeRequirement", id);
-    if (result.ok) {
-      setMessage(result.message);
-      refresh();
-    } else {
-      setError(result.message);
-    }
-    setBusy(false);
-  };
 
   /* 使っている場所があるなら消させない。
      行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
@@ -173,7 +128,7 @@ export function GradeRequirementEditor({
                   <div className="mt-2 flex gap-2">
                     <Button
                       variant="primary"
-                      disabled={busy || editing[r.id].trim() === ""}
+                      disabled={saving || editing[r.id].trim() === ""}
                       onClick={async () => {
                         const ok = await send({
                           kind: "gradeRequirementRevise",
@@ -187,7 +142,7 @@ export function GradeRequirementEditor({
                     </Button>
                     <Button
                       variant="tertiary"
-                      disabled={busy}
+                      disabled={saving}
                       onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}
                     >
                       やめる
@@ -200,7 +155,7 @@ export function GradeRequirementEditor({
               <div className="row-actions">
                 <Button
                   variant="tertiary"
-                  disabled={busy || i === 0}
+                  disabled={saving || i === 0}
                   aria-label="先頭に移動"
                   onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "top" })}
                 >
@@ -208,7 +163,7 @@ export function GradeRequirementEditor({
                 </Button>
                 <Button
                   variant="tertiary"
-                  disabled={busy || i === 0}
+                  disabled={saving || i === 0}
                   aria-label="1つ上に移動"
                   onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "up" })}
                 >
@@ -216,7 +171,7 @@ export function GradeRequirementEditor({
                 </Button>
                 <Button
                   variant="tertiary"
-                  disabled={busy || i === list.length - 1}
+                  disabled={saving || i === list.length - 1}
                   aria-label="1つ下に移動"
                   onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "down" })}
                 >
@@ -224,19 +179,19 @@ export function GradeRequirementEditor({
                 </Button>
                 <Button
                   variant="tertiary"
-                  disabled={busy || i === list.length - 1}
+                  disabled={saving || i === list.length - 1}
                   aria-label="末尾に移動"
                   onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "bottom" })}
                 >
                   ⇊
                 </Button>
-                <Button variant="tertiary" disabled={busy} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
+                <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
                   内容を直す
                 </Button>
                 <ConfirmButton
                   label="今後使わない"
                   variant="danger-outline"
-                  busy={busy}
+                  busy={saving}
                   confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
                   onConfirm={() => void send({ kind: "gradeRequirementActivation", id: r.id, isActive: false })}
                 />
@@ -244,7 +199,7 @@ export function GradeRequirementEditor({
                   <ConfirmButton
                     label={DELETE_LABEL}
                     variant="danger-outline"
-                    busy={busy}
+                    busy={saving}
                     confirm={deleteConfirmText(r.text)}
                     onConfirm={() => void remove(r.id)}
                   />
@@ -269,7 +224,7 @@ export function GradeRequirementEditor({
               <div className="flex gap-2">
                 <Button
                   variant="primary"
-                  disabled={busy || draft.text.trim() === ""}
+                  disabled={saving || draft.text.trim() === ""}
                   onClick={async () => {
                     const ok = await send({ kind: "gradeRequirementCreate", gradeId, category, text: draft.text.trim() });
                     if (ok) setDrafts((s) => ({ ...s, [category]: { open: true, text: "" } }));
@@ -277,14 +232,14 @@ export function GradeRequirementEditor({
                 >
                   この内容で追加する
                 </Button>
-                <Button variant="tertiary" disabled={busy} onClick={() => setDrafts((s) => ({ ...s, [category]: { open: false, text: "" } }))}>
+                <Button variant="tertiary" disabled={saving} onClick={() => setDrafts((s) => ({ ...s, [category]: { open: false, text: "" } }))}>
                   閉じる
                 </Button>
               </div>
             </div>
           ) : (
             <>
-              <Button variant="secondary" disabled={busy || rest === 0} onClick={() => setDrafts((s) => ({ ...s, [category]: { open: true, text: "" } }))}>
+              <Button variant="secondary" disabled={saving || rest === 0} onClick={() => setDrafts((s) => ({ ...s, [category]: { open: true, text: "" } }))}>
                 ＋ 項目を追加
               </Button>
               {rest === 0 && (
@@ -301,7 +256,7 @@ export function GradeRequirementEditor({
           <VersionedMasterSections
             sectionId={`grade-${gradeId}-${category}`}
             rows={rows.filter((row) => row.category === category)}
-            busy={busy}
+            busy={saving}
             maxActive={GRADE_REQUIREMENT_MAX}
             renderDetail={(row) =>
               markOf(row.id) !== null ? <UsedByDetail mark={markOf(row.id)!} usedBy={usedByOf(row.id)} /> : null
@@ -311,7 +266,7 @@ export function GradeRequirementEditor({
                 <ConfirmButton
                   label={DELETE_LABEL}
                   variant="danger-outline"
-                  busy={busy}
+                  busy={saving}
                   confirm={deleteConfirmText(row.text)}
                   onConfirm={() => void remove(row.id)}
                 />
@@ -330,7 +285,7 @@ export function GradeRequirementEditor({
   };
 
   return (
-    <fieldset disabled={busy || refreshing} aria-busy={busy || refreshing} className="stack m-0 min-w-0 border-0 p-0">
+    <fieldset disabled={saving} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
       <Card className="card-pad">
         <p className="m-0 text-sub">
           いま編集しているのは <b>{gradeName}</b> の等級要件です。
@@ -349,7 +304,7 @@ export function GradeRequirementEditor({
       </Card>
 
       {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
-      <RefreshStatus message={message} refreshing={refreshing} />
+      <RefreshStatus message={message} refreshing={saving} />
 
       {block("support", support)}
       {block("operation", operation)}

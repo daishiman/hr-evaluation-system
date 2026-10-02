@@ -38,8 +38,13 @@ function headline(body: string): string {
   return head.length > 40 ? `${head.slice(0, 40)}…` : head;
 }
 
-/** 履歴は追記だけ。ここを更新にすると、前に落とした理由が上書きで消える。 */
-async function addEvent(
+/**
+ * 履歴は追記だけ。ここを更新にすると、前に落とした理由が上書きで消える。
+ *
+ * 書き込みの文を返すだけで、実行は呼び出し側の batch に任せる。
+ * 要望の更新と同じ batch に入れ、片方だけ残る状態を作らない。
+ */
+function addEvent(
   db: DB,
   requestId: string,
   event: {
@@ -51,7 +56,7 @@ async function addEvent(
     actorId: string;
   },
 ) {
-  await db.insert(s.improvementStatusEvents).values({ id: newId("ise"), requestId, ...event });
+  return db.insert(s.improvementStatusEvents).values({ id: newId("ise"), requestId, ...event });
 }
 
 /** 廃棄を戻すときの行き先。廃棄したときの記録から読む。 */
@@ -95,28 +100,32 @@ export async function applyDisposition(
   if (input.action === "restore") {
     if (item.discarded) {
       const back = await statusBeforeDiscard(db, id, status);
-      await db.update(s.improvementRequests).set({ discardedAt: null, discardedById: null, discardReason: null, status: back }).where(where);
-      await addEvent(db, id, {
-        action: "restore",
-        fromStatus: status,
-        toStatus: back,
-        reasonCode: null,
-        reason: "廃棄を取り消しました。",
-        actorId: viewer.id,
-      });
+      await db.batch([
+        db.update(s.improvementRequests).set({ discardedAt: null, discardedById: null, discardReason: null, status: back }).where(where),
+        addEvent(db, id, {
+          action: "restore",
+          fromStatus: status,
+          toStatus: back,
+          reasonCode: null,
+          reason: "廃棄を取り消しました。",
+          actorId: viewer.id,
+        }),
+      ]);
       return done("restored", "廃棄を取り消し、元の状態に戻しました。");
     }
     if (item.duplicateOfId || status === "dropped") {
       const back = await statusBeforeDiscard(db, id, "open");
-      await db.update(s.improvementRequests).set({ duplicateOfId: null, status: back }).where(where);
-      await addEvent(db, id, {
-        action: "restore",
-        fromStatus: status,
-        toStatus: back,
-        reasonCode: null,
-        reason: "落とした判断を取り消しました。",
-        actorId: viewer.id,
-      });
+      await db.batch([
+        db.update(s.improvementRequests).set({ duplicateOfId: null, status: back }).where(where),
+        addEvent(db, id, {
+          action: "restore",
+          fromStatus: status,
+          toStatus: back,
+          reasonCode: null,
+          reason: "落とした判断を取り消しました。",
+          actorId: viewer.id,
+        }),
+      ]);
       return done("restored", "元の状態に戻しました。");
     }
     return done("skipped", "戻す操作はありません。");
@@ -131,31 +140,35 @@ export async function applyDisposition(
     if (!target) throw new HttpError(404, "統合先の要望が見つかりませんでした。");
   }
 
-  if (input.action === "discard") {
-    if (item.discarded) return done("skipped", "すでに廃棄しています。");
-    await db
-      .update(s.improvementRequests)
-      .set({ discardedAt: new Date(), discardedById: viewer.id, discardReason: reason })
-      .where(where);
-  } else {
-    await db
-      .update(s.improvementRequests)
-      .set({
-        status: "dropped",
-        handledById: viewer.id,
-        duplicateOfId: input.action === "duplicate" ? input.duplicateOfId : null,
-      })
-      .where(where);
-  }
+  if (input.action === "discard" && item.discarded) return done("skipped", "すでに廃棄しています。");
 
-  await addEvent(db, id, {
-    action: input.action,
-    fromStatus: status,
-    toStatus: input.action === "discard" ? status : "dropped",
-    reasonCode: dispositionNeedsReason(input.action) ? input.reasonCode : null,
-    reason,
-    actorId: viewer.id,
-  });
+  const update =
+    input.action === "discard"
+      ? db
+          .update(s.improvementRequests)
+          .set({ discardedAt: new Date(), discardedById: viewer.id, discardReason: reason })
+          .where(where)
+      : db
+          .update(s.improvementRequests)
+          .set({
+            status: "dropped",
+            handledById: viewer.id,
+            duplicateOfId: input.action === "duplicate" ? input.duplicateOfId : null,
+          })
+          .where(where);
+
+  // 印を立てるのと履歴を積むのは1回の batch で書く（落としたのに経緯が無い行を作らない）
+  await db.batch([
+    update,
+    addEvent(db, id, {
+      action: input.action,
+      fromStatus: status,
+      toStatus: input.action === "discard" ? status : "dropped",
+      reasonCode: dispositionNeedsReason(input.action) ? input.reasonCode : null,
+      reason,
+      actorId: viewer.id,
+    }),
+  ]);
 
   const appResult: BulkAction = input.action === "discard" ? "discarded" : input.action === "duplicate" ? "duplicated" : "rejected";
   return done(appResult, `${dispositionActionLabel(input.action)}にしました（${reason}）`);

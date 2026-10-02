@@ -11,16 +11,18 @@ beads: `hr-7i7`
   /account, /admin/members/policy, /admin/members/[id], /system/users/[id]
         │
         ▼
-[API]
-  /api/account/profile          … 本人（EMPLOYEE 以上）
-  /api/masters/profile-policy   … COMPANY_ADMIN 以上
-  /api/members                  … 自社社員（COMPANY_ADMIN 以上）
-  /api/system/users             … SUPER_ADMIN のみ
+[サーバーアクション]（src/actions/。どれも runAction を通る）
+  updateOwnProfile / changeOwnPassword        … 本人（EMPLOYEE 以上）
+  saveProfilePolicy                           … COMPANY_ADMIN 以上
+  createMember / updateMember                 … 自社社員（COMPANY_ADMIN 以上）
+  createSystemUser / updateSystemUser         … SUPER_ADMIN のみ
+  revealCredentialMemo（runRead）             … SUPER_ADMIN・同じ会社の COMPANY_ADMIN
         │
         ▼
 [ドメイン]
   profile-fields.ts   … 項目定義・既定値・許可表の解決（画面/API共通）
-  user-integrity.ts   … 上長循環の拒否
+  user-integrity.ts   … 上長循環・メールの重複・所属できない会社（ひな形・停止中）の拒否
+  user-name-schema.ts … 氏名の検査（前後の空白を除いて必須・60文字。本人・社員・全体管理の3つの入口で共通）
         │
         ▼
 [データ]
@@ -49,8 +51,9 @@ role / grade / manager / isActive を `profile_field_policies.field` に入れ�
 
 ### 4. パスワード再発行は原子的バッチ
 
-利用者行の `mustChangePassword`、credential の hash 更新、sessions 削除を `db.batch` でまとめる。  
-途中失敗で「新パスワードなのに古いセッションが生きる」状態を避ける。
+利用者行の `mustChangePassword`、credential の hash 更新、sessions 削除、初期パスワードの控え（`initial_credential_memos`）の置き換えを `db.batch` でまとめる。
+途中失敗で「新パスワードなのに古いセッションが生きる」「控えだけ古い」状態を避ける。
+本人がパスワードを変えたときは、印を消すのと控えを消すのを同じ batch で書き、この端末以外のログインを切る（`revokeOtherSessions`）。
 
 ### 5. 等級 JOIN は会社も揃える
 
@@ -62,7 +65,8 @@ role / grade / manager / isActive を `profile_field_policies.field` に入れ�
 | 役割 | パス |
 |---|---|
 | 項目定義 | `src/lib/domain/profile-fields.ts` |
-| 上長循環 | `src/lib/user-integrity.ts` |
+| 上長循環・メールの重複・所属会社 | `src/lib/user-integrity.ts` |
+| 氏名の検査 | `src/lib/user-name-schema.ts` |
 | スキーマ | `src/db/schema.ts` (`profileFieldPolicies`) |
 | クエリ | `src/lib/queries.ts` (`listProfileFieldPolicies`, `getSelfProfile`, `listAllUsers`, `getAnyUser`) |
 | ナビ | `src/lib/nav.ts` / `AppShell.tsx` / `AccountMenu.tsx` |

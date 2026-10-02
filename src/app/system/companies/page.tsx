@@ -4,6 +4,7 @@ import { getTemplateSummary, listCompanies } from "@/lib/queries";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { Badge, Card, CardHead, Disclosure, EmptyState, LinkButton, Num, PageTitle, SectionHeading, StatGrid } from "@/components/ui";
+import { createCompany, updateCompany } from "@/actions/companies";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +51,8 @@ export default async function SystemCompanies() {
 
       <SectionHeading>会社を追加する</SectionHeading>
       <RecordForm
-        url="/api/companies"
-        method="POST"
+        action={createCompany}
+        resource="companies"
         submitLabel="この内容で会社を追加する"
         description="会社IDは画面には出ませんが、あとから変更できません。英小文字・数字・ハイフンで入力してください。追加すると上の標準の制度が自動で写されます。"
         resetAfterSubmit
@@ -95,8 +96,8 @@ export default async function SystemCompanies() {
 
               <div className="card-grid mt-3">
                 <RecordForm
-                  url="/api/companies"
-                  method="PATCH"
+                  action={updateCompany}
+                  resource="companies"
                   fixed={{ companyId: c.id }}
                   submitLabel="会社の情報を保存する"
                   fields={[
@@ -113,18 +114,18 @@ export default async function SystemCompanies() {
                   <div className="mt-3">
                     {c.isActive ? (
                       <ActionButton
-                        url="/api/companies"
-                        method="PATCH"
-                        body={{ companyId: c.id, isActive: false }}
+                        action={updateCompany}
+                        resource="companies"
+                        input={{ companyId: c.id, isActive: false }}
                         label="利用を停止する"
                         variant="secondary"
                         confirm={`${c.name}の方は全員ログインできなくなります。回答・評価のデータはすべて残ります。よろしいですか？`}
                       />
                     ) : (
                       <ActionButton
-                        url="/api/companies"
-                        method="PATCH"
-                        body={{ companyId: c.id, isActive: true }}
+                        action={updateCompany}
+                        resource="companies"
+                        input={{ companyId: c.id, isActive: true }}
                         label="利用を再開する"
                       />
                     )}

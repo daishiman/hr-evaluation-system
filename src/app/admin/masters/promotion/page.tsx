@@ -4,6 +4,7 @@ import { listGrades, listPromotionRequirements, listPromotionThresholds } from "
 import { getDb } from "@/lib/db";
 import { promotionRequirementUsage } from "@/lib/master-usage";
 import { detectStaleCycles } from "@/lib/impact";
+import { saveMaster } from "@/actions/masters";
 import { RecordForm } from "@/components/RecordForm";
 import { PromotionRequirementEditor } from "@/components/PromotionRequirementEditor";
 import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
@@ -86,8 +87,8 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
           )}
           <RecordForm
             key={grade.id}
-            url="/api/masters"
-            method="PUT"
+            action={saveMaster}
+            resource="masters"
             fixed={{ kind: "threshold", id: th.id }}
             submitLabel="昇格の条件を保存する"
             description={`${th.label}。行動指針の点数は、観点ごとの点数（模範3〜悪影響-1）の合計です。何を問うかは行動指針の画面で決めます。`}

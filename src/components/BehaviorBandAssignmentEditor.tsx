@@ -1,6 +1,7 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
+import { saveMaster } from "@/actions/masters";
+import { useSaveAction } from "@/lib/use-refresh";
 import { useEffect, useState } from "react";
 import { behaviorBandLabel, behaviorBandPayloadValue, type BehaviorBandSetRow } from "@/lib/domain/behavior";
 import { Button, Card, CardHead, ReasonNote } from "@/components/ui";
@@ -27,15 +28,14 @@ export function BehaviorBandAssignmentEditor({
   /** 問う内容があり、いま使う設定の基準だけを選択肢にする。 */
   availableBands: readonly string[];
 }) {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(saveMaster, { resource: "masters" });
   const [baseline, setBaseline] = useState(grade.behaviorBand ?? "");
   const [draft, setDraft] = useState(grade.behaviorBand ?? "");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const selectableBands = bandSets.map((set) => set.code).filter((code) => availableBands.includes(code));
 
-  /* 保存後（router.refresh）の現在値だけを取り込む。等級タブの切り替えは
+  /* 保存後（応答に同梱された新しい画面）の現在値だけを取り込む。等級タブの切り替えは
      親側の key={grade.id} で作り直すので、ここでは同じ等級内の同期だけを見る。 */
   useEffect(() => {
     setBaseline(grade.behaviorBand ?? "");
@@ -48,33 +48,21 @@ export function BehaviorBandAssignmentEditor({
     setMessage(null);
   };
 
-  const save = async () => {
-    setBusy(true);
+  const submit = async () => {
     setError(null);
     setMessage(null);
-    try {
-      const res = await fetch("/api/masters", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          kind: "grade",
-          id: grade.id,
-          behaviorBand: behaviorBandPayloadValue(draft),
-        }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "保存できませんでした。");
-        return;
-      }
-      setBaseline(draft);
-      setMessage(json.message ?? "保存しました。");
-      refresh();
-    } catch {
-      setError("通信できませんでした。選んだ内容はこの画面に残っています。");
-    } finally {
-      setBusy(false);
+    const result = await save({
+      kind: "grade",
+      id: grade.id,
+      behaviorBand: behaviorBandPayloadValue(draft),
+    });
+    if (!result.ok) {
+      // 選んだ内容は画面に残す
+      setError(result.message);
+      return;
     }
+    setBaseline(draft);
+    setMessage(result.message);
   };
 
   const currentUnavailable = draft !== "" && !selectableBands.includes(draft);
@@ -101,7 +89,7 @@ export function BehaviorBandAssignmentEditor({
             <select
               value={draft}
               onChange={(event) => choose(event.target.value)}
-              disabled={busy || refreshing}
+              disabled={saving}
               className="input mt-1 w-full"
               aria-label={`${grade.name}に出す行動指針`}
             >
@@ -130,10 +118,10 @@ export function BehaviorBandAssignmentEditor({
           )}
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" variant="primary" disabled={busy || refreshing || draft === baseline} onClick={() => void save()}>
-              {busy ? "保存しています…" : refreshing ? "画面に反映しています…" : "この等級の設定を保存"}
+            <Button type="button" variant="primary" disabled={saving || draft === baseline} onClick={() => void submit()}>
+              {saving ? "保存しています…" : "この等級の設定を保存"}
             </Button>
-            <Button type="button" variant="tertiary" disabled={busy || refreshing || draft === baseline} onClick={() => choose(baseline)}>
+            <Button type="button" variant="tertiary" disabled={saving || draft === baseline} onClick={() => choose(baseline)}>
               現在値へ戻す
             </Button>
           </div>
@@ -143,7 +131,7 @@ export function BehaviorBandAssignmentEditor({
               <ReasonNote>{error}</ReasonNote>
             </div>
           )}
-          <RefreshStatus message={message} refreshing={refreshing} target="画面" className="m-0 mt-3 text-sub text-brand-deep" />
+          <RefreshStatus message={message} refreshing={saving} target="画面" className="m-0 mt-3 text-sub text-brand-deep" />
         </div>
       </Card>
     </div>

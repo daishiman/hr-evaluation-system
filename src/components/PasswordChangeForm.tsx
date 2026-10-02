@@ -1,9 +1,11 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
+import { changeOwnPassword } from "@/actions/account";
+import { useSaveAction } from "@/lib/use-refresh";
 import { Button, LinkButton, ReasonNote, RevealToggle } from "@/components/ui";
 import { Icon } from "@/components/Icon";
+import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
  * パスワードの変更。
@@ -15,14 +17,15 @@ import { Icon } from "@/components/Icon";
  * - 何が足りないかは具体的に言う。ただし「いまのパスワード」が合っているかどうかの
  *   詳しい理由はサーバーの言い方のまま出す（総当たりの手掛かりを増やさない）。
  *
- * 決まり事の値（10文字以上）は api/account/password と同じものを**表示のためだけに**持つ。
+ * 決まり事の値（10文字以上）は actions/account.ts と同じものを**表示のためだけに**持つ。
  * ここを変えても実際の判定は変わらない（判定はサーバーが行う）。
  */
 const MIN_LENGTH = 10;
 const MAX_LENGTH = 200;
 
 export function PasswordChangeForm() {
-  const { refresh } = useRefreshAfterSave();
+  // 成功の応答には「仮パスワードのまま」の案内を消した画面が同梱される（runAction の refresh）
+  const { save, saving } = useSaveAction(changeOwnPassword, { resource: "account" });
   const nextRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
@@ -33,7 +36,6 @@ export function PasswordChangeForm() {
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
@@ -80,29 +82,20 @@ export function PasswordChangeForm() {
       return;
     }
     sending.current = true;
-    setBusy(true);
     try {
-      const res = await fetch("/api/account/password", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ currentPassword: current, newPassword: next }),
-      });
-      const json = (await res.json()) as { ok: boolean; message?: string };
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "変更できませんでした。");
+      const result = await save({ currentPassword: current, newPassword: next });
+      // 失敗（通信の失敗を含む）は入力欄を残したまま理由を出す
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
-      setDone(json.message ?? "パスワードを変更しました。");
+      setDone(result.message);
       setCurrent("");
       setNext("");
       setConfirm("");
       setTouched({});
-      refresh();
-    } catch {
-      setError("通信できませんでした。入力内容はこの画面に残っています。");
     } finally {
       sending.current = false;
-      setBusy(false);
     }
   };
 
@@ -114,7 +107,7 @@ export function PasswordChangeForm() {
           <Icon name="check" size={18} />
           パスワードを変更しました
         </p>
-        <p className="m-0 text-sub">{done}</p>
+        <RefreshStatus message={done} refreshing={saving} target="画面" className="m-0 text-sub" />
         <p className="m-0 text-sub text-ink-muted">
           この端末はそのまま使えます。ほかの端末やブラウザで開いていた場合は、ログインし直してください。
           そのときは新しいパスワードをお使いください。
@@ -194,8 +187,8 @@ export function PasswordChangeForm() {
       {error && <ReasonNote>{error}</ReasonNote>}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button ref={submitRef} type="submit" variant="primary" disabled={busy}>
-          {busy ? "変更しています…" : "パスワードを変更する"}
+        <Button ref={submitRef} type="submit" variant="primary" disabled={saving}>
+          {saving ? "変更しています…" : "パスワードを変更する"}
         </Button>
         {/* 押せなくして黙らせず、残りをその場で伝える（押せば足りない欄まで案内が出る） */}
         <span className="footnote m-0" aria-live="polite">

@@ -10,6 +10,7 @@ import { homeItemFor, navGroupsFor, searchableScreens } from "@/lib/nav";
 import { LinkButton, ReasonNote } from "@/components/ui";
 import { StickyOffset } from "@/components/StickyOffset";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
+import { FreshnessSync } from "@/components/FreshnessSync";
 import { UsageTracker } from "@/components/UsageTracker";
 
 /**
@@ -92,6 +93,9 @@ export async function AppShell({ viewer, children }: { viewer: Viewer; children:
 
           {/* 利用状況の記録も同じ理由でここ1箇所。画面には何も出ない */}
           <UsageTracker />
+
+          {/* 他のタブでの保存・タブへの復帰で、表示中の画面を取り直す。画面には何も出ない */}
+          <FreshnessSync />
         </div>
       </div>
     </SidebarDrawerProvider>

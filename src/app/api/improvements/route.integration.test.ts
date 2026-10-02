@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
+import { API_CACHE_CONTROL } from "@/lib/api";
 import { schema as s } from "@/lib/db";
 import { HttpError, type Viewer } from "@/lib/session";
 import { _resetRateLimitStoreForTest } from "@/lib/rate-limit";
@@ -12,8 +13,12 @@ const AGENT_KEY = "test-agent-key-0123456789abcdefghij";
 const mocked = vi.hoisted(() => ({
   apiViewer: vi.fn(),
   getDb: vi.fn(),
+  refresh: vi.fn(),
   env: { AGENT_API_KEY: "" } as Record<string, unknown>,
 }));
+
+// 払い出す・落とす・戻すは画面からの Server Action。成功すると画面を描き直す（refresh）。
+vi.mock("next/cache", () => ({ refresh: mocked.refresh }));
 
 vi.mock("@/lib/session", async () => ({
   ...(await vi.importActual<typeof import("@/lib/session")>("@/lib/session")),
@@ -31,7 +36,8 @@ vi.mock("@opennextjs/cloudflare", () => ({
   getCloudflareContext: async () => ({ env: mocked.env }),
 }));
 
-import { GET, POST, PUT, PATCH as agentWriteBack } from "@/app/api/improvements/route";
+import { GET, POST, PATCH as agentWriteBack } from "@/app/api/improvements/route";
+import { disposeImprovement, handOutImprovement } from "@/actions/improvements";
 import { hashAgentKey } from "@/lib/agent-keys";
 import { IMPROVEMENT_REQUEST_MAX_BYTES } from "@/lib/domain/improvement";
 import { PATCH } from "@/app/api/improvements/[id]/route";
@@ -93,6 +99,7 @@ beforeEach(async () => {
   mocked.getDb.mockResolvedValue(testDb.db);
   mocked.apiViewer.mockReset();
   mocked.apiViewer.mockResolvedValue(viewer());
+  mocked.refresh.mockReset();
   mocked.env = { AGENT_API_KEY: AGENT_KEY };
   _resetRateLimitStoreForTest();
 });
@@ -263,10 +270,10 @@ describe("PATCH /api/improvements/[id]", () => {
 });
 
 /*
- * 一覧からのまとめ払い出しは、この入口を1件ずつ順番に呼ぶ。
+ * 一覧からのまとめ払い出しは、この Server Action を1件ずつ順番に呼ぶ。
  * つまり「いろいろなパターン」は、この1件ぶんの結果の並びとして現れる。
  */
-describe("PUT /api/improvements（払い出しの控え）", () => {
+describe("handOutImprovement（払い出しの控え）", () => {
   async function seed(status = "open") {
     await testDb.db.insert(s.improvementRequests).values({
       id: "improve_target",
@@ -283,36 +290,38 @@ describe("PUT /api/improvements（払い出しの控え）", () => {
     });
   }
 
-  function putRequest(id = "improve_target") {
-    return new Request("http://localhost/api/improvements", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
+  function handOut(id = "improve_target") {
+    return handOutImprovement({ id });
   }
 
-  const resultOf = async (response: Response) =>
-    ((await response.json()) as { result: { action: string; reason: string } }).result;
+  /** 成功した1件ぶんの結果。失敗（ok: false）ならその文言でテストを落とす。 */
+  const resultOf = async (pending: ReturnType<typeof handOut>) => {
+    const res = await pending;
+    if (!res.ok) throw new Error(`払い出せませんでした: ${res.message}`);
+    return res.result;
+  };
 
   const handouts = () => testDb.db.select().from(s.improvementHandouts);
 
   it("未払い出しなら控えを残し、対応中へ進める", async () => {
     await seed();
     mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
-    const result = await resultOf(await PUT(putRequest()));
+    const result = await resultOf(handOut());
 
     expect(result.action).toBe("handed");
     const row = (await handouts())[0];
     expect(row.contentFingerprint).not.toBe("");
     expect(row.handedOutAt).not.toBeNull();
     expect((await testDb.db.select().from(s.improvementRequests))[0].status).toBe("doing");
+    // 払い出せたら、一覧が新しくなるよう画面を描き直す
+    expect(mocked.refresh).toHaveBeenCalledTimes(1);
   });
 
   it("内容が変わっていなければ、二度目は何もしない", async () => {
     await seed();
     mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
-    await PUT(putRequest());
-    const again = await resultOf(await PUT(putRequest()));
+    await handOut();
+    const again = await resultOf(handOut());
 
     expect(again.action).toBe("skipped");
     expect(await handouts()).toHaveLength(1);
@@ -321,12 +330,12 @@ describe("PUT /api/improvements（払い出しの控え）", () => {
   it("渡したあとに内容が変わったら、払い出し直せる", async () => {
     await seed();
     mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
-    await PUT(putRequest());
+    await handOut();
     await testDb.db
       .update(s.improvementRequests)
       .set({ handledNote: "来週の版で直します" })
       .where(eq(s.improvementRequests.id, "improve_target"));
-    const result = await resultOf(await PUT(putRequest()));
+    const result = await resultOf(handOut());
 
     expect(result.action).toBe("rehanded");
     expect(await handouts()).toHaveLength(1);
@@ -351,7 +360,7 @@ describe("PUT /api/improvements（払い出しの控え）", () => {
     }
 
     const actions: string[] = [];
-    for (const id of ids) actions.push((await resultOf(await PUT(putRequest(id)))).action);
+    for (const id of ids) actions.push((await resultOf(handOut(id))).action);
 
     expect(actions.every((a) => a === "handed")).toBe(true);
     const rows = await handouts();
@@ -362,7 +371,7 @@ describe("PUT /api/improvements（払い出しの控え）", () => {
   it("同時に2回押されても、控えは1件にまとまる", async () => {
     await seed();
     mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN"));
-    await Promise.all([PUT(putRequest()), PUT(putRequest())]);
+    await Promise.all([handOut(), handOut()]);
 
     expect(await handouts()).toHaveLength(1);
   });
@@ -370,14 +379,16 @@ describe("PUT /api/improvements（払い出しの控え）", () => {
   it("会社の管理者は押せない", async () => {
     await seed();
     mocked.apiViewer.mockRejectedValue(new HttpError(403, "権限がありません。"));
-    expect((await PUT(putRequest())).status).toBe(403);
+    expect(await handOut()).toEqual({ ok: false, message: "権限がありません。" });
+    expect(mocked.apiViewer).toHaveBeenCalledWith("SUPER_ADMIN");
     expect(await handouts()).toHaveLength(0);
+    expect(mocked.refresh).not.toHaveBeenCalled();
   });
 
-  it("他社の要望は404にする", async () => {
+  it("他社の要望は見つからない扱いにする", async () => {
     await seed();
     mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN", "cmp_other"));
-    expect((await PUT(putRequest())).status).toBe(404);
+    expect(await handOut()).toEqual({ ok: false, message: "対象の要望が見つかりませんでした。" });
     expect(await handouts()).toHaveLength(0);
   });
 });
@@ -388,7 +399,7 @@ describe("PUT /api/improvements（払い出しの控え）", () => {
  * ここで守りたいのは「戻せること」。落とす操作そのものより、
  * 取り消しが効かなくなる壊れ方のほうが困る（依頼者の指摘、2026-08-15）。
  */
-describe("PUT /api/improvements（落とす・戻す）", () => {
+describe("disposeImprovement（落とす・戻す）", () => {
   async function seed(over: Record<string, unknown> = {}) {
     await testDb.db.insert(s.improvementRequests).values({
       id: "improve_target",
@@ -407,15 +418,15 @@ describe("PUT /api/improvements（落とす・戻す）", () => {
   }
 
   function act(body: Record<string, unknown>) {
-    return new Request("http://localhost/api/improvements", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id: "improve_target", ...body }),
-    });
+    return disposeImprovement({ id: "improve_target", ...body });
   }
 
-  const resultOf = async (response: Response) =>
-    ((await response.json()) as { result: { action: string; reason: string } }).result;
+  /** 成功した1件ぶんの結果。失敗（ok: false）ならその文言でテストを落とす。 */
+  const resultOf = async (pending: Promise<Awaited<ReturnType<typeof disposeImprovement>>>) => {
+    const res = await pending;
+    if (!res.ok) throw new Error(`操作できませんでした: ${res.message}`);
+    return res.result;
+  };
 
   const target = () =>
     testDb.db.select().from(s.improvementRequests).where(eq(s.improvementRequests.id, "improve_target"));
@@ -429,7 +440,7 @@ describe("PUT /api/improvements（落とす・戻す）", () => {
 
   it("廃棄しても行は消さず、印を立てるだけにする", async () => {
     await seed();
-    const result = await resultOf(await PUT(act({ action: "discard", reasonCode: "mistake" })));
+    const result = await resultOf(act({ action: "discard", reasonCode: "mistake" }));
 
     expect(result.action).toBe("discarded");
     const row = (await target())[0];
@@ -441,8 +452,8 @@ describe("PUT /api/improvements（落とす・戻す）", () => {
 
   it("廃棄を取り消すと、廃棄する前の状態に戻る", async () => {
     await seed();
-    await PUT(act({ action: "discard", reasonCode: "mistake" }));
-    const result = await resultOf(await PUT(act({ action: "restore" })));
+    await act({ action: "discard", reasonCode: "mistake" });
+    const result = await resultOf(act({ action: "restore" }));
 
     expect(result.action).toBe("restored");
     const row = (await target())[0];
@@ -454,23 +465,25 @@ describe("PUT /api/improvements（落とす・戻す）", () => {
 
   it("対応しないを取り消すと、落とす前の状態に戻る", async () => {
     await seed({ status: "open" });
-    await PUT(act({ action: "reject", reasonCode: "by-design" }));
+    await act({ action: "reject", reasonCode: "by-design" });
     expect((await target())[0].status).toBe("dropped");
 
-    const result = await resultOf(await PUT(act({ action: "restore" })));
+    const result = await resultOf(act({ action: "restore" }));
     expect(result.action).toBe("restored");
     expect((await target())[0].status).toBe("open");
   });
 
   it("戻すものが無ければ、何もしないと言って終わる", async () => {
     await seed();
-    expect((await resultOf(await PUT(act({ action: "restore" })))).action).toBe("skipped");
+    expect((await resultOf(act({ action: "restore" }))).action).toBe("skipped");
   });
 
   it("廃棄したものは、まとめ払い出しの対象から自動的に外れる", async () => {
     await seed();
-    await PUT(act({ action: "discard", reasonCode: "test" }));
-    const result = await resultOf(await PUT(act({ action: "handout" })));
+    await act({ action: "discard", reasonCode: "test" });
+    const handed = await handOutImprovement({ id: "improve_target" });
+    if (!handed.ok) throw new Error(handed.message);
+    const result = handed.result;
 
     expect(result.action).toBe("skipped");
     expect(result.reason).toContain("払い出しません");
@@ -479,35 +492,42 @@ describe("PUT /api/improvements（落とす・戻す）", () => {
 
   it("理由を選ばなければ落とせない（画面で隠すだけにしない）", async () => {
     await seed();
-    const response = await PUT(act({ action: "discard" }));
-
-    expect(response.status).toBe(400);
+    expect(await act({ action: "discard" })).toEqual({ ok: false, message: "落とす理由を選んでください。" });
     expect((await target())[0].discardedAt).toBeNull();
+    expect(mocked.refresh).not.toHaveBeenCalled();
   });
 
   it("「その他」を選んだのに書いていなければ落とせない", async () => {
     await seed();
-    expect((await PUT(act({ action: "reject", reasonCode: "other" }))).status).toBe(400);
+    expect(await act({ action: "reject", reasonCode: "other" })).toEqual({
+      ok: false,
+      message: "「その他」を選んだときは理由を書いてください。",
+    });
   });
 
   it("統合先が無い重複は受け付けない", async () => {
     await seed();
-    expect((await PUT(act({ action: "duplicate", reasonCode: "duplicate" }))).status).toBe(400);
+    expect(await act({ action: "duplicate", reasonCode: "duplicate" })).toEqual({
+      ok: false,
+      message: "統合先の要望を選んでください。",
+    });
   });
 
   it("会社の管理者は落とせない（要望が見えなくなる操作のため）", async () => {
     await seed();
     mocked.apiViewer.mockRejectedValue(new HttpError(403, "権限がありません。"));
-    const response = await PUT(act({ action: "discard", reasonCode: "mistake" }));
-
-    expect(response.status).toBe(403);
+    expect(await act({ action: "discard", reasonCode: "mistake" })).toEqual({ ok: false, message: "権限がありません。" });
+    expect(mocked.apiViewer).toHaveBeenCalledWith("SUPER_ADMIN");
     expect((await target())[0].discardedAt).toBeNull();
   });
 
-  it("他社の要望は404にする", async () => {
+  it("他社の要望は見つからない扱いにする", async () => {
     await seed();
     mocked.apiViewer.mockResolvedValue(viewer("SUPER_ADMIN", "cmp_other"));
-    expect((await PUT(act({ action: "discard", reasonCode: "mistake" }))).status).toBe(404);
+    expect(await act({ action: "discard", reasonCode: "mistake" })).toEqual({
+      ok: false,
+      message: "対象の要望が見つかりませんでした。",
+    });
   });
 });
 
@@ -602,7 +622,7 @@ describe("GET /api/improvements（作業指示の払い出し）", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/markdown");
-    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("cache-control")).toBe(API_CACHE_CONTROL);
     expect(text).toContain("improve_target");
     expect(text).toContain("社員");
     // 一覧には技術情報も本文の全文も出さない
@@ -619,6 +639,19 @@ describe("GET /api/improvements（作業指示の払い出し）", () => {
     expect(byHeader.headers.get("content-type")).toContain("application/json");
     expect(body.count).toBe(1);
     expect(body.items[0]).toMatchObject({ id: "improve_target", handedOut: false });
+  });
+
+  it("どの返し方でも、途中の共有キャッシュに中身を残させない", async () => {
+    await seed();
+    const responses = [
+      await GET(withKey("?id=improve_target")),
+      await GET(withKey("?format=json")),
+      await GET(withKey("?id=improve_target&format=json")),
+      await GET(get("?id=improve_target")),
+    ];
+
+    expect(responses.map((r) => r.status)).toEqual([200, 200, 200, 401]);
+    for (const response of responses) expect(response.headers.get("cache-control")).toBe(API_CACHE_CONTROL);
   });
 
   it("1件を取ると、伏せ字ずみの技術情報を含む指示文が返る", async () => {

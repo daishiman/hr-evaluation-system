@@ -43,8 +43,8 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
   it("基準セットは会社の設定を正本にし、コードに固定しない", () => {
     const page = read("src/app/admin/behavior/page.tsx");
     const domain = read("src/lib/domain/behavior.ts");
-    const bodySchema = read("src/app/api/masters/body-schema.ts");
-    const apply = read("src/app/api/masters/apply-master-update.ts");
+    const bodySchema = read("src/lib/masters/body-schema.ts");
+    const apply = read("src/lib/masters/apply-master-update.ts");
 
     // 選べる基準は DB（behavior_band_sets）から来る。定数の総当たりに戻さない。
     expect(page).toContain("listBehaviorBandSets(companyId)");
@@ -58,8 +58,8 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
   });
 
   it("基準セットの操作は必ず自社の中だけで解決する", () => {
-    const route = read("src/app/api/masters/apply-master-update.ts");
-    const apply = read("src/app/api/masters/apply-behavior-master-update.ts");
+    const route = read("src/lib/masters/apply-master-update.ts");
+    const apply = read("src/lib/masters/apply-behavior-master-update.ts");
     expect(route).toContain("applyBehaviorMasterUpdate");
 
     /* 会社の基準を一度だけ読み、その中から id / code を探す形にしている。
@@ -74,7 +74,7 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
   });
 
   it("使用中の基準セットは止められず、消すのは一度も使っていないものだけ", () => {
-    const apply = read("src/app/api/masters/apply-behavior-master-update.ts");
+    const apply = read("src/lib/masters/apply-behavior-master-update.ts");
     const setEditor = read("src/components/BehaviorBandSetEditor.tsx");
 
     /* 2026-08-12、1文40文字の決まりに合わせて2文に割った。中身（どこを直すか・そのあと何ができるか）は同じ。 */
@@ -133,7 +133,7 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
        名前を含む文はサーバーの返事（bandSetBlockedReason）に残してある。 */
     expect(setEditor).toContain("BAND_SET_ASSIGNED_NEXT");
     expect(setEditor).toContain("usedByGradeNames");
-    expect(read("src/app/api/masters/delete-master-item.ts")).toContain("bandSetBlockedReason");
+    expect(read("src/lib/masters/delete-master-item.ts")).toContain("bandSetBlockedReason");
     expect(setEditor).toContain("DELETE_LABEL");
     // 「使わない」「もう一度使う」は消さずに残す（消すのはそれに加えた3つ目の選択肢）
     expect(guidelineEditor).toContain("使わない");

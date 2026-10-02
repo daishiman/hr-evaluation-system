@@ -41,6 +41,19 @@ const nextConfig: NextConfig = {
    * 外部パッケージとして1つだけ持たせる。
    */
   serverExternalPackages: ["better-auth", "@better-auth/core", "@better-auth/utils", "drizzle-orm"],
+  experimental: {
+    serverActions: {
+      /**
+       * 画面からの保存（Server Action）が1回に受け取る本文の上限。既定は1MB。
+       *
+       * CSVの貼り付け取込は最大200万文字まで受け付けている（日本語なら1文字3バイト）。
+       * 画面の改善要望はスクリーンショット1枚（960KB）を送る。どちらも既定の1MBを
+       * 超えうるので、ここで広げる。個々の操作はさらに小さい上限を持つ
+       * （src/lib/action.ts の maxBytes と、各入力の zod の max）。
+       */
+      bodySizeLimit: "8mb",
+    },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

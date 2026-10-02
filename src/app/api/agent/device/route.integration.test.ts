@@ -16,8 +16,12 @@ import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
 const mocked = vi.hoisted(() => ({
   apiViewer: vi.fn(),
   getDb: vi.fn(),
+  refresh: vi.fn(),
   env: {} as Record<string, unknown>,
 }));
+
+// 画面の「通す／止める」は Server Action。成功すると画面を描き直す（refresh）ので、ここでは空にする。
+vi.mock("next/cache", () => ({ refresh: mocked.refresh }));
 
 vi.mock("@/lib/session", async () => ({
   ...(await vi.importActual<typeof import("@/lib/session")>("@/lib/session")),
@@ -35,9 +39,9 @@ vi.mock("@opennextjs/cloudflare", () => ({
 
 import { POST as startDevice, PUT as redeemDevice } from "@/app/api/agent/device/route";
 import { POST as exchangeToken } from "@/app/api/agent/token/route";
-import { DELETE as stopSession, POST as decide } from "@/app/api/agent-keys/approve/route";
+import { approveDevice, revokeAgentSession } from "@/actions/agent-keys";
 import { GET as readImprovements } from "@/app/api/improvements/route";
-import { formatUserCode } from "@/lib/domain/agent-device";
+import { DEVICE_APPROVED_MESSAGE, DEVICE_EXPIRED_MESSAGE, formatUserCode } from "@/lib/domain/agent-device";
 
 let testDb: TestDatabase;
 
@@ -92,13 +96,12 @@ async function redeem(deviceCode: string) {
 
 /** 画面の「通す／通さない」を押すのと同じ経路。 */
 function decideCode(userCode: string, approve: boolean) {
-  return decide(
-    new Request("http://localhost/api/agent-keys/approve", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ userCode, approve }),
-    }),
-  );
+  return approveDevice({ userCode, approve });
+}
+
+/** 画面の「この端末を止める」を押すのと同じ経路。 */
+function stopSession(id: string) {
+  return revokeAgentSession({ id });
 }
 
 /** 通行証で改善要望を読みにいく。 */
@@ -113,7 +116,7 @@ function fetchWith(token: string | null) {
 /** 承認まで済ませて、通行証を引き取った状態にする。 */
 async function approvedTokens(label = "開発機") {
   const grant = await start(label);
-  expect((await decideCode(grant.userCode, true)).status).toBe(200);
+  expect(await decideCode(grant.userCode, true)).toEqual({ ok: true, message: DEVICE_APPROVED_MESSAGE });
   const taken = await redeem(grant.deviceCode);
   expect(taken.state).toBe("approved");
   return { grant, access: taken.accessToken!, refresh: taken.refreshToken! };
@@ -184,8 +187,8 @@ describe("承認を待つ", () => {
 
   it("断られた合言葉では、あとから承認しても通らない", async () => {
     const grant = await start();
-    expect((await decideCode(grant.userCode, false)).status).toBe(200);
-    expect((await decideCode(grant.userCode, true)).status).toBe(400);
+    expect(await decideCode(grant.userCode, false)).toEqual({ ok: true, message: "この端末は通しませんでした。" });
+    expect(await decideCode(grant.userCode, true)).toEqual({ ok: false, message: DEVICE_EXPIRED_MESSAGE });
     expect((await redeem(grant.deviceCode)).state).toBe("denied");
   });
 
@@ -205,7 +208,7 @@ describe("承認を待つ", () => {
     const { HttpError } = await import("@/lib/session");
     mocked.apiViewer.mockRejectedValue(new HttpError(403, "権限がありません。"));
 
-    expect((await decideCode(grant.userCode, true)).status).toBe(403);
+    expect(await decideCode(grant.userCode, true)).toEqual({ ok: false, message: "権限がありません。" });
     expect((await redeem(grant.deviceCode)).state).toBe("pending");
   });
 });
@@ -217,6 +220,19 @@ describe("通行証を引き取る", () => {
 
     expect(second.state).toBe("taken");
     expect(second.refreshToken).toBeUndefined();
+    expect(await testDb.db.select().from(s.agentSessions)).toHaveLength(1);
+  });
+
+  it("同時に引き取っても、通行証は1本だけ", async () => {
+    const grant = await start();
+    expect(await decideCode(grant.userCode, true)).toEqual({ ok: true, message: DEVICE_APPROVED_MESSAGE });
+
+    // 両方とも「まだ引き取られていない」を読んだあとで書きにいく形を作る。
+    const results = await Promise.all([redeem(grant.deviceCode), redeem(grant.deviceCode)]);
+    const states = results.map((r) => r.state).sort();
+
+    expect(states).toEqual(["approved", "taken"]);
+    // 後から来た方が足した行は消えている。引き取れた1本だけが残る。
     expect(await testDb.db.select().from(s.agentSessions)).toHaveLength(1);
   });
 
@@ -281,10 +297,8 @@ describe("通行証で読む", () => {
     const { access, refresh } = await approvedTokens();
     const id = (await testDb.db.select().from(s.agentSessions))[0].id;
 
-    const stopped = await stopSession(
-      new Request(`http://localhost/api/agent-keys/approve?id=${id}`, { method: "DELETE" }),
-    );
-    expect(stopped.status).toBe(200);
+    const stopped = await stopSession(id);
+    expect(stopped).toEqual({ ok: true, message: "この端末からの受け取りを止めました。" });
     expect((await fetchWith(access)).status).toBe(401);
 
     // 取り直しの道も同時に閉じる（片方だけ閉じても止めたことにならない）

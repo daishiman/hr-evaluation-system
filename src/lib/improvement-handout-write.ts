@@ -47,17 +47,10 @@ function headline(body: string): string {
 }
 
 /**
- * 履歴を積み、あふれた古い行を落とす。
- *
- * 上限は「1件の要望につき何行残すか」で決める。全体の行数で切ると、
- * よく直す要望の履歴が、無関係な要望の増加で消えることになる。
+ * 履歴を1行積む文。実行は recordHandout の batch に任せ、控えの更新と同時に書く。
  */
-async function pushHistory(
-  db: DB,
-  requestId: string,
-  source: HandoutSource,
-): Promise<void> {
-  await db.insert(s.improvementHandoutEvents).values({
+function historyRow(db: DB, requestId: string, source: HandoutSource) {
+  return db.insert(s.improvementHandoutEvents).values({
     id: newId("ihe"),
     requestId,
     via: source.via,
@@ -65,7 +58,18 @@ async function pushHistory(
     keyLabel: source.via === "api" ? source.keyLabel : null,
     actorId: source.via === "screen" ? source.actorId : null,
   });
+}
 
+/**
+ * あふれた古い履歴を落とす。
+ *
+ * 上限は「1件の要望につき何行残すか」で決める。全体の行数で切ると、
+ * よく直す要望の履歴が、無関係な要望の増加で消えることになる。
+ *
+ * 積むのとは別の書き込みにしてある。ここで止まっても、古い行が一時的に
+ * 多く残るだけで、控え・履歴・状態の食い違いは生まれない（次の払い出しで落ちる）。
+ */
+async function trimHistory(db: DB, requestId: string): Promise<void> {
   const stale = await db
     .select({ id: s.improvementHandoutEvents.id })
     .from(s.improvementHandoutEvents)
@@ -103,7 +107,7 @@ export async function recordHandout(
   const now = new Date();
   const byId = source.via === "screen" ? source.actorId : null;
 
-  await db
+  const handout = db
     .insert(s.improvementHandouts)
     .values({
       requestId: item.id,
@@ -123,15 +127,22 @@ export async function recordHandout(
       },
     });
 
-  await pushHistory(db, item.id, source);
+  const history = historyRow(db, item.id, source);
 
-  // 未対応のまま置き去りにしないよう、渡した時点で「対応中」へ進める。
+  // 控え・履歴・状態の3つは1回の batch で書く。
+  // 途中で止まると「控えはあるのに未対応のまま」や「履歴だけ増えた」が残る。
   if (item.status === "open") {
-    await db
+    // 未対応のまま置き去りにしないよう、渡した時点で「対応中」へ進める。
+    const advance = db
       .update(s.improvementRequests)
       .set(byId ? { status: "doing", handledById: byId } : { status: "doing" })
       .where(and(eq(s.improvementRequests.id, item.id), eq(s.improvementRequests.status, "open")));
+    await db.batch([handout, history, advance]);
+  } else {
+    await db.batch([handout, history]);
   }
+
+  await trimHistory(db, item.id);
 }
 
 /**

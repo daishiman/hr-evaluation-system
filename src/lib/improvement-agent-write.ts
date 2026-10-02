@@ -103,30 +103,32 @@ export async function applyAgentResult(
   // レビュー待ちかどうかは status ではなく review_ref で表す（→ improvementDisplayState）。
   const to: ImprovementStatus = input.result === "done" ? "done" : "doing";
 
-  await db
-    .update(s.improvementRequests)
-    .set({
-      status: to,
-      handledNote: note,
-      // 確認依頼の場所は、取り込まれたあとも消さない。どの依頼で直ったかを詳細画面で読む。
-      ...(input.result === "review" ? { reviewRef: detail, reviewedAt: new Date() } : {}),
-    })
-    .where(and(eq(s.improvementRequests.id, id), eq(s.improvementRequests.companyId, row.companyId)));
-
-  await db.insert(s.improvementStatusEvents).values({
-    id: newId("ise"),
-    requestId: id,
-    action: agentResultAction(input.result),
-    fromStatus: from,
-    toStatus: to,
-    reasonCode: null,
-    reason: note,
-    // 人ではなく鍵が変えたので、押した人は入らない。代わりに鍵を残す。
-    actorId: null,
-    keyId: caller.keyId,
-    keyLabel: caller.keyLabel,
-    releaseRef: input.result === "failed" ? null : detail,
-  });
+  // 状態と経緯は1回の batch で書く。途中で止まると「状態だけ変わって経緯が無い」が残る。
+  await db.batch([
+    db
+      .update(s.improvementRequests)
+      .set({
+        status: to,
+        handledNote: note,
+        // 確認依頼の場所は、取り込まれたあとも消さない。どの依頼で直ったかを詳細画面で読む。
+        ...(input.result === "review" ? { reviewRef: detail, reviewedAt: new Date() } : {}),
+      })
+      .where(and(eq(s.improvementRequests.id, id), eq(s.improvementRequests.companyId, row.companyId))),
+    db.insert(s.improvementStatusEvents).values({
+      id: newId("ise"),
+      requestId: id,
+      action: agentResultAction(input.result),
+      fromStatus: from,
+      toStatus: to,
+      reasonCode: null,
+      reason: note,
+      // 人ではなく鍵が変えたので、押した人は入らない。代わりに鍵を残す。
+      actorId: null,
+      keyId: caller.keyId,
+      keyLabel: caller.keyLabel,
+      releaseRef: input.result === "failed" ? null : detail,
+    }),
+  ]);
 
   return { id, status: to, message: RESULT_MESSAGE[input.result] };
 }

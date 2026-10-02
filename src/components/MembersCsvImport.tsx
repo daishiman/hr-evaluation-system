@@ -1,7 +1,8 @@
 "use client";
 
-import { useRefreshAfterSave } from "@/lib/use-refresh";
 import { useState } from "react";
+import { importMembers, previewMembersImport } from "@/actions/member-import";
+import { useReadAction, useSaveAction } from "@/lib/use-refresh";
 import { Button, Card, ReasonNote } from "@/components/ui";
 import { DetailDialogButton } from "@/components/ConfirmButton";
 import { DataTable } from "@/components/DataTable";
@@ -61,14 +62,15 @@ const CSV_COLUMNS = [
  * 読み切るものなので窓に畳む（発注者の指摘、2026-08-12。消さずに置き場所を変える）。
  */
 export function MembersCsvImport() {
-  const { refresh, refreshing } = useRefreshAfterSave();
+  const { save, saving } = useSaveAction(importMembers, { resource: "members" });
+  const { read: preview, reading } = useReadAction(previewMembersImport, { resource: "members" });
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<MemberRowResult[] | null>(null);
   const [credentials, setCredentials] = useState<IssuedMemberCredential[]>([]);
+  const [memoStored, setMemoStored] = useState(false);
   const [checked, setChecked] = useState(false);
 
   const reset = () => {
@@ -83,38 +85,19 @@ export function MembersCsvImport() {
       setError("取り込む内容がありません。ファイルを選ぶか、表を貼り付けてください。");
       return;
     }
-    setBusy(true);
     setMessage(null);
     setError(null);
-    try {
-      const res = await fetch("/api/import/members", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          csv: text,
-          dryRun,
-        }),
-      });
-      const data = (await res.json()) as {
-        ok: boolean;
-        message?: string;
-        rows?: MemberRowResult[];
-        credentials?: IssuedMemberCredential[];
-      };
-      if (!res.ok || !data.ok) {
-        setError(data.message ?? "取り込みできませんでした。");
-        return;
-      }
-      setMessage(data.message ?? "取り込みました。");
-      setRows(data.rows ?? []);
-      setCredentials(dryRun ? [] : (data.credentials ?? []));
-      setChecked(dryRun);
-      if (!dryRun) refresh();
-    } catch {
-      setError("通信できませんでした。時間をおいてもう一度お試しください。");
-    } finally {
-      setBusy(false);
+    // 保存の応答には取り込み後の社員一覧が同梱される（サーバー側の refresh()）
+    const result = dryRun ? await preview({ csv: text }) : await save({ csv: text });
+    if (!result.ok) {
+      setError(result.message);
+      return;
     }
+    setMessage(result.message);
+    setRows(result.rows);
+    setCredentials(dryRun ? [] : result.credentials);
+    setMemoStored(!dryRun && result.memoStored);
+    setChecked(dryRun);
   };
 
   return (
@@ -148,7 +131,7 @@ export function MembersCsvImport() {
             type="file"
             accept=".csv,text/csv"
             className="mt-1 block w-full text-sub font-normal"
-            disabled={busy || refreshing}
+            disabled={saving || reading}
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
@@ -166,7 +149,7 @@ export function MembersCsvImport() {
             className="input mt-1 w-full font-mono text-note"
             rows={4}
             value={text}
-            disabled={busy || refreshing}
+            disabled={saving || reading}
             onChange={(e) => {
               setText(e.target.value);
               setFileName(null);
@@ -182,11 +165,11 @@ export function MembersCsvImport() {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Button variant="tertiary" onClick={() => run(true)} disabled={busy || refreshing}>
+        <Button variant="tertiary" onClick={() => run(true)} disabled={saving || reading}>
           まず内容を確認する
         </Button>
-        <Button onClick={() => run(false)} disabled={busy || refreshing}>
-          {busy ? "処理しています…" : refreshing ? "一覧に反映しています…" : "この内容を取り込む"}
+        <Button onClick={() => run(false)} disabled={saving || reading}>
+          {saving ? "取り込んでいます…" : reading ? "確認しています…" : "この内容を取り込む"}
         </Button>
       </div>
 
@@ -195,15 +178,17 @@ export function MembersCsvImport() {
           <ReasonNote>{error}</ReasonNote>
         </div>
       )}
-      <RefreshStatus message={message} refreshing={refreshing} className="mt-3 m-0 text-sub font-bold" />
+      <RefreshStatus message={message} refreshing={saving} className="mt-3 m-0 text-sub font-bold" />
 
       {credentials.length > 0 && (
         <div className="mt-3">
           <ReasonNote>
-            仮パスワードは今回だけ表示します。この画面を離れる前に一覧を保存し、それぞれご本人へ安全な方法でお伝えください。
+            {memoStored
+              ? "この一覧は今回だけ表示します。控えは社員一覧の各行から開けます。"
+              : "仮パスワードは今回だけ表示します。この画面を離れる前に一覧を保存し、それぞれご本人へ安全な方法でお伝えください。"}
           </ReasonNote>
           <div className="mt-2">
-            <Button type="button" variant="tertiary" disabled={refreshing} onClick={() => downloadCredentials(credentials)}>
+            <Button type="button" variant="tertiary" disabled={saving} onClick={() => downloadCredentials(credentials)}>
               仮パスワード一覧を保存する
             </Button>
           </div>

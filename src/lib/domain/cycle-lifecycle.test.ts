@@ -28,8 +28,8 @@ describe("評価期間の状態遷移", () => {
   });
 });
 
-describe("評価期間APIへの状態契約の配線", () => {
-  const route = readFileSync(new URL("../../app/api/cycles/route.ts", import.meta.url), "utf8");
+describe("評価期間の操作への状態契約の配線", () => {
+  const route = readFileSync(new URL("../../actions/cycles.ts", import.meta.url), "utf8");
 
   it("openへ移す前に同じ会社の別のopen期間を拒否する", () => {
     expect(route).toContain("別の評価期間が受付中です");
