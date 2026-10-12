@@ -78,5 +78,9 @@ export function recordAppliedThemeChoice(): void {
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&
     window.matchMedia("(prefers-color-scheme: dark)").matches;
-  sink(appliedChoice(document.documentElement.dataset, prefersDark));
+  try {
+    sink(appliedChoice(document.documentElement.dataset, prefersDark));
+  } catch {
+    // 差し替えた送信先の同期エラーも、外観の操作や初回表示へ返さない。
+  }
 }

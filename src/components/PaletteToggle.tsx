@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { ChoiceChip } from "@/components/ui";
 import {
@@ -13,7 +12,7 @@ import {
   storedPalette,
   type Palette,
 } from "@/lib/palette";
-import { recordAppliedThemeChoice } from "@/lib/theme-usage";
+import { useAppearanceChoice } from "@/lib/use-appearance-choice";
 
 /**
  * 配色（色の系統）の切り替え。
@@ -26,40 +25,14 @@ import { recordAppliedThemeChoice } from "@/lib/theme-usage";
  * 明るさ（自動・明るい・暗い）とは独立している。
  * どちらを変えても、もう片方の選択はそのまま残る。
  */
-function applyPalette(palette: Palette) {
-  const root = document.documentElement;
-  const explicit = explicitPalette(palette);
-  if (explicit === null) delete root.dataset.palette;
-  else root.dataset.palette = explicit;
-}
-
 export function PaletteToggle() {
-  /* 初期値は既定の系統。保存されている値は下の useEffect で読み直す
-     （サーバーには localStorage が無いので、ここで読むと表示がずれる）。 */
-  const [palette, setPalette] = useState<Palette>(DEFAULT_PALETTE);
-
-  useEffect(() => {
-    try {
-      setPalette(storedPalette(localStorage.getItem(PALETTE_STORAGE_KEY)));
-    } catch {
-      /* 保存できない設定の端末では、毎回いつもの配色から始める */
-    }
-  }, []);
-
-  function choose(next: Palette) {
-    // 選択中の札を押し直しても、保存や計測を繰り返さない。
-    if (next === palette) return;
-    setPalette(next);
-    applyPalette(next);
-    try {
-      if (next === DEFAULT_PALETTE) localStorage.removeItem(PALETTE_STORAGE_KEY);
-      else localStorage.setItem(PALETTE_STORAGE_KEY, next);
-    } catch {
-      /* 保存できなくても、この画面の間は選んだ配色のまま使える */
-    }
-    // 見た目を変えてから数える。数えられなくても画面は変わっている。
-    recordAppliedThemeChoice();
-  }
+  const { value: palette, choose } = useAppearanceChoice<Palette>({
+    attribute: "palette",
+    storageKey: PALETTE_STORAGE_KEY,
+    defaultValue: DEFAULT_PALETTE,
+    stored: storedPalette,
+    explicit: explicitPalette,
+  });
 
   return (
     <div className="palette-choices" role="group" aria-label="画面の配色">
