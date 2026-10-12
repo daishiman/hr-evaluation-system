@@ -97,6 +97,8 @@ drizzle/.grade-schemes.sql
 drizzle/sample*.sql
 drizzle/.sample*.sql
 
-# エージェントのフックがこの端末に残す記録（外部変更ガードの受領書・フックの待ち行列）。共有しない
+# エージェントとツールがこの端末に残す記録（外部変更ガードの受領書・フックの待ち行列・
+# dev-graph の状態とキャッシュ）。共有しない。dev-graph の正本は tasks/ features/ などの文書側にある
 .artifact-delivery/
+.dev-graph/
 eval-log/

@@ -15,7 +15,7 @@
 5. どこからも読み込まれていないアプリ内の写し（`src/lib/ux-patterns.tsx`）は置かない。必要になったらキットの `ux-design/assets/ux-patterns.tsx` から、その時点の原本を写す。
 6. 製品仕様の MANAGER は「本人と直属メンバーの閲覧、直属メンバーの評価の作成・確定、自社の評価基準の閲覧」。権限の正本は `system-spec/routes-and-access.md` で、今回は範囲を変えず説明だけを合わせる。
 7. README の使い方は利用者向けの短い入口にとどめ、権限と判定条件は正本へのリンクにする。
-8. `.beads/` の設定は共有し、beads のデータベース本体と、端末だけの記録（`.artifact-delivery/`・`eval-log/`）は共有しない。
+8. `.beads/` の設定は共有し、beads のデータベース本体と、端末だけの記録（`.artifact-delivery/`・`.dev-graph/`・`eval-log/`）は共有しない。
 
 ## 非決定 / 残すもの
 

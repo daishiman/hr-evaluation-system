@@ -20,7 +20,7 @@
 3. `src/lib/ux-patterns.tsx` を読み込む箇所が無く、削除しても型検査とテストが通る
 4. マネージャーのホームの文言と製品仕様の MANAGER 行が、`system-spec/routes-and-access.md` の範囲と一致する
 5. SECURITY-013 が backlog にあり、README が権限と判定条件を再掲せず正本へリンクする
-6. `.artifact-delivery/` と `eval-log/` が git の対象外で、`.beads/` のデータベース本体も対象外のまま
+6. `.artifact-delivery/`・`.dev-graph/`・`eval-log/` が git の対象外で、`.beads/` のデータベース本体も対象外のまま
 7. system-spec / architecture / feature / spec / task / 受領書 / beads が同じ決定を指す
 
 ## 担当範囲
