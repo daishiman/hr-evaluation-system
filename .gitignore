@@ -96,3 +96,7 @@ drizzle/.grade-schemes.sql
 # サンプルデータの投入・削除SQL（実行のたびに作り直す。パスワードのハッシュを含むため残さない）
 drizzle/sample*.sql
 drizzle/.sample*.sql
+
+# エージェントのフックがこの端末に残す記録（外部変更ガードの受領書・フックの待ち行列）。共有しない
+.artifact-delivery/
+eval-log/
