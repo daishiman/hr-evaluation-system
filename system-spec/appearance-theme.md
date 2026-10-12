@@ -1,9 +1,9 @@
 # 画面の外観（明るさ・配色） — システム仕様
 
-- graph_node_id: `chore-aidd-kit-1-11-indigo-default`
-- beads: `hr-fo1`
+- graph_node_id: `chore-aidd-kit-1-11-indigo-default`（§3「選ぶ側」「送る側」は `refactor-elegant-review-2026-09-29` で更新）
+- beads: `hr-fo1` / `hr-s4s`
 - 正本（製品）: `docs/product/spec.md`「テーマ契約（全画面共通）」「配色（テーマの系統）」 / 判断: `docs/product/design-decisions.md` DD-003
-- 実装入口: `src/lib/theme.ts` / `src/lib/palette.ts` / `src/lib/theme-preferences.ts` / `src/app/api/theme-choice/route.ts`
+- 実装入口: `src/lib/theme.ts` / `src/lib/palette.ts` / `src/lib/use-appearance-choice.ts` / `src/lib/theme-preferences.ts` / `src/app/api/theme-choice/route.ts`
 
 ## 1. 値の集合
 
@@ -32,7 +32,8 @@
 | 行 | 利用者ごとに1行（主キーは `user_id`。利用者が消えると連動して消える） |
 | 書き込み | `PUT /api/theme-choice`。ログインしていれば全ロールで可。未認証は 401。利用者IDは検証済みのセッションだけから取り、本文の余分なキーは受け付けない（`.strict()`）。不正な値と明暗の矛盾は 400 |
 | 同じ値 | 同じ組み合わせを再び送っても、行も `updated_at` も変えない（`upsertThemePreference` の `setWhere`） |
-| 送る側 | `recordAppliedThemeChoice` は `html` の属性を正本として読み、応答を待たずに送る。送信に失敗しても画面の切り替えは止めない |
+| 選ぶ側 | 明るさ（`ThemeToggle`）と系統（`PaletteToggle`）は、共通の `useAppearanceChoice` で属性・保存値・記録を扱う。今と同じ値を選び直しても、属性・保存値は変えず、記録も送らない。許可値と既定は各軸（`theme.ts` / `palette.ts`）が持つ |
+| 送る側 | `recordAppliedThemeChoice` は `html` の属性を正本として読み、応答を待たずに送る。送信に失敗しても（送信先が同期的に例外を投げた場合を含む）画面の切り替えは止めない |
 | 読み取り | `GET /api/theme-choice` は SUPER_ADMIN のみ（それ以外は 403）。有効な利用者の人数・割合・計測母数・カバー率だけを返し、個人を識別できる値は返さない。`/system` の「配色の利用状況」も同じ `readThemePreferenceUsage` を使う |
 | 旧表 | `theme_choice_counts` は過去データとして残すが、今の人気の判定には使わない |
 
@@ -56,6 +57,8 @@
 | 0030 が既存の行を残し、`indigo` を保存できる | `src/db/theme-palette-migration.test.ts` |
 | 全系統を保存できる（DB の許可値が `PALETTES` と一致）、1人1行、同じ値では更新しない、集計 | `src/lib/theme-preferences.integration.test.ts` |
 | 401 / 403 / 400、本文の利用者IDを無視する、個人データを返さない | `src/app/api/theme-choice/route.test.ts` |
+| 同じ値の再選択では何も変えない、保存できない端末でも切り替わる、既定へ戻すと保存値を消す | `src/lib/use-appearance-choice.test.ts` |
+| 送信先が同期的に例外を投げても外へ出さない | `src/lib/theme-usage.test.ts` |
 | 骨格18個に過不足がない、全系統×明暗で AA | `src/components/palette-contract.test.ts` |
 | 明暗・端末追従・印刷・コントラスト強調 | `src/components/theme-contract.test.ts` |
 | キットの判定が `report-only`、2か所の宣言、`src` がキットの CSS を読み込まない | `scripts/aidd-kit-boundary.test.mjs` |
