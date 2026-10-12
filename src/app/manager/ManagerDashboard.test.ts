@@ -41,7 +41,7 @@ describe("ManagerDashboard", () => {
     expect(html).toContain('aria-label="チームの提出 2中 1"');
     expect(html).toContain("メンバー別の状況を見る");
     expect(html.indexOf("次にやること")).toBeLessThan(html.indexOf("担当チームの状況"));
-    expect(html).toContain("メンバー（全社員）");
+    expect(html).toContain("メンバーの一覧");
     expect(html).not.toContain("確認待ち");
     // 自分の未提出アンケートが無いときは、余計な見出しを出さない
     expect(html).not.toContain("自分の未提出アンケート");

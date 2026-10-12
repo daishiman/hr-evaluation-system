@@ -45,7 +45,7 @@ export function DownloadButton({
  *
  * 「選ぶ」の見た目は3つだけ。用途で使い分け、画面ごとに書き起こさない。
  *
- *   Segmented   … 2〜3個から1つ。選んだものがそのまま状態表示になる（設定・表示切替）
+ *   Segmented   … 2〜4個から1つ。選んだものがそのまま状態表示になる（設定・表示切替）
  *   ChoiceChip  … 短い語の選択肢を横に並べる（はい/いいえ・段階・期間の絞り込み）
  *   OptionCard  … 名前＋補足の2行を持つ、縦に積む選択肢（評価項目・回答の選択肢）
  *
@@ -56,7 +56,7 @@ export function DownloadButton({
 /**
  * 並べて1つ選ぶスイッチ。
  *
- * 選択肢は2〜3個まで。それ以上は ChoiceChip か通常の選択欄にする
+ * 選択肢は2〜4個まで。それ以上は ChoiceChip か通常の選択欄にする
  * （横に伸びて狭い画面からはみ出す）。
  */
 export function Segmented<T extends string>({

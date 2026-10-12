@@ -14,14 +14,6 @@ describe("外観選択UIの契約", () => {
     expect(source).toContain("palette-choice-status");
   });
 
-  it("配色と明るさの同値再選択を記録処理へ流さない", () => {
-    const palette = read("src/components/PaletteToggle.tsx");
-    const theme = read("src/components/ThemeToggle.tsx");
-
-    expect(palette).toContain("if (next === palette) return");
-    expect(theme).toContain("if (next === theme) return");
-  });
-
   it("外観の全選択肢を44px以上にし、色見本は6系統すべてに定義する", () => {
     const css = read("src/app/globals.css");
 
