@@ -96,3 +96,9 @@ drizzle/.grade-schemes.sql
 # サンプルデータの投入・削除SQL（実行のたびに作り直す。パスワードのハッシュを含むため残さない）
 drizzle/sample*.sql
 drizzle/.sample*.sql
+
+# エージェントとツールがこの端末に残す記録（外部変更ガードの受領書・フックの待ち行列・
+# dev-graph の状態とキャッシュ）。共有しない。dev-graph の正本は tasks/ features/ などの文書側にある
+.artifact-delivery/
+.dev-graph/
+eval-log/

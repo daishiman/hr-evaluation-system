@@ -1,7 +1,7 @@
 # アーキテクチャ: 画面の外観と開発キットの境界
 
-- graph_node_id: `chore-aidd-kit-1-11-indigo-default`
-- beads: `hr-fo1`
+- graph_node_id: `chore-aidd-kit-1-11-indigo-default`（「切り替えと記録」と設計判断4・7は `refactor-elegant-review-2026-09-29` で更新）
+- beads: `hr-fo1` / `hr-s4s`
 
 ## 層分け
 
@@ -19,8 +19,10 @@
         │
         ▼
 [切り替えと記録]
-  ThemeToggle / PaletteToggle / AccountMenu
-    → recordAppliedThemeChoice（html の属性を読み、送りっぱなし）
+  ThemeToggle / PaletteToggle（値の契約と表示は各軸が持つ）
+    → useAppearanceChoice（属性の付け外し・保存値・同じ値の無視）
+  useAppearanceChoice（選択時）と AccountMenu（表示時・自動モードで端末の明暗が変わったとき）
+    → recordAppliedThemeChoice（html の属性を読み、送りっぱなし。送信先の例外も外へ出さない）
     → PUT /api/theme-choice（セッションの利用者ID）
         │
         ▼
@@ -57,7 +59,7 @@ aidd-agent-kit/（編集元。配布元のものを丸ごと置き換える）
 
 ### 4. 記録は見た目の切り替えから切り離す
 
-`theme-usage.ts` を1枚挟んで、切り替えの部品は送信先を知らないようにした。記録に失敗しても色は変わる。送信先を差し替えるときは `setThemeChoiceSink` だけを変えればよい。
+`theme-usage.ts` を1枚挟んで、切り替えの部品は送信先を知らないようにした。記録に失敗しても色は変わる。送信先を差し替えるときは `setThemeChoiceSink` だけを変えればよい。差し替えた送信先が同期的に例外を投げても、`recordAppliedThemeChoice` の中で止め、切り替えや初回表示へ返さない。
 
 ### 5. キットの配色は「値として取り込む」だけにする
 
@@ -66,6 +68,10 @@ aidd-agent-kit/（編集元。配布元のものを丸ごと置き換える）
 ### 6. キットの規約とこのアプリの規約を分けて置く
 
 キットの実配置は sync で上書きされるので、アプリ固有の決まりを書いても次の更新で消える。アプリ固有の決まりは `AGENTS.md` に置き、`CLAUDE.md` からはそれを読み込むだけにする。改善要望の手順（`.claude/commands/improvements.md` / `improve-request.md`）はキットの管理対象外なので、リポジトリ側で直接直す。
+
+### 7. 選ぶ操作だけを共通にし、値の契約は各軸に残す
+
+明るさと系統の切り替えは、保存値の読み込み・属性の付け外し・保存・同じ値の無視・記録という同じ手順を別々に書いていた。片方だけ直すと2軸の振る舞いがずれるので、手順を `useAppearanceChoice` に1つにした。一方、許可値・既定・「保存値なしで表す値」は軸ごとに違うので、`stored` と `explicit` を各軸（`theme.ts` / `palette.ts`）から渡す形にして、フックは値の意味を知らないようにした。描画前の初期化（`THEME_INIT_SCRIPT` / `PALETTE_INIT_SCRIPT`）は React の外で走る必要があるため、共通化しない。
 
 ## 主要ファイル
 

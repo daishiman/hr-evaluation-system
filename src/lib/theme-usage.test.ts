@@ -77,6 +77,15 @@ describe("見た目の選択の記録", () => {
     expect(seen).toEqual([]);
   });
 
+  it("差し替えた送信先が同期的に失敗しても、外観の操作へ例外を返さない", () => {
+    const previous = setThemeChoiceSink(() => { throw new Error("sink unavailable"); });
+    restore.push(() => setThemeChoiceSink(previous));
+    vi.stubGlobal("document", { documentElement: { dataset: { theme: "dark", palette: "moss" } } });
+    vi.stubGlobal("window", { matchMedia: () => ({ matches: false }) });
+
+    expect(() => recordAppliedThemeChoice()).not.toThrow();
+  });
+
   it("既定の送信先は、応答を待たずに集計の入口へ送り、失敗しても投げない", async () => {
     let sent: { url: string; init: RequestInit } | null = null;
     const fetchMock = vi.fn((url: string, init: RequestInit) => {

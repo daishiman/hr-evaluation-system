@@ -191,7 +191,7 @@ export function ManagerDashboard({
         </Card>
       )}
 
-      <SectionHeading aside={<Link href="/manager/members" className="footnote">メンバー（全社員）</Link>}>
+      <SectionHeading aside={<Link href="/manager/members" className="footnote">メンバーの一覧</Link>}>
         担当チームの状況
       </SectionHeading>
       {team.length === 0 ? (

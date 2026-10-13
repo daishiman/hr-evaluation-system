@@ -1,6 +1,6 @@
 # 現在の残課題
 
-最終更新: 2026-10-02
+最終更新: 2026-10-13
 
 この文書は、未解決事項だけを扱う current SSOT です。完了した内容と判断の経緯は [統合台帳の履歴](./backlog-history-2026-08-13.md) と [回ごとの記録](./backlog-session-notes.md) に保存します。
 
@@ -107,6 +107,7 @@
 | SECURITY-009 | ready | CSP は nonce 方式ではない | inline script をさらに制限 | Next.js・OpenNext の制約を確認して nonce 化 | [旧台帳 UX99](./backlog-history-2026-08-13.md) |
 | SECURITY-011 | observe | ローカルpreviewではBetter Authがclient IPを解決できず、共有bucketへfallbackする警告が出る | productionログでも同じ警告を1件以上観測 | Cloudflareの信頼済みIP header/proxy設定をBetter Auth公式契約で検証し、認証方式を変えず最小設定する | [リリース判定](./T4-release-readiness.md) / [認証設定](../../src/lib/auth.ts) |
 | SECURITY-012 | observe | 通信の中身は鍵の名前で伏せるため、氏名・評価コメント以外の無害な値まで `***` になり、原因の特定に届かないことがある | 指示文を読んでも原因が分からず、開発ツールでの再取得を繰り返す事例が出る | 伏せた件数を数え、過剰な鍵名を実データで見直す。緩める場合は評価データ本文を除外できる形だけを採る | [伏せ方の正本](../../src/lib/domain/improvement-instruction.ts) / [仕様 §26-7](./spec.md) |
+| SECURITY-013 | decision | マネージャーが自分の個人詳細URLを開く場合の、確認中評価・評価メモの公開範囲を明確にしていない | 本人情報の閲覧と評価者向け情報の閲覧を区別する仕様を確認 | `/me/results` の公開条件を個人詳細にも適用するか、本人向け非公開メモを除外するか決め、共通認可と回帰検査へ反映 | [個人詳細](../../src/app/manager/members/[id]/page.tsx) / [閲覧の契約](../../src/lib/domain/evaluation-authority.ts) / [今回のレビュー](../reviews/elegant-review-2026-09-29.md) |
 | RELIABILITY-002 | observe | 安全側の代替表示が発生しても運用で気づきにくい | 発生率を観測可能にする | 構造化ログ・通知閾値を追加 | [回ごとの記録 Q4](./backlog-session-notes.md) |
 | RELIABILITY-004 | ready | 昇格制約の翻訳ロジックが画面に近い | 次の条件追加前 | ドメイン関数へ移し境界値テストを追加 | [回ごとの記録 U3](./backlog-session-notes.md) |
 | RELIABILITY-005 | observe | 通信の記録は `fetch` だけで、XMLHttpRequest・WebSocket・画像やスクリプトの読込失敗は残らない | それらの経路で起きた不具合が、記録票を見ても原因に届かない事例が出る | 失敗した通信の取りこぼしを実測し、必要なら `XMLHttpRequest` と `PerformanceObserver` の resource 監視を足す | [収集の実装](../../src/lib/client-diagnostics.ts) / [仕様 §26-7](./spec.md) |
