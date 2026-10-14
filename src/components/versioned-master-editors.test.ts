@@ -68,11 +68,11 @@ describe("等級要件・昇格要件の版管理UI", () => {
     const grade = read("GradeRequirementEditor.tsx");
     const promotion = read("PromotionRequirementEditor.tsx");
 
-    expect(grade).toContain('send({ kind: "gradeRequirementOrder", ids })');
-    expect(promotion).toContain('send({ kind: "promotionRequirementOrder", ids })');
+    expect(grade).toContain('sendOrder({ kind: "gradeRequirementOrder", ids })');
+    expect(promotion).toContain('sendOrder({ kind: "promotionRequirementOrder", ids })');
     for (const editor of [grade, promotion]) {
       expect(editor).toContain("<ReorderList");
-      expect(editor).toContain("onCommit={(ids) => commitOrder(ids)}");
+      expect(editor).toContain("onCommit={(ids) => sendOrder({");
       // 1段ずつの移動（up/down/top/bottom）は送らない
       expect(editor).not.toContain("direction:");
       // 並びの保存中は fieldset を止めない（止めると、つまみのフォーカスが外れる）

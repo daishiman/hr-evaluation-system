@@ -2,9 +2,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { availableSortKeys, parsePeopleView } from "@/lib/domain/people-list";
 import { PeopleList, type PeopleListRow } from "./PeopleList";
+
+// SSRの描画試験。URL遷移と履歴の復元はpeople-list-navigation.spec.tsで実ブラウザを通す。
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 
 const rows: PeopleListRow[] = [
   { key: "m1", id: "u1", href: "/admin/members/u1", isActive: true, name: "山田 太郎", email: "taro@example.com", role: "EMPLOYEE", gradeName: "等級2", gradeOrder: 2, latestScore: null, department: "営業部", employeeCode: "A-001" },

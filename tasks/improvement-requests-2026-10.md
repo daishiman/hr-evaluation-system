@@ -9,7 +9,7 @@
 | work branch | `devgraph/feature-improvement-requests-2026-10` |
 | 仕様反映 | [2026-10-13 の受領書](../docs/product/spec-receipts/2026-10-13-improvement-requests.md) / [最終レビューの受領書](../docs/product/spec-receipts/2026-10-14-improvement-requests-final-review.md) / [追加要望の受領書](../docs/product/spec-receipts/2026-10-14-improvement-requests-additional.md) |
 
-各 task の仕様の正本は `tasks/feature-improvement-requests-2026-10/sys-ir-p01.md`〜`sys-ir-p13.md`（system-dev-planner の exact-13 package）。そちらは package の digest に結び付いているので、状態はこの文書と Beads に書き、task の仕様書は書き換えない。範囲 S1〜S14・受入 A1〜A13 の番号と証跡の場所は [仕様メモ](../specs/improvement-requests-2026-10.md) が正本。
+各 task の固定された計画は `tasks/feature-improvement-requests-2026-10/sys-ir-p01.md`〜`sys-ir-p13.md`（system-dev-planner の exact-13 package）。そちらは package の digest に結び付いているので、状態はこの文書と Beads に書き、task の仕様書は書き換えない。範囲 S1〜S14・受入 A1〜A13 の番号・担当・証跡の場所は [仕様メモ](../specs/improvement-requests-2026-10.md) の照合表から辿る。現行の振る舞い・契約・構成の優先順位は [README「文書の入口」](../README.md#文書の入口) に従う。
 
 ## task ごとの状態（2026-10-14）
 
@@ -21,7 +21,7 @@
 | P04 赤の試験 | `hr-wcv.4` | closed。最終レビューで所属・提出対象・画面の操作の試験を足した | — |
 | P05 実装と移行 | `hr-wcv.5` | closed。draft PR #93 を出した | — |
 | P06 緑の確認 | `hr-wcv.6` | closed。#93 のマージ後の Deploy は run 38509015552 で成功 | — |
-| P07 preview での受入 | `hr-wcv.7` | 確認済み（E2E 53 件成功。追加要望の2件を含む） | P06 のあと（Beads の依存） |
+| P07 preview での受入 | `hr-wcv.7` | 確認済み（E2E 57 件成功。追加要望と共通化レビューの試験を含む） | P06 のあと（Beads の依存） |
 | P08 移行の予行 | `hr-wcv.8` | closed。0033・0034・0035 を2回流した。対応表は [migration-mapping-grade-display-names.md](../docs/migration-mapping-grade-display-names.md) | — |
 | P09 漏れ・権限・a11y | `hr-wcv.9` | 確認済み。他社の既存アカウントへの所属追加を全体管理者だけにした（DD-009） | P06 のあと（P08 は閉じた） |
 | P10 突き合わせ | `hr-wcv.10` | 範囲14件・受入13項目・変えてはいけないものを突き合わせた | P07・P09 のあと |
@@ -60,21 +60,28 @@
 - 人の一覧の検索は、ヘッダーの検索と別の仕組みのままにする（コードは変えない）。
 - 社員の一覧に利用停止の人も含める（メンバー一覧・利用者一覧とそろえた。PR #94 に含める）。
 
-## 品質ゲート（追加要望 A〜C を含めた作業ツリー、2026-10-14）
+### 共通化レビュー（2026-10-14、PR #94 に含める）
+
+[共通化レビュー](../docs/reviews/elegant-review-2026-10-14-refactor.md) で、会社全体の割り当ての同時保存を 409 で止める照合（`grade-assignment-guard.ts`）、4つの制度編集画面の送信と結果の表示の共通化（`useMasterAction`）、等級ごとの下書きの寿命（`key={grade.id}`）、人の一覧の移動と履歴の復元（`syncPeopleUrl`）、同名の会社の区別を足した。仕様と設計への影響は [追加要望の受領書](../docs/product/spec-receipts/2026-10-14-improvement-requests-additional.md) の「共通化レビュー」に記録した。task は増やさず、P04（試験）・P05（実装）・P07（受入）・P12（文書）の中で扱った。
+
+## 品質ゲート（追加要望 A〜C と共通化レビューを含めた作業ツリー、2026-10-14）
+
+重複整理と境界修正の経緯は [共通化レビュー](../docs/reviews/elegant-review-2026-10-14-refactor.md)。typecheck・test・check:docs は最終レビューで流し直した。
 
 | ゲート | 結果 |
 |---|---|
-| `pnpm typecheck` | exit 0 |
-| `pnpm test` | 182 ファイル成功・1 スキップ、2754 件成功・1 件スキップ |
-| `pnpm test:coverage`（domain） | 100%（文 2562・分岐 2038・関数 682・行 2093） |
-| `pnpm check:docs` | PASS |
-| `pnpm cf:dry-run` | exit 0（bundle は無料プランの上限の 66.6%） |
-| E2E（`e2e/` の全 spec） | 54 件成功 |
+| `pnpm typecheck` | exit 0（最終レビューで再実行） |
+| `pnpm test` | 182 ファイル成功・1 スキップ、2781 件成功・1 件スキップ（最終レビューで再実行） |
+| `pnpm test:coverage`（domain） | 100%（文 2563・分岐 2050・関数 681・行 2094） |
+| `pnpm check:docs` | PASS（current backlog 103 件。最終レビューで再実行） |
+| `pnpm cf:dry-run` / `check:bundle-size` | exit 0 / PASS（bundle は無料プランの上限の 66.7%） |
+| E2E（`e2e/` の全 spec） | Chromium 57 件成功（隔離した DB。`E2E_PERSIST_TO`） |
 | system-spec（coverage・citation・spec-doc-sync） | OK |
 | dev-graph（schema / lineage） | pass / fail（3 node の digest が古い。OPS-015。追加要望で増えていない） |
 
 ## 残課題
 
+- OPS-016: 通し試験が作る会社がローカル DB にたまり、利用者一覧の余白の検査（40%）が前提ごと崩れる。同じ DB で通し試験を繰り返す前に、試験の会社を片付けるか隔離した DB で流す
 - OPS-015: graph の取込元の digest が古い3 node。dev-graph の writer に取り込み直しの操作が入ったら、R0 からやり直す
 - FEATURE-005（行動指針の並べ替え）・OPS-014（見本データの締切が固定の日付）・`/criteria` の網羅率 42% は範囲外のまま
 - 等級の並び順（`displayOrder`）が同着のとき、等級の一覧・書き出しなどの読み出し（`src/lib/queries.ts` の `listGrades` ほか10か所余り）は並びが決まらない。前からの挙動で、今回の範囲外。行動指針の判定は `bandLine` が id で決めている

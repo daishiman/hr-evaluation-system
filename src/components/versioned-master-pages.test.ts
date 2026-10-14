@@ -5,6 +5,18 @@ import { describe, expect, it } from "vitest";
 const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
 describe("版を持つ要件の画面境界", () => {
+  it("追加の下書きは選択等級に属し、同じ等級の再描画では保持し別等級へ持ち越さない", () => {
+    for (const [path, editor] of [
+      ["src/app/admin/masters/requirements/page.tsx", "GradeRequirementEditor"],
+      ["src/app/admin/masters/promotion/page.tsx", "PromotionRequirementEditor"],
+    ]) {
+      const source = read(path);
+      const props = source.match(new RegExp(`<${editor}\\s+([^>]+)`))?.[1];
+      // 行や版ではなく等級のkey。保存後に行が増えても入力部品を作り直さない。
+      expect(props, path).toContain("key={grade.id}");
+    }
+  });
+
   it("通常の件数と参照一覧は、現在版に絞ってから使用中を数える", () => {
     const expectations = [
       ["src/app/admin/page.tsx", "currentVersionRows(gradeRequirements)"],

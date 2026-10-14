@@ -25,7 +25,7 @@ vi.mock("@/components/master-request", () => ({
 
 import { useMasterAction } from "./use-master-action";
 
-function render(kind: "gradeRequirement" | "promotionRequirement" = "gradeRequirement") {
+function render(kind: "gradeRequirement" | "promotionRequirement" | "behaviorGuideline" | "behaviorBandSet" = "gradeRequirement") {
   mocks.cursor = 0;
   return useMasterAction(kind);
 }
@@ -55,7 +55,7 @@ describe("useMasterAction", () => {
     expect(render()).toMatchObject({ message: "保存しました。", error: null });
   });
 
-  it.each(["gradeRequirement", "promotionRequirement"] as const)("%sの削除拒否理由を保持し、次の送信で消す", async (kind) => {
+  it.each(["gradeRequirement", "promotionRequirement", "behaviorGuideline", "behaviorBandSet"] as const)("%sの削除拒否理由を保持し、次の送信で消す", async (kind) => {
     mocks.save.mockResolvedValueOnce({ ok: false, message: "使用中のため消せません。" });
     expect(await render(kind).remove("r")).toBe(false);
     expect(mocks.save).toHaveBeenCalledWith({ op: "delete", input: { kind, id: "r" } });
@@ -75,5 +75,29 @@ describe("useMasterAction", () => {
     expect(render()).toMatchObject({ error: "保存できません。", message: null });
     mocks.saving = true;
     expect(render().saving).toBe(true);
+  });
+
+  it.each([true, false])("並べ替えは描画完了まで一覧を無効化せず、結果%sのあと通常の保存状態に戻る", async (ok) => {
+    let resolve!: (value: { ok: boolean; message: string }) => void;
+    mocks.save.mockReturnValue(new Promise((done) => { resolve = done; }));
+    const pending = render().sendOrder({ kind: "gradeRequirementOrder", ids: ["b", "a"] });
+    mocks.saving = true;
+    expect(render()).toMatchObject({ saving: true, reordering: true, message: null });
+    expect(mocks.save).toHaveBeenCalledWith({ op: "save", input: { kind: "gradeRequirementOrder", ids: ["b", "a"] } });
+    resolve({ ok, message: ok ? "並べ替えました。" : "保存できません。" });
+    expect(await pending).toBe(ok);
+    expect(render()).toMatchObject({ reordering: false });
+    // 通常の内容保存はfieldsetを止める（並べ替えだけがフォーカス維持の例外）。
+    expect(render().saving && !render().reordering).toBe(true);
+  });
+
+  it.each([true, false])("新しい入力を始めると結果%sの通知を消し、送信はしない", async (ok) => {
+    mocks.save.mockResolvedValueOnce({ ok, message: ok ? "保存しました。" : "保存できません。" });
+    await render("behaviorBandSet").send({ kind: "behaviorBandSet", name: "新しい基準" });
+    expect(render("behaviorBandSet")[ok ? "message" : "error"]).not.toBeNull();
+    mocks.save.mockClear();
+    render("behaviorBandSet").clearResult();
+    expect(render("behaviorBandSet")).toMatchObject({ message: null, error: null });
+    expect(mocks.save).not.toHaveBeenCalled();
   });
 });

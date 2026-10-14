@@ -23,6 +23,8 @@ type Named = { name: string | null } | null | undefined;
 
 /** 呼び名を作るのに使う等級の形（DB の行の一部） */
 export type GradeLike = {
+  /** 同着の表示順を決める。名前だけの入力では省略できる */
+  id?: string;
   name: string;
   pointGroup: string;
   displayOrder: number;
@@ -37,8 +39,16 @@ export function gradeLabel(grade: Named): string {
   return name ? name : GRADE_UNSET_LABEL;
 }
 
-function byOrder<T extends { displayOrder: number }>(rows: readonly T[]): T[] {
-  return [...rows].sort((a, b) => a.displayOrder - b.displayOrder);
+/** 等級の表示順。番号が同着なら id の順（id を持たない入力同士は入力順を保つ） */
+export function compareGradeOrder(
+  a: { displayOrder: number; id?: string },
+  b: { displayOrder: number; id?: string },
+): number {
+  return a.displayOrder - b.displayOrder || (a.id ?? "").localeCompare(b.id ?? "");
+}
+
+function byOrder<T extends { displayOrder: number; id?: string }>(rows: readonly T[]): T[] {
+  return [...rows].sort(compareGradeOrder);
 }
 
 function joinNames(grades: readonly GradeLike[]): string {

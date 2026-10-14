@@ -58,21 +58,10 @@ export function GradeRequirementEditor({
   /** 項目ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const { send, remove, saving, error, message } = useMasterAction("gradeRequirement");
+  const { send, sendOrder, remove, saving, reordering, error, message } = useMasterAction("gradeRequirement");
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const editing = useDraftMap<string>();
   const [preview, setPreview] = useState(false);
-  /* 並べ替えの保存中は、一覧を包む fieldset を止めない。止めると、いま押したつまみや矢印のボタンが
-     disabled になってフォーカスが外れ、キーボードで続けて動かせなくなる（busy で受け付けだけを止める）。 */
-  const [reordering, setReordering] = useState(false);
-  const commitOrder = async (ids: string[]) => {
-    setReordering(true);
-    try {
-      return await send({ kind: "gradeRequirementOrder", ids });
-    } finally {
-      setReordering(false);
-    }
-  };
 
   /* 使っている場所があるなら消させない。
      行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
@@ -128,7 +117,7 @@ export function GradeRequirementEditor({
           label={`${label}の並び`}
           className="reorder-in-card"
           busy={saving}
-          onCommit={(ids) => commitOrder(ids)}
+          onCommit={(ids) => sendOrder({ kind: "gradeRequirementOrder", ids })}
           renderItem={(r, i) => (
             <RevisableRequirementBody
               {...rowOf(r)}

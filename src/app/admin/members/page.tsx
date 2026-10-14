@@ -100,6 +100,7 @@ export default async function AdminMembers({ searchParams }: { searchParams: Pro
             name: m.name,
             email: m.email,
             role: m.role,
+            companyId,
             gradeName: m.gradeName,
             gradeOrder: m.gradeOrder,
             latestScore: m.latestScore,

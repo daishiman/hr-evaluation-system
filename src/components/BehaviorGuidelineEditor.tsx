@@ -1,11 +1,10 @@
 "use client";
 
-import { useSaveAction } from "@/lib/use-refresh";
+import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
-import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
 import { behaviorBandLabel, type BehaviorBandSetRow } from "@/lib/domain/behavior";
 import {
   BLOCKED_HELP_LABEL,
@@ -63,37 +62,12 @@ export function BehaviorGuidelineEditor({
   /** 観点ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const { send, remove, saving, error, message } = useMasterAction("behaviorGuideline");
   /** 開いている入力欄。行のidをキーにして、開いているものだけを持つ */
   const editingLevel = useDraftMap<{ label: string; text: string }>();
   const editingName = useDraftMap<string>();
   /** 「観点を追加する」を開いているときだけ持つ下書き。 */
   const [newAspectName, setNewAspectName] = useState<string | null>(null);
-
-  /* 保存の応答に保存後の画面が同梱されるので、別に読み直しを頼まない。
-     失敗したときは入力欄を閉じずに残す（呼び出し側は true のときだけ閉じる）。 */
-  const send = async (payload: Record<string, unknown>) => {
-    setError(null);
-    setMessage(null);
-    const result = await save(masterSave(payload));
-    if (!result.ok) {
-      setError(result.message);
-      return false;
-    }
-    setMessage(result.message);
-    return true;
-  };
-
-  /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
-  const remove = async (id: string) => {
-    setError(null);
-    setMessage(null);
-    const result = await save(masterDelete("behaviorGuideline", id));
-    if (result.ok) setMessage(result.message);
-    else setError(result.message);
-  };
 
   const list = rows.filter((r) => r.band === band).sort((a, b) => a.seq - b.seq);
 

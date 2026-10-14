@@ -95,6 +95,14 @@ implementation_readiness: {"checked_at": "2026-10-13T05:14:08.263424Z", "missing
 - [ ] 4つの幅の撮影で右側だけが空く画面が無い
 - [ ] pnpm test と pnpm run check:docs が通り、domain のカバレッジ 100% を保つ
 
+## 追加要望（2026-10-14、PR #94）
+
+上のスコープと受入は変えない。#93 を本番へ配布したあとに受けた3件を、同じ feature の task（P04・P05・P07・P12）の中で扱う。状態と残りの作業は [タスクの状態](../tasks/improvement-requests-2026-10.md)、受領は [追加要望の受領書](../docs/product/spec-receipts/2026-10-14-improvement-requests-additional.md) を正本にする。
+
+- 追加A: 並べ替えの行の段組みと、持ち上げて動かす操作（製品仕様 §28-11）
+- 追加B: 人の一覧の検索と並べ替え。選べる並べ替えは権限で決める（§28-13・DD-011）
+- 追加C: 行動指針の基準セットは、等級の並びで続いた等級にだけ出す（§28-12・DD-010）。本番の直しは管理者の1手で、配布のあと
+
 ## アーキテクチャ参照
 
 - `arch-system-spec-database`

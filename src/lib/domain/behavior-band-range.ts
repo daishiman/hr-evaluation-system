@@ -15,7 +15,7 @@
  * 並び順（displayOrder）は重なりうる（一意の制約が無い）ので、同着は id の順にし、画面とサーバーで同じ並びにする。
  */
 
-import { gradeLabel } from "./grade-label";
+import { compareGradeOrder, gradeLabel } from "./grade-label";
 
 export type BandGrade = {
   id: string;
@@ -38,7 +38,7 @@ export type BandSplit = {
 export function bandLine<T extends BandGrade>(grades: readonly T[]): T[] {
   return grades
     .filter((g) => g.isActive)
-    .sort((a, b) => a.displayOrder - b.displayOrder || a.id.localeCompare(b.id));
+    .sort(compareGradeOrder);
 }
 
 /** 飛び飛びになっているセットを、並びで最初に現れる順に返す */

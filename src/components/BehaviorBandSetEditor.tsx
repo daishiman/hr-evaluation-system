@@ -1,6 +1,6 @@
 "use client";
 
-import { useSaveAction } from "@/lib/use-refresh";
+import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -16,7 +16,6 @@ import {
   blockedMark,
   deleteConfirmText,
 } from "@/lib/domain/master-delete";
-import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { useDraftMap } from "@/components/use-draft-map";
 
@@ -53,35 +52,10 @@ export interface BehaviorBandSetRow {
 }
 
 export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBandSetRow[]; currentBand: string | null }) {
-  const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const { send, remove, saving, error, message, clearResult } = useMasterAction("behaviorBandSet");
   const editingName = useDraftMap<string>();
   /** 「新しく作る」を開いているときだけ持つ下書き。閉じているときは null。 */
   const [draft, setDraft] = useState<{ name: string; copyFromBand: string } | null>(null);
-
-  /* 保存の応答に保存後の画面が同梱されるので、別に読み直しを頼まない。
-     失敗したときは入力欄を閉じずに残す（呼び出し側は true のときだけ閉じる）。 */
-  const send = async (payload: Record<string, unknown>) => {
-    setError(null);
-    setMessage(null);
-    const result = await save(masterSave({ kind: "behaviorBandSet", ...payload }));
-    if (!result.ok) {
-      setError(result.message);
-      return false;
-    }
-    setMessage(result.message);
-    return true;
-  };
-
-  /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
-  const remove = async (id: string) => {
-    setError(null);
-    setMessage(null);
-    const result = await save(masterDelete("behaviorBandSet", id));
-    if (result.ok) setMessage(result.message);
-    else setError(result.message);
-  };
 
   const openDraft = () => {
     const source = sets.find((set) => set.code === currentBand) ?? sets.find((set) => set.isActive) ?? sets[0] ?? null;
@@ -89,8 +63,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
       name: source ? copiedBandSetName(sets.map((set) => set.name), source.name) : "",
       copyFromBand: source?.code ?? "",
     });
-    setError(null);
-    setMessage(null);
+    clearResult();
   };
 
   return (
@@ -157,6 +130,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
               disabled={saving || draft.name.trim() === ""}
               onClick={async () => {
                 const ok = await send({
+                  kind: "behaviorBandSet",
                   name: draft.name.trim(),
                   ...(draft.copyFromBand ? { copyFromBand: draft.copyFromBand } : {}),
                 });
@@ -215,7 +189,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       variant="primary"
                       disabled={saving || nameDraft.trim() === ""}
                       onClick={async () => {
-                        const ok = await send({ id: set.id, name: nameDraft.trim() });
+                        const ok = await send({ kind: "behaviorBandSet", id: set.id, name: nameDraft.trim() });
                         if (ok) editingName.stop(set.id);
                       }}
                     >
@@ -251,11 +225,11 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                         busy={saving}
                         busyLabel="保存しています…"
                         confirm={`「${set.name}」を次に作るアンケートで選べないようにします。中身は残るので、あとからもう一度使えます。すでに公開したアンケートと確定済みの評価はそのまま残ります。`}
-                        onConfirm={() => void send({ id: set.id, isActive: false })}
+                        onConfirm={() => void send({ kind: "behaviorBandSet", id: set.id, isActive: false })}
                       />
                     )
                   ) : (
-                    <Button variant="secondary" disabled={saving} onClick={() => void send({ id: set.id, isActive: true })}>
+                    <Button variant="secondary" disabled={saving} onClick={() => void send({ kind: "behaviorBandSet", id: set.id, isActive: true })}>
                       もう一度使う
                     </Button>
                   )}

@@ -16,6 +16,7 @@ import {
   QUERY_MAX_LENGTH,
   reversed,
   searchTokens,
+  sortLabel,
   sortPeople,
   type PersonFields,
 } from "./people-list";
@@ -124,6 +125,11 @@ describe("探す", () => {
   it("出ている札の文字でも当たる（会社に属さない・所属 未設定）", () => {
     expect(keysOf(filterPeople(rows, index, "会社に属さない"))).toEqual(["u3"]);
     expect(keysOf(filterPeople(rows, index, "未設定"))).toEqual(["m2", "m4"]);
+  });
+
+  it("表示した社員番号の札をそのまま検索できる（番号の無い人には当たらない）", () => {
+    expect(keysOf(filterPeople(rows, index, "社員番号 A-001"))).toEqual(["m1"]);
+    expect(keysOf(filterPeople(rows, index, "社員番号"))).toEqual(["m1", "m4"]);
   });
 
   it("語を空白で区切ると、すべてを含む行だけを出す", () => {
@@ -265,6 +271,19 @@ describe("全社の一覧の等級順", () => {
     expect(keysOf(sortPeople(across, "grade", "desc"))).toEqual(["s3", "s2", "s1", "t2", "t1", "none", "sx"]);
   });
 
+  it("同名の別会社も会社ごとにまとめ、会社の順は等級の向きを変えても同じ", () => {
+    const sameName = [
+      { key: "a1", id: "a1", name: "あべ", role: "EMPLOYEE", companyId: "company_a", companyName: "同名社", gradeOrder: 1 },
+      { key: "b2", id: "b2", name: "いとう", role: "EMPLOYEE", companyId: "company_b", companyName: "同名社", gradeOrder: 2 },
+      { key: "a3", id: "a3", name: "うえだ", role: "EMPLOYEE", companyId: "company_a", companyName: "同名社", gradeOrder: 3 },
+      { key: "b1", id: "b1", name: "えのもと", role: "EMPLOYEE", companyId: "company_b", companyName: "同名社", gradeOrder: 1 },
+    ];
+    expect(keysOf(sortPeople(sameName, "grade", "asc"))).toEqual(["a1", "a3", "b1", "b2"]);
+    expect(keysOf(sortPeople([...sameName].reverse(), "grade", "desc"))).toEqual(["a3", "a1", "b2", "b1"]);
+    // 等級以外では、会社の識別子によって順番を変えない。
+    expect(keysOf(sortPeople(sameName, "name", "asc"))).toEqual(["a1", "b2", "a3", "b1"]);
+  });
+
   it("会社に属さない人と等級未設定の人は、会社によらず末尾に名前順で置く", () => {
     for (const dir of ["asc", "desc"] as const) {
       expect(keysOf(sortPeople(across, "grade", dir)).slice(-2)).toEqual(["none", "sx"]);
@@ -285,6 +304,10 @@ describe("全社の一覧の等級順", () => {
 });
 
 describe("向き", () => {
+  it("選んだ並びと向きに合わせて画面と読み上げの呼び名を作る", () => {
+    expect(sortLabel("score", "desc")).toBe("点数の高い順");
+    expect(sortLabel("grade", "asc")).toBe("等級の低い順");
+  });
   it("並べ替えを選ぶと、点数だけは高い順から、ほかは小さい順から始める", () => {
     expect(defaultDirection("score")).toBe("desc");
     expect((["name", "company", "role", "grade"] as const).map((key) => defaultDirection(key))).toEqual(["asc", "asc", "asc", "asc"]);

@@ -13,6 +13,7 @@ import {
   countPeople,
   defaultDirection,
   filterPeople,
+  parsePeopleView,
   peopleViewParams,
   personLabels,
   QUERY_MAX_LENGTH,
@@ -53,6 +54,15 @@ function replaceUrlKeepingHistory(url: URL) {
   window.history.replaceState(own, "", url);
 }
 
+function syncPeopleUrl(view: PeopleView, sortKeys: readonly PeopleSortKey[]) {
+  const url = new URL(window.location.href);
+  for (const [key, value] of Object.entries(peopleViewParams(view, sortKeys))) {
+    if (value === null) url.searchParams.delete(key);
+    else url.searchParams.set(key, value);
+  }
+  if (url.href !== window.location.href) replaceUrlKeepingHistory(url);
+}
+
 export function PeopleList({
   rows,
   sortKeys,
@@ -68,15 +78,25 @@ export function PeopleList({
   const [query, setQuery] = useState(initial.q);
   const [sort, setSort] = useState(initial.sort);
   const [dir, setDir] = useState(initial.dir);
-  // 範囲を切り替えて選べる並べ替えが変わったら（全社の一覧を1社にしぼると会社が無くなる）、並びは URL から
-  // 読み直したもの（initial）にする。札の href は URL の並びを引き継ぐので、開き直したときと同じ並びになる。
-  // 検索語は打っている途中のことがあるので、そのまま残す
+  const searchParams = useSearchParams();
+  const urlId = searchParams.toString();
   const keysId = sortKeys.join();
+  const [loadedUrl, setLoadedUrl] = useState(urlId);
   const [loadedKeys, setLoadedKeys] = useState(keysId);
-  if (loadedKeys !== keysId) {
+  // 会社の札やブラウザの「戻る」で移動したら、移動先のURLを採用する。
+  // 手元の入力だけが変わった間はURLが同じなので、未反映の入力を消さない。
+  // native replaceStateでもNextのsearchParamsが更新される。cachedなserver props(initial)は復元の根拠にしない。
+  if (loadedUrl !== urlId || loadedKeys !== keysId) {
+    const view = parsePeopleView({
+      q: searchParams.get("q") ?? undefined,
+      sort: searchParams.get("sort") ?? undefined,
+      dir: searchParams.get("dir") ?? undefined,
+    }, sortKeys);
+    setLoadedUrl(urlId);
     setLoadedKeys(keysId);
-    setSort(initial.sort);
-    setDir(initial.dir);
+    setQuery(view.q);
+    setSort(view.sort);
+    setDir(view.dir);
   }
   // 入力欄はすぐに変え、一覧の描き直しは後から追いかける
   const deferredQuery = useDeferredValue(query);
@@ -88,15 +108,7 @@ export function PeopleList({
   const visible = useMemo(() => filterPeople(sorted, index, deferredQuery), [sorted, index, deferredQuery]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const url = new URL(window.location.href);
-      for (const [key, value] of Object.entries(peopleViewParams({ q: query, sort, dir }, sortKeys))) {
-        if (value === null) url.searchParams.delete(key);
-        else url.searchParams.set(key, value);
-      }
-      if (url.href === window.location.href) return;
-      replaceUrlKeepingHistory(url);
-    }, URL_SYNC_DELAY_MS);
+    const timer = window.setTimeout(() => syncPeopleUrl({ q: query, sort, dir }, sortKeys), URL_SYNC_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [query, sort, dir, sortKeys]);
 
@@ -107,7 +119,9 @@ export function PeopleList({
   const seen = new Set<string>();
 
   return (
-    <div>
+    // 入力から会社の札や詳細へフォーカスが移る時は待たずに確定する。
+    // 札や詳細への移動に備える。即時の会社切替も実ブラウザの回帰試験で確認する。
+    <div onBlur={() => syncPeopleUrl({ q: query, sort, dir }, sortKeys)}>
       <div className="mb-2 flex flex-wrap items-end gap-3">
         <div className="field min-w-0 flex-[1_1_16rem]">
           <label htmlFor={`${id}-q`}>探す</label>

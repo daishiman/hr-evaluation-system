@@ -46,6 +46,7 @@ export default async function ManagerMembers({ searchParams }: { searchParams: P
             isActive: m.isActive,
             name: m.name,
             role: m.role,
+            companyId: viewer.companyId,
             gradeName: m.gradeName,
             gradeOrder: m.gradeOrder,
             latestScore: m.latestScore,

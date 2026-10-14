@@ -74,6 +74,7 @@ export default async function AdminGradeRequirements({
       </div>
 
       <GradeRequirementEditor
+        key={grade.id}
         gradeId={grade.id}
         gradeName={grade.name}
         rows={reqs.filter((r) => r.gradeId === grade.id)}

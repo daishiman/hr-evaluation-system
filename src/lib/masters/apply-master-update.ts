@@ -7,12 +7,13 @@ import { checkKgiCoverage } from "@/lib/domain/kgi";
 import { rangeLabel, type Direction } from "@/lib/domain/scoring";
 import { checkBounds, checkNumberMagnitude } from "@/lib/domain/number-input";
 import { checkRankBoundaries } from "@/lib/domain/rank-bounds";
-import { bandChangeBlockers, bandSplitMessage } from "@/lib/domain/behavior-band-range";
+import { bandChangeBlockers, bandSplitMessage, type BandGrade } from "@/lib/domain/behavior-band-range";
 import type { MasterUpdateBody } from "./body-schema";
 import { applyBehaviorMasterUpdate } from "./apply-behavior-master-update";
 import { applyVersionedRequirementUpdate } from "./versioned-requirement-update";
 import { constitutionEventStatements } from "@/lib/domain/constitution-events";
 import { writeMasterBatch, type MasterStatement } from "./write-batch";
+import { writeGradeAssignmentBatch } from "./grade-assignment-guard";
 import { kpiItemUsage } from "@/lib/master-usage";
 import { KPI_ITEM_LOCKED_NOTE, KPI_ITEM_STRUCTURAL_FIELDS } from "@/lib/domain/master-delete";
 
@@ -63,8 +64,9 @@ export async function applyMasterUpdate(args: {
            画面は断る選択肢を選べなくしているが、ここでも会社の全等級で数え直す。
            断るのは、挟まる等級が増える手と、割り当てた先が飛び飛びのまま挟まる等級が減らない手。
            変えない保存（同じ値の送り直し）と直す向きの1手は、判定（bandChangeBlockers）が [] を返すので通る。 */
+        let companyGrades: BandGrade[] | undefined;
         if (body.behaviorBand !== undefined || body.isActive !== undefined) {
-          const companyGrades = await db
+          companyGrades = await db
             .select({
               id: s.grades.id,
               name: s.grades.name,
@@ -86,7 +88,7 @@ export async function applyMasterUpdate(args: {
         for (const k of ["name", "targetCap", "autonomyLevel", "responsibilityLevel", "deadlineNote", "behaviorBand", "isActive"] as const) {
           if (body[k] !== undefined) patch[k] = body[k];
         }
-        await writeMasterBatch(db, [
+        await writeGradeAssignmentBatch(db, companyId, companyGrades, [
           db.update(s.grades).set(patch).where(eq(s.grades.id, body.id)),
           ...(await constitutionEventStatements({
             db,

@@ -166,6 +166,7 @@ export default async function SystemUsers({
               name: u.name,
               email: u.email,
               role: u.role,
+              companyId: u.companyId,
               companyName: u.companyName,
               ...(gradedIn && {
                 gradeName: gradeLabel({ name: u.gradeName }),

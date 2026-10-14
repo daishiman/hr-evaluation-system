@@ -29,6 +29,8 @@ export interface PersonFields {
   email?: string;
   /** 役割の生値（SUPER_ADMIN など）。呼び名はここで作る */
   role: string;
+  /** 会社ごとの等級の並びを区別する鍵。会社名は重複しうるので識別には使わない */
+  companyId?: string | null;
   /** 全社の一覧だけが持つ。会社に属さない人は null */
   companyName?: string | null;
   /** 等級名（未設定なら「等級未設定」）。見てよい役割の一覧だけが持つ（S6） */
@@ -179,7 +181,7 @@ export function buildSearchIndex(rows: readonly PersonFields[]): Map<string, str
   const index = new Map<string, string>();
   for (const row of rows) {
     const labels = personLabels(row);
-    const fields = [row.name, row.email, labels.role, labels.company, labels.grade, labels.department, row.employeeCode];
+    const fields = [row.name, row.email, labels.role, labels.company, labels.grade, labels.department, labels.employeeCode];
     index.set(
       row.key,
       fields
@@ -250,13 +252,20 @@ function compareValues(a: string | number, b: string | number): number {
 export function sortPeople<T extends PersonFields>(rows: readonly T[], key: PeopleSortKey, dir: SortDirection): T[] {
   const sign = dir === "asc" ? 1 : -1;
   // 並べる値は1行につき1回だけ求める（比べるたびに求め直さない）
-  const decorated = rows.map((row) => ({ row, group: sortGroup(key, row), value: sortValue(key, row) }));
+  const decorated = rows.map((row) => ({
+    row,
+    group: sortGroup(key, row),
+    groupId: key === "grade" ? (row.companyId ?? "") : "",
+    value: sortValue(key, row),
+  }));
   decorated.sort((a, b) => {
     if (a.value === null || b.value === null) {
       if (a.value !== b.value) return a.value === null ? 1 : -1;
     } else {
       const byGroup = collator.compare(a.group, b.group);
       if (byGroup !== 0) return byGroup;
+      // 同名会社も混ぜない。会社の並びは、等級の向きによらず固定する。
+      if (a.groupId !== b.groupId) return a.groupId < b.groupId ? -1 : 1;
       const byValue = compareValues(a.value, b.value);
       if (byValue !== 0) return byValue * sign;
     }
