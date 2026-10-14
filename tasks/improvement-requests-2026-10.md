@@ -4,7 +4,7 @@
 |---|---|
 | graph_node_id | `feature-improvement-requests-2026-10`（task は `SYS-IR-P01`〜`SYS-IR-P13`） |
 | beads_id | `hr-wcv`（task は `hr-wcv.1`〜`hr-wcv.13`） |
-| 状態 | review（main 向けの draft PR。マージと本番への配布のあと done） |
+| 状態 | review（main 向けの draft PR [#93](https://github.com/daishiman/hr-evaluation-system/pull/93)。マージと本番への配布のあと done） |
 | base branch | `main`（`2922479`。origin/main と同じで、dev ブランチは無い） |
 | work branch | `devgraph/feature-improvement-requests-2026-10` |
 | 仕様反映 | [2026-10-13 の受領書](../docs/product/spec-receipts/2026-10-13-improvement-requests.md) / [最終レビューの受領書](../docs/product/spec-receipts/2026-10-14-improvement-requests-final-review.md) |
@@ -19,15 +19,15 @@
 | P02 設計 | `hr-wcv.2` | closed。最終レビューで DD-009 を足した | — |
 | P03 設計の見直し | `hr-wcv.3` | closed | — |
 | P04 赤の試験 | `hr-wcv.4` | closed。最終レビューで所属・提出対象・画面の操作の試験を足した | — |
-| P05 実装と移行 | `hr-wcv.5` | 実装済み。draft PR を出した | PR の番号を記録したとき |
+| P05 実装と移行 | `hr-wcv.5` | closed。draft PR #93 を出した | — |
 | P06 緑の確認 | `hr-wcv.6` | 手元の試験はすべて緑 | マージ後の `deploy.yml` の実行番号を記録したとき |
 | P07 preview での受入 | `hr-wcv.7` | 確認済み（E2E 51 件成功） | P06 のあと（Beads の依存） |
-| P08 移行の予行 | `hr-wcv.8` | 0033・0034・0035 を2回流した。対応表は [migration-mapping-grade-display-names.md](../docs/migration-mapping-grade-display-names.md) | P05 のあと |
-| P09 漏れ・権限・a11y | `hr-wcv.9` | 確認済み。他社の既存アカウントへの所属追加を全体管理者だけにした（DD-009） | P06・P08 のあと |
+| P08 移行の予行 | `hr-wcv.8` | closed。0033・0034・0035 を2回流した。対応表は [migration-mapping-grade-display-names.md](../docs/migration-mapping-grade-display-names.md) | — |
+| P09 漏れ・権限・a11y | `hr-wcv.9` | 確認済み。他社の既存アカウントへの所属追加を全体管理者だけにした（DD-009） | P06 のあと（P08 は閉じた） |
 | P10 突き合わせ | `hr-wcv.10` | 範囲14件・受入13項目・変えてはいけないものを突き合わせた | P07・P09 のあと |
 | P11 証跡のまとめ | `hr-wcv.11` | 仕様メモの受入の表にまとめた | P10 のあと |
 | P12 文書 | `hr-wcv.12` | 製品仕様 §28・機能の地図・運用の文書・README をそろえた | P10 のあと |
-| P13 配布 | `hr-wcv.13` | 配布の準備まで（[デプロイ時の注意](../docs/deploy-notes.md)、戻す手順は `drizzle/rollback/`）。本番の D1 には書いていない | マージのあと、0033 → 0034 → 0035 と Worker を配布し、本番の画面を確かめて記録を残したとき |
+| P13 配布 | `hr-wcv.13` | PR #93 の `gh:pr` ゲートを付けた。配布の準備まで（[デプロイ時の注意](../docs/deploy-notes.md)、戻す手順は `drizzle/rollback/`）。本番の D1 には書いていない | マージのあと、0033 → 0034 → 0035 と Worker を配布し、本番の画面を確かめて記録を残したとき |
 
 ## 品質ゲート（tree `5c12ad4a`）
 
