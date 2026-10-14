@@ -4,7 +4,7 @@
 |---|---|
 | graph_node_id | `feature-improvement-requests-2026-10`（task は `SYS-IR-P01`〜`SYS-IR-P13`） |
 | beads_id | `hr-wcv`（task は `hr-wcv.1`〜`hr-wcv.13`） |
-| 状態 | review。11項目の PR [#93](https://github.com/daishiman/hr-evaluation-system/pull/93) は 2026-10-14 に main へマージし（squash `03787cb`）、Deploy run 38509015552 で本番へ配布した。追加要望 A〜C は続きの PR で出す |
+| 状態 | review。11項目の PR [#93](https://github.com/daishiman/hr-evaluation-system/pull/93) は 2026-10-14 に main へマージし（squash `03787cb`）、Deploy run 38509015552 で本番へ配布した。追加要望 A〜C は main 向けの draft PR [#94](https://github.com/daishiman/hr-evaluation-system/pull/94)。マージと本番への配布のあと done |
 | base branch | `main`（追加要望の PR は `03787cb`＝#93 のマージ後の上に載せる。dev ブランチは無い） |
 | work branch | `devgraph/feature-improvement-requests-2026-10` |
 | 仕様反映 | [2026-10-13 の受領書](../docs/product/spec-receipts/2026-10-13-improvement-requests.md) / [最終レビューの受領書](../docs/product/spec-receipts/2026-10-14-improvement-requests-final-review.md) / [追加要望の受領書](../docs/product/spec-receipts/2026-10-14-improvement-requests-additional.md) |
@@ -20,7 +20,7 @@
 | P03 設計の見直し | `hr-wcv.3` | closed | — |
 | P04 赤の試験 | `hr-wcv.4` | closed。最終レビューで所属・提出対象・画面の操作の試験を足した | — |
 | P05 実装と移行 | `hr-wcv.5` | closed。draft PR #93 を出した | — |
-| P06 緑の確認 | `hr-wcv.6` | 手元の試験はすべて緑。#93 のマージ後の Deploy は run 38509015552 で成功（Beads はまだ閉じていない） | マージ後の `deploy.yml` の実行番号を記録したとき |
+| P06 緑の確認 | `hr-wcv.6` | closed。#93 のマージ後の Deploy は run 38509015552 で成功 | — |
 | P07 preview での受入 | `hr-wcv.7` | 確認済み（E2E 53 件成功。追加要望の2件を含む） | P06 のあと（Beads の依存） |
 | P08 移行の予行 | `hr-wcv.8` | closed。0033・0034・0035 を2回流した。対応表は [migration-mapping-grade-display-names.md](../docs/migration-mapping-grade-display-names.md) | — |
 | P09 漏れ・権限・a11y | `hr-wcv.9` | 確認済み。他社の既存アカウントへの所属追加を全体管理者だけにした（DD-009） | P06 のあと（P08 は閉じた） |
@@ -31,7 +31,7 @@
 
 ## 追加要望（2026-10-14、本番を見て受けた3件）
 
-#93 を本番へ配布したあとに受けた。続きの PR で出す。範囲 S1〜S14・受入 A1〜A13 の番号の外に置く。task は増やさず、P04（試験）・P05（実装）・P07（preview での受入）・P12（文書）の中で扱った。
+#93 を本番へ配布したあとに受けた。draft PR #94 で出す。範囲 S1〜S14・受入 A1〜A13 の番号の外に置く。task は増やさず、P04（試験）・P05（実装）・P07（preview での受入）・P12（文書）の中で扱った。
 
 | 記号 | 要望 | 状態 | 反映先 |
 |---|---|---|---|
