@@ -7,6 +7,7 @@ import { checkKgiCoverage } from "@/lib/domain/kgi";
 import { rangeLabel, type Direction } from "@/lib/domain/scoring";
 import { checkBounds, checkNumberMagnitude } from "@/lib/domain/number-input";
 import { checkRankBoundaries } from "@/lib/domain/rank-bounds";
+import { bandChangeBlockers, bandSplitMessage } from "@/lib/domain/behavior-band-range";
 import type { MasterUpdateBody } from "./body-schema";
 import { applyBehaviorMasterUpdate } from "./apply-behavior-master-update";
 import { applyVersionedRequirementUpdate } from "./versioned-requirement-update";
@@ -57,6 +58,26 @@ export async function applyMasterUpdate(args: {
           )[0];
           if (!set) throw new HttpError(404, "その行動指針の基準が見つかりませんでした。");
           if (!set.isActive) throw new HttpError(400, "その行動指針の基準は使用を止めています。もう一度使う状態にしてから割り当ててください。");
+        }
+        /* 同じ基準セットは、等級の並びで続いた等級にだけ出す（§7-6・DD-010）。
+           画面は飛び飛びになる選択肢を選べなくしているが、ここでも会社の全等級で数え直す。 */
+        if (body.behaviorBand !== undefined || body.isActive !== undefined) {
+          const companyGrades = await db
+            .select({
+              id: s.grades.id,
+              name: s.grades.name,
+              displayOrder: s.grades.displayOrder,
+              isActive: s.grades.isActive,
+              behaviorBand: s.grades.behaviorBand,
+            })
+            .from(s.grades)
+            .where(eq(s.grades.companyId, companyId));
+          const [blocker] = bandChangeBlockers(companyGrades, {
+            gradeId: body.id,
+            behaviorBand: body.behaviorBand,
+            isActive: body.isActive,
+          });
+          if (blocker) throw new HttpError(400, bandSplitMessage(blocker));
         }
         const before = (await db.select().from(s.grades).where(eq(s.grades.id, body.id)).limit(1))[0];
         const patch: Record<string, unknown> = {};

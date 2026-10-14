@@ -141,13 +141,15 @@ describe("withGradeAndScore", () => {
     const out = await withGradeAndScore(t.db, viewer(role), rows);
     expect(out[0]).toMatchObject({ id: IDS.employee, gradeName: "等級２：Regular", latestScore: { totalScore: 72.5 } });
     expect(out[1]).toMatchObject({ id: IDS.evaluator, gradeName: "等級３：Chief", latestScore: null });
+    // 一覧を等級で並べ替えるための並び（下の等級ほど小さい）
+    expect(out[0].gradeOrder).toBeLessThan(out[1].gradeOrder ?? Number.NEGATIVE_INFINITY);
   });
 
   it("EMPLOYEE には等級と点数のキーそのものを含めない（等級の id も落とす）", async () => {
     const out = await withGradeAndScore(t.db, viewer("EMPLOYEE"), rows);
     for (const row of out) {
       expect(Object.keys(row).sort()).toEqual(["id", "name"]);
-      expect(JSON.stringify(row)).not.toMatch(/totalScore|gradeName|latestScore/);
+      expect(JSON.stringify(row)).not.toMatch(/totalScore|gradeName|gradeOrder|latestScore/);
     }
   });
 });

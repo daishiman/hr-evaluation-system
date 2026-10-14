@@ -126,78 +126,79 @@ export function GradeRequirementEditor({
           busy={saving}
           onCommit={(ids) => commitOrder(ids)}
           renderItem={(r, i) => (
-            <>
-              <div className="flex items-start gap-3">
-                <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{i + 1}</span>
-                <div className="row-main">
-                  {editing[r.id] === undefined ? (
-                    <>
-                      <p className="m-0 text-sub">{r.text}</p>
-                      {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
-                    </>
-                  ) : (
-                    <>
-                      <textarea
-                        value={editing[r.id]}
-                        autoFocus
-                        onChange={(e) => setEditing((s) => ({ ...s, [r.id]: e.target.value }))}
-                        rows={2}
-                        className="input w-full"
-                        aria-label={`${label} ${i + 1}件目の内容`}
-                      />
-                      <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
-                      <div className="mt-2 flex gap-2">
-                        <Button
-                          variant="primary"
-                          disabled={saving || editing[r.id].trim() === ""}
-                          onClick={async () => {
-                            const ok = await send({
-                              kind: "gradeRequirementRevise",
-                              id: r.id,
-                              text: editing[r.id].trim(),
-                            });
-                            if (ok) setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; });
-                          }}
-                        >
-                          新版として保存
-                        </Button>
-                        <Button
-                          variant="tertiary"
-                          disabled={saving}
-                          onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}
-                        >
-                          やめる
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
+            <div className="flex items-start gap-3">
+              <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{i + 1}</span>
+              <div className="row-main">
+                {editing[r.id] === undefined ? (
+                  <>
+                    <p className="m-0 text-sub">{r.text}</p>
+                    {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
+                  </>
+                ) : (
+                  <>
+                    <textarea
+                      value={editing[r.id]}
+                      autoFocus
+                      onChange={(e) => setEditing((s) => ({ ...s, [r.id]: e.target.value }))}
+                      rows={2}
+                      className="input w-full"
+                      aria-label={`${label} ${i + 1}件目の内容`}
+                    />
+                    <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
+                    <div className="mt-2 flex gap-2">
+                      <Button
+                        variant="primary"
+                        disabled={saving || editing[r.id].trim() === ""}
+                        onClick={async () => {
+                          const ok = await send({
+                            kind: "gradeRequirementRevise",
+                            id: r.id,
+                            text: editing[r.id].trim(),
+                          });
+                          if (ok) setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; });
+                        }}
+                      >
+                        新版として保存
+                      </Button>
+                      <Button
+                        variant="tertiary"
+                        disabled={saving}
+                        onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}
+                      >
+                        やめる
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
-              {editing[r.id] === undefined && (
-                <div className="row-actions mt-2">
-                  <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
-                    内容を直す
-                  </Button>
+            </div>
+          )}
+          renderActions={(r) =>
+            // 直している行は操作の列を作らず、入力欄を行の幅いっぱいに使う
+            editing[r.id] !== undefined ? null : (
+              <>
+                <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
+                  内容を直す
+                </Button>
+                <ConfirmButton
+                  label="今後使わない"
+                  variant="danger-outline"
+                  busy={saving}
+                  confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
+                  onConfirm={() => void send({ kind: "gradeRequirementActivation", id: r.id, isActive: false })}
+                />
+                {markOf(r.id) === null && (
                   <ConfirmButton
-                    label="今後使わない"
+                    label={DELETE_LABEL}
                     variant="danger-outline"
                     busy={saving}
-                    confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
-                    onConfirm={() => void send({ kind: "gradeRequirementActivation", id: r.id, isActive: false })}
+                    confirm={deleteConfirmText(r.text)}
+                    onConfirm={() => void remove(r.id)}
                   />
-                  {markOf(r.id) === null && (
-                    <ConfirmButton
-                      label={DELETE_LABEL}
-                      variant="danger-outline"
-                      busy={saving}
-                      confirm={deleteConfirmText(r.text)}
-                      onConfirm={() => void remove(r.id)}
-                    />
-                  )}
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )
+          }
         />
         )}
 

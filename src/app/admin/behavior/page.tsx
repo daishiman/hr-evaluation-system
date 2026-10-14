@@ -7,8 +7,9 @@ import { BehaviorBandAssignmentEditor } from "@/components/BehaviorBandAssignmen
 import { BehaviorBandSetEditor } from "@/components/BehaviorBandSetEditor";
 import { BehaviorGuidelineEditor } from "@/components/BehaviorGuidelineEditor";
 import { gradesUsingBand } from "@/lib/domain/behavior";
-import { bandSetLabel, pointGroupLabel } from "@/lib/domain/grade-label";
-import { ChipLink, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
+import { bandSetLabel, DEFAULT_GRADE_NAMES, gradeLabel } from "@/lib/domain/grade-label";
+import { bandRuns, bandSplitMessage, bandSplits } from "@/lib/domain/behavior-band-range";
+import { ChipLink, Disclosure, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,24 @@ export default async function AdminBehavior({
      下の部品へはこの呼び名を name として渡す。 */
   const labeledSets = bandSets.map((set) => ({ ...set, name: bandSetLabel(set, grades) }));
 
+  /* 同じ基準セットは、等級の並びで続いた等級にだけ出す（§7-6・DD-010）。
+     等級タブを「同じ行動指針が出るまとまり」ごとに囲み、全体の分け方を1か所で見せる。 */
+  const lineGrades = grades.map((g) => ({
+    id: g.id,
+    name: gradeLabel(g),
+    displayOrder: g.displayOrder,
+    isActive: g.isActive,
+    behaviorBand: g.behaviorBand,
+  }));
+  const runs = bandRuns(lineGrades);
+  const splits = bandSplits(lineGrades);
+  const splitBands = new Set(splits.map((split) => split.band));
+  const stoppedGrades = lineGrades.filter((g) => !g.isActive);
+  const aspectCountOf = (code: string) => guidelines.filter((g) => g.band === code && g.isActive).length;
+  /* 初期の分け方の説明に、会社のいまの等級名を使う（無ければ既定の名前） */
+  const nameByCode = (code: keyof typeof DEFAULT_GRADE_NAMES) =>
+    gradeLabel(grades.find((g) => g.code === code) ?? { name: DEFAULT_GRADE_NAMES[code] });
+
   const rows = guidelines.map((g) => ({
     id: g.id,
     band: g.band,
@@ -80,20 +99,65 @@ export default async function AdminBehavior({
         <EmptyState title="等級が登録されていません" body="先に等級を登録してください。" />
       ) : (
         <>
-          <div className="mb-5 flex flex-wrap gap-2">
-            {grades.map((g) => (
-              <ChipLink
-                key={g.id}
-                href={`/admin/behavior?grade=${g.id}${band ? `&band=${band}` : ""}`} current={g.id === selectedGrade?.id}
-              >
-                {g.name}
-              </ChipLink>
-            ))}
-          </div>
+          {splits.map((split) => (
+            <div key={split.band} role="alert" className="mb-3">
+              <ReasonNote>
+                いまの分け方は飛び飛びです。{bandSplitMessage(split)}
+                端の等級か、あいだの等級の割り当てを変えて、続いた並びに直してください。
+              </ReasonNote>
+            </div>
+          ))}
+          <ol className="m-0 mb-5 flex list-none flex-wrap gap-3 p-0" aria-label="等級と、出す行動指針の分け方">
+            {runs.map((run) => {
+              const split = run.band !== null && splitBands.has(run.band);
+              return (
+                <li
+                  key={run.grades[0].id}
+                  className={
+                    split
+                      ? "rounded-lg border border-caution-border bg-caution-soft px-3 py-2"
+                      : "rounded-lg border border-line px-3 py-2"
+                  }
+                >
+                  <span className="block text-note text-ink-muted">
+                    {run.band === null
+                      ? "行動指針を出さない"
+                      : `同じ行動指針（観点${aspectCountOf(run.band)}件）${split ? "・飛び飛び" : ""}`}
+                  </span>
+                  <span className="mt-1 flex flex-wrap gap-2">
+                    {run.grades.map((g) => (
+                      <ChipLink
+                        key={g.id}
+                        href={`/admin/behavior?grade=${g.id}${band ? `&band=${band}` : ""}`} current={g.id === selectedGrade?.id}
+                      >
+                        {g.name}
+                      </ChipLink>
+                    ))}
+                  </span>
+                </li>
+              );
+            })}
+            {stoppedGrades.length > 0 && (
+              <li className="rounded-lg border border-dashed border-line px-3 py-2">
+                <span className="block text-note text-ink-muted">使用を止めた等級（アンケートに出ない）</span>
+                <span className="mt-1 flex flex-wrap gap-2">
+                  {stoppedGrades.map((g) => (
+                    <ChipLink
+                      key={g.id}
+                      href={`/admin/behavior?grade=${g.id}${band ? `&band=${band}` : ""}`} current={g.id === selectedGrade?.id}
+                    >
+                      {g.name}
+                    </ChipLink>
+                  ))}
+                </span>
+              </li>
+            )}
+          </ol>
           {selectedGrade && (
             <BehaviorBandAssignmentEditor
               key={selectedGrade.id}
               grade={{ id: selectedGrade.id, name: selectedGrade.name, behaviorBand: selectedGrade.behaviorBand }}
+              lineGrades={lineGrades}
               bandSets={labeledSets}
               availableBands={assignableBands}
             />
@@ -104,8 +168,16 @@ export default async function AdminBehavior({
       <div className="mt-3">
         <Disclosure summary="行動指針の初期設定について">
           <p className="footnote m-0">
-            移行元には、{pointGroupLabel("AM", grades)}へ行動指針を出さない記録がありました。実際に出したアンケートも残っていました。
-            初期値は実際のアンケートを採用しています。会社の制度に合わせて上で切り替えてください。
+            初期の分け方は3つです。{nameByCode("beginner")}・{nameByCode("regular")}に1つ目の行動指針、
+            {nameByCode("chief")}・{nameByCode("am1")}・{nameByCode("am2")}に2つ目の行動指針を出し、
+            {nameByCode("manager1")}・{nameByCode("manager2")}には出しません。
+          </p>
+          <p className="footnote m-0 mt-1">
+            同じ行動指針は、等級の並びで続いた等級にだけ出せます。間の等級を飛ばして同じ行動指針を出す設定は保存できません。
+          </p>
+          <p className="footnote m-0 mt-1">
+            移行元には、{nameByCode("am1")}・{nameByCode("am2")}へ行動指針を出さない記録がありました。実際に出したアンケートも残っていたので、
+            初期値は出す側にしています。
           </p>
         </Disclosure>
       </div>

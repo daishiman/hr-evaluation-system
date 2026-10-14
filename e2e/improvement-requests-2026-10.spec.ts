@@ -14,6 +14,7 @@ import { E2E_RESPONDENT, STORAGE_STATE, signIn, switchCompany, waitForHydration 
  * 4. 右側の余白（A12）: S13 の7画面と、同じ崩れ方をしていたので直した画面・一覧の画面で、1280px と 1600px のとき、
  *    中身のある高さのうち本文（main の内側）の右 40% に何も無い高さが 40% 以下。375・768・1280・1600 の4つの幅で撮影を残す。
  *    /me は一般の方でも測る（一般の方にだけ最新の評価のカードが出て、全体管理者の /me とは中身が違う）。
+ * 5. 人の一覧（§28-13）: 打つと絞られ、検索語と並びが URL に残り、会社を切り替えても引き継ぐ。1社の一覧には会社の並べ替えが無い。
  *
  * 相手はローカルの preview とローカル D1 の見本データ（playwright.config.ts）。
  * ログインはシステム全体管理者（auth.setup.ts）。操作する会社は見本の1社目にそろえてから始める。
@@ -378,6 +379,65 @@ test.describe("設問と保存済みデータの接続（A10・A11）", () => {
     await title.fill(original);
     await save.click();
     await expect(save).toBeEnabled();
+  });
+});
+
+test.describe("人の一覧の検索と並べ替え（§28-13）", () => {
+  const status = (page: Page) => page.locator("main [role=status]").filter({ hasText: "人を表示" });
+  const rows = (page: Page) => page.locator("main a.user-row");
+
+  test("打つと絞られ、検索語と並びは URL に残り、会社を切り替えても引き継ぐ", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/system/users");
+    await waitForHydration(page, "main input[type=search]");
+    await expect(status(page)).toContainText("会社名順");
+    const total = Number((await status(page).innerText()).match(/\/ (\d+)人/)?.[1]);
+    expect(total).toBeGreaterThan(1);
+
+    // 先頭の人の名前で探すと、その人が残る
+    const name = (await rows(page).first().locator("p").first().evaluate((el) => el.firstChild?.textContent ?? "")).trim();
+    const search = page.getByRole("searchbox", { name: "探す" });
+    await search.fill(name);
+    await expect(rows(page).first()).toContainText(name);
+    await expect(page).toHaveURL(/[?&]q=/);
+
+    // 当たらない語では、その旨と消す手段を出す
+    await search.fill("当たらない語zzz");
+    await expect(page.getByText("条件に合う人がいません")).toBeVisible();
+    await page.getByRole("button", { name: "検索を消す" }).click();
+    await expect(status(page)).toContainText(`${total} / ${total}人を表示`);
+
+    // 並べ替えを選ぶと既定の向き、ボタンで逆にする
+    await page.getByRole("combobox", { name: "並べ替え" }).selectOption("score");
+    await expect(status(page)).toContainText("点数の高い順");
+    await page.getByRole("button", { name: "点数の低い順にする" }).click();
+    await expect(status(page)).toContainText("点数の低い順");
+    await expect(page).toHaveURL(/sort=score/);
+    await expect(page).toHaveURL(/dir=asc/);
+
+    // 会社でしぼっても、検索語と並びは残る
+    await search.fill(name);
+    await expect(page).toHaveURL(/[?&]q=/);
+    const chip = page.locator("main a.chip[href*='company=']").first();
+    await expect(chip).toHaveAttribute("href", /q=/);
+    await chip.click();
+    await expect(page).toHaveURL(/company=/);
+    await expect(page).toHaveURL(/sort=score/);
+    await waitForHydration(page, "main input[type=search]");
+    await expect(page.getByRole("searchbox", { name: "探す" })).toHaveValue(name);
+
+    // 再読み込みしても同じ一覧に戻る
+    await page.reload();
+    await waitForHydration(page, "main input[type=search]");
+    await expect(page.getByRole("searchbox", { name: "探す" })).toHaveValue(name);
+    await expect(status(page)).toContainText("点数の低い順");
+  });
+
+  test("1社の一覧には会社の並べ替えが無く、URL で指定しても既定の並びに戻る", async ({ page }) => {
+    await page.goto("/admin/members?sort=company");
+    await waitForHydration(page, "main input[type=search]");
+    await expect(page.locator("main select option[value=company]")).toHaveCount(0);
+    await expect(status(page)).toContainText("等級の低い順");
   });
 });
 

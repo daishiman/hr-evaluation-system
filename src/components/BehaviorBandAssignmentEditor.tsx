@@ -4,6 +4,7 @@ import { saveMaster } from "@/actions/masters";
 import { useSaveAction } from "@/lib/use-refresh";
 import { useEffect, useState } from "react";
 import { behaviorBandLabel, behaviorBandPayloadValue, type BehaviorBandSetRow } from "@/lib/domain/behavior";
+import { bandChangeBlockers, bandChoiceNote, type BandGrade } from "@/lib/domain/behavior-band-range";
 import { Button, Card, CardHead, ReasonNote } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
 
@@ -19,10 +20,13 @@ export interface BehaviorAssignmentGradeRow {
  */
 export function BehaviorBandAssignmentEditor({
   grade,
+  lineGrades,
   bandSets,
   availableBands,
 }: {
   grade: BehaviorAssignmentGradeRow;
+  /** 会社の全等級（並びと割り当て）。飛び飛びになる選択肢を選べなくするのに使う（サーバーも同じ判定をする） */
+  lineGrades: readonly BandGrade[];
   /** 会社が持っている基準セット（呼び名の正本）。 */
   bandSets: readonly BehaviorBandSetRow[];
   /** 問う内容があり、いま使う設定の基準だけを選択肢にする。 */
@@ -66,6 +70,10 @@ export function BehaviorBandAssignmentEditor({
   };
 
   const currentUnavailable = draft !== "" && !selectableBands.includes(draft);
+  /* 同じ基準セットは続いた等級にだけ出す（§7-6・DD-010）。選ぶと飛び飛びになる選択肢には理由を添える */
+  const choiceNote = (code: string) =>
+    bandChoiceNote(bandChangeBlockers(lineGrades, { gradeId: grade.id, behaviorBand: behaviorBandPayloadValue(code) }));
+  const noneNote = choiceNote("");
 
   return (
     <div className="stack">
@@ -93,17 +101,23 @@ export function BehaviorBandAssignmentEditor({
               className="input mt-1 w-full"
               aria-label={`${grade.name}に出す行動指針`}
             >
-              <option value="">行動指針を出さない</option>
+              <option value="" disabled={noneNote !== null && draft !== ""}>
+                行動指針を出さない{noneNote && `（${noneNote}）`}
+              </option>
               {currentUnavailable && (
                 <option value={draft} disabled>
                   {behaviorBandLabel(bandSets, draft)}（いまは選べません）
                 </option>
               )}
-              {selectableBands.map((code) => (
-                <option key={code} value={code}>
-                  {behaviorBandLabel(bandSets, code)}
-                </option>
-              ))}
+              {selectableBands.map((code) => {
+                const note = choiceNote(code);
+                return (
+                  <option key={code} value={code} disabled={note !== null && code !== draft}>
+                    {behaviorBandLabel(bandSets, code)}
+                    {note && `（${note}）`}
+                  </option>
+                );
+              })}
             </select>
           </label>
 

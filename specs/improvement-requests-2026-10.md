@@ -6,7 +6,7 @@
 - 正本（システム）: `system-spec/00-requirements-definition.md`（G6〜G15・O6〜O15・I7〜I16、決定 D-004〜D-007、qa-v02）
 - 正本（feature）: `features/improvement-requests-2026-10.md`・`features/feature-improvement-requests-2026-10.context.json`
 - 要件定義（実装要件）: `docs/requirements/feature-improvement-requests-2026-10.md`
-- 受領: `docs/product/spec-receipts/2026-10-13-improvement-requests.md`（範囲と受入）、`docs/product/spec-receipts/2026-10-14-improvement-requests-final-review.md`（最終レビュー。DD-009 による会社選択の戻り先と所属追加の主体の訂正）
+- 受領: `docs/product/spec-receipts/2026-10-13-improvement-requests.md`（範囲と受入）、`docs/product/spec-receipts/2026-10-14-improvement-requests-final-review.md`（最終レビュー。DD-009 による会社選択の戻り先と所属追加の主体の訂正）、`docs/product/spec-receipts/2026-10-14-improvement-requests-additional.md`（本番を見て受けた追加要望3件。製品仕様 §28-11〜§28-13。範囲 S1〜S14・受入 A1〜A13 の番号の外に置く）
 
 この文書は、範囲 S1〜S14 と受入 A1〜A13 の番号の正本です。番号と意味は `features/feature-improvement-requests-2026-10.context.json` の scope_in・acceptance と同じで、製品仕様 §28 も同じ番号を使います。どの項目も「保留」「対象外」にしていません（利用者の指示「保留事項にしないで、今回の内容全て対応」）。
 

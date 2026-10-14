@@ -5,6 +5,7 @@ import { REORDER_HINT, ReorderList, reorderHandleLabel } from "@/components/reor
 import {
   EDGE_SCROLL_MAX_PX,
   EDGE_SCROLL_PX,
+  dragOffset,
   edgeScrollSpeed,
   initialReorderState,
   pickOverIndex,
@@ -77,6 +78,27 @@ describe("ReorderList の読み上げと押せる場所", () => {
     expect(saving).toContain('aria-busy="true"');
     expect(saving.match(/aria-disabled="true"/g)).toHaveLength(ITEMS.length * 5);
     expect(saving.match(/disabled=""/g)).toHaveLength(4);
+  });
+
+  it("行の操作は本文の外の列に描き、読む順は「つまみ → 本文 → 操作 → 矢印」。null の行には列を作らない", () => {
+    const withActions = renderToStaticMarkup(
+      createElement(ReorderList<(typeof ITEMS)[number]>, {
+        items: ITEMS,
+        label: "設問の並び",
+        onCommit: () => {},
+        renderActions: (item) => (item.id === "b" ? null : createElement("button", { type: "button" }, `${item.label}を直す`)),
+      }),
+    );
+    const rows = withActions.match(/<li [\s\S]*?<\/li>/g) ?? [];
+    expect(rows).toHaveLength(ITEMS.length);
+    expect(rows.map((row) => row.includes('class="reorder-actions"'))).toEqual([true, false, true]);
+    const order = (row: string) =>
+      ["reorder-handle", "reorder-body", "reorder-actions", "reorder-steps"]
+        .map((name) => row.indexOf(name))
+        .filter((at) => at >= 0);
+    for (const row of rows) expect(order(row)).toEqual([...order(row)].sort((a, b) => a - b));
+    // 操作は本文の箱の中に入れない（矢印と右端をそろえるため）
+    expect(rows[0]).toMatch(/<div class="reorder-body">設問A<\/div><div class="reorder-actions">/);
   });
 });
 
@@ -204,27 +226,54 @@ describe("キーボードで持ち上げたあとの Esc", () => {
   });
 });
 
-describe("pickOverIndex（指の下の行）", () => {
-  // 高さの違う3行（0〜50・60〜260・270〜300。行の間に10pxの隙間）
+describe("pickOverIndex（浮いた行の行き先）", () => {
+  // 高さの違う3行の置き場所（0〜50・60〜260・270〜300。真ん中は 25・160・285）
   const rows = [
     { top: 0, bottom: 50 },
     { top: 60, bottom: 260 },
     { top: 270, bottom: 300 },
   ];
+  const at = (top: number, height: number) => ({ top, bottom: top + height });
 
-  it("向きの先にある行だけを選ぶ（入れ替え直後の揺り戻しを防ぐ）", () => {
-    expect(pickOverIndex(rows, 0, 100, +1)).toBe(1);
-    expect(pickOverIndex(rows, 1, 20, +1)).toBeNull();
-    expect(pickOverIndex(rows, 1, 20, -1)).toBe(0);
-    expect(pickOverIndex(rows, 0, 100, -1)).toBeNull();
-    expect(pickOverIndex(rows, 1, 100, 0)).toBeNull();
+  it("浮いた行の端が、向きの先にある行の真ん中を越えたら、その行の位置へ", () => {
+    // 先頭の低い行（高さ50）を下へ: 下端が 160 を越えたら2番目、285 を越えたら末尾
+    expect(pickOverIndex(rows, 0, at(100, 50), +1)).toBeNull();
+    expect(pickOverIndex(rows, 0, at(120, 50), +1)).toBe(1);
+    expect(pickOverIndex(rows, 0, at(250, 50), +1)).toBe(2);
+    // 背の高い行（高さ200）を上へ: 上端が 25 を下回ったら先頭。つかんだ点が行のどこでも同じ
+    expect(pickOverIndex(rows, 1, at(30, 200), -1)).toBeNull();
+    expect(pickOverIndex(rows, 1, at(20, 200), -1)).toBe(0);
   });
 
-  it("一覧の上なら先頭、下なら末尾、行の間と空の一覧では決めない", () => {
-    expect(pickOverIndex(rows, 2, -40, -1)).toBe(0);
-    expect(pickOverIndex(rows, 0, 900, +1)).toBe(2);
-    expect(pickOverIndex(rows, 0, 55, +1)).toBeNull();
-    expect(pickOverIndex([], 0, 10, +1)).toBeNull();
+  it("向きと逆の側は相手にしない（入れ替えた直後に入れ替わり返さない）", () => {
+    // 背の高い行が低い行を越えて下へ入れ替わった直後（低い行 0〜50、背の高い行 60〜260）。
+    // 少し上へ戻しても、上端が低い行の真ん中（25）を下回るまでは動かない
+    const swapped = [
+      { top: 0, bottom: 50 },
+      { top: 60, bottom: 260 },
+    ];
+    expect(pickOverIndex(swapped, 1, at(40, 200), -1)).toBeNull();
+    expect(pickOverIndex(rows, 1, at(20, 200), +1)).toBeNull();
+    expect(pickOverIndex(rows, 1, at(100, 200), +1)).toBe(2);
+    expect(pickOverIndex(rows, 1, at(20, 200), 0)).toBeNull();
+    expect(pickOverIndex([], 0, at(0, 50), +1)).toBeNull();
+  });
+});
+
+describe("dragOffset（持っている行を指について動かす）", () => {
+  const base = { grab: 10, layoutTop: 200, height: 50, listTop: 100, listBottom: 600 };
+
+  it("つかんだ点が指の下に来るだけずらす", () => {
+    expect(dragOffset({ ...base, pointerY: 210 })).toBe(0);
+    expect(dragOffset({ ...base, pointerY: 300 })).toBe(90);
+    expect(dragOffset({ ...base, pointerY: 150 })).toBe(-60);
+  });
+
+  it("一覧の上端と下端の間に収める（一覧の外へ浮かせない）", () => {
+    expect(dragOffset({ ...base, pointerY: 0 })).toBe(-100);
+    expect(dragOffset({ ...base, pointerY: 2000 })).toBe(350);
+    // 一覧より行のほうが高い（1行だけの一覧など）ときは、一覧の上端にそろえる
+    expect(dragOffset({ ...base, pointerY: 2000, listBottom: 120 })).toBe(-100);
   });
 });
 
@@ -239,5 +288,23 @@ describe("edgeScrollSpeed（端での自動スクロール）", () => {
     const near = edgeScrollSpeed(800 - EDGE_SCROLL_PX / 2, 800);
     expect(near).toBeGreaterThan(0);
     expect(near).toBeLessThan(EDGE_SCROLL_MAX_PX);
+  });
+
+  it("上下に張り付いたもの（ヘッダー・操作の帯）の内側から端を数える", () => {
+    // ヘッダーの下端が 100 なら、上の端の帯は 100〜156
+    expect(edgeScrollSpeed(200, 800, { top: 100 })).toBe(0);
+    expect(edgeScrollSpeed(120, 800, { top: 100 })).toBeLessThan(0);
+    expect(edgeScrollSpeed(40, 800, { top: 100 })).toBe(-EDGE_SCROLL_MAX_PX);
+    // 下に 80 の操作の帯があれば、下の端の帯は 664〜720
+    expect(edgeScrollSpeed(700, 800, { bottom: 80 })).toBeGreaterThan(0);
+    expect(edgeScrollSpeed(700, 800)).toBe(0);
+  });
+
+  it("その向きの一覧の端がもう見えていれば流さない", () => {
+    expect(edgeScrollSpeed(10, 800, { list: { top: 5, bottom: 2000 } })).toBe(0);
+    expect(edgeScrollSpeed(10, 800, { list: { top: -300, bottom: 2000 } })).toBeLessThan(0);
+    expect(edgeScrollSpeed(120, 800, { top: 100, list: { top: 110, bottom: 2000 } })).toBe(0);
+    expect(edgeScrollSpeed(790, 800, { list: { top: -300, bottom: 700 } })).toBe(0);
+    expect(edgeScrollSpeed(790, 800, { list: { top: -300, bottom: 900 } })).toBeGreaterThan(0);
   });
 });

@@ -8,11 +8,12 @@ import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
 import { RoleCapabilities } from "@/components/permissions/RoleCapabilities";
 import { MembersCsvImport } from "@/components/MembersCsvImport";
-import { MembersFilter } from "@/components/MembersFilter";
+import { PeopleList } from "@/components/PeopleList";
 import { createMember } from "@/actions/members";
 import { listMemoHolderIds } from "@/lib/credential-vault";
 import { getDb } from "@/lib/db";
-import { withGradeAndScore } from "@/lib/score-visibility";
+import { canViewGradeScore, withGradeAndScore } from "@/lib/score-visibility";
+import { availableSortKeys, parsePeopleView, type PeopleSearchParams } from "@/lib/domain/people-list";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export const dynamic = "force-dynamic";
  * アカウントの発行と名簿の取り込みは、必要になったときだけ開く。
  * 一覧には「名前・等級・役割・状態」だけを出し、細かい情報は個人のページに置く。
  */
-export default async function AdminMembers() {
+export default async function AdminMembers({ searchParams }: { searchParams: Promise<PeopleSearchParams> }) {
   const viewer = await requireRoute("/admin/members");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
@@ -42,6 +43,9 @@ export default async function AdminMembers() {
   const inactive = members.filter((m) => !m.isActive);
   // 一覧に出す等級と確定した最新の点数は、見てよい役割にだけサーバーで付ける（S6）
   const listed = await withGradeAndScore(db, viewer, active);
+  // 自社の一覧なので会社では並べない。点数と等級は見てよい役割だけが並べられる
+  const sortKeys = availableSortKeys({ acrossCompanies: false, gradeAndScore: canViewGradeScore(viewer) });
+  const view = parsePeopleView(await searchParams, sortKeys);
   const selfEdit = resolveSelfEditMap(policies);
   const selfEditableLabels = CONFIGURABLE_FIELDS.filter((f) => selfEdit[f.key as keyof typeof selfEdit]).map(
     (f) => f.label,
@@ -87,15 +91,22 @@ export default async function AdminMembers() {
       {active.length === 0 ? (
         <EmptyState title="社員がまだ登録されていません" body="下の「アカウントを発行する」から追加してください。" />
       ) : (
-        <MembersFilter
-          members={listed.map((m) => ({
+        <PeopleList
+          sortKeys={sortKeys}
+          initial={view}
+          rows={listed.map((m) => ({
+            key: m.id,
             id: m.id,
+            href: `/admin/members/${m.id}`,
+            isActive: true,
             name: m.name,
             email: m.email,
-            roleLabel: ROLE_LABEL[m.role as keyof typeof ROLE_LABEL] ?? m.role,
+            role: m.role,
             gradeName: m.gradeName,
+            gradeOrder: m.gradeOrder,
             latestScore: m.latestScore,
             department: m.department,
+            employeeCode: m.employeeCode,
             hasMemo: hasMemo.has(m.id),
           }))}
         />
