@@ -53,7 +53,7 @@ implementation_readiness: {"status": "complete", "missing_sections": [], "checke
 
 ## Architecture overview
 
-11項目の改善要望と互換性の1件（範囲 S1〜S14・受入 A1〜A13。番号の正本は [仕様メモ](../specs/improvement-requests-2026-10.md)）を、次の7つの設計で受け止める。何を決めたかは [製品仕様 §28](../docs/product/spec.md)、なぜそうしたかは [設計判断](#設計判断) と [design-decisions.md](../docs/product/design-decisions.md) の DD-004〜DD-008 が正本。
+11項目の改善要望と互換性の1件（範囲 S1〜S14・受入 A1〜A13。番号・担当・証跡は [仕様メモ](../specs/improvement-requests-2026-10.md) の照合表）を、次の7つの設計で受け止める。何を決めたかは [製品仕様 §28](../docs/product/spec.md)、なぜそうしたかは [設計判断](#設計判断) と [design-decisions.md](../docs/product/design-decisions.md) の DD-004〜DD-008 が正本。
 
 1. 等級の呼び名を作る共通の関数（`src/lib/domain/grade-label.ts`）
 2. 所属の表 `company_memberships` と、cookie `hr_company` で選ぶ会社（D-004）
@@ -135,6 +135,8 @@ flowchart LR
 - Local/server/global state ownership: 一覧・権限・点数・提出状況はサーバーが描いた画面が正本。部品が持つのは並べ替え中の並び・開閉・選んだタブだけ。『役割ごとにできること』の開閉は localStorage に覚え、読めないときは閉じた状態で動く。
 - Fetch/cache/invalidation/optimistic update: 並べ替えの保存は `useSaveAction` で並び全体を送り、成功したら `refresh()` の画面に置き換える。409 のときは元の並びに戻し、再読み込みを頼む。
 - Form/validation/error presentation: 選択肢の重複は保存のときサーバーの zod で断り、どの値が重なっているかを文で返す。
+- 人の一覧（追加要望B、2026-10-14）: 3つの一覧はサーバーが一度に返した行を `PeopleList` が手元で探して並べ替える（DD-011）。検索語と並びの正本は URL で、`useSearchParams` が変わったら `parsePeopleView` で読み直す（移動・履歴の復元で古い server props に戻らない）。書き戻しは `syncPeopleUrl` の1か所で、入力中は300ms待ち、入力欄からフォーカスが移るときは待たずに確定する。
+- マスターの編集（共通化レビュー、2026-10-14）: 4つの編集部品は保存・並べ替え・削除の送信と結果の表示を `useMasterAction(kind)` から受け取る。等級ごとの下書きは `key={grade.id}` で部品ごと作り直し、別の等級へ持ち越さない（`e2e/master-editing-scope.spec.ts`）。
 
 #### Backend integration
 
@@ -175,6 +177,7 @@ flowchart LR
 
 - Store/ownership/ORM/query boundaries: 所属の表は `src/lib/memberships.ts` だけが書く。読み出しは `users` と `company_memberships` を結合し、会社・役割・等級・上司は所属の値を使う。
 - Transactions/idempotency/concurrency: 所属の追加と元の所属の写しは1回の batch。並べ替えは id の集まりを照合してから `display_order` を1から振り直す batch。等級名の変更は既存の `writeMasterBatch`（同時保存は 409）。
+- 行動指針の割り当て（追加要望C、2026-10-14）: 割り当てか使用中かどうかを変える等級の保存は、判定に使った会社全体の割り当て（id・並び順・使用中・セット）を `writeGradeAssignmentBatch`（`src/lib/masters/grade-assignment-guard.ts`）が本体・監査と同じ batch の先頭で照合する。食い違えば CASE の失敗枝の `abs(INT64_MIN)` が integer overflow を起こして batch 全体を戻し、409（再読み込みを頼む）にする。等級名だけの保存と他社の保存は照合しない（`src/lib/masters/master-concurrent-save.integration.test.ts`）。
 - Migration/backfill: 0033（所属の表と既存の利用者の所属）・0034（等級名の一律の書き換え）・0035（移行の予行で見つかった書き換えの漏れの直し）。詳しくは [Data architecture](#data-architecture)。
 
 #### Reliability and operations
@@ -360,9 +363,9 @@ CREATE TABLE IF NOT EXISTS display_name_rewrites (
 `src/lib/domain/grade-label.ts` に次の関数を置き、画面・CSV の書き出し・アンケートの自動作成はここだけを使う。
 
 - `DEFAULT_GRADE_NAMES`: `code` ごとの既定（beginner→等級1 … manager2→等級5-2）。
-- `gradeLabel(grade | null)`: 等級名。無ければ「等級未設定」に1つにまとめる。
+- `gradeLabel(grade | null)`: 等級名。無い・名前が空白だけなら「等級未設定」に1つにまとめる。呼び名「等級未設定」（`GRADE_UNSET_LABEL`）はこのファイルだけが持ち、人数の札（「等級未設定 3人」）もこの定数を使う（`src/lib/grade-label-static.test.ts` が確かめる）。
 - `pointGroupLabel(pointGroup, grades)`: その区分の等級を `displayOrder` の順に「・」でつなぐ（例「等級4-1・等級4-2」）。区分名そのものは出さない。
-- `bandSetLabel(set, grades)`: 割り当てた等級があれば「等級1・等級2向け」。無ければ保存した名前、それも空なら「基準セット{n}」。
+- `bandSetLabel(set, grades)`: 割り当てた使用中の等級があれば「等級1・等級2向け」。無ければ保存した名前、それも空なら「基準セット{n}」。使用を止めた等級は新しいアンケートに出ないので数えない。
 - `promotionStepLabel(from, to)`: 「等級1→等級2」。
 - `targetGradesLabel(targetGrades, grades)`: 照合には生の値を使い、表示だけを変える。
 - `formDisplayTitle(form, cycle, grade)`: `title` が空なら「{評価期間} {等級名} 実績アンケート」。空文字を「既定の題名」とする。

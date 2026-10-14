@@ -71,6 +71,8 @@
 | 昇格要件 | `promotionRequirementCreate` | `promotionRequirementRevise` | `promotionRequirementActivation` | `promotionRequirementRestoreContent` | `promotionRequirementOrder` |
 
 - Createだけが `gradeId` と区分/種類を受け取る。
+- 等級要件・昇格要件・行動指針・基準セットの画面は `useMasterAction` に送信・結果通知を集約する。並べ替え中だけはfieldsetを無効化せず、つまみや矢印のフォーカスを維持する。
+- 等級要件の入力の寿命は `key={grade.id}` で対象等級へ結び付ける。同じ等級の再描画・保存失敗では下書きを保持し、別等級へ持ち越さない（`e2e/master-editing-scope.spec.ts`）。
 - Reviseは `id` と意味フィールド、Activationは `id + isActive`、RestoreContentは `id + sourceVersionId`、Orderは `ids`（並び全体の id の配列。1〜200件）を受け取る（S11・DD-005）。
 - id指定commandは `gradeId` / `category` / `reqKind` を受け取らない。
 - 一覧は `previousVersionId` を含む全版を返す。画面と削除判定は同じ系譜関数で現行・履歴を分類する。
@@ -86,11 +88,17 @@
 
 ## 6. 行動指針の等級割当UI
 
-- `/admin/behavior` は、各等級を同じ行またはカードで表示し、その中に `この等級に出す行動指針` のselect、`出さない`、行内保存を置く。
-- 上部の読み取り専用一覧と下部の単一等級編集フォームを併存させない。表示値と編集値の所有場所は1つにする。
-- `適用` という抽象語は使わず、`Beginnerのアンケートにこの行動指針を出す` のように、等級・対象・結果を明記する。
-- 保存後は `次に作るアンケートから反映します。作成済みのアンケートと評価は変わりません` と表示する。
+画面の形の正本は [版管理の製品仕様「行動指針をどの等級に出すか」](../docs/product/spec-master-definition-revisions.md#行動指針をどの等級に出すか)、
+断る割り当ての規則は [製品仕様 §28-12](../docs/product/spec.md#28-12-行動指針の分け方2026-10-14-の追加要望)、
+判断の経緯は [DD-010](../docs/product/design-decisions.md#dd-010-行動指針の基準セットは等級の並びで続いた等級にだけ出せるようにした2026-10-14)。ここには実装の場所と検査だけを書く。
+
+- 画面は `src/app/admin/behavior/page.tsx`。分け方の枠と、その中の等級のタブを描き、選んだ1等級だけを `BehaviorBandAssignmentEditor`（`src/components/BehaviorBandAssignmentEditor.tsx`）に渡す。
+  割り当てを変えるのはこの部品だけで、枠は読むだけ。
+- 判定は `src/lib/domain/behavior-band-range.ts` の1つ。画面（選べない選択肢と理由・枠・警告）とサーバー（`saveMaster` の kind=grade。`src/lib/masters/apply-master-update.ts`）が同じ関数を使い、サーバーは断る手を 400 にする。
+  並び順（`displayOrder`）が同着の等級は id の順に並べ、呼び名と分け方の判定は `grade-label.ts` の `compareGradeOrder` を共有する。
+- `grade-assignment-guard.ts` は判定に使った会社の等級（id・並び・使用中・割当）を本体・監査と同じD1 batch内で照合する。別等級の変更・追加・削除で前提が変わった保存は全体を取り消し409にする。規則に関係しない名称や他社は比較しない。監査表を状態の正本にしたり、スキーマを増やしたりしない。
 - 保存APIの権限・会社境界・基準セットの存在/active検査は従来どおりサーバーで行う。
+- 検査: `src/lib/domain/behavior-band-range.test.ts`・`src/actions/behavior-band-range.integration.test.ts`（固定した内容は DD-010）、`src/lib/masters/master-concurrent-save.integration.test.ts`（同じ初期状態で検証した別等級の2保存も片方だけ残り、もう片方の等級・監査は書かれない）。
 
 ## 7. 制度マスタの変更監査
 

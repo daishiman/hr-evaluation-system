@@ -1,19 +1,19 @@
-import Link from "next/link";
-import { ROLE_LABEL, type Role, requireRoute } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { listMembers } from "@/lib/queries";
 import { getDb } from "@/lib/db";
-import { GRADE_UNSET_LABEL } from "@/lib/domain/grade-label";
-import { withGradeAndScore } from "@/lib/score-visibility";
-import { Badge, Card, CardRow, EmptyState, PageTitle } from "@/components/ui";
-import { LatestScoreValue } from "@/components/LatestScore";
+import { availableSortKeys, parsePeopleView, type PeopleSearchParams } from "@/lib/domain/people-list";
+import { canViewGradeScore, withGradeAndScore } from "@/lib/score-visibility";
+import { EmptyState, PageTitle } from "@/components/ui";
+import { PeopleList } from "@/components/PeopleList";
 
 export const dynamic = "force-dynamic";
 
 /**
  * メンバー一覧。
  * 一覧には「名前・等級・直近の状態」の3つだけ置き、細かい数字は詳細画面に送る（認知負荷を下げる）。
+ * 名前などで探し、名前・役割・点数・等級で並べ替えられる（spec.md §28-13）。
  */
-export default async function ManagerMembers() {
+export default async function ManagerMembers({ searchParams }: { searchParams: Promise<PeopleSearchParams> }) {
   const viewer = await requireRoute("/manager/members");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
@@ -23,6 +23,8 @@ export default async function ManagerMembers() {
     viewer,
     await listMembers(viewer.companyId, viewer.role === "MANAGER" ? { managerId: viewer.id } : undefined),
   );
+  const sortKeys = availableSortKeys({ acrossCompanies: false, gradeAndScore: canViewGradeScore(viewer) });
+  const view = parsePeopleView(await searchParams, sortKeys);
 
   return (
     <>
@@ -34,27 +36,24 @@ export default async function ManagerMembers() {
       {members.length === 0 ? (
         <EmptyState title="メンバーが登録されていません" body="会社の管理者に社員の登録を依頼してください。" />
       ) : (
-        <Card>
-          {members.map((m) => (
-            <CardRow
-              key={m.id}
-              title={
-                <>
-                  <Link href={`/manager/members/${m.id}`} className="text-brand-deep">
-                    {m.name}
-                  </Link>
-                  {m.role !== "EMPLOYEE" && (
-                    <span className="footnote"> （{ROLE_LABEL[m.role as Role] ?? m.role}）</span>
-                  )}
-                </>
-              }
-              sub={`${m.gradeName ?? GRADE_UNSET_LABEL} ／ ${m.department ?? "所属未設定"} ／ 社員番号 ${m.employeeCode ?? "—"}`}
-              value={m.latestScore !== undefined && <LatestScoreValue score={m.latestScore} />}
-              marks={!m.isActive ? <Badge tone="closed">利用停止</Badge> : undefined}
-              off={!m.isActive}
-            />
-          ))}
-        </Card>
+        <PeopleList
+          sortKeys={sortKeys}
+          initial={view}
+          rows={members.map((m) => ({
+            key: m.id,
+            id: m.id,
+            href: `/manager/members/${m.id}`,
+            isActive: m.isActive,
+            name: m.name,
+            role: m.role,
+            companyId: viewer.companyId,
+            gradeName: m.gradeName,
+            gradeOrder: m.gradeOrder,
+            latestScore: m.latestScore,
+            department: m.department,
+            employeeCode: m.employeeCode,
+          }))}
+        />
       )}
       <p className="footnote mt-3">
         メンバーの登録・等級の変更は会社の管理者が行います。マネージャーは内容の確認と評価メモの記入ができます。

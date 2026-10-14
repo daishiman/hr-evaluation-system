@@ -4,6 +4,7 @@ import { saveMaster } from "@/actions/masters";
 import { useSaveAction } from "@/lib/use-refresh";
 import { useEffect, useState } from "react";
 import { behaviorBandLabel, behaviorBandPayloadValue, type BehaviorBandSetRow } from "@/lib/domain/behavior";
+import { bandChangeBlockers, bandChoiceNote, type BandGrade } from "@/lib/domain/behavior-band-range";
 import { Button, Card, CardHead, ReasonNote } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
 
@@ -19,10 +20,13 @@ export interface BehaviorAssignmentGradeRow {
  */
 export function BehaviorBandAssignmentEditor({
   grade,
+  lineGrades,
   bandSets,
   availableBands,
 }: {
   grade: BehaviorAssignmentGradeRow;
+  /** 会社の全等級（保存されている並びと割り当て）。サーバーが断る選択肢を選べなくするのに使う（サーバーも同じ判定をする） */
+  lineGrades: readonly BandGrade[];
   /** 会社が持っている基準セット（呼び名の正本）。 */
   bandSets: readonly BehaviorBandSetRow[];
   /** 問う内容があり、いま使う設定の基準だけを選択肢にする。 */
@@ -66,6 +70,15 @@ export function BehaviorBandAssignmentEditor({
   };
 
   const currentUnavailable = draft !== "" && !selectableBands.includes(draft);
+  /* 同じ基準セットは続いた等級にだけ出す（§28-12・DD-010）。保存は「保存されている分け方（lineGrades）から1手」なので、
+     下書きではなく lineGrades から判定し、サーバーが断る選択肢には理由を添えて選べなくする。
+     今の値は変えない手なので理由は付かない。下書きに理由が付くのは、選んだあとに別の保存で分け方が変わったときだけ。 */
+  const choiceNote = (code: string) =>
+    bandChoiceNote(
+      bandChangeBlockers(lineGrades, { gradeId: grade.id, behaviorBand: behaviorBandPayloadValue(code) }),
+      grade.id,
+    );
+  const noneNote = choiceNote("");
 
   return (
     <div className="stack">
@@ -93,17 +106,23 @@ export function BehaviorBandAssignmentEditor({
               className="input mt-1 w-full"
               aria-label={`${grade.name}に出す行動指針`}
             >
-              <option value="">行動指針を出さない</option>
+              <option value="" disabled={noneNote !== null}>
+                行動指針を出さない{noneNote && `（${noneNote}）`}
+              </option>
               {currentUnavailable && (
                 <option value={draft} disabled>
                   {behaviorBandLabel(bandSets, draft)}（いまは選べません）
                 </option>
               )}
-              {selectableBands.map((code) => (
-                <option key={code} value={code}>
-                  {behaviorBandLabel(bandSets, code)}
-                </option>
-              ))}
+              {selectableBands.map((code) => {
+                const note = choiceNote(code);
+                return (
+                  <option key={code} value={code} disabled={note !== null}>
+                    {behaviorBandLabel(bandSets, code)}
+                    {note && `（${note}）`}
+                  </option>
+                );
+              })}
             </select>
           </label>
 

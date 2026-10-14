@@ -2,6 +2,8 @@ import Link from "next/link";
 import { FormActionList, type MyActionForm } from "@/app/me/MyDashboard";
 import { StalledEvaluationsNotice } from "@/components/StalledEvaluationsNotice";
 import { Badge, Bar, Card, CardRow, Disclosure, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
+import { GRADE_UNSET_LABEL, gradeLabel } from "@/lib/domain/grade-label";
+import { DEPARTMENT_UNSET_LABEL } from "@/lib/domain/people-list";
 import type { StalledRow } from "@/lib/domain/stalled-evaluations";
 import { formatPeriod } from "@/lib/view";
 
@@ -175,7 +177,7 @@ export function ManagerDashboard({
                   {evaluation.employeeName ?? "氏名未設定"}
                 </Link>
               }
-              sub={evaluation.gradeName ?? "等級未設定"}
+              sub={gradeLabel({ name: evaluation.gradeName })}
               marks={<Badge tone="required">確認・確定が必要</Badge>}
             />
           ))}
@@ -206,7 +208,7 @@ export function ManagerDashboard({
             </div>
             <div className="flex flex-wrap gap-2">
               {notSubmitted > 0 ? <Badge tone="required">未提出 {notSubmitted}人</Badge> : <Badge tone="done">全員提出済み</Badge>}
-              {missingGrade > 0 && <Badge tone="alert">等級未設定 {missingGrade}人</Badge>}
+              {missingGrade > 0 && <Badge tone="alert">{GRADE_UNSET_LABEL} {missingGrade}人</Badge>}
             </div>
           </div>
 
@@ -221,7 +223,7 @@ export function ManagerDashboard({
                         {member.name}
                       </Link>
                     }
-                    sub={`${member.gradeName ?? "等級未設定"} ／ ${member.department ?? "所属未設定"}`}
+                    sub={`${gradeLabel({ name: member.gradeName })} ／ ${member.department ?? DEPARTMENT_UNSET_LABEL}`}
                     marks={
                       member.responseStatus === "submitted" ? (
                         <Badge tone="done">提出済み</Badge>

@@ -18,6 +18,8 @@ import {
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { ReorderList } from "@/components/reorder/ReorderList";
+import { RevisableRequirementBody, revisableRequirementActions } from "@/components/RevisableRequirementRow";
+import { useDraftMap } from "@/components/use-draft-map";
 import {
   CATEGORY_LABEL,
   GRADE_REQUIREMENT_MAX,
@@ -56,21 +58,10 @@ export function GradeRequirementEditor({
   /** 項目ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const { send, remove, saving, error, message } = useMasterAction("gradeRequirement");
+  const { send, sendOrder, remove, saving, reordering, error, message } = useMasterAction("gradeRequirement");
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
-  const [editing, setEditing] = useState<Record<string, string>>({});
+  const editing = useDraftMap<string>();
   const [preview, setPreview] = useState(false);
-  /* 並べ替えの保存中は、一覧を包む fieldset を止めない。止めると、いま押したつまみや矢印のボタンが
-     disabled になってフォーカスが外れ、キーボードで続けて動かせなくなる（busy で受け付けだけを止める）。 */
-  const [reordering, setReordering] = useState(false);
-  const commitOrder = async (ids: string[]) => {
-    setReordering(true);
-    try {
-      return await send({ kind: "gradeRequirementOrder", ids });
-    } finally {
-      setReordering(false);
-    }
-  };
 
   /* 使っている場所があるなら消させない。
      行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
@@ -78,6 +69,8 @@ export function GradeRequirementEditor({
   const usedByOf = (id: string) => usage[id] ?? [];
   const markOf = (id: string) => blockedMark(usedByOf(id));
   const anyBlocked = rows.some((r) => usedByOf(r.id).length > 0);
+  /** 並べ替えの一覧の1行（本文と行の操作）に、どちらにも同じく渡す値 */
+  const rowOf = (r: RequirementRow) => ({ id: r.id, text: r.text, usedBy: usedByOf(r.id), editing, busy: saving });
 
   const support = activeOf(rows, "support");
   const operation = activeOf(rows, "operation");
@@ -124,80 +117,22 @@ export function GradeRequirementEditor({
           label={`${label}の並び`}
           className="reorder-in-card"
           busy={saving}
-          onCommit={(ids) => commitOrder(ids)}
+          onCommit={(ids) => sendOrder({ kind: "gradeRequirementOrder", ids })}
           renderItem={(r, i) => (
-            <>
-              <div className="flex items-start gap-3">
-                <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{i + 1}</span>
-                <div className="row-main">
-                  {editing[r.id] === undefined ? (
-                    <>
-                      <p className="m-0 text-sub">{r.text}</p>
-                      {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
-                    </>
-                  ) : (
-                    <>
-                      <textarea
-                        value={editing[r.id]}
-                        autoFocus
-                        onChange={(e) => setEditing((s) => ({ ...s, [r.id]: e.target.value }))}
-                        rows={2}
-                        className="input w-full"
-                        aria-label={`${label} ${i + 1}件目の内容`}
-                      />
-                      <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
-                      <div className="mt-2 flex gap-2">
-                        <Button
-                          variant="primary"
-                          disabled={saving || editing[r.id].trim() === ""}
-                          onClick={async () => {
-                            const ok = await send({
-                              kind: "gradeRequirementRevise",
-                              id: r.id,
-                              text: editing[r.id].trim(),
-                            });
-                            if (ok) setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; });
-                          }}
-                        >
-                          新版として保存
-                        </Button>
-                        <Button
-                          variant="tertiary"
-                          disabled={saving}
-                          onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}
-                        >
-                          やめる
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-              {editing[r.id] === undefined && (
-                <div className="row-actions mt-2">
-                  <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
-                    内容を直す
-                  </Button>
-                  <ConfirmButton
-                    label="今後使わない"
-                    variant="danger-outline"
-                    busy={saving}
-                    confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
-                    onConfirm={() => void send({ kind: "gradeRequirementActivation", id: r.id, isActive: false })}
-                  />
-                  {markOf(r.id) === null && (
-                    <ConfirmButton
-                      label={DELETE_LABEL}
-                      variant="danger-outline"
-                      busy={saving}
-                      confirm={deleteConfirmText(r.text)}
-                      onConfirm={() => void remove(r.id)}
-                    />
-                  )}
-                </div>
-              )}
-            </>
+            <RevisableRequirementBody
+              {...rowOf(r)}
+              index={i}
+              groupLabel={label}
+              onSave={(text) => send({ kind: "gradeRequirementRevise", id: r.id, text })}
+            />
           )}
+          renderActions={(r) =>
+            revisableRequirementActions({
+              ...rowOf(r),
+              onStop: () => void send({ kind: "gradeRequirementActivation", id: r.id, isActive: false }),
+              onDelete: () => void remove(r.id),
+            })
+          }
         />
         )}
 

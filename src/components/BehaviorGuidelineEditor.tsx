@@ -1,11 +1,10 @@
 "use client";
 
-import { useSaveAction } from "@/lib/use-refresh";
+import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
 import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { UsedByDetail } from "@/components/UsedByDetail";
-import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
 import { behaviorBandLabel, type BehaviorBandSetRow } from "@/lib/domain/behavior";
 import {
   BLOCKED_HELP_LABEL,
@@ -18,6 +17,7 @@ import {
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
+import { useDraftMap } from "@/components/use-draft-map";
 
 /**
  * 行動指針（観点 × 5段階の文言）の編集。
@@ -62,37 +62,12 @@ export function BehaviorGuidelineEditor({
   /** 観点ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const { send, remove, saving, error, message } = useMasterAction("behaviorGuideline");
   /** 開いている入力欄。行のidをキーにして、開いているものだけを持つ */
-  const [editingLevel, setEditingLevel] = useState<Record<string, { label: string; text: string }>>({});
-  const [editingName, setEditingName] = useState<Record<string, string>>({});
+  const editingLevel = useDraftMap<{ label: string; text: string }>();
+  const editingName = useDraftMap<string>();
   /** 「観点を追加する」を開いているときだけ持つ下書き。 */
   const [newAspectName, setNewAspectName] = useState<string | null>(null);
-
-  /* 保存の応答に保存後の画面が同梱されるので、別に読み直しを頼まない。
-     失敗したときは入力欄を閉じずに残す（呼び出し側は true のときだけ閉じる）。 */
-  const send = async (payload: Record<string, unknown>) => {
-    setError(null);
-    setMessage(null);
-    const result = await save(masterSave(payload));
-    if (!result.ok) {
-      setError(result.message);
-      return false;
-    }
-    setMessage(result.message);
-    return true;
-  };
-
-  /** 完全に消す。消せるかどうかの判定はサーバー側が持つ。 */
-  const remove = async (id: string) => {
-    setError(null);
-    setMessage(null);
-    const result = await save(masterDelete("behaviorGuideline", id));
-    if (result.ok) setMessage(result.message);
-    else setError(result.message);
-  };
 
   const list = rows.filter((r) => r.band === band).sort((a, b) => a.seq - b.seq);
 
@@ -122,12 +97,12 @@ export function BehaviorGuidelineEditor({
           <CardHead
             pinned
             title={
-              editingName[g.id] === undefined ? (
+              editingName.drafts[g.id] === undefined ? (
                 g.aspectName
               ) : (
                 <input
-                  value={editingName[g.id]}
-                  onChange={(e) => setEditingName((s) => ({ ...s, [g.id]: e.target.value }))}
+                  value={editingName.drafts[g.id]}
+                  onChange={(e) => editingName.change(g.id, e.target.value)}
                   className="input w-full"
                   aria-label="観点の呼び名"
                 />
@@ -158,18 +133,18 @@ export function BehaviorGuidelineEditor({
                     もう一度使う
                   </Button>
                 )}
-                {editingName[g.id] === undefined ? (
-                  <Button variant="tertiary" disabled={saving} onClick={() => setEditingName((s) => ({ ...s, [g.id]: g.aspectName }))}>
+                {editingName.drafts[g.id] === undefined ? (
+                  <Button variant="tertiary" disabled={saving} onClick={() => editingName.start(g.id, g.aspectName)}>
                     呼び名を直す
                   </Button>
                 ) : (
                   <>
                     <Button
                       variant="primary"
-                      disabled={saving || editingName[g.id].trim() === ""}
+                      disabled={saving || editingName.drafts[g.id].trim() === ""}
                       onClick={async () => {
-                        const ok = await send({ kind: "behaviorGuideline", id: g.id, aspectName: editingName[g.id].trim() });
-                        if (ok) setEditingName((s) => { const n = { ...s }; delete n[g.id]; return n; });
+                        const ok = await send({ kind: "behaviorGuideline", id: g.id, aspectName: editingName.drafts[g.id].trim() });
+                        if (ok) editingName.stop(g.id);
                       }}
                     >
                       保存する
@@ -177,13 +152,13 @@ export function BehaviorGuidelineEditor({
                     <Button
                       variant="tertiary"
                       disabled={saving}
-                      onClick={() => setEditingName((s) => { const n = { ...s }; delete n[g.id]; return n; })}
+                      onClick={() => editingName.stop(g.id)}
                     >
                       やめる
                     </Button>
                   </>
                 )}
-                {editingName[g.id] === undefined && mark === null && (
+                {editingName.drafts[g.id] === undefined && mark === null && (
                   <ConfirmButton
                     label={DELETE_LABEL}
                     variant="danger-outline"
@@ -204,7 +179,7 @@ export function BehaviorGuidelineEditor({
             {[...g.levels]
               .sort((a, b) => b.score - a.score)
               .map((lv) => {
-                const draft = editingLevel[lv.id];
+                const draft = editingLevel.drafts[lv.id];
                 return (
                   <div key={lv.id} className="card-row items-start rounded-lg border border-line">
                     <span className="num w-8 shrink-0 text-sub font-bold">{lv.score > 0 ? `+${lv.score}` : lv.score}</span>
@@ -222,7 +197,7 @@ export function BehaviorGuidelineEditor({
                             この段階の呼び名
                             <input
                               value={draft.label}
-                              onChange={(e) => setEditingLevel((s) => ({ ...s, [lv.id]: { ...draft, label: e.target.value } }))}
+                              onChange={(e) => editingLevel.change(lv.id, { ...draft, label: e.target.value })}
                               className="input mt-1 w-full"
                             />
                           </label>
@@ -231,7 +206,7 @@ export function BehaviorGuidelineEditor({
                             <textarea
                               value={draft.text}
                               rows={2}
-                              onChange={(e) => setEditingLevel((s) => ({ ...s, [lv.id]: { ...draft, text: e.target.value } }))}
+                              onChange={(e) => editingLevel.change(lv.id, { ...draft, text: e.target.value })}
                               className="input mt-1 w-full"
                             />
                           </label>
@@ -246,7 +221,7 @@ export function BehaviorGuidelineEditor({
                                   label: draft.label.trim(),
                                   text: draft.text.trim(),
                                 });
-                                if (ok) setEditingLevel((s) => { const n = { ...s }; delete n[lv.id]; return n; });
+                                if (ok) editingLevel.stop(lv.id);
                               }}
                             >
                               保存する
@@ -254,7 +229,7 @@ export function BehaviorGuidelineEditor({
                             <Button
                               variant="tertiary"
                               disabled={saving}
-                              onClick={() => setEditingLevel((s) => { const n = { ...s }; delete n[lv.id]; return n; })}
+                              onClick={() => editingLevel.stop(lv.id)}
                             >
                               やめる
                             </Button>
@@ -268,7 +243,7 @@ export function BehaviorGuidelineEditor({
                         <Button
                           variant="tertiary"
                           disabled={saving}
-                          onClick={() => setEditingLevel((s) => ({ ...s, [lv.id]: { label: lv.label, text: lv.text } }))}
+                          onClick={() => editingLevel.start(lv.id, { label: lv.label, text: lv.text })}
                         >
                           直す
                         </Button>

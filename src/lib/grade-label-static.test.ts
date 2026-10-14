@@ -95,4 +95,14 @@ describe("英語の区分名の静的検査", () => {
       expect(bad, file).toEqual([]);
     }
   });
+
+  it("「等級未設定」の呼び名は grade-label.ts だけが持つ（等級名は gradeLabel を通し、名前が空白だけの等級も同じ表示にそろえる）", () => {
+    const hits: string[] = [];
+    for (const file of sourceFiles(path.join(ROOT, "src"))) {
+      if (file.endsWith(path.join("domain", "grade-label.ts"))) continue;
+      const { literals } = splitSource(readFileSync(file, "utf8"));
+      if (literals.some((l) => l.includes("等級未設定"))) hits.push(path.relative(ROOT, file));
+    }
+    expect(hits).toEqual([]);
+  });
 });

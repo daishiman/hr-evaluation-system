@@ -360,6 +360,9 @@ export interface Crumb {
   href?: string;
 }
 
+/** 貼り付けた見出しの帯（PageTitle の sticky）を探す印。帯の高さは StickyOffset が測り、並べ替えの自動スクロールは隠れない上端を測るのに読む */
+export const STICKY_PAGE_HEAD_SELECTOR = '.page-head[data-sticky="true"]';
+
 /**
  * 画面の見出し。全画面でこの1つだけを使う。
  *
@@ -896,6 +899,9 @@ type CardHeadProps = CardHeadBase &
     | { pinned?: false; narrow?: never; detail?: ReactNode }
   );
 
+/** 貼り付くカードの頭のクラス。貼り付けはこの部品だけが持つ（並べ替えの自動スクロールは、隠れない上端を測るのに読む） */
+export const PINNED_CARD_HEAD_CLASS = "card-head-sticky";
+
 export function CardHead({ lead, title, heading, sub, detail, actions, pinned, narrow }: CardHeadProps) {
   const Title = heading ? "h2" : "p";
   return (
@@ -903,7 +909,7 @@ export function CardHead({ lead, title, heading, sub, detail, actions, pinned, n
       <div
         className={clsx(
           "flex flex-wrap items-start justify-between gap-3",
-          pinned && "card-head-sticky",
+          pinned && PINNED_CARD_HEAD_CLASS,
         )}
         data-narrow={pinned && narrow ? "pin" : undefined}
       >

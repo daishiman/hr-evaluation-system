@@ -13,6 +13,7 @@ import {
   PageTitle,
   SectionHeading,
 } from "@/components/ui";
+import { gradeLabel } from "@/lib/domain/grade-label";
 
 export interface MyActionForm {
   formId: string;
@@ -194,7 +195,7 @@ export function MyDashboard({
             <div className="min-w-0">
               <p className="m-0 text-note text-ink-muted">最新の評価</p>
               <p className="todo-row-title m-0 mt-1 text-head">{latest.cycleName ?? "評価結果"}</p>
-              <p className="todo-row-sub m-0">{latest.gradeName ?? "等級未設定"}</p>
+              <p className="todo-row-sub m-0">{gradeLabel({ name: latest.gradeName })}</p>
               <div className="mt-3"><ResultBadges result={latest} /></div>
             </div>
             <div className="min-w-0">
@@ -228,7 +229,7 @@ export function MyDashboard({
                       }
                       sub={
                         <>
-                          {result.gradeName ?? "等級未設定"} ／ 等級要件の達成率{" "}
+                          {gradeLabel({ name: result.gradeName })} ／ 等級要件の達成率{" "}
                           <Num value={result.requirementRate} unit="%" />
                         </>
                       }

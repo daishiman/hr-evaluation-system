@@ -10,6 +10,8 @@
  * 人事の判断を誤らせるため、変わった事実だけを示す。
  */
 
+import { gradeLabel } from "./grade-label";
+
 export interface TrendSource {
   /** 評価期間の名前。グラフの横軸の値になる */
   cycle: string;
@@ -41,8 +43,6 @@ export interface GradeChange {
    線だけは残すので「ここで変わった」ことは読める。 */
 const LABEL_MIN_SHARE = 0.1;
 
-const GRADE_UNKNOWN = "等級未設定";
-
 /** 1日のミリ秒。うるう年を平均して1年を数える（境目が1日ずれても読み方は変わらない） */
 const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 
@@ -62,7 +62,7 @@ function startTime(p: TrendSource): number | null {
 export function buildGradeBands(points: TrendSource[]): GradeBand[] {
   const bands: GradeBand[] = [];
   for (const p of points) {
-    const label = p.gradeName ?? GRADE_UNKNOWN;
+    const label = gradeLabel({ name: p.gradeName });
     const last = bands.at(-1);
     if (last && last.label === label) {
       last.to = p.cycle;

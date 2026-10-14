@@ -36,15 +36,20 @@ describe("等級要件・昇格要件の版管理UI", () => {
   it("上書きと誤解する語をやめ、停止中と履歴を共通部品に任せる", () => {
     const grade = read("GradeRequirementEditor.tsx");
     const promotion = read("PromotionRequirementEditor.tsx");
+    const row = read("RevisableRequirementRow.tsx");
     const common = read("VersionedMasterSections.tsx");
 
     for (const editor of [grade, promotion]) {
       expect(editor).toContain("VersionedMasterSections");
-      expect(editor).toContain("内容を直す");
-      expect(editor).toContain("新版として保存");
-      expect(editor).toContain("今後使わない");
+      // 並びの1行（本文・入力欄・行の操作）は2画面とも同じ部品で描く。文言はその部品が持つ
+      expect(editor).toContain("<RevisableRequirementBody");
+      expect(editor).toContain("revisableRequirementActions({");
       expect(editor).not.toContain(">直す<");
     }
+    expect(row).toContain("内容を直す");
+    expect(row).toContain("新版として保存");
+    expect(row).toContain("今後使わない");
+    expect(row).not.toContain(">直す<");
     expect(common).toContain('summary="以前使っていた項目"');
     expect(common).toContain('summary="変更履歴"');
     expect(common).toContain("もう一度使う");
@@ -63,11 +68,11 @@ describe("等級要件・昇格要件の版管理UI", () => {
     const grade = read("GradeRequirementEditor.tsx");
     const promotion = read("PromotionRequirementEditor.tsx");
 
-    expect(grade).toContain('send({ kind: "gradeRequirementOrder", ids })');
-    expect(promotion).toContain('send({ kind: "promotionRequirementOrder", ids })');
+    expect(grade).toContain('sendOrder({ kind: "gradeRequirementOrder", ids })');
+    expect(promotion).toContain('sendOrder({ kind: "promotionRequirementOrder", ids })');
     for (const editor of [grade, promotion]) {
       expect(editor).toContain("<ReorderList");
-      expect(editor).toContain("onCommit={(ids) => commitOrder(ids)}");
+      expect(editor).toContain("onCommit={(ids) => sendOrder({");
       // 1段ずつの移動（up/down/top/bottom）は送らない
       expect(editor).not.toContain("direction:");
       // 並びの保存中は fieldset を止めない（止めると、つまみのフォーカスが外れる）

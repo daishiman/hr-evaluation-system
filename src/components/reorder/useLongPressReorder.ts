@@ -12,13 +12,15 @@ import {
   type PointerEvent,
 } from "react";
 import { moveItem } from "@/lib/domain/reorder";
+import { PINNED_CARD_HEAD_CLASS, STICKY_PAGE_HEAD_SELECTOR } from "@/components/ui";
 
 /**
  * 長押しで並べ替える（S11・A10・DD-005）。
  *
  * 状態の移り変わりは reorderReducer（純粋な関数）に寄せ、DOM の無い試験でも
  * マウス・タッチ（長押し）・キーボードの3つの操作で同じ並びになることを確かめる。
- * hook が受け持つのは、長押しのタイマー・ポインターの捕捉・指の下の行の判定・端での自動スクロールだけ。
+ * hook が受け持つのは、長押しのタイマー・ポインターの捕捉・指の下の行の判定・端での自動スクロールと、
+ * 見た目の動き（持っている行を指について浮かせる・ほかの行を滑らせる）だけ。
  */
 
 /** タッチで、動かさずに押し続けて持ち上げるまでの時間 */
@@ -29,6 +31,11 @@ export const MOVE_TOLERANCE_PX = 8;
 export const EDGE_SCROLL_PX = 56;
 /** 自動スクロールの1コマあたりの最大量 */
 export const EDGE_SCROLL_MAX_PX = 16;
+/** 並びが変わったときに、ほかの行が新しい位置へ滑る時間 */
+export const SLIDE_MS = 180;
+const SLIDE_ID = "reorder-slide";
+/** 画面の上に張り付いて一覧を覆うもの（ヘッダー・固定した見出しの帯・カードの頭）。自動スクロールの上端はこの下 */
+const STICKY_SELECTOR = `.app-header, ${STICKY_PAGE_HEAD_SELECTOR}, .${PINNED_CARD_HEAD_CLASS}`;
 
 /** つまみの印。フォーカスの行き先を探すのに使う */
 export const HANDLE_ATTR = "data-reorder-handle";
@@ -231,33 +238,102 @@ export function reorderReducer(state: ReorderState, event: ReorderEvent): Reorde
 }
 
 /**
- * 指（ポインター）の下の行を、行き先として選ぶ。
- * 下へ動かしているときは下の行だけ、上へは上の行だけを相手にする。
- * 高さの違う行どうしで、入れ替えた直後に指の下へ来た行とまた入れ替わり返すのを防ぐため。
- * 一覧より上なら先頭、下なら末尾。行と行の間では決めない（null）。
+ * 浮かせて動かしている行（dragged）の位置から、行き先を選ぶ。rows は置き場所（配置の上での位置）で、active は持っている行。
+ * 下へ動かしているときは、浮いた行の下端が越えた行のうち一番下の行へ。上へは、上端が越えた行のうち一番上の行へ。
+ * 越えたかは相手の行の真ん中で決める。つかんだ点（つまみは行の頭にある）によらず、上へも下へも半分重なれば入れ替わる。
+ * 向きと逆の側は相手にしないので、高さの違う行どうしで、入れ替えた直後にまた入れ替わり返すことがない。
  */
 export function pickOverIndex(
   rows: readonly { top: number; bottom: number }[],
   active: number,
-  y: number,
+  dragged: { top: number; bottom: number },
   dy: number,
 ): number | null {
-  if (rows.length === 0) return null;
-  if (y < rows[0].top) return 0;
-  if (y >= rows[rows.length - 1].bottom) return rows.length - 1;
-  const hit = rows.findIndex((row) => y >= row.top && y < row.bottom);
-  if (hit < 0) return null;
-  if (dy > 0 && hit > active) return hit;
-  if (dy < 0 && hit < active) return hit;
+  const middle = (row: { top: number; bottom: number }) => (row.top + row.bottom) / 2;
+  if (dy > 0) {
+    for (let j = rows.length - 1; j > active; j--) if (dragged.bottom > middle(rows[j])) return j;
+  } else if (dy < 0) {
+    for (let j = 0; j < active && j < rows.length; j++) if (dragged.top < middle(rows[j])) return j;
+  }
   return null;
 }
 
-/** 画面の端に近いほど速くスクロールする量。上は負、下は正、端から遠ければ 0 */
-export function edgeScrollSpeed(y: number, viewportHeight: number): number {
+/**
+ * 画面の端に近いほど速くスクロールする量。上は負、下は正、端から遠ければ 0。
+ * top・bottom は上下に張り付いて画面を覆っている分（ヘッダー・下の操作の帯）で、端はその内側から数える。
+ * list を渡すと、その向きの一覧の端がもう見えているときは流さない（一覧の外まで画面を送らない）。
+ */
+export function edgeScrollSpeed(
+  y: number,
+  viewportHeight: number,
+  { top = 0, bottom = 0, list }: { top?: number; bottom?: number; list?: { top: number; bottom: number } } = {},
+): number {
   const ramp = (depth: number) => Math.ceil((EDGE_SCROLL_MAX_PX * Math.min(depth, EDGE_SCROLL_PX)) / EDGE_SCROLL_PX);
-  if (y < EDGE_SCROLL_PX) return -ramp(EDGE_SCROLL_PX - y);
-  if (viewportHeight - y < EDGE_SCROLL_PX) return ramp(EDGE_SCROLL_PX - (viewportHeight - y));
+  const upper = top + EDGE_SCROLL_PX;
+  const lower = viewportHeight - bottom - EDGE_SCROLL_PX;
+  if (y < upper) return list && list.top >= top ? 0 : -ramp(upper - y);
+  if (y > lower) return list && list.bottom <= viewportHeight - bottom ? 0 : ramp(y - lower);
   return 0;
+}
+
+/**
+ * 持っている行を、指（ポインター）について動かすずらし量。
+ * 行の置き場所（layoutTop）から、つかんだ点が指の下に来る位置までの差を、一覧の上端と下端の間に収める。
+ */
+export function dragOffset({
+  pointerY,
+  grab,
+  layoutTop,
+  height,
+  listTop,
+  listBottom,
+}: {
+  pointerY: number;
+  /** 押したときの、行の上端からつかんだ点までの距離 */
+  grab: number;
+  layoutTop: number;
+  height: number;
+  listTop: number;
+  listBottom: number;
+}): number {
+  const wanted = pointerY - grab;
+  const top = Math.min(Math.max(wanted, listTop), Math.max(listTop, listBottom - height));
+  return top - layoutTop;
+}
+
+/** 画面の上に張り付いているもの（ヘッダーなど）の下端。sticky の top の位置に止まっているものだけを数える */
+function stuckTop(): number {
+  let edge = 0;
+  for (const el of document.querySelectorAll<HTMLElement>(STICKY_SELECTOR)) {
+    const style = getComputedStyle(el);
+    if (style.position !== "sticky" && style.position !== "fixed") continue;
+    const rect = el.getBoundingClientRect();
+    // sticky の top は、配置の済んだ要素では px の値で返る（calc(var(--header-h) + 8px) のような指定でも）
+    const offset = parseFloat(style.top);
+    if (rect.height > 0 && Number.isFinite(offset) && Math.abs(rect.top - offset) <= 1) edge = Math.max(edge, rect.bottom);
+  }
+  // 張り付いたものが画面の大半を覆う狭い画面でも、上へ流せる余地は残す
+  return Math.min(edge, window.innerHeight * 0.4);
+}
+
+/** 画面の下に張り付いている操作の帯の高さ（StickyActionBar が --action-bar-height に px で書く） */
+function stuckBottom(): number {
+  const value = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--action-bar-height"));
+  return Number.isFinite(value) ? value : 0;
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** 行の置き場所（ずらし・滑らせる動きを除いた、配置の上での位置）。一覧（position: relative）からの距離で測る */
+function layoutRects(list: HTMLOListElement): { top: number; bottom: number }[] {
+  const origin = list.getBoundingClientRect().top;
+  return Array.from(list.children, (row) => {
+    const el = row as HTMLElement;
+    const top = origin + el.offsetTop;
+    return { top, bottom: top + el.offsetHeight };
+  });
 }
 
 type Options = {
@@ -290,16 +366,103 @@ export function useLongPressReorder({ ids, onCommit, busy = false }: Options) {
   const onCommitRef = useRef(onCommit);
   /** 捕まえているポインターと、最後に見た位置 */
   const pointerRef = useRef<{ id: number; x: number; y: number } | null>(null);
+  /** 押したときの、行の上端からつかんだ点までの距離（浮いた行は、この点が指の下に来るように動く） */
+  const grabRef = useRef(0);
+  /** 並びが変わる直前の、行ごとの見えている位置（id → 一覧の上端からの距離）。描き直したあと、ここから滑らせる */
+  const slideFromRef = useRef<Map<string, number> | null>(null);
+  /** ずらし（--reorder-dy）を書いた行。持つのをやめたら消す */
+  const placedRef = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
     stateRef.current = state;
     onCommitRef.current = onCommit;
+  });
+
+  /** 持っている行の、指（ポインター）について浮かせた位置。置き場所と一覧の端も一緒に返す */
+  const floating = useCallback((pointerY: number) => {
+    const list = listRef.current;
+    const { phase, active } = stateRef.current;
+    if (!list || phase !== "dragging" || active === null) return null;
+    const row = list.children[active] as HTMLElement | undefined;
+    if (!row) return null;
+    const box = list.getBoundingClientRect();
+    const layoutTop = box.top + row.offsetTop;
+    const height = row.offsetHeight;
+    const offset = dragOffset({ pointerY, grab: grabRef.current, layoutTop, height, listTop: box.top, listBottom: box.bottom });
+    return { list, row, active, offset, top: layoutTop + offset, height };
+  }, []);
+
+  /** 持っている行を指の位置へずらし、置き場所の目印をその行の置き場所へ合わせる */
+  const place = useCallback(() => {
+    const pointer = pointerRef.current;
+    const at = pointer ? floating(pointer.y) : null;
+    if (!at) return;
+    if (placedRef.current && placedRef.current !== at.row) placedRef.current.style.removeProperty("--reorder-dy");
+    placedRef.current = at.row;
+    at.row.style.setProperty("--reorder-dy", `${at.offset}px`);
+    at.list.style.setProperty("--reorder-slot-top", `${at.row.offsetTop}px`);
+    at.list.style.setProperty("--reorder-slot-h", `${at.height}px`);
+  }, [floating]);
+
+  /**
+   * 出来事を送る。並びが変わるとき（と、持っていた行を置くとき）は、その前に行ごとの見えている位置を控える。
+   * 位置は一覧の上端から測る。描き直すまでに画面がスクロールしても（端での自動スクロール・キーボードで動かした行を
+   * 見える所へ送る scrollIntoView）、ずれた分を行の動きと取り違えない。
+   */
+  const send = useCallback((event: ReorderEvent) => {
+    const current = stateRef.current;
+    const next = reorderReducer(current, event);
+    const list = listRef.current;
+    const lands = current.phase === "dragging" && next.phase !== "dragging";
+    if (list && !slideFromRef.current && (next.order !== current.order || lands)) {
+      const origin = list.getBoundingClientRect().top;
+      const from = new Map<string, number>();
+      current.order.forEach((id, i) => {
+        const row = list.children[i];
+        if (row) from.set(id, row.getBoundingClientRect().top - origin);
+      });
+      slideFromRef.current = from;
+    }
+    dispatch(event);
+  }, []);
+
+  // 描き直したあと（色を塗る前）: 持っている行を指の位置へ合わせ、並びの変わった行を元の見えていた位置から滑らせる。
+  // 指で持っている行は place が動かすので滑らせない。置いたときは、浮いていた位置から置き場所へ滑らせる
+  useLayoutEffect(() => {
+    if (state.phase === "dragging") {
+      place();
+    } else if (placedRef.current) {
+      placedRef.current.style.removeProperty("--reorder-dy");
+      placedRef.current = null;
+    }
+    const from = slideFromRef.current;
+    slideFromRef.current = null;
+    const list = listRef.current;
+    if (!from || !list || prefersReducedMotion()) return;
+    const held = state.phase === "dragging" ? state.active : null;
+    const rows = state.order.map((id, i) => ({ id, i, row: list.children[i] as HTMLElement | undefined }));
+    const moving = rows.filter(
+      (r): r is { id: string; i: number; row: HTMLElement } =>
+        r.row !== undefined && r.i !== held && from.has(r.id) && typeof r.row.animate === "function",
+    );
+    // 途中の動きを止めてから測る（書く → 読むを行ごとに繰り返すと、そのたびに配置を計算し直す）
+    for (const { row } of moving) for (const animation of row.getAnimations()) if (animation.id === SLIDE_ID) animation.cancel();
+    const origin = list.getBoundingClientRect().top;
+    const deltas = moving.map(({ id, row }) => from.get(id)! - (row.getBoundingClientRect().top - origin));
+    moving.forEach(({ row }, k) => {
+      if (Math.abs(deltas[k]) < 1) return;
+      row.animate([{ transform: `translateY(${deltas[k]}px)` }, { transform: "none" }], {
+        id: SLIDE_ID,
+        duration: SLIDE_MS,
+        easing: "cubic-bezier(0.2, 0, 0, 1)",
+      });
+    });
   });
 
   // 置いて並びが変わったら保存する。保存できなければ置く前の並びへ戻す
   const { committed } = state;
   useEffect(() => {
     if (!committed) return;
-    const restore = () => dispatch({ type: "revert", committed });
+    const restore = () => send({ type: "revert", committed });
     void Promise.resolve()
       .then(() => onCommitRef.current(committed))
       .then(
@@ -311,7 +474,7 @@ export function useLongPressReorder({ ids, onCommit, busy = false }: Options) {
           throw error;
         },
       );
-  }, [committed]);
+  }, [committed, send]);
 
   // 指で押し続けたら持ち上げる。待つ間に離れた・動いた・取り消されたら、タイマーごと捨てる
   useEffect(() => {
@@ -320,21 +483,38 @@ export function useLongPressReorder({ ids, onCommit, busy = false }: Options) {
     return () => window.clearTimeout(timer);
   }, [state.phase]);
 
-  /** 指の位置から行き先を選んで知らせる。行の位置は、いま描かれている DOM から読む */
-  const follow = useCallback((x: number, y: number, dy: number) => {
-    const current = stateRef.current;
-    const rows = Array.from(listRef.current?.children ?? [], (row) => row.getBoundingClientRect());
-    const overIndex =
-      current.phase === "dragging" && current.active !== null ? pickOverIndex(rows, current.active, y, dy) : null;
-    dispatch({ type: "pointermove", x, y, overIndex });
-  }, []);
+  /**
+   * 指の位置から行き先を選んで知らせ、浮いた行を指へ合わせる。
+   * 行き先は置き場所（offsetTop・offsetHeight）で決める。見えている位置は滑らせている途中の動きを含み、
+   * それで決めると、動いている行を追いかけて入れ替わりが行ったり来たりする。
+   */
+  const follow = useCallback(
+    (x: number, y: number, dy: number) => {
+      const at = floating(y);
+      const overIndex = at
+        ? pickOverIndex(layoutRects(at.list), at.active, { top: at.top, bottom: at.top + at.height }, dy)
+        : null;
+      send({ type: "pointermove", x, y, overIndex });
+      place();
+    },
+    [floating, place, send],
+  );
 
-  // 持ち上げたまま画面の端へ来たら、その向きへスクロールし続ける
+  // 持ち上げたまま画面の端へ来たら、その向きへスクロールし続ける。
+  // 端は、上に張り付いたヘッダー・見出しの帯と、下の操作の帯の内側から数える。一覧の端が見えたら止める
   useEffect(() => {
     if (state.phase !== "dragging") return;
     let frame = window.requestAnimationFrame(function tick() {
       const pointer = pointerRef.current;
-      const speed = pointer ? edgeScrollSpeed(pointer.y, window.innerHeight) : 0;
+      const list = listRef.current;
+      const speed =
+        pointer && list
+          ? edgeScrollSpeed(pointer.y, window.innerHeight, {
+              top: stuckTop(),
+              bottom: stuckBottom(),
+              list: list.getBoundingClientRect(),
+            })
+          : 0;
       if (pointer && speed !== 0) {
         const before = window.scrollY;
         window.scrollBy(0, speed);
@@ -366,7 +546,7 @@ export function useLongPressReorder({ ids, onCommit, busy = false }: Options) {
   const finish = (type: "pointerup" | "pointercancel") => (e: PointerEvent<HTMLOListElement>) => {
     if (pointerRef.current?.id !== e.pointerId) return;
     pointerRef.current = null;
-    dispatch({ type });
+    send({ type });
   };
 
   const handleProps = (index: number) => ({
@@ -375,7 +555,10 @@ export function useLongPressReorder({ ids, onCommit, busy = false }: Options) {
       if (busy || stateRef.current.phase !== "idle" || pointerRef.current) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
       // 行は持ち上げている間に DOM の中で動く。動いた要素は捕捉を失うことがあるので、動かない一覧のほうで捕まえる
-      listRef.current?.setPointerCapture(e.pointerId);
+      const list = listRef.current;
+      list?.setPointerCapture(e.pointerId);
+      const row = list?.children[index] as HTMLElement | undefined;
+      grabRef.current = list && row ? e.clientY - (list.getBoundingClientRect().top + row.offsetTop) : 0;
       pointerRef.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
       dispatch({ type: "pointerdown", pointerType: e.pointerType, index, x: e.clientX, y: e.clientY });
     },
@@ -392,7 +575,7 @@ export function useLongPressReorder({ ids, onCommit, busy = false }: Options) {
       // 並べ替えが受け取るキーだけ、既定の動き（Space や矢印でのスクロール）を止める
       if (reorderReducer(current, event) === current) return;
       e.preventDefault();
-      dispatch(event);
+      send(event);
     },
     onBlur: () => {
       if (stateRef.current.phase !== "keyboard") return;
@@ -404,7 +587,7 @@ export function useLongPressReorder({ ids, onCommit, busy = false }: Options) {
         if (focused instanceof HTMLElement && focused.hasAttribute(HANDLE_ATTR) && focused.closest("ol") === listRef.current) {
           return;
         }
-        dispatch({ type: "blur" });
+        send({ type: "blur" });
       }, 0);
     },
     // 長押しで端末のメニュー（コピー・共有など）を出さない
@@ -426,7 +609,7 @@ export function useLongPressReorder({ ids, onCommit, busy = false }: Options) {
     handleProps,
     /** 矢印のボタンから、index の項目を to へ動かして置く */
     step: (index: number, to: number) => {
-      if (!busy) dispatch({ type: "step", index, to });
+      if (!busy) send({ type: "step", index, to });
     },
   };
 }

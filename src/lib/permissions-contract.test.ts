@@ -331,7 +331,7 @@ describe("役割の名前を書いた判定を残さない", () => {
     "src/app/admin/members/[id]/page.tsx": "上長の候補は EMPLOYEE 以外",
     "src/app/system/users/page.tsx": "全体管理者の一覧を分けて出す",
     "src/app/system/users/[id]/page.tsx": "上長の候補・最後の全体管理者",
-    "src/app/manager/members/page.tsx": "マネージャーは自分の部下だけ・部下を持てる役割の印",
+    "src/app/manager/members/page.tsx": "マネージャーは自分の部下だけ",
     "src/app/manager/cycles/page.tsx": "マネージャーは自分の部下だけ",
     "src/app/manager/evaluations/[id]/page.tsx": "マネージャーは自分の部下だけ",
     "src/lib/memberships.ts": "所属に置ける役割（全体管理者は所属を持たない）",

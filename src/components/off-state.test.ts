@@ -20,6 +20,8 @@ const ALLOWED: Record<string, string> = {
   "src/app/account/page.tsx": "自分の情報。利用停止の人はそもそもログインできないため到達しない",
   "src/app/admin/setup/page.tsx": "件数の集計と案内文だけ。停止中の項目自体を並べていない",
   "src/app/admin/page.tsx": "件数の集計だけ",
+  "src/app/admin/members/page.tsx":
+    "案内文と注記だけ。利用停止の行は PeopleList が data-off で沈める（行の isActive を渡すことは PeopleList.test.ts が確かめる）",
   "src/app/manager/page.tsx": "件数の集計だけ",
   "src/app/system/page.tsx": "SystemDashboard に渡すだけ",
   "src/app/admin/masters/page.tsx": "等級を選ぶチップ。等級に停止状態は出していない",

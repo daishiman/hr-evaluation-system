@@ -11,6 +11,9 @@ import { HANDLE_ATTR, useLongPressReorder } from "@/components/reorder/useLongPr
  * 1行に、つまみ（長押し・マウス・キーボードで持ち上げる）と、矢印のボタン（先頭・上・下・末尾）を置く。
  * 矢印のボタンは、ドラッグできない人のための代わりの手段（WCAG 2.2 SC 2.5.7）なので、つまみがあっても消さない。
  * 置いたら onCommit へ並び全体（id の配列）を渡す。保存の結果で items が変われば、並びはそれに合わせ直す。
+ *
+ * 行の操作（内容を直す・今後使わない など）は renderActions で渡す。本文の中に置かず行の列として描くので、
+ * 操作の右端と矢印の右端が1本にそろう。段組みは一覧の幅（container query）で決める（globals.css の並べ替えの節）。
  */
 
 export type ReorderItem = { id: string; label: string };
@@ -54,6 +57,7 @@ export function ReorderList<T extends ReorderItem>({
   label,
   onCommit,
   renderItem,
+  renderActions,
   busy = false,
   className,
 }: {
@@ -64,6 +68,8 @@ export function ReorderList<T extends ReorderItem>({
   onCommit: (ids: string[]) => void | boolean | Promise<void | boolean>;
   /** 行の中身。省略すると label だけを出す */
   renderItem?: (item: T, index: number) => ReactNode;
+  /** 行の操作。null を返した行（編集中など）は操作の列を作らず、本文を広げる */
+  renderActions?: (item: T, index: number) => ReactNode;
   /** 保存中。持ち上げ・矢印のボタンを受け付けない（フォーカスは外さない） */
   busy?: boolean;
   className?: string;
@@ -101,6 +107,7 @@ export function ReorderList<T extends ReorderItem>({
           const item = byId.get(id);
           if (!item) return null;
           const held = state.active === index && state.phase !== "idle";
+          const actions = renderActions?.(item, index);
           return (
             <li
               key={id}
@@ -119,6 +126,8 @@ export function ReorderList<T extends ReorderItem>({
                 <span className="reorder-grip" aria-hidden="true" />
               </Button>
               <div className="reorder-body">{renderItem ? renderItem(item, index) : item.label}</div>
+              {/* 読む順（DOM）と見える順をそろえる: 本文 → 行の操作 → 矢印。どの幅の段組みでもこの順に並ぶ */}
+              {actions != null && actions !== false && <div className="reorder-actions">{actions}</div>}
               <div className="reorder-steps">
                 {STEPS.map(({ action, glyph, name }) => {
                   const to = stepTarget(action, index, last);

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { bandLine } from "./behavior-band-range";
 import {
   DEFAULT_GRADE_NAMES,
   bandSetLabel,
@@ -76,6 +77,26 @@ describe("bandSetLabel", () => {
   it("割り当てが無ければ保存した名前、それも空なら「基準セット{n}」", () => {
     expect(bandSetLabel({ code: "custom", name: "新人向け", displayOrder: 3 }, GRADES)).toBe("新人向け");
     expect(bandSetLabel({ code: "custom", name: "", displayOrder: 3 }, GRADES)).toBe("基準セット3");
+  });
+
+  it("表示順が同着なら id の順にし、分け方の並びと呼び名が一致する", () => {
+    const tied = [
+      { ...GRADES[1], id: "b", displayOrder: 1, isActive: true },
+      { ...GRADES[0], id: "a", displayOrder: 1, isActive: true },
+    ];
+    expect(bandLine(tied).map((grade) => grade.name)).toEqual(["等級1", "等級2"]);
+    expect(bandSetLabel({ code: "g1_2", name: "", displayOrder: 1 }, tied)).toBe("等級1・等級2向け");
+    expect(bandSetLabel({ code: "g1_2", name: "", displayOrder: 1 }, [...tied].reverse())).toBe("等級1・等級2向け");
+    // 名前だけの読取り結果でも使え、同着で id が無いときは元の順を保つ。
+    const namesOnly = tied.map(({ id: _id, ...grade }) => grade);
+    expect(bandSetLabel({ code: "g1_2", name: "", displayOrder: 1 }, namesOnly)).toBe("等級2・等級1向け");
+  });
+
+  it("使用を止めた等級は数えない（使用中かを持たない等級は使用中とみなす）", () => {
+    const stopped = GRADES.map((g) => (g.id === "g2" ? { ...g, isActive: false } : { ...g, isActive: true }));
+    expect(bandSetLabel({ code: "g1_2", name: "", displayOrder: 1 }, stopped)).toBe("等級1向け");
+    const allStopped = GRADES.map((g) => (g.behaviorBand === "g1_2" ? { ...g, isActive: false } : g));
+    expect(bandSetLabel({ code: "g1_2", name: "新人向け", displayOrder: 1 }, allStopped)).toBe("新人向け");
   });
 });
 

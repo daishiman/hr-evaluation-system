@@ -23,10 +23,14 @@ type Named = { name: string | null } | null | undefined;
 
 /** 呼び名を作るのに使う等級の形（DB の行の一部） */
 export type GradeLike = {
+  /** 同着の表示順を決める。名前だけの入力では省略できる */
+  id?: string;
   name: string;
   pointGroup: string;
   displayOrder: number;
   behaviorBand?: string | null;
+  /** 使用中か。持たない入力は使用中とみなす */
+  isActive?: boolean;
 };
 
 /** 等級名。等級が無い・名前が空なら「等級未設定」に1つにまとめる */
@@ -35,8 +39,16 @@ export function gradeLabel(grade: Named): string {
   return name ? name : GRADE_UNSET_LABEL;
 }
 
-function byOrder<T extends { displayOrder: number }>(rows: readonly T[]): T[] {
-  return [...rows].sort((a, b) => a.displayOrder - b.displayOrder);
+/** 等級の表示順。番号が同着なら id の順（id を持たない入力同士は入力順を保つ） */
+export function compareGradeOrder(
+  a: { displayOrder: number; id?: string },
+  b: { displayOrder: number; id?: string },
+): number {
+  return a.displayOrder - b.displayOrder || (a.id ?? "").localeCompare(b.id ?? "");
+}
+
+function byOrder<T extends { displayOrder: number; id?: string }>(rows: readonly T[]): T[] {
+  return [...rows].sort(compareGradeOrder);
 }
 
 function joinNames(grades: readonly GradeLike[]): string {
@@ -48,12 +60,15 @@ export function pointGroupLabel(pointGroup: string, grades: readonly GradeLike[]
   return joinNames(grades.filter((g) => g.pointGroup === pointGroup));
 }
 
-/** 行動指針の基準セットの呼び名。割り当てた等級があれば「等級1・等級2向け」 */
+/**
+ * 行動指針の基準セットの呼び名。割り当てた使用中の等級があれば「等級1・等級2向け」。
+ * 使用を止めた等級は新しいアンケートに出ないので数えない（行動指針の分け方の並びと同じ。behavior-band-range.ts）。
+ */
 export function bandSetLabel(
   set: { code: string; name: string | null; displayOrder: number },
   grades: readonly GradeLike[],
 ): string {
-  const assigned = grades.filter((g) => g.behaviorBand === set.code);
+  const assigned = grades.filter((g) => g.behaviorBand === set.code && g.isActive !== false);
   if (assigned.length > 0) return `${joinNames(assigned)}向け`;
   const saved = set.name?.trim();
   return saved ? saved : `基準セット${set.displayOrder}`;

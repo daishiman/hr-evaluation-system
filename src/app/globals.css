@@ -3258,7 +3258,11 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 
 /* 並べ替え（S11・DD-005）
    つまみと矢印のボタンは 24px 以上（SC 2.5.8）。指で押す端末では、ほかのボタンと同じ 44px にする。
-   スクロールを止めるのはつまみだけ。行の残りを指でなぞれば、今までどおり画面が流れる。 */
+   スクロールを止めるのはつまみだけ。行の残りを指でなぞれば、今までどおり画面が流れる。
+
+   行の段組みは、画面の幅ではなく一覧の幅（container query）で決める。同じ部品を、カードの中・設問のカード・
+   設問の中の選択肢と、幅の違う場所に置くため。どの段組みでも、見える順は読む順（DOM）と同じ
+   「つまみ → 本文 → 行の操作 → 矢印」にする（SC 1.3.2・2.4.3）。行の操作と矢印は、どちらも行の右端にそろえる。 */
 .reorder-list {
   list-style: none;
   margin: 0;
@@ -3266,21 +3270,82 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   display: flex;
   flex-direction: column;
   gap: 8px;
+  container: reorder / inline-size;
+  /* 置き場所の目印（::before）を行の位置に重ねる基準。持ち上げた行の重なりは、この一覧の中で閉じる */
+  position: relative;
+  isolation: isolate;
 }
 .reorder-row {
-  display: flex;
-  flex-wrap: wrap;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "handle body"
+    ".      steps";
   align-items: center;
   gap: 8px;
   padding: 8px;
   border: 1px solid transparent;
   border-radius: 8px;
+  transition: scale 150ms cubic-bezier(0.2, 0, 0, 1), box-shadow 150ms cubic-bezier(0.2, 0, 0, 1);
 }
-.reorder-body { flex: 1 1 16rem; min-width: 0; }
+.reorder-handle { grid-area: handle; }
+.reorder-body { grid-area: body; min-width: 0; }
+.reorder-steps { grid-area: steps; justify-self: end; }
+@container reorder (min-width: 30rem) {
+  .reorder-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "handle body steps";
+  }
+}
+/* 行の操作のある行（等級要件・昇格の条件）。狭い一覧では、操作を本文の下へ行の幅いっぱいに割り付け、
+   矢印はその下の右端に置く。右寄せのまま段ごとにばらばらに積むと、どこが揃っているのか読めなくなる */
+.reorder-row:has(> .reorder-actions) {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "handle  body"
+    "actions actions"
+    "steps   steps";
+}
+@container reorder (min-width: 36rem) {
+  /* 本文を1段目に広く取り、操作と矢印は2段目の右端にまとめる */
+  .reorder-row:has(> .reorder-actions) {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "handle body    body"
+      ".      actions steps";
+  }
+}
+@container reorder (min-width: 60rem) {
+  /* 十分に広ければ1段に並べる。本文・操作・矢印の頭がそろい、行が低くなって見渡しやすい。
+     本文は 16rem を下回らせず、操作が収まらなければ操作のほうを折り返す */
+  .reorder-row:has(> .reorder-actions) {
+    grid-template-columns: auto minmax(16rem, 1fr) minmax(0, max-content) auto;
+    grid-template-areas: "handle body actions steps";
+  }
+}
+/* 行の操作。置く区画（actions）の位置は、すぐ上の「行の操作のある行」の段組みが決める */
+.reorder-actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+/* 狭い一覧では、ボタンを同じ幅の基準で割り付けて段ごとに行の幅を埋める（押す面も広くなる）。
+   確認のある操作（ConfirmButton）は包みの div の中のボタンまで伸ばす */
+.reorder-actions > *,
+.reorder-actions > * > .btn { flex: 1 1 8rem; }
+@container reorder (min-width: 36rem) {
+  .reorder-actions > *,
+  .reorder-actions > * > .btn { flex: 0 0 auto; }
+}
 /* カードの中の一覧（等級要件・昇格の条件）。行の区切りと余白は、カードの行（.card-row）にそろえる */
 .reorder-list.reorder-in-card { gap: 0; }
 .reorder-in-card > .reorder-row {
-  align-items: flex-start;
+  align-items: start;
   padding: 12px 16px;
   border-width: 0 0 1px;
   border-color: var(--line);
@@ -3289,14 +3354,14 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .reorder-in-card > .reorder-row:last-child { border-bottom-width: 0; }
 /* 1行がカード1枚の一覧（アンケートの設問）。つまみと矢印はカードの頭の高さにそろえる */
 .reorder-list.reorder-cards { gap: 12px; }
-.reorder-cards > .reorder-row { align-items: flex-start; padding: 4px; }
-.reorder-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  min-width: 0;
-  margin-left: auto;
-}
+.reorder-cards > .reorder-row { align-items: start; padding: 4px; }
+/* 矢印の4つは1つの部品に見せる（隣との境は左の枠を消して1本にする）。
+   overflow: hidden で角を切らないのは、フォーカスの枠まで切れてしまうため */
+.reorder-steps { display: flex; }
+.reorder-step { border-radius: 0; }
+.reorder-step + .reorder-step { border-left-width: 0; }
+.reorder-step:first-child { border-radius: 8px 0 0 8px; }
+.reorder-step:last-child { border-radius: 0 8px 8px 0; }
 .reorder-handle,
 .reorder-step {
   padding: 0;
@@ -3321,11 +3386,30 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 }
 /* 長押しを待っている間（指が届いたことを見せる） */
 .reorder-row[data-reorder-state="pressing"] .reorder-handle { background: var(--brand-soft); }
-/* 持ち上げた行＝置く位置。色だけに頼らず、左の太い線と枠でも示す */
+/* 持ち上げた行。面・影・わずかな拡大で周りから浮かせる。色だけに頼らず、左の太い線と外周の線でも示す */
 .reorder-row[data-reorder-state="lifted"] {
+  z-index: 2;
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(22, 25, 29, .18), 0 0 0 1px var(--line), inset 4px 0 0 var(--accent);
+  scale: 1.015;
+}
+/* ポインターで持っている間は、行が指（マウス）について動く。ずらす量は hook が一覧の中に収めて渡す。
+   置き場所は DOM の中で先に動いているので、離せば今の目印の位置へ収まる */
+.reorder-list[data-reorder-phase="dragging"] > .reorder-row[data-reorder-state="lifted"] {
+  translate: 0 var(--reorder-dy, 0px);
+}
+/* 置き場所の目印。浮いた行の下に、離せば収まる場所を点線の枠で見せる（位置と高さは hook が測って渡す） */
+.reorder-list[data-reorder-phase="dragging"]::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: var(--reorder-slot-top, 0px);
+  height: var(--reorder-slot-h, 0px);
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
   background: var(--brand-soft);
-  border-color: var(--line);
-  box-shadow: inset 4px 0 0 var(--accent);
+  pointer-events: none;
 }
 .reorder-list[data-reorder-phase="dragging"] {
   cursor: grabbing;
@@ -3333,7 +3417,15 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   user-select: none;
 }
 .reorder-list[data-reorder-phase="dragging"] .reorder-handle { cursor: grabbing; }
+/* 持っている間は右下の改善要望のボタンを退ける。矢印や置き場所に重なり、離した先で押してしまわないように */
+.feedback-fab { transition: opacity 150ms; }
+body:has(.reorder-list[data-reorder-phase="dragging"]) .feedback-fab { opacity: 0; pointer-events: none; }
 @media (pointer: coarse) {
   .reorder-handle,
   .reorder-step { min-width: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reorder-row,
+  .feedback-fab { transition: none; }
+  .reorder-row[data-reorder-state="lifted"] { scale: none; }
 }

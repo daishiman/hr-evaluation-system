@@ -10,6 +10,7 @@ import {
   filterByRange,
   gradeChanges,
 } from "@/lib/domain/evaluation-trend";
+import { gradeLabel } from "@/lib/domain/grade-label";
 
 /** 内訳に出す1行。数値は画面側で桁区切りを付けるため、文字にせず数のまま渡す。 */
 export interface TrendDetailRow {
@@ -91,7 +92,7 @@ export function EvaluationTrend({
   const bands = useMemo(() => buildGradeBands(plotted), [plotted]);
   const changes = useMemo(() => gradeChanges(bands), [bands]);
   const gradeOf = useMemo(
-    () => Object.fromEntries(plotted.map((x) => [x.cycle, x.gradeName ?? "等級未設定"])),
+    () => Object.fromEntries(plotted.map((x) => [x.cycle, gradeLabel({ name: x.gradeName })])),
     [plotted],
   );
   const chartData = useMemo(
@@ -253,7 +254,7 @@ export function EvaluationTrend({
                 <>
                   {/* 等級は打消し線の出るバッジ（closed）を使わない。等級名に線が引かれ、
                       「その等級ではなくなった」と読めてしまう。 */}
-                  <Badge tone="active">{e.gradeName ?? "等級未設定"}</Badge>
+                  <Badge tone="active">{gradeLabel({ name: e.gradeName })}</Badge>
                   {e.finalized ? <Badge tone="done">確定済み</Badge> : <Badge tone="dropped">確認中</Badge>}
                   {/* 選んでいる行は薄い塗りだけだと見落とす。言葉でも示す */}
                   {e.id === current?.id && <Badge tone="required">表示中</Badge>}

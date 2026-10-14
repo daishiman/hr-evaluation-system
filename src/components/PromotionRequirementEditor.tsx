@@ -18,6 +18,8 @@ import {
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { ReorderList } from "@/components/reorder/ReorderList";
+import { RevisableRequirementBody, revisableRequirementActions } from "@/components/RevisableRequirementRow";
+import { useDraftMap } from "@/components/use-draft-map";
 
 /**
  * 昇格要件（受講して報告書を提出／独学してテストに合格）の編集。
@@ -62,20 +64,9 @@ export function PromotionRequirementEditor({
   /** 項目ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
-  const { send, remove, saving, error, message } = useMasterAction("promotionRequirement");
+  const { send, sendOrder, remove, saving, reordering, error, message } = useMasterAction("promotionRequirement");
   const [drafts, setDrafts] = useState<Record<string, { open: boolean; text: string; gate: boolean }>>({});
-  const [editing, setEditing] = useState<Record<string, string>>({});
-  /* 並べ替えの保存中は、一覧を包む fieldset を止めない。止めると、いま押したつまみや矢印のボタンが
-     disabled になってフォーカスが外れ、キーボードで続けて動かせなくなる（busy で受け付けだけを止める）。 */
-  const [reordering, setReordering] = useState(false);
-  const commitOrder = async (ids: string[]) => {
-    setReordering(true);
-    try {
-      return await send({ kind: "promotionRequirementOrder", ids });
-    } finally {
-      setReordering(false);
-    }
-  };
+  const editing = useDraftMap<string>();
 
   /* 使っている場所があるなら消させない。
      行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
@@ -83,6 +74,8 @@ export function PromotionRequirementEditor({
   const usedByOf = (id: string) => usage[id] ?? [];
   const markOf = (id: string) => blockedMark(usedByOf(id));
   const anyBlocked = rows.some((r) => usedByOf(r.id).length > 0);
+  /** 並べ替えの一覧の1行（本文と行の操作）に、どちらにも同じく渡す値 */
+  const rowOf = (r: PromotionRow) => ({ id: r.id, text: r.text, usedBy: usedByOf(r.id), editing, busy: saving });
 
   const activeOf = (kind: PromoKind) =>
     classifyVersionedItems(rows.filter((row) => row.kind === kind))
@@ -122,95 +115,49 @@ export function PromotionRequirementEditor({
             label={`${KIND_LABEL[kind]}の並び`}
             className="reorder-in-card"
             busy={saving}
-            onCommit={(ids) => commitOrder(ids)}
+            onCommit={(ids) => sendOrder({ kind: "promotionRequirementOrder", ids })}
             renderItem={(r, i) => (
-              <>
-                <div className="flex items-start gap-3">
-                  <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{i + 1}</span>
-                  <div className="row-main">
-                    {editing[r.id] === undefined ? (
-                      <>
-                        <p className="m-0 text-sub">{r.text}</p>
-                        {stepLabel && <p className="footnote m-0">{stepLabel}</p>}
-                        {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
-                      </>
-                    ) : (
-                      <>
-                        <textarea
-                          value={editing[r.id]}
-                          autoFocus
-                          onChange={(e) => setEditing((s) => ({ ...s, [r.id]: e.target.value }))}
-                          rows={2}
-                          className="input w-full"
-                          aria-label={`${KIND_LABEL[kind]} ${i + 1}件目の内容`}
-                        />
-                        <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
-                        <div className="mt-2 flex gap-2">
-                          <Button
-                            variant="primary"
-                            disabled={saving || editing[r.id].trim() === ""}
-                            onClick={async () => {
-                              const ok = await send({
-                                kind: "promotionRequirementRevise",
-                                id: r.id,
-                                text: editing[r.id].trim(),
-                                transitionLabel: r.transitionLabel,
-                                isGate: r.isGate,
-                              });
-                              if (ok) setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; });
-                            }}
-                          >
-                            新版として保存
-                          </Button>
-                          <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}>
-                            やめる
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {editing[r.id] === undefined && (
-                  <div className="row-actions mt-2">
-                    {r.isGate ? <Badge tone="alert">必須</Badge> : <Badge tone="done">任意</Badge>}
-                    <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
-                      内容を直す
-                    </Button>
-                    <Button
-                      variant="tertiary"
-                      disabled={saving}
-                      onClick={() =>
-                        void send({
-                          kind: "promotionRequirementRevise",
-                          id: r.id,
-                          text: r.text,
-                          transitionLabel: r.transitionLabel,
-                          isGate: !r.isGate,
-                        })
-                      }
-                    >
-                      {r.isGate ? "任意の新版にする" : "必須の新版にする"}
-                    </Button>
-                    <ConfirmButton
-                      label="今後使わない"
-                      variant="danger-outline"
-                      busy={saving}
-                      confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
-                      onConfirm={() => void send({ kind: "promotionRequirementActivation", id: r.id, isActive: false })}
-                    />
-                    {markOf(r.id) === null && (
-                      <ConfirmButton
-                        label={DELETE_LABEL}
-                        variant="danger-outline"
-                        busy={saving}
-                        confirm={deleteConfirmText(r.text)}
-                        onConfirm={() => void remove(r.id)}
-                      />
-                    )}
-                  </div>
-                )}
-              </>
+              <RevisableRequirementBody
+                {...rowOf(r)}
+                index={i}
+                groupLabel={KIND_LABEL[kind]}
+                /* 札は必須・任意だけ。対象の昇格（等級1→等級2）はこのタブの全行で同じなので、行ごとには繰り返さない */
+                badge={r.isGate ? <Badge tone="alert">必須</Badge> : <Badge tone="done">任意</Badge>}
+                onSave={(text) =>
+                  send({
+                    kind: "promotionRequirementRevise",
+                    id: r.id,
+                    text,
+                    transitionLabel: r.transitionLabel,
+                    isGate: r.isGate,
+                  })
+                }
+              />
             )}
+            renderActions={(r) =>
+              revisableRequirementActions({
+                ...rowOf(r),
+                extraAction: (
+                  <Button
+                    variant="tertiary"
+                    disabled={saving}
+                    onClick={() =>
+                      void send({
+                        kind: "promotionRequirementRevise",
+                        id: r.id,
+                        text: r.text,
+                        transitionLabel: r.transitionLabel,
+                        isGate: !r.isGate,
+                      })
+                    }
+                  >
+                    {r.isGate ? "任意の新版にする" : "必須の新版にする"}
+                  </Button>
+                ),
+                onStop: () => void send({ kind: "promotionRequirementActivation", id: r.id, isActive: false }),
+                onDelete: () => void remove(r.id),
+              })
+            }
           />
         )}
 
@@ -310,7 +257,7 @@ export function PromotionRequirementEditor({
     <fieldset disabled={saving && !reordering} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
       {/* 冒頭の説明は1つの段落にまとめる（短い文を1行ずつ積むと、その行ごとに右側が空く。§28-9） */}
       <p className="footnote m-0">
-        いま編集しているのは <b>{gradeName}</b> の昇格要件です。ここでの変更は次に作るアンケートから反映されます。
+        いま編集しているのは <b>{gradeName}</b> の昇格要件です{stepLabel && `（${stepLabel}）`}。ここでの変更は次に作るアンケートから反映されます。
         すでに作成・公開したアンケートと確定済みの評価は変わりません。内容を直すと、新版を作ります。
         どちらの種類も件数の上限はなく、0項目のままでもかまいません。
       </p>

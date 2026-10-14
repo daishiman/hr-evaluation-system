@@ -78,3 +78,25 @@
 
 - 会社選択欄は全役割で使える（非 SUPER_ADMIN には有効な所属が2社以上あるときに表示）。明示的な `label` と `select` の関連付けを持つ。`label` の内側へエラー表示用のブロック要素を入れない。
 - 切り替え失敗は現在の会社を維持し、`role=alert` / `aria-live=assertive` で理由と再試行を伝える。
+
+## 8. 人の一覧の検索と並べ替え
+
+製品の決まりは [製品仕様 §28-13](../docs/product/spec.md#28-13-人の一覧の検索と並べ替え2026-10-14-の追加要望)、判断の経緯は [DD-011](../docs/product/design-decisions.md)。
+
+- `/system/users`・`/admin/members`・`/manager/members` は、どれも `PeopleList`（`src/components/PeopleList.tsx`）に行の配列を渡すだけにする。
+  検索・並べ替え・URL の読み書きは `src/lib/domain/people-list.ts` の純粋関数が持ち、画面ごとに書き分けない。
+- 行の配列には利用停止の人も入れ、`isActive` は行の値をそのまま渡す（`PeopleList` が札と `data-off` で沈める）。
+  画面で在籍中の人に絞ったり、別の節に分けたりしない。対象は所属を持つ人で、所属の行を消した人は出ない（`src/components/PeopleList.test.ts`）。
+- 人の一覧の検索は、ヘッダーの検索（`src/lib/domain/search.ts`・`normalizeKey`）と正規化を共有しない。
+  共有するとヘッダーの検索の当たり方が変わるため、別の仕組みのままにする（2026-10-14 の利用者の判断）。
+- 選べる並べ替えは、画面が `availableSortKeys({ acrossCompanies, gradeAndScore })` で決める。
+  `acrossCompanies` は利用者一覧（`/system/users`）で会社をしぼらないときだけ true。`gradeAndScore` は `canViewGradeScore(viewer)`（台帳の `members.viewGradeScore`）で、利用者一覧を「会社に属さない」にしぼったときは false。
+  URL の `sort` は `parsePeopleView` が選べるものに限って読み、ほかは既定に戻す。並べ替えの可否を UI の非表示だけに頼らない。
+- 等級の並び（`gradeOrder`）は、等級名・点数と同じく `withGradeAndScore` か、全社の一覧では見てよい役割のときだけ行に入れる。
+  一般の社員の応答には含めない（`src/lib/score-visibility.integration.test.ts`）。
+- 検索の索引（`buildSearchIndex`）には、名前・メール・役割名・会社名・等級名・所属・社員番号を入れる。
+  役割名・会社名・等級名・所属・社員番号は同じ関数（`personLabels`）の表示文字を使い、描く文字と探す文字をそろえる。社員番号は「社員番号 X」でも番号だけでも探せる。
+- 各画面は行へ `companyId` を渡す。全社の等級順は会社名→会社IDでまとまりを作り、同名の別会社の等級を混在させない。ID自体は検索索引へ入れない。
+- `PeopleList` は移動・履歴復元で変わった `useSearchParams` を `parsePeopleView` で読み直す。キャッシュされたserver propsだけで復元しない。実操作の検査は `e2e/people-list-navigation.spec.ts`。
+  入力中は300ms待ってURLへ書き戻し、入力欄から札や詳細へフォーカスが移るときは待たずに確定する。書き戻しの処理は `syncPeopleUrl` の1か所にする。
+- 一覧の行はサーバーが一度に返し（多くて数百人）、検索と並べ替えのたびにサーバーへ問い合わせない。

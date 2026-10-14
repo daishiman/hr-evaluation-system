@@ -908,6 +908,7 @@ export async function listAllUsers() {
       isActive: s.users.isActive,
       gradeId: mem.gradeId,
       gradeName: s.grades.name,
+      gradeOrder: s.grades.displayOrder,
       managerId: mem.managerId,
       companyId: mem.companyId,
       companyName: s.companies.name,

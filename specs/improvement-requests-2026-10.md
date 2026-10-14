@@ -4,11 +4,11 @@
 - beads: `hr-wcv`（task は `hr-wcv.1`〜`hr-wcv.13`）
 - 正本（製品）: `docs/product/spec.md` §28
 - 正本（システム）: `system-spec/00-requirements-definition.md`（G6〜G15・O6〜O15・I7〜I16、決定 D-004〜D-007、qa-v02）
-- 正本（feature）: `features/improvement-requests-2026-10.md`・`features/feature-improvement-requests-2026-10.context.json`
+- 計画の取込元（feature）: `features/improvement-requests-2026-10.md`・`features/feature-improvement-requests-2026-10.context.json`
 - 要件定義（実装要件）: `docs/requirements/feature-improvement-requests-2026-10.md`
-- 受領: `docs/product/spec-receipts/2026-10-13-improvement-requests.md`（範囲と受入）、`docs/product/spec-receipts/2026-10-14-improvement-requests-final-review.md`（最終レビュー。DD-009 による会社選択の戻り先と所属追加の主体の訂正）
+- 受領: `docs/product/spec-receipts/2026-10-13-improvement-requests.md`（範囲と受入）、`docs/product/spec-receipts/2026-10-14-improvement-requests-final-review.md`（最終レビュー。DD-009 による会社選択の戻り先と所属追加の主体の訂正）、`docs/product/spec-receipts/2026-10-14-improvement-requests-additional.md`（本番を見て受けた追加要望3件。製品仕様 §28-11〜§28-13。範囲 S1〜S14・受入 A1〜A13 の番号の外に置く。共通化レビューで §28-12・§28-13 に足した2文の影響も同じ受領書に記録）
 
-この文書は、範囲 S1〜S14 と受入 A1〜A13 の番号の正本です。番号と意味は `features/feature-improvement-requests-2026-10.context.json` の scope_in・acceptance と同じで、製品仕様 §28 も同じ番号を使います。どの項目も「保留」「対象外」にしていません（利用者の指示「保留事項にしないで、今回の内容全て対応」）。
+この文書は、範囲 S1〜S14 と受入 A1〜A13 の番号・担当・証跡を辿る照合表です。番号と意味は `features/feature-improvement-requests-2026-10.context.json` の scope_in・acceptance と同じで、製品仕様 §28 も同じ番号を使います。現行の振る舞いは製品仕様、API・データ・認証の契約はシステム仕様を優先します。どの項目も「保留」「対象外」にしていません（利用者の指示「保留事項にしないで、今回の内容全て対応」）。
 
 ## 上位の目的からの辿り方
 
@@ -71,7 +71,7 @@
 
 | task | Beads | 題名 | 依存 |
 |---|---|---|---|
-| SYS-IR-P01 | hr-wcv.1 | 改善要望の範囲14件と受入13項目を、製品仕様と specs の正本へ同じ番号で写す | なし |
+| SYS-IR-P01 | hr-wcv.1 | 改善要望の範囲14件と受入13項目を、製品仕様とこの照合表へ同じ番号で写す | なし |
 | SYS-IR-P02 | hr-wcv.2 | 等級の呼び名・所属・権限の台帳・並べ替え・権限の見せ方・点数の可視範囲の設計を決めて文書に残す | P01 |
 | SYS-IR-P03 | hr-wcv.3 | 設計を、範囲の取りこぼし・他社と点数の漏れ・アクセシビリティ・テーマの契約に照らして見直す | P02 |
 | SYS-IR-P04 | hr-wcv.4 | 受入13項目を、実装の前に単体・結合・契約・画面の試験にして、赤になることを確かめる | P03 |

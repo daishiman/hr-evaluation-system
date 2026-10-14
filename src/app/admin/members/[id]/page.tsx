@@ -4,6 +4,7 @@ import { crossesCompanies, ROLE_LABEL, type Role, requireRoute } from "@/lib/ses
 import { getMember, listEvaluations, listGrades, listMembers, listProfileFieldPolicies } from "@/lib/queries";
 import { CONFIGURABLE_FIELDS, resolveSelfEditMap } from "@/lib/domain/profile-fields";
 import { gradeLabel } from "@/lib/domain/grade-label";
+import { DEPARTMENT_UNSET_LABEL } from "@/lib/domain/people-list";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { Avatar } from "@/components/Avatar";
@@ -78,7 +79,7 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
               </span>
               <span className="tag">
                 <Icon name="building" size={13} />
-                {member.department ?? "所属 未設定"}
+                {member.department ?? DEPARTMENT_UNSET_LABEL}
               </span>
               <span className="tag">
                 <Icon name="users" size={13} />

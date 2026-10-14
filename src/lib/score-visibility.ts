@@ -122,6 +122,8 @@ export async function latestFinalizedScoresEveryCompany(db: DB, viewer: ScoreVie
 export type WithGradeAndScore<R> = Omit<R, (typeof GRADE_SCORE_KEYS)[number]> & {
   /** 見てよい役割にだけ付く。等級が無ければ「等級未設定」 */
   gradeName?: string;
+  /** 見てよい役割にだけ付く。等級の並び（小さいほど下の等級）。等級が無ければ null */
+  gradeOrder?: number | null;
   /** 見てよい役割にだけ付く。確定した評価が無ければ null */
   latestScore?: LatestScore | null;
 };
@@ -144,7 +146,7 @@ export async function withGradeAndScore<R extends { id: string; gradeId?: string
 
   const [grades, scores] = await Promise.all([
     db
-      .select({ id: s.grades.id, name: s.grades.name })
+      .select({ id: s.grades.id, name: s.grades.name, displayOrder: s.grades.displayOrder })
       .from(s.grades)
       .where(eq(s.grades.companyId, viewer.companyId)),
     latestFinalizedScores(
@@ -154,9 +156,13 @@ export async function withGradeAndScore<R extends { id: string; gradeId?: string
     ),
   ]);
   const gradeById = new Map(grades.map((g) => [g.id, g]));
-  return stripped.map((row, i) => ({
-    ...row,
-    gradeName: gradeLabel(rows[i].gradeId ? gradeById.get(rows[i].gradeId) : null),
-    latestScore: scores.get(rows[i].id) ?? null,
-  }));
+  return stripped.map((row, i) => {
+    const grade = rows[i].gradeId ? gradeById.get(rows[i].gradeId) : undefined;
+    return {
+      ...row,
+      gradeName: gradeLabel(grade ?? null),
+      gradeOrder: grade?.displayOrder ?? null,
+      latestScore: scores.get(rows[i].id) ?? null,
+    };
+  });
 }

@@ -8,6 +8,7 @@ import {
   type StalledLevel,
   type StalledRow,
 } from "@/lib/domain/stalled-evaluations";
+import { gradeLabel } from "@/lib/domain/grade-label";
 
 /**
  * 「締め切ったのに確定されていない評価がある」ことの知らせ。
@@ -66,7 +67,7 @@ export function StalledEvaluationsNotice({
                 {row.employeeName ?? "氏名未設定"}
               </Link>
             }
-            sub={`${row.cycleName} ／ ${row.gradeName ?? "等級未設定"} ／ ${STALLED_KIND_LABEL[row.kind]}`}
+            sub={`${row.cycleName} ／ ${gradeLabel({ name: row.gradeName })} ／ ${STALLED_KIND_LABEL[row.kind]}`}
             marks={<LevelBadge level={row.level} days={row.days} />}
           />
         ))}

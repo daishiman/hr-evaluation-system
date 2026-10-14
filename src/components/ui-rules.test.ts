@@ -54,7 +54,7 @@ describe("画面の器の作法", () => {
     // .row-main（見出し＋補足の入れ物）を自前で書いている画面を検出する。
     // 入力欄が並ぶ編集画面は行の中身が画面ごとに違うため、下の許可リストで除く。
     const editors = new Set(
-      ["FormAnswer.tsx", "GradeRequirementEditor.tsx", "PromotionRequirementEditor.tsx", "PointDesign.tsx", "BehaviorGuidelineEditor.tsx", "BehaviorBandSetEditor.tsx"].map((n) => n),
+      ["FormAnswer.tsx", "RevisableRequirementRow.tsx", "PointDesign.tsx", "BehaviorGuidelineEditor.tsx", "BehaviorBandSetEditor.tsx"].map((n) => n),
     );
     const offenders = sourceFiles.filter(
       (p) => p !== owner && !editors.has(p.split("/").pop() ?? "") && readFileSync(p, "utf8").includes('className="row-main"'),
@@ -504,7 +504,11 @@ describe("画面の器の作法", () => {
     // 見出し帯の高さは画面ごとに違う（パンくずの有無・札の行数・折返し・文字サイズ）。
     // CSSに数値を書き込んだままにすると、帯がその下に潜り込んで読めなくなる。
     const source = readFileSync(join(SRC, "components", "StickyOffset.tsx"), "utf8");
-    expect(source).toContain('.page-head[data-sticky="true"]');
+    // 測る帯の印は、帯を描く ui.tsx の定数を使う（並べ替えの自動スクロールも同じ定数を読む）
+    expect(readFileSync(join(SRC, "components", "ui.tsx"), "utf8")).toContain(
+      `STICKY_PAGE_HEAD_SELECTOR = '.page-head[data-sticky="true"]'`,
+    );
+    expect(source).toContain("querySelector<HTMLElement>(STICKY_PAGE_HEAD_SELECTOR)");
     expect(source).toContain("getBoundingClientRect");
     expect(source).toContain("--sticky-top");
     // 測り直しの引き金：画面の移動と、帯の高さが変わったとき

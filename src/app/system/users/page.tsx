@@ -1,19 +1,21 @@
-import Link from "next/link";
-import { Fragment } from "react";
 import { ROLE_LABEL, type Role, requireRoute } from "@/lib/session";
 import { listAllUsers, listCompanies } from "@/lib/queries";
-import { Card, ChipLink, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
-import { Avatar } from "@/components/Avatar";
-import { Icon } from "@/components/Icon";
+import { Card, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 import { RecordForm } from "@/components/RecordForm";
 import { RoleCapabilities } from "@/components/permissions/RoleCapabilities";
-import { CredentialMemoButton } from "@/components/CredentialMemoButton";
+import { PeopleList, PeopleScopeChips } from "@/components/PeopleList";
 import { createSystemUser } from "@/actions/system-users";
 import { listMemoHolderIds } from "@/lib/credential-vault";
 import { getDb } from "@/lib/db";
-import { GRADE_UNSET_LABEL } from "@/lib/domain/grade-label";
+import { gradeLabel } from "@/lib/domain/grade-label";
+import {
+  availableSortKeys,
+  countPeople,
+  NO_COMPANY_LABEL,
+  parsePeopleView,
+  type PeopleSearchParams,
+} from "@/lib/domain/people-list";
 import { canViewGradeScore, latestFinalizedScoresEveryCompany, membershipScoreKey } from "@/lib/score-visibility";
-import { LatestScoreValue } from "@/components/LatestScore";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +28,13 @@ export const dynamic = "force-dynamic";
  *
  * 行は所属ごと（2社に所属する人は2行。行ごとにその会社での役割を出す）。
  * 人数は行の数ではなく人で数える。
+ * 名前などで探し、名前・会社・役割・点数・等級で並べ替えられる（spec.md §28-13）。
  */
-export default async function SystemUsers({ searchParams }: { searchParams: Promise<{ company?: string }> }) {
+export default async function SystemUsers({
+  searchParams,
+}: {
+  searchParams: Promise<PeopleSearchParams & { company?: string }>;
+}) {
   const viewer = await requireRoute("/system/users");
   const db = await getDb();
   const [companies, all, memoHolders, scores] = await Promise.all([
@@ -43,17 +50,19 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
 
   const superAdmins = all.filter((u) => u.role === "SUPER_ADMIN");
-  const scope = sp.company ?? "";
+  const scope = typeof sp.company === "string" ? sp.company : "";
   const scoped =
     scope === "" ? all : scope === "none" ? all.filter((u) => !u.companyId) : all.filter((u) => u.companyId === scope);
 
-  /** 行（所属）ではなく人で数える */
-  const people = (rows: typeof all) => new Set(rows.map((u) => u.id)).size;
   const byRole = (r: string) => scoped.filter((u) => u.role === r);
-  const countLabel = (r: Role) => `${ROLE_LABEL[r]} ${people(byRole(r))}`;
-  // 控えのボタンは、その人の最初の行にだけ出す（同じ人の2行目に重ねない）
-  const firstRowOf = new Map<string, string>();
-  for (const u of scoped) if (!firstRowOf.has(u.id)) firstRowOf.set(u.id, u.membershipId ?? u.id);
+  const countLabel = (r: Role) => `${ROLE_LABEL[r]} ${countPeople(byRole(r))}`;
+  // 会社で並べられるのは、会社でしぼっていないときだけ（1社・会社に属さない人だけなら並べても変わらない）。
+  // 点数と等級は見てよい役割だけ。会社に属さない人は等級と点数を持たないので、そこでも出さない
+  const sortKeys = availableSortKeys({
+    acrossCompanies: scope === "",
+    gradeAndScore: showGradeScore && scope !== "none",
+  });
+  const view = parsePeopleView(sp, sortKeys);
 
   return (
     <>
@@ -62,8 +71,8 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
       {/* 全体像は数字だけ。誰が何人いるかを一行で掴ませる */}
       <Card className="card-pad hero-tint">
         <p className="num-display m-0 text-hero-sp leading-tight text-accent">
-          {people(scoped.filter((u) => u.isActive))}
-          <span className="unit"> / {people(scoped)} 人が利用中</span>
+          {countPeople(scoped.filter((u) => u.isActive))}
+          <span className="unit"> / {countPeople(scoped)} 人が利用中</span>
         </p>
         <p className="m-0 mt-2 text-sub text-ink-muted">
           {countLabel("SUPER_ADMIN")}人 ／ {countLabel("COMPANY_ADMIN")}人 ／ {countLabel("MANAGER")}人 ／{" "}
@@ -122,22 +131,20 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
       </div>
 
       <SectionHeading>会社でしぼる</SectionHeading>
-      <div className="mb-5 flex flex-wrap gap-2">
-        <ChipLink href="/system/users" current={scope === ""}>
-          すべて（{people(all)}）
-        </ChipLink>
-        {companies.map((c) => (
-          <ChipLink key={c.id} href={`/system/users?company=${c.id}`} current={scope === c.id}>
-            {c.name}（{all.filter((u) => u.companyId === c.id).length}）
-          </ChipLink>
-        ))}
-        <ChipLink href="/system/users?company=none" current={scope === "none"}>
-          会社に属さない（{all.filter((u) => !u.companyId).length}）
-        </ChipLink>
-      </div>
+      {/* 会社を切り替えても、選んでいる並びと検索語は引き継ぐ */}
+      <PeopleScopeChips
+        basePath="/system/users"
+        param="company"
+        current={scope}
+        items={[
+          { value: "", label: `すべて（${countPeople(all)}）` },
+          ...companies.map((c) => ({ value: c.id, label: `${c.name}（${all.filter((u) => u.companyId === c.id).length}）` })),
+          { value: "none", label: `${NO_COMPANY_LABEL}（${all.filter((u) => !u.companyId).length}）` },
+        ]}
+      />
 
       <SectionHeading aside={<span className="footnote">名前を押すと変更できます</span>}>
-        利用者（{people(scoped)}人）
+        利用者（{countPeople(scoped)}人）
       </SectionHeading>
       {scoped.length === 0 ? (
         <EmptyState
@@ -145,56 +152,31 @@ export default async function SystemUsers({ searchParams }: { searchParams: Prom
           body="別の会社を選ぶか、「新しい利用者を作る」から追加してください。"
         />
       ) : (
-        <Card>
-          {scoped.map((u) => {
-            const rowKey = u.membershipId ?? u.id;
-            const row = (
-              <Link
-                href={u.companyId ? `/system/users/${u.id}?company=${u.companyId}` : `/system/users/${u.id}`}
-                className="user-row no-underline"
-                /* 利用停止の方は、札だけでなく行の面と枠でも分かるようにする（全画面共通の作法） */
-                data-off={u.isActive ? undefined : "true"}
-              >
-                <Avatar name={u.name} seed={u.id} size={36} />
-                <div className="min-w-0 flex-1">
-                  <p className="m-0 truncate text-body font-semibold text-ink">
-                    {u.name}
-                    {!u.isActive && <span className="ml-2 badge badge-closed">利用停止</span>}
-                  </p>
-                  <p className="m-0 truncate text-note text-ink-muted">{u.email}</p>
-                </div>
-                <span className="user-row-tags">
-                  <span className="tag">
-                    <Icon name="shield" size={13} />
-                    {ROLE_LABEL[u.role as Role] ?? u.role}
-                  </span>
-                  <span className="tag">
-                    <Icon name="building" size={13} />
-                    {u.companyName ?? "所属なし"}
-                  </span>
-                  {showGradeScore && u.companyId && (
-                    <span className="tag">
-                      <Icon name="layers" size={13} />
-                      {u.gradeName ?? GRADE_UNSET_LABEL}
-                    </span>
-                  )}
-                </span>
-                {showGradeScore && u.companyId && (
-                  <LatestScoreValue score={scores.get(membershipScoreKey(u.companyId, u.id)) ?? null} />
-                )}
-              </Link>
-            );
-            // 控えがある行だけ、リンクの下に「控えを見る」を並べる（リンクの中には入れない）
-            return hasMemo.has(u.id) && firstRowOf.get(u.id) === rowKey ? (
-              <div key={rowKey} className="user-row-group">
-                {row}
-                <CredentialMemoButton userId={u.id} name={u.name} />
-              </div>
-            ) : (
-              <Fragment key={rowKey}>{row}</Fragment>
-            );
+        <PeopleList
+          sortKeys={sortKeys}
+          initial={view}
+          rows={scoped.map((u) => {
+            // 等級と点数は、会社に属する行で、見てよい役割にだけ渡す（S6）
+            const gradedIn = showGradeScore ? u.companyId : null;
+            return {
+              key: u.membershipId ?? u.id,
+              id: u.id,
+              href: u.companyId ? `/system/users/${u.id}?company=${u.companyId}` : `/system/users/${u.id}`,
+              isActive: u.isActive,
+              name: u.name,
+              email: u.email,
+              role: u.role,
+              companyId: u.companyId,
+              companyName: u.companyName,
+              ...(gradedIn && {
+                gradeName: gradeLabel({ name: u.gradeName }),
+                gradeOrder: u.gradeOrder,
+                latestScore: scores.get(membershipScoreKey(gradedIn, u.id)) ?? null,
+              }),
+              hasMemo: hasMemo.has(u.id),
+            };
           })}
-        </Card>
+        />
       )}
 
       <p className="footnote mt-3">

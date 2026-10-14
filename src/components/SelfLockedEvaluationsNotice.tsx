@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge, Card, CardRow } from "@/components/ui";
 import { selfLockedHeadline, type SelfLockedRow } from "@/lib/domain/self-locked-evaluations";
+import { gradeLabel } from "@/lib/domain/grade-label";
 
 /**
  * 「本人が確定できず、確定を頼まれている評価」の知らせ（会社の管理者のホーム）。
@@ -41,7 +42,7 @@ export function SelfLockedEvaluationsNotice({
                 {row.employeeName ?? "氏名未設定"}
               </Link>
             }
-            sub={`${row.cycleName} ／ ${row.gradeName ?? "等級未設定"}`}
+            sub={`${row.cycleName} ／ ${gradeLabel({ name: row.gradeName })}`}
             marks={<Badge tone="required">確定待ち</Badge>}
           />
         ))}
