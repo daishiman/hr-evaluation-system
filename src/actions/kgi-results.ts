@@ -37,7 +37,7 @@ const kgiResultSchema = z.object({
 });
 
 export async function saveKgiResult(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: kgiResultSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "kgi.saveResult", input: kgiResultSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const companyId = viewer.companyId;
     const db = await getDb();

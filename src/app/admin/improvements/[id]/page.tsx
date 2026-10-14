@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
+import { can } from "@/lib/route-access";
 import { getImprovementRequest, listHandoutEvents, listImprovementEvents } from "@/lib/queries";
 import {
   Badge,
@@ -53,7 +54,7 @@ export const dynamic = "force-dynamic";
  * （渡したあとに「何を渡したのか」を探し直さずに済む）。
  */
 export default async function AdminImprovementDetail({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/improvements/[id]");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
   const { id } = await params;
@@ -61,7 +62,7 @@ export default async function AdminImprovementDetail({ params }: { params: Promi
   if (!item) notFound();
 
   const diagnostics = parseDiagnostics(item.diagnostics, diagnosticsLevelFor(item.kind));
-  const canHandOut = viewer.role === "SUPER_ADMIN";
+  const canHandOut = can(viewer, "improvements.handOut");
   const canDispose = canDisposeImprovements(viewer.role);
   const displayState = improvementDisplayState(item);
   // 誰がいつどの状態に変えたかは、上書きせず積み上げてある（→ improvement_status_events）。

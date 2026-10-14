@@ -46,7 +46,7 @@ describe("runAction・runRead の入口で、送り元のサイトを確かめ�
     request({ origin: "https://evil.example", host: "hyoka.example" });
     const write = vi.fn();
 
-    const result = await runAction({ role: "EMPLOYEE", input }, { name: "a" }, write);
+    const result = await runAction({ operation: "account.updateProfile", input }, { name: "a" }, write);
 
     expect(result).toEqual({ ok: false, message: REJECTED });
     expect(mocked.getSession).not.toHaveBeenCalled();
@@ -58,7 +58,7 @@ describe("runAction・runRead の入口で、送り元のサイトを確かめ�
     request({ origin: "https://evil.example", host: "hyoka.example" });
     const read = vi.fn();
 
-    expect(await runRead({ role: "COMPANY_ADMIN", input }, { name: "a" }, read)).toEqual({
+    expect(await runRead({ operation: "credentialMemos.reveal", input }, { name: "a" }, read)).toEqual({
       ok: false,
       message: REJECTED,
     });
@@ -67,7 +67,7 @@ describe("runAction・runRead の入口で、送り元のサイトを確かめ�
 
   it("ポートだけ違うサイトも別のサイトとして断る", async () => {
     request({ origin: "http://localhost:3000", host: "localhost:8788" });
-    expect(await runAction({ role: "EMPLOYEE", input }, { name: "a" }, vi.fn())).toEqual({
+    expect(await runAction({ operation: "account.updateProfile", input }, { name: "a" }, vi.fn())).toEqual({
       ok: false,
       message: REJECTED,
     });
@@ -75,7 +75,7 @@ describe("runAction・runRead の入口で、送り元のサイトを確かめ�
 
   it("送り元が読めない（Origin: null など）ときも断る", async () => {
     request({ origin: "null", host: "hyoka.example" });
-    expect(await runAction({ role: "EMPLOYEE", input }, { name: "a" }, vi.fn())).toEqual({
+    expect(await runAction({ operation: "account.updateProfile", input }, { name: "a" }, vi.fn())).toEqual({
       ok: false,
       message: REJECTED,
     });
@@ -84,7 +84,7 @@ describe("runAction・runRead の入口で、送り元のサイトを確かめ�
   it("同じサイトからなら検査を通り、ログインの確認へ進む", async () => {
     request({ origin: "https://hyoka.example", host: "hyoka.example" });
 
-    const result = await runAction({ role: "EMPLOYEE", input }, { name: "a" }, vi.fn());
+    const result = await runAction({ operation: "account.updateProfile", input }, { name: "a" }, vi.fn());
 
     expect(result).toEqual({ ok: false, message: "ログインが必要です。" });
     expect(mocked.getSession).toHaveBeenCalledOnce();
@@ -92,7 +92,7 @@ describe("runAction・runRead の入口で、送り元のサイトを確かめ�
 
   it("Origin を付けない呼び出し（画面以外）は、この検査ではなくログインの確認で止まる", async () => {
     request({ host: "hyoka.example" });
-    expect(await runAction({ role: "EMPLOYEE", input }, { name: "a" }, vi.fn())).toEqual({
+    expect(await runAction({ operation: "account.updateProfile", input }, { name: "a" }, vi.fn())).toEqual({
       ok: false,
       message: "ログインが必要です。",
     });

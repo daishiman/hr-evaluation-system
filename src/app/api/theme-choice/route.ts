@@ -1,11 +1,10 @@
-import { handle } from "@/lib/api";
+import { apiViewerFor, handle } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import {
   readThemePreferenceUsage,
   themePreferenceSchema,
   upsertThemePreference,
 } from "@/lib/theme-preferences";
-import { apiViewer } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +16,7 @@ export const dynamic = "force-dynamic";
  */
 export async function PUT(req: Request) {
   return handle(async () => {
-    const viewer = await apiViewer();
+    const viewer = await apiViewerFor("appearance.save");
     const choice = themePreferenceSchema.parse(await req.json());
     const db = await getDb();
     await upsertThemePreference(db, viewer.id, choice);
@@ -28,7 +27,7 @@ export async function PUT(req: Request) {
 /** 現在の利用人数と割合。個人を識別できる値は返さない。 */
 export async function GET() {
   return handle(async () => {
-    await apiViewer("SUPER_ADMIN");
+    await apiViewerFor("appearance.read");
     return readThemePreferenceUsage(await getDb());
   });
 }

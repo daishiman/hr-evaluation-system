@@ -30,7 +30,7 @@ const importSchema = previewSchema.extend({
 /** 保存せず、取り込むとどうなるかと、本取込に使う確認トークンを返す。 */
 export async function previewResponsesImport(raw: unknown) {
   return runRead(
-    { role: "COMPANY_ADMIN", input: previewSchema, maxBytes: IMPORT_MAX_BYTES, tooLargeMessage: IMPORT_TOO_LARGE_MESSAGE },
+    { operation: "responses.import", input: previewSchema, maxBytes: IMPORT_MAX_BYTES, tooLargeMessage: IMPORT_TOO_LARGE_MESSAGE },
     raw,
     async ({ viewer, input }) => {
       const companyId = requireTargetCompany(viewer, input.companyId);
@@ -54,7 +54,7 @@ export async function previewResponsesImport(raw: unknown) {
 /** 確認済みの内容を取り込んで保存する。 */
 export async function importResponses(raw: unknown) {
   return runAction(
-    { role: "COMPANY_ADMIN", input: importSchema, maxBytes: IMPORT_MAX_BYTES, tooLargeMessage: IMPORT_TOO_LARGE_MESSAGE },
+    { operation: "responses.import", input: importSchema, maxBytes: IMPORT_MAX_BYTES, tooLargeMessage: IMPORT_TOO_LARGE_MESSAGE },
     raw,
     async ({ viewer, input }) => {
       const companyId = requireTargetCompany(viewer, input.companyId);

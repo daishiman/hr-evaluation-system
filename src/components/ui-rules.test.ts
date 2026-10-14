@@ -1,6 +1,9 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { RecordList } from "@/components/ui";
 import { splitSource, stripComments } from "@/test-support/source-code";
 import { ACTION_HOOKS } from "@/test-support/action-hooks";
 
@@ -347,6 +350,47 @@ describe("画面の器の作法", () => {
     // 画面側で「縮まない操作のまとまり」を書き起こしていないこと
     const offenders = sourceFiles.filter((p) => /shrink-0[^"]*flex-wrap|flex-wrap[^"]*shrink-0/.test(readFileSync(p, "utf8")));
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
+  });
+
+  it("カードの一覧（RecordList）は、広い入れ物では操作を見出しの行の右へ寄せ、値を横に流す（§28-9）", () => {
+    // 縦1列に積むと、同じ高さの右側が空いたまま残る（回答一覧の延長の記録で 43% 空いていた）。
+    const html = renderToStaticMarkup(
+      createElement(RecordList, {
+        items: [
+          {
+            key: "r1",
+            title: "延長の記録",
+            marks: "有効",
+            rows: [{ label: "延長後の締切", value: "2026年10月31日" }],
+            note: "理由の文章",
+            action: "取り消す",
+          },
+        ],
+      }),
+    );
+    // 読む順（HTML の並び）は 見出し → 値 → 長い文章 → 操作 のまま。寄せるのは見た目だけ
+    const order = ["延長の記録", "延長後の締切", "理由の文章", "取り消す"].map((s) => html.indexOf(s));
+    expect(order.every((at) => at >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(html).toContain('class="card record-list"');
+
+    // 並べ替えは入れ物の幅（名前付きのコンテナ）で切り替え、画面幅では切り替えない
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    expect(css).toContain(".record-list { container: record-list / inline-size; }");
+    const wide = css.slice(css.indexOf("@container record-list (min-width: 560px)"));
+    expect(wide).not.toBe(css);
+    const rule = (selector: string) => {
+      const at = wide.indexOf(`${selector} {`);
+      expect(at, selector).toBeGreaterThanOrEqual(0);
+      return wide.slice(at, wide.indexOf("}", at));
+    };
+    const actions = rule(".record-list .list-card > .list-card-actions");
+    expect(actions).toContain("grid-column: 2;");
+    expect(actions).toContain("grid-row: 1;");
+    expect(rule(".record-list .list-card > .list-card-head")).toContain("grid-column: 1; grid-row: 1;");
+    expect(rule(".record-list .list-card .def-list")).toContain("repeat(auto-fill, minmax(min(100%, 20rem), 1fr))");
+    // 表を畳んだカード（DataTable の .list-host の中）には効かせない
+    expect(readFileSync(join(SRC, "components", "DataTable.tsx"), "utf8")).not.toContain("record-list");
   });
 
   it("グラフの中の文字も下限を守る（SVGはクラスが効かないので数値で確認する）", () => {

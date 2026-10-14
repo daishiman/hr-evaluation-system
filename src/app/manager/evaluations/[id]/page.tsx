@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { getEvaluationDetail, getMember, listEvaluations, listMembers } from "@/lib/queries";
 import { isEvaluationStale } from "@/lib/impact";
 import { ActionButton } from "@/components/ActionButton";
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 /** 評価1件の確認・確定。表示の中身は本人の画面と同じ部品を使い、判定の理由を必ず出す。 */
 export default async function ManagerEvaluation({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await requireRole("MANAGER");
+  const viewer = await requireRoute("/manager/evaluations/[id]");
   const { id } = await params;
   if (!viewer.companyId) notFound();
 

@@ -1,5 +1,6 @@
 import type { IconName } from "@/components/Icon";
-import type { Role } from "@/lib/session";
+import type { Role } from "@/lib/roles";
+import { roleCanOpen, routeOf } from "@/lib/route-access";
 import routeLedger from "../../system-spec/route-ledger.json";
 
 /**
@@ -9,8 +10,12 @@ import routeLedger from "../../system-spec/route-ledger.json";
  * グループ名は利用者の言葉（動詞ベース）にする。「マスタ管理」のような
  * システム内部の言い方はしない。
  *
+ * 項目の呼び名と「その役割が開けるか」は台帳（system-spec/route-ledger.json）から引く。
+ * ここで決めるのは並び順・分類・絵だけ。開けないページ（byRole が none）と、
+ * 開けてもメニューに出さないページ（navHiddenFor）は、ここに書いてあっても出さない。
+ *
  * 注意: メニューを出さないことは権限の制御ではない。URLを直接開かれても
- * 通さないのは各画面の requireRole と API 側の判定（src/lib/session.ts）。
+ * 通さないのは各画面の requireRoute と API 側の apiViewerFor（どちらも同じ台帳を読む）。
  */
 
 export interface NavItem {
@@ -32,57 +37,62 @@ export interface NavItem {
 export interface NavGroup {
   /** null は見出しなし（ホームのように分類が要らないもの） */
   title: string | null;
+  /** 分類の呼び名。見出しなしの分類は「ホーム」。権限一覧の区分名にも使う */
+  label: string;
   items: NavItem[];
 }
+
+/** メニューの定義に書く形。呼び名（label）は navGroupsFor が見出しから補う */
+type GroupDef = Omit<NavGroup, "label">;
+
+/** 台帳のページを1項目にする。呼び名は台帳の label（画面名の正本を1つにする） */
+function item(href: string, icon: IconName, exact = false): NavItem {
+  const route = routeOf(href);
+  // 台帳に無いページをメニューに足すと、権限一覧にも載らない入口ができてしまう
+  if (!route) throw new Error(`メニューの ${href} が台帳にありません`);
+  return exact ? { href, label: route.label, icon, exact } : { href, label: route.label, icon };
+}
+
+const home = (href: string): GroupDef => ({ title: null, items: [item(href, "home", true)] });
 
 /* 自分のアカウント（情報の確認・変更・パスワード・ログアウト）はサイドバーに置かない。
    全ロールのメニュー末尾に同じ項目が並ぶと、その分だけ毎回読む量が増えるため、
    右上の自分のアイコン（AccountMenu）にまとめている。 */
 
 /** 会社の管理者とシステム全体管理者で共通の、会社ごとの運用メニュー。 */
-const COMPANY_GROUPS: NavGroup[] = [
+const COMPANY_GROUPS: GroupDef[] = [
   {
     title: "制度を順番に設定する",
     items: [
-      { href: "/admin/setup", label: "制度設定ガイド", icon: "guide" },
-      { href: "/admin/masters", label: "等級の設定", icon: "grade" },
-      { href: "/admin/masters/requirements", label: "等級要件（支援・運営）", icon: "requirement" },
-      { href: "/admin/masters/promotion", label: "昇格の条件・要件", icon: "promotion" },
-      { href: "/admin/behavior", label: "行動指針", icon: "behavior" },
-      { href: "/admin/scheme", label: "KPI・評価セット", icon: "kpi" },
+      item("/admin/setup", "guide"),
+      item("/admin/masters", "grade"),
+      item("/admin/masters/requirements", "requirement"),
+      item("/admin/masters/promotion", "promotion"),
+      item("/admin/behavior", "behavior"),
+      item("/admin/scheme", "kpi"),
     ],
   },
   {
     title: "評価を順番に進める",
-    items: [
-      { href: "/admin/cycles", label: "評価期間", icon: "calendar" },
-      { href: "/admin/forms", label: "アンケート", icon: "survey" },
-      { href: "/manager/cycles", label: "評価・結果を確認する", icon: "evaluation" },
-    ],
+    items: [item("/admin/cycles", "calendar"), item("/admin/forms", "survey"), item("/manager/cycles", "evaluation")],
   },
   {
     title: "運用を補う",
-    items: [
-      { href: "/admin/kgi", label: "事業所KGIの達成率", icon: "achievement" },
-      { href: "/admin/raises", label: "昇給の設定", icon: "raise" },
-    ],
+    items: [item("/admin/kgi", "achievement"), item("/admin/raises", "raise")],
   },
   {
     title: "人を管理する",
-    items: [{ href: "/admin/members", label: "社員", icon: "users" }],
+    items: [item("/admin/members", "users")],
   },
   {
     title: "基準を確認する",
-    items: [
-      { href: "/criteria", label: "評価の基準", icon: "criteria" },
-      { href: "/forms", label: "アンケートの中身", icon: "surveyRead" },
-    ],
+    items: [item("/criteria", "criteria"), item("/forms", "surveyRead")],
   },
   /* 各画面から届いた「ここが使いにくい」を読む場所。
      他の人が書いた不満がそのまま載るため、管理者だけに出す。 */
   {
     title: "使い勝手を直す",
-    items: [{ href: "/admin/improvements", label: "届いた改善要望", icon: "inbox" }],
+    items: [item("/admin/improvements", "inbox")],
   },
 ];
 
@@ -95,80 +105,64 @@ const COMPANY_GROUPS: NavGroup[] = [
  * たどり着けない状態だった。同じ2項目を一般の方と同じ言い方で出す。
  *
  * 会社に属さないシステム全体管理者には出さない（評価を受ける立場を持たない）。
+ * 台帳でも /me/forms・/me/results の navHiddenFor に SUPER_ADMIN を書いてある。
  */
-const MY_EVALUATION_GROUP: NavGroup = {
+const MY_EVALUATION_GROUP: GroupDef = {
   title: "自分の評価",
-  items: [
-    { href: "/me/forms", label: "実績を報告する", icon: "report" },
-    { href: "/me/results", label: "評価の結果を見る", icon: "result" },
-  ],
+  items: [item("/me/forms", "report"), item("/me/results", "result")],
 };
 
 /**
- * ロールごとのメニュー。
+ * ロールごとのメニューの並び。
  * 一般（EMPLOYEE）には、制度の設定と評価基準を一切出さない。
  */
+const MENUS: Record<Role, GroupDef[]> = {
+  SUPER_ADMIN: [
+    home("/system"),
+    {
+      title: "システムを管理する",
+      items: [
+        item("/system/companies", "building"),
+        item("/system/users", "userAdmin"),
+        item("/system/permissions", "shield"),
+        item("/system/usage", "usage"),
+        item("/system/agent-keys", "lock"),
+      ],
+    },
+    ...COMPANY_GROUPS,
+  ],
+  COMPANY_ADMIN: [home("/admin"), ...COMPANY_GROUPS, MY_EVALUATION_GROUP],
+  MANAGER: [
+    home("/manager"),
+    { title: "評価を進める", items: [item("/manager/cycles", "evaluation")] },
+    { title: "人を見る", items: [item("/manager/members", "users")] },
+    MY_EVALUATION_GROUP,
+    { title: "基準を確認する", items: [item("/criteria", "criteria"), item("/forms", "surveyRead")] },
+  ],
+  EMPLOYEE: [
+    home("/me"),
+    { title: "半期の実績", items: [item("/me/forms", "report"), item("/me/results", "result")] },
+    /* アンケートの中身は全ロールが読める（配点・昇格ゲートは出さない）。
+       自分あての1本を答えることと、どの等級で何を聞いているかを読むことは
+       別の用事なので、「実績を報告する」と同じ分類には入れない。 */
+    { title: "内容を確認する", items: [item("/forms", "surveyRead")] },
+  ],
+};
+
+/** その役割のメニューに出してよいか。開けないページと、台帳で隠すと決めたページは出さない */
+function shownTo(role: Role, href: string): boolean {
+  return roleCanOpen(role, href) && !(routeOf(href)?.navHiddenFor ?? []).includes(role);
+}
+
+/** ロールごとのメニュー。中身が空になった分類は見出しごと出さない */
 export function navGroupsFor(role: Role): NavGroup[] {
-  switch (role) {
-    case "SUPER_ADMIN":
-      return [
-        { title: null, items: [{ href: "/system", label: "ホーム", icon: "home", exact: true }] },
-        {
-          title: "システムを管理する",
-          items: [
-            { href: "/system/companies", label: "会社一覧", icon: "building" },
-            { href: "/system/users", label: "利用者一覧", icon: "userAdmin" },
-            { href: "/system/usage", label: "利用状況", icon: "usage" },
-            { href: "/system/agent-keys", label: "Claude Code 連携の鍵", icon: "lock" },
-          ],
-        },
-        ...COMPANY_GROUPS,
-      ];
-    case "COMPANY_ADMIN":
-      return [
-        { title: null, items: [{ href: "/admin", label: "ホーム", icon: "home", exact: true }] },
-        ...COMPANY_GROUPS,
-        MY_EVALUATION_GROUP,
-      ];
-    case "MANAGER":
-      return [
-        { title: null, items: [{ href: "/manager", label: "ホーム", icon: "home", exact: true }] },
-        {
-          title: "評価を進める",
-          items: [{ href: "/manager/cycles", label: "評価・結果を確認する", icon: "evaluation" }],
-        },
-        {
-          title: "人を見る",
-          items: [{ href: "/manager/members", label: "メンバー", icon: "users" }],
-        },
-        MY_EVALUATION_GROUP,
-        {
-          title: "基準を確認する",
-          items: [
-            { href: "/criteria", label: "評価の基準", icon: "criteria" },
-            { href: "/forms", label: "アンケートの中身", icon: "surveyRead" },
-          ],
-        },
-      ];
-    default:
-      return [
-        { title: null, items: [{ href: "/me", label: "ホーム", icon: "home", exact: true }] },
-        {
-          title: "半期の実績",
-          items: [
-            { href: "/me/forms", label: "実績を報告する", icon: "report" },
-            { href: "/me/results", label: "評価の結果を見る", icon: "result" },
-          ],
-        },
-        /* アンケートの中身は全ロールが読める（配点・昇格ゲートは出さない）。
-           自分あての1本を答えることと、どの等級で何を聞いているかを読むことは
-           別の用事なので、「実績を報告する」と同じ分類には入れない。 */
-        {
-          title: "内容を確認する",
-          items: [{ href: "/forms", label: "アンケートの中身", icon: "surveyRead" }],
-        },
-      ];
-  }
+  return MENUS[role]
+    .map((group) => ({
+      ...group,
+      label: group.title ?? "ホーム",
+      items: group.items.filter((i) => shownTo(role, i.href)),
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 /** サイドバーの先頭に置くホームのリンク（アプリ名を押したときの戻り先と揃える）。 */

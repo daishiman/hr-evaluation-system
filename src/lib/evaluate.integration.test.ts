@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import * as s from "@/db/schema";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany, seedResponse, HIGHER_BOUNDS } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedResponse, HIGHER_BOUNDS, seedMemberships } from "@/test-support/evaluation-fixture";
 import { scopeEvaluationItem, scopeEvaluationRow, buildRadarValues } from "@/lib/domain/evaluation-view";
 
 /**
@@ -130,6 +130,7 @@ async function readEvaluation() {
 describe("評価の集計（保管場所まで通して確かめる）", () => {
   it("全項目Aなら 100点満点・昇給あり。保存された値と読み出した値が一致する", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     // 等級要件は2問中2問○＝100%（A）／稼働率 100%（A）／残業率 4%（A）
     await seedResponse(current, standardQuestions());
 
@@ -164,6 +165,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("ランクごとの割合（A100% B80% C60% D40% E0%）が配点に正しく掛かる", async () => {
     await seedCompany(current, { weights: [20, 50, 30] });
+    seedMemberships(current);
     // 等級要件 2問中1問○＝50%（E）／稼働率 85%（C）／残業率 12%（C）
     await seedResponse(current, standardQuestions({ req2: 0, q2_1: 85, q3_1: 12 }));
 
@@ -181,6 +183,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("小数の配点も、合計が小数第1位で丸められて保存される", async () => {
     await seedCompany(current, { weights: [20, 50, 30] });
+    seedMemberships(current);
     // 稼働率 95%（B=0.8→40点）／残業率 7%（B=0.8→24点）／等級要件100%（A=20点）
     await seedResponse(current, standardQuestions({ q2_1: 95, q3_1: 7 }));
 
@@ -212,6 +215,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
     for (const [value, rank] of cases) {
       it(`稼働率 ${value}% は ${rank}（保存された値も同じ）`, async () => {
         await seedCompany(current);
+        seedMemberships(current);
         await seedResponse(current, standardQuestions({ q2_1: value }));
         await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
         const { items } = await readEvaluation();
@@ -239,6 +243,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
     for (const [value, rank] of cases) {
       it(`残業率 ${value}% は ${rank}`, async () => {
         await seedCompany(current);
+        seedMemberships(current);
         await seedResponse(current, standardQuestions({ q3_1: value }));
         await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
         const { items } = await readEvaluation();
@@ -249,6 +254,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("分母が0の項目だけが判定外になり、ほかの項目は最後まで計算される", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions({ q2_2: 0 }));
 
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
@@ -272,6 +278,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("回答が空の項目は判定外になり、Eには落とさない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions({ q3_1: null }));
 
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
@@ -283,6 +290,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("等級要件の設問が1件も無ければ、固定枠は0%ではなく判定外になる", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     const qs = standardQuestions().filter((q) => !q.gradeRequirementId);
     await seedResponse(current, qs);
 
@@ -298,6 +306,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("確定済みの評価は、集計し直しても1文字も変わらない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions());
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
 
@@ -326,6 +335,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("確認中の評価を集計し直すと、評価IDは変わらず、内訳が二重に増えない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions());
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
     const first = await readEvaluation();
@@ -346,6 +356,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("等級区分の評価セットが無い人は、0点の評価を作らず理由を返す", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions());
     await current.db.delete(s.schemeItems);
 
@@ -358,6 +369,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("提出済みでない回答は集計しない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions(), { status: "draft" });
     const out = await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
     expect(out).toEqual([]);
@@ -365,6 +377,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("対象者を絞ると、その人だけが集計される", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions());
     const out = await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator, {
       employeeIds: ["usr_other"],
@@ -374,6 +387,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("サイクルが無い・評価セットが無いときは何もしない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     expect(await buildEvaluationsForCycle(IDS.company, "cyc_none", IDS.evaluator)).toEqual([]);
 
     await current.db.update(s.evaluationCycles).set({ schemeId: null });
@@ -383,6 +397,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("行動指針の点数（-1点を含む）がそのまま合計され、保存される", async () => {
     await seedCompany(current, { requiredBehaviorPoints: 3 });
+    seedMemberships(current);
     await seedResponse(current, standardQuestions({ behavior: -1 }));
 
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
@@ -398,6 +413,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("行動指針の設問が1件も無ければ、行動指針は判定に使わない", async () => {
     await seedCompany(current, { requiredBehaviorPoints: 99 });
+    seedMemberships(current);
     await seedResponse(current, standardQuestions().filter((q) => !q.behaviorGuidelineId));
 
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
@@ -409,6 +425,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("必須ゲートが未達なら、点数が足りていても昇格できない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions({ gate: 0 }));
 
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
@@ -435,6 +452,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
     for (const [rate, total, eligible] of cases) {
       it(`合計${total}点は昇格${eligible ? "可" : "不可"}`, async () => {
         await seedCompany(current, { requiredKpiPoints: 80, requiredBehaviorPoints: 3 });
+        seedMemberships(current);
         await seedResponse(current, standardQuestions({ q2_1: rate }));
         await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
         const { ev } = await readEvaluation();
@@ -447,6 +465,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
   describe("賞与（事業所KGI達成係数）", () => {
     it("達成率100%なら係数1.0。個人Ptと賞与額が保存される", async () => {
       await seedCompany(current, { officeKgiRate: 100, yenPerPoint: 3200 });
+      seedMemberships(current);
       await seedResponse(current, standardQuestions());
       await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
       const { ev } = await readEvaluation();
@@ -458,6 +477,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
     it("達成率が未登録なら、0円ではなく空のまま残る", async () => {
       await seedCompany(current, { officeKgiRate: null });
+      seedMemberships(current);
       await seedResponse(current, standardQuestions());
       await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
       const { ev } = await readEvaluation();
@@ -478,6 +498,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
         const prev = current;
         current = t;
         await seedCompany(current, { officeKgiRate: rate });
+        seedMemberships(current);
         await seedResponse(current, standardQuestions());
         await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
         const { ev } = await readEvaluation();
@@ -490,7 +511,13 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
     it("事業所が分からない回答には、どの達成率も当てない", async () => {
       await seedCompany(current);
+      seedMemberships(current);
       await current.db.update(s.users).set({ officeId: null }).where(eq(s.users.id, IDS.employee));
+      // 事業所は所属の値が正本（users の同じ列は元の所属の写し）
+      await current.db
+        .update(s.companyMemberships)
+        .set({ officeId: null })
+        .where(eq(s.companyMemberships.userId, IDS.employee));
       await seedResponse(current, standardQuestions(), { officeId: null });
       await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
       const { ev } = await readEvaluation();
@@ -500,6 +527,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
     it("アンケートに office_kgi_rate の設問があれば、そちらの回答を優先する", async () => {
       await seedCompany(current, { officeKgiRate: 100 });
+      seedMemberships(current);
       await seedResponse(current, [
         ...standardQuestions(),
         {
@@ -522,6 +550,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
   describe("保存した値と、画面に渡る値が一致すること", () => {
     it("評価者には保存された点数がそのまま渡る", async () => {
       await seedCompany(current);
+      seedMemberships(current);
       await seedResponse(current, standardQuestions({ q2_1: 85 }));
       await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
       const { ev, items } = await readEvaluation();
@@ -544,6 +573,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
     it("本人には点数・配点・閾値を渡さず、実績値とランクだけを渡す", async () => {
       await seedCompany(current);
+      seedMemberships(current);
       await seedResponse(current, standardQuestions({ q2_1: 85 }));
       await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
       const { ev, items } = await readEvaluation();
@@ -570,6 +600,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
     it("判定外の項目は、レーダーで0点と混ざらない", async () => {
       await seedCompany(current);
+      seedMemberships(current);
       await seedResponse(current, standardQuestions({ q2_2: 0 }));
       await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
       const { items } = await readEvaluation();
@@ -582,6 +613,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("ランク基準に穴があると、最下位に丸めたうえでその事実を残す", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions({ q2_1: 85 }));
     // 稼働率の C（80以上90未満）を消して、85% がどこにも当たらない状態にする
     await current.db
@@ -598,6 +630,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("ランク基準が1件も無い項目も、集計を止めずに最下位として残す", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions());
     await current.db
       .delete(s.kpiRankCriteria)
@@ -612,6 +645,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("すべてAを求めない設定では、満点に届いたときだけ昇給になる", async () => {
     await seedCompany(current, { raiseRequiresAllA: false });
+    seedMemberships(current);
     await seedResponse(current, standardQuestions({ q2_1: 95 }));
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
     const { ev } = await readEvaluation();
@@ -623,6 +657,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("未提出の人を、状態つきで一覧できる", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions());
     const pending = await listPendingRespondents(IDS.company, IDS.cycle);
     expect(pending).toEqual([
@@ -640,6 +675,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("利用停止中の人は、未提出の一覧から外れる（提出済みの回答は残ったまま）", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions());
     await current.db.update(s.users).set({ isActive: false }).where(eq(s.users.id, IDS.employee));
 
@@ -655,12 +691,14 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 
   it("アンケートが1件も無ければ、未提出者の一覧は空になる", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await current.db.delete(s.forms);
     expect(await listPendingRespondents(IDS.company, IDS.cycle)).toEqual([]);
   });
 
   it("基準の下限・上限は、判定した時点の値が内訳に写し取られる", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions({ q2_1: 85 }));
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
     const { items } = await readEvaluation();
@@ -679,6 +717,7 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
 describe("設定に抜けがある・条件が変わる場合", () => {
   it("AM等級では「1人あたり必要回数」が3回になる（ほかの等級は2回）", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     // 等級区分を AM にし、その定数を使う計算式に差し替える
     await current.db.update(s.grades).set({ pointGroup: "AM" }).where(eq(s.grades.id, IDS.gradeFrom));
     await current.db.update(s.schemeItems).set({ pointGroup: "AM" });
@@ -696,6 +735,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("Regular等級では同じ計算式が2回で割られる", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await current.db
       .update(s.kpiItems)
       .set({ formula: "q2_1 ÷ 【等級別の1人あたり必要回数】 × 100" })
@@ -709,6 +749,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("昇格の必要点数が未設定なら、必要点数は空のまま保存し、0点として扱わない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await current.db.delete(s.promotionThresholds);
     await seedResponse(current, standardQuestions());
 
@@ -721,6 +762,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("賞与の単価が未設定なら、賞与額は空にする（0円と書かない）", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await current.db.delete(s.raisePolicies);
     await seedResponse(current, standardQuestions());
 
@@ -733,6 +775,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("回答に所属が入っていなければ、その人のいまの所属で達成率を引く", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions(), { officeId: null });
 
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
@@ -743,7 +786,13 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("回答にも本人にも所属が無ければ、達成率は空のまま（0%にしない）", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await current.db.update(s.users).set({ officeId: null }).where(eq(s.users.id, IDS.employee));
+    // 事業所は所属の値が正本（users の同じ列は元の所属の写し）
+    await current.db
+      .update(s.companyMemberships)
+      .set({ officeId: null })
+      .where(eq(s.companyMemberships.userId, IDS.employee));
     await seedResponse(current, standardQuestions(), { officeId: null });
 
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
@@ -755,6 +804,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("分類が未設定の項目は「等級要件（固定枠）」として保存する（空欄にしない）", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await current.db.update(s.schemeItems).set({ categoryId: null }).where(eq(s.schemeItems.id, "si_1"));
     await seedResponse(current, standardQuestions());
 
@@ -765,6 +815,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("判定外になった項目でも、分類が未設定なら同じ呼び名で保存する", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await current.db.update(s.schemeItems).set({ categoryId: null }).where(eq(s.schemeItems.id, "si_1"));
     // 等級要件の設問を外すと、達成率が出せず固定枠が判定外になる
     await seedResponse(
@@ -782,6 +833,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("研修以外の昇格要件は「試験」として扱う", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     const qs = standardQuestions().map((q) =>
       q.id === "fq_gate" ? { ...q, section: "test", title: "昇格試験に合格した", answer: 0 } : q,
     );
@@ -799,6 +851,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("行動指針の回答に言葉の控えが無くても、点数は保存する", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     const qs = standardQuestions().map((q) =>
       q.id === "fq_beh" ? { ...q, answerText: undefined } : q,
     );
@@ -814,6 +867,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("KPIの回答が空の設問は、計算に使う値として持ち込まない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions({ q2_2: null }));
 
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
@@ -829,6 +883,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("計算式が未登録の項目は判定外にする（Eに落とさない）", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await current.db.update(s.kpiItems).set({ formula: null }).where(eq(s.kpiItems.id, IDS.itemHigher));
     await seedResponse(current, standardQuestions());
 
@@ -847,6 +902,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("行動指針に未回答があれば0点として数える（-1点にはしない）", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     const qs = standardQuestions().map((q) =>
       q.id === "fq_beh" ? { ...q, answer: null, answerText: undefined } : q,
     );
@@ -870,6 +926,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
    */
   it("行動指針のマスタは、評価が残っている間は消せない（参照が守られている）", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions());
     current.raw.exec("PRAGMA foreign_keys = OFF");
     current.raw.prepare("delete from behavior_guidelines").run();
@@ -882,6 +939,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("評価セットに残った、実体の無いKPI項目は黙って飛ばす（ほかの項目は計算する）", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions());
     current.raw.exec("PRAGMA foreign_keys = OFF");
     current.raw.prepare("delete from kpi_items where id = ?").run(IDS.itemLower);
@@ -897,6 +955,7 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
   it("等級が見当たらない回答は集計の対象にしない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, standardQuestions());
     current.raw.exec("PRAGMA foreign_keys = OFF");
     current.raw.prepare("update form_responses set grade_id = ?").run("grd_missing");

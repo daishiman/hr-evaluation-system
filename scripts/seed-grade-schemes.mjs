@@ -76,7 +76,7 @@ const d1 = (arg, json = false) => {
   return json ? JSON.parse(out.slice(out.indexOf("["))) : null;
 };
 const query = (sql) => d1({ command: sql }, true)[0]?.results ?? [];
-const esc = (v) => (v === null || v === undefined ? "NULL" : `'${String(v).replace(/'/g, "''")}'`);
+const esc = (v) => (v === null || v === undefined ? "NULL" : `'${String(v).replaceAll("'", "''")}'`);
 
 /* ───────────────── 現状を読む ───────────────── */
 
@@ -114,7 +114,7 @@ for (const cid of companyIds) {
 VALUES ('gpr_${cid}_${r.pointGroup}', ${esc(cid)}, ${esc(r.pointGroup)}, ${r.displayOrder}, ${r.totalPoints}, ${r.fixedSlotPoints}, ${r.majorSlotPoints}, ${r.majorSlotCount}, ${r.minorSlotPoints}, ${r.minorSlotCount}, ${esc(
         r.majorSlotCount > 0
           ? "固定枠（等級要件達成率）＋金銭系の20点枠1つ＋10点枠で100点。"
-          : "固定枠（等級要件達成率）＋10点枠で100点。20点枠はChief以上のみ。",
+          : "固定枠（等級要件達成率）＋10点枠で100点。20点枠は等級3以上のみ。",
       )}, ${now}, ${now});`,
     );
   }

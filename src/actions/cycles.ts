@@ -25,7 +25,7 @@ const createSchema = z.object({
 
 /** 評価期間（半期）の作成。有効な評価セットを紐づけて、集計で使う基準を明示する。 */
 export async function createCycle(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: createSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "cycles.create", input: createSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const companyId = viewer.companyId;
     if (input.periodEnd <= input.periodStart) {
@@ -65,7 +65,7 @@ const statusSchema = z.object({
 
 /** 評価期間の開始・締め切り。締め切ると回答は受け付けなくなる（記録は残る）。 */
 export async function updateCycleStatus(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: statusSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "cycles.updateStatus", input: statusSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const companyId = viewer.companyId;
     const db = await getDb();
@@ -91,8 +91,9 @@ export async function updateCycleStatus(raw: unknown) {
           .where(and(eq(s.forms.cycleId, cycle.id), eq(s.forms.status, "published"))),
       ]);
       const readiness = cycleOpenReadiness({
-        schemeReady: schemeReadiness.schemeReady,
+        schemeGaps: schemeReadiness.schemeGaps,
         publishedFormCount: publishedForms.length,
+        cycleId: cycle.id,
       });
       if (!readiness.ready) throw new HttpError(409, readiness.message);
       const anotherOpen = (

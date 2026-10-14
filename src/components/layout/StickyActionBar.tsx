@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 
 /**
  * 画面下に固定する操作の帯。
@@ -15,8 +17,20 @@ import type { ReactNode } from "react";
  * ページの一番下に置くこと（本文の途中に置くと、そこから下でしか貼り付かない）。
  */
 export function StickyActionBar({ status, children }: { status?: ReactNode; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const bar = ref.current;
+    if (!bar) return;
+    const root = document.documentElement;
+    // 操作・状態の折り返しで高さが変わっても、改善要望ボタンが保存・提出を遮らない。
+    const measure = () => root.style.setProperty("--action-bar-height", `${bar.getBoundingClientRect().height}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(bar);
+    return () => { observer.disconnect(); root.style.removeProperty("--action-bar-height"); };
+  }, []);
   return (
-    <div className="action-bar">
+    <div ref={ref} className="action-bar">
       <div className="action-bar-inner">
         <div className="action-bar-status">{status}</div>
         <div className="action-bar-actions">{children}</div>

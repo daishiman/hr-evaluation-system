@@ -26,7 +26,7 @@ pnpm run preview
 
 `preview` は Workers 相当のローカル環境を `http://localhost:8787` で起動します。日常の UI 開発で `pnpm dev` を使う場合は、`.dev.vars` の `BETTER_AUTH_URL` を Next.js が表示する URL に合わせてください。
 
-改善要望を作業指示文として払い出す読み取り API（`GET /api/improvements`）だけは、通行証が要ります。無くても投稿・閲覧は動き、払い出しのときだけ設定案内が出ます。通行証は `pnpm improvements login` で受け取り、システム全体管理者がブラウザで承認します（メニュー「Claude Code 連携の鍵」＝ `/system/agent-keys`）。同じ画面には古い方式の鍵も残しています（用途の名前を付けて発行すると乱数で作られ、その場で1回だけ表示します。同時に10本まで持て、1本だけ止めても他は動き続けます）。ターミナルから設定する場合は `openssl rand -base64 32` で作り、`.dev.vars` の `AGENT_API_KEY` に置きます（本番は `pnpm exec wrangler secret put AGENT_API_KEY`）。どれでも通り、**見る順番は通行証 → 画面発行の鍵 → 環境変数 `AGENT_API_KEY`** です。環境変数の鍵は同じ画面から受け付けを止められます。手順の詳細は [デプロイ注意 §5](docs/deploy-notes.md) にあります。
+改善要望を作業指示文として払い出す読み取り API（`GET /api/improvements`）だけは、通行証が要ります。無くても投稿・閲覧は動き、払い出しのときだけ設定案内が出ます。通行証は `pnpm improvements login` で受け取り、システム全体管理者がブラウザで承認します（メニュー「Claude Code連携（システム開発者専用）」＝ `/system/agent-keys`）。同じ画面には古い方式の鍵も残しています（用途の名前を付けて発行すると乱数で作られ、その場で1回だけ表示します。同時に10本まで持て、1本だけ止めても他は動き続けます）。ターミナルから設定する場合は `openssl rand -base64 32` で作り、`.dev.vars` の `AGENT_API_KEY` に置きます（本番は `pnpm exec wrangler secret put AGENT_API_KEY`）。どれでも通り、**見る順番は通行証 → 画面発行の鍵 → 環境変数 `AGENT_API_KEY`** です。環境変数の鍵は同じ画面から受け付けを止められます。手順の詳細は [デプロイ注意 §5](docs/deploy-notes.md) にあります。
 
 利用者を追加したときの初期パスワードは、`.dev.vars` に `CREDENTIAL_ENC_KEY` を置くと暗号化して控えに残り、一覧の行からあとで開けます。値は `openssl rand -base64 32` で作ります（本番は `pnpm exec wrangler secret put CREDENTIAL_ENC_KEY`）。無くても追加は動き、そのときはその場でメモする案内が出ます。詳細は [デプロイ注意 §6](docs/deploy-notes.md) にあります。
 
@@ -155,7 +155,7 @@ Cloudflare へ配る構成をローカルで確認するときは `pnpm run cf:d
 - [システム仕様](./system-spec/index.md) — API・データ・認証の契約
 - [アーキテクチャ](./architecture/index.md) — 構成と設計判断
 - [デプロイ時の注意](./docs/deploy-notes.md) — migration、配布、スモーク確認
-- [30思考法レビュー](./docs/reviews/elegant-review-2026-10-02.md) — 今回のワークツリーの検証・共通化・確認結果（[過去のレビュー](./docs/reviews/elegant-review-2026-08-13.md)）
+- [30思考法レビュー](./docs/reviews/elegant-review-2026-10-14.md) — 今回のワークツリーの検証・共通化・確認結果（[前回のレビュー](./docs/reviews/elegant-review-2026-10-02.md)）
 - [エージェント向けの規約](./AGENTS.md) — Claude Code・Codex 共通。キットの扱い、配色の優先順位、改善要望の手順
 - 生成物と記録 — `specs/`・`features/`・`tasks/`・`docs/requirements/` は開発の計画づくり（dev-graph・system-dev-planner）が作った文書、`.dev-graph/`・`eval-log/` はその状態と実行の記録（端末ごとに残り、git では共有しない）で、どれも正本ではありません。画面と振る舞いは製品仕様、API・データ・認証の契約はシステム仕様、構成と設計判断はアーキテクチャを正とし、食い違ったら生成物の側を直します。
 

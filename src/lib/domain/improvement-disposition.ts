@@ -12,7 +12,8 @@
  * 状態は履歴に残し、行そのものは残す。
  */
 
-import type { Role } from "@/lib/session";
+import type { Role } from "@/lib/roles";
+import { roleCan } from "@/lib/route-access";
 import { improvementStatusLabel, type ImprovementStatus } from "@/lib/domain/improvement";
 
 /* ───────────────────────── 画面に出す状態 ───────────────────────── */
@@ -163,7 +164,7 @@ export function reasonText(action: DispositionAction, code: string, note: string
  * ここで絞るのは、要望を見えなくする操作だけ。
  */
 export function canDisposeImprovements(role: Role): boolean {
-  return role === "SUPER_ADMIN";
+  return roleCan(role, "improvements.dispose");
 }
 
 /** まとめて実行する前の確認文。対象が何件かを必ず書く。 */

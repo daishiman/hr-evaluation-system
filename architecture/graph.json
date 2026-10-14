@@ -92,5 +92,158 @@
     {"from": "worker-entry", "to": "action-entry", "relation": "serves"},
     {"from": "worker-entry", "to": "route-handlers", "relation": "serves"}
   ],
-  "decisions": ["D-001", "D-002", "D-003", "ADR-004", "ADR-005", "ADR-006", "ADR-007", "ADR-008"]
+  "decisions": ["D-001", "D-002", "D-003", "ADR-004", "ADR-005", "ADR-006", "ADR-007", "ADR-008"],
+  "documents": [
+    {
+      "source": "architecture/improvement-requests-2026-10.md",
+      "graph_node_ref": "arch-improvement-requests-2026-10",
+      "source_sections": [
+        "層分け",
+        "設計判断",
+        "Architecture decisions",
+        "S1〜S14 の置き場所"
+      ],
+      "nodes": [
+        {
+          "id": "route-ledger",
+          "kind": "data",
+          "name": "route-ledger.json",
+          "source_ref": "system-spec/route-ledger.json",
+          "summary": "全47画面の accessClass と、各ページの操作（操作 id・最低の役割・説明）。権限の唯一の定義"
+        },
+        {
+          "id": "route-access",
+          "kind": "backend",
+          "name": "route-access",
+          "source_ref": "src/lib/route-access.ts",
+          "summary": "台帳からページ・操作の最低の役割と権限一覧の行を作る。役割とページの対応を自分では持たない"
+        },
+        {
+          "id": "entry-guards",
+          "kind": "backend",
+          "name": "requireRoute / runAction({operation})",
+          "source_ref": "src/lib/session.ts",
+          "summary": "ページの入口とサーバー処理の入口。どちらも route-access を通して台帳を読む。未知の操作は 403"
+        },
+        {
+          "id": "memberships",
+          "kind": "data",
+          "name": "company_memberships",
+          "source_ref": "src/lib/memberships.ts",
+          "summary": "利用者と会社の所属（役割・等級・事業所・上司）。cookie hr_company の会社を所属で確かめる"
+        },
+        {
+          "id": "grade-label",
+          "kind": "backend",
+          "name": "grade-label",
+          "source_ref": "src/lib/domain/grade-label.ts",
+          "summary": "等級・区分・行動指針のセット・昇格の段階・アンケートの既定の題名を、会社の等級名から作る"
+        },
+        {
+          "id": "score-visibility",
+          "kind": "security",
+          "name": "score-visibility",
+          "source_ref": "src/lib/score-visibility.ts",
+          "summary": "MANAGER 以上だけに等級と確定済みの最新点数を返す。それ以外にはキーを含めない"
+        },
+        {
+          "id": "reorder",
+          "kind": "frontend",
+          "name": "useLongPressReorder / reorder",
+          "source_ref": "src/components/reorder/useLongPressReorder.ts",
+          "summary": "長押しドラッグ・キーボード・矢印のボタンで並べ替え、並び全体を保存。id の集まりが違えば 409"
+        },
+        {
+          "id": "permission-matrix",
+          "kind": "frontend",
+          "name": "PermissionMatrix / InfoTip",
+          "source_ref": "src/components/permissions/PermissionMatrix.tsx",
+          "summary": "権限一覧の表・役割のタブ・スマホのカード。ページとモーダルで共用"
+        },
+        {
+          "id": "submission-status",
+          "kind": "backend",
+          "name": "submission-status",
+          "source_ref": "src/lib/domain/submission-status.ts",
+          "summary": "対象者ごとの提出済み・入力途中・未回答と件数"
+        },
+        {
+          "id": "setup-gaps",
+          "kind": "backend",
+          "name": "setup-gaps",
+          "source_ref": "src/lib/domain/setup-gaps.ts",
+          "summary": "設定不足を {what, how, href, linkLabel} で返す"
+        },
+        {
+          "id": "migrations-0033-0034",
+          "kind": "infrastructure",
+          "name": "0033 / 0034",
+          "source_ref": "drizzle/migrations/0034_grade_display_names.sql",
+          "summary": "所属の表と既存の利用者の所属、等級名の一律の書き換えと書き換え前の値の記録。冪等で戻せる"
+        }
+      ],
+      "edges": [
+        {
+          "from": "route-access",
+          "to": "route-ledger",
+          "relation": "reads",
+          "note": "ビルド時に取り込んだ JSON を読むだけ"
+        },
+        {
+          "from": "entry-guards",
+          "to": "route-access",
+          "relation": "calls",
+          "note": "ページの最低の役割と操作の最低の役割を引く"
+        },
+        {
+          "from": "permission-matrix",
+          "to": "route-access",
+          "relation": "calls",
+          "note": "権限一覧の行を作る"
+        },
+        {
+          "from": "entry-guards",
+          "to": "memberships",
+          "relation": "reads",
+          "note": "getViewer が選んでいる所属から会社と役割を作る"
+        },
+        {
+          "from": "score-visibility",
+          "to": "memberships",
+          "relation": "reads",
+          "note": "一覧の対象者を所属から求める"
+        },
+        {
+          "from": "submission-status",
+          "to": "memberships",
+          "relation": "reads",
+          "note": "アンケートの対象者を所属から求める"
+        },
+        {
+          "from": "grade-label",
+          "to": "migrations-0033-0034",
+          "relation": "aligns",
+          "note": "既定の等級名は 0034 の書き換え先と同じ"
+        },
+        {
+          "from": "setup-gaps",
+          "to": "route-access",
+          "relation": "links",
+          "note": "直す画面へのリンクはパスを作る関数から作る"
+        }
+      ],
+      "decisions": [
+        "D-004",
+        "D-005",
+        "D-006",
+        "D-007",
+        "qa-v02",
+        "DD-004",
+        "DD-005",
+        "DD-006",
+        "DD-007",
+        "DD-008"
+      ]
+    }
+  ]
 }

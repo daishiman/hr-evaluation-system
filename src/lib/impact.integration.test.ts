@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import * as s from "@/db/schema";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /**
  * 「基準を直したのに、集計し直していない評価」の見つけ方を、本物の保管場所で確かめる。
@@ -55,6 +55,7 @@ beforeEach(async () => {
   current = createTestDatabase();
   (globalThis as { __testDb?: unknown }).__testDb = current.db;
   await seedCompany(current);
+  seedMemberships(current);
   resetMasterTimestamps(OLD);
 });
 

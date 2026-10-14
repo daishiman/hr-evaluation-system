@@ -1,22 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireRole, ROLE_LABEL, type Role } from "@/lib/session";
+import { crossesCompanies, ROLE_LABEL, type Role, requireRoute } from "@/lib/session";
 import { getMember, listEvaluations, listGrades, listMembers, listProfileFieldPolicies } from "@/lib/queries";
 import { CONFIGURABLE_FIELDS, resolveSelfEditMap } from "@/lib/domain/profile-fields";
+import { gradeLabel } from "@/lib/domain/grade-label";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { PasswordReissue } from "@/components/PasswordReissue";
-import { Card, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { Card, LinkButton, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { formatDate } from "@/lib/view";
 import { updateMember } from "@/actions/members";
+import { removeMembership } from "@/actions/memberships";
 
 export const dynamic = "force-dynamic";
 
 /** 社員1人の情報変更（会社の管理者）。等級・上長・役割はここでだけ変えられる。 */
 export default async function AdminMemberDetail({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/members/[id]");
   const { id } = await params;
   if (!viewer.companyId) notFound();
   const companyId = viewer.companyId;
@@ -38,6 +40,15 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
   /** 入力欄に「本人も直せる項目かどうか」を添える（管理者が直した内容を本人が戻せる場合がある）。 */
   const selfEditHint = (key: keyof typeof selfEdit) =>
     selfEdit[key] ? "本人も自分の画面から変更できます。" : undefined;
+
+  // 他社にも所属する人の氏名・パスワード・利用の停止は、すべての会社に効く。
+  // 会社の管理者は自社の所属（役割・等級・上長など）だけを変え、人そのものは全体管理者に任せる（S7・D-004）
+  const shared = member.belongsElsewhere && !crossesCompanies(viewer.role);
+  const sharedNote = (
+    <ReasonNote>
+      この方はほかの会社にも所属しています。氏名・パスワード・利用の停止はすべての会社に効くため、ここでは変えられません。変えるときは、システム全体管理者に依頼してください。
+    </ReasonNote>
+  );
 
   return (
     <>
@@ -63,7 +74,7 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
             <div className="mt-2 flex flex-wrap gap-2">
               <span className="tag">
                 <Icon name="layers" size={13} />
-                {member.gradeName ?? "等級 未設定"}
+                {gradeLabel({ name: member.gradeName })}
               </span>
               <span className="tag">
                 <Icon name="building" size={13} />
@@ -109,7 +120,18 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
         submitLabel="この内容で保存する"
         description="等級を変えると、次に作るアンケートと評価の計算に反映されます。確定済みの評価は変わりません。"
         fields={[
-          { name: "name", label: "氏名", type: "text", required: true, defaultValue: member.name, help: selfEditHint("name") },
+          ...(shared
+            ? []
+            : [
+                {
+                  name: "name",
+                  label: "氏名",
+                  type: "text" as const,
+                  required: true,
+                  defaultValue: member.name,
+                  help: selfEditHint("name"),
+                },
+              ]),
           {
             name: "role",
             label: "役割",
@@ -144,34 +166,63 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
       />
 
       <SectionHeading>パスワードの再発行</SectionHeading>
-      <PasswordReissue action={updateMember} resource="members" userId={member.id} name={member.name} />
+      {shared ? (
+        sharedNote
+      ) : (
+        <PasswordReissue action={updateMember} resource="members" userId={member.id} name={member.name} />
+      )}
 
       <SectionHeading>利用の停止と再開</SectionHeading>
-      <Card className="card-pad">
-        <p className="m-0 text-sub">
-          {member.isActive
-            ? "退職された方は「利用停止」にしてください。ログインできなくなりますが、これまでの回答と評価はそのまま残ります。"
-            : "この方はいま利用停止中です。再開するとログインできるようになります。"}
-        </p>
-        <div className="mt-3">
-          {member.isActive ? (
-            <ActionButton
-              action={updateMember}
-              resource="members"
-              input={{ userId: member.id, isActive: false }}
-              label="利用を停止する"
-              confirm={`${member.name}さんはログインできなくなります。これまでの回答と評価の記録は残ります。よろしいですか？`}
-            />
-          ) : (
-            <ActionButton
-              action={updateMember}
-              resource="members"
-              input={{ userId: member.id, isActive: true }}
-              label="利用を再開する"
-            />
-          )}
-        </div>
-      </Card>
+      {shared ? (
+        sharedNote
+      ) : (
+        <Card className="card-pad">
+          <p className="m-0 text-sub">
+            {member.isActive
+              ? "退職された方は「利用停止」にしてください。ログインできなくなりますが、これまでの回答と評価はそのまま残ります。"
+              : "この方はいま利用停止中です。再開するとログインできるようになります。"}
+          </p>
+          <div className="mt-3">
+            {member.isActive ? (
+              <ActionButton
+                action={updateMember}
+                resource="members"
+                input={{ userId: member.id, isActive: false }}
+                label="利用を停止する"
+                confirm={`${member.name}さんはログインできなくなります。これまでの回答と評価の記録は残ります。よろしいですか？`}
+              />
+            ) : (
+              <ActionButton
+                action={updateMember}
+                resource="members"
+                input={{ userId: member.id, isActive: true }}
+                label="利用を再開する"
+              />
+            )}
+          </div>
+        </Card>
+      )}
+
+      {member.belongsElsewhere && member.id !== viewer.id && (
+        <>
+          <SectionHeading>この会社の所属を外す</SectionHeading>
+          <Card className="card-pad">
+            <p className="m-0 text-sub">
+              この会社の所属だけを外します。ほかの会社の所属とログインはそのまま残ります。この会社での回答と評価の記録も消えません。部下がいるときは、先に上長を変えてください。
+            </p>
+            <div className="mt-3">
+              <ActionButton
+                action={removeMembership}
+                resource="members"
+                input={{ userId: member.id }}
+                label="この会社の所属を外す"
+                variant="secondary"
+                confirm={`${member.name}さんは、この会社の画面に入れなくなります。ほかの会社の所属はそのまま残ります。よろしいですか？`}
+              />
+            </div>
+          </Card>
+        </>
+      )}
     </>
   );
 }

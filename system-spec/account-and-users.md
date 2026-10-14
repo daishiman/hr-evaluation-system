@@ -5,15 +5,17 @@
 - 正本（製品）: `docs/product/spec.md` §3-2
 - 実装入口: `src/lib/domain/profile-fields.ts` / `src/lib/user-integrity.ts`
 
+会社ごとの役割・等級・事業所・上司・社員番号・部署・入社日・人物メモは `company_memberships` が正本。`users` の同じ列は元の所属の写しで、氏名・メール・利用状態・資格情報はアカウント全体の値として `users` が持つ。所属と会社選択の契約は [製品仕様 §28-4](../docs/product/spec.md#28-4-複数の会社への所属s7受入-a6)、実装の境界は [所属の設計](../architecture/improvement-requests-2026-10.md) を参照する。
+
 ## 1. ロールと画面境界
 
 | 画面 / サーバーアクション | 最小ロール | 会社スコープ |
 |---|---|---|
-| `/account`、`updateOwnProfile`・`changeOwnPassword` | EMPLOYEE（全ログイン利用者） | **実所属** `users.company_id`（操作対象会社ではない） |
+| `/account`、`updateOwnProfile`・`changeOwnPassword` | EMPLOYEE（全ログイン利用者） | 会社ごとの項目と本人編集ポリシーは選択した所属。会社所属を持たない SUPER_ADMIN 本人には会社ポリシーを適用しない。パスワードはアカウント全体 |
 | `/admin/members/policy`、`saveProfilePolicy` | COMPANY_ADMIN | 自社、または SUPER_ADMIN の操作対象会社 |
 | `/admin/members`、`createMember`・`updateMember` | COMPANY_ADMIN | 自社 / 操作対象会社の社員のみ |
-| `/system/users`、`/system/users/[id]`、`createSystemUser`・`updateSystemUser` | SUPER_ADMIN | 全社・全ロール（評価の中身は出さない） |
-| 一覧の行の「控えを見る」、`revealCredentialMemo`（読むだけ） | COMPANY_ADMIN | SUPER_ADMIN は全社、COMPANY_ADMIN は同じ会社の利用者だけ |
+| `/system/users`、`/system/users/[id]`、`createSystemUser`・`updateSystemUser` | SUPER_ADMIN | 全社・全ロール。利用者一覧は所属ごとに今の等級と確定した最新の点数を示す（[製品仕様 §28-3](../docs/product/spec.md#28-3-一覧の等級と点数s6受入-a5)） |
+| 一覧の行の「控えを見る」、`revealCredentialMemo`（読むだけ） | COMPANY_ADMIN | SUPER_ADMIN は全社。COMPANY_ADMIN は選択会社だけに所属する利用者の控えを開ける。他社にも所属する利用者の控えは SUPER_ADMIN だけ |
 
 ## 2. 本人編集ポリシー
 
@@ -47,17 +49,18 @@
 保存後の合成状態で検証する（入力差分だけを見ない）。
 
 1. **SUPER_ADMIN** は `companyId` / `gradeId` / `managerId` を持たない
-2. それ以外は実在かつひな形でない会社への所属が必須。**利用中**アカウントは**有効な会社**にだけ所属できる
+2. それ以外は実在かつひな形でない会社への所属が必須。停止した会社の所属も履歴として残す。操作できるのは有効な会社の所属だけ
 3. 等級・上長は同一会社。上長は有効な MANAGER 以上。自己上長・循環禁止（`assertNoManagerCycle`）
 4. 上長として参照されている利用者を、上長資格を失う role / isActive / 会社変更へ進める前にブロック
 5. 最後の有効 SUPER_ADMIN は降格・停止不可（UPDATE 条件付きで同時更新耐性）
 6. パスワード再発行時は `mustChangePassword=true` とし、既存セッションを削除する（users / accounts / sessions を途中状態なく更新）
 7. 自分自身を利用停止にできない。SUPER_ADMIN は自分の role を下げられない
+8. 他社にも所属する利用者の氏名・メール・利用状態・資格情報を会社管理者が変更することは拒否する。自社の所属の値だけを変更できる
 
 ## 4. セッション
 
 - `getViewer`: 利用者本人が inactive なら null
-- 非 SUPER_ADMIN は `companyId` が無い、または所属会社が inactive なら null
+- 非 SUPER_ADMIN は有効な所属が1つも無ければ null。選択した所属の会社・役割・等級・上司を使う。会社を停止しても別の有効な所属が残る利用者はアカウントを停止しない
 - SUPER_ADMIN の `viewer.companyId` は操作対象会社（所属ではない）
 
 ## 5. ナビ
@@ -68,10 +71,10 @@
 ## 6. 評価確定後の次候補
 
 - 確定済み評価から出す「次の未確定評価」は、現在の評価、確定済み、操作者本人の評価を除外する。
-- MANAGER は `users.manager_id = viewer.id` の有効な直属メンバーだけを候補にする。COMPANY_ADMIN / SUPER_ADMIN は操作対象会社の候補を扱える。
+- MANAGER は選択会社の `company_memberships.manager_id = viewer.id` の有効な直属メンバーだけを候補にする。COMPANY_ADMIN / SUPER_ADMIN は操作対象会社の候補を扱える。
 - 候補選択は `selectNextActionableEvaluation` に集約し、画面ごとに `id/status` だけで会社全体から選ばない。
 
 ## 7. 操作対象会社の切り替え
 
-- SUPER_ADMIN の会社選択欄は明示的な `label` と `select` の関連付けを持つ。`label` の内側へエラー表示用のブロック要素を入れない。
+- 会社選択欄は全役割で使える（非 SUPER_ADMIN には有効な所属が2社以上あるときに表示）。明示的な `label` と `select` の関連付けを持つ。`label` の内側へエラー表示用のブロック要素を入れない。
 - 切り替え失敗は現在の会社を維持し、`role=alert` / `aria-live=assertive` で理由と再試行を伝える。

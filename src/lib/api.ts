@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { HttpError } from "@/lib/session";
+import { minRoleFor } from "@/lib/route-access";
+import { apiViewer, HttpError, type Viewer } from "@/lib/session";
 
 /** 想定していない失敗のときに画面へ出す言葉。中身（例外の文面）は利用者に見せない。 */
 export const UNEXPECTED_ERROR_MESSAGE = "処理中に問題が発生しました。時間をおいて試してください。";
@@ -68,4 +69,16 @@ export async function handle(fn: () => Promise<unknown>) {
   } catch (e) {
     return jsonError(e);
   }
+}
+
+/**
+ * Route Handler の入口。台帳（system-spec/route-ledger.json）の操作の名前から要る役割を引いて、
+ * ログインと役割を確かめる。台帳に無い操作は誰にも許さない（403）。
+ *
+ * 役割の名前を Route Handler に書かないのは、権限一覧のページに出す内容と実際の判定をずらさないため。
+ */
+export async function apiViewerFor(operationId: string): Promise<Viewer> {
+  const min = minRoleFor(operationId);
+  if (!min) throw new HttpError(403, "この操作を行う権限がありません。");
+  return apiViewer(min);
 }

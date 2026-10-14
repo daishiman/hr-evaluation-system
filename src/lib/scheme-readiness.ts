@@ -4,10 +4,17 @@ import { computeGroupProgress } from "@/lib/domain/scheme-steps";
 import { setupReadiness } from "@/lib/domain/setup-readiness";
 import { targetsPointGroup, type GradePointRule } from "@/lib/domain/grade-points";
 
-/** computeGroupProgressをDB行へ適用する唯一の読み取り。setup/dashboard/APIで共有する。 */
+/**
+ * computeGroupProgressをDB行へ適用する唯一の読み取り。setup/dashboard/APIで共有する。
+ * 不足（schemeGaps）の文は等級名で言うため、会社の等級も読む。
+ */
 export async function loadSchemeReadiness(companyId: string, schemeId: string | null) {
-  if (!schemeId) return { ...setupReadiness({ hasScheme: false, groups: [] }), groups: [] };
   const db = await getDb();
+  const grades = await db
+    .select({ name: s.grades.name, pointGroup: s.grades.pointGroup, displayOrder: s.grades.displayOrder })
+    .from(s.grades)
+    .where(eq(s.grades.companyId, companyId));
+  if (!schemeId) return { ...setupReadiness({ hasScheme: false, groups: [] }, grades), groups: [] };
   const [rules, criteria, items] = await Promise.all([
     db.select().from(s.gradePointRules).where(eq(s.gradePointRules.companyId, companyId)).orderBy(asc(s.gradePointRules.displayOrder)),
     db.select({ kpiItemId: s.kpiRankCriteria.kpiItemId, targetGrades: s.kpiRankCriteria.targetGrades })
@@ -28,5 +35,5 @@ export async function loadSchemeReadiness(companyId: string, schemeId: string | 
     )];
     return { rule, saved, ratedItemIds: [...ratedItemIds], progress: computeGroupProgress({ rule, saved, ratedItemIds }) };
   });
-  return { ...setupReadiness({ hasScheme: true, groups: groups.map((group) => group.progress) }), groups };
+  return { ...setupReadiness({ hasScheme: true, groups: groups.map((group) => group.progress) }, grades), groups };
 }

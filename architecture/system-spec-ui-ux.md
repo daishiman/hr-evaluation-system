@@ -1,0 +1,119 @@
+---
+graph_node_id: "arch-system-spec-ui-ux"
+artifact_kind: "architecture"
+artifact_subtypes: ["frontend"]
+title: "UI-UX：利用者に見える鮮度と追加要件の画面設計"
+project_id: "hr-evaluation-system"
+domain: "ui-ux"
+status: "done"
+priority: null
+start_date: null
+target_date: null
+iteration: null
+owners: []
+tags: ["system-spec", "改善要望対応"]
+file_path: "architecture/system-spec-ui-ux.md"
+template_id: "architecture"
+template_version: "1.0.0"
+confirmation_status: "confirmed"
+evaluation_status: "pass"
+confirmation_evidence: {"evaluated_digest": "fcb01c29bf8a38582956d1e8d7717bada5e65773634d37e396c325206b4f28b2", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "system-spec/completeness-findings.json"}
+source_lineage: {"imported_at": "2026-10-13T05:04:21Z", "origin_kind": "system-spec-harness", "source_digest": "fcb01c29bf8a38582956d1e8d7717bada5e65773634d37e396c325206b4f28b2", "source_path": "system-spec/ui-ux.md", "source_plugin": "system-spec-harness", "source_version": "0.1.21"}
+created_at: "2026-10-13T05:05:39.858264Z"
+updated_at: "2026-10-13T05:05:39.858264Z"
+depends_on: []
+related_nodes: []
+resource_scope: []
+purpose: null
+goal: null
+scope_in: []
+scope_out: []
+acceptance: []
+architecture_refs: []
+parent_feature: null
+feature_package_id: null
+phase_ref: null
+classification_confidence: 0.95
+classification_reason: "system-spec-harness が確定した章 system-spec/ui-ux.md の取り込み"
+classification_candidates: [{"artifact_kind": "architecture", "candidate_path": "architecture/system-spec-ui-ux.md", "confidence": 0.95}]
+tracker_binding: "none"
+beads_linkage: null
+github_publication: {"labels": [], "milestone": null, "mode": "local_only", "project_aliases": []}
+issue_linkage: null
+github_project_linkages: []
+pull_request_linkages: []
+execution_contexts: []
+completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
+implementation_readiness: {"checked_at": "2026-10-13T05:05:39.858264Z", "missing_sections": [], "status": "complete"}
+---
+
+# Architecture overview
+
+この章は、利用者に何をどの順で見せ、どう操作させるかという画面の情報設計を受け持つ。既存の要件では、『〜を追加しました』の表示と一覧の新しい行・件数・会社切替メニューを同じ描画でそろえ、連続作成では一覧の新しい行・件数、成功の知らせ、控えの順に優先する。2026-10-12 の追加では、等級名の統一、権限一覧のページとモーダルと説明（表・役割のタブ・スマホのカード。D-006）、等級と確定した最新の評価点の一覧表示、アンケートの提出状況、設定不足の3点表示、長押しドラッグとキーボードによる並べ替え（D-005）、選択肢の不具合、右側の余白、『Claude Code連携（システム開発者専用）』への改名を扱う。どれも route-ledger の4幅（375・768・1280・1600）で同じ振る舞いにする。この追加の全文は、利用者が全文のまま承認した（qa-v18、2026-10-13T00:03:46Z）。根拠: qa-v18, qa-r-uiux-3, qa-v13, qa-v14／system-spec/ui-ux.md
+
+## Context and drivers
+
+出発点は、会社や利用者を追加しても一覧に出ず、再読み込みしても出ないという報告で、新規作成の全機能に共通する問題として扱った（qa-u01）。連続作成の画面では、利用者が選んだとおり一覧の反映を最優先にし、控えはサーバーに保存して一覧の行から開き直せるようにした（qa-u19）。2026-10-12 の依頼（qa-v01）、利用者の決定（qa-v02）、上位概念 G6〜G15 の全文承認（qa-v03）が追加の駆動要因である。並べ替えは、利用者が Pointer Events で自作する案を選んだ（D-005、qa-v13）。権限一覧は、利用者が一覧表・項目ごとの詳細・スマホのカードの組み合わせを求めた（D-006、qa-v14）。この章の全文は、2026-10-13T00:03:46Z に利用者が全文のまま承認した（qa-v18）。上流指針は Apple HIG で、取り直しても入力中のフォームの内容とスクロール位置を失わないこと、画面全体を読み込み中の表示に切り替えないことを導く。追加要件では、可否を色だけでなく記号と言葉で示すこと、説明をポインター・フォーカス・タップのどれでも出すことも導く。根拠: qa-v18, qa-r-uiux-3, qa-u01, qa-u19, qa-v13, qa-v14／system-spec/ui-ux.md
+
+## Goals and non-goals
+
+ゴールは G1（同じタブで成功の知らせと一覧がそろう）、G3（他タブと画面復帰で古い一覧を残さない）、G6（等級はその会社の等級名だけで表す）、G8（役割ごとにできることをページ名の単位で確かめられる）、G9（見てよい人だけが等級と点数を一覧で見る）、G11（提出状況を一覧で見る）、G12（設定不足は何・どう直す・どこで直すを示す）、G13（並べ替えをドラッグとキーボードでも行える）、G14（押しても何も起きない選択肢を無くす）、G15（右側の余白を無くす）である。非ゴールは、別の利用者の画面への即時配信、オフライン編集と同期、配色・テーマの変更、本番データの移行・修正で、等級名の一律の書き換え（I7）だけは追加要件として扱う。全画面共通の本文の最大幅と、配色・明るさのテーマの契約は変えない（AGENTS.md と DD-003）。根拠: qa-v18, qa-r-uiux-3, qa-u24／system-spec/ui-ux.md
+
+## System context and boundaries
+
+利用者は、システム全体管理者・会社の管理者・マネージャー・一般の社員の4役割で、スマホ（375px）・タブレット（768px）・PC のブラウザから使う。デスクトップのネイティブアプリは対象外である（appr-platform-001）。この章が決めるのは見え方・文言・操作の順序で、表示を許すかどうかはサーバーが返すデータの段階で決まり、画面はそれを出すだけにする（一般の社員は等級と点数の一覧を開けず、値も見えない）。同じ利用者の他タブは同じブラウザの中で取り直し、別の利用者の画面へは届けない。根拠: qa-v18, qa-r-uiux-3, qa-f01／system-spec/ui-ux.md
+
+## Container and component view
+
+利用者から見た構成は、サイドバーの区分（作業のまとまり）、一覧画面、編集画面、モーダル、知らせで、追加要件はこの上に載る。『システムを管理する』に権限一覧のページを足す（D-006）。広い画面では、ページ名を行・4役割を列にした1つの表で、開ける／開けない、主な操作のできる／できないを同じ記号と言葉で示す。表の上の役割のタブ（すべての役割・各役割）で、1つの役割の列だけに絞れる。スマホの幅では、同じ内容をページごとのカード（カードの中に役割ごとの可否と操作）に切り替える。利用者一覧（システム全体管理者）と社員の一覧（会社の管理者）には開閉できる『役割ごとにできること』の欄を置き、欄の中の『権限一覧を開く』で、ページと同じ部品（表・役割のタブ・カード）をモーダルで出す。等級と点数は、利用者一覧・社員の一覧・担当チームのメンバー一覧に、今の等級名、確定した最新の評価の KPI評価点と等級要件の達成率、どの評価期間の値かを並べ、確定した評価が無い人は『確定した評価なし』と出す。提出状況は /admin/forms にアンケートごとの提出済み・入力途中・未回答の人数、/admin/forms/[id]/responses と /manager/cycles に対象者ごとの状態と提出日時を出し、状態で絞り込める。根拠: qa-v18, qa-v14／system-spec/ui-ux.md
+
+## Cross-cutting contracts
+
+等級の呼び名は、どの画面でもその会社の等級名だけで表し（既定は『等級1』『等級2』『等級3』『等級4-1』『等級4-2』『等級5-1』『等級5-2』）、英語の区分名（Beginner・Regular・Chief・AM・Manager）とカタカナの区分名を出さない。等級名を変えると、等級の一覧・行動指針の向け先・評価セットの区分・昇格の条件と要件・評価の基準・警告文・アンケートのタイトル・ボタン・説明文の全てに、次に表示した画面から反映する。設定不足は1件ごとに『何が足りないか』『どう直すか』『直す画面へのリンク（文字は画面名）』の3つで出し、多いときは直す画面ごとにまとめて初めの数件だけ見せ、制度設定ガイド・会社の管理者のホーム・評価期間・アンケート・KGI・システムのホームの全てを同じ形にする。権限一覧の説明は1〜2文で、表ではポインターを載せる・フォーカスする・タップするのどれでも出し、カードでは常に見える形で出す。ポインターを載せたときだけ出る情報は作らない。鮮度の面では、取り直しの間も今の表示を保って差し替え、入力中の内容とスクロール位置を失わない。根拠: qa-v18, qa-r-uiux-3, qa-v14／system-spec/ui-ux.md
+
+## Subtype architecture
+
+frontend の観点のうち、利用者に見える振る舞いと情報の優先度だけを持ち、内容は subtype_sections の frontend に置く。部品と実装の構造は system-spec-frontend が担う。Backend は N/A: サーバーの共通の入口と書き込みの型は backend の章が担う。Security は N/A: 認可・送り元の検査・控えの暗号化は system-spec-security が担い、この章は見え方だけを決める。Data は N/A: 表の構成と移行の手順は database の章が担う。根拠: qa-v18／system-spec/ui-ux.md
+
+### Frontend architecture
+
+#### Rendering and application pattern
+
+利用者から見た描画の型は、書き込みの成功と同じ描画で一覧・件数・会社切替メニューがそろい、待ったり再読み込みしたりせずに確かめられることである。他タブや画面復帰で取り直す間も、画面全体を読み込み中の表示に切り替えず、今の表示を保ったまま差し替える。等級名を変えると、次に表示した画面から全ての箇所に新しい名前が出る。根拠: qa-r-uiux-3, qa-v18／system-spec/ui-ux.md
+
+#### Routes, screens and navigation
+
+サイドバーの『システムを管理する』に『権限一覧』を足し、表の行とカードはサイドバーの区分（作業のまとまり）ごとに並べる。広い画面では表、スマホの幅ではページごとのカードで出す（D-006）。『Claude Code連携の鍵』は『Claude Code連携（システム開発者専用）』に改め、見出し・サイドバー・権限一覧で同じ名前にする。提出状況は /admin/forms、/admin/forms/[id]/responses、/manager/cycles に出す。設定不足の各件は直す画面へのリンク（文字は画面名）を持ち、1回の操作で直す画面へ移れる。追加の振る舞いは全て、route-ledger の4幅（スマホ・タブレット・PC）で同じにする。根拠: qa-v18, qa-f01, qa-v14／system-spec/ui-ux.md
+
+#### Component and design-system boundaries
+
+権限一覧は、表・役割のタブ・スマホのカード・説明を1つの部品にし、ページとモーダルで同じものを出す（D-006）。可否は記号と言葉を併用して色だけに頼らない。説明は1〜2文で、表ではポインター・フォーカス・タップのどれでも出し、カードでは常に見える形で出す。モーダルは閉じるボタンと Esc で閉じ、開いたらフォーカスを中へ移し、閉じたら元のボタンへ戻す。並べ替えの対象は、今、矢印のボタンで並べ替える等級要件・昇格の条件と要件・アンケートの設問と、新しく並べ替えを足す設問の選択肢である。つまみを押したまま（マウスは押し続け、タッチは長押し）上下に動かし、動かしている間は落とす位置を示し、矢印のボタン（先頭へ・1つ上へ・1つ下へ・末尾へ）もドラッグの代わりの単一ポインターの操作として残す。キーボードではつまみにフォーカスして Space で持ち上げ、↑↓で動かし、Space で置き、Esc で戻し、何番目になったかを読み上げる。タッチの長押しはふつうのスクロールと取り違えない（D-005）。読み取り専用の表示は押せるように見せず、下に固定したバーが選択肢に重ならないようにし、配色・明るさのテーマの契約は変えない。出典は WCAG 2.2 の解説（w3c-wcag22-dragging-movements、w3c-wcag22-content-on-hover-focus、w3c-wcag22-reflow）と APG（w3c-apg-tabs、w3c-apg-tooltip、w3c-apg-dialog-modal）である。根拠: qa-v18, qa-v13, qa-v14／system-spec/ui-ux.md
+
+#### State and data flow
+
+利用者が失いたくない状態は入力中のフォームの内容とスクロール位置で、他タブの通知や画面復帰で取り直しても残す。『役割ごとにできること』の欄の開閉はその端末で覚える。権限一覧の表とカードは同じデータから描くので、幅を変えても出る内容は変わらない。控えは閉じた後も一覧の行の『仮パスワードの控えを見る』から開き直せ、控えを画面の上に出し続けない。見本の画面では選択肢を試しに選べるが保存はせず、『見本のため送信できません』とその理由（対象の等級が違う など）を見える場所に出す。根拠: qa-v18, qa-r-uiux-3, qa-v14／system-spec/ui-ux.md
+
+#### Backend integration
+
+画面に出す等級名・点数は、サーバーが返す値をそのまま出す。権限一覧の可否・操作・説明は、実際の判定と同じ定義（route-ledger.json の各ページに置いた権限の定義。D-007 ①）から作った値を出す。等級と点数は、システム全体管理者・会社の管理者・マネージャーが開く一覧にだけ載り、一般の社員はその一覧を開けず値も見えない。提出状況は、対象者の全員が提出済み・入力途中・未回答のどれか1つで出る。並べ替えの保存は並び順の全体を送る形にする（I14）。根拠: qa-v18, qa-v25, qa-v27, qa-v28, qa-v30／system-spec/ui-ux.md・system-spec/auth.md・system-spec/security.md・system-spec/backend.md
+
+#### Performance and observability
+
+他タブは通知の受信またはタブ復帰から1秒以内に新しい行を表示する（O3）。取り直しの間に画面全体を読み込み中の表示に切り替えないので、待ち時間が利用者の操作を止めない。設定不足が多い画面は直す画面ごとにまとめ、初めの数件だけ出して残りは開いて見る形にし、一度に読む量を抑える。根拠: qa-v18, qa-r-uiux-3／system-spec/ui-ux.md
+
+#### Frontend verification
+
+同じタブの反映は作成系 E2E、他タブは2タブ E2E で確かめ、鮮度の通し試験は 375px・768px でも回す。等級名は等級名を変える結合テストと、英語の区分名を画面の文字として書く箇所の静的検査（0件）で確かめる。並べ替えは部品のテストでドラッグ・矢印・キーボードの結果が一致し、並び順を持つ編集画面が全てその部品を使うことを静的検査で確かめ、タッチでの長押しとスクロールの区別はテストを厚くする。権限一覧は表とカードが同じ内容を出すことを検査し、権限の定義を変えたときは表・タブ・カードの3つの見え方を確かめる。選択肢は、見本で押すと選んだ表示になること、回答画面で設問名や選択肢を押すと選ばれること、値の重複が保存時に拒否されることをテストする。余白は 375・768・1280・1600 の4幅で評価期間・行動指針・アンケートの見本などを撮影し、内容が本文の幅を使っていることを目で確かめる。根拠: qa-v18, qa-r-uiux-3, qa-v13, qa-v14, qa-v31／system-spec/ui-ux.md・system-spec/maintenance-ops.md
+
+## Architecture decisions
+
+D-001（opt-broadcast）により、他タブへは BroadcastChannel で知らせ、visibilitychange と pageshow（persisted）でも取り直すので、利用者はタブを戻すだけで最新の一覧を見られる。D-002（opt-server-functions）により書き込みを Server Functions へ移し、成功の応答で表示中の画面を作り直す（後に next/cache の refresh にそろえた）ので、成功の知らせと一覧が同じ描画で出る。控えは成功の知らせの後ろに畳み『仮パスワードの控えを見る』で開き、開いた控えには発行の日時と開ける期限（発行から14日）を出し、期限を過ぎた控えは一覧の行にボタンを出さず再発行を案内する。D-005（opt-pointer-hook）は利用者が選んだ案で、AI の推奨と同じである（qa-v13）。ドラッグに加え、矢印のボタンをドラッグの代わりの操作（WCAG 2.2 の SC 2.5.7）として残し、キーボードでも同じことができる。D-006（opt-combined）は、利用者が自由記述で①②③の組み合わせを求めたので足した案で、AI の推奨（opt-single-table）とは別の案である（qa-v14）。D-007（opt-route-ledger-extend）は利用者が選んだ案で、AI が委任に基づいて選んだ別の案とは違う（qa-v25）。権限一覧の可否・操作・説明は、実際の判定と同じ定義（route-ledger.json）から出す。表の行と列の組み方、開閉の状態を端末ごとに覚えること、モーダルのフォーカスの扱い、直す画面ごとのまとめ方、キーボードの割り当て、余白を埋める手段の候補は、この章の全文に書いて示し、利用者が全文のまま承認した（qa-v18、2026-10-13T00:03:46Z）。根拠: qa-v18, qa-r-uiux-3, qa-u19, qa-v13, qa-v14, qa-v25／system-spec/ui-ux.md
+
+## Delivery, migration and rollback
+
+鮮度の仕組みは Server Functions への移行を終えており、書き込みの二つの経路の混在は残っていない（D-002 の 2026-10-01 追記）。等級名は、既定を『等級1』〜『等級5-2』にし、既存の会社の等級名と英語を含む表示名を一律に書き換える移行を入れる（I7）。受入では、既定の等級名と移行後の本番の等級名が『等級N』『等級N-M』の形であることを確かめる（O6）。余白の見直しは画面ごとの配置（幅に応じた2列の段組み、補足の情報を右の列に置く、などから選ぶ）で行い、全画面共通の本文の最大幅と配色・テーマには手を入れない。根拠: qa-v18／system-spec/ui-ux.md
+
+## Risks and verification
+
+危険は、英語の区分名が一部の画面に残ること、表示と実際の権限の判定が食い違うこと、権限一覧の表とカードの片方だけを直して内容がずれること、タッチの長押しがふつうのスクロールと取り違えられること、見本の画面で押しても何も起きないと誤解されることである。表とカードは同じデータから描き、タッチとスクロールの区別はテストを厚くする（D-005・D-006）。O1 は作成系 E2E で成功表示直後の DOM に新しい行と件数があることを、O3 は2タブ E2E で1秒以内の最新化を確かめる。O6 は等級名を変える結合テストと英語の区分名の静的検査（0件）、O8 はルート台帳の権限の定義とサイドバー・ページの判定・サーバー処理の役割の指定が一致することの検査と、権限一覧の表とカードが同じ内容を出す検査、O9 は確定直後の点数と一般の社員への応答の検査、O11〜O14 は提出状況のテスト・設定不足の契約テスト・並べ替えの3操作の一致・選択肢の挙動のテストで確かめる。O15 は 375・768・1280・1600 の4幅で対象画面を撮影して目で確かめ、鮮度の通し試験も 375px・768px で回す。根拠: qa-v18, qa-r-uiux-3, qa-v13, qa-v14, qa-v31／system-spec/ui-ux.md・system-spec/maintenance-ops.md
+

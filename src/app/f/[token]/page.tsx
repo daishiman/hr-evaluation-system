@@ -7,6 +7,7 @@ import { LinkButton, PageTitle, ReasonNote } from "@/components/ui";
 import { listActiveExtensions } from "@/lib/response-access";
 import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
 import { judgeFormEntry } from "@/lib/domain/form-entry";
+import { formDisplayTitle } from "@/lib/domain/grade-label";
 
 export const dynamic = "force-dynamic";
 
@@ -41,11 +42,20 @@ export default async function PublicForm({ params }: { params: Promise<{ token: 
 
   const cycle = (
     await db
-      .select({ status: s.evaluationCycles.status })
+      .select({ status: s.evaluationCycles.status, name: s.evaluationCycles.name })
       .from(s.evaluationCycles)
       .where(and(eq(s.evaluationCycles.id, form.cycleId), eq(s.evaluationCycles.companyId, form.companyId)))
       .limit(1)
   )[0];
+  // 空の題名（既定の題名）は評価期間と等級名から作る
+  const grade = (
+    await db
+      .select({ name: s.grades.name })
+      .from(s.grades)
+      .where(and(eq(s.grades.id, form.gradeId), eq(s.grades.companyId, form.companyId)))
+      .limit(1)
+  )[0];
+  const title = formDisplayTitle(form, cycle, grade);
 
   // 過去に自分が答えていれば、等級が変わっていても読み返せるようにする
   const mine = (
@@ -80,7 +90,7 @@ export default async function PublicForm({ params }: { params: Promise<{ token: 
           : "";
     return (
       <AppShell viewer={viewer}>
-        <PageTitle title={form.title} />
+        <PageTitle title={title} />
         <ReasonNote action={<LinkButton href="/me/forms">自分のアンケートを見る</LinkButton>}>
           {judgement.message}
           {detail}

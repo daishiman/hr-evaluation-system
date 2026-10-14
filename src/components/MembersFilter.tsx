@@ -6,6 +6,9 @@ import { CredentialMemoButton } from "@/components/CredentialMemoButton";
 import { Card, EmptyState } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
+import { LatestScoreValue } from "@/components/LatestScore";
+import { GRADE_UNSET_LABEL } from "@/lib/domain/grade-label";
+import type { LatestScore } from "@/lib/score-visibility";
 
 export interface FilterableMember {
   id: string;
@@ -14,7 +17,10 @@ export interface FilterableMember {
   /** 表示用に解決済みのラベル。role の生値と ROLE_LABEL の変換はサーバー側で行う
       （@/lib/session は next/headers に依存しており、クライアント部品からは読み込めない）。 */
   roleLabel: string;
-  gradeName: string | null;
+  /** 等級名。見てよい役割にだけサーバーが付ける（S6） */
+  gradeName?: string | null;
+  /** 確定した最新の点数。見てよい役割にだけサーバーが付け、確定した評価が無ければ null（S6） */
+  latestScore?: LatestScore | null;
   department: string | null;
   /** 初期パスワードの控えがあるか（あれば行の下に「控えを見る」を出す） */
   hasMemo?: boolean;
@@ -63,15 +69,18 @@ export function MembersFilter({ members }: { members: FilterableMember[] }) {
                     <Icon name="shield" size={13} />
                     {m.roleLabel}
                   </span>
-                  <span className="tag">
-                    <Icon name="layers" size={13} />
-                    {m.gradeName ?? "等級 未設定"}
-                  </span>
+                  {m.gradeName !== undefined && (
+                    <span className="tag">
+                      <Icon name="layers" size={13} />
+                      {m.gradeName ?? GRADE_UNSET_LABEL}
+                    </span>
+                  )}
                   <span className="tag">
                     <Icon name="building" size={13} />
                     {m.department ?? "所属 未設定"}
                   </span>
                 </span>
+                {m.latestScore !== undefined && <LatestScoreValue score={m.latestScore} />}
               </Link>
             );
             // 控えがある行だけ、リンクの下に「控えを見る」を並べる（リンクの中には入れない）

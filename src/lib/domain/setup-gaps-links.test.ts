@@ -1,0 +1,146 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+  cycleOpenGaps,
+  formPublicationGaps,
+  formSyncGaps,
+  schemeGaps,
+  type SetupGap,
+} from "@/lib/domain/setup-gaps";
+
+/*
+ * 設定不足の示し方（S9・A8）。
+ *
+ * 準備の確認・制度の手順・公開や受付開始の 409 の理由・アンケートの同期は、
+ * 文ではなく { what, how, href, linkLabel } を返す。全件に
+ * 「何が足りないか」「どう直すか」「直す画面へのリンク」がそろっていることを確かめる。
+ * リンク先は台帳（route-ledger.json）にある画面に限る。
+ */
+
+const GRADES = [
+  { id: "g1", code: "beginner", name: "等級1", pointGroup: "Beginner", displayOrder: 1 },
+  { id: "g2", code: "regular", name: "等級2", pointGroup: "Regular", displayOrder: 2 },
+  { id: "g3", code: "chief", name: "等級3", pointGroup: "Chief", displayOrder: 3 },
+  { id: "g41", code: "am1", name: "等級4-1", pointGroup: "AM", displayOrder: 4 },
+  { id: "g42", code: "am2", name: "等級4-2", pointGroup: "AM", displayOrder: 5 },
+];
+
+const ledger = JSON.parse(readFileSync(path.join(process.cwd(), "system-spec/route-ledger.json"), "utf8")) as {
+  routes: { path: string }[];
+};
+/** 台帳のパスを正規表現にする（[id] などの動的な部分は1つの区切りに合う） */
+const ROUTE_PATTERNS = ledger.routes.map(
+  (r) => new RegExp(`^${r.path.replace(/\[[^\]]+\]/g, "[^/?#]+")}$`),
+);
+
+function expectComplete(gaps: SetupGap[]) {
+  expect(gaps.length).toBeGreaterThan(0);
+  for (const gap of gaps) {
+    expect(gap.what.trim(), JSON.stringify(gap)).not.toBe("");
+    expect(gap.how.trim(), JSON.stringify(gap)).not.toBe("");
+    expect(gap.linkLabel.trim(), JSON.stringify(gap)).not.toBe("");
+    const pathname = decodeURIComponent(gap.href.split(/[?#]/)[0]);
+    expect(
+      ROUTE_PATTERNS.some((re) => re.test(pathname)),
+      `${gap.href} は台帳に無い画面です`,
+    ).toBe(true);
+    // 英語の区分名は出さない（等級名で言う）
+    expect(`${gap.what}${gap.how}${gap.linkLabel}`).not.toMatch(/Beginner|Regular|Chief|\bAM\b|Manager/);
+  }
+}
+
+describe("schemeGaps（評価セットの準備）", () => {
+  it("評価セットが無い", () => {
+    const gaps = schemeGaps({ hasScheme: false, groups: [] }, GRADES);
+    expectComplete(gaps);
+    expect(gaps[0].href).toBe("/admin/scheme");
+  });
+
+  it("配点ルールが無い", () => {
+    expectComplete(schemeGaps({ hasScheme: true, groups: [] }, GRADES));
+  });
+
+  it("KPI を選んでいない区分は手順1へ、基準が無い区分は手順2へ案内する（区分ごとに1件）", () => {
+    const gaps = schemeGaps(
+      {
+        hasScheme: true,
+        groups: [
+          { pointGroup: "Beginner", selectionDone: true, criteriaDone: true },
+          { pointGroup: "Chief", selectionDone: false, criteriaDone: false },
+          { pointGroup: "AM", selectionDone: true, criteriaDone: false },
+        ],
+      },
+      GRADES,
+    );
+    expectComplete(gaps);
+    expect(gaps.map((g) => g.href)).toEqual(["/admin/scheme/Chief", "/admin/scheme/AM/criteria"]);
+    expect(gaps[0].what).toContain("等級3");
+    expect(gaps[1].what).toContain("等級4-1・等級4-2");
+  });
+
+  it("全て済んでいれば空", () => {
+    expect(
+      schemeGaps({ hasScheme: true, groups: [{ pointGroup: "Beginner", selectionDone: true, criteriaDone: true }] }, GRADES),
+    ).toEqual([]);
+  });
+});
+
+describe("cycleOpenGaps（回答の受付を始める前）", () => {
+  const schemeMissing = schemeGaps({ hasScheme: false, groups: [] }, GRADES);
+
+  it("評価セットの不足をそのまま引き継ぐ", () => {
+    const gaps = cycleOpenGaps({ schemeGaps: schemeMissing, publishedFormCount: 3 });
+    expectComplete(gaps);
+    expect(gaps).toEqual(schemeMissing);
+  });
+
+  it("公開したアンケートが無ければアンケートの画面へ", () => {
+    const gaps = cycleOpenGaps({ schemeGaps: [], publishedFormCount: 0 });
+    expectComplete(gaps);
+    expect(gaps[0].href).toBe("/admin/forms");
+  });
+
+  it("両方そろえば空", () => {
+    expect(cycleOpenGaps({ schemeGaps: [], publishedFormCount: 1 })).toEqual([]);
+  });
+});
+
+describe("formPublicationGaps（アンケートを公開する前）", () => {
+  it("締め切り済みの期間は評価期間の画面へ", () => {
+    const gaps = formPublicationGaps({ schemeGaps: [], cycleStatus: "closed", questionCount: 3, formId: "f1" });
+    expectComplete(gaps);
+    expect(gaps[0].href).toBe("/admin/cycles");
+  });
+
+  it("設問が無ければそのアンケートの編集へ", () => {
+    const gaps = formPublicationGaps({ schemeGaps: [], cycleStatus: "planning", questionCount: 0, formId: "f1" });
+    expectComplete(gaps);
+    expect(gaps[0].href).toBe("/admin/forms/f1");
+  });
+
+  it("評価セットの不足が先に出る", () => {
+    const schemeMissing = schemeGaps({ hasScheme: false, groups: [] }, GRADES);
+    const gaps = formPublicationGaps({ schemeGaps: schemeMissing, cycleStatus: "open", questionCount: 0, formId: "f1" });
+    expectComplete(gaps);
+    expect(gaps[0]).toEqual(schemeMissing[0]);
+  });
+
+  it("全てそろえば空", () => {
+    expect(formPublicationGaps({ schemeGaps: [], cycleStatus: "open", questionCount: 2, formId: "f1" })).toEqual([]);
+  });
+});
+
+describe("formSyncGaps（評価セットとアンケートのずれ）", () => {
+  it("欠落・余分のどちらも、そのアンケートの画面へ案内する", () => {
+    const gaps = formSyncGaps({ missing: ["k1"], extra: ["k2"] }, (id) => (id === "k1" ? "売上" : "訪問数"), "f1");
+    expectComplete(gaps);
+    expect(gaps.every((g) => g.href === "/admin/forms/f1")).toBe(true);
+    expect(gaps.map((g) => g.what).join()).toContain("売上");
+    expect(gaps.map((g) => g.what).join()).toContain("訪問数");
+  });
+
+  it("ずれが無ければ空", () => {
+    expect(formSyncGaps({ missing: [], extra: [] }, (id) => id, "f1")).toEqual([]);
+  });
+});

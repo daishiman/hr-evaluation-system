@@ -1,4 +1,6 @@
 import { Badge, Card, CardHead, InlineDetail, LinkButton } from "@/components/ui";
+import { SetupGapList } from "@/components/SetupGapList";
+import type { SetupGap } from "@/lib/domain/setup-gaps";
 
 export interface SetupAction {
   href: string;
@@ -14,6 +16,8 @@ export interface SetupStep {
   statusLabel: string;
   actions: SetupAction[];
   detail: string;
+  /** 終わっていない手順の、足りないもの・直し方・直す画面。分かる手順だけ渡す */
+  gaps?: readonly SetupGap[];
 }
 
 /**
@@ -47,6 +51,12 @@ export function SetupGuide({ steps }: { steps: SetupStep[] }) {
               <span className="font-semibold">現在：</span>
               {step.current}
             </p>
+
+            {!step.complete && step.gaps && step.gaps.length > 0 && (
+              <div className="mt-3">
+                <SetupGapList gaps={step.gaps} title="この手順で足りないもの" />
+              </div>
+            )}
 
             <div className="mt-3 flex flex-wrap gap-2">
               {step.actions.map((action, index) => (

@@ -7,7 +7,14 @@ import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
 import { batchAll } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
 import { assertCompanyChosen, HttpError } from "@/lib/session";
-import { assertFormContentEditable, buildFormDrafts, syncFormQuestions, type FormDraftInput } from "@/lib/form-build";
+import {
+  assertFormContentEditable,
+  buildFormDrafts,
+  duplicateOptionMessage,
+  duplicateOptionValues,
+  syncFormQuestions,
+  type FormDraftInput,
+} from "@/lib/form-build";
 import { checkNumberMagnitude, defaultIntegerFlag } from "@/lib/domain/number-input";
 import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
@@ -28,7 +35,7 @@ const createSchema = z.object({
 
 /** アンケートの下書きを制度マスタから作る。 */
 export async function createForms(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: createSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "forms.create", input: createSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const companyId = viewer.companyId;
     const db = await getDb();
@@ -76,7 +83,8 @@ export async function createForms(raw: unknown) {
 const patchSchema = z.object({
   formId: z.string().min(1),
   status: z.enum(["draft", "published", "closed"]).optional(),
-  title: z.string().min(1).max(80).optional(),
+  /* 空（null・空白だけ）は「既定の題名」に戻す。画面では formDisplayTitle が評価期間と等級名から作る */
+  title: z.string().max(80).nullable().optional(),
   description: z.string().max(400).nullable().optional(),
   /* 回答期間。締切が実際に効くようになったため、あとから直せる必要がある
      （もとは評価期間の開始・終了がそのまま入るだけで、変更する手段が無かった）。
@@ -87,7 +95,7 @@ const patchSchema = z.object({
 
 /** アンケートの公開・締め切り・タイトル変更・回答期間の変更。 */
 export async function updateForm(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: patchSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "forms.update", input: patchSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const companyId = viewer.companyId;
     const db = await getDb();
@@ -155,9 +163,10 @@ export async function updateForm(raw: unknown) {
       if (!cycleRow) throw new HttpError(404, "評価期間が見つかりませんでした。");
       const schemeReadiness = await loadSchemeReadiness(companyId, cycleRow.schemeId);
       const readiness = formPublicationReadiness({
-        schemeReady: schemeReadiness.schemeReady,
+        schemeGaps: schemeReadiness.schemeGaps,
         cycleStatus: cycleRow.status,
         questionCount: qs.length,
+        formId: form.id,
       });
       if (!readiness.ready) throw new HttpError(409, readiness.message);
       // 同じサイクル・等級で公開中のものは自動で締める（回答先が2つに割れないようにする）
@@ -196,7 +205,7 @@ export async function updateForm(raw: unknown) {
       .update(s.forms)
       .set({
         ...(input.status ? { status: input.status } : {}),
-        ...(input.title ? { title: input.title.trim() } : {}),
+        ...(input.title !== undefined ? { title: input.title?.trim() ?? "" } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.opensAt !== undefined ? { opensAt: input.opensAt } : {}),
         ...(input.closesAt !== undefined ? { closesAt: input.closesAt } : {}),
@@ -244,7 +253,7 @@ const formRefSchema = z.object({ formId: z.string().min(1) });
  * 「制度が正・アンケートは写し」という向きを保つため、直すのは常にこちら側にする。
  */
 export async function rebuildFormQuestions(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: formRefSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "forms.rebuildQuestions", input: formRefSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const r = await syncFormQuestions({ companyId: viewer.companyId, formId: input.formId });
     return {
@@ -287,7 +296,7 @@ const questionsSchema = z.object({ formId: z.string().min(1), questions: z.array
  * 直したいときは「新しい版を作る」。
  */
 export async function saveFormQuestions(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: questionsSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "forms.saveQuestions", input: questionsSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const companyId = viewer.companyId;
     const db = await getDb();
@@ -320,6 +329,9 @@ export async function saveFormQuestions(raw: unknown) {
       if ((x.questionType === "single" || x.questionType === "multi") && (x.options ?? []).length < 2) {
         throw new HttpError(400, `「${x.title}」の選択肢が足りません。2つ以上にしてください。`);
       }
+      // 値が重なった選択肢は回答画面で一緒に光り、押した方が選べないように見える。画面の作る値だけに頼らず断る
+      const duplicated = duplicateOptionValues(x.options ?? []);
+      if (duplicated.length > 0) throw new HttpError(400, duplicateOptionMessage(x.title, duplicated));
       /* 設問に書く下限・上限・選択肢の点数にも、回答を受け取るときと同じ 1兆の決まりを当てる。
          ここが無制限だと、極端な下限・上限を1つ置いただけで、その設問を通るすべての回答の
          許容範囲がその値になる（＝提出時の検査が実質効かなくなる）。

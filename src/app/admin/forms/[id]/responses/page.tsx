@@ -3,15 +3,18 @@ import { notFound } from "next/navigation";
 import { CopyReminder } from "@/components/CopyReminder";
 import { CopyUrl } from "@/components/CopyUrl";
 import { appOrigin, formUrl } from "@/lib/origin";
-import { requireRole } from "@/lib/session";
-import { getForm, listResponseStatus } from "@/lib/queries";
+import { requireRoute } from "@/lib/session";
+import { getForm } from "@/lib/queries";
+import { formRowTitle } from "@/lib/domain/grade-label";
+import { listFormSubmissionRows } from "@/lib/submission-queries";
+import { parseSubmissionFilter, SUBMISSION_STATE_LABEL } from "@/lib/domain/submission-status";
 import { listFormExtensions } from "@/lib/response-access";
 import { CsvImport } from "@/components/CsvImport";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { grantFormExtension, revokeFormExtension } from "@/actions/form-extensions";
 import { Badge, Card, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, RecordList, SectionHeading, StatGrid } from "@/components/ui";
-import { DataTable } from "@/components/DataTable";
+import { SubmissionStatusTable } from "@/components/SubmissionStatusTable";
 import { FORM_STATUS_LABEL, formatDate } from "@/lib/view";
 import { formatJpDate, judgeFormDeadline, jstDateString } from "@/lib/domain/form-deadline";
 
@@ -33,8 +36,14 @@ function formatWhen(v: Date | string | null): string {
  * 提出済みだけを並べず、対象等級の在籍者を全員並べて未回答の人を見えるようにする
  * （催促できる状態にするため）。
  */
-export default async function AdminFormResponses({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+export default async function AdminFormResponses({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const viewer = await requireRoute("/admin/forms/[id]/responses");
   const { id } = await params;
   if (!viewer.companyId) notFound();
   const companyId = viewer.companyId;
@@ -42,10 +51,12 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
   const form = await getForm(companyId, id);
   if (!form) notFound();
 
-  const [rows, extensions] = await Promise.all([
-    listResponseStatus(companyId, form.id),
+  const [submission, extensions] = await Promise.all([
+    listFormSubmissionRows(companyId, form.id),
     listFormExtensions(companyId, form.id),
   ]);
+  if (!submission) notFound();
+  const filter = parseSubmissionFilter((await searchParams).status);
   /* 催促の文面にはそのまま開けるURLを入れる（相対パスだと貼り付け先で開けないため）。
      優先順位の理由は appOrigin() 側に書いてある。 */
   const origin = await appOrigin();
@@ -57,20 +68,18 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
     now: new Date(),
   });
   const activeExtensions = extensions.filter((e) => !e.revokedAt);
-  /* 利用停止中の人は対象者一覧そのものから外す（表示だけの絞り込みで、
-     すでにある回答・評価のデータは一切変更しない）。期の途中で停止した人が
+  /* 利用停止中の人は対象者一覧そのものから外す（問い合わせの時点で在籍中の人だけを読む。
+     表示だけの絞り込みで、すでにある回答・評価のデータは一切変更しない）。期の途中で停止した人が
      いても、それまでに提出済みだった回答は formResponses に残ったまま。 */
-  const active = rows.filter((r) => r.isActive);
-  const submitted = active.filter((r) => r.status === "submitted");
-  const drafting = active.filter((r) => r.status === "draft");
-  const missing = active.filter((r) => !r.responseId);
+  const { rows: active, counts } = submission;
+  const missing = active.filter((r) => r.state === "none");
 
   return (
     <>
       <PageTitle
         breadcrumb={[
           { label: "アンケート", href: `/admin/forms?cycle=${form.cycleId}` },
-          { label: form.title, href: `/admin/forms/${form.id}` },
+          { label: formRowTitle(form), href: `/admin/forms/${form.id}` },
         ]}
         title="回答一覧"
         lede={`${form.cycleName ?? ""} ／ 対象：${form.gradeName ?? "—"}`}
@@ -93,10 +102,10 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
       <Card className="card-pad">
         <StatGrid
           stats={[
-            { label: "対象の人数", value: <Num value={active.length} unit="人" display /> },
-            { label: "提出済み", value: <Num value={submitted.length} unit="人" display /> },
-            { label: "入力途中", value: <Num value={drafting.length} unit="人" display /> },
-            { label: "未回答", value: <Num value={missing.length} unit="人" display /> },
+            { label: "対象の人数", value: <Num value={counts.total} unit="人" display /> },
+            { label: SUBMISSION_STATE_LABEL.submitted, value: <Num value={counts.submitted} unit="人" display /> },
+            { label: SUBMISSION_STATE_LABEL.draft, value: <Num value={counts.draft} unit="人" display /> },
+            { label: SUBMISSION_STATE_LABEL.none, value: <Num value={counts.none} unit="人" display /> },
           ]}
         />
       </Card>
@@ -114,14 +123,12 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
             {missing.length}人がまだ回答していません（{missing.slice(0, 5).map((r) => r.name).join("、")}
             {missing.length > 5 ? " ほか" : ""}）。
           </ReasonNote>
-          <p className="mt-2">
-            <CopyUrl url={formUrl(origin, form.publicToken)} label="回答画面のURL" />
-          </p>
-          <div className="mt-3">
+          <div className="mt-2">
             <CopyReminder
               names={missing.map((r) => r.name)}
               url={formUrl(origin, form.publicToken)}
               deadline={form.closesAt}
+              lead={<CopyUrl url={formUrl(origin, form.publicToken)} label="回答画面のURL" />}
             />
           </div>
         </div>
@@ -139,46 +146,31 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
       ) : (
         /* 対象者は「同じ項目を持つ多数の行を上から見比べる」一覧なので表のまま。
            狭い画面では DataTable が自動でカードに畳む（docs/product/spec.md §5-5）。
-           利用停止中の人は対象者一覧から外すため、ここには active（在籍中）だけを渡す。 */
-        <DataTable
+           利用停止中の人は対象者一覧から外すため、ここには active（在籍中）だけを渡す。
+           状態の絞り込みは ?status= で持ち、件数は絞る前の全員ぶんを出す。 */
+        <SubmissionStatusTable
           caption="対象者と回答の状況"
           rows={active}
-          rowKey={(r) => r.employeeId}
+          counts={counts}
+          filter={filter}
+          filterHref={(f) => `/admin/forms/${form.id}/responses${f === "all" ? "" : `?status=${f}`}`}
+          nameCell={(r) =>
+            r.response ? (
+              <Link href={`/me/responses/${r.response.id}`} className="text-brand-deep">
+                {r.name}
+              </Link>
+            ) : (
+              r.name
+            )
+          }
           columns={[
-            {
-              key: "name",
-              header: "氏名",
-              role: "title",
-              cell: (r) => (
-                r.responseId ? (
-                  <Link href={`/me/responses/${r.responseId}`} className="text-brand-deep">
-                    {r.name}
-                  </Link>
-                ) : (
-                  r.name
-                )
-              ),
-            },
-            {
-              key: "status",
-              header: "状況",
-              role: "mark",
-              cell: (r) =>
-                r.status === "submitted" ? (
-                  <Badge tone="done">提出済み</Badge>
-                ) : r.status === "draft" ? (
-                  <Badge tone="active">入力途中</Badge>
-                ) : (
-                  <Badge tone="required">未回答</Badge>
-                ),
-            },
             { key: "code", header: "社員番号", cell: (r) => r.employeeCode ?? "—" },
             { key: "office", header: "事業所", cell: (r) => r.officeName ?? r.department ?? "—" },
-            { key: "at", header: "回答日時", cell: (r) => formatWhen(r.submittedAt) },
             {
               key: "from",
               header: "取り込み元",
-              cell: (r) => (r.importSource === "csv" ? "取り込み（CSV）" : r.responseId ? "この画面から回答" : "—"),
+              cell: (r) =>
+                r.response?.importSource === "csv" ? "取り込み（CSV）" : r.response ? "この画面から回答" : "—",
             },
             {
               key: "until",
@@ -217,7 +209,7 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
               required: true,
               options: active.map((r) => ({
                 value: r.employeeId,
-                label: `${r.name}（${r.status === "submitted" ? "提出済み" : r.status === "draft" ? "入力途中" : "未回答"}）`,
+                label: `${r.name}（${SUBMISSION_STATE_LABEL[r.state]}）`,
               })),
             },
             {
@@ -270,7 +262,7 @@ export default async function AdminFormResponses({ params }: { params: Promise<{
       )}
 
       <SectionHeading>これまでのスプレッドシートから取り込む</SectionHeading>
-      <CsvImport formId={form.id} formTitle={form.title} />
+      <CsvImport formId={form.id} formTitle={formRowTitle(form)} />
     </>
   );
 }

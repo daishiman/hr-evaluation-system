@@ -5,7 +5,7 @@ import { COMPANY_SCOPE_COOKIE, type Viewer } from "@/lib/session";
 import { UNEXPECTED_ERROR_MESSAGE } from "@/lib/api";
 import { FORBIDDEN_MESSAGE as FORBIDDEN } from "@/test-support/action-mocks";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
  * アカウント設定と会社管理の保存（backlog SECURITY-001）。
@@ -108,6 +108,8 @@ beforeEach(async () => {
     { id: "usr_admin", name: "会社の管理者", email: "admin@example.com", companyId: IDS.company, role: "COMPANY_ADMIN" },
     { id: "usr_other", name: "別の会社の社員", email: "other@example.com", companyId: OTHER_COMPANY, role: "EMPLOYEE" },
   ]);
+  // 利用者を入れ終えたところで、users の会社の列から所属を作る（本番の移行 0033 と同じ写し）
+  seedMemberships(t);
   await t.db.insert(s.accounts).values({
     id: "acc_emp",
     accountId: IDS.employee,

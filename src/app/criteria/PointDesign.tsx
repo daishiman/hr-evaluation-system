@@ -1,5 +1,6 @@
 import { Card, InlineDetail, Num } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
+import { pointGroupLabel, type GradeLike } from "@/lib/domain/grade-label";
 import { slotCountOf, type GradePointRule } from "./data";
 
 /**
@@ -152,8 +153,19 @@ export function PointDesign({
   );
 }
 
-/** 全等級区分の配点をならべた比較表。「自分の等級だけ特別ではない」ことを確かめるために置く。 */
-export function PointRuleComparison({ rules, currentGroup }: { rules: GradePointRule[]; currentGroup: string | null }) {
+/**
+ * 全等級区分の配点をならべた比較表。「自分の等級だけ特別ではない」ことを確かめるために置く。
+ * 区分は英語の区分名ではなく、その区分の等級名（「等級4-1・等級4-2」）で呼ぶ。
+ */
+export function PointRuleComparison({
+  rules,
+  grades,
+  currentGroup,
+}: {
+  rules: GradePointRule[];
+  grades: readonly GradeLike[];
+  currentGroup: string | null;
+}) {
   return (
     /* 等級区分ごとの配点を横並びで見比べるための表。数値を突き合わせる用途そのものなので表が最適
        （docs/product/spec.md §5-5）。狭い画面では DataTable が自動でカードに畳む。 */
@@ -168,7 +180,7 @@ export function PointRuleComparison({ rules, currentGroup }: { rules: GradePoint
           role: "title",
           cell: (r) => (
             <>
-              {r.pointGroup}
+              {pointGroupLabel(r.pointGroup, grades)}
               {r.pointGroup === currentGroup && <span className="footnote"> ← いま見ている等級</span>}
             </>
           ),

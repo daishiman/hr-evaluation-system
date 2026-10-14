@@ -12,7 +12,8 @@ import {
   readMemo,
 } from "@/lib/credential-vault";
 import { getDb, schema as s } from "@/lib/db";
-import { HttpError } from "@/lib/session";
+import { hasMembershipElsewhere, membershipIn } from "@/lib/memberships";
+import { crossesCompanies, FORBIDDEN_MESSAGE, HttpError } from "@/lib/session";
 
 /**
  * 初期パスワードの控えを開く（会社の管理者・システム全体管理者）。
@@ -23,6 +24,7 @@ import { HttpError } from "@/lib/session";
  *
  * 開けるのは、システム全体管理者と、同じ会社の管理者だけ。
  * 他社の人の ID を送られても、控えの有無が分からない言い方で断る。
+ * ほかの会社にも所属している人の控えは、全体管理者だけが開ける（パスワードは会社をまたいで使うため。S7）。
  * 発行から14日を過ぎた控えは開けない（表から消すのは次の発行の batch。ここは読むだけ）。
  */
 
@@ -32,18 +34,16 @@ const NOT_FOUND = "この方の控えはありません。";
 const EXPIRED = `発行から${MEMO_TTL_DAYS}日を過ぎたため開けません。再発行してください。`;
 
 export async function revealCredentialMemo(raw: unknown) {
-  return runRead({ role: "COMPANY_ADMIN", input: inputSchema }, raw, async ({ viewer, input }) => {
+  return runRead({ operation: "credentialMemos.reveal", input: inputSchema }, raw, async ({ viewer, input }) => {
     const db = await getDb();
     const target = (
-      await db
-        .select({ id: s.users.id, companyId: s.users.companyId })
-        .from(s.users)
-        .where(eq(s.users.id, input.userId))
-        .limit(1)
+      await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.id, input.userId)).limit(1)
     )[0];
-    // 他社の人は「いない」と同じ扱いにする（控えがあるかどうかも漏らさない）
-    if (!target || (viewer.role !== "SUPER_ADMIN" && target.companyId !== viewer.companyId)) {
-      throw new HttpError(404, NOT_FOUND);
+    if (!target) throw new HttpError(404, NOT_FOUND);
+    if (!crossesCompanies(viewer.role)) {
+      // 他社の人は「いない」と同じ扱いにする（控えがあるかどうかも漏らさない）
+      if (!viewer.companyId || !(await membershipIn(db, target.id, viewer.companyId))) throw new HttpError(404, NOT_FOUND);
+      if (await hasMembershipElsewhere(db, target.id, viewer.companyId)) throw new HttpError(403, FORBIDDEN_MESSAGE);
     }
 
     // 本人がパスワードを変えると控えは消える（src/actions/account.ts）
@@ -70,7 +70,7 @@ export async function revealCredentialMemo(raw: unknown) {
         event: "credential_memo_revealed",
         actorId: viewer.id,
         targetUserId: target.id,
-        companyId: target.companyId,
+        companyId: viewer.companyId,
       }),
     );
 

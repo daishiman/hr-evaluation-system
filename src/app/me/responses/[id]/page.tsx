@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireViewer } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { canReadResponseBody } from "@/lib/domain/evaluation-authority";
 import { getResponseDetail } from "@/lib/response-access";
 import { ResponseSnapshot } from "@/components/ResponseSnapshot";
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * 表示は必ず回答時点の版（form_answers に写した当時の設問文・選択肢）で行う。
  */
 export default async function ResponsePage({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await requireViewer();
+  const viewer = await requireRoute("/me/responses/[id]");
   const { id } = await params;
   if (!viewer.companyId) notFound();
 

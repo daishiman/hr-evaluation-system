@@ -1,5 +1,4 @@
-import { handle } from "@/lib/api";
-import { apiViewer } from "@/lib/session";
+import { apiViewerFor, handle } from "@/lib/api";
 import { listAllUsers, listCompanies, listMembers } from "@/lib/queries";
 import { matchPerson, type PersonHit } from "@/lib/domain/search";
 
@@ -19,7 +18,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
   return handle(async () => {
-    const viewer = await apiViewer("EMPLOYEE");
+    const viewer = await apiViewerFor("search.run");
     const q = (new URL(req.url).searchParams.get("q") ?? "").trim();
     if (q.length === 0) return { people: [] as PersonHit[] };
 
@@ -30,15 +29,26 @@ export async function GET(req: Request) {
         if (!c.isActive) continue;
         people.push({ kind: "company", id: c.id, name: c.name, note: null, href: "/system/companies" });
       }
+      // 利用者の一覧は所属ごとの行なので、人ごとにまとめ、所属する会社の名前を並べる
+      const byUser = new Map<string, PersonHit & { companies: string[] }>();
       for (const u of await listAllUsers()) {
-        people.push({
+        const hit = byUser.get(u.id);
+        if (hit) {
+          if (u.companyName) hit.companies.push(u.companyName);
+          continue;
+        }
+        byUser.set(u.id, {
           kind: "user",
           id: u.id,
           name: u.name,
-          note: u.companyName ?? null,
+          note: null,
           href: `/system/users/${u.id}`,
           email: u.email,
+          companies: u.companyName ? [u.companyName] : [],
         });
+      }
+      for (const { companies, ...hit } of byUser.values()) {
+        people.push({ ...hit, note: companies.length > 0 ? companies.join("、") : null });
       }
     } else if (viewer.role === "COMPANY_ADMIN" && viewer.companyId) {
       for (const m of await listMembers(viewer.companyId)) {

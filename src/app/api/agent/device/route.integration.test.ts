@@ -3,7 +3,7 @@ import { schema as s } from "@/lib/db";
 import type { Viewer } from "@/lib/session";
 import { _resetRateLimitStoreForTest } from "@/lib/rate-limit";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
  * ブラウザで承認して端末を通す仕組み。
@@ -142,6 +142,7 @@ async function seedImprovement(id: string, companyId: string) {
 beforeEach(async () => {
   testDb = createTestDatabase();
   await seedCompany(testDb);
+  seedMemberships(testDb);
   await testDb.db.insert(s.companies).values({ id: OTHER_COMPANY, name: "よその会社", slug: "other" });
   await testDb.db.insert(s.users).values({
     id: "usr_super",

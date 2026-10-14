@@ -1,7 +1,10 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { PageLoading } from "@/components/ui";
 
 const app = new URL("../../app/", import.meta.url);
 const read = (name: string) => readFileSync(new URL(name, app), "utf8");
@@ -25,6 +28,15 @@ describe("全画面共通の待機・失敗・権限状態", () => {
     const shared = readFileSync(new URL("../components/ui.tsx", app), "utf8");
     expect(shared).toContain('aria-live="polite"');
     expect(shared).toContain("画面を読み込んでいます");
+  });
+
+  it("待機表示は AppShell の main の内側に出るので、自分では main を作らない（main を入れ子にしない）", () => {
+    const html = renderToStaticMarkup(createElement(PageLoading, { lede: "読み込み中" }));
+    expect(html).not.toContain("<main");
+    expect(html).toContain('aria-busy="true"');
+    // 外側の main は AppShell が1つだけ持つ
+    const shell = readFileSync(new URL("../components/AppShell.tsx", app), "utf8");
+    expect(shell.match(/<main\b/g)).toHaveLength(1);
   });
 
   /**

@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { listBehaviorBandSets, listGradeRequirements, listGrades, listPromotionThresholds, listRaiseSettings } from "@/lib/queries";
 import { detectStaleCycles } from "@/lib/impact";
 import { saveMaster } from "@/actions/masters";
@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
  * どこにあるか毎回探すことになるため。
  */
 export default async function AdminMasters({ searchParams }: { searchParams: Promise<{ grade?: string }> }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/masters");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
@@ -152,7 +152,7 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
           {grade.behaviorBand ? (
             <>
               <p className="m-0 mt-1 text-sub">この等級のアンケートに出す行動指針です。</p>
-              <p className="m-0 mt-1 text-sub font-bold">{behaviorBandLabel(bandSets, grade.behaviorBand)}</p>
+              <p className="m-0 mt-1 text-sub font-bold">{behaviorBandLabel(bandSets, grade.behaviorBand, grades)}</p>
             </>
           ) : (
             <p className="m-0 mt-1 text-sub">この等級のアンケートには、行動指針を出しません。</p>

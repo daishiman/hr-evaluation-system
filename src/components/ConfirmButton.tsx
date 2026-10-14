@@ -41,6 +41,7 @@ export function DetailDialogButton({
   label,
   title,
   variant = "tertiary",
+  wide,
   children,
 }: {
   /** 押す場所の文言。何が出るか分かる言葉にする（「詳しく」だけにしない）。 */
@@ -48,6 +49,8 @@ export function DetailDialogButton({
   /** 窓の見出し。 */
   title: string;
   variant?: "primary" | "secondary" | "tertiary";
+  /** 表を見比べる窓（権限一覧など）。幅を広げ、注意の色を外す */
+  wide?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -67,7 +70,7 @@ export function DetailDialogButton({
       </Button>
       <dialog
         ref={dialogRef}
-        className="confirm-dialog"
+        className={wide ? "confirm-dialog detail-dialog-wide" : "confirm-dialog"}
         aria-label={title}
         onClose={() => setOpen(false)}
         onClick={(e) => {

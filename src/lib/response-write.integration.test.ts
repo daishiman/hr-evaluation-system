@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import * as s from "@/db/schema";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany, seedResponse } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedResponse, seedMemberships } from "@/test-support/evaluation-fixture";
 import { responseWithAnswersStatements, saveResponseWithAnswers } from "@/lib/response-write";
 import { chunkRowsForD1 } from "@/lib/db";
 
@@ -21,6 +21,7 @@ afterEach(() => {
 describe("回答本文の原子的な置き換え", () => {
   async function prepareDraft() {
     await seedCompany(current);
+    seedMemberships(current);
     const id = await seedResponse(current, [{
       id: "fq_race", section: "kpi", questionType: "number",
       title: "競合の確認", displayOrder: 1, answer: 10,
@@ -153,6 +154,7 @@ describe("回答本文の原子的な置き換え", () => {
 
   it("新しい回答行が1件でも失敗したら、状態と古い本文をどちらも保持する", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     const responseId = await seedResponse(current, [
       {
         id: "fq_atomic",

@@ -40,6 +40,8 @@ export function DataTable<T>({
   rowKey,
   caption,
   rowOff,
+  rowData,
+  cardsData,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -48,6 +50,13 @@ export function DataTable<T>({
   caption?: string;
   /** いまは使わない設定の行（利用停止・取り消し済み）。表でも折りたたみでも同じ見た目で沈める。 */
   rowOff?: (row: T) => boolean;
+  /**
+   * 行に付ける data-* 属性。表の行とカードの両方に同じものを付ける
+   * （表とカードが同じ行を出しているかを、試験やブラウザから同じ名前で確かめるため）。
+   */
+  rowData?: (row: T) => Record<`data-${string}`, string>;
+  /** カードの側（狭い容器で出る方）に付ける data-* 属性 */
+  cardsData?: Record<`data-${string}`, string>;
 }) {
   const titleCol = columns.find((c) => c.role === "title") ?? columns[0];
   const markCols = columns.filter((c) => c.role === "mark");
@@ -69,7 +78,7 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={rowKey(r)} data-off={rowOff?.(r) ? "true" : undefined}>
+              <tr key={rowKey(r)} data-off={rowOff?.(r) ? "true" : undefined} {...rowData?.(r)}>
                 {columns.map((c) => (
                   <td key={c.key} className={c.num ? "col-num" : undefined}>
                     {c.cell(r)}
@@ -81,9 +90,9 @@ export function DataTable<T>({
         </table>
       </Card>
 
-      <Card className="list-cards">
+      <div className="card list-cards" {...cardsData}>
         {rows.map((r) => (
-          <div key={rowKey(r)} className="list-card" data-off={rowOff?.(r) ? "true" : undefined}>
+          <div key={rowKey(r)} className="list-card" data-off={rowOff?.(r) ? "true" : undefined} {...rowData?.(r)}>
             <div className="list-card-head">
               <span className="min-w-0">{titleCol.cell(r)}</span>
               {markCols.map((c) => (
@@ -100,7 +109,7 @@ export function DataTable<T>({
             </dl>
           </div>
         ))}
-      </Card>
+      </div>
     </div>
   );
 }

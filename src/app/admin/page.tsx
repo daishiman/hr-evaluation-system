@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import {
   getActiveScheme,
   listBehaviorGuidelines,
@@ -31,7 +31,7 @@ export const dynamic = "force-dynamic";
  * 設定順を変えるときにDBアクセスまで巻き込まずに済む。
  */
 export default async function AdminHome() {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin");
   if (!viewer.companyId) {
     return <EmptyState title="所属している会社がありません" body="システム管理者にご連絡ください。" />;
   }

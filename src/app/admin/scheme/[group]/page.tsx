@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { Badge, EmptyState, PageTitle, ReasonNote } from "@/components/ui";
 import { SchemeGroupPicker } from "@/components/SchemeGroupPicker";
 import { groupPosition, schemeStepPath, stepLede, stepNumber, STEPS, stepTitle } from "@/lib/domain/scheme-steps";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * 1画面1目的。ここでは選ぶだけで、基準（A〜E）は次の手順で扱う。
  */
 export default async function SchemeSelectPage({ params }: { params: Promise<{ group: string }> }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/scheme/[group]");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const pointGroup = decodeURIComponent((await params).group);
 
@@ -29,8 +29,8 @@ export default async function SchemeSelectPage({ params }: { params: Promise<{ g
          ここに残すのは、URL の親ではない「手順の入口」だけ。
          等級区分名は見出しに出ているので段に詰めない。 */
       breadcrumb={[{ label: "制度設定ガイド", href: "/admin/setup" }]}
-      title={`${pointGroup}：${stepTitle("select")}`}
-      lede={stepLede("select", pointGroup)}
+      title={`${group.label}：${stepTitle("select")}`}
+      lede={stepLede("select", group.label)}
       tags={
         <>
           <Badge tone="active">
@@ -60,6 +60,7 @@ export default async function SchemeSelectPage({ params }: { params: Promise<{ g
       <SchemeGroupPicker
         schemeId={setup.scheme.id}
         pointGroup={group.pointGroup}
+        groupLabel={group.label}
         gradeNames={group.gradeNames}
         rule={group.rule}
         ratedItemIds={group.ratedItemIds}

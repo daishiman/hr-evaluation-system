@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { Badge, Card, CardHead, Code, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote } from "@/components/ui";
 import { DetailDialogButton } from "@/components/ConfirmButton";
 import { RankCriteriaSetForm } from "@/components/RankCriteriaSetForm";
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  *   ここではこの等級区分で選んだ項目だけを、選んだ順に出す。
  */
 export default async function SchemeCriteriaPage({ params }: { params: Promise<{ group: string }> }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/scheme/[group]/criteria");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const pointGroup = decodeURIComponent((await params).group);
 
@@ -29,12 +29,14 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
 
   const position = groupPosition(setup.order, pointGroup);
   const nextGroup = nextGroupOf(setup.order, pointGroup);
+  /* 区分の鍵は URL と照合にだけ使い、文には等級名から作った呼び名を出す */
+  const nextLabel = setup.groups.find((g) => g.pointGroup === nextGroup)?.label ?? "";
   const head = (
     <PageTitle
       /* ヘッダーが出す階層と重ねない（手順1へは階層の1段前が同じ URL を指す）。 */
       breadcrumb={[{ label: "制度設定ガイド", href: "/admin/setup" }]}
-      title={`${pointGroup}：${stepTitle("criteria")}`}
-      lede={stepLede("criteria", pointGroup)}
+      title={`${group.label}：${stepTitle("criteria")}`}
+      lede={stepLede("criteria", group.label)}
       tags={
         <>
           <Badge tone="active">
@@ -205,13 +207,13 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
       <StickyActionBar
         status={
           nextGroup
-            ? `${pointGroup} の設定はここまでです。次は「${nextGroup}」の設定に進みます。`
+            ? `${group.label}の設定はここまでです。次は「${nextLabel}」の設定に進みます。`
             : "すべての等級区分の設定がここで終わりです。次は評価期間の設定に進みます。"
         }
       >
         {nextGroup ? (
           <LinkButton variant="primary" href={schemeStepPath(nextGroup, "select")}>
-            次は {nextGroup} で使うKPIを選ぶ
+            次は{nextLabel}で使うKPIを選ぶ
           </LinkButton>
         ) : (
           <LinkButton variant="primary" href="/admin/cycles">

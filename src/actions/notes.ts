@@ -15,7 +15,7 @@ const noteSchema = z.object({
 
 /** 評価メモを残す。マネージャー以上のみ。本人には見せない。 */
 export async function createNote(raw: unknown) {
-  return runAction({ role: "MANAGER", input: noteSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "notes.create", input: noteSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     if (!(await canManageEmployee(viewer, input.employeeId))) {
       throw new HttpError(403, "この方のメモを書く権限がありません。");

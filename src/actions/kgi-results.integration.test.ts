@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { schema as s } from "@/lib/db";
 import type { Viewer } from "@/lib/session";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
  * 事業所KGIの達成率の保存（達成率の行 → 変更履歴 → 確認中の評価の賞与欄）。
@@ -84,6 +84,7 @@ beforeEach(async () => {
   t = createTestDatabase();
   t.raw.exec("PRAGMA foreign_keys = ON");
   await seedCompany(t, { officeKgiRate: null });
+  seedMemberships(t);
   await t.db.insert(s.evaluations).values({
     id: "ev_1",
     companyId: IDS.company,

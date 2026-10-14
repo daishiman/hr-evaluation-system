@@ -2,6 +2,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { schema as s } from "@/lib/db";
 import type { getDb } from "@/lib/db";
 import { versionFamilyIds, type VersionedMasterRow } from "@/lib/domain/versioned-master";
+import { formRowTitle } from "@/lib/domain/grade-label";
 
 type Db = Awaited<ReturnType<typeof getDb>>;
 
@@ -29,7 +30,10 @@ function add(map: UsageMap, key: string | null, label: string) {
   if (!list.includes(label)) list.push(label);
 }
 
-const formLabel = (title: string) => `アンケート「${title}」`;
+/** 空の題名（既定の題名）は評価期間と等級名から作るので、題名と一緒にその2つも読む */
+const formTitleColumns = { title: s.forms.title, cycleName: s.evaluationCycles.name, gradeName: s.grades.name };
+const formLabel = (row: { title: string; cycleName: string | null; gradeName: string | null }) =>
+  `アンケート「${formRowTitle(row)}」`;
 
 /** 版ごとの参照を、同じ論理項目の系譜全体へ広げる。 */
 function usageByVersionFamily<T extends VersionedMasterRow>(rows: T[], exact: UsageMap): UsageMap {
@@ -47,9 +51,11 @@ function usageByVersionFamily<T extends VersionedMasterRow>(rows: T[], exact: Us
 /** 行動指針の観点の使用状況 */
 export async function behaviorGuidelineUsage(db: Db, companyId: string): Promise<UsageMap> {
   const inForms = await db
-    .select({ key: s.formQuestions.behaviorGuidelineId, title: s.forms.title })
+    .select({ key: s.formQuestions.behaviorGuidelineId, ...formTitleColumns })
     .from(s.formQuestions)
     .innerJoin(s.forms, eq(s.formQuestions.formId, s.forms.id))
+    .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.forms.cycleId))
+    .leftJoin(s.grades, eq(s.grades.id, s.forms.gradeId))
     .where(and(eq(s.formQuestions.companyId, companyId), isNotNull(s.formQuestions.behaviorGuidelineId)));
   const inEvaluations = await db
     .select({ key: s.evaluationBehaviors.guidelineId })
@@ -57,7 +63,7 @@ export async function behaviorGuidelineUsage(db: Db, companyId: string): Promise
     .where(and(eq(s.evaluationBehaviors.companyId, companyId), isNotNull(s.evaluationBehaviors.guidelineId)));
 
   const map: UsageMap = {};
-  for (const row of inForms) add(map, row.key, formLabel(row.title));
+  for (const row of inForms) add(map, row.key, formLabel(row));
   for (const row of inEvaluations) add(map, row.key, EVALUATION_LABEL);
   return map;
 }
@@ -67,9 +73,11 @@ export async function gradeRequirementUsage(db: Db, companyId: string): Promise<
   const [rows, inForms, inEvaluations] = await Promise.all([
     db.select().from(s.gradeRequirements).where(eq(s.gradeRequirements.companyId, companyId)),
     db
-      .select({ key: s.formQuestions.gradeRequirementId, title: s.forms.title })
+      .select({ key: s.formQuestions.gradeRequirementId, ...formTitleColumns })
       .from(s.formQuestions)
       .innerJoin(s.forms, eq(s.formQuestions.formId, s.forms.id))
+      .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.forms.cycleId))
+      .leftJoin(s.grades, eq(s.grades.id, s.forms.gradeId))
       .where(and(eq(s.formQuestions.companyId, companyId), isNotNull(s.formQuestions.gradeRequirementId))),
     db
       .select({ key: s.evaluationRequirements.gradeRequirementId })
@@ -78,7 +86,7 @@ export async function gradeRequirementUsage(db: Db, companyId: string): Promise<
   ]);
 
   const exact: UsageMap = {};
-  for (const row of inForms) add(exact, row.key, formLabel(row.title));
+  for (const row of inForms) add(exact, row.key, formLabel(row));
   for (const row of inEvaluations) add(exact, row.key, EVALUATION_LABEL);
   return usageByVersionFamily(rows, exact);
 }
@@ -88,9 +96,11 @@ export async function promotionRequirementUsage(db: Db, companyId: string): Prom
   const [rows, inForms, inEvaluations] = await Promise.all([
     db.select().from(s.promotionRequirements).where(eq(s.promotionRequirements.companyId, companyId)),
     db
-      .select({ key: s.formQuestions.promotionRequirementId, title: s.forms.title })
+      .select({ key: s.formQuestions.promotionRequirementId, ...formTitleColumns })
       .from(s.formQuestions)
       .innerJoin(s.forms, eq(s.formQuestions.formId, s.forms.id))
+      .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.forms.cycleId))
+      .leftJoin(s.grades, eq(s.grades.id, s.forms.gradeId))
       .where(and(eq(s.formQuestions.companyId, companyId), isNotNull(s.formQuestions.promotionRequirementId))),
     db
       .select({ key: s.evaluationGates.promotionRequirementId })
@@ -99,7 +109,7 @@ export async function promotionRequirementUsage(db: Db, companyId: string): Prom
   ]);
 
   const exact: UsageMap = {};
-  for (const row of inForms) add(exact, row.key, formLabel(row.title));
+  for (const row of inForms) add(exact, row.key, formLabel(row));
   for (const row of inEvaluations) add(exact, row.key, EVALUATION_LABEL);
   return usageByVersionFamily(rows, exact);
 }
@@ -145,9 +155,11 @@ export async function kpiCategoryUsage(db: Db, companyId: string): Promise<Usage
 export async function kpiItemUsage(db: Db, companyId: string): Promise<UsageMap> {
   const [inForms, inScheme, inEvaluations] = await Promise.all([
     db
-      .select({ key: s.formQuestions.kpiItemId, title: s.forms.title })
+      .select({ key: s.formQuestions.kpiItemId, ...formTitleColumns })
       .from(s.formQuestions)
       .innerJoin(s.forms, eq(s.formQuestions.formId, s.forms.id))
+      .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.forms.cycleId))
+      .leftJoin(s.grades, eq(s.grades.id, s.forms.gradeId))
       .where(and(eq(s.formQuestions.companyId, companyId), isNotNull(s.formQuestions.kpiItemId))),
     db
       .select({ key: s.schemeItems.kpiItemId })
@@ -160,7 +172,7 @@ export async function kpiItemUsage(db: Db, companyId: string): Promise<UsageMap>
   ]);
 
   const map: UsageMap = {};
-  for (const row of inForms) add(map, row.key, formLabel(row.title));
+  for (const row of inForms) add(map, row.key, formLabel(row));
   for (const row of inScheme) add(map, row.key, "評価セット");
   for (const row of inEvaluations) add(map, row.key, EVALUATION_LABEL);
   return map;

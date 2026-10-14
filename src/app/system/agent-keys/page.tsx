@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { getDb } from "@/lib/db";
 import { envKeyEnabled, listAgentKeys } from "@/lib/agent-keys";
 import { hasEnvKey } from "@/lib/agent-api";
@@ -36,7 +36,7 @@ export const dynamic = "force-dynamic";
  * 日時はここで文字にしてから渡す。押しものの部品へ Date のまま渡さない。
  */
 export default async function SystemAgentKeys() {
-  await requireRole("SUPER_ADMIN");
+  await requireRoute("/system/agent-keys");
   const keys = await listAgentKeys();
   const sessions = await listAgentSessions();
   const db = await getDb();

@@ -270,10 +270,25 @@ describe("等級・昇格要件の版管理", () => {
     expect(testDb.raw.prepare("SELECT id FROM grade_requirements WHERE id = 'greq_rolled_back'").get()).toBeUndefined();
   });
 
-  it("等級要件を中央から先頭・末尾へ保存し、別区分は動かさない", async () => {
+  // 使用中の現行版（後に版が無い行）の並び
+  const supportOrder = () =>
+    testDb.raw
+      .prepare(
+        `SELECT id FROM grade_requirements WHERE category = 'support' AND is_active = 1
+           AND id NOT IN (SELECT previous_version_id FROM grade_requirements WHERE previous_version_id IS NOT NULL)
+         ORDER BY seq, id`,
+      )
+      .all();
+  const reorderEvents = (entityType: string) =>
+    testDb.raw
+      .prepare("SELECT entity_id, before_json, after_json FROM constitution_events WHERE entity_type = ? AND event_type = 'reordered' ORDER BY entity_id")
+      .all(entityType);
+
+  it("等級要件は並び全体で保存し、動いた行だけを書いて行ごとに記録する。別区分・使わない行は動かさない", async () => {
     await putGrade("greq_a", "A", { seq: 10 });
     await putGrade("greq_b", "B", { seq: 30 });
     await putGrade("greq_c", "C", { seq: 70 });
+    await putGrade("greq_off", "使わない", { seq: 50, active: false });
     await testDb.db.insert(s.gradeRequirements).values({
       id: "greq_operation",
       companyId: COMPANY,
@@ -283,34 +298,97 @@ describe("等級・昇格要件の版管理", () => {
       text: "運営",
     });
 
-    await expect(apply({ kind: "gradeRequirementOrder", id: "greq_b", direction: "top" })).resolves.toMatchObject({
-      id: "greq_b",
+    // 長押しで中央を先頭へ（1回の操作で何段も動く）
+    await expect(apply({ kind: "gradeRequirementOrder", ids: ["greq_c", "greq_a", "greq_b"] })).resolves.toMatchObject({
+      message: "並び順を変更しました。",
     });
+    expect(supportOrder()).toEqual([{ id: "greq_c" }, { id: "greq_a" }, { id: "greq_b" }]);
+    // 今の番号（10・30・70）を配り直すので、使わない行（50）とは重ならない
     expect(
-      testDb.raw.prepare("SELECT id FROM grade_requirements WHERE category = 'support' ORDER BY seq, id").all(),
-    ).toEqual([{ id: "greq_b" }, { id: "greq_a" }, { id: "greq_c" }]);
-
-    await expect(apply({ kind: "gradeRequirementOrder", id: "greq_b", direction: "bottom" })).resolves.toMatchObject({
-      id: "greq_b",
-    });
-    expect(
-      testDb.raw.prepare("SELECT id FROM grade_requirements WHERE category = 'support' ORDER BY seq, id").all(),
-    ).toEqual([{ id: "greq_a" }, { id: "greq_c" }, { id: "greq_b" }]);
+      testDb.raw.prepare("SELECT id, seq FROM grade_requirements WHERE category = 'support' ORDER BY id").all(),
+    ).toEqual([
+      { id: "greq_a", seq: 30 },
+      { id: "greq_b", seq: 70 },
+      { id: "greq_c", seq: 10 },
+      { id: "greq_off", seq: 50 },
+    ]);
+    expect(reorderEvents("gradeRequirement")).toEqual([
+      { entity_id: "greq_a", before_json: JSON.stringify({ seq: 10 }), after_json: JSON.stringify({ seq: 30 }) },
+      { entity_id: "greq_b", before_json: JSON.stringify({ seq: 30 }), after_json: JSON.stringify({ seq: 70 }) },
+      { entity_id: "greq_c", before_json: JSON.stringify({ seq: 70 }), after_json: JSON.stringify({ seq: 10 }) },
+    ]);
     expect(testDb.raw.prepare("SELECT seq FROM grade_requirements WHERE id = 'greq_operation'").get()).toEqual({ seq: 20 });
+
+    // 同じ並びを送り直しても書かない
+    await expect(apply({ kind: "gradeRequirementOrder", ids: ["greq_c", "greq_a", "greq_b"] })).resolves.toEqual({
+      message: "並び順は変わっていません。",
+    });
+    expect(reorderEvents("gradeRequirement")).toHaveLength(3);
   });
 
-  it("昇格要件も中央から末尾へ保存し、別種類は動かさない", async () => {
+  it("等級要件の並びが今と食い違えば 409 で1行も書かない。知らない id は 404", async () => {
+    await putGrade("greq_a", "A", { seq: 1 });
+    await putGrade("greq_b", "B", { seq: 2 });
+    await putGrade("greq_a2", "A改", { seq: 1, previous: "greq_a" });
+    await putGrade("greq_off", "使わない", { seq: 3, active: false });
+    await testDb.db.insert(s.gradeRequirements).values({
+      id: "greq_operation",
+      companyId: COMPANY,
+      gradeId: GRADE,
+      category: "operation",
+      seq: 1,
+      text: "運営",
+    });
+    const before = testDb.raw.prepare("SELECT id, seq FROM grade_requirements ORDER BY id").all();
+
+    for (const ids of [
+      ["greq_b"], // ほかの人が足した行を知らない
+      ["greq_b", "greq_a2", "greq_operation"], // 別区分を混ぜた
+      ["greq_b", "greq_a2", "greq_off"], // 使わない行を混ぜた
+      ["greq_a", "greq_b"], // 先頭が古い版
+      ["greq_off", "greq_b"], // 先頭が使わない行
+      ["greq_b", "greq_b"], // 重複
+    ]) {
+      await expect(apply({ kind: "gradeRequirementOrder", ids })).rejects.toMatchObject({ status: 409 });
+    }
+    await expect(apply({ kind: "gradeRequirementOrder", ids: ["greq_missing"] })).rejects.toMatchObject({ status: 404 });
+    // 別の会社からは見えない
+    await expect(apply({ kind: "gradeRequirementOrder", ids: ["greq_b", "greq_a2"] }, OTHER)).rejects.toMatchObject({
+      status: 404,
+    });
+    expect(testDb.raw.prepare("SELECT id, seq FROM grade_requirements ORDER BY id").all()).toEqual(before);
+    expect(reorderEvents("gradeRequirement")).toEqual([]);
+
+    // 現行版どうしなら並べ替えられる
+    await apply({ kind: "gradeRequirementOrder", ids: ["greq_b", "greq_a2"] });
+    expect(supportOrder()).toEqual([{ id: "greq_b" }, { id: "greq_a2" }]);
+    // 記録は版の系列の根（最初の版の id）で数える
+    expect(reorderEvents("gradeRequirement").map((row) => (row as { entity_id: string }).entity_id)).toEqual([
+      "greq_a",
+      "greq_b",
+    ]);
+  });
+
+  it("昇格要件も並び全体で保存し、別種類は動かさない。食い違えば 409", async () => {
     await putPromotion("preq_a", "A", { seq: 2 });
     await putPromotion("preq_b", "B", { seq: 5 });
     await putPromotion("preq_c", "C", { seq: 9 });
     await putPromotion("preq_test", "テスト", { seq: 4, kind: "test" });
 
     await expect(
-      apply({ kind: "promotionRequirementOrder", id: "preq_b", direction: "bottom" }),
-    ).resolves.toMatchObject({ id: "preq_b" });
+      apply({ kind: "promotionRequirementOrder", ids: ["preq_a", "preq_c", "preq_b"] }),
+    ).resolves.toMatchObject({ message: "並び順を変更しました。" });
     expect(
       testDb.raw.prepare("SELECT id FROM promotion_requirements WHERE kind = 'report' ORDER BY seq, id").all(),
     ).toEqual([{ id: "preq_a" }, { id: "preq_c" }, { id: "preq_b" }]);
     expect(testDb.raw.prepare("SELECT seq FROM promotion_requirements WHERE id = 'preq_test'").get()).toEqual({ seq: 4 });
+    expect(reorderEvents("promotionRequirement")).toHaveLength(2);
+
+    await expect(
+      apply({ kind: "promotionRequirementOrder", ids: ["preq_a", "preq_c", "preq_b", "preq_test"] }),
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(apply({ kind: "promotionRequirementOrder", ids: ["preq_missing"] })).rejects.toMatchObject({
+      status: 404,
+    });
   });
 });

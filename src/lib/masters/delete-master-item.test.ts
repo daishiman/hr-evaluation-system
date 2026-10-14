@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import { beforeEach, describe, expect, it } from "vitest";
 import * as schema from "@/db/schema";
+import { minRoleFor } from "@/lib/route-access";
 import { deleteMasterItem } from "./delete-master-item";
 
 /**
@@ -46,7 +47,11 @@ const CREATE = `
     is_gate integer NOT NULL DEFAULT 1, is_active integer NOT NULL DEFAULT 1,
     previous_version_id text REFERENCES promotion_requirements(id), created_at text, updated_at text
   );
-  CREATE TABLE forms (id text PRIMARY KEY, company_id text NOT NULL, title text NOT NULL, status text NOT NULL DEFAULT 'published');
+  CREATE TABLE evaluation_cycles (id text PRIMARY KEY, company_id text NOT NULL, name text NOT NULL);
+  CREATE TABLE forms (
+    id text PRIMARY KEY, company_id text NOT NULL, cycle_id text, grade_id text, title text NOT NULL,
+    status text NOT NULL DEFAULT 'published'
+  );
   CREATE TABLE form_questions (
     id text PRIMARY KEY, company_id text NOT NULL, form_id text NOT NULL, title text NOT NULL DEFAULT '',
     grade_requirement_id text, promotion_requirement_id text, behavior_guideline_id text, kpi_item_id text
@@ -118,7 +123,9 @@ beforeEach(() => {
       statement.run(...(params as never[]));
       return { rows: [] };
     }
-    const result = statement.all(...(params as never[])).map((row) => Object.values(row));
+    // 列名が重なる結合（評価期間名と等級名の name など）でも取り違えないよう、行を配列で受け取る
+    (statement as unknown as { setReturnArrays: (v: boolean) => void }).setReturnArrays(true);
+    const result = statement.all(...(params as never[])) as unknown as unknown[][];
     return { rows: method === "get" ? (result[0] ?? []) : result };
   };
   db = drizzle(
@@ -150,10 +157,15 @@ function seedBandSet() {
   `);
 }
 
-/** すでに公開したアンケートと、確定済みの評価がその観点を指している状態にする。 */
+/**
+ * すでに公開したアンケートと、確定済みの評価がその観点を指している状態にする。
+ * アンケートは自動で作ったもの（題名は空＝既定の題名）。表示名は評価期間と等級名から作る。
+ */
 function seedPastRecords() {
   sqlite.exec(`
-    INSERT INTO forms (id, company_id, title) VALUES ('f_1', 'cmp_a', '2026年上期（Beginner）');
+    INSERT INTO evaluation_cycles (id, company_id, name) VALUES ('cyc_1', 'cmp_a', '2026年上期');
+    INSERT INTO grades (id, company_id, name) VALUES ('g_form', 'cmp_a', '等級1');
+    INSERT INTO forms (id, company_id, cycle_id, grade_id, title) VALUES ('f_1', 'cmp_a', 'cyc_1', 'g_form', '');
     INSERT INTO form_questions (id, company_id, form_id, title, behavior_guideline_id)
       VALUES ('fq_1', 'cmp_a', 'f_1', '創造性について', 'bg_a');
     INSERT INTO evaluation_behaviors (id, company_id, evaluation_id, guideline_id, aspect_name, score)
@@ -182,7 +194,7 @@ describe("制度設定の項目を完全に消す", () => {
       deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorGuideline", id: "bg_a" } }),
     ).rejects.toMatchObject({
       status: 400,
-      message: expect.stringContaining("アンケート「2026年上期（Beginner）」"),
+      message: expect.stringContaining("アンケート「2026年上期 等級1 実績アンケート」"),
     });
     await expect(
       deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorGuideline", id: "bg_a" } }),
@@ -220,7 +232,7 @@ describe("制度設定の項目を完全に消す", () => {
 
   it("等級に出す設定になっている基準セットは消せず、先に外す順番を示す", async () => {
     seedBandSet();
-    sqlite.exec(`INSERT INTO grades (id, company_id, name, behavior_band) VALUES ('g_1', 'cmp_a', '等級５：Manager Ⅰ', 'band_a');`);
+    sqlite.exec(`INSERT INTO grades (id, company_id, name, behavior_band) VALUES ('g_1', 'cmp_a', '等級5-1', 'band_a');`);
 
     await expect(
       deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "behaviorBandSet", id: "bbs_a" } }),
@@ -415,13 +427,17 @@ describe("KPI項目を完全に消す", () => {
   it("アンケートの設問になっている項目は消せない", async () => {
     sqlite.exec(`
       INSERT INTO kpi_items (id, company_id, no, name) VALUES ('ki_form', 'cmp_a', 10, '単価率');
-      INSERT INTO forms (id, company_id, title) VALUES ('f_ki', 'cmp_a', '2026年上期（Chief）');
+      INSERT INTO forms (id, company_id, title) VALUES ('f_ki', 'cmp_a', '2026年上期 営業の振り返り');
       INSERT INTO form_questions (id, company_id, form_id, title, kpi_item_id) VALUES ('fq_ki', 'cmp_a', 'f_ki', '単価率', 'ki_form');
     `);
 
     await expect(
       deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiItem", id: "ki_form" } }),
     ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("完全には消せません") });
+    // 会社が付けた題名は、そのまま理由に出す
+    await expect(
+      deleteMasterItem({ db, companyId: "cmp_a", viewerId: "u_test", body: { kind: "kpiItem", id: "ki_form" } }),
+    ).rejects.toMatchObject({ message: expect.stringContaining("アンケート「2026年上期 営業の振り返り」") });
     expect(rows("SELECT id FROM kpi_items")).toEqual([{ id: "ki_form" }]);
   });
 
@@ -474,8 +490,9 @@ describe("削除の入口（権限と会社の境界）", () => {
     expect(start).toBeGreaterThanOrEqual(0);
     const next = actions.indexOf("export async function", start + 1);
     const branch = actions.slice(start, next < 0 ? undefined : next);
-    // 画面でボタンを隠すだけにしない。入口で役割を確かめる（runAction が apiViewer を呼ぶ）。
-    expect(branch).toContain('role: "COMPANY_ADMIN"');
+    // 画面でボタンを隠すだけにしない。入口で役割を確かめる（runAction が台帳の操作 id で判定する。D-007）。
+    expect(branch).toContain('operation: "masters.deleteItem"');
+    expect(minRoleFor("masters.deleteItem")).toBe("COMPANY_ADMIN");
     // 会社の指定を本文から受け取らない（他社の会社idを送られても効かない）
     expect(branch).toContain("companyId: viewer.companyId");
     expect(branch).not.toContain("body.companyId");

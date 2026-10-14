@@ -7,6 +7,7 @@ import {
   index,
   uniqueIndex,
   check,
+  primaryKey,
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
@@ -98,6 +99,44 @@ export const users = sqliteTable(
     updatedAt: updatedAt(),
   },
   (t) => [index("idx_users_company").on(t.companyId), index("idx_users_manager").on(t.managerId)],
+);
+
+/**
+ * 所属。1人が複数の会社に所属する（S7・D-004）。
+ *
+ * 会社ごとの値（役割・等級・事業所・上司・社員番号・部署・入社日・人物メモ）はこの表が正本。
+ * users の同じ列は「元の所属（有効な所属のうち一番古いもの）」の写しで、アプリは読まない
+ * （書くのは src/lib/memberships.ts だけ。版を戻したときに元の動きになるよう残す）。
+ * 全体管理者は所属を持たない（role に SUPER_ADMIN を置けない）。
+ */
+export const companyMemberships = sqliteTable(
+  "company_memberships",
+  {
+    id: id(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    /** COMPANY_ADMIN | MANAGER | EMPLOYEE（全体管理者は所属を持たない） */
+    role: text("role").$type<"COMPANY_ADMIN" | "MANAGER" | "EMPLOYEE">().notNull().default("EMPLOYEE"),
+    gradeId: text("grade_id"),
+    officeId: text("office_id"),
+    /** 上長。同じ会社に有効な所属がある利用者（アプリで確かめる） */
+    managerId: text("manager_id"),
+    employeeCode: text("employee_code"),
+    department: text("department"),
+    hiredAt: text("hired_at"),
+    profileNote: text("profile_note"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("uq_membership_user_company").on(t.userId, t.companyId),
+    index("idx_membership_company").on(t.companyId),
+    check("ck_membership_role", sql`${t.role} IN ('EMPLOYEE', 'MANAGER', 'COMPANY_ADMIN')`),
+  ],
 );
 
 export const sessions = sqliteTable(
@@ -1239,6 +1278,31 @@ export const constitutionEvents = sqliteTable(
     uniqueIndex("uq_ce_entity_seq").on(t.companyId, t.entityType, t.entityId, t.seq),
     index("idx_ce_company_time").on(t.companyId, t.occurredAt),
   ],
+);
+
+/* ─────────────────────── 移行で書き換えた表示名の記録 ───────────────────────
+ *
+ * 移行 0034 が等級名と、等級名を含む表示名（既定の題名・基準セットの名前・昇格の段階など）を
+ * 一律に書き換えたときの、書き換える前の値。戻すときは drizzle/rollback/0034_grade_names_rollback.sql が
+ * old_value を元の行へ書き戻す。CSV の取り込みは、ここに残る移行前の等級名も受け付ける。
+ *
+ * 1つの行の1つの列につき1行。移行を2回流しても最初の値を上書きしない（INSERT OR IGNORE）。
+ * 戻し方のために残すので消さない。会社を消しても残るよう、会社への外部キーは張らない。
+ */
+export const displayNameRewrites = sqliteTable(
+  "display_name_rewrites",
+  {
+    tableName: text("table_name").notNull(),
+    rowId: text("row_id").notNull(),
+    columnName: text("column_name").notNull(),
+    oldValue: text("old_value").notNull(),
+    newValue: text("new_value").notNull(),
+    companyId: text("company_id"),
+    /** 書き換えた移行の名前（0034_grade_display_names） */
+    migration: text("migration").notNull(),
+    recordedAt: integer("recorded_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.tableName, t.rowId, t.columnName] })],
 );
 
 /* ─────────────────────── 見た目の選択の集計 ───────────────────────

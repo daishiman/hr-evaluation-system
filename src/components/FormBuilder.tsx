@@ -2,7 +2,7 @@
 
 import { useSaveAction } from "@/lib/use-refresh";
 import { saveFormQuestions } from "@/actions/forms";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Badge, Button, Card, CardHead, CardRow, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { NumberField } from "@/components/NumberField";
@@ -10,11 +10,17 @@ import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
 import {
   createBlankQuestion,
   insertBlankQuestionAfter,
+  matchesSavedQuestions,
+  nextOptionValue,
+  optionKeys,
+  reorderByKeys,
   withClientKeys,
   type BuilderQuestion,
   type BuilderQuestionDraft,
 } from "@/components/form-builder-model";
 import { RefreshStatus } from "@/components/RefreshStatus";
+import { ReorderList } from "@/components/reorder/ReorderList";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 export type { BuilderQuestion } from "@/components/form-builder-model";
 
@@ -22,7 +28,9 @@ export type { BuilderQuestion } from "@/components/form-builder-model";
  * アンケートの設問をクリックで組み立てる画面。
  *
  * 設問文を打ち込む以外は、すべてボタンで完結するようにしている
- * （種類を選ぶ・並べ替える・選択肢を足す）。
+ * （種類を選ぶ・並べ替える・選択肢を足す）。並べ替えは共通の ReorderList（つまみの長押し・ドラッグ・
+ * キーボード・矢印のボタン）で、設問と選択肢の両方に使う（S11）。並べ替えは手元の並びだけを変え、
+ * 保存は今までどおり「設問を保存する」でまとめて行う。
  * 集計に使う紐づけ（等級要件・KPI項目）は編集させない。ここを人が触ると
  * 「何の実績としてカウントするか」が分からなくなるため、表示だけにとどめる。
  */
@@ -53,27 +61,61 @@ export function FormBuilder({
   const [error, setError] = useState<string | null>(null);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const nextClientKey = useRef(0);
+  const initialKey = JSON.stringify(initial);
+  const [loadedKey, setLoadedKey] = useState(initialKey);
+  const [dirty, setDirty] = useState(false);
+  const latestInitial = useRef(initial);
+  useLayoutEffect(() => { latestInitial.current = initial; }, [initial]);
+
+  // 未編集の再取得だけを採用する。保存待ちの外部更新も、編集中の入力に上書きしない。
+  if (loadedKey !== initialKey && !dirty) {
+    setRows(withClientKeys(initial));
+    setLoadedKey(initialKey);
+    setDirty(false);
+  }
+  const conflict = dirty && loadedKey !== initialKey;
+
+  const acceptLatest = () => {
+    setRows(withClientKeys(initial));
+    setLoadedKey(initialKey);
+    setDirty(false);
+    setOpenKey(null);
+  };
 
   const newClientKey = () => `new:${nextClientKey.current++}`;
 
-  const patch = (i: number, p: Partial<BuilderQuestion>) =>
+  const patch = (i: number, p: Partial<BuilderQuestion>) => {
+    setDirty(true);
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...p } : r)));
+  };
 
-  const move = (i: number, dir: -1 | 1) =>
-    setRows((prev) => {
-      const next = [...prev];
-      const j = i + dir;
-      if (j < 0 || j >= next.length) return prev;
-      [next[i], next[j]] = [next[j], next[i]];
-      return next;
-    });
+  /* 並べ替えの部品が渡した並びで手元の設問を並べ直す。キーの集まりが食い違えば false（部品は置く前の並びへ戻す） */
+  const reorderQuestions = (keys: string[]) => {
+    const next = reorderByKeys(rows, keys, (r) => r.clientKey);
+    const applied = next.map((r) => r.clientKey).join("\n") === keys.join("\n");
+    if (applied) { setDirty(true); setRows(next); }
+    return applied;
+  };
+
+  /* 選択肢も同じ。値が重なる選択肢があるときは並べ替えない（どれがどれか決められず、保存も重なりで断られる） */
+  const reorderOptions = (i: number, keys: string[]) => {
+    const options = rows[i]?.options ?? [];
+    const current = optionKeys(options);
+    if (current.some((key, oi) => key !== options[oi].value)) return false;
+    const next = reorderByKeys(options, keys, (o) => o.value);
+    const applied = next.map((o) => o.value).join("\n") === keys.join("\n");
+    if (applied) patch(i, { options: next });
+    return applied;
+  };
 
   const remove = (i: number) => {
+    setDirty(true);
     if (rows[i]?.clientKey === openKey) setOpenKey(null);
     setRows((prev) => prev.filter((_, idx) => idx !== i));
   };
 
   const add = (section: string, questionType: string) => {
+    setDirty(true);
     const clientKey = newClientKey();
     setRows((prev) => [...prev, createBlankQuestion(section, questionType, clientKey)]);
     setOpenKey(clientKey);
@@ -82,12 +124,14 @@ export function FormBuilder({
   /* 一覧が長くなるほど、末尾の「設問を足す」まで押しに戻るのが遠くなる。
      いま見ているカードのすぐ下に、同じまとまり・同じ答え方で1問差し込めるようにする。 */
   const addAfter = (i: number) => {
+    setDirty(true);
     const clientKey = newClientKey();
     setRows((prev) => insertBlankQuestionAfter(prev, i, clientKey).rows);
     setOpenKey(clientKey);
   };
 
   const submit = async () => {
+    if (conflict) return;
     const blank = rows.findIndex((r) => !r.title.trim());
     if (blank >= 0) {
       setError(`${blank + 1}問目の設問文が空です。入力してから保存してください。`);
@@ -97,6 +141,7 @@ export function FormBuilder({
     setError(null);
     setMessage(null);
     // 保存の応答には保存後の画面が同梱される（サーバー側の refresh()）
+    const sent = rows;
     const result = await save({
       formId,
       questions: rows.map((r) => ({
@@ -124,6 +169,13 @@ export function FormBuilder({
       setError(result.message);
       return;
     }
+    // useSaveActionは応答の画面が描き終わってから返る。成功と送信内容の一致を確認してから採番IDも採用する。
+    const saved = latestInitial.current;
+    if (matchesSavedQuestions(sent, saved)) {
+      setRows(withClientKeys(saved).map((row, i) => ({ ...row, clientKey: sent[i]?.clientKey ?? row.clientKey })));
+      setLoadedKey(JSON.stringify(saved));
+      setDirty(false);
+    }
     setMessage(result.message);
   };
 
@@ -142,14 +194,34 @@ export function FormBuilder({
   return (
     <fieldset disabled={saving} aria-busy={saving} className="m-0 min-w-0 border-0 p-0">
       {error && <ReasonNote>{error}</ReasonNote>}
+      {conflict && (
+        <div className="mb-3">
+          <ReasonNote>保存済みの設問が変わりました。未保存の入力は残していますが、古い内容で上書きしないよう保存を止めています。</ReasonNote>
+          <ConfirmButton
+            label="最新の設問を読み直す"
+            confirm="未保存の変更を破棄して、最新の保存済み設問を読み直します。よろしいですか？"
+            onConfirm={acceptLatest}
+          />
+        </div>
+      )}
       <RefreshStatus message={message} refreshing={saving} target="画面" className="m-0 mb-3 text-sub text-brand-deep" />
 
-      <div className="grid gap-3">
-        {rows.map((r, i) => {
+      <ReorderList
+        items={rows.map((r) => ({ id: r.clientKey, label: r.title || "（設問文が未入力です）" }))}
+        label="設問の並び"
+        className="reorder-cards"
+        busy={saving}
+        onCommit={reorderQuestions}
+        renderItem={(item, position) => {
+          // position は表示の位置（動かしている最中も追いかける）。手元の設問は clientKey で引く
+          const i = rows.findIndex((row) => row.clientKey === item.id);
+          const r = rows[i];
+          if (!r) return null;
           const open = openKey === r.clientKey;
+          const keys = optionKeys(r.options);
           const title = (
             <>
-              <span className="num mr-2 text-ink-muted">{i + 1}.</span>
+              <span className="num mr-2 text-ink-muted">{position + 1}.</span>
               {r.title || <span className="text-ink-muted">（設問文が未入力です）</span>}
             </>
           );
@@ -162,12 +234,6 @@ export function FormBuilder({
           const actions = (
             <>
               {r.isGate && <Badge tone="alert">昇格の必須要件</Badge>}
-              <Button onClick={() => move(i, -1)} disabled={i === 0} aria-label="1つ上へ">
-                ↑
-              </Button>
-              <Button onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label="1つ下へ">
-                ↓
-              </Button>
               <Button onClick={() => addAfter(i)} aria-label="この下に自由設問を追加">
                 この下に追加
               </Button>
@@ -175,7 +241,7 @@ export function FormBuilder({
             </>
           );
           return (
-          <Card key={r.clientKey} className="card-pad">
+          <Card className="card-pad">
             {/* 頭を固定するのは「編集を開いているカード」だけ。
                 開くと選択肢の並びまで含めて縦に長くなり、下のほうを直しているときに
                 「何問目を・どの答え方で・どの単位で」直しているのかが画面の外へ出てしまう。
@@ -225,7 +291,10 @@ export function FormBuilder({
                   <select
                     className="input mt-1 w-full"
                     value={r.questionType}
-                    onChange={(e) => patch(i, { questionType: e.target.value })}
+                    onChange={(e) => patch(i, {
+                      questionType: e.target.value,
+                      options: ["yesno", "single", "multi", "scale"].includes(e.target.value) ? r.options : [],
+                    })}
                   >
                     {Object.entries(TYPE_LABEL).map(([v, l]) => (
                       <option key={v} value={v}>
@@ -278,32 +347,49 @@ export function FormBuilder({
                   <div className="md:col-span-2">
                     <span className="block text-note text-ink-muted">選択肢</span>
                     <div className="mt-1 grid gap-2">
-                      {r.options.map((o, oi) => (
-                        <div key={oi} className="flex items-center gap-2">
-                          <input
-                            className="input flex-1"
-                            value={o.label}
-                            onChange={(e) =>
-                              patch(i, {
-                                options: r.options.map((x, xi) => (xi === oi ? { ...x, label: e.target.value } : x)),
-                              })
-                            }
-                          />
-                          <Button onClick={() => patch(i, { options: r.options.filter((_, xi) => xi !== oi) })}>
-                            削除
-                          </Button>
-                        </div>
-                      ))}
+                      {keys.some((key, oi) => key !== r.options[oi].value) && (
+                        <p className="footnote m-0">
+                          値が重なっている選択肢があるため、並べ替えられません。重なっている選択肢を削除してください。
+                        </p>
+                      )}
+                      {r.options.length > 0 && (
+                        <ReorderList
+                          items={r.options.map((o, oi) => ({ id: keys[oi], label: o.label || "（未入力の選択肢）" }))}
+                          label={`「${r.title || `${position + 1}問目`}」の選択肢の並び`}
+                          busy={saving}
+                          onCommit={(order) => reorderOptions(i, order)}
+                          renderItem={(option, at) => {
+                            // 文言は打つたびに変わるので、選択肢はキー（値）で引く
+                            const oi = keys.indexOf(option.id);
+                            const o = r.options[oi];
+                            if (!o) return null;
+                            return (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  className="input min-w-0 flex-1"
+                                  aria-label={`${at + 1}番目の選択肢の文言`}
+                                  value={o.label}
+                                  onChange={(e) =>
+                                    patch(i, {
+                                      options: r.options.map((x, xi) => (xi === oi ? { ...x, label: e.target.value } : x)),
+                                    })
+                                  }
+                                />
+                                <Button onClick={() => patch(i, { options: r.options.filter((_, xi) => xi !== oi) })}>
+                                  削除
+                                </Button>
+                              </div>
+                            );
+                          }}
+                        />
+                      )}
                       <div>
                         <Button
-                          onClick={() =>
-                            patch(i, {
-                              options: [
-                                ...r.options,
-                                { value: String(r.options.length + 1), label: `選択肢${r.options.length + 1}` },
-                              ],
-                            })
-                          }
+                          onClick={() => {
+                            // 件数＋1 ではなく今ある値の最大＋1にする（消してから足しても値が重ならない）
+                            const value = nextOptionValue(r.options);
+                            patch(i, { options: [...r.options, { value, label: `選択肢${value}` }] });
+                          }}
                         >
                           選択肢を足す
                         </Button>
@@ -325,8 +411,8 @@ export function FormBuilder({
             )}
           </Card>
           );
-        })}
-      </div>
+        }}
+      />
 
       <div className="mt-4">
         <p className="section-heading m-0 mb-2">設問を足す</p>
@@ -352,7 +438,7 @@ export function FormBuilder({
           </>
         }
       >
-        <Button variant="primary" onClick={() => void submit()} disabled={saving}>
+        <Button variant="primary" onClick={() => submit()} disabled={saving || conflict}>
           {saving ? "保存しています…" : "設問を保存する"}
         </Button>
       </StickyActionBar>
@@ -373,10 +459,15 @@ function QuestionList({ rows }: { rows: BuilderQuestion[] }) {
               {r.title}
             </>
           }
-          sub={
+          sub={SECTION_LABEL[r.section] ?? r.section}
+          /* 答え方と必須かどうかは行の右端へ寄せる。左に詰めると、行の右側がまるごと空く（spec.md §28-9） */
+          value={
             <>
-              {SECTION_LABEL[r.section] ?? r.section} ／ {TYPE_LABEL[r.questionType] ?? r.questionType}
-              {r.unit ? ` ／ 単位 ${r.unit}` : ""} ／ {r.required ? "必須" : "任意"}
+              <p className="m-0 text-sub">
+                {TYPE_LABEL[r.questionType] ?? r.questionType}
+                {r.unit ? `（単位 ${r.unit}）` : ""}
+              </p>
+              <p className="footnote m-0">{r.required ? "必須" : "任意"}</p>
             </>
           }
           marks={r.isGate ? <Badge tone="alert">昇格の必須要件</Badge> : undefined}

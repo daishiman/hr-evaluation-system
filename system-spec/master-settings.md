@@ -71,11 +71,11 @@
 | 昇格要件 | `promotionRequirementCreate` | `promotionRequirementRevise` | `promotionRequirementActivation` | `promotionRequirementRestoreContent` | `promotionRequirementOrder` |
 
 - Createだけが `gradeId` と区分/種類を受け取る。
-- Reviseは `id` と意味フィールド、Activationは `id + isActive`、RestoreContentは `id + sourceVersionId`、Orderは `id + direction` を受け取る。Order の `direction` は `up` / `down` / `top` / `bottom` の4値だけを許す。
+- Reviseは `id` と意味フィールド、Activationは `id + isActive`、RestoreContentは `id + sourceVersionId`、Orderは `ids`（並び全体の id の配列。1〜200件）を受け取る（S11・DD-005）。
 - id指定commandは `gradeId` / `category` / `reqKind` を受け取らない。
 - 一覧は `previousVersionId` を含む全版を返す。画面と削除判定は同じ系譜関数で現行・履歴を分類する。
-- Order は対象idから同じ会社・等級・区分/種類の使用中の現行版を導き、`up` / `down` は隣と交換、`top` / `bottom` は間を詰めて先頭/末尾へ移す。別区分・別種類・過去版を更新しない。
-- 先頭で `up` / `top`、末尾で `down` / `bottom` は `400` とし、DBへ変更を残さない。旧データに重複 `seq` がある場合は同じ並び替え単位を1始まりへ正規化する。
+- Order は先頭の id の保存済み行から会社・等級・区分/種類を導き、同じ範囲の使用中の現行版の集まりと `ids` を照合する。過不足・重複・別区分/別種類・過去版・使用停止中の行が1つでもあれば `409`（再読み込みを促す文言）とし、1行も書かない。知らない id・別会社の id は `404`。
+- 照合が通れば、今の `seq` の集まりを新しい並びへ配り直す（使用停止中の行など並びの外の `seq` と重ならない）。今の `seq` に重複がある旧データだけ1始まりへ振り直す。`seq` の変わった行だけを更新し、行ごとに `reordered` の監査記録（before/after の `seq`、entity は系譜の根）を残す。並びが変わらなければ何も書かず「並び順は変わっていません。」を返す。
 
 ### 5-3. フォーム・評価・stale境界
 

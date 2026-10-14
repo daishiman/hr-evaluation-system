@@ -4,7 +4,7 @@ import { schema as s } from "@/lib/db";
 import type { Viewer } from "@/lib/session";
 import { FORBIDDEN_MESSAGE } from "@/test-support/action-mocks";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
  * 評価の代表経路を、入口（サーバーアクション）から保管場所まで通しで確かめる。
@@ -39,7 +39,11 @@ import { buildEvaluations, updateEvaluation } from "@/actions/evaluations";
 
 let t: TestDatabase;
 
-function as(role: Viewer["role"], id: string, opts: { companyId?: string; gradeId?: string | null } = {}): Viewer {
+function as(
+  role: Viewer["role"],
+  id: string,
+  opts: { companyId?: string; gradeId?: string | null; officeId?: string | null } = {},
+): Viewer {
   return {
     id,
     name: "操作する人",
@@ -47,6 +51,8 @@ function as(role: Viewer["role"], id: string, opts: { companyId?: string; gradeI
     role,
     companyId: opts.companyId ?? IDS.company,
     gradeId: opts.gradeId ?? null,
+    // いまの会社での所属の事業所（本物の Viewer は所属から入れる）
+    officeId: opts.officeId ?? null,
     managerId: null,
     department: null,
     employeeCode: null,
@@ -56,7 +62,7 @@ function as(role: Viewer["role"], id: string, opts: { companyId?: string; gradeI
   } as Viewer;
 }
 
-const EMPLOYEE = as("EMPLOYEE", IDS.employee, { gradeId: IDS.gradeFrom });
+const EMPLOYEE = as("EMPLOYEE", IDS.employee, { gradeId: IDS.gradeFrom, officeId: IDS.office });
 const MANAGER = as("MANAGER", IDS.evaluator, { gradeId: IDS.gradeTo });
 
 /** 回答の対象になる設問（等級要件2問・受講報告・KPI 3問・行動指針1問。すべて必須）。 */
@@ -110,6 +116,7 @@ async function evaluationOf(employeeId: string) {
 beforeEach(async () => {
   t = createTestDatabase();
   await seedCompany(t);
+  seedMemberships(t);
   await seedQuestions();
   await t.db.insert(s.companies).values({ id: OTHER_COMPANY, name: "よその会社", slug: "other" });
   mocked.getDb.mockReset();
@@ -128,6 +135,12 @@ describe("本人の提出 → 上長の集計 → 確定（代表経路）", () 
     const draft = await saveResponse({ formId: IDS.form, status: "draft", answers: FULL_ANSWERS.slice(0, 2) });
     expect(draft).toMatchObject({ ok: true, message: "入力内容を保存しました。", status: "draft" });
     expect(await responses()).toEqual([expect.objectContaining({ status: "draft" })]);
+    // 回答時点の事業所（いまの会社での所属の事業所）を回答に写し取る
+    const copied = await t.db
+      .select({ officeId: s.formResponses.officeId })
+      .from(s.formResponses)
+      .where(eq(s.formResponses.employeeId, IDS.employee));
+    expect(copied).toEqual([{ officeId: IDS.office }]);
     expect(mocked.refresh).toHaveBeenCalledTimes(1);
 
     const submitted = await saveResponse({ formId: IDS.form, status: "submitted", answers: FULL_ANSWERS });

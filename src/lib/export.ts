@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDb, schema as s } from "@/lib/db";
 import { formatDateTime, formatPercent, toCsv } from "@/lib/csv";
+import { joinMembership } from "@/lib/memberships";
 
 /**
  * これまでスプレッドシートで見ていた3種類の表を、そのままの列でCSVに書き出す。
@@ -11,7 +12,13 @@ import { formatDateTime, formatPercent, toCsv } from "@/lib/csv";
  *
  * 列の並びと見出しは現行のスプレッドシートに合わせてある。
  * 乗り換えたあとも、これまでと同じ形で保存・共有できるようにするため。
+ *
+ * 社員番号・役割・等級・事業所・部署・上長・入社日は、その会社の所属（company_memberships）から読む。
+ * 1人が複数の会社に所属するので、users の同じ列（元の所属の写し）は読まない（src/lib/memberships.ts）。
  */
+
+/** 会社ごとの値の正本 */
+const mem = s.companyMemberships;
 
 export type CsvFile = { filename: string; csv: string };
 
@@ -49,11 +56,12 @@ export async function buildResponsesCsv(companyId: string, formId: string): Prom
       status: s.formResponses.status,
       importSource: s.formResponses.importSource,
       employeeName: s.users.name,
-      employeeCode: s.users.employeeCode,
+      employeeCode: mem.employeeCode,
       officeName: s.offices.name,
     })
     .from(s.formResponses)
     .leftJoin(s.users, eq(s.users.id, s.formResponses.employeeId))
+    .leftJoin(mem, joinMembership(s.formResponses.companyId))
     .leftJoin(s.offices, eq(s.offices.id, s.formResponses.officeId))
     .where(and(eq(s.formResponses.companyId, companyId), eq(s.formResponses.formId, formId)))
     .orderBy(asc(s.formResponses.submittedAt));
@@ -109,7 +117,7 @@ export async function buildResultsCsv(companyId: string, cycleId: string, origin
       computedAt: s.evaluations.computedAt,
       finalizedAt: s.evaluations.finalizedAt,
       employeeName: s.users.name,
-      employeeCode: s.users.employeeCode,
+      employeeCode: mem.employeeCode,
       email: s.users.email,
       gradeName: s.grades.name,
       gradeOrder: s.grades.displayOrder,
@@ -129,6 +137,7 @@ export async function buildResultsCsv(companyId: string, cycleId: string, origin
     })
     .from(s.evaluations)
     .leftJoin(s.users, eq(s.users.id, s.evaluations.employeeId))
+    .leftJoin(mem, joinMembership(s.evaluations.companyId))
     .leftJoin(s.grades, eq(s.grades.id, s.evaluations.gradeId))
     .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.evaluations.cycleId))
     .where(and(eq(s.evaluations.companyId, companyId), eq(s.evaluations.cycleId, cycleId)))
@@ -289,20 +298,20 @@ export async function buildMembersCsv(companyId: string): Promise<CsvFile> {
       id: s.users.id,
       name: s.users.name,
       email: s.users.email,
-      employeeCode: s.users.employeeCode,
-      role: s.users.role,
+      employeeCode: mem.employeeCode,
+      role: mem.role,
       gradeName: s.grades.name,
       gradeOrder: s.grades.displayOrder,
       officeName: s.offices.name,
-      department: s.users.department,
-      managerId: s.users.managerId,
-      hiredAt: s.users.hiredAt,
+      department: mem.department,
+      managerId: mem.managerId,
+      hiredAt: mem.hiredAt,
       isActive: s.users.isActive,
     })
     .from(s.users)
-    .leftJoin(s.grades, eq(s.grades.id, s.users.gradeId))
-    .leftJoin(s.offices, eq(s.offices.id, s.users.officeId))
-    .where(eq(s.users.companyId, companyId))
+    .innerJoin(mem, joinMembership(companyId))
+    .leftJoin(s.grades, and(eq(s.grades.id, mem.gradeId), eq(s.grades.companyId, mem.companyId)))
+    .leftJoin(s.offices, and(eq(s.offices.id, mem.officeId), eq(s.offices.companyId, mem.companyId)))
     .orderBy(asc(s.grades.displayOrder), asc(s.users.name));
 
   const nameById = new Map(rows.map((r) => [r.id, r.name]));

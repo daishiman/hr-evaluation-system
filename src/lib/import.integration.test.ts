@@ -9,7 +9,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import * as s from "@/db/schema";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 let current: TestDatabase;
 
@@ -33,6 +33,7 @@ afterEach(() => {
 /** 「件数」（0以上・整数だけ）と「達成率」（0〜1000・小数あり）の2問を用意する */
 async function seedTwoQuestions() {
   await seedCompany(current);
+  seedMemberships(current);
   await current.db.insert(s.formQuestions).values([
     {
       id: "fq_count", companyId: IDS.company, formId: IDS.form, section: "kpi",
@@ -144,6 +145,8 @@ describe("受け付けられない値を実際に流したとき、何が保存�
       id: "usr_emp_2", name: "本人2", email: "emp2@example.com", companyId: IDS.company,
       role: "EMPLOYEE", gradeId: IDS.gradeFrom, officeId: IDS.office,
     });
+    // 取り込みはこの会社の所属で人を探すので、足した人にも所属を作る
+    seedMemberships(current);
     await importResponsesCsv(IDS.company, IDS.form, csv("10"));
     current.raw.exec(`CREATE TRIGGER fail_second_csv_answer BEFORE INSERT ON form_answers
       WHEN NEW.response_id IN (SELECT id FROM form_responses WHERE employee_id = 'usr_emp_2')
@@ -179,6 +182,7 @@ describe("受け付けられない値を実際に流したとき、何が保存�
 describe("社員CSVの部分更新", () => {
   it("上長列が無いCSVでは、既存の上長を変更しない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await importMembersCsv(
       IDS.company,
       ["氏名,メールアドレス,所属", "本人,emp@example.com,新しい部署"].join("\n"),
@@ -190,6 +194,7 @@ describe("社員CSVの部分更新", () => {
 
   it("上長列があり値が空なら、明示的な解除として扱う", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await importMembersCsv(
       IDS.company,
       ["氏名,メールアドレス,上長", "本人,emp@example.com,"].join("\n"),
@@ -200,6 +205,7 @@ describe("社員CSVの部分更新", () => {
 
   it("CSV内の変更で上長関係が循環する場合は保存しない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     const out = await importMembersCsv(
       IDS.company,
       ["氏名,メールアドレス,上長", "上長,mgr@example.com,本人"].join("\n"),
@@ -217,6 +223,7 @@ describe("社員CSVの部分更新", () => {
 
   it("1行でも不正なら、正しい行を含むファイル全体を保存しない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await expect(importMembersCsv(
       IDS.company,
       ["氏名,メールアドレス,所属,等級", "本人,emp@example.com,変更後,Regular", "新規,new@example.com,新規部署,存在しない等級"].join("\n"),
@@ -228,6 +235,7 @@ describe("社員CSVの部分更新", () => {
 
   it("2人目のDB更新に失敗したら、1人目の変更もrollbackする", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     current.raw.exec(`CREATE TRIGGER fail_second_member_update BEFORE UPDATE ON users
       WHEN NEW.id = '${IDS.evaluator}'
       BEGIN SELECT RAISE(ABORT, 'forced member failure'); END;`);
@@ -243,6 +251,7 @@ describe("社員CSVの部分更新", () => {
 
   it("成功時は復元用の変更前snapshotを同じbatchで残す", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await importMembersCsv(
       IDS.company,
       ["氏名,メールアドレス,所属", "本人,emp@example.com,変更後"].join("\n"),
@@ -253,5 +262,79 @@ describe("社員CSVの部分更新", () => {
     expect(event.actorId).toBe(IDS.evaluator);
     expect(event.beforeJson).toContain("emp@example.com");
     expect(event.sourceHash).toHaveLength(64);
+  });
+});
+
+describe("社員CSVの等級（移行 0034 で書き換える前の名前）", () => {
+  it("前の等級名でも同じ等級に結び、今の名前と重なるときは今の名前の等級を選ぶ", async () => {
+    await seedCompany(current);
+    seedMemberships(current);
+    await current.db.update(s.grades).set({ name: "等級2" }).where(eq(s.grades.id, IDS.gradeFrom));
+    await current.db.update(s.grades).set({ name: "等級3" }).where(eq(s.grades.id, IDS.gradeTo));
+    // 移行のあとに、会社が前の名前「一般職」で新しい等級を作った
+    await current.db.insert(s.grades).values([
+      { id: "grd_beginner", companyId: IDS.company, code: "beginner", name: "等級1", pointGroup: "Beginner", displayOrder: 1, targetCap: 5 },
+      { id: "grd_new", companyId: IDS.company, code: "ippan", name: "一般職", pointGroup: "Beginner", displayOrder: 9, targetCap: 5 },
+    ]);
+    const rewrite = {
+      tableName: "grades",
+      columnName: "name",
+      companyId: IDS.company,
+      migration: "0034_grade_display_names",
+      recordedAt: new Date(),
+    };
+    await current.db.insert(s.displayNameRewrites).values([
+      { ...rewrite, rowId: IDS.gradeFrom, oldValue: "等級２：Regular", newValue: "等級2" },
+      { ...rewrite, rowId: IDS.gradeTo, oldValue: "等級３：Chief", newValue: "等級3" },
+      { ...rewrite, rowId: "grd_beginner", oldValue: "一般職", newValue: "等級1" },
+    ]);
+
+    const out = await importMembersCsv(
+      IDS.company,
+      ["氏名,メールアドレス,等級", "本人,emp@example.com,等級３：Chief", "上長,mgr@example.com,一般職"].join("\n"),
+    );
+
+    expect(out.failed).toBe(0);
+    const [employee] = await current.db.select().from(s.users).where(eq(s.users.id, IDS.employee));
+    const [manager] = await current.db.select().from(s.users).where(eq(s.users.id, IDS.evaluator));
+    expect(employee.gradeId).toBe(IDS.gradeTo);
+    expect(manager.gradeId).toBe("grd_new");
+  });
+});
+
+describe("回答CSVの設問（移行 0035 で直す前の設問名）", () => {
+  it("前の設問名の列も同じ設問に結び、今の設問名と重なるときは今の名前の設問を選ぶ", async () => {
+    await seedTwoQuestions();
+    await current.db.insert(s.formQuestions).values({
+      id: "fq_training", companyId: IDS.company, formId: IDS.form, section: "gate",
+      questionType: "number", title: "スキルアップ研修（等級3以上）", displayOrder: 3, unit: "回",
+      validationMin: 0, validationMax: null, validationInteger: true,
+    });
+    const rewrite = {
+      tableName: "form_questions",
+      columnName: "title",
+      companyId: IDS.company,
+      migration: "0035_migration_corrections",
+      recordedAt: new Date(),
+    };
+    await current.db.insert(s.displayNameRewrites).values([
+      { ...rewrite, rowId: "fq_training", oldValue: "スキルアップ研修（チーフ以上）", newValue: "スキルアップ研修（等級3以上）" },
+      // 前の名前が、今ある別の設問の名前と同じ（今の名前の設問を選ぶ）
+      { ...rewrite, rowId: "fq_rate", oldValue: "件数", newValue: "達成率" },
+      // このアンケートに無い設問の記録（結ばない）
+      { ...rewrite, rowId: "fq_other_form", oldValue: "別のアンケートの設問", newValue: "直したあとの設問" },
+    ]);
+
+    const out = await importResponsesCsv(
+      IDS.company,
+      IDS.form,
+      ["氏名,件数,スキルアップ研修（チーフ以上）,別のアンケートの設問", "本人,7,2,9"].join("\n"),
+    );
+
+    expect(out.imported).toBe(1);
+    expect(out.unmatchedHeaders).toEqual(["別のアンケートの設問"]);
+    const answers = await current.db.select().from(s.formAnswers);
+    const byQuestion = Object.fromEntries(answers.map((a) => [a.questionId, a.valueNumber]));
+    expect(byQuestion).toEqual({ fq_count: 7, fq_training: 2 });
   });
 });

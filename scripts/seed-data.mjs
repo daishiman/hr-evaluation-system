@@ -23,14 +23,18 @@ const behaviors = read("behavior-guidelines.json");
 /** 移行前の配点表の列（等級区分ごとに配点が違う）。 */
 const POINT_GROUPS = ["Beginner", "Regular", "Chief", "AM", "Manager"];
 
+/** 空文字をそのまま入れる印。q は元シートの空欄を NULL にするので、NOT NULL の列の「既定」（''）はこれで書く。 */
+const BLANK = Symbol("blank");
+
 /**
  * 行動指針の基準セットの初期値。会社が画面から追加・複製・改名できる。
- * 呼び名は等級名（Beginner / Regular / Chief / AM）にそろえる。
+ * 名前は空（BLANK）で入れ、画面では割り当てた等級の名前から「等級1・等級2向け」の形で作る
+ * （src/lib/domain/grade-label.ts の bandSetLabel）。等級名を変えても呼び名が古くならない。
  * src/lib/domain/behavior.ts の DEFAULT_BAND_SETS と同じ内容にしておく。
  */
 const BEHAVIOR_BAND_SETS = [
-  { code: "g1_2", name: "Beginner・Regular向け" },
-  { code: "g3_4", name: "Chief・AM向け" },
+  { code: "g1_2", name: BLANK },
+  { code: "g3_4", name: BLANK },
 ];
 
 export const CATEGORIES = [
@@ -99,10 +103,11 @@ const targetsPointGroup = (targetGrades, group) => {
 /* ───────────────── 補助 ───────────────── */
 
 const q = (v) => {
+  if (v === BLANK) return "''";
   if (v === null || v === undefined || v === "" || v === "-" || v === "－") return "NULL";
   if (typeof v === "number") return Number.isFinite(v) ? String(v) : "NULL";
   if (typeof v === "boolean") return v ? "1" : "0";
-  return `'${String(v).replace(/'/g, "''")}'`;
+  return `'${String(v).replaceAll("'", "''")}'`;
 };
 const num = (v) => {
   if (v === null || v === undefined || v === "" || v === "-" || v === "－") return null;
@@ -472,12 +477,12 @@ export async function buildSeed(options = {}) {
 
     /* 昇格に必要な点数（アンケートには絶対に出さない値） */
     [
-      { from: "beginner", to: "regular", label: "B→R", behavior: 10 },
-      { from: "regular", to: "chief", label: "R→C", behavior: 8 },
-      { from: "chief", to: "am1", label: "C→AM", behavior: 12 },
-      { from: "am1", to: "am2", label: "AMⅠ→AMⅡ", behavior: 12 },
-      { from: "am2", to: "manager1", label: "AM→M", behavior: 12 },
-      { from: "manager1", to: "manager2", label: "MⅠ→MⅡ", behavior: 12 },
+      { from: "beginner", to: "regular", label: "等級1→等級2", behavior: 10 },
+      { from: "regular", to: "chief", label: "等級2→等級3", behavior: 8 },
+      { from: "chief", to: "am1", label: "等級3→等級4-1", behavior: 12 },
+      { from: "am1", to: "am2", label: "等級4-1→等級4-2", behavior: 12 },
+      { from: "am2", to: "manager1", label: "等級4-2→等級5-1", behavior: 12 },
+      { from: "manager1", to: "manager2", label: "等級5-1→等級5-2", behavior: 12 },
     ].forEach((t, i) => {
       promotionThresholds.push({
         id: `pth_${co.key}_${i}`, company_id: cid, from_grade_id: gid(t.from), to_grade_id: gid(t.to),
@@ -589,7 +594,7 @@ export async function buildSeed(options = {}) {
         minor_slot_points: r.minorSlotPoints, minor_slot_count: r.minorSlotCount,
         note: r.majorSlotCount > 0
           ? "固定枠（等級要件達成率）＋金銭系の20点枠1つ＋10点枠で100点。"
-          : "固定枠（等級要件達成率）＋10点枠で100点。20点枠はChief以上のみ。",
+          : "固定枠（等級要件達成率）＋10点枠で100点。20点枠は等級3以上のみ。",
         created_at: NOW, updated_at: MASTER_AT,
       });
     });
@@ -730,7 +735,8 @@ export async function buildSeed(options = {}) {
         const formId = `frm_${co.key}_${cy.key}_${g.code}`;
         forms.push({
           id: formId, company_id: cid, grade_id: gid(g.code), cycle_id: cycleId,
-          title: `${cy.name} ${g.name} 実績アンケート`,
+          // 空の題名は「既定の題名」。画面では formDisplayTitle が評価期間と等級名から作る
+          title: BLANK,
           description: "半期の実績を入力してください。点数や評価基準はこの画面には表示されません。",
           version: 1, status: cy.status === "open" ? "published" : "closed",
           public_token: `${co.key}-${cy.key}-${g.code}`,
@@ -1026,12 +1032,35 @@ export async function buildSeed(options = {}) {
     });
   }
 
+  /* 所属（S7・D-004）。会社ごとの値の正本で、本番では移行 0033 が users から写す。
+     seed も同じ規則で作る（id は 'mem_' || 利用者の id、全体管理者は所属を持たない）。 */
+  const memberships = users
+    .filter((u) => u.company_id && u.role !== "SUPER_ADMIN")
+    .map((u) => ({
+      id: `mem_${u.id}`, user_id: u.id, company_id: u.company_id, role: u.role, grade_id: u.grade_id,
+      office_id: u.office_id, manager_id: u.manager_id, employee_code: u.employee_code, department: u.department,
+      hired_at: u.hired_at, profile_note: u.profile_note, created_at: u.created_at, updated_at: u.updated_at,
+    }));
+  /* 複数所属の見本。給付事業のマネージャーが、さくら福祉会では一般の社員として兼務する。
+     役割・等級・上長が会社ごとに違うことと、会社の切り替えを画面で確かめられる。
+     users の会社の列は元の所属（給付事業）のまま。両社がそろうときだけ作る（サンプルデータには入れない） */
+  const keys = new Set(companyList.map((co) => co.key));
+  if (keys.has("kyufu") && keys.has("sakura") && employeeList.length > 0) {
+    memberships.push({
+      id: "mem_usr_kyufu_mgr_sakura", user_id: "usr_kyufu_mgr", company_id: "cmp_sakura", role: "EMPLOYEE",
+      grade_id: "grd_sakura_chief", office_id: "off_sakura_office1", manager_id: "usr_sakura_mgr",
+      employee_code: "EMP-901", department: "第1事業所", hired_at: "2024-10-01",
+      profile_note: "給付事業のマネージャーと兼務（見本）。", created_at: NOW, updated_at: NOW,
+    });
+  }
+
   /* 親→子の順に並べる（外部キーの向き）。
      消すときはこの逆順をたどればよいので、投入と削除の一覧を1か所にまとめている。 */
   const tableRows = [
     ["companies", companies],
     ["offices", offices],
     ["users", users],
+    ["company_memberships", memberships],
     ["accounts", accounts],
     ["grades", grades],
     ["grade_requirements", gradeRequirements],
@@ -1073,7 +1102,7 @@ export async function buildSeed(options = {}) {
     sql,
     tableRows,
     counts: {
-      会社: companies.length, 事業所: offices.length, 利用者: users.length, 等級: grades.length,
+      会社: companies.length, 事業所: offices.length, 利用者: users.length, 所属: memberships.length, 等級: grades.length,
       昇給ルール: raisePolicies.length, 判定パターン: raisePatterns.length, 昇給の特例: raiseExceptions.length,
       昇給額: raiseSettings.length,
       等級要件: gradeRequirements.length, 昇格要件: promotionRequirements.length,

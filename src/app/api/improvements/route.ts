@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { getDb } from "@/lib/db";
-import { apiViewer } from "@/lib/session";
-import { API_CACHE_CONTROL, handle, SMALL_JSON_MAX_BYTES } from "@/lib/api";
+import { API_CACHE_CONTROL, apiViewerFor, handle, SMALL_JSON_MAX_BYTES } from "@/lib/api";
 import { IMPROVEMENT_REQUEST_MAX_BYTES, improvementStatusLabel } from "@/lib/domain/improvement";
 import { improvementKindLabel } from "@/lib/domain/improvement-instruction";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
@@ -40,7 +39,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   return handle(async () => {
-    const viewer = await apiViewer("EMPLOYEE");
+    const viewer = await apiViewerFor("improvements.submit");
     const reporter = reporterOf(viewer);
     const input = improvementSubmitSchema.parse(await readJsonBodyWithinLimit(req, IMPROVEMENT_REQUEST_MAX_BYTES));
     return submitImprovement(reporter, input, req.headers.get("user-agent"));

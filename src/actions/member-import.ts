@@ -25,7 +25,7 @@ const inputSchema = z.object({
 /** 保存せず、取り込むとどうなるかだけを返す。 */
 export async function previewMembersImport(raw: unknown) {
   return runRead(
-    { role: "COMPANY_ADMIN", input: inputSchema, maxBytes: IMPORT_MAX_BYTES, tooLargeMessage: IMPORT_TOO_LARGE_MESSAGE },
+    { operation: "members.import", input: inputSchema, maxBytes: IMPORT_MAX_BYTES, tooLargeMessage: IMPORT_TOO_LARGE_MESSAGE },
     raw,
     async ({ viewer, input }) => {
       const result = await importMembersCsv(requireTargetCompany(viewer, input.companyId), input.csv, {
@@ -46,7 +46,7 @@ export async function previewMembersImport(raw: unknown) {
 /** 取り込んで保存する。新しく作った方の仮パスワードは、暗号化した控えも残す。 */
 export async function importMembers(raw: unknown) {
   return runAction(
-    { role: "COMPANY_ADMIN", input: inputSchema, maxBytes: IMPORT_MAX_BYTES, tooLargeMessage: IMPORT_TOO_LARGE_MESSAGE },
+    { operation: "members.import", input: inputSchema, maxBytes: IMPORT_MAX_BYTES, tooLargeMessage: IMPORT_TOO_LARGE_MESSAGE },
     raw,
     async ({ viewer, input }) => {
       const result = await importMembersCsv(requireTargetCompany(viewer, input.companyId), input.csv, {

@@ -27,7 +27,7 @@ export function CompanyScopeSwitcher({
   companies: { id: string; name: string }[];
   currentId: string | null;
 }) {
-  const { save, saving } = useSaveAction(switchCompanyScope, { resource: "company-scope" });
+  const { save, saving } = useSaveAction(switchCompanyScope, { resource: "company-scope", scoped: false });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 

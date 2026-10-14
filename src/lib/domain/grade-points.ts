@@ -59,27 +59,30 @@ export function slotKindOf(sel: { isFixedSlot: boolean; isMajorSlot?: boolean })
  * 評価セットの内容ではなく、マスタ（grade_point_rules）側の検算。
  * 固定枠 + 20点枠×数 + 10点枠×数 が満点ちょうどにならない行が入ると、
  * どんな選び方をしても保存できない状態になるため、シードや移行の時点で気づけるようにする。
+ *
+ * group は指摘に出す区分の呼び名（grade-label.ts の pointGroupLabel で作る「等級4-1・等級4-2」）。
+ * 区分の値（Beginner など）は照合の鍵なので、指摘の文には出さない。
  */
-export function checkGradePointRule(rule: GradePointRule): string[] {
+export function checkGradePointRule(rule: GradePointRule, group = "この等級区分"): string[] {
   const errors: string[] = [];
   const sum =
     rule.fixedSlotPoints + rule.majorSlotPoints * rule.majorSlotCount + rule.minorSlotPoints * rule.minorSlotCount;
   if (sum !== rule.totalPoints) {
     errors.push(
-      `${rule.pointGroup} の配点の型が合いません。固定枠${rule.fixedSlotPoints}点 + ${rule.majorSlotPoints}点枠×${rule.majorSlotCount} + ${rule.minorSlotPoints}点枠×${rule.minorSlotCount} ＝ ${sum}点で、満点${rule.totalPoints}点になりません。`,
+      `${group}の配点の型が合いません。固定枠${rule.fixedSlotPoints}点 + ${rule.majorSlotPoints}点枠×${rule.majorSlotCount} + ${rule.minorSlotPoints}点枠×${rule.minorSlotCount} ＝ ${sum}点で、満点${rule.totalPoints}点になりません。`,
     );
   }
   if (rule.fixedSlotPoints <= 0) {
-    errors.push(`${rule.pointGroup} の固定枠（等級要件達成率）の配点が0点以下です。`);
+    errors.push(`${group}の固定枠（等級要件達成率）の配点が0点以下です。`);
   }
   if (rule.majorSlotCount < 0 || rule.minorSlotCount < 0) {
-    errors.push(`${rule.pointGroup} の枠数が負の数になっています。`);
+    errors.push(`${group}の枠数が負の数になっています。`);
   }
   if (rule.majorSlotCount > 0 && rule.majorSlotPoints <= 0) {
-    errors.push(`${rule.pointGroup} は20点枠を持つのに、その配点が0点以下です。`);
+    errors.push(`${group}は20点枠を持つのに、その配点が0点以下です。`);
   }
   if (rule.minorSlotCount > 0 && rule.minorSlotPoints <= 0) {
-    errors.push(`${rule.pointGroup} は10点枠を持つのに、その配点が0点以下です。`);
+    errors.push(`${group}は10点枠を持つのに、その配点が0点以下です。`);
   }
   return errors;
 }

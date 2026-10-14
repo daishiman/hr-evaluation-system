@@ -4,7 +4,7 @@ import { schema as s } from "@/lib/db";
 import type { Viewer } from "@/lib/session";
 import { _resetRateLimitStoreForTest } from "@/lib/rate-limit";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
  * 初期パスワードの控えが「生まれてから消えるまで」。
@@ -115,6 +115,8 @@ beforeEach(async () => {
     { id: "usr_other_emp", name: "他社の人", email: "oe@example.com", companyId: OTHER_COMPANY, role: "EMPLOYEE" },
     { id: "usr_super", name: "システム管理者", email: "super@example.com", companyId: OTHER_COMPANY, role: "SUPER_ADMIN" },
   ]);
+  // 利用者を入れ終えたところで、users の会社の列から所属を作る（本番の移行 0033 と同じ写し）
+  seedMemberships(t);
   await t.db.update(s.users).set({ mustChangePassword: true }).where(eq(s.users.id, IDS.employee));
 
   mocked.getDb.mockReset();

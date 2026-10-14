@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import * as s from "@/db/schema";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 import { improvementRequestId, saveImprovementRequest } from "@/lib/improvement-write";
 
 let current: TestDatabase;
@@ -10,6 +10,7 @@ let current: TestDatabase;
 beforeEach(async () => {
   current = createTestDatabase();
   await seedCompany(current);
+  seedMemberships(current);
 });
 
 afterEach(() => current.close());

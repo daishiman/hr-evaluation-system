@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useLayoutEffect, useState, useTransition } from "react";
-import type { ActionResult, SaveAction } from "@/lib/action-result";
+import { type ActionResult, type SaveAction, withScope } from "@/lib/action-result";
+import { useCompanyScope } from "@/lib/company-scope-context";
 import { announceChange, type FreshnessResource } from "@/lib/freshness";
 import { recordActionCall } from "@/lib/usage-client";
 
@@ -54,9 +55,16 @@ export function failureMessageOf(e: unknown): string {
  */
 export function useSaveAction<I, T extends object>(
   action: SaveAction<I, T>,
-  options: { resource: FreshnessResource },
+  options: {
+    resource: FreshnessResource;
+    /**
+     * 画面を描いた会社（`__scope`）を添えるか。既定は添える（古いタブからの書き込みを止めるため）。
+     * 会社そのものを切り替える操作だけは添えない（古いタブからでも切り替えられるように）。
+     */
+    scoped?: boolean;
+  },
 ): { save: (input: I) => Promise<ActionResult<T>>; saving: boolean } {
-  const { call, pending } = useActionCall(action, options.resource, true);
+  const { call, pending } = useActionCall(action, options.resource, true, options.scoped ?? true);
   return { save: call, saving: pending };
 }
 
@@ -71,7 +79,7 @@ export function useReadAction<I, T extends object>(
   action: SaveAction<I, T>,
   options: { resource: FreshnessResource },
 ): { read: (input: I) => Promise<ActionResult<T>>; reading: boolean } {
-  const { call, pending } = useActionCall(action, options.resource, false);
+  const { call, pending } = useActionCall(action, options.resource, false, true);
   return { read: call, reading: pending };
 }
 
@@ -111,8 +119,14 @@ export function createCommitGate() {
   };
 }
 
-function useActionCall<I, T extends object>(action: SaveAction<I, T>, resource: FreshnessResource, announce: boolean) {
+function useActionCall<I, T extends object>(
+  action: SaveAction<I, T>,
+  resource: FreshnessResource,
+  announce: boolean,
+  scoped: boolean,
+) {
   const [pending, startTransition] = useTransition();
+  const scope = useCompanyScope();
   const [gate] = useState(createCommitGate);
   /** 「描き終わり」の印。応答の新しい画面と同じ transition で進める */
   const [settled, setSettled] = useState(0);
@@ -133,7 +147,7 @@ function useActionCall<I, T extends object>(action: SaveAction<I, T>, resource: 
           const started = performance.now();
           let result: ActionResult<T>;
           try {
-            result = await action(input);
+            result = await action(scoped ? withScope(input, scope) : input);
           } catch (e) {
             result = { ok: false, message: failureMessageOf(e) };
           }
@@ -144,7 +158,7 @@ function useActionCall<I, T extends object>(action: SaveAction<I, T>, resource: 
           startTransition(() => setSettled((n) => n + 1));
         });
       }),
-    [action, resource, announce, gate],
+    [action, resource, announce, gate, scoped, scope],
   );
 
   return { call, pending };

@@ -1,7 +1,7 @@
 [
  {
   "code": "beginner",
-  "name": "等級１：Beginner",
+  "name": "等級1",
   "pointGroup": "Beginner",
   "targetCap": 5,
   "autonomy": "自律度Level：補助",
@@ -11,7 +11,7 @@
  },
  {
   "code": "regular",
-  "name": "等級２：Regular",
+  "name": "等級2",
   "pointGroup": "Regular",
   "targetCap": 5,
   "autonomy": "自律度Level：遂行",
@@ -21,7 +21,7 @@
  },
  {
   "code": "chief",
-  "name": "等級３：Chief",
+  "name": "等級3",
   "pointGroup": "Chief",
   "targetCap": 5,
   "autonomy": "自律度Level：指示",
@@ -31,7 +31,7 @@
  },
  {
   "code": "am1",
-  "name": "等級４：AM Ⅰ",
+  "name": "等級4-1",
   "pointGroup": "AM",
   "targetCap": 3,
   "autonomy": null,
@@ -41,7 +41,7 @@
  },
  {
   "code": "am2",
-  "name": "等級４：AM Ⅱ",
+  "name": "等級4-2",
   "pointGroup": "AM",
   "targetCap": 2,
   "autonomy": null,
@@ -51,7 +51,7 @@
  },
  {
   "code": "manager1",
-  "name": "等級５：Manager Ⅰ",
+  "name": "等級5-1",
   "pointGroup": "Manager",
   "targetCap": 2,
   "autonomy": null,
@@ -61,7 +61,7 @@
  },
  {
   "code": "manager2",
-  "name": "等級５：Manager Ⅱ",
+  "name": "等級5-2",
   "pointGroup": "Manager",
   "targetCap": 2,
   "autonomy": null,

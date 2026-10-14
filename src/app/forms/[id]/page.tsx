@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { canEditForm, canSeeCriteria, requireViewer } from "@/lib/session";
+import { canEditForm, canSeeCriteria, requireRoute } from "@/lib/session";
 import { getForm, listFormQuestions } from "@/lib/queries";
+import { formRowTitle } from "@/lib/domain/grade-label";
 import { toContentQuestions } from "@/lib/domain/form-visibility";
 import { canAnswerForm } from "@/lib/domain/form-entry";
 import { judgeFormDeadline } from "@/lib/domain/form-deadline";
@@ -21,7 +22,7 @@ export const dynamic = "force-dynamic";
  * 自社のものしか開けない。
  */
 export default async function FormContentDetail({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await requireViewer();
+  const viewer = await requireRoute("/forms/[id]");
   const { id } = await params;
   if (!viewer.companyId) notFound();
 
@@ -51,7 +52,7 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
       <PageTitle
         sticky
         breadcrumb={[{ label: "アンケートの中身", href: `/forms?cycle=${form.cycleId}` }]}
-        title={form.title}
+        title={formRowTitle(form)}
         lede={`${form.cycleName ?? ""} ／ 対象：${form.gradeName ?? "—"} ／ 第${form.version}版`}
         tags={
           <>

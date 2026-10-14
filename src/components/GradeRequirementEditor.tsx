@@ -17,6 +17,7 @@ import {
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
+import { ReorderList } from "@/components/reorder/ReorderList";
 import {
   CATEGORY_LABEL,
   GRADE_REQUIREMENT_MAX,
@@ -59,6 +60,17 @@ export function GradeRequirementEditor({
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState(false);
+  /* 並べ替えの保存中は、一覧を包む fieldset を止めない。止めると、いま押したつまみや矢印のボタンが
+     disabled になってフォーカスが外れ、キーボードで続けて動かせなくなる（busy で受け付けだけを止める）。 */
+  const [reordering, setReordering] = useState(false);
+  const commitOrder = async (ids: string[]) => {
+    setReordering(true);
+    try {
+      return await send({ kind: "gradeRequirementOrder", ids });
+    } finally {
+      setReordering(false);
+    }
+  };
 
   /* 使っている場所があるなら消させない。
      行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
@@ -105,109 +117,89 @@ export function GradeRequirementEditor({
           </div>
         )}
 
-        {list.map((r, i) => (
-          <div key={r.id} className="card-row items-start">
-            <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{i + 1}</span>
-            <div className="row-main">
-              {editing[r.id] === undefined ? (
-                <>
-                  <p className="m-0 text-sub">{r.text}</p>
-                  {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
-                </>
-              ) : (
-                <>
-                  <textarea
-                    value={editing[r.id]}
-                    autoFocus
-                    onChange={(e) => setEditing((s) => ({ ...s, [r.id]: e.target.value }))}
-                    rows={2}
-                    className="input w-full"
-                    aria-label={`${label} ${i + 1}件目の内容`}
-                  />
-                  <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
-                  <div className="mt-2 flex gap-2">
-                    <Button
-                      variant="primary"
-                      disabled={saving || editing[r.id].trim() === ""}
-                      onClick={async () => {
-                        const ok = await send({
-                          kind: "gradeRequirementRevise",
-                          id: r.id,
-                          text: editing[r.id].trim(),
-                        });
-                        if (ok) setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; });
-                      }}
-                    >
-                      新版として保存
-                    </Button>
-                    <Button
-                      variant="tertiary"
-                      disabled={saving}
-                      onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}
-                    >
-                      やめる
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-            {editing[r.id] === undefined && (
-              <div className="row-actions">
-                <Button
-                  variant="tertiary"
-                  disabled={saving || i === 0}
-                  aria-label="先頭に移動"
-                  onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "top" })}
-                >
-                  ⇈
-                </Button>
-                <Button
-                  variant="tertiary"
-                  disabled={saving || i === 0}
-                  aria-label="1つ上に移動"
-                  onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "up" })}
-                >
-                  ↑
-                </Button>
-                <Button
-                  variant="tertiary"
-                  disabled={saving || i === list.length - 1}
-                  aria-label="1つ下に移動"
-                  onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "down" })}
-                >
-                  ↓
-                </Button>
-                <Button
-                  variant="tertiary"
-                  disabled={saving || i === list.length - 1}
-                  aria-label="末尾に移動"
-                  onClick={() => void send({ kind: "gradeRequirementOrder", id: r.id, direction: "bottom" })}
-                >
-                  ⇊
-                </Button>
-                <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
-                  内容を直す
-                </Button>
-                <ConfirmButton
-                  label="今後使わない"
-                  variant="danger-outline"
-                  busy={saving}
-                  confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
-                  onConfirm={() => void send({ kind: "gradeRequirementActivation", id: r.id, isActive: false })}
-                />
-                {markOf(r.id) === null && (
+        {/* 並べ替えはつまみの長押し・ドラッグか矢印のボタン（S11・DD-005）。置いたら並び全体を1回で保存する */}
+        {list.length > 0 && (
+        <ReorderList
+          items={list.map((r) => ({ ...r, label: r.text }))}
+          label={`${label}の並び`}
+          className="reorder-in-card"
+          busy={saving}
+          onCommit={(ids) => commitOrder(ids)}
+          renderItem={(r, i) => (
+            <>
+              <div className="flex items-start gap-3">
+                <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{i + 1}</span>
+                <div className="row-main">
+                  {editing[r.id] === undefined ? (
+                    <>
+                      <p className="m-0 text-sub">{r.text}</p>
+                      {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
+                    </>
+                  ) : (
+                    <>
+                      <textarea
+                        value={editing[r.id]}
+                        autoFocus
+                        onChange={(e) => setEditing((s) => ({ ...s, [r.id]: e.target.value }))}
+                        rows={2}
+                        className="input w-full"
+                        aria-label={`${label} ${i + 1}件目の内容`}
+                      />
+                      <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
+                      <div className="mt-2 flex gap-2">
+                        <Button
+                          variant="primary"
+                          disabled={saving || editing[r.id].trim() === ""}
+                          onClick={async () => {
+                            const ok = await send({
+                              kind: "gradeRequirementRevise",
+                              id: r.id,
+                              text: editing[r.id].trim(),
+                            });
+                            if (ok) setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; });
+                          }}
+                        >
+                          新版として保存
+                        </Button>
+                        <Button
+                          variant="tertiary"
+                          disabled={saving}
+                          onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}
+                        >
+                          やめる
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+              {editing[r.id] === undefined && (
+                <div className="row-actions mt-2">
+                  <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
+                    内容を直す
+                  </Button>
                   <ConfirmButton
-                    label={DELETE_LABEL}
+                    label="今後使わない"
                     variant="danger-outline"
                     busy={saving}
-                    confirm={deleteConfirmText(r.text)}
-                    onConfirm={() => void remove(r.id)}
+                    confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
+                    onConfirm={() => void send({ kind: "gradeRequirementActivation", id: r.id, isActive: false })}
                   />
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+                  {markOf(r.id) === null && (
+                    <ConfirmButton
+                      label={DELETE_LABEL}
+                      variant="danger-outline"
+                      busy={saving}
+                      confirm={deleteConfirmText(r.text)}
+                      onConfirm={() => void remove(r.id)}
+                    />
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        />
+        )}
 
         <div className="card-pad">
           {draft.open ? (
@@ -285,7 +277,7 @@ export function GradeRequirementEditor({
   };
 
   return (
-    <fieldset disabled={saving} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
+    <fieldset disabled={saving && !reordering} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
       <Card className="card-pad">
         <p className="m-0 text-sub">
           いま編集しているのは <b>{gradeName}</b> の等級要件です。

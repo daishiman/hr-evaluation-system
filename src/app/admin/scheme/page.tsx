@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { Badge, Bar, EmptyState, LinkButton, Num, PageTitle, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
 import { detectStaleCycles } from "@/lib/impact";
 import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
  * 同時にやらせていて、何をする画面なのか分からなくなっていた（2026-08-11 の指摘）。
  */
 export default async function AdminSchemePage() {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/scheme");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
   const [setup, staleCycles, categories, kpiItems] = await Promise.all([
@@ -93,11 +93,16 @@ export default async function AdminSchemePage() {
     );
   }
 
-  const overall = overallProgress(setup.groups.map((g) => g.progress));
+  /* 区分は鍵（pointGroup）で照合し、文には等級名から作った呼び名（label）を出す */
+  const labelOf = (pointGroup: string) => setup.groups.find((g) => g.pointGroup === pointGroup)?.label ?? "";
+  const overall = overallProgress(
+    setup.groups.map((g) => g.progress),
+    labelOf,
+  );
 
   /* 配点の型そのものが壊れていると、どう選んでも保存できない状態になる。
      「保存できない」とだけ出すと画面の不具合に見えるため、原因をここで名指しする。 */
-  const ruleErrors = setup.groups.flatMap((g) => checkGradePointRule(g.rule));
+  const ruleErrors = setup.groups.flatMap((g) => checkGradePointRule(g.rule, g.label));
 
   return (
     <>
@@ -124,7 +129,7 @@ export default async function AdminSchemePage() {
         {overall.nextGroup && (
           <p className="m-0 mt-2">
             <LinkButton variant="primary" href={schemeStepPath(overall.nextGroup, "select")}>
-              {overall.nextGroup} の設定を始める
+              {labelOf(overall.nextGroup)}の設定を始める
             </LinkButton>
           </p>
         )}
@@ -140,7 +145,7 @@ export default async function AdminSchemePage() {
           const step = p.nextStep ?? "select";
           return {
             key: g.pointGroup,
-            title: g.pointGroup,
+            title: g.label,
             marks: p.done ? <Badge tone="done">設定済み</Badge> : <Badge tone="required">設定が未完了</Badge>,
             rows: [
               {
@@ -195,7 +200,7 @@ export default async function AdminSchemePage() {
                 variant={overall.nextGroup === g.pointGroup ? "primary" : "secondary"}
                 href={schemeStepPath(g.pointGroup, step)}
               >
-                {p.done ? `${g.pointGroup} の設定を見直す` : `${g.pointGroup} の${stepTitle(step)}`}
+                {p.done ? `${g.label}の設定を見直す` : `${g.label}の${stepTitle(step)}`}
               </LinkButton>
             ),
           };

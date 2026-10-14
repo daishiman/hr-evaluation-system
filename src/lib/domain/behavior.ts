@@ -11,17 +11,18 @@
  * ブラウザのどちらからも読めるこのモジュールを正本にする。
  */
 
+import { bandSetLabel, type GradeLike } from "./grade-label";
+
 /**
  * 会社を作ったときに入っている基準セット。
  *
- * 呼び名は等級名（Beginner / Regular / Chief / AM）に合わせる。
- * 「等級1〜2の基準」という呼び方は、画面の等級一覧（等級１：Beginner …）や
- * 評価セットの等級区分（Beginner / Regular / Chief / AM / Manager）と語が違い、
- * どの等級のことか読み替えが要る。制度の中で等級を指す語を1つにそろえる。
+ * 名前は空にしておき、画面では割り当てた等級の名前から「等級1・等級2向け」の形で作る
+ * （grade-label.ts の bandSetLabel）。名前に等級名を書き込むと、会社が等級名を変えたときに
+ * セットの呼び名だけが古い等級名のまま残り、どの等級のことか読み替えが要る。
  */
 export const DEFAULT_BAND_SETS = [
-  { code: "g1_2", name: "Beginner・Regular向け", displayOrder: 1 },
-  { code: "g3_4", name: "Chief・AM向け", displayOrder: 2 },
+  { code: "g1_2", name: "", displayOrder: 1 },
+  { code: "g3_4", name: "", displayOrder: 2 },
 ] as const;
 
 /** 行動指針の5段階。点数は制度の骨格なので会社ごとに動かせない（文章だけ変えられる）。 */
@@ -52,14 +53,17 @@ export function sortBandSets<T extends { displayOrder: number; code: string }>(s
 
 /**
  * DB から来る基準セットのコードを画面の呼び名に変える。
+ * 呼び名は bandSetLabel で作る（割り当てた等級があれば「等級1・等級2向け」）。
  * 会社の設定に無いコードは隠さず、そのまま表示する（消えたように見せない）。
  */
 export function behaviorBandLabel(
   sets: readonly BehaviorBandSetRow[],
   code: string | null | undefined,
+  grades: readonly GradeLike[] = [],
 ): string {
   if (!code) return "";
-  return sets.find((set) => set.code === code)?.name ?? code;
+  const set = sets.find((row) => row.code === code);
+  return set ? bandSetLabel(set, grades) : code;
 }
 
 export interface BehaviorAssignmentGrade {

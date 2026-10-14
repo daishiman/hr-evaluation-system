@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { join, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -34,6 +35,18 @@ describe("全置換seedの実行先", () => {
 
     expect(guard).toBeGreaterThan(-1);
     expect(dangerousSteps.every((position) => position > guard)).toBe(true);
+  });
+
+  it("wrangler を起こす作業場所は、日本語を含むパスでもそのまま渡す（URL の pathname は %E6… のまま）", () => {
+    // pathname は百分率で符号化された文字列なので、リポジトリの置き場所に日本語があると cwd が見つからず落ちていた
+    for (const file of ["scripts/seed.mjs", "scripts/seed-sample.mjs"]) {
+      const source = readFileSync(join(root, file), "utf8");
+      expect(source, file).not.toMatch(/import\.meta\.url\)\.pathname/);
+      expect(source, file).toContain('cwd: fileURLToPath(new URL("..", import.meta.url))');
+    }
+    const url = new URL("../", pathToFileURL(join(root, "改善要望/scripts/seed.mjs")));
+    expect(url.pathname).toContain("%E6%94%B9");
+    expect(fileURLToPath(url)).toBe(join(root, "改善要望") + sep);
   });
 
   it("package scriptsからremote全置換の入口を公開しない", () => {

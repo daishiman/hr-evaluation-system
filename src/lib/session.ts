@@ -7,6 +7,9 @@ import {
   canActOnEmployeeEvaluation,
   canReadEmployee as canReadEmployeeByRole,
 } from "@/lib/domain/evaluation-authority";
+import { activeCompanyCondition, activeMembershipFor, membershipIn } from "@/lib/memberships";
+import { atLeast, ROLES, type Role } from "@/lib/roles";
+import { roleCan, roleCanOpen, routeAccessOf } from "@/lib/route-access";
 
 /**
  * 権限の判定をここ1箇所に集める。
@@ -16,47 +19,22 @@ import {
  * ロールの判定をサーバー側で行う。
  */
 
-export const ROLES = ["SUPER_ADMIN", "COMPANY_ADMIN", "MANAGER", "EMPLOYEE"] as const;
-export type Role = (typeof ROLES)[number];
-
-/** 権限の強さ。数字が大きいほど広く見える。 */
-const RANK: Record<Role, number> = {
-  SUPER_ADMIN: 4,
-  COMPANY_ADMIN: 3,
-  MANAGER: 2,
-  EMPLOYEE: 1,
-};
-
-/**
- * 画面に出す役割の呼び名。
- *
- * EMPLOYEE を「評価される方」とは呼ばない。マネージャーも会社の管理者も
- * 自分の上長から評価を受けるため、「評価される／しない」で役割を言い分けると
- * 事実と食い違う。ここで分けているのは「制度を設定・閲覧できる範囲」なので、
- * 設定を持たない立場は「一般」と呼ぶ。
- *
- * DBに入っている値（EMPLOYEE など）は変えない。呼び名は今後も変わりうるが、
- * 保存済みのデータを呼び名に合わせて書き換えると、過去のデータと突き合わせが
- * できなくなるため、変えるのは表示だけにする。
- */
-export const ROLE_LABEL: Record<Role, string> = {
-  SUPER_ADMIN: "システム全体管理者",
-  COMPANY_ADMIN: "会社の管理者",
-  MANAGER: "マネージャー",
-  EMPLOYEE: "一般",
-};
+export { ROLES, ROLE_LABEL, atLeast, type Role } from "@/lib/roles";
 
 export interface Viewer {
   id: string;
   name: string;
   email: string;
   role: Role;
+  /** いま使っている会社。所属が2つ以上ある人は切り替えられる（全体管理者は操作する会社） */
   companyId: string | null;
   gradeId: string | null;
   managerId: string | null;
   department: string | null;
   employeeCode: string | null;
   hiredAt: string | null;
+  /** いまの会社での事業所（試験で作る Viewer は省くことがあるので、無いときは null と同じに扱う） */
+  officeId?: string | null;
   companyName: string | null;
   /** 発行時の仮パスワードのまま使っている（変更をお願いし続ける） */
   mustChangePassword: boolean;
@@ -69,64 +47,68 @@ export async function getViewer(): Promise<Viewer | null> {
   if (!session?.user?.id) return null;
 
   const db = await getDb();
-  const rows = await db
-    .select({
-      id: schema.users.id,
-      name: schema.users.name,
-      email: schema.users.email,
-      role: schema.users.role,
-      companyId: schema.users.companyId,
-      gradeId: schema.users.gradeId,
-      managerId: schema.users.managerId,
-      department: schema.users.department,
-      employeeCode: schema.users.employeeCode,
-      hiredAt: schema.users.hiredAt,
-      mustChangePassword: schema.users.mustChangePassword,
-      isActive: schema.users.isActive,
-      companyName: schema.companies.name,
-      companyIsActive: schema.companies.isActive,
-    })
-    .from(schema.users)
-    .leftJoin(schema.companies, eq(schema.companies.id, schema.users.companyId))
-    .where(eq(schema.users.id, session.user.id))
-    .limit(1);
-
-  const u = rows[0];
+  const u = (
+    await db
+      .select({
+        id: schema.users.id,
+        name: schema.users.name,
+        email: schema.users.email,
+        // 全体管理者か（所属を持たない人か）を見るためだけに読む。会社ごとの役割は所属の表から読む
+        globalRole: schema.users.role,
+        mustChangePassword: schema.users.mustChangePassword,
+        isActive: schema.users.isActive,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, session.user.id))
+      .limit(1)
+  )[0];
   // 退職・停止したアカウントはセッションが残っていても通さない
   if (!u || !u.isActive) return null;
 
-  const role: Role = (ROLES as readonly string[]).includes(u.role) ? (u.role as Role) : "EMPLOYEE";
+  const base = { id: u.id, name: u.name, email: u.email, mustChangePassword: Boolean(u.mustChangePassword) };
+  const requested = (await cookies()).get(COMPANY_SCOPE_COOKIE)?.value ?? null;
 
-  // 会社所属が必須のロールは、会社が未設定または停止中ならセッションが残っていても通さない。
-  // SUPER_ADMIN の companyId は所属ではなく、後段で選ぶ操作対象会社なのでこの判定から除く。
-  if (role !== "SUPER_ADMIN" && (!u.companyId || !u.companyIsActive)) return null;
-
-  // システム全体管理者は会社に属さないため、いま見ている会社を別に決める（他のロールは自社に固定）
-  let companyId = u.companyId;
-  let companyName = u.companyName ?? null;
-  if (role === "SUPER_ADMIN") {
-    const scoped = await readCompanyScope(db);
-    companyId = scoped?.id ?? null;
-    companyName = scoped?.name ?? null;
+  // システム全体管理者は会社に属さないため、いま見ている会社を別に決める
+  if (u.globalRole === "SUPER_ADMIN") {
+    const scoped = await readCompanyScope(db, requested);
+    return {
+      ...base,
+      role: "SUPER_ADMIN",
+      companyId: scoped?.id ?? null,
+      companyName: scoped?.name ?? null,
+      gradeId: null,
+      officeId: null,
+      managerId: null,
+      department: null,
+      employeeCode: null,
+      hiredAt: null,
+    };
   }
 
+  // それ以外は所属から決める。選んだ会社（cookie）に有効な所属があればそれ、無ければ一番古い有効な所属。
+  // 有効な所属が1つも無い（会社が止まった・テンプレートだけ）なら、セッションが残っていても通さない
+  const membership = await activeMembershipFor(db, u.id, requested);
+  if (!membership) return null;
+  const role: Role = (ROLES as readonly string[]).includes(membership.role) ? (membership.role as Role) : "EMPLOYEE";
+
   return {
-    id: u.id,
-    name: u.name,
-    email: u.email,
+    ...base,
     role,
-    companyId,
-    gradeId: u.gradeId,
-    managerId: u.managerId,
-    department: u.department,
-    employeeCode: u.employeeCode,
-    hiredAt: u.hiredAt,
-    companyName,
-    mustChangePassword: Boolean(u.mustChangePassword),
+    companyId: membership.companyId,
+    companyName: membership.companyName,
+    gradeId: membership.gradeId,
+    officeId: membership.officeId,
+    managerId: membership.managerId,
+    department: membership.department,
+    employeeCode: membership.employeeCode,
+    hiredAt: membership.hiredAt,
   };
 }
 
-/** システム全体管理者が「いま見ている会社」を覚えておくクッキーの名前。 */
+/**
+ * いま見ている会社を覚えておくクッキーの名前。
+ * 全体管理者は有効な会社ならどこでも、ほかの役割は自分が所属する会社だけを選べる。
+ */
 export const COMPANY_SCOPE_COOKIE = "hr_company";
 
 /**
@@ -135,15 +117,12 @@ export const COMPANY_SCOPE_COOKIE = "hr_company";
  * クッキーの値をそのまま信じず、実在して有効な会社かをDBで確かめる。
  * 選ばれていなければ、会社一覧の先頭を既定にする（何も見えない状態にしない）。
  */
-async function readCompanyScope(db: Awaited<ReturnType<typeof getDb>>) {
-  const jar = await cookies();
-  const requested = jar.get(COMPANY_SCOPE_COOKIE)?.value ?? null;
-
+async function readCompanyScope(db: Awaited<ReturnType<typeof getDb>>, requested: string | null) {
   if (requested) {
     const hit = await db
       .select({ id: schema.companies.id, name: schema.companies.name })
       .from(schema.companies)
-      .where(and(eq(schema.companies.id, requested), eq(schema.companies.isActive, true)))
+      .where(and(eq(schema.companies.id, requested), activeCompanyCondition()))
       .limit(1);
     if (hit[0]) return hit[0];
   }
@@ -152,7 +131,7 @@ async function readCompanyScope(db: Awaited<ReturnType<typeof getDb>>) {
   const first = await db
     .select({ id: schema.companies.id, name: schema.companies.name })
     .from(schema.companies)
-    .where(and(eq(schema.companies.isActive, true), eq(schema.companies.isTemplate, false)))
+    .where(activeCompanyCondition())
     .orderBy(schema.companies.name)
     .limit(1);
   return first[0] ?? null;
@@ -165,15 +144,21 @@ export async function requireViewer(): Promise<Viewer> {
   return v;
 }
 
-/** 画面用。権限が足りなければ自分のホームへ戻す。 */
-export async function requireRole(min: Role): Promise<Viewer> {
+/**
+ * 画面用。台帳（system-spec/route-ledger.json）でそのページを開けない役割なら自分のホームへ戻す。
+ *
+ * path は台帳の書き方のパス（例: "/admin/members/[id]"）。各ページは自分のパスを渡す。
+ * 誰が開けるかをページに書かず台帳から引くので、権限一覧のページと実際の入口がずれない。
+ * 条件つき（自分の部下だけなど）の判定は、開いたあとにページの中で行う。
+ */
+export async function requireRoute(path: string): Promise<Viewer> {
+  const access = routeAccessOf(path);
+  if (!access || access.minRole === null) {
+    throw new Error(`requireRoute: ${path} は台帳に無いか、ログインの前のページです`);
+  }
   const v = await requireViewer();
-  if (RANK[v.role] < RANK[min]) redirect(`${homePathFor(v.role)}?denied=1`);
+  if (access.byRole[v.role] === "none") redirect(`${homePathFor(v.role)}?denied=1`);
   return v;
-}
-
-export function atLeast(role: Role, min: Role): boolean {
-  return RANK[role] >= RANK[min];
 }
 
 /**
@@ -182,7 +167,7 @@ export function atLeast(role: Role, min: Role): boolean {
  * マネージャーは自分も評価を受けるが、基準は見てよい。
  */
 export function canSeeCriteria(role: Role): boolean {
-  return atLeast(role, "MANAGER");
+  return roleCanOpen(role, "/criteria");
 }
 
 /**
@@ -192,8 +177,8 @@ export function canSeeCriteria(role: Role): boolean {
  * 作った本人だけだと、設問の誤りが配布後まで誰にも気づかれないため。
  * 読めるのは自社のアンケートだけで、会社の絞り込みは呼び出し側の companyId が担う。
  */
-export function canSeeFormContent(_role: Role): boolean {
-  return true;
+export function canSeeFormContent(role: Role): boolean {
+  return roleCanOpen(role, "/forms");
 }
 
 /**
@@ -203,22 +188,20 @@ export function canSeeFormContent(_role: Role): boolean {
  * 回答は個人の評価そのものなので、これまでどおり会社の管理者だけにする。
  */
 export function canSeeFormResponses(role: Role): boolean {
-  return atLeast(role, "COMPANY_ADMIN");
+  return roleCanOpen(role, "/admin/forms/[id]/responses");
 }
 
 /** アンケートを作る・設問を直す・公開する・締め切ってよいか。閲覧を開いても書き込みは広げない。 */
 export function canEditForm(role: Role): boolean {
-  return atLeast(role, "COMPANY_ADMIN");
+  return roleCan(role, "forms.update");
 }
 
-/** 他の人の情報（プロフィール・評価メモ）を変更してよいか。 */
-export function canEditEmployee(role: Role): boolean {
-  return atLeast(role, "COMPANY_ADMIN");
-}
-
-/** 制度（等級・KPI・配点・昇給額）を変更してよいか。マネージャーは閲覧のみ。 */
-export function canEditScheme(role: Role): boolean {
-  return atLeast(role, "COMPANY_ADMIN");
+/**
+ * 会社をまたいで操作する役割か（全体管理者）。全体管理者は所属を持たず、選んだ会社で操作する。
+ * 会社の切り替え・所属の追加・会社をまたぐ利用者全体の値の変更で、所属の確認の代わりに使う。
+ */
+export function crossesCompanies(role: Role): boolean {
+  return atLeast(role, "SUPER_ADMIN");
 }
 
 export function homePathFor(role: Role): string {
@@ -236,8 +219,9 @@ export function homePathFor(role: Role): string {
 
 /**
  * 対象の会社を確定する。
- * SUPER_ADMIN だけが会社を切り替えられ、それ以外は自分の会社に固定される。
- * URLに他社のIDを入れられても、ここで自社に強制される。
+ * SUPER_ADMIN だけが会社を指定でき、それ以外はいまの会社（所属から決めた会社）に固定される。
+ * URLに他社のIDを入れられても、ここでいまの会社に強制される。
+ * 所属が2つ以上ある人の切り替えは、cookie を通して getViewer が決める（ここでは指定を受けない）。
  */
 export function resolveCompanyId(v: Viewer, requested?: string | null): string | null {
   // システム全体管理者だけが会社を指定できる。指定がなければ、いま選んでいる会社を使う
@@ -272,32 +256,28 @@ export function requireTargetCompany(v: Viewer, requested?: string | null): stri
   return companyId;
 }
 
-/** 指定した利用者を閲覧してよいか。 */
-export async function canViewEmployee(v: Viewer, employeeId: string): Promise<boolean> {
+/** いまの会社での、対象の人の所属（上長を含む）。いまの会社に所属していなければ null */
+async function targetInCompany(v: Viewer, employeeId: string) {
+  if (!v.companyId) return null;
   const db = await getDb();
-  const rows = await db
-    .select({ id: schema.users.id, managerId: schema.users.managerId })
-    .from(schema.users)
-    .where(and(eq(schema.users.id, employeeId), eq(schema.users.companyId, v.companyId ?? "")))
-    .limit(1);
-  const target = rows[0];
-  return target ? canReadEmployeeByRole(v.id, v.role, { employeeId: target.id, managerId: target.managerId }) : false;
+  const row = await membershipIn(db, employeeId, v.companyId);
+  return row ? { employeeId, managerId: row.managerId } : null;
+}
+
+/** 指定した利用者を閲覧してよいか。上長かどうかは、いまの会社の所属で決める。 */
+export async function canViewEmployee(v: Viewer, employeeId: string): Promise<boolean> {
+  const target = await targetInCompany(v, employeeId);
+  return target ? canReadEmployeeByRole(v.id, v.role, target) : false;
 }
 
 /** 指定した利用者の評価・メモ・期限へ手を入れてよいか。 */
 export async function canManageEmployee(v: Viewer, employeeId: string): Promise<boolean> {
-  const db = await getDb();
-  const target = (
-    await db
-      .select({ id: schema.users.id, managerId: schema.users.managerId })
-      .from(schema.users)
-      .where(and(eq(schema.users.id, employeeId), eq(schema.users.companyId, v.companyId ?? "")))
-      .limit(1)
-  )[0];
-  return target
-    ? canActOnEmployeeEvaluation(v.id, v.role, { employeeId: target.id, managerId: target.managerId })
-    : false;
+  const target = await targetInCompany(v, employeeId);
+  return target ? canActOnEmployeeEvaluation(v.id, v.role, target) : false;
 }
+
+/** 役割や範囲が足りないときの言い方（入口の判定と、所属による制限で同じ文にする） */
+export const FORBIDDEN_MESSAGE = "この操作を行う権限がありません。";
 
 /** API用。権限が足りなければ 401 / 403 を投げる。 */
 export class HttpError extends Error {
@@ -333,10 +313,16 @@ async function assertSameOrigin(): Promise<void> {
   }
 }
 
+/**
+ * API・サーバー処理用。ログインと、min 以上の役割かを確かめる。
+ *
+ * 呼ぶ側は役割の名前を書かず、操作の名前から最低の役割を引いて渡す
+ * （runAction の operation、Route Handler の apiViewerFor。台帳が正本）。
+ */
 export async function apiViewer(min: Role = "EMPLOYEE"): Promise<Viewer> {
   await assertSameOrigin();
   const v = await getViewer();
   if (!v) throw new HttpError(401, "ログインが必要です。");
-  if (RANK[v.role] < RANK[min]) throw new HttpError(403, "この操作を行う権限がありません。");
+  if (!atLeast(v.role, min)) throw new HttpError(403, FORBIDDEN_MESSAGE);
   return v;
 }

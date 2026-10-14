@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Button, InlineDetail, ReasonNote } from "@/components/ui";
+import { type ReactNode, useState } from "react";
+import { Button, InlineDetail, ReasonNote, SplitRow } from "@/components/ui";
 
 /**
  * 未回答の方への連絡文を1クリックで作る。
@@ -14,10 +14,13 @@ export function CopyReminder({
   names,
   url,
   deadline,
+  lead,
 }: {
   names: string[];
   url: string;
   deadline?: string | null;
+  /** 文面の確認の上に置く1行（回答画面のURLなど）。コピーのボタンはこの行の右端に並ぶ。 */
+  lead?: ReactNode;
 }) {
   const [result, setResult] = useState<"idle" | "copied" | "manual">("idle");
 
@@ -45,36 +48,45 @@ export function CopyReminder({
     }
   };
 
-  return <CopyReminderView text={text} result={result} onCopy={() => void copy()} />;
+  return <CopyReminderView text={text} result={result} onCopy={() => void copy()} lead={lead} />;
 }
 
 export function CopyReminderView({
   text,
   result,
   onCopy,
+  lead,
 }: {
   text: string;
   result: "idle" | "copied" | "manual";
   onCopy: () => void;
+  lead?: ReactNode;
 }) {
   return (
     <div>
-      {/* 送る前に中身（宛先・URL・期限）を確認できるようにする。
-          クリップボードAPIの成否に関わらず、常にこの場で開ける。 */}
-      <InlineDetail summary="送る文面を確認する" open={result === "manual"}>
-        <textarea
-          aria-label="未回答者への連絡文"
-          className="input mt-2 w-full font-mono text-note"
-          rows={8}
-          readOnly
-          value={text}
-        />
-      </InlineDetail>
-      <div className="mt-2">
-        <Button type="button" variant="secondary" onClick={onCopy}>
-          未回答の方への連絡文をコピーする
-        </Button>
-      </div>
+      {/* コピーのボタンは本文（URL・文面の確認）と同じ行の右端へ寄せる。
+          左に縦積みすると、同じ高さの右側が空いたまま残る（docs/product/spec.md §28-9）。
+          読む順は URL → 文面の確認 → コピー のまま（寄せるのは見た目だけ）。 */}
+      <SplitRow
+        aside={
+          <Button type="button" variant="secondary" onClick={onCopy}>
+            未回答の方への連絡文をコピーする
+          </Button>
+        }
+      >
+        {lead && <div className="mb-2">{lead}</div>}
+        {/* 送る前に中身（宛先・URL・期限）を確認できるようにする。
+            クリップボードAPIの成否に関わらず、常にこの場で開ける。 */}
+        <InlineDetail summary="送る文面を確認する" open={result === "manual"}>
+          <textarea
+            aria-label="未回答者への連絡文"
+            className="input mt-2 w-full font-mono text-note"
+            rows={8}
+            readOnly
+            value={text}
+          />
+        </InlineDetail>
+      </SplitRow>
       {result === "copied" && (
         <p className="m-0 mt-2 text-sub text-brand-deep">
           コピーしました。メールやチャットに貼り付けてお使いください。

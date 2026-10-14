@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { listGrades, listPromotionRequirements, listPromotionThresholds } from "@/lib/queries";
 import { getDb } from "@/lib/db";
 import { promotionRequirementUsage } from "@/lib/master-usage";
 import { detectStaleCycles } from "@/lib/impact";
 import { saveMaster } from "@/actions/masters";
+import { promotionStepFrom } from "@/lib/domain/grade-label";
 import { RecordForm } from "@/components/RecordForm";
 import { PromotionRequirementEditor } from "@/components/PromotionRequirementEditor";
 import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
@@ -21,7 +22,7 @@ export const dynamic = "force-dynamic";
  * 等級そのものの設定・等級要件・行動指針の中身は別の画面にある。
  */
 export default async function AdminPromotion({ searchParams }: { searchParams: Promise<{ grade?: string }> }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/masters/promotion");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
@@ -49,6 +50,8 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
 
   const th = thresholds.find((t) => t.fromGradeId === grade.id) ?? null;
   const myPromoReqs = promoReqs.filter((r) => r.gradeId === grade.id);
+  /* 段階の呼び名は等級名から作る（S1・A1）。保存してある th.label・transitionLabel は名前を変えても追従しない */
+  const step = promotionStepFrom(grade.id, grades, thresholds);
 
   return (
     <>
@@ -73,9 +76,15 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
         ))}
       </div>
 
-      <SectionHeading>点数の線引き</SectionHeading>
+      {/* 上がる先の等級が無い（最上位）なら、線引きが無いのは正しい状態。警告の枠ではなく見出しの右の1行で知らせる
+          （§28-9。上がる先があるのに線引きが無いときだけ、登録漏れとして警告を出す） */}
+      <SectionHeading
+        aside={!th && !step ? <span className="footnote">{grade.name} は最上位の等級なので、設定は要りません</span> : undefined}
+      >
+        点数の線引き
+      </SectionHeading>
       {!th ? (
-        <ReasonNote>この等級からの昇格条件が登録されていません。最上位の等級の場合は設定不要です。</ReasonNote>
+        step && <ReasonNote>この等級からの昇格条件（{step}）が登録されていません。</ReasonNote>
       ) : (
         <>
           {th.isProvisional && (
@@ -91,7 +100,9 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
             resource="masters"
             fixed={{ kind: "threshold", id: th.id }}
             submitLabel="昇格の条件を保存する"
-            description={`${th.label}。行動指針の点数は、観点ごとの点数（模範3〜悪影響-1）の合計です。何を問うかは行動指針の画面で決めます。`}
+            /* 短い数の欄が2つだけなので、保存ボタンを同じ行の右端に置く（§28-9） */
+            inline
+            description={`${step ? `${step}。` : ""}行動指針の点数は、観点ごとの点数（模範3〜悪影響-1）の合計です。何を問うかは行動指針の画面で決めます。`}
             fields={[
               {
                 name: "requiredKpiPoints",
@@ -124,7 +135,14 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
       )}
 
       <SectionHeading>昇格要件</SectionHeading>
-      <PromotionRequirementEditor key={grade.id} gradeId={grade.id} gradeName={grade.name} rows={myPromoReqs} usage={usage} />
+      <PromotionRequirementEditor
+        key={grade.id}
+        gradeId={grade.id}
+        gradeName={grade.name}
+        stepLabel={step}
+        rows={myPromoReqs}
+        usage={usage}
+      />
     </>
   );
 }

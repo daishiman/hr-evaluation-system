@@ -3,7 +3,7 @@ import { eq, ne } from "drizzle-orm";
 import { schema as s } from "@/lib/db";
 import type { Viewer } from "@/lib/session";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
  * 会社の追加（会社 → 制度のひな形 → 管理者 の3段書き）。
@@ -90,6 +90,7 @@ beforeEach(async () => {
   t = createTestDatabase();
   t.raw.exec("PRAGMA foreign_keys = ON");
   await seedCompany(t);
+  seedMemberships(t);
   // 既存の会社を標準のひな形にする（会社の追加で制度が写る状態）
   await t.db.update(s.companies).set({ isTemplate: true }).where(eq(s.companies.id, IDS.company));
   await t.db.insert(s.users).values({

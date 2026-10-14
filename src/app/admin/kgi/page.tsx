@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import {
   countEvaluationsByOffice,
   getRaisePolicy,
@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
  * 最小係数で賞与額が算出されてしまうため。
  */
 export default async function AdminKgi({ searchParams }: { searchParams: Promise<{ cycle?: string }> }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/kgi");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 

@@ -5,6 +5,7 @@ import {
   nextGroupOf,
   overallProgress,
   schemeStepPath,
+  stepLede,
   stepNumber,
   stepTitle,
   STEPS,
@@ -137,15 +138,17 @@ describe("overallProgress — 入口に出す全体の進み具合", () => {
     }));
 
   it("未完了のうち「並びが最初のもの」を次に案内する", () => {
-    const p = overallProgress(progressOf([true, false, true, false, false]));
+    const p = overallProgress(progressOf([true, false, true, false, false]), (g) => (g === "Regular" ? "等級2" : g));
     expect(p.done).toBe(2);
     expect(p.total).toBe(5);
+    // 鍵は区分のまま。文に出すのは呼び名（等級名）だけ
     expect(p.nextGroup).toBe("Regular");
-    expect(p.summary).toContain("Regular");
+    expect(p.summary).toContain("次は「等級2」の設定です。");
+    expect(p.summary).not.toContain("Regular");
   });
 
   it("すべて終わっていれば次の等級区分を出さない", () => {
-    const p = overallProgress(progressOf([true, true, true, true, true]));
+    const p = overallProgress(progressOf([true, true, true, true, true]), (g) => g);
     expect(p.nextGroup).toBeNull();
     expect(p.summary).toContain("すべて");
   });
@@ -161,6 +164,11 @@ describe("手順の名前とURL", () => {
   it("手順名は1箇所で決める（画面ごとに言い換えない）", () => {
     expect(stepTitle("select")).toBe("使うKPIを選ぶ");
     expect(stepTitle("criteria")).toBe("選んだ項目の基準を決める");
+  });
+
+  it("手順の説明は区分を呼び名（等級名）で呼ぶ", () => {
+    expect(stepLede("select", "等級2")).toBe("等級2の評価に使うKPIを選びます。ここでは全項目から選べます。");
+    expect(stepLede("criteria", "等級2")).toMatch(/^等級2で選んだ項目だけが対象です。/);
   });
 
   it("URLは等級区分名を安全に埋め込む", () => {

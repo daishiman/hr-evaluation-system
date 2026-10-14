@@ -113,16 +113,33 @@ export async function importMembersCsv(
     throw new HttpError(400, "「氏名」と「メールアドレス」の列が必要です。見出し行をご確認ください。");
   }
 
-  const [grades, offices, existingUsers] = await Promise.all([
+  const [grades, offices, existingUsers, formerGradeNames] = await Promise.all([
     db.select({ id: s.grades.id, name: s.grades.name, code: s.grades.code }).from(s.grades).where(eq(s.grades.companyId, companyId)),
     db.select({ id: s.offices.id, name: s.offices.name }).from(s.offices).where(eq(s.offices.companyId, companyId)),
     db.select().from(s.users),
+    // 移行 0034 で書き換える前の等級名（「等級１：Beginner」など）。前に書き出した CSV もそのまま取り込めるようにする
+    db
+      .select({ id: s.displayNameRewrites.rowId, name: s.displayNameRewrites.oldValue })
+      .from(s.displayNameRewrites)
+      .where(
+        and(
+          eq(s.displayNameRewrites.tableName, "grades"),
+          eq(s.displayNameRewrites.columnName, "name"),
+          eq(s.displayNameRewrites.companyId, companyId),
+        ),
+      ),
   ]);
 
   const gradeByKey = new Map<string, string>();
   for (const g of grades) {
     gradeByKey.set(normalizeKey(g.name), g.id);
     if (g.code) gradeByKey.set(normalizeKey(g.code), g.id);
+  }
+  // 旧名は、今の名前・code のどれにも当たらないときだけ使う（今の名前が優先。消した等級には結ばない）
+  const gradeIds = new Set(grades.map((g) => g.id));
+  for (const g of formerGradeNames) {
+    const key = normalizeKey(g.name);
+    if (gradeIds.has(g.id) && !gradeByKey.has(key)) gradeByKey.set(key, g.id);
   }
   const officeByKey = new Map(offices.map((o) => [normalizeKey(o.name), o.id]));
   const userByEmail = new Map(existingUsers.map((u) => [u.email.trim().toLowerCase(), u]));

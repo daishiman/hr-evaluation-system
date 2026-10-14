@@ -3,7 +3,8 @@ import { schema as s } from "@/lib/db";
 import type { getDb } from "@/lib/db";
 import { HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
-import { GRADE_REQUIREMENT_MAX, changesForMove } from "@/lib/domain/grade-requirements";
+import { GRADE_REQUIREMENT_MAX, activeOf } from "@/lib/domain/grade-requirements";
+import { REORDER_CONFLICT_MESSAGE, reorderChanges } from "@/lib/domain/reorder";
 import { currentVersionRows, lineageRootId, versionFamilyIds } from "@/lib/domain/versioned-master";
 import { constitutionEventStatements } from "@/lib/domain/constitution-events";
 import { writeMasterBatch } from "./write-batch";
@@ -37,6 +38,37 @@ const terminal = <T extends { id: string; previousVersionId: string | null }>(ro
   currentVersionRows(rows).find((row) => row.id === id) ?? null;
 
 const cleanOptional = (value: string | null | undefined): string | null => value?.trim() || null;
+
+/**
+ * 並べ替え（S11・DD-005）で書き換える行。送られた並び全体を、先頭の id と同じ等級・同じ区分の
+ * 使用中の現行版と照合する（対象の等級と区分は保存済みの行から決め、画面の申告を信じない）。
+ * 先頭が古い版・使っていない行・並びの過不足は、ほかの操作と重なったとして 409。
+ */
+function planReorder<T extends { id: string; gradeId: string; seq: number; isActive: boolean; previousVersionId: string | null }>(
+  rows: T[],
+  ids: readonly string[],
+  categoryOf: (row: T) => string,
+  notFound: string,
+) {
+  if (!rows.some((row) => row.id === ids[0])) throw new HttpError(404, notFound);
+  const head = terminal(rows, ids[0]);
+  if (!head || !head.isActive) throw new HttpError(409, REORDER_CONFLICT_MESSAGE);
+  const siblings = activeOf(
+    currentVersionRows(rows)
+      .filter((row) => row.gradeId === head.gradeId)
+      .map((row) => ({ id: row.id, category: categoryOf(row), seq: row.seq, text: "", isActive: row.isActive })),
+    categoryOf(head),
+  );
+  const changes = reorderChanges(
+    siblings.map((row) => ({ id: row.id, displayOrder: row.seq })),
+    ids,
+  );
+  if (!changes) throw new HttpError(409, REORDER_CONFLICT_MESSAGE);
+  return changes;
+}
+
+const REORDER_UNCHANGED = "並び順は変わっていません。";
+const REORDERED = "並び順を変更しました。";
 
 function databaseMessage(error: unknown): string {
   if (error instanceof Error) return `${error.message} ${(error as { cause?: unknown }).cause ?? ""}`;
@@ -297,33 +329,36 @@ export async function applyVersionedRequirementUpdate(args: {
 
     case "gradeRequirementOrder": {
       const rows = await gradeRows(db, companyId);
-      const current = terminal(rows, body.id);
-      if (!rows.some((row) => row.id === body.id)) throw new HttpError(404, "等級要件が見つかりませんでした。");
-      if (!current || !current.isActive) throw new HttpError(409, "現在使っている版だけ並べ替えられます。画面を更新してください。");
-      const siblings = currentVersionRows(rows).filter((row) => row.gradeId === current.gradeId);
-      const changes = changesForMove(siblings, current.category, current.id, body.direction);
-      if (!changes || changes.length === 0) throw new HttpError(400, "これ以上は動かせません。");
-      const events = await constitutionEventStatements({
-        db,
-        companyId,
-        entityType: "gradeRequirement",
-        entityId: lineageRootId(rows, current.id),
-        eventType: "reordered",
-        actorId: viewerId,
-        before: { seq: current.seq },
-        after: { seq: changes.find((row) => row.id === current.id)?.seq ?? current.seq },
-      });
+      const changes = planReorder(rows, body.ids, (row) => row.category, "等級要件が見つかりませんでした。");
+      if (changes.length === 0) return { message: REORDER_UNCHANGED };
+      // 動いた行ごとに監査記録を残す（実体は版の系列の根で数える）
+      const events = (
+        await Promise.all(
+          changes.map((row) =>
+            constitutionEventStatements({
+              db,
+              companyId,
+              entityType: "gradeRequirement",
+              entityId: lineageRootId(rows, row.id),
+              eventType: "reordered",
+              actorId: viewerId,
+              before: { seq: row.before },
+              after: { seq: row.displayOrder },
+            }),
+          ),
+        )
+      ).flat();
       try {
         await writeMasterBatch(db, [
           ...changes.map((row) =>
-            db.update(s.gradeRequirements).set({ seq: row.seq }).where(eq(s.gradeRequirements.id, row.id)),
+            db.update(s.gradeRequirements).set({ seq: row.displayOrder }).where(eq(s.gradeRequirements.id, row.id)),
           ),
           ...events,
         ]);
       } catch (error) {
         translateWriteError(error, "等級要件");
       }
-      return { message: "並び順を変更しました。", id: current.id };
+      return { message: REORDERED };
     }
 
     case "promotionRequirementCreate": {
@@ -447,42 +482,35 @@ export async function applyVersionedRequirementUpdate(args: {
 
     case "promotionRequirementOrder": {
       const rows = await promotionRows(db, companyId);
-      const current = terminal(rows, body.id);
-      if (!rows.some((row) => row.id === body.id)) throw new HttpError(404, "昇格要件が見つかりませんでした。");
-      if (!current || !current.isActive) throw new HttpError(409, "現在使っている版だけ並べ替えられます。画面を更新してください。");
-      const siblings = currentVersionRows(rows)
-        .filter((row) => row.gradeId === current.gradeId)
-        .map((row) => ({
-          id: row.id,
-          category: row.kind,
-          seq: row.seq,
-          text: row.text,
-          isActive: row.isActive,
-          previousVersionId: row.previousVersionId,
-        }));
-      const changes = changesForMove(siblings, current.kind, current.id, body.direction);
-      if (!changes || changes.length === 0) throw new HttpError(400, "これ以上は動かせません。");
-      const events = await constitutionEventStatements({
-        db,
-        companyId,
-        entityType: "promotionRequirement",
-        entityId: lineageRootId(rows, current.id),
-        eventType: "reordered",
-        actorId: viewerId,
-        before: { seq: current.seq },
-        after: { seq: changes.find((row) => row.id === current.id)?.seq ?? current.seq },
-      });
+      const changes = planReorder(rows, body.ids, (row) => row.kind, "昇格要件が見つかりませんでした。");
+      if (changes.length === 0) return { message: REORDER_UNCHANGED };
+      const events = (
+        await Promise.all(
+          changes.map((row) =>
+            constitutionEventStatements({
+              db,
+              companyId,
+              entityType: "promotionRequirement",
+              entityId: lineageRootId(rows, row.id),
+              eventType: "reordered",
+              actorId: viewerId,
+              before: { seq: row.before },
+              after: { seq: row.displayOrder },
+            }),
+          ),
+        )
+      ).flat();
       try {
         await writeMasterBatch(db, [
           ...changes.map((row) =>
-            db.update(s.promotionRequirements).set({ seq: row.seq }).where(eq(s.promotionRequirements.id, row.id)),
+            db.update(s.promotionRequirements).set({ seq: row.displayOrder }).where(eq(s.promotionRequirements.id, row.id)),
           ),
           ...events,
         ]);
       } catch (error) {
         translateWriteError(error, "昇格要件");
       }
-      return { message: "並び順を変更しました。", id: current.id };
+      return { message: REORDERED };
     }
   }
 }

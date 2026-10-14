@@ -21,6 +21,7 @@
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { hashPassword } from "better-auth/crypto";
 import { buildSampleSeed, assertSampleOnly, SAMPLE_COMPANY } from "./sample-data.mjs";
 import { generateUniqueInitialPassword } from "../src/lib/domain/initial-password.ts";
@@ -62,4 +63,4 @@ if (generateOnly) process.exit(0);
 
 const args = ["wrangler", "d1", "execute", "hr-evaluation-db", `--file=drizzle/${fileName}`, remote ? "--remote" : "--local", "-y"];
 console.log(`\n実行: pnpm ${args.join(" ")}`);
-execFileSync("pnpm", args, { stdio: "inherit", cwd: new URL("..", import.meta.url).pathname });
+execFileSync("pnpm", args, { stdio: "inherit", cwd: fileURLToPath(new URL("..", import.meta.url)) });

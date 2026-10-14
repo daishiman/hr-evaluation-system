@@ -17,6 +17,7 @@ import {
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
+import { ReorderList } from "@/components/reorder/ReorderList";
 
 /**
  * 昇格要件（受講して報告書を提出／独学してテストに合格）の編集。
@@ -46,18 +47,35 @@ export interface PromotionRow {
 export function PromotionRequirementEditor({
   gradeId,
   gradeName,
+  stepLabel,
   rows,
   usage,
 }: {
   gradeId: string;
   gradeName: string;
+  /**
+   * この等級から上がる昇格の段階の呼び名（「等級1→等級2」）。等級名から作った値を受け取り、最上位なら null（S1・A1）。
+   * 行に保存してある transitionLabel は等級名を変えても追従しないので、画面には出さない（改訂の比較のためにだけ送り返す）。
+   */
+  stepLabel: string | null;
   rows: PromotionRow[];
   /** 項目ごとの「どこで使っているか」。空＝一度も使っていない＝完全に消せる。 */
   usage: UsageMap;
 }) {
   const { send, remove, saving, error, message } = useMasterAction("promotionRequirement");
-  const [drafts, setDrafts] = useState<Record<string, { open: boolean; text: string; gate: boolean; label: string }>>({});
+  const [drafts, setDrafts] = useState<Record<string, { open: boolean; text: string; gate: boolean }>>({});
   const [editing, setEditing] = useState<Record<string, string>>({});
+  /* 並べ替えの保存中は、一覧を包む fieldset を止めない。止めると、いま押したつまみや矢印のボタンが
+     disabled になってフォーカスが外れ、キーボードで続けて動かせなくなる（busy で受け付けだけを止める）。 */
+  const [reordering, setReordering] = useState(false);
+  const commitOrder = async (ids: string[]) => {
+    setReordering(true);
+    try {
+      return await send({ kind: "promotionRequirementOrder", ids });
+    } finally {
+      setReordering(false);
+    }
+  };
 
   /* 使っている場所があるなら消させない。
      行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
@@ -73,15 +91,15 @@ export function PromotionRequirementEditor({
 
   const block = (kind: PromoKind) => {
     const list = activeOf(kind);
-    const draft = drafts[kind] ?? { open: false, text: "", gate: true, label: "" };
+    const draft = drafts[kind] ?? { open: false, text: "", gate: true };
     return (
       <Card key={kind}>
         {/* 項目を上から書き足していく画面なので、頭は固定表示にする。
             帯に載せるのは「いま何の種類を書いているか」と「いま何項目あるか」だけ。 */}
+        {/* 「件数の上限なし・0項目でもよい」は2つの種類で同じ文なので、カードの頭ではなく冒頭の説明に1回だけ書く */}
         <CardHead
           pinned
           title={KIND_LABEL[kind]}
-          sub="件数の上限はありません。0項目のままでもかまいません。"
           actions={
             <span className="num text-title font-bold">
               {list.length}
@@ -90,130 +108,111 @@ export function PromotionRequirementEditor({
           }
         />
 
-        {list.length === 0 && (
+        {/* 追加の入力欄を開いているときだけ、ここに「まだありません」を出す。閉じているときは追加ボタンと同じ行に置く */}
+        {list.length === 0 && draft.open && (
           <div className="card-pad">
             <p className="footnote m-0">この種類の項目はまだありません。</p>
           </div>
         )}
 
-        {list.map((r, i) => (
-          <div key={r.id} className="card-row items-start">
-            <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{i + 1}</span>
-            <div className="row-main">
-              {editing[r.id] === undefined ? (
-                <>
-                  <p className="m-0 text-sub">{r.text}</p>
-                  {r.transitionLabel && <p className="footnote m-0">{r.transitionLabel}</p>}
-                  {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
-                </>
-              ) : (
-                <>
-                  <textarea
-                    value={editing[r.id]}
-                    autoFocus
-                    onChange={(e) => setEditing((s) => ({ ...s, [r.id]: e.target.value }))}
-                    rows={2}
-                    className="input w-full"
-                    aria-label={`${KIND_LABEL[kind]} ${i + 1}件目の内容`}
-                  />
-                  <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
-                  <div className="mt-2 flex gap-2">
+        {/* 並べ替えはつまみの長押し・ドラッグか矢印のボタン（S11・DD-005）。置いたら並び全体を1回で保存する */}
+        {list.length > 0 && (
+          <ReorderList
+            items={list.map((r) => ({ ...r, label: r.text }))}
+            label={`${KIND_LABEL[kind]}の並び`}
+            className="reorder-in-card"
+            busy={saving}
+            onCommit={(ids) => commitOrder(ids)}
+            renderItem={(r, i) => (
+              <>
+                <div className="flex items-start gap-3">
+                  <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{i + 1}</span>
+                  <div className="row-main">
+                    {editing[r.id] === undefined ? (
+                      <>
+                        <p className="m-0 text-sub">{r.text}</p>
+                        {stepLabel && <p className="footnote m-0">{stepLabel}</p>}
+                        {markOf(r.id) !== null && <UsedByDetail mark={markOf(r.id)!} usedBy={usedByOf(r.id)} />}
+                      </>
+                    ) : (
+                      <>
+                        <textarea
+                          value={editing[r.id]}
+                          autoFocus
+                          onChange={(e) => setEditing((s) => ({ ...s, [r.id]: e.target.value }))}
+                          rows={2}
+                          className="input w-full"
+                          aria-label={`${KIND_LABEL[kind]} ${i + 1}件目の内容`}
+                        />
+                        <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
+                        <div className="mt-2 flex gap-2">
+                          <Button
+                            variant="primary"
+                            disabled={saving || editing[r.id].trim() === ""}
+                            onClick={async () => {
+                              const ok = await send({
+                                kind: "promotionRequirementRevise",
+                                id: r.id,
+                                text: editing[r.id].trim(),
+                                transitionLabel: r.transitionLabel,
+                                isGate: r.isGate,
+                              });
+                              if (ok) setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; });
+                            }}
+                          >
+                            新版として保存
+                          </Button>
+                          <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}>
+                            やめる
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {editing[r.id] === undefined && (
+                  <div className="row-actions mt-2">
+                    {r.isGate ? <Badge tone="alert">必須</Badge> : <Badge tone="done">任意</Badge>}
+                    <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
+                      内容を直す
+                    </Button>
                     <Button
-                      variant="primary"
-                      disabled={saving || editing[r.id].trim() === ""}
-                      onClick={async () => {
-                        const ok = await send({
+                      variant="tertiary"
+                      disabled={saving}
+                      onClick={() =>
+                        void send({
                           kind: "promotionRequirementRevise",
                           id: r.id,
-                          text: editing[r.id].trim(),
+                          text: r.text,
                           transitionLabel: r.transitionLabel,
-                          isGate: r.isGate,
-                        });
-                        if (ok) setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; });
-                      }}
+                          isGate: !r.isGate,
+                        })
+                      }
                     >
-                      新版として保存
+                      {r.isGate ? "任意の新版にする" : "必須の新版にする"}
                     </Button>
-                    <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => { const n = { ...s }; delete n[r.id]; return n; })}>
-                      やめる
-                    </Button>
+                    <ConfirmButton
+                      label="今後使わない"
+                      variant="danger-outline"
+                      busy={saving}
+                      confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
+                      onConfirm={() => void send({ kind: "promotionRequirementActivation", id: r.id, isActive: false })}
+                    />
+                    {markOf(r.id) === null && (
+                      <ConfirmButton
+                        label={DELETE_LABEL}
+                        variant="danger-outline"
+                        busy={saving}
+                        confirm={deleteConfirmText(r.text)}
+                        onConfirm={() => void remove(r.id)}
+                      />
+                    )}
                   </div>
-                </>
-              )}
-            </div>
-            {editing[r.id] === undefined && (
-              <div className="row-actions">
-                {r.isGate ? <Badge tone="alert">必須</Badge> : <Badge tone="done">任意</Badge>}
-                <Button
-                  variant="tertiary"
-                  disabled={saving || i === 0}
-                  aria-label="先頭に移動"
-                  onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, direction: "top" })}
-                >
-                  ⇈
-                </Button>
-                <Button
-                  variant="tertiary"
-                  disabled={saving || i === 0}
-                  aria-label="1つ上に移動"
-                  onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, direction: "up" })}
-                >
-                  ↑
-                </Button>
-                <Button
-                  variant="tertiary"
-                  disabled={saving || i === list.length - 1}
-                  aria-label="1つ下に移動"
-                  onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, direction: "down" })}
-                >
-                  ↓
-                </Button>
-                <Button
-                  variant="tertiary"
-                  disabled={saving || i === list.length - 1}
-                  aria-label="末尾に移動"
-                  onClick={() => void send({ kind: "promotionRequirementOrder", id: r.id, direction: "bottom" })}
-                >
-                  ⇊
-                </Button>
-                <Button variant="tertiary" disabled={saving} onClick={() => setEditing((s) => ({ ...s, [r.id]: r.text }))}>
-                  内容を直す
-                </Button>
-                <Button
-                  variant="tertiary"
-                  disabled={saving}
-                  onClick={() =>
-                    void send({
-                      kind: "promotionRequirementRevise",
-                      id: r.id,
-                      text: r.text,
-                      transitionLabel: r.transitionLabel,
-                      isGate: !r.isGate,
-                    })
-                  }
-                >
-                  {r.isGate ? "任意の新版にする" : "必須の新版にする"}
-                </Button>
-                <ConfirmButton
-                  label="今後使わない"
-                  variant="danger-outline"
-                  busy={saving}
-                  confirm={`「${r.text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
-                  onConfirm={() => void send({ kind: "promotionRequirementActivation", id: r.id, isActive: false })}
-                />
-                {markOf(r.id) === null && (
-                  <ConfirmButton
-                    label={DELETE_LABEL}
-                    variant="danger-outline"
-                    busy={saving}
-                    confirm={deleteConfirmText(r.text)}
-                    onConfirm={() => void remove(r.id)}
-                  />
                 )}
-              </div>
+              </>
             )}
-          </div>
-        ))}
+          />
+        )}
 
         <div className="card-pad">
           {draft.open ? (
@@ -227,14 +226,8 @@ export function PromotionRequirementEditor({
                 aria-label={`${KIND_LABEL[kind]}に追加する項目の内容`}
                 onChange={(e) => setDrafts((s) => ({ ...s, [kind]: { ...draft, open: true, text: e.target.value } }))}
               />
-              <label className="text-note text-ink-muted">
-                対象の昇格（任意。例：Beginner → Regular）
-                <input
-                  value={draft.label}
-                  className="input mt-1 w-full"
-                  onChange={(e) => setDrafts((s) => ({ ...s, [kind]: { ...draft, open: true, label: e.target.value } }))}
-                />
-              </label>
+              {/* 対象の昇格は等級で決まるので、手では書かせない（手書きの等級名は、名前を変えると古いまま残る） */}
+              {stepLabel && <p className="footnote m-0">対象の昇格：{stepLabel}（等級名から自動で表示します）</p>}
               <label className="flex items-center gap-2 text-sub">
                 <input
                   type="checkbox"
@@ -253,23 +246,28 @@ export function PromotionRequirementEditor({
                       gradeId,
                       reqKind: kind,
                       text: draft.text.trim(),
-                      transitionLabel: draft.label.trim() || null,
+                      transitionLabel: null,
                       isGate: draft.gate,
                     });
-                    if (ok) setDrafts((s) => ({ ...s, [kind]: { open: true, text: "", gate: draft.gate, label: draft.label } }));
+                    if (ok) setDrafts((s) => ({ ...s, [kind]: { open: true, text: "", gate: draft.gate } }));
                   }}
                 >
                   この内容で追加する
                 </Button>
-                <Button variant="tertiary" disabled={saving} onClick={() => setDrafts((s) => ({ ...s, [kind]: { open: false, text: "", gate: true, label: "" } }))}>
+                <Button variant="tertiary" disabled={saving} onClick={() => setDrafts((s) => ({ ...s, [kind]: { open: false, text: "", gate: true } }))}>
                   閉じる
                 </Button>
               </div>
             </div>
           ) : (
-            <Button variant="secondary" disabled={saving} onClick={() => setDrafts((s) => ({ ...s, [kind]: { open: true, text: "", gate: true, label: "" } }))}>
-              ＋ 項目を追加
-            </Button>
+            /* 行の操作（内容を直す・今後使わない）と同じく右端に置く（左に1つだけ置くと右側が空いたまま残る。§28-9）。
+               項目が無いときは「まだありません」を同じ行の左に置く（別の段にすると、その段は右側が空く） */
+            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+              {list.length === 0 && <p className="footnote m-0 mr-auto">この種類の項目はまだありません。</p>}
+              <Button variant="secondary" disabled={saving} onClick={() => setDrafts((s) => ({ ...s, [kind]: { open: true, text: "", gate: true } }))}>
+                ＋ 項目を追加
+              </Button>
+            </div>
           )}
         </div>
 
@@ -280,7 +278,7 @@ export function PromotionRequirementEditor({
             busy={saving}
             renderDetail={(row) => (
               <>
-                {row.transitionLabel && <p className="footnote m-0">{row.transitionLabel}</p>}
+                {stepLabel && <p className="footnote m-0">{stepLabel}</p>}
                 <p className="footnote m-0">{row.isGate ? "必須" : "任意"}</p>
                 {markOf(row.id) !== null && <UsedByDetail mark={markOf(row.id)!} usedBy={usedByOf(row.id)} />}
               </>
@@ -309,12 +307,13 @@ export function PromotionRequirementEditor({
   };
 
   return (
-    <fieldset disabled={saving} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
+    <fieldset disabled={saving && !reordering} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
+      {/* 冒頭の説明は1つの段落にまとめる（短い文を1行ずつ積むと、その行ごとに右側が空く。§28-9） */}
       <p className="footnote m-0">
         いま編集しているのは <b>{gradeName}</b> の昇格要件です。ここでの変更は次に作るアンケートから反映されます。
-        すでに作成・公開したアンケートと確定済みの評価は変わりません。
+        すでに作成・公開したアンケートと確定済みの評価は変わりません。内容を直すと、新版を作ります。
+        どちらの種類も件数の上限はなく、0項目のままでもかまいません。
       </p>
-      <p className="footnote m-0">内容を直すと、新版を作ります。</p>
       {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
       <RefreshStatus message={message} refreshing={saving} />
       {block("report")}

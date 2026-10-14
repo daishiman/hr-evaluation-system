@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { canSeeFormResponses, requireViewer } from "@/lib/session";
+import { canSeeFormResponses, requireRoute } from "@/lib/session";
 import { listCycles, listForms } from "@/lib/queries";
+import { formRowTitle } from "@/lib/domain/grade-label";
 import { Badge, Card, CardRow, ChipLink, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
  * これまでどおり会社の管理者だけが /admin/forms から見る。
  */
 export default async function FormContentList({ searchParams }: { searchParams: Promise<{ cycle?: string }> }) {
-  const viewer = await requireViewer();
+  const viewer = await requireRoute("/forms");
   if (!viewer.companyId) {
     return <EmptyState title="所属している会社がありません" body="会社の管理者にご連絡ください。" />;
   }
@@ -47,14 +48,20 @@ export default async function FormContentList({ searchParams }: { searchParams: 
         lede="等級ごとのアンケートを、答えずに読めます。設問文・補足・選択肢・答え方まで確認できます。"
       />
 
-      <SectionHeading>評価期間を選ぶ</SectionHeading>
-      <div className="mb-5 flex flex-wrap gap-2">
-        {cycles.map((c) => (
-          <ChipLink key={c.id} href={`/forms?cycle=${c.id}`} current={c.id === selected.id}>
-            {c.name}
-          </ChipLink>
-        ))}
-      </div>
+      {/* 期間の切り替えは見出しの右に並べる（見出しの下に積むと、右側が空いた帯が2段できる） */}
+      <SectionHeading
+        aside={
+          <div className="flex flex-wrap justify-end gap-2" role="group" aria-label="評価期間を選ぶ">
+            {cycles.map((c) => (
+              <ChipLink key={c.id} href={`/forms?cycle=${c.id}`} current={c.id === selected.id}>
+                {c.name}
+              </ChipLink>
+            ))}
+          </div>
+        }
+      >
+        評価期間を選ぶ
+      </SectionHeading>
 
       <SectionHeading>この期間のアンケート（{forms.length}件）</SectionHeading>
       {forms.length === 0 ? (
@@ -67,7 +74,7 @@ export default async function FormContentList({ searchParams }: { searchParams: 
               off={f.status === "closed"}
               title={
                 <Link href={`/forms/${f.id}`} className="text-brand-deep">
-                  {f.title}
+                  {formRowTitle(f)}
                 </Link>
               }
               sub={
@@ -75,7 +82,13 @@ export default async function FormContentList({ searchParams }: { searchParams: 
                   対象 {f.gradeName ?? "—"} ／ 第{f.version}版 ／ 全{f.questionCount}問
                 </>
               }
-              detail={<p className="footnote m-0">回答期間 {formatPeriod(f.opensAt, f.closesAt)}</p>}
+              value={
+                /* 回答期間は行の右に置く（名前・対象と同じ高さで読めるようにする） */
+                <>
+                  <p className="footnote m-0">回答期間</p>
+                  <p className="m-0 text-sub">{formatPeriod(f.opensAt, f.closesAt)}</p>
+                </>
+              }
               marks={
                 <Badge tone={f.status === "published" ? "active" : f.status === "closed" ? "closed" : "dropped"}>
                   {FORM_STATUS_LABEL[f.status] ?? f.status}

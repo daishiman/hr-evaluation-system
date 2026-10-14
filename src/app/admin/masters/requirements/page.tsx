@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { listGradeRequirements, listGrades } from "@/lib/queries";
 import { getDb } from "@/lib/db";
 import { gradeRequirementUsage } from "@/lib/master-usage";
@@ -21,7 +21,7 @@ export default async function AdminGradeRequirements({
 }: {
   searchParams: Promise<{ grade?: string }>;
 }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/masters/requirements");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
   const [grades, reqs] = await Promise.all([listGrades(viewer.companyId), listGradeRequirements(viewer.companyId)]);

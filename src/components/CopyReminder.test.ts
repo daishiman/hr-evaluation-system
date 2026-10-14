@@ -25,4 +25,21 @@ describe("未回答者への連絡文コピー", () => {
   it("読み取り専用の文面欄にも、読み上げられる名前がある", () => {
     expect(render("idle")).toContain('aria-label="未回答者への連絡文"');
   });
+
+  it("コピーのボタンは本文と同じ行の右端（SplitRow の補足）に置き、読む順は URL → 文面の確認 → コピー のまま（§28-9）", () => {
+    const html = renderToStaticMarkup(
+      createElement(CopyReminderView, {
+        text: "催促文",
+        result: "idle",
+        onCopy: vi.fn(),
+        lead: createElement("span", null, "回答画面のURL"),
+      }),
+    );
+    const aside = html.indexOf('class="split-aside"');
+    expect(html).toContain('class="split-row"');
+    expect(aside).toBeGreaterThan(-1);
+    expect(html.indexOf("未回答の方への連絡文をコピーする")).toBeGreaterThan(aside);
+    expect(html.indexOf("回答画面のURL")).toBeLessThan(html.indexOf("送る文面を確認する"));
+    expect(html.indexOf("送る文面を確認する")).toBeLessThan(aside);
+  });
 });

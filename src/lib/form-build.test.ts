@@ -15,6 +15,10 @@ describe("assertFormContentEditable（アンケート内容の版を守る）", 
     );
   });
 
+  it("題名が空（既定の題名）なら「このアンケート」と呼ぶ", () => {
+    expect(() => assertFormContentEditable({ status: "published", title: "" })).toThrow(/^このアンケートは公開中/);
+  });
+
   it("未知の状態もfail-closedにする", () => {
     expect(() => assertFormContentEditable({ status: "unexpected", title: "上期アンケート" })).toThrow(
       /現在の状態.*新しい版/,

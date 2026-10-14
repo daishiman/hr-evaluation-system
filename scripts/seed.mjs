@@ -7,6 +7,7 @@
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { assertFullSeedTargetIsLocal } from "./seed-target.mjs";
 
 try {
@@ -31,7 +32,7 @@ const TABLES = [
   "kpi_questions", "kpi_reference_points", "kpi_rank_criteria", "kpi_items", "kpi_categories",
   "promotion_thresholds", "behavior_levels", "behavior_guidelines", "behavior_band_sets",
   "promotion_requirements", "grade_requirements",
-  "sessions", "accounts", "verifications", "users", "grades", "offices", "companies",
+  "sessions", "accounts", "verifications", "company_memberships", "users", "grades", "offices", "companies",
 ];
 
 const { sql, counts } = await buildSeed();
@@ -57,4 +58,4 @@ if (generateOnly) process.exit(0);
 // guardに加えて実行先もローカルへ固定し、後続の条件分岐から本番へ届かないようにする。
 const args = ["wrangler", "d1", "execute", "hr-evaluation-db", "--file=drizzle/seed.sql", "--local", "-y"];
 console.log(`\n実行: pnpm ${args.join(" ")}`);
-execFileSync("pnpm", args, { stdio: "inherit", cwd: new URL("..", import.meta.url).pathname });
+execFileSync("pnpm", args, { stdio: "inherit", cwd: fileURLToPath(new URL("..", import.meta.url)) });

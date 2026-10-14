@@ -1,10 +1,24 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { listCycles, listEvaluations, listMembers } from "@/lib/queries";
-import { listPendingRespondents } from "@/lib/evaluate";
+import { listCycleSubmissionRows } from "@/lib/submission-queries";
+import { SUBMISSION_STATE_LABEL, countSubmissions, parseSubmissionFilter } from "@/lib/domain/submission-status";
 import { detectStaleCycles } from "@/lib/impact";
 import { ActionButton } from "@/components/ActionButton";
-import { Badge, Card, CardRow, ChipLink, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { SubmissionStatusTable } from "@/components/SubmissionStatusTable";
+import {
+  Badge,
+  Card,
+  CardRow,
+  ChipLink,
+  DownloadButton,
+  EmptyState,
+  Num,
+  PageTitle,
+  ReasonNote,
+  SectionHeading,
+  SplitRow,
+} from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 import { buildEvaluations } from "@/actions/evaluations";
 
@@ -17,9 +31,9 @@ export const dynamic = "force-dynamic";
 export default async function ManagerCycles({
   searchParams,
 }: {
-  searchParams: Promise<{ cycle?: string }>;
+  searchParams: Promise<{ cycle?: string; status?: string }>;
 }) {
-  const viewer = await requireRole("MANAGER");
+  const viewer = await requireRoute("/manager/cycles");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
@@ -39,19 +53,23 @@ export default async function ManagerCycles({
   const sp = await searchParams;
   const selected = cycles.find((c) => c.id === sp.cycle) ?? cycles.find((c) => c.status === "open") ?? cycles[0];
 
-  const [allPending, allEvals, staleCycles, assignedMembers] = await Promise.all([
-    listPendingRespondents(companyId, selected.id),
+  const [submission, allEvals, staleCycles, assignedMembers] = await Promise.all([
+    listCycleSubmissionRows(companyId, selected.id),
     listEvaluations(companyId, viewer.role, { cycleId: selected.id }),
     detectStaleCycles(companyId),
     viewer.role === "MANAGER" ? listMembers(companyId, { managerId: viewer.id }) : Promise.resolve([]),
   ]);
   const assignedIds =
     viewer.role === "MANAGER" ? new Set(assignedMembers.map((member) => member.id)) : null;
-  const pending = assignedIds ? allPending.filter((row) => assignedIds.has(row.id)) : allPending;
+  // マネージャーは担当の部下の行だけを出し、件数もその範囲で数え直す
+  const respondents = assignedIds
+    ? submission.rows.filter((row) => assignedIds.has(row.employeeId))
+    : submission.rows;
+  const counts = countSubmissions(respondents);
+  const filter = parseSubmissionFilter(sp.status);
   const evals = assignedIds ? allEvals.filter((row) => assignedIds.has(row.employeeId)) : allEvals;
   const stale = staleCycles.find((c) => c.cycleId === selected.id);
-  const submitted = pending.filter((p) => p.status === "submitted");
-  const notSubmitted = pending.filter((p) => p.status !== "submitted");
+  const submitted = respondents.filter((p) => p.state === "submitted");
   const drafts = evals.filter((e) => e.status !== "finalized");
 
   return (
@@ -61,26 +79,41 @@ export default async function ManagerCycles({
         lede="半期ごとに、提出されたアンケートから評価を作り、内容を確認して確定します。"
       />
 
-      <SectionHeading>期間を選ぶ</SectionHeading>
-      <div className="mb-5 flex flex-wrap gap-2">
-        {cycles.map((c) => (
-          <ChipLink
-            key={c.id}
-            href={`/manager/cycles?cycle=${c.id}`} current={c.id === selected.id}
-          >
-            {c.name}
-          </ChipLink>
-        ))}
-      </div>
+      {/* 期間の札は見出しの右に並べる。見出しの下に1行で置くと、札の右側が空いたまま残る（§28-9） */}
+      <SectionHeading
+        aside={
+          <div className="flex flex-wrap justify-end gap-2" role="group" aria-label="期間を選ぶ">
+            {cycles.map((c) => (
+              <ChipLink key={c.id} href={`/manager/cycles?cycle=${c.id}`} current={c.id === selected.id}>
+                {c.name}
+              </ChipLink>
+            ))}
+          </div>
+        }
+      >
+        期間を選ぶ
+      </SectionHeading>
 
+      {/* 左に「提出済みの人数」、右にまだ出ていない人の内訳。大きな数字だけを左に置くと右半分が空く */}
       <Card className="card-pad hero-tint">
-        <p className="m-0 text-note text-ink-muted">
-          {formatPeriod(selected.periodStart, selected.periodEnd)} ／ {CYCLE_STATUS_LABEL[selected.status] ?? selected.status}
-        </p>
-        <p className="num-display m-0 text-hero-sp leading-tight text-accent">
-          {submitted.length}
-          <span className="unit"> / {pending.length} 人が提出済み</span>
-        </p>
+        <SplitRow
+          aside={
+            counts.total > 0 && (
+              <p className="m-0 text-sub">
+                {SUBMISSION_STATE_LABEL.draft} <Num value={counts.draft} unit="人" /> ／ {SUBMISSION_STATE_LABEL.none}{" "}
+                <Num value={counts.none} unit="人" />
+              </p>
+            )
+          }
+        >
+          <p className="m-0 text-note text-ink-muted">
+            {formatPeriod(selected.periodStart, selected.periodEnd)} ／ {CYCLE_STATUS_LABEL[selected.status] ?? selected.status}
+          </p>
+          <p className="num-display m-0 text-hero-sp leading-tight text-accent">
+            {counts.submitted}
+            <span className="unit"> / {counts.total} 人が提出済み</span>
+          </p>
+        </SplitRow>
       </Card>
 
       {stale && (
@@ -110,41 +143,45 @@ export default async function ManagerCycles({
         </div>
       )}
 
-      <SectionHeading>未提出の方</SectionHeading>
-      {notSubmitted.length === 0 ? (
-        <p className="footnote">全員の提出が終わっています。</p>
+      {/* 未提出の人だけでなく対象者全員を並べ、状態（?status=）で絞る。
+          評価期間の選択（?cycle=）は絞り込みのリンクにも残す。 */}
+      <SectionHeading>提出の状況</SectionHeading>
+      {counts.total === 0 ? (
+        <p className="footnote">この期間のアンケートの対象になる方がいません。</p>
       ) : (
-        <Card>
-          {notSubmitted.map((p) => (
-            <CardRow
-              key={p.id}
-              title={p.name}
-              sub={p.status === "draft" ? "入力途中です。提出まで進んでいません。" : "まだ入力を始めていません。"}
-              marks={<Badge tone="required">未提出</Badge>}
-            />
-          ))}
-        </Card>
+        <SubmissionStatusTable
+          caption="対象者と提出の状況"
+          rows={respondents}
+          counts={counts}
+          filter={filter}
+          filterHref={(f) => `/manager/cycles?cycle=${selected.id}${f === "all" ? "" : `&status=${f}`}`}
+          columns={[{ key: "grade", header: "等級", cell: (r) => r.gradeName ?? "—" }]}
+        />
       )}
 
       <SectionHeading>評価を作る</SectionHeading>
       <Card className="card-pad">
-        <p className="m-0 text-sub">
-          提出済みの{submitted.length}人分について、回答から評価を計算します。すでに確定した評価は作り直しません。
-        </p>
-        <div className="mt-3">
-          <ActionButton
-            action={buildEvaluations}
-            resource="evaluations"
-            input={{ cycleId: selected.id }}
-            label="提出済みの回答から評価を作る"
-            confirm={`提出済み${submitted.length}人分の評価を作り直します。確認中の評価があれば、最新の回答で上書きされます。よろしいですか？`}
-          />
-        </div>
-        {submitted.length === 0 && (
-          <div className="mt-3">
-            <ReasonNote>提出済みの回答がないため、まだ評価を作れません。</ReasonNote>
-          </div>
-        )}
+        {/* 説明と止まっている理由を左、押すものを右に置く（ボタンを説明の下に積むと右が空く） */}
+        <SplitRow
+          aside={
+            <ActionButton
+              action={buildEvaluations}
+              resource="evaluations"
+              input={{ cycleId: selected.id }}
+              label="提出済みの回答から評価を作る"
+              confirm={`提出済み${submitted.length}人分の評価を作り直します。確認中の評価があれば、最新の回答で上書きされます。よろしいですか？`}
+            />
+          }
+        >
+          <p className="m-0 text-sub">
+            提出済みの{submitted.length}人分について、回答から評価を計算します。すでに確定した評価は作り直しません。
+          </p>
+          {submitted.length === 0 && (
+            <div className="mt-3">
+              <ReasonNote>提出済みの回答がないため、まだ評価を作れません。</ReasonNote>
+            </div>
+          )}
+        </SplitRow>
       </Card>
 
       <SectionHeading

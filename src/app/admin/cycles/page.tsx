@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { getActiveScheme, listCycles, listForms } from "@/lib/queries";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
+import { SetupGapList } from "@/components/SetupGapList";
 import { Badge, Card, CardHead, DownloadButton, EmptyState, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 import { listUnfinalizedNamesInCycle } from "@/lib/stalled";
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
  * 「期間を作る → アンケートを配る → 受付を締め切る」の順に並べる。
  */
 export default async function AdminCycles() {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/cycles");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
@@ -67,6 +68,7 @@ export default async function AdminCycles() {
         action={createCycle}
         resource="cycles"
         submitLabel="この期間を作る"
+        inline
         description="いま有効な評価セット（KPIの項目と配点）がこの期間に紐づきます。あとで配点を変えても、この期間の判定条件は作成時のまま残ります。"
         resetAfterSubmit
         fields={[
@@ -85,8 +87,9 @@ export default async function AdminCycles() {
             const my = forms.filter((f) => f.cycleId === c.id);
             const published = my.filter((f) => f.status === "published").length;
             const openReadiness = cycleOpenReadiness({
-              schemeReady: schemeReadinessByCycle.get(c.id)?.schemeReady === true,
+              schemeGaps: schemeReadinessByCycle.get(c.id)?.schemeGaps ?? [],
               publishedFormCount: published,
+              cycleId: c.id,
             });
             const responses = my.reduce((sum, f) => sum + Number(f.responseCount ?? 0), 0);
             // 受付中の期間だけ数えている。0件のときは何も足さない（余計な確認を挟まない）。
@@ -110,58 +113,61 @@ export default async function AdminCycles() {
                     `${formatPeriod(c.periodStart, c.periodEnd)} ／ アンケート${my.length}件（公開中 ${published}件） ／ 回答${responses}件` +
                     (pending.length > 0 ? ` ／ 未確定 ${pending.length}件` : "")
                   }
+                  /* 受付の状態を変える操作は、状態の札と同じ行の右端に置く。
+                     左に詰めて並べると、行の右側がまるごと空く（spec.md §28-9） */
                   actions={
                     <>
-                      <LinkButton href={`/admin/forms?cycle=${c.id}`} variant="tertiary">
-                        アンケートを見る
-                      </LinkButton>
-                      <LinkButton href={`/manager/cycles?cycle=${c.id}`} variant="tertiary">
-                        進行状況を見る
-                      </LinkButton>
-                      <DownloadButton href={`/api/export?type=results&cycleId=${c.id}`} variant="tertiary">
-                        評価結果をCSVに書き出す
-                      </DownloadButton>
-                      <DownloadButton href={`/api/export?type=kpi&cycleId=${c.id}`} variant="tertiary">
-                        KPI明細をCSVに書き出す
-                      </DownloadButton>
+                      {c.status !== "open" && c.status !== "closed" && openReadiness.ready && (
+                        <ActionButton
+                          action={updateCycleStatus}
+                          resource="cycles"
+                          input={{ cycleId: c.id, status: "open" }}
+                          label="回答の受付を始める"
+                        />
+                      )}
+                      {c.status === "open" && (
+                        <ActionButton
+                          action={updateCycleStatus}
+                          resource="cycles"
+                          input={{ cycleId: c.id, status: "closed" }}
+                          label="受付を締め切る"
+                          variant="secondary"
+                          confirm={cycleCloseConfirmText(pending)}
+                        />
+                      )}
+                      {c.status === "closed" && (
+                        <ActionButton
+                          action={updateCycleStatus}
+                          resource="cycles"
+                          input={{ cycleId: c.id, status: "open" }}
+                          label="受付を再開する"
+                          variant="tertiary"
+                          confirm="受付を再開すると、この期間の回答を再び受け付けます。アンケートは個別に公開し直してください。よろしいですか？"
+                        />
+                      )}
                     </>
                   }
                 />
 
-                <div className="mt-3 flex flex-wrap gap-3">
-                  {c.status !== "open" && c.status !== "closed" && openReadiness.ready && (
-                    <ActionButton
-                      action={updateCycleStatus}
-                      resource="cycles"
-                      input={{ cycleId: c.id, status: "open" }}
-                      label="回答の受付を始める"
-                    />
-                  )}
-                  {c.status === "open" && (
-                    <ActionButton
-                      action={updateCycleStatus}
-                      resource="cycles"
-                      input={{ cycleId: c.id, status: "closed" }}
-                      label="受付を締め切る"
-                      variant="secondary"
-                      confirm={cycleCloseConfirmText(pending)}
-                    />
-                  )}
-                  {c.status === "closed" && (
-                    <ActionButton
-                      action={updateCycleStatus}
-                      resource="cycles"
-                      input={{ cycleId: c.id, status: "open" }}
-                      label="受付を再開する"
-                      variant="tertiary"
-                      confirm="受付を再開すると、この期間の回答を再び受け付けます。アンケートは個別に公開し直してください。よろしいですか？"
-                    />
-                  )}
+                {/* この期間から出ていく先（一覧・進行状況・書き出し） */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <LinkButton href={`/admin/forms?cycle=${c.id}`} variant="tertiary">
+                    アンケートを見る
+                  </LinkButton>
+                  <LinkButton href={`/manager/cycles?cycle=${c.id}`} variant="tertiary">
+                    進行状況を見る
+                  </LinkButton>
+                  <DownloadButton href={`/api/export?type=results&cycleId=${c.id}`} variant="tertiary">
+                    評価結果をCSVに書き出す
+                  </DownloadButton>
+                  <DownloadButton href={`/api/export?type=kpi&cycleId=${c.id}`} variant="tertiary">
+                    KPI明細をCSVに書き出す
+                  </DownloadButton>
                 </div>
 
                 {c.status === "planning" && !openReadiness.ready && (
                   <div className="mt-3">
-                    <ReasonNote>{openReadiness.message}</ReasonNote>
+                    <SetupGapList gaps={openReadiness.gaps} title="回答の受付を始める前に、次の設定が必要です" />
                   </div>
                 )}
 
