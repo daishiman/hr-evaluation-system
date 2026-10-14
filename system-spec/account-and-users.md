@@ -85,6 +85,10 @@
 
 - `/system/users`・`/admin/members`・`/manager/members` は、どれも `PeopleList`（`src/components/PeopleList.tsx`）に行の配列を渡すだけにする。
   検索・並べ替え・URL の読み書きは `src/lib/domain/people-list.ts` の純粋関数が持ち、画面ごとに書き分けない。
+- 行の配列には利用停止の人も入れ、`isActive` は行の値をそのまま渡す（`PeopleList` が札と `data-off` で沈める）。
+  画面で在籍中の人に絞ったり、別の節に分けたりしない。対象は所属を持つ人で、所属の行を消した人は出ない（`src/components/PeopleList.test.ts`）。
+- 人の一覧の検索は、ヘッダーの検索（`src/lib/domain/search.ts`・`normalizeKey`）と正規化を共有しない。
+  共有するとヘッダーの検索の当たり方が変わるため、別の仕組みのままにする（2026-10-14 の利用者の判断）。
 - 選べる並べ替えは、画面が `availableSortKeys({ acrossCompanies, gradeAndScore })` で決める。
   `acrossCompanies` は利用者一覧（`/system/users`）で会社をしぼらないときだけ true。`gradeAndScore` は `canViewGradeScore(viewer)`（台帳の `members.viewGradeScore`）で、利用者一覧を「会社に属さない」にしぼったときは false。
   URL の `sort` は `parsePeopleView` が選べるものに限って読み、ほかは既定に戻す。並べ替えの可否を UI の非表示だけに頼らない。

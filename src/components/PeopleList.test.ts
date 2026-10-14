@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -50,6 +52,21 @@ describe("人の一覧", () => {
     const html = render();
     expect(html).toContain("利用停止");
     expect(html).toContain('data-off="true"');
+  });
+
+  it("3つの一覧は利用停止の人も同じ一覧に入れ、行の状態をそのまま渡す（別の節に分けない。§28-13）", () => {
+    for (const [file, row] of [
+      ["src/app/system/users/page.tsx", "u"],
+      ["src/app/admin/members/page.tsx", "m"],
+      ["src/app/manager/members/page.tsx", "m"],
+    ] as const) {
+      const source = readFileSync(path.join(process.cwd(), file), "utf8");
+      expect(source, file).toContain(`isActive: ${row}.isActive,`);
+      expect(source, file).not.toMatch(/isActive:\s*true/);
+    }
+    // 社員の一覧は、等級と点数を付ける前に在籍中の人へ絞らない
+    const admin = readFileSync(path.join(process.cwd(), "src/app/admin/members/page.tsx"), "utf8");
+    expect(admin).toContain("withGradeAndScore(db, viewer, members)");
   });
 
   it("URL の検索語で開くと、当たる人だけを出し、当たらなければ消す手段を示す", () => {

@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { ROLE_LABEL, requireRoute } from "@/lib/session";
 import { listGrades, listMembers, listProfileFieldPolicies } from "@/lib/queries";
 import { resolveSelfEditMap, CONFIGURABLE_FIELDS } from "@/lib/domain/profile-fields";
 import { Card, Disclosure, DownloadButton, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
-import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
 import { RoleCapabilities } from "@/components/permissions/RoleCapabilities";
@@ -39,10 +37,10 @@ export default async function AdminMembers({ searchParams }: { searchParams: Pro
   // 初期パスワードの控えがある人（中身は押したときにだけ開く）
   const hasMemo = new Set(memoHolders);
   const managers = members.filter((m) => m.role !== "EMPLOYEE" && m.isActive);
-  const active = members.filter((m) => m.isActive);
-  const inactive = members.filter((m) => !m.isActive);
+  const activeCount = members.filter((m) => m.isActive).length;
+  // 利用停止の人も同じ一覧に入れる（退職した人の情報をあとから確かめるため。§28-13）。
   // 一覧に出す等級と確定した最新の点数は、見てよい役割にだけサーバーで付ける（S6）
-  const listed = await withGradeAndScore(db, viewer, active);
+  const listed = await withGradeAndScore(db, viewer, members);
   // 自社の一覧なので会社では並べない。点数と等級は見てよい役割だけが並べられる
   const sortKeys = availableSortKeys({ acrossCompanies: false, gradeAndScore: canViewGradeScore(viewer) });
   const view = parsePeopleView(await searchParams, sortKeys);
@@ -61,7 +59,7 @@ export default async function AdminMembers({ searchParams }: { searchParams: Pro
       {/* 名簿の全体像と、いま本人に開放している項目。文で書かず、数と札で見せる */}
       <Card className="card-pad hero-tint">
         <p className="num-display m-0 text-hero-sp leading-tight text-accent">
-          {active.length}
+          {activeCount}
           <span className="unit"> / {members.length} 人が在籍中</span>
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -85,10 +83,10 @@ export default async function AdminMembers({ searchParams }: { searchParams: Pro
         </div>
       </Card>
 
-      <SectionHeading aside={<span className="footnote">名前を押すと詳細を確認できます</span>}>
-        在籍中（{active.length}人）
+      <SectionHeading aside={<span className="footnote">名前を押すと詳細を確認できます（利用停止の方も載せています）</span>}>
+        名簿（{members.length}人）
       </SectionHeading>
-      {active.length === 0 ? (
+      {members.length === 0 ? (
         <EmptyState title="社員がまだ登録されていません" body="下の「アカウントを発行する」から追加してください。" />
       ) : (
         <PeopleList
@@ -98,7 +96,7 @@ export default async function AdminMembers({ searchParams }: { searchParams: Pro
             key: m.id,
             id: m.id,
             href: `/admin/members/${m.id}`,
-            isActive: true,
+            isActive: m.isActive,
             name: m.name,
             email: m.email,
             role: m.role,
@@ -110,26 +108,6 @@ export default async function AdminMembers({ searchParams }: { searchParams: Pro
             hasMemo: hasMemo.has(m.id),
           }))}
         />
-      )}
-
-      {inactive.length > 0 && (
-        <>
-          <SectionHeading>利用停止中（{inactive.length}人）</SectionHeading>
-          <Card>
-            {inactive.map((m) => (
-              <Link key={m.id} href={`/admin/members/${m.id}`} className="user-row no-underline" data-muted="true">
-                <Avatar name={m.name} seed={m.id} size={36} />
-                <div className="min-w-0 flex-1">
-                  <p className="m-0 truncate text-body font-semibold">{m.name}</p>
-                  <p className="m-0 truncate text-note text-ink-muted">
-                    ログインできません。過去の評価は残っています。
-                  </p>
-                </div>
-                <span className="badge badge-closed">利用停止</span>
-              </Link>
-            ))}
-          </Card>
-        </>
       )}
 
       <SectionHeading
