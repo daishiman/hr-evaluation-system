@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { STICKY_PAGE_HEAD_SELECTOR } from "@/components/ui";
 
 /**
  * 「固定した見出しの帯の下端」を実測して、--sticky-top に入れる。
@@ -49,7 +50,7 @@ export function StickyOffset() {
   }, []);
 
   useEffect(() => {
-    const head = document.querySelector<HTMLElement>('.page-head[data-sticky="true"]');
+    const head = document.querySelector<HTMLElement>(STICKY_PAGE_HEAD_SELECTOR);
     // html に置く。scroll-padding-top（html に効く）もこの値を読むため、
     // body に置くと html から読めない。
     const root = document.documentElement;

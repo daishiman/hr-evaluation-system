@@ -59,8 +59,10 @@ export async function applyMasterUpdate(args: {
           if (!set) throw new HttpError(404, "その行動指針の基準が見つかりませんでした。");
           if (!set.isActive) throw new HttpError(400, "その行動指針の基準は使用を止めています。もう一度使う状態にしてから割り当ててください。");
         }
-        /* 同じ基準セットは、等級の並びで続いた等級にだけ出す（§7-6・DD-010）。
-           画面は飛び飛びになる選択肢を選べなくしているが、ここでも会社の全等級で数え直す。 */
+        /* 同じ基準セットは、等級の並びで続いた等級にだけ出す（§28-12・DD-010）。
+           画面は断る選択肢を選べなくしているが、ここでも会社の全等級で数え直す。
+           断るのは、挟まる等級が増える手と、割り当てた先が飛び飛びのまま挟まる等級が減らない手。
+           変えない保存（同じ値の送り直し）と直す向きの1手は、判定（bandChangeBlockers）が [] を返すので通る。 */
         if (body.behaviorBand !== undefined || body.isActive !== undefined) {
           const companyGrades = await db
             .select({

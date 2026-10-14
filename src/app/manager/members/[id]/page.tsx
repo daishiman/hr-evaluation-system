@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { canViewEmployee, ROLE_LABEL, type Role, requireRoute } from "@/lib/session";
 import { getMember, listEvaluations, listNotes } from "@/lib/queries";
+import { gradeLabel } from "@/lib/domain/grade-label";
+import { DEPARTMENT_UNSET_LABEL } from "@/lib/domain/people-list";
 import { Badge, Card, DefList, PageTitle, RecordList, SectionHeading } from "@/components/ui";
 import { EvaluationTrend, type TrendItem } from "@/components/EvaluationTrend";
 import { NoteForm } from "@/components/NoteForm";
@@ -56,7 +58,7 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
     <>
       <PageTitle
         title={`${member.name} さん`}
-        lede={`${member.gradeName ?? "等級未設定"} ／ ${member.department ?? "所属未設定"} ／ ${ROLE_LABEL[member.role as Role] ?? member.role}`}
+        lede={`${gradeLabel({ name: member.gradeName })} ／ ${member.department ?? DEPARTMENT_UNSET_LABEL} ／ ${ROLE_LABEL[member.role as Role] ?? member.role}`}
       />
 
       <SectionHeading>基本情報</SectionHeading>

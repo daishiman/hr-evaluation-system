@@ -360,9 +360,9 @@ CREATE TABLE IF NOT EXISTS display_name_rewrites (
 `src/lib/domain/grade-label.ts` に次の関数を置き、画面・CSV の書き出し・アンケートの自動作成はここだけを使う。
 
 - `DEFAULT_GRADE_NAMES`: `code` ごとの既定（beginner→等級1 … manager2→等級5-2）。
-- `gradeLabel(grade | null)`: 等級名。無ければ「等級未設定」に1つにまとめる。
+- `gradeLabel(grade | null)`: 等級名。無い・名前が空白だけなら「等級未設定」に1つにまとめる。呼び名「等級未設定」（`GRADE_UNSET_LABEL`）はこのファイルだけが持ち、人数の札（「等級未設定 3人」）もこの定数を使う（`src/lib/grade-label-static.test.ts` が確かめる）。
 - `pointGroupLabel(pointGroup, grades)`: その区分の等級を `displayOrder` の順に「・」でつなぐ（例「等級4-1・等級4-2」）。区分名そのものは出さない。
-- `bandSetLabel(set, grades)`: 割り当てた等級があれば「等級1・等級2向け」。無ければ保存した名前、それも空なら「基準セット{n}」。
+- `bandSetLabel(set, grades)`: 割り当てた使用中の等級があれば「等級1・等級2向け」。無ければ保存した名前、それも空なら「基準セット{n}」。使用を止めた等級は新しいアンケートに出ないので数えない。
 - `promotionStepLabel(from, to)`: 「等級1→等級2」。
 - `targetGradesLabel(targetGrades, grades)`: 照合には生の値を使い、表示だけを変える。
 - `formDisplayTitle(form, cycle, grade)`: `title` が空なら「{評価期間} {等級名} 実績アンケート」。空文字を「既定の題名」とする。

@@ -25,7 +25,7 @@ export function BehaviorBandAssignmentEditor({
   availableBands,
 }: {
   grade: BehaviorAssignmentGradeRow;
-  /** 会社の全等級（並びと割り当て）。飛び飛びになる選択肢を選べなくするのに使う（サーバーも同じ判定をする） */
+  /** 会社の全等級（保存されている並びと割り当て）。サーバーが断る選択肢を選べなくするのに使う（サーバーも同じ判定をする） */
   lineGrades: readonly BandGrade[];
   /** 会社が持っている基準セット（呼び名の正本）。 */
   bandSets: readonly BehaviorBandSetRow[];
@@ -70,9 +70,14 @@ export function BehaviorBandAssignmentEditor({
   };
 
   const currentUnavailable = draft !== "" && !selectableBands.includes(draft);
-  /* 同じ基準セットは続いた等級にだけ出す（§7-6・DD-010）。選ぶと飛び飛びになる選択肢には理由を添える */
+  /* 同じ基準セットは続いた等級にだけ出す（§28-12・DD-010）。保存は「保存されている分け方（lineGrades）から1手」なので、
+     下書きではなく lineGrades から判定し、サーバーが断る選択肢には理由を添えて選べなくする。
+     今の値は変えない手なので理由は付かない。下書きに理由が付くのは、選んだあとに別の保存で分け方が変わったときだけ。 */
   const choiceNote = (code: string) =>
-    bandChoiceNote(bandChangeBlockers(lineGrades, { gradeId: grade.id, behaviorBand: behaviorBandPayloadValue(code) }));
+    bandChoiceNote(
+      bandChangeBlockers(lineGrades, { gradeId: grade.id, behaviorBand: behaviorBandPayloadValue(code) }),
+      grade.id,
+    );
   const noneNote = choiceNote("");
 
   return (
@@ -101,7 +106,7 @@ export function BehaviorBandAssignmentEditor({
               className="input mt-1 w-full"
               aria-label={`${grade.name}に出す行動指針`}
             >
-              <option value="" disabled={noneNote !== null && draft !== ""}>
+              <option value="" disabled={noneNote !== null}>
                 行動指針を出さない{noneNote && `（${noneNote}）`}
               </option>
               {currentUnavailable && (
@@ -112,7 +117,7 @@ export function BehaviorBandAssignmentEditor({
               {selectableBands.map((code) => {
                 const note = choiceNote(code);
                 return (
-                  <option key={code} value={code} disabled={note !== null && code !== draft}>
+                  <option key={code} value={code} disabled={note !== null}>
                     {behaviorBandLabel(bandSets, code)}
                     {note && `（${note}）`}
                   </option>

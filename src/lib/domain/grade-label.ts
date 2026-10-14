@@ -27,6 +27,8 @@ export type GradeLike = {
   pointGroup: string;
   displayOrder: number;
   behaviorBand?: string | null;
+  /** 使用中か。持たない入力は使用中とみなす */
+  isActive?: boolean;
 };
 
 /** 等級名。等級が無い・名前が空なら「等級未設定」に1つにまとめる */
@@ -48,12 +50,15 @@ export function pointGroupLabel(pointGroup: string, grades: readonly GradeLike[]
   return joinNames(grades.filter((g) => g.pointGroup === pointGroup));
 }
 
-/** 行動指針の基準セットの呼び名。割り当てた等級があれば「等級1・等級2向け」 */
+/**
+ * 行動指針の基準セットの呼び名。割り当てた使用中の等級があれば「等級1・等級2向け」。
+ * 使用を止めた等級は新しいアンケートに出ないので数えない（行動指針の分け方の並びと同じ。behavior-band-range.ts）。
+ */
 export function bandSetLabel(
   set: { code: string; name: string | null; displayOrder: number },
   grades: readonly GradeLike[],
 ): string {
-  const assigned = grades.filter((g) => g.behaviorBand === set.code);
+  const assigned = grades.filter((g) => g.behaviorBand === set.code && g.isActive !== false);
   if (assigned.length > 0) return `${joinNames(assigned)}向け`;
   const saved = set.name?.trim();
   return saved ? saved : `基準セット${set.displayOrder}`;

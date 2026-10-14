@@ -43,6 +43,16 @@ export interface PeopleListRow extends PersonFields {
 /** URL へ書き戻すまでの間。打っている途中は書かない（Safari は短い間の書き換えの回数を制限する） */
 const URL_SYNC_DELAY_MS = 300;
 
+/**
+ * 履歴を増やさずに URL を書き換える。メニューの位置などは残し、Next の印（__NA・_N）だけ外して渡す。
+ * 印が付いたままだと Next は内部の呼び出しとみなし、useSearchParams（会社の札の href）へ反映しない。
+ * 印の名前は Next の内部のものなので、頼るのはここ1か所にする。
+ */
+function replaceUrlKeepingHistory(url: URL) {
+  const { __NA: _na, _N: _n, ...own } = (window.history.state ?? {}) as Record<string, unknown>;
+  window.history.replaceState(own, "", url);
+}
+
 export function PeopleList({
   rows,
   sortKeys,
@@ -58,6 +68,16 @@ export function PeopleList({
   const [query, setQuery] = useState(initial.q);
   const [sort, setSort] = useState(initial.sort);
   const [dir, setDir] = useState(initial.dir);
+  // 範囲を切り替えて選べる並べ替えが変わったら（全社の一覧を1社にしぼると会社が無くなる）、並びは URL から
+  // 読み直したもの（initial）にする。札の href は URL の並びを引き継ぐので、開き直したときと同じ並びになる。
+  // 検索語は打っている途中のことがあるので、そのまま残す
+  const keysId = sortKeys.join();
+  const [loadedKeys, setLoadedKeys] = useState(keysId);
+  if (loadedKeys !== keysId) {
+    setLoadedKeys(keysId);
+    setSort(initial.sort);
+    setDir(initial.dir);
+  }
   // 入力欄はすぐに変え、一覧の描き直しは後から追いかける
   const deferredQuery = useDeferredValue(query);
   const catchingUp = deferredQuery !== query;
@@ -75,10 +95,7 @@ export function PeopleList({
         else url.searchParams.set(key, value);
       }
       if (url.href === window.location.href) return;
-      // 履歴は増やさない。メニューの位置などは残し、Next の印（__NA・_N）だけ外して渡す。
-      // 印が付いたままだと Next は内部の呼び出しとみなし、useSearchParams（会社の札の href）へ反映しない
-      const { __NA: _na, _N: _n, ...own } = (window.history.state ?? {}) as Record<string, unknown>;
-      window.history.replaceState(own, "", url);
+      replaceUrlKeepingHistory(url);
     }, URL_SYNC_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [query, sort, dir, sortKeys]);

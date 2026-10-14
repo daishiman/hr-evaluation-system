@@ -86,9 +86,11 @@
 - `/system/users`・`/admin/members`・`/manager/members` は、どれも `PeopleList`（`src/components/PeopleList.tsx`）に行の配列を渡すだけにする。
   検索・並べ替え・URL の読み書きは `src/lib/domain/people-list.ts` の純粋関数が持ち、画面ごとに書き分けない。
 - 選べる並べ替えは、画面が `availableSortKeys({ acrossCompanies, gradeAndScore })` で決める。
-  `acrossCompanies` は全社の一覧（`/system/users`）だけ true。`gradeAndScore` は `canViewGradeScore(viewer)`（台帳の `members.viewGradeScore`）。
+  `acrossCompanies` は利用者一覧（`/system/users`）で会社をしぼらないときだけ true。`gradeAndScore` は `canViewGradeScore(viewer)`（台帳の `members.viewGradeScore`）で、利用者一覧を「会社に属さない」にしぼったときは false。
   URL の `sort` は `parsePeopleView` が選べるものに限って読み、ほかは既定に戻す。並べ替えの可否を UI の非表示だけに頼らない。
 - 等級の並び（`gradeOrder`）は、等級名・点数と同じく `withGradeAndScore` か、全社の一覧では見てよい役割のときだけ行に入れる。
   一般の社員の応答には含めない（`src/lib/score-visibility.integration.test.ts`）。
-- 検索の対象は、行に描く札の文字と同じ関数（`personLabels`）から作る。描く文字と探す文字がずれない。
+- 検索の索引（`buildSearchIndex`）には、名前・メール・役割名・会社名・等級名・所属・社員番号を入れる。
+  役割名・会社名・等級名・所属は札と同じ関数（`personLabels`）の文字を使い、描く文字と探す文字をそろえる。
+  社員番号だけは生の値を入れる（札は「社員番号 X」だが、番号だけで探せるように）。
 - 一覧の行はサーバーが一度に返し（多くて数百人）、検索と並べ替えのたびにサーバーへ問い合わせない。

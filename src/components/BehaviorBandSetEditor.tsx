@@ -18,6 +18,7 @@ import {
 } from "@/lib/domain/master-delete";
 import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
 import { RefreshStatus } from "@/components/RefreshStatus";
+import { useDraftMap } from "@/components/use-draft-map";
 
 /**
  * 行動指針の「基準セット」を作る・呼び名を直す・使用を止める。
@@ -55,7 +56,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
   const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState<Record<string, string>>({});
+  const editingName = useDraftMap<string>();
   /** 「新しく作る」を開いているときだけ持つ下書き。閉じているときは null。 */
   const [draft, setDraft] = useState<{ name: string; copyFromBand: string } | null>(null);
 
@@ -170,7 +171,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
 
       <div className="mt-3 grid gap-2">
         {sets.map((set) => {
-          const nameDraft = editingName[set.id];
+          const nameDraft = editingName.drafts[set.id];
           const inUse = set.usedByGradeNames.length > 0;
           /* 止められない理由は2種類あり、扱いが違う。
              ①どれかの等級に出す設定が残っている … 行ごとに内容が違い、直す順番も示すので畳まない
@@ -203,7 +204,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     この基準の呼び名
                     <input
                       value={nameDraft}
-                      onChange={(event) => setEditingName((s) => ({ ...s, [set.id]: event.target.value }))}
+                      onChange={(event) => editingName.change(set.id, event.target.value)}
                       className="input mt-1 w-full"
                     />
                   </label>
@@ -215,7 +216,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       disabled={saving || nameDraft.trim() === ""}
                       onClick={async () => {
                         const ok = await send({ id: set.id, name: nameDraft.trim() });
-                        if (ok) setEditingName((s) => { const n = { ...s }; delete n[set.id]; return n; });
+                        if (ok) editingName.stop(set.id);
                       }}
                     >
                       保存する
@@ -223,7 +224,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     <Button
                       variant="tertiary"
                       disabled={saving}
-                      onClick={() => setEditingName((s) => { const n = { ...s }; delete n[set.id]; return n; })}
+                      onClick={() => editingName.stop(set.id)}
                     >
                       やめる
                     </Button>
@@ -236,7 +237,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                   <Button
                     variant="tertiary"
                     disabled={saving}
-                    onClick={() => setEditingName((s) => ({ ...s, [set.id]: set.name }))}
+                    onClick={() => editingName.start(set.id, set.name)}
                   >
                     呼び名を直す
                   </Button>

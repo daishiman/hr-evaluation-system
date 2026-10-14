@@ -13,6 +13,14 @@ import { ChipLink, Disclosure, EmptyState, PageTitle, ReasonNote, SectionHeading
 
 export const dynamic = "force-dynamic";
 
+/** 等級タブ・基準セットの切り替えのリンク。選んでいるもう一方（等級か基準セット）は引き継ぐ */
+function behaviorHref({ grade, band }: { grade?: string; band?: string | null }): string {
+  const params = new URLSearchParams();
+  if (grade) params.set("grade", grade);
+  if (band) params.set("band", band);
+  return `/admin/behavior?${params}`;
+}
+
 /**
  * 行動指針だけを扱う画面。
  *
@@ -58,7 +66,7 @@ export default async function AdminBehavior({
      下の部品へはこの呼び名を name として渡す。 */
   const labeledSets = bandSets.map((set) => ({ ...set, name: bandSetLabel(set, grades) }));
 
-  /* 同じ基準セットは、等級の並びで続いた等級にだけ出す（§7-6・DD-010）。
+  /* 同じ基準セットは、等級の並びで続いた等級にだけ出す（§28-12・DD-010）。
      等級タブを「同じ行動指針が出るまとまり」ごとに囲み、全体の分け方を1か所で見せる。 */
   const lineGrades = grades.map((g) => ({
     id: g.id,
@@ -128,7 +136,7 @@ export default async function AdminBehavior({
                     {run.grades.map((g) => (
                       <ChipLink
                         key={g.id}
-                        href={`/admin/behavior?grade=${g.id}${band ? `&band=${band}` : ""}`} current={g.id === selectedGrade?.id}
+                        href={behaviorHref({ grade: g.id, band })} current={g.id === selectedGrade?.id}
                       >
                         {g.name}
                       </ChipLink>
@@ -144,7 +152,7 @@ export default async function AdminBehavior({
                   {stoppedGrades.map((g) => (
                     <ChipLink
                       key={g.id}
-                      href={`/admin/behavior?grade=${g.id}${band ? `&band=${band}` : ""}`} current={g.id === selectedGrade?.id}
+                      href={behaviorHref({ grade: g.id, band })} current={g.id === selectedGrade?.id}
                     >
                       {g.name}
                     </ChipLink>
@@ -191,7 +199,7 @@ export default async function AdminBehavior({
             code: set.code,
             name: set.name,
             isActive: set.isActive,
-            aspectCount: guidelines.filter((g) => g.band === set.code && g.isActive).length,
+            aspectCount: aspectCountOf(set.code),
             usedByGradeNames: gradesUsingBand(grades, set.code).map((g) => g.name),
             usedBy: bandSetUsedBy(
               guidelines.filter((g) => g.band === set.code).map((g) => g.id),
@@ -214,7 +222,7 @@ export default async function AdminBehavior({
             {labeledSets.map((set) => (
               <ChipLink
                 key={set.code}
-                href={`/admin/behavior?band=${set.code}${selectedGrade ? `&grade=${selectedGrade.id}` : ""}`} current={set.code === band}
+                href={behaviorHref({ grade: selectedGrade?.id, band: set.code })} current={set.code === band}
                 data-off={set.isActive ? undefined : "true"}
               >
                 {set.name}

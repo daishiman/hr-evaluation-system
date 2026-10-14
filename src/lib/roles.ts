@@ -23,6 +23,14 @@ export function atLeast(role: Role, min: Role): boolean {
 }
 
 /**
+ * 権限の強さ（数字が大きいほど広く見える）。人の一覧を役割で並べるときに使う。
+ * DB の生の値を受けるので、役割として知らない値は null にする（並べ替えでは末尾に置く）。
+ */
+export function roleRank(role: string): number | null {
+  return (ROLES as readonly string[]).includes(role) ? RANK[role as Role] : null;
+}
+
+/**
  * 画面に出す役割の呼び名。
  *
  * EMPLOYEE を「評価される方」とは呼ばない。マネージャーも会社の管理者も

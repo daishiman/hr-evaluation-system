@@ -7,8 +7,14 @@ import { PeopleList, PeopleScopeChips } from "@/components/PeopleList";
 import { createSystemUser } from "@/actions/system-users";
 import { listMemoHolderIds } from "@/lib/credential-vault";
 import { getDb } from "@/lib/db";
-import { GRADE_UNSET_LABEL } from "@/lib/domain/grade-label";
-import { availableSortKeys, parsePeopleView, type PeopleSearchParams } from "@/lib/domain/people-list";
+import { gradeLabel } from "@/lib/domain/grade-label";
+import {
+  availableSortKeys,
+  countPeople,
+  NO_COMPANY_LABEL,
+  parsePeopleView,
+  type PeopleSearchParams,
+} from "@/lib/domain/people-list";
 import { canViewGradeScore, latestFinalizedScoresEveryCompany, membershipScoreKey } from "@/lib/score-visibility";
 
 export const dynamic = "force-dynamic";
@@ -48,12 +54,14 @@ export default async function SystemUsers({
   const scoped =
     scope === "" ? all : scope === "none" ? all.filter((u) => !u.companyId) : all.filter((u) => u.companyId === scope);
 
-  /** 行（所属）ではなく人で数える */
-  const people = (rows: typeof all) => new Set(rows.map((u) => u.id)).size;
   const byRole = (r: string) => scoped.filter((u) => u.role === r);
-  const countLabel = (r: Role) => `${ROLE_LABEL[r]} ${people(byRole(r))}`;
-  // 全社の一覧なので会社でも並べられる。点数と等級は見てよい役割だけ
-  const sortKeys = availableSortKeys({ acrossCompanies: true, gradeAndScore: showGradeScore });
+  const countLabel = (r: Role) => `${ROLE_LABEL[r]} ${countPeople(byRole(r))}`;
+  // 会社で並べられるのは、会社でしぼっていないときだけ（1社・会社に属さない人だけなら並べても変わらない）。
+  // 点数と等級は見てよい役割だけ。会社に属さない人は等級と点数を持たないので、そこでも出さない
+  const sortKeys = availableSortKeys({
+    acrossCompanies: scope === "",
+    gradeAndScore: showGradeScore && scope !== "none",
+  });
   const view = parsePeopleView(sp, sortKeys);
 
   return (
@@ -63,8 +71,8 @@ export default async function SystemUsers({
       {/* 全体像は数字だけ。誰が何人いるかを一行で掴ませる */}
       <Card className="card-pad hero-tint">
         <p className="num-display m-0 text-hero-sp leading-tight text-accent">
-          {people(scoped.filter((u) => u.isActive))}
-          <span className="unit"> / {people(scoped)} 人が利用中</span>
+          {countPeople(scoped.filter((u) => u.isActive))}
+          <span className="unit"> / {countPeople(scoped)} 人が利用中</span>
         </p>
         <p className="m-0 mt-2 text-sub text-ink-muted">
           {countLabel("SUPER_ADMIN")}人 ／ {countLabel("COMPANY_ADMIN")}人 ／ {countLabel("MANAGER")}人 ／{" "}
@@ -129,14 +137,14 @@ export default async function SystemUsers({
         param="company"
         current={scope}
         items={[
-          { value: "", label: `すべて（${people(all)}）` },
+          { value: "", label: `すべて（${countPeople(all)}）` },
           ...companies.map((c) => ({ value: c.id, label: `${c.name}（${all.filter((u) => u.companyId === c.id).length}）` })),
-          { value: "none", label: `会社に属さない（${all.filter((u) => !u.companyId).length}）` },
+          { value: "none", label: `${NO_COMPANY_LABEL}（${all.filter((u) => !u.companyId).length}）` },
         ]}
       />
 
       <SectionHeading aside={<span className="footnote">名前を押すと変更できます</span>}>
-        利用者（{people(scoped)}人）
+        利用者（{countPeople(scoped)}人）
       </SectionHeading>
       {scoped.length === 0 ? (
         <EmptyState
@@ -160,7 +168,7 @@ export default async function SystemUsers({
               role: u.role,
               companyName: u.companyName,
               ...(gradedIn && {
-                gradeName: u.gradeName ?? GRADE_UNSET_LABEL,
+                gradeName: gradeLabel({ name: u.gradeName }),
                 gradeOrder: u.gradeOrder,
                 latestScore: scores.get(membershipScoreKey(gradedIn, u.id)) ?? null,
               }),

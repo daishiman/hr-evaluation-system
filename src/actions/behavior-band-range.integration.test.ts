@@ -6,7 +6,7 @@ import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1"
 import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
- * 行動指針の基準セットは、等級の並びで続いた等級にだけ出す（§7-6・DD-010）。
+ * 行動指針の基準セットは、等級の並びで続いた等級にだけ出す（§28-12・DD-010）。
  *
  * 画面は飛び飛びになる選択肢を選べなくしているが、saveMaster（kind=grade）を直接呼んでも
  * 同じ判定で止まることを確かめる。止めたときは等級も制度の変更記録も書かない。
@@ -132,6 +132,14 @@ describe("行動指針の基準セットは続いた等級にだけ出す", () =
     expect(await saveMaster({ kind: "grade", id: MANAGER1, behaviorBand: "g3_4" })).toMatchObject({ ok: false });
     expect(await saveMaster({ kind: "grade", id: BEGINNER, behaviorBand: "g1_2" })).toMatchObject({ ok: true });
     expect((await bands()).map(([, band]) => band)).toEqual(["g1_2", "g1_2", "g3_4", "g3_4", "g3_4", null]);
+  });
+
+  it("すでに飛び飛びの会社でも、飛び飛びのセットの等級へ今と同じ値を送り直すのは 400 にしない", async () => {
+    await t.db.update(s.grades).set({ behaviorBand: "g3_4" }).where(eq(s.grades.id, BEGINNER));
+
+    expect(await saveMaster({ kind: "grade", id: BEGINNER, behaviorBand: "g3_4" })).toMatchObject({ ok: true });
+    expect(await saveMaster({ kind: "grade", id: IDS.gradeTo, behaviorBand: "g3_4" })).toMatchObject({ ok: true });
+    expect((await bands()).map(([, band]) => band)).toEqual(["g3_4", "g1_2", "g3_4", "g3_4", "g3_4", null]);
   });
 
   it("等級名だけを変えるときは、割り当ての判定をしない", async () => {

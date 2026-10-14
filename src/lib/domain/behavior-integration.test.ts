@@ -36,7 +36,9 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
   it("行動指針画面も等級タブの切り替えで下書き状態を作り直す（昇格画面と同じ作法）", () => {
     const page = read("src/app/admin/behavior/page.tsx");
     expect(page).toContain("等級を選ぶ");
-    expect(page).toMatch(/href=\{`\/admin\/behavior\?grade=\$\{g\.id\}/);
+    // 等級タブのリンクは、基準セットの切り替えと同じ behaviorHref で ?grade= を付けて作る
+    expect(page).toContain("href={behaviorHref({ grade: g.id, band })}");
+    expect(page).toContain('params.set("grade", grade)');
     expect(page).toContain('<span className="tag">編集中の等級');
   });
 

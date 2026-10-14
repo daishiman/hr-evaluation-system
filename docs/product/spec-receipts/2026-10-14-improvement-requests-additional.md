@@ -25,9 +25,9 @@ PR #93 は 2026-10-14 に main へマージし（squash `03787cb`）、Deploy（
 | 層 | 影響 | 理由 |
 |---|---|---|
 | 製品仕様 | あり | `docs/product/spec.md` に §28-11（並べ替えの見た目と行の段組み）・§28-12（行動指針の分け方）・§28-13（人の一覧の検索と並べ替え）を足した。§28-7 の操作（つまみ・矢印・キーボード）と保存の決まりは変えない |
-| システム仕様 | あり（領域別の手書きの文書だけ） | `system-spec/master-settings.md` §6 に、行動指針の基準セットの判定とサーバーの断り方を書いた。`system-spec/account-and-users.md` §8 に、人の一覧の部品・並べ替えの可否・等級の並びを返す条件を書いた。`spec-state.json` には qa を足していない（範囲 S1〜S14 の外に置く追加要望で、要件定義の G6〜G15 の中で満たせるため）。compile の章は変わらないので、OPS-015 の digest のずれは増えない |
-| 設計 | あり | `docs/product/design-decisions.md` に DD-010（行動指針の基準セットは続いた等級にだけ出す）と DD-011（人の一覧は手元の配列で探して並べ替え、選べる並べ替えを権限で決める）を足した。`docs/product/spec-master-definition-revisions.md` に行動指針の割り当ての判定を書いた |
-| データ | なし | 移行を足していない。0033・0034・0035 も変えない。本番の行動指針は、管理者の1手（等級1 を等級2 と同じセットへ戻す）で直す。データを書き換える移行はしない（DD-010） |
+| システム仕様 | あり（領域別の手書きの文書だけ） | `system-spec/master-settings.md` §6 に、行動指針の割り当ての実装の場所と検査を書いた。`system-spec/account-and-users.md` §8 に、人の一覧の部品・並べ替えの可否・等級の並びを返す条件を書いた。`spec-state.json` には qa を足していない（範囲 S1〜S14 の外に置く追加要望で、要件定義の G6〜G15 の中で満たせるため）。compile の章は変わらないので、OPS-015 の digest のずれは増えない |
+| 設計 | あり | `docs/product/design-decisions.md` に DD-010（行動指針の基準セットは続いた等級にだけ出す）と DD-011（人の一覧は手元の配列で探して並べ替え、選べる並べ替えを権限で決める）を足した。`docs/product/spec-master-definition-revisions.md` に行動指針の割り当ての画面の形を書いた |
+| データ | なし | 移行を足していない。0033・0034・0035 も変えない。本番の行動指針の直しは [タスクの状態](../../../tasks/improvement-requests-2026-10.md) の task で扱う（DD-010） |
 | 権限 | あり（見せる範囲を狭める側だけ） | 点数・等級の並べ替えは `members.viewGradeScore` を持つ役割だけ。会社の並べ替えは全社の一覧（全体管理者）だけ。等級の並び（`gradeOrder`）は、等級名・点数と同じ条件でしか応答に入れない。役割の種類も台帳も増やさない |
 | 配色・テーマ | なし | `globals.css` の変更は、並べ替えの行の段組み（コンテナクエリ）と、持っている間の見た目・改善要望のボタンを退けることだけ。色の値・`brand_color_*`・テーマの契約テスト・DD-003 は変えない |
 | 依存 | なし | 新しい依存は足していない（検索の正規化は `String.prototype.normalize`、照合は `Intl.Collator`） |
@@ -37,7 +37,7 @@ PR #93 は 2026-10-14 に main へマージし（squash `03787cb`）、Deploy（
 | 要望 | 試験 |
 |---|---|
 | 追加A | `src/components/reorder/ReorderList.test.ts`（行き先・ずらし量・自動スクロールの量）、`e2e/improvement-requests-2026-10.spec.ts` の「長押しの並べ替え（A10）」「右側の余白（A12）」 |
-| 追加B | `src/lib/domain/people-list.test.ts`（32 件）、`src/components/PeopleList.test.ts`（6 件）、`src/lib/score-visibility.integration.test.ts`（等級の並びを一般の社員に返さない）、`src/lib/permissions-contract.test.ts`、`e2e/improvement-requests-2026-10.spec.ts` の「人の一覧の検索と並べ替え（§28-13）」（2 件） |
+| 追加B | `src/lib/domain/people-list.test.ts`、`src/components/PeopleList.test.ts`、`src/lib/score-visibility.integration.test.ts`（等級の並びを一般の社員に返さない）、`src/lib/permissions-contract.test.ts`、`e2e/improvement-requests-2026-10.spec.ts` の「人の一覧の検索と並べ替え（§28-13）」 |
 | 追加C | `src/lib/domain/behavior-band-range.test.ts`、`src/actions/behavior-band-range.integration.test.ts` |
 
 ## 4条件
@@ -51,10 +51,12 @@ PR #93 は 2026-10-14 に main へマージし（squash `03787cb`）、Deploy（
 
 ## 制約と限界
 
-- 名前の並びは `Intl.Collator('ja', { numeric: true })` による。漢字は JIS 第1水準の順（音読みに近い）で、読み（ふりがな）の順ではない。読みの順が要るなら、ふりがなの欄を足す（DD-011 の見直す条件）。
-- 検索は、行に出ている文字だけを対象にする。隠している等級・点数や、役割の内部の値（`SUPER_ADMIN` など）では当たらない。
-- 一覧は数百人を前提に、手元で探して並べ替える。数千人を超えたら、サーバーでの検索とページ分けに移す（DD-011 の見直す条件）。
+名前の並び（読みの順ではない）・検索の対象（行に出ている文字だけ）・一覧の大きさ（数百人まで）の限界は、[製品仕様 §28-13](../spec.md#28-13-人の一覧の検索と並べ替え2026-10-14-の追加要望) と DD-011 の見直す条件に書いた。
+
+## エレガントレビュー（2026-10-14、PR #94 に含める）
+
+判定の規則の一般化（[製品仕様 §28-12](../spec.md#28-12-行動指針の分け方2026-10-14-の追加要望)）、使用中の等級の定義の統一、人の一覧の呼び方と全社の等級順、版を持つ行の部品化、文書の層分け（§28-12＝何を・DD-010＝なぜ・システム仕様＝どう・受領書＝リンク）を整理した。別の判断に回したものは [タスクの状態](../../../tasks/improvement-requests-2026-10.md) の残課題。
 
 ## 受領境界
 
-この受領は、追加の3件を製品仕様・設計・領域別のシステム仕様・試験へ反映したことを記録するところまで。本番の D1 への書き込み（追加C の行動指針の直し）と配布は含めない。本番の直し方は §28-12 に書いた管理者の1手。
+この受領は、追加の3件を製品仕様・設計・領域別のシステム仕様・試験へ反映したことを記録するところまで。本番の D1 への書き込み（追加C の行動指針の直し）と配布は含めない。本番の直しの担当と確認は [タスクの状態](../../../tasks/improvement-requests-2026-10.md) に書いた。

@@ -3291,7 +3291,6 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 }
 .reorder-handle { grid-area: handle; }
 .reorder-body { grid-area: body; min-width: 0; }
-.reorder-actions { grid-area: actions; }
 .reorder-steps { grid-area: steps; justify-self: end; }
 @container reorder (min-width: 30rem) {
   .reorder-row {
@@ -3325,7 +3324,9 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
     grid-template-areas: "handle body actions steps";
   }
 }
+/* 行の操作。置く区画（actions）の位置は、すぐ上の「行の操作のある行」の段組みが決める */
 .reorder-actions {
+  grid-area: actions;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

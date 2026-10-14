@@ -77,6 +77,13 @@ describe("bandSetLabel", () => {
     expect(bandSetLabel({ code: "custom", name: "新人向け", displayOrder: 3 }, GRADES)).toBe("新人向け");
     expect(bandSetLabel({ code: "custom", name: "", displayOrder: 3 }, GRADES)).toBe("基準セット3");
   });
+
+  it("使用を止めた等級は数えない（使用中かを持たない等級は使用中とみなす）", () => {
+    const stopped = GRADES.map((g) => (g.id === "g2" ? { ...g, isActive: false } : { ...g, isActive: true }));
+    expect(bandSetLabel({ code: "g1_2", name: "", displayOrder: 1 }, stopped)).toBe("等級1向け");
+    const allStopped = GRADES.map((g) => (g.behaviorBand === "g1_2" ? { ...g, isActive: false } : g));
+    expect(bandSetLabel({ code: "g1_2", name: "新人向け", displayOrder: 1 }, allStopped)).toBe("新人向け");
+  });
 });
 
 describe("promotionStepLabel", () => {

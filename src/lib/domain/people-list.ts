@@ -4,14 +4,15 @@
  * 利用者一覧（/system/users）・社員（/admin/members）・メンバー（/manager/members）が同じ関数を使う。
  * 一覧は多くて数百人なので、サーバーには問い合わせず、手元の配列を並べ替えて絞る。
  *
- * - 並べ替えの種類は、一覧の範囲と見てよい値で決まる（availableSortKeys）。会社は全社の一覧だけ、
+ * - 並べ替えの種類は、一覧の範囲と見てよい値で決まる（availableSortKeys）。会社は全社の一覧（会社でしぼっていないとき）だけ、
  *   点数と等級は等級と点数を見てよい役割（台帳の members.viewGradeScore）だけ。
- * - 値が無い行（所属なし・等級未設定・確定した評価なし）は、向きを逆にしても常に末尾に置く。
+ * - 等級は会社ごとの並びなので、全社の一覧では会社名でまとめてから等級で比べる。会社の並びは向きによらず会社名順。
+ * - 値が無い行（会社に属さない・等級未設定・確定した評価なし）は、向きを逆にしても常に末尾に置く。
  * - 検索は画面に出ている文字だけを対象にする（見えない値に当たって、理由の分からない行が出ないように）。
  *   語を空白で区切ると、すべてを含む行だけを出す。全角半角・大文字小文字・カタカナとひらがなの違いは無視する。
  */
 
-import { ROLE_LABEL, ROLES, type Role } from "@/lib/roles";
+import { ROLE_LABEL, roleRank, type Role } from "@/lib/roles";
 import type { LatestScore } from "@/lib/score-visibility";
 
 export const PEOPLE_SORT_KEYS = ["name", "company", "role", "score", "grade"] as const;
@@ -80,7 +81,8 @@ export function reversed(dir: SortDirection): SortDirection {
 
 /**
  * その一覧で選べる並べ替え（並びは名前・会社・役割・点数・等級）。
- * acrossCompanies: 全社にまたがる一覧か。gradeAndScore: 等級と点数を見てよいか。
+ * acrossCompanies: 全社にまたがる一覧か（1社にしぼった全社の一覧は、並べても変わらないので false）。
+ * gradeAndScore: 等級と点数を見てよいか。
  */
 export function availableSortKeys(scope: { acrossCompanies: boolean; gradeAndScore: boolean }): PeopleSortKey[] {
   return PEOPLE_SORT_KEYS.filter((key) => {
@@ -132,13 +134,19 @@ export function peopleViewParams(view: PeopleView, keys: readonly PeopleSortKey[
   };
 }
 
+/** 会社に属さない人（システム全体管理者など）の会社の札。利用者一覧の「会社でしぼる」の札も同じ呼び方にする */
+export const NO_COMPANY_LABEL = "会社に属さない";
+
+/** 所属（部署）を登録していない人の札。一覧・社員の詳細・マネージャーの画面で同じ呼び方にする */
+export const DEPARTMENT_UNSET_LABEL = "所属 未設定";
+
 /** 行に出す札の文字。表示と検索の両方がこれを使う（出ている文字だけを探せるように） */
 export function personLabels(row: PersonFields) {
   return {
     role: ROLE_LABEL[row.role as Role] ?? row.role,
-    company: row.companyName === undefined ? undefined : (row.companyName ?? "所属なし"),
+    company: row.companyName === undefined ? undefined : (row.companyName ?? NO_COMPANY_LABEL),
     grade: row.gradeName,
-    department: row.department === undefined ? undefined : (row.department ?? "所属 未設定"),
+    department: row.department === undefined ? undefined : (row.department ?? DEPARTMENT_UNSET_LABEL),
     employeeCode: row.employeeCode ? `社員番号 ${row.employeeCode}` : undefined,
   };
 }
@@ -211,14 +219,23 @@ function sortValue(key: PeopleSortKey, row: PersonFields): string | number | nul
     case "company":
       return row.companyName ?? null;
     case "role": {
-      const order = (ROLES as readonly string[]).indexOf(row.role);
-      return order < 0 ? null : order;
+      // 権限の広い順を小さい順にする（強さは数字が大きいほど広いので、符号を逆にする）
+      const rank = roleRank(row.role);
+      return rank === null ? null : -rank;
     }
     case "score":
       return row.latestScore ? scoreRatio(row.latestScore) : null;
     case "grade":
       return row.gradeOrder ?? null;
   }
+}
+
+/**
+ * 値より先に比べる組。等級の並びは会社ごとに決まるので、全社の一覧の等級順は会社名でまとめる
+ * （A社の等級2とB社の等級2を数で混ぜない）。1社の一覧（会社名を持たない行）と、等級以外の並べ替えは、すべて同じ組。
+ */
+function sortGroup(key: PeopleSortKey, row: PersonFields): string {
+  return key === "grade" ? (row.companyName ?? "") : "";
 }
 
 function compareValues(a: string | number, b: string | number): number {
@@ -228,16 +245,18 @@ function compareValues(a: string | number, b: string | number): number {
 
 /**
  * 並べ替える。値が同じなら名前順、名前も同じなら行の鍵の順（毎回同じ並びにする）。
- * 値が無い行は、向きにかかわらず末尾に置く。
+ * 値が無い行は、向きにかかわらず末尾に置く。組（全社の等級順の会社）は向きによらず会社名順で、組の中だけが向きに従う。
  */
 export function sortPeople<T extends PersonFields>(rows: readonly T[], key: PeopleSortKey, dir: SortDirection): T[] {
   const sign = dir === "asc" ? 1 : -1;
   // 並べる値は1行につき1回だけ求める（比べるたびに求め直さない）
-  const decorated = rows.map((row) => ({ row, value: sortValue(key, row) }));
+  const decorated = rows.map((row) => ({ row, group: sortGroup(key, row), value: sortValue(key, row) }));
   decorated.sort((a, b) => {
-    if (a.value !== b.value) {
-      if (a.value === null) return 1;
-      if (b.value === null) return -1;
+    if (a.value === null || b.value === null) {
+      if (a.value !== b.value) return a.value === null ? 1 : -1;
+    } else {
+      const byGroup = collator.compare(a.group, b.group);
+      if (byGroup !== 0) return byGroup;
       const byValue = compareValues(a.value, b.value);
       if (byValue !== 0) return byValue * sign;
     }

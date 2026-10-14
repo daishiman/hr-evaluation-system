@@ -433,6 +433,21 @@ test.describe("人の一覧の検索と並べ替え（§28-13）", () => {
     await expect(status(page)).toContainText("点数の低い順");
   });
 
+  test("全社の一覧を1社にしぼると会社の並べ替えが消えて等級の低い順になり、すべてに戻すと会社名順に戻る", async ({ page }) => {
+    await page.goto("/system/users");
+    await waitForHydration(page, "main input[type=search]");
+    await expect(status(page)).toContainText("会社名順");
+    await page.locator("main a.chip[href*='company=']").first().click();
+    await expect(page).toHaveURL(/company=/);
+    await expect(page.locator("main select option[value=company]")).toHaveCount(0);
+    await expect(status(page)).toContainText("等級の低い順");
+    await page.locator("main a.chip").filter({ hasText: /^すべて（/ }).click();
+    await expect(page).not.toHaveURL(/company=/);
+    await expect(status(page)).toContainText("会社名順");
+    // 既定の並びは URL に残さない
+    await expect(page).not.toHaveURL(/sort=/);
+  });
+
   test("1社の一覧には会社の並べ替えが無く、URL で指定しても既定の並びに戻る", async ({ page }) => {
     await page.goto("/admin/members?sort=company");
     await waitForHydration(page, "main input[type=search]");

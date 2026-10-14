@@ -360,6 +360,9 @@ export interface Crumb {
   href?: string;
 }
 
+/** 貼り付けた見出しの帯（PageTitle の sticky）を探す印。帯の高さは StickyOffset が測り、並べ替えの自動スクロールは隠れない上端を測るのに読む */
+export const STICKY_PAGE_HEAD_SELECTOR = '.page-head[data-sticky="true"]';
+
 /**
  * 画面の見出し。全画面でこの1つだけを使う。
  *

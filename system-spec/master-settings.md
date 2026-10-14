@@ -86,14 +86,16 @@
 
 ## 6. 行動指針の等級割当UI
 
-- `/admin/behavior` は、各等級を同じ行またはカードで表示し、その中に `この等級に出す行動指針` のselect、`出さない`、行内保存を置く。
-- 上部の読み取り専用一覧と下部の単一等級編集フォームを併存させない。表示値と編集値の所有場所は1つにする。
-- `適用` という抽象語は使わず、`等級1のアンケートにこの行動指針を出す` のように、等級・対象・結果を明記する（等級名はその会社の等級名。英語の区分名は出さない。spec.md §28-1）。
-- 等級のタブの上に、いまの分け方を並びの順のまとまり（枠）で見せる。飛び飛びのセットは警告と注意の色で示す（spec.md §28-12）。
-- 保存後は `次に作るアンケートから反映します。作成済みのアンケートと評価は変わりません` と表示する。
+画面の形の正本は [版管理の製品仕様「行動指針をどの等級に出すか」](../docs/product/spec-master-definition-revisions.md#行動指針をどの等級に出すか)、
+断る割り当ての規則は [製品仕様 §28-12](../docs/product/spec.md#28-12-行動指針の分け方2026-10-14-の追加要望)、
+判断の経緯は [DD-010](../docs/product/design-decisions.md#dd-010-行動指針の基準セットは等級の並びで続いた等級にだけ出せるようにした2026-10-14)。ここには実装の場所と検査だけを書く。
+
+- 画面は `src/app/admin/behavior/page.tsx`。分け方の枠と、その中の等級のタブを描き、選んだ1等級だけを `BehaviorBandAssignmentEditor`（`src/components/BehaviorBandAssignmentEditor.tsx`）に渡す。
+  割り当てを変えるのはこの部品だけで、枠は読むだけ。
+- 判定は `src/lib/domain/behavior-band-range.ts` の1つ。画面（選べない選択肢と理由・枠・警告）とサーバー（`saveMaster` の kind=grade。`src/lib/masters/apply-master-update.ts`）が同じ関数を使い、サーバーは断る手を 400 にする。
+  並び順（`displayOrder`）が同着の等級は id の順に並べ、画面とサーバーで同じ並びにする。
 - 保存APIの権限・会社境界・基準セットの存在/active検査は従来どおりサーバーで行う。
-- 同じ基準セットは、等級の並びで続いた等級にだけ出せる。選ぶと飛び飛びになる選択肢は選べなくして理由を添え、
-  サーバーも同じ関数（`src/lib/domain/behavior-band-range.ts`）で 400 にする。直す向きの1手は通す（DD-010）。
+- 検査: `src/lib/domain/behavior-band-range.test.ts`・`src/actions/behavior-band-range.integration.test.ts`（固定した内容は DD-010）。
 
 ## 7. 制度マスタの変更監査
 

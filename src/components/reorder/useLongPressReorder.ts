@@ -12,7 +12,7 @@ import {
   type PointerEvent,
 } from "react";
 import { moveItem } from "@/lib/domain/reorder";
-import { PINNED_CARD_HEAD_CLASS } from "@/components/ui";
+import { PINNED_CARD_HEAD_CLASS, STICKY_PAGE_HEAD_SELECTOR } from "@/components/ui";
 
 /**
  * 長押しで並べ替える（S11・A10・DD-005）。
@@ -35,7 +35,7 @@ export const EDGE_SCROLL_MAX_PX = 16;
 export const SLIDE_MS = 180;
 const SLIDE_ID = "reorder-slide";
 /** 画面の上に張り付いて一覧を覆うもの（ヘッダー・固定した見出しの帯・カードの頭）。自動スクロールの上端はこの下 */
-const STICKY_SELECTOR = `.app-header, .page-head[data-sticky="true"], .${PINNED_CARD_HEAD_CLASS}`;
+const STICKY_SELECTOR = `.app-header, ${STICKY_PAGE_HEAD_SELECTOR}, .${PINNED_CARD_HEAD_CLASS}`;
 
 /** つまみの印。フォーカスの行き先を探すのに使う */
 export const HANDLE_ATTR = "data-reorder-handle";

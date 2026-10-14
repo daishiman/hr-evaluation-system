@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { atLeast, ROLES, roleRank } from "@/lib/roles";
 import {
   availableSortKeys,
   buildSearchIndex,
   countPeople,
   defaultDirection,
+  DEPARTMENT_UNSET_LABEL,
   defaultSortKey,
   filterPeople,
+  NO_COMPANY_LABEL,
   normalizeForSearch,
   parsePeopleView,
   peopleViewParams,
@@ -85,6 +88,22 @@ describe("検索語をそろえる", () => {
   });
 });
 
+describe("札の呼び方", () => {
+  it("会社に属さない人・所属の無い人の札は、ほかの画面と同じ呼び方の定数から作る", () => {
+    expect(NO_COMPANY_LABEL).toBe("会社に属さない");
+    expect(DEPARTMENT_UNSET_LABEL).toBe("所属 未設定");
+    expect(personLabels(rows[2]).company).toBe(NO_COMPANY_LABEL);
+    expect(personLabels(rows[1]).department).toBe(DEPARTMENT_UNSET_LABEL);
+  });
+
+  it("その一覧で出さない欄（会社・所属）は、札も作らない", () => {
+    expect(personLabels({ key: "k1", id: "k1", name: "名前", role: "EMPLOYEE" })).toMatchObject({
+      company: undefined,
+      department: undefined,
+    });
+  });
+});
+
 describe("探す", () => {
   const index = buildSearchIndex(rows);
 
@@ -102,8 +121,8 @@ describe("探す", () => {
     expect(keysOf(filterPeople(rows, index, "a-010"))).toEqual(["m4"]);
   });
 
-  it("出ている札の文字でも当たる（所属なし・所属 未設定）", () => {
-    expect(keysOf(filterPeople(rows, index, "所属なし"))).toEqual(["u3"]);
+  it("出ている札の文字でも当たる（会社に属さない・所属 未設定）", () => {
+    expect(keysOf(filterPeople(rows, index, "会社に属さない"))).toEqual(["u3"]);
     expect(keysOf(filterPeople(rows, index, "未設定"))).toEqual(["m2", "m4"]);
   });
 
@@ -150,13 +169,26 @@ describe("並べ替える", () => {
   });
 
   it("等級は等級の並びで比べる（名前の文字の順ではない）", () => {
-    expect(keysOf(sortPeople(rows, "grade", "asc")).slice(0, 2)).toEqual(["m1", "m2"]);
-    expect(keysOf(sortPeople(rows, "grade", "desc")).slice(0, 2)).toEqual(["m2", "m1"]);
+    // 1社の一覧（会社名を持たない行）
+    const oneCompany = rows.map(({ companyName: _company, ...rest }) => rest);
+    expect(keysOf(sortPeople(oneCompany, "grade", "asc")).slice(0, 2)).toEqual(["m1", "m2"]);
+    expect(keysOf(sortPeople(oneCompany, "grade", "desc")).slice(0, 2)).toEqual(["m2", "m1"]);
   });
 
   it("役割は権限の広い順", () => {
     expect(keysOf(sortPeople(rows, "role", "asc"))).toEqual(["u3", "m4", "m2", "m1"]);
     expect(keysOf(sortPeople(rows, "role", "desc"))).toEqual(["m1", "m2", "m4", "u3"]);
+  });
+
+  it("役割の並びは、権限の判定（atLeast）と同じ強さ（roleRank）で決まり、強い順が小さい順", () => {
+    for (const a of ROLES) {
+      for (const b of ROLES) expect(roleRank(a)! >= roleRank(b)!).toBe(atLeast(a, b));
+    }
+    const shuffled = ["MANAGER", "SUPER_ADMIN", "EMPLOYEE", "COMPANY_ADMIN"].map((role) => ({ key: role, id: role, name: "同じ 名前", role }));
+    expect(keysOf(sortPeople(shuffled, "role", "asc"))).toEqual(["SUPER_ADMIN", "COMPANY_ADMIN", "MANAGER", "EMPLOYEE"]);
+    // 役割として知らない値は強さを持たない（Object の持ち物の名前でも数を返さない）
+    expect(roleRank("LEGACY")).toBeNull();
+    expect(roleRank("toString")).toBeNull();
   });
 
   it("同じ会社の中は名前順に並ぶ", () => {
@@ -210,6 +242,45 @@ describe("並べ替える", () => {
     const before = keysOf(rows);
     sortPeople(rows, "score", "desc");
     expect(keysOf(rows)).toEqual(before);
+  });
+});
+
+describe("全社の一覧の等級順", () => {
+  // 2社 × 等級。会社に属さない人と、会社にいて等級未設定の人も混ぜる（渡す順はばらばら）
+  const across: PersonFields[] = [
+    { key: "t2", id: "t2", name: "あべ", role: "EMPLOYEE", companyName: "テスト商事", gradeOrder: 2 },
+    { key: "s2", id: "s2", name: "いとう", role: "EMPLOYEE", companyName: "サンプル工業", gradeOrder: 2 },
+    { key: "t1", id: "t1", name: "うえだ", role: "EMPLOYEE", companyName: "テスト商事", gradeOrder: 1 },
+    { key: "s3", id: "s3", name: "えのもと", role: "EMPLOYEE", companyName: "サンプル工業", gradeOrder: 3 },
+    { key: "s1", id: "s1", name: "おおた", role: "EMPLOYEE", companyName: "サンプル工業", gradeOrder: 1 },
+    { key: "none", id: "none", name: "かとう", role: "SUPER_ADMIN", companyName: null, gradeOrder: null },
+    { key: "sx", id: "sx", name: "きむら", role: "EMPLOYEE", companyName: "サンプル工業", gradeOrder: null },
+  ];
+
+  it("会社名でまとめてから等級の低い順に並べ、別の会社の同じ等級を混ぜない", () => {
+    expect(keysOf(sortPeople(across, "grade", "asc"))).toEqual(["s1", "s2", "s3", "t1", "t2", "none", "sx"]);
+  });
+
+  it("向きを逆にすると会社の中だけが等級の高い順になり、会社の並びは会社名順のまま", () => {
+    expect(keysOf(sortPeople(across, "grade", "desc"))).toEqual(["s3", "s2", "s1", "t2", "t1", "none", "sx"]);
+  });
+
+  it("会社に属さない人と等級未設定の人は、会社によらず末尾に名前順で置く", () => {
+    for (const dir of ["asc", "desc"] as const) {
+      expect(keysOf(sortPeople(across, "grade", dir)).slice(-2)).toEqual(["none", "sx"]);
+    }
+  });
+
+  it("1社の一覧（会社名を持たない行）は、これまでどおり等級の並びだけで比べる", () => {
+    const oneCompany = across.filter((row) => row.companyName === "サンプル工業").map(({ companyName: _company, ...rest }) => rest);
+    expect(keysOf(sortPeople(oneCompany, "grade", "asc"))).toEqual(["s1", "s2", "s3", "sx"]);
+  });
+
+  it("等級以外の並べ替えは会社でまとめない（点数は会社をまたいで比べる）", () => {
+    const scored = across.map((row) => ({ ...row, latestScore: typeof row.gradeOrder === "number" ? score(row.gradeOrder * 10) : null }));
+    // 会社名順ならサンプル工業が先に来るが、点数が同じなら名前順で、テスト商事の人が間に入る
+    expect(keysOf(sortPeople(scored, "score", "desc")).slice(0, 2)).toEqual(["s3", "t2"]);
+    expect(keysOf(sortPeople(scored, "score", "asc")).slice(0, 2)).toEqual(["t1", "s1"]);
   });
 });
 

@@ -84,7 +84,10 @@ export function behaviorBandPayloadValue(value: string): string | null {
   return value === "" ? null : value;
 }
 
-/** その基準セットを出す設定になっている等級。使用を止める前に必ず見る。 */
+/**
+ * その基準セットを出す設定になっている等級。使用を止める前に必ず見る。
+ * 使用を止めた等級も数える（もう一度使う状態に戻すと出るので。サーバーも止めた等級を含めて断る）。
+ */
 export function gradesUsingBand(
   grades: readonly (BehaviorAssignmentGrade & { name: string })[],
   code: string,

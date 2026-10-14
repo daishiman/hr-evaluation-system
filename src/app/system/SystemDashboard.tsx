@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { StalledByCompanyNotice } from "@/components/StalledEvaluationsNotice";
 import { Badge, Card, CardRow, Disclosure, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { GRADE_UNSET_LABEL } from "@/lib/domain/grade-label";
 import { PALETTE_LABELS, PALETTES } from "@/lib/palette";
 import type { ThemePreferenceUsage } from "@/lib/theme-preferences";
 
@@ -24,7 +25,7 @@ export function companySetupIssues(company: SystemCompanySummary): string[] {
   const issues: string[] = [];
   if (company.companyAdmins === 0) issues.push("会社の管理者が未設定");
   if (company.activeUsers === 0) issues.push("利用者が未登録");
-  if (company.usersWithoutGrade > 0) issues.push(`等級未設定 ${company.usersWithoutGrade}人`);
+  if (company.usersWithoutGrade > 0) issues.push(`${GRADE_UNSET_LABEL} ${company.usersWithoutGrade}人`);
   if (company.cycles === 0) issues.push("評価期間が未設定");
   return issues;
 }
