@@ -65,6 +65,11 @@ export interface ValidateSchemeOptions {
   ratedItemIds?: Iterable<string>;
   /** 指摘に業務の言葉（項目名）を出すための引き当て */
   itemNameOf?: (id: string) => string;
+  /**
+   * 指摘に出す等級区分の呼び名（grade-label.ts の pointGroupLabel で作る「等級4-1・等級4-2」）。
+   * 区分の値（Beginner など）は照合の鍵なので、指摘の文には出さない。渡さなければ「この等級区分」。
+   */
+  groupLabel?: string;
 }
 
 export function validateScheme(selections: SchemeSelection[], opts: ValidateSchemeOptions): SchemeValidation {
@@ -73,13 +78,14 @@ export function validateScheme(selections: SchemeSelection[], opts: ValidateSche
   const warnings: string[] = [];
   const total = selections.reduce((sum, x) => sum + x.weight, 0);
   const nameOf = opts.itemNameOf ?? ((id: string) => id);
+  const group = opts.groupLabel ?? "この等級区分";
   const fixedCandidates = new Set(opts.fixedSlotItemIds);
 
   const expected = expectedItemCount(rule);
   if (selections.length !== expected) {
     const diff = expected - selections.length;
     errors.push(
-      `${rule.pointGroup} で選ぶ項目は${expected}件です（いまは${selections.length}件。` +
+      `${group}で選ぶ項目は${expected}件です（いまは${selections.length}件。` +
         `${diff > 0 ? `あと${diff}件選んでください` : `${-diff}件外してください`}）。`,
     );
   }
@@ -103,7 +109,7 @@ export function validateScheme(selections: SchemeSelection[], opts: ValidateSche
   if (major.length !== rule.majorSlotCount) {
     errors.push(
       rule.majorSlotCount === 0
-        ? `${rule.pointGroup} に${rule.majorSlotPoints || 20}点枠はありません（いまは${major.length}件選ばれています）。`
+        ? `${group}に${rule.majorSlotPoints || 20}点枠はありません（いまは${major.length}件選ばれています）。`
         : `${rule.majorSlotPoints}点枠はちょうど${rule.majorSlotCount}件にしてください（いまは${major.length}件）。`,
     );
   }
@@ -123,9 +129,9 @@ export function validateScheme(selections: SchemeSelection[], opts: ValidateSche
     if (unrated.length > 0) {
       warnings.push(
         `${unrated.map((x) => `「${nameOf(x.kpiItemId)}」`).join("・")}のランク基準（A〜E）は、` +
-          `${rule.pointGroup} を対象として想定されていません。このまま保存でき、採点も行われます。` +
+          `${group}を対象として想定されていません。このまま保存でき、採点も行われます。` +
           `ただし上位の等級を想定して作られた基準がそのまま使われます。` +
-          `${rule.pointGroup} には厳しすぎる可能性があります。` +
+          `${group}には厳しすぎる可能性があります。` +
           `「評価基準」で閾値を確認してください。`,
       );
     }

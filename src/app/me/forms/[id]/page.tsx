@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { requireViewer } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { getForm, getResponse, listFormQuestions } from "@/lib/queries";
+import { formRowTitle } from "@/lib/domain/grade-label";
 import { listActiveExtensions } from "@/lib/response-access";
 import { FormAnswer } from "@/components/FormAnswer";
 import { ResponseSnapshot } from "@/components/ResponseSnapshot";
@@ -23,7 +24,7 @@ export const dynamic = "force-dynamic";
  * 回答できる・できないはサーバー側の締切判定に合わせ、理由を日本語で書く。
  */
 export default async function AnswerForm({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await requireViewer();
+  const viewer = await requireRoute("/me/forms/[id]");
   const { id } = await params;
   if (!viewer.companyId) notFound();
 
@@ -39,7 +40,7 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
   if (form.status === "draft") {
     return (
       <>
-        <PageTitle title={form.title} />
+        <PageTitle title={formRowTitle(form)} />
         <ReasonNote>このアンケートはまだ準備中です。公開されるとこの画面から回答できます。</ReasonNote>
       </>
     );
@@ -64,7 +65,7 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
   const header = (
     <PageTitle
       sticky
-      title={form.title}
+      title={formRowTitle(form)}
       lede={`回答期間 ${formatPeriod(form.opensAt, form.closesAt)}`}
       tags={
         <>

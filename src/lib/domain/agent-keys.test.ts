@@ -216,7 +216,7 @@ describe("使った時刻の書き換え", () => {
 describe("案内の行き先", () => {
   it("発行の場所と呼び名は1か所で決める", () => {
     expect(AGENT_KEY_PAGE_PATH).toBe("/system/agent-keys");
-    expect(AGENT_KEY_PAGE_LABEL).toContain("鍵");
+    expect(AGENT_KEY_PAGE_LABEL).toBe("Claude Code連携（システム開発者専用）");
   });
 });
 

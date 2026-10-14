@@ -2,7 +2,7 @@ import { UsageDashboard } from "@/app/system/UsageDashboard";
 import { getDb } from "@/lib/db";
 import { USAGE_DEFAULT_RANGE_DAYS, USAGE_RANGE_DAYS } from "@/lib/domain/usage";
 import { listCompanies } from "@/lib/queries";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { readUsageReport } from "@/lib/usage";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function SystemUsage({
 }: {
   searchParams: Promise<{ days?: string; company?: string }>;
 }) {
-  await requireRole("SUPER_ADMIN");
+  await requireRoute("/system/usage");
   const sp = await searchParams;
 
   /* 期間は決めた3つだけ受け付ける。任意の日数を通すと、

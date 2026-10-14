@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FormActionCard, type MyActionForm } from "@/app/me/MyDashboard";
+import { FormActionList, type MyActionForm } from "@/app/me/MyDashboard";
 import { StalledEvaluationsNotice } from "@/components/StalledEvaluationsNotice";
 import { Badge, Bar, Card, CardRow, Disclosure, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
 import type { StalledRow } from "@/lib/domain/stalled-evaluations";
@@ -121,11 +121,7 @@ export function ManagerDashboard({
       {ownPendingForms.length > 0 && (
         <>
           <SectionHeading>自分の未提出アンケート</SectionHeading>
-          <div className="card-grid">
-            {ownPendingForms.map((form, index) => (
-              <FormActionCard key={form.formId} form={form} primary={index === 0} />
-            ))}
-          </div>
+          <FormActionList forms={ownPendingForms} />
         </>
       )}
 

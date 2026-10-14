@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { requireRole, ROLE_LABEL, type Role } from "@/lib/session";
-import { listEvaluations, listMembers } from "@/lib/queries";
-import { Badge, Card, CardRow, EmptyState, Num, PageTitle } from "@/components/ui";
+import { ROLE_LABEL, type Role, requireRoute } from "@/lib/session";
+import { listMembers } from "@/lib/queries";
+import { getDb } from "@/lib/db";
+import { GRADE_UNSET_LABEL } from "@/lib/domain/grade-label";
+import { withGradeAndScore } from "@/lib/score-visibility";
+import { Badge, Card, CardRow, EmptyState, PageTitle } from "@/components/ui";
+import { LatestScoreValue } from "@/components/LatestScore";
 
 export const dynamic = "force-dynamic";
 
@@ -10,15 +14,15 @@ export const dynamic = "force-dynamic";
  * 一覧には「名前・等級・直近の状態」の3つだけ置き、細かい数字は詳細画面に送る（認知負荷を下げる）。
  */
 export default async function ManagerMembers() {
-  const viewer = await requireRole("MANAGER");
+  const viewer = await requireRoute("/manager/members");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
-  const [members, evals] = await Promise.all([
-    listMembers(viewer.companyId, viewer.role === "MANAGER" ? { managerId: viewer.id } : undefined),
-    listEvaluations(viewer.companyId, viewer.role),
-  ]);
-
-  const latestOf = (userId: string) => evals.find((e) => e.employeeId === userId && e.status === "finalized") ?? null;
+  // 等級と確定した最新の点数は、見てよい役割にだけサーバーで付ける（S6）
+  const members = await withGradeAndScore(
+    await getDb(),
+    viewer,
+    await listMembers(viewer.companyId, viewer.role === "MANAGER" ? { managerId: viewer.id } : undefined),
+  );
 
   return (
     <>
@@ -31,37 +35,25 @@ export default async function ManagerMembers() {
         <EmptyState title="メンバーが登録されていません" body="会社の管理者に社員の登録を依頼してください。" />
       ) : (
         <Card>
-          {members.map((m) => {
-            const last = latestOf(m.id);
-            return (
-              <CardRow
-                key={m.id}
-                title={
-                  <>
-                    <Link href={`/manager/members/${m.id}`} className="text-brand-deep">
-                      {m.name}
-                    </Link>
-                    {m.role !== "EMPLOYEE" && (
-                      <span className="footnote"> （{ROLE_LABEL[m.role as Role] ?? m.role}）</span>
-                    )}
-                  </>
-                }
-                sub={`${m.gradeName ?? "等級未設定"} ／ ${m.department ?? "所属未設定"} ／ 社員番号 ${m.employeeCode ?? "—"}`}
-                value={
-                  last ? (
-                    <>
-                      <Num value={last.requirementRate} unit="%" />
-                      <p className="m-0 text-note text-ink-muted">{last.cycleName} の等級要件達成率</p>
-                    </>
-                  ) : (
-                    <span className="footnote">確定した評価なし</span>
-                  )
-                }
-                marks={!m.isActive ? <Badge tone="closed">利用停止</Badge> : undefined}
-                off={!m.isActive}
-              />
-            );
-          })}
+          {members.map((m) => (
+            <CardRow
+              key={m.id}
+              title={
+                <>
+                  <Link href={`/manager/members/${m.id}`} className="text-brand-deep">
+                    {m.name}
+                  </Link>
+                  {m.role !== "EMPLOYEE" && (
+                    <span className="footnote"> （{ROLE_LABEL[m.role as Role] ?? m.role}）</span>
+                  )}
+                </>
+              }
+              sub={`${m.gradeName ?? GRADE_UNSET_LABEL} ／ ${m.department ?? "所属未設定"} ／ 社員番号 ${m.employeeCode ?? "—"}`}
+              value={m.latestScore !== undefined && <LatestScoreValue score={m.latestScore} />}
+              marks={!m.isActive ? <Badge tone="closed">利用停止</Badge> : undefined}
+              off={!m.isActive}
+            />
+          ))}
         </Card>
       )}
       <p className="footnote mt-3">

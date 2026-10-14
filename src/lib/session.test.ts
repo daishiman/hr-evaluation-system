@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   atLeast,
   canEditForm,
-  canEditScheme,
   canSeeCriteria,
   canSeeFormContent,
   canSeeFormResponses,
@@ -39,13 +38,11 @@ describe("対象の会社の決め方", () => {
 describe("権限の強さ", () => {
   it("システム全体管理者は会社の管理者にできることをすべてできる", () => {
     expect(atLeast("SUPER_ADMIN", "COMPANY_ADMIN")).toBe(true);
-    expect(canEditScheme("SUPER_ADMIN")).toBe(true);
     expect(canSeeCriteria("SUPER_ADMIN")).toBe(true);
   });
 
   it("一般の方には評価基準・配点を見せない", () => {
     expect(canSeeCriteria("EMPLOYEE")).toBe(false);
-    expect(canEditScheme("MANAGER")).toBe(false);
   });
 });
 

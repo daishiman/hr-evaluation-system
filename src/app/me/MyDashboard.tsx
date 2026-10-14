@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DetailDialogButton } from "@/components/ConfirmButton";
 import {
   Badge,
   Bar,
@@ -34,10 +35,15 @@ export interface MyResultSummary {
   promotionEligible: boolean;
 }
 
-/** マネージャー・会社管理者のホーム（自分自身の未提出アンケート）でも同じ見え方にするため公開する。 */
-export function FormActionCard({ form, primary }: { form: MyActionForm; primary: boolean }) {
-  return (
-    <Card className={`card-pad${primary ? " hero-tint" : ""}`}>
+/**
+ * 回答するアンケートの1枚。
+ * wide は横幅いっぱいに置くとき（1件だけのとき）で、「どのアンケートか」を左、「締切と回答への入口」を右に並べる
+ * （下の「自分の結果」と同じ分け方。カードが狭ければ左寄せで縦に積む）。
+ * 並べるときは高さをそろえ、ボタンをカードの下端にそろえる。
+ */
+export function FormActionCard({ form, primary, wide = false }: { form: MyActionForm; primary: boolean; wide?: boolean }) {
+  const what = (
+    <>
       <div className="flex flex-wrap items-center gap-2">
         <p className="todo-row-title m-0 text-strong">{form.title}</p>
         <Badge tone={form.responseStatus === "draft" ? "active" : "required"}>
@@ -47,22 +53,58 @@ export function FormActionCard({ form, primary }: { form: MyActionForm; primary:
       <p className="todo-row-sub m-0 mt-1">
         {form.cycleName ?? "評価期間"} ／ 全{form.questionCount}問
       </p>
-      {form.deadlineLabel && (
-        <p className="m-0 mt-3 text-note">
-          回答締切：<strong>{form.deadlineLabel}</strong>
-          {form.daysUntilDeadline !== null && (
-            <span className="text-ink-muted">
-              {form.daysUntilDeadline === 0 ? "（本日）" : `（あと${form.daysUntilDeadline}日）`}
-            </span>
-          )}
-        </p>
+    </>
+  );
+  const deadline = form.deadlineLabel && (
+    <p className="m-0 mt-3 text-note">
+      回答締切：<strong>{form.deadlineLabel}</strong>
+      {form.daysUntilDeadline !== null && (
+        <span className="text-ink-muted">
+          {form.daysUntilDeadline === 0 ? "（本日）" : `（あと${form.daysUntilDeadline}日）`}
+        </span>
       )}
-      <div className="card-foot">
-        <LinkButton href={`/me/forms/${form.formId}`} variant={primary ? "primary" : "secondary"}>
-          {form.responseStatus === "draft" ? "続きから回答する" : "回答を始める"}
-        </LinkButton>
-      </div>
+    </p>
+  );
+  const action = (
+    <LinkButton href={`/me/forms/${form.formId}`} variant={primary ? "primary" : "secondary"}>
+      {form.responseStatus === "draft" ? "続きから回答する" : "回答を始める"}
+    </LinkButton>
+  );
+  const className = `card-pad${primary ? " hero-tint" : ""}`;
+  if (wide) {
+    return (
+      <Card className={`${className} split-host`}>
+        <div className="split-row">
+          <div className="split-main">{what}</div>
+          <div className="split-aside">
+            {deadline}
+            <div className="mt-3">{action}</div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+  return (
+    <Card className={className}>
+      {what}
+      {deadline}
+      <div className="card-foot">{action}</div>
     </Card>
+  );
+}
+
+/**
+ * 回答するアンケートの並び。マネージャー・会社管理者のホーム（自分自身の未提出アンケート）でも同じ見え方にするため公開する。
+ * 1件だけのときは2列の枠に入れない。左の列にだけ置くと、右半分が空いたまま残る（S13・A12）。
+ */
+export function FormActionList({ forms }: { forms: MyActionForm[] }) {
+  if (forms.length === 1) return <FormActionCard form={forms[0]} primary wide />;
+  return (
+    <div className="card-grid">
+      {forms.map((form, index) => (
+        <FormActionCard key={form.formId} form={form} primary={index === 0} />
+      ))}
+    </div>
   );
 }
 
@@ -98,15 +140,21 @@ export function MyDashboard({
       <PageTitle
         title={`${viewerName} さんの評価ページ`}
         lede={cycleName ? `${cycleName}の回答と、自分に公開された評価結果を確認できます。` : "回答するアンケートと、自分に公開された評価結果を確認できます。"}
+        /* 画面の読み方は見出しの右に置く。画面の末尾に畳んでおくと、読む前に見つからない */
+        actions={
+          <DetailDialogButton label="この画面に表示される内容" title="この画面に表示される内容">
+            <p className="m-0">アンケートは入力途中でも自動保存されます。</p>
+            <p className="m-0 mt-1">評価結果には、結論だけでなく判定の理由も残ります。</p>
+            <p className="m-0 mt-1">自分が提出した回答も、あとから見返せます。</p>
+            <p className="m-0 mt-1">評価基準の配点や、昇格に必要な点数は表示されません。</p>
+          </DetailDialogButton>
+        }
       />
 
-      <SectionHeading>今やること</SectionHeading>
+      {/* 一覧への入口は見出しの右端に常に置く（回答対象が無いときも、提出済みを見返せる） */}
+      <SectionHeading aside={<Link href="/me/forms" className="footnote">アンケート一覧を見る</Link>}>今やること</SectionHeading>
       {actionableForms.length > 0 ? (
-        <div className="card-grid">
-          {actionableForms.map((form, index) => (
-            <FormActionCard key={form.formId} form={form} primary={index === 0} />
-          ))}
-        </div>
+        <FormActionList forms={actionableForms} />
       ) : latestSubmittedForm ? (
         <Card className="card-pad hero-tint">
           <CardHead
@@ -127,7 +175,6 @@ export function MyDashboard({
               ? "新しいアンケートが公開されると、ここに回答ボタンと締切が表示されます。"
               : "等級が設定されていないため、アンケートが割り当てられていません。会社の管理者に確認してください。"
           }
-          action={<LinkButton href="/me/forms">アンケート一覧を見る</LinkButton>}
         />
       )}
 
@@ -141,24 +188,30 @@ export function MyDashboard({
         />
       ) : (
         <Card className="card-pad">
-          <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+          {/* 広い画面では「どの評価か」を左、「達成率と結果への入口」を右に並べ、右側が空いたまま縦に長くならないようにする（S13・A12）。
+              狭い画面では左→右の順に縦に積む。 */}
+          <div className="grid gap-x-8 gap-y-4 md:grid-cols-2 md:items-start">
             <div className="min-w-0">
               <p className="m-0 text-note text-ink-muted">最新の評価</p>
               <p className="todo-row-title m-0 mt-1 text-head">{latest.cycleName ?? "評価結果"}</p>
               <p className="todo-row-sub m-0">{latest.gradeName ?? "等級未設定"}</p>
-              {latest.requirementRate !== null ? (
-                <div className="mt-4 max-w-xl">
-                  <Bar value={latest.requirementRate} max={100} label="等級要件の達成率（%）" />
-                  <p className="m-0 mt-1 text-sub">
-                    <Num value={latest.requirementAchieved} /> / <Num value={latest.requirementTotal} /> 項目を達成
-                  </p>
-                </div>
-              ) : (
-                <p className="footnote m-0 mt-3">等級要件の達成率は判定対象外です。</p>
-              )}
               <div className="mt-3"><ResultBadges result={latest} /></div>
             </div>
-            <LinkButton href={`/me/results/${latest.id}`} variant="primary">結果と理由を見る</LinkButton>
+            <div className="min-w-0">
+              {latest.requirementRate !== null ? (
+                <Bar value={latest.requirementRate} max={100} label="等級要件の達成率（%）" />
+              ) : (
+                <p className="footnote m-0">等級要件の達成率は判定対象外です。</p>
+              )}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                {latest.requirementRate !== null && (
+                  <p className="m-0 text-sub">
+                    <Num value={latest.requirementAchieved} /> / <Num value={latest.requirementTotal} /> 項目を達成
+                  </p>
+                )}
+                <LinkButton href={`/me/results/${latest.id}`} variant="primary" className="ml-auto">結果と理由を見る</LinkButton>
+              </div>
+            </div>
           </div>
 
           {previous.length > 0 && (
@@ -188,15 +241,6 @@ export function MyDashboard({
           )}
         </Card>
       )}
-
-      <div className="mt-5">
-        <Disclosure summary="この画面に表示される内容">
-          <p className="m-0">アンケートは入力途中でも自動保存されます。</p>
-          <p className="m-0 mt-1">評価結果には、結論だけでなく判定の理由も残ります。</p>
-          <p className="m-0 mt-1">自分が提出した回答も、あとから見返せます。</p>
-          <p className="m-0 mt-1">評価基準の配点や、昇格に必要な点数は表示されません。</p>
-        </Disclosure>
-      </div>
     </>
   );
 }

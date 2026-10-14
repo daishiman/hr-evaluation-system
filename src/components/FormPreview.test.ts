@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+
 import { FormPreview, type PreviewQuestion } from "./FormPreview";
 
 const base: PreviewQuestion = {
@@ -17,8 +18,8 @@ const base: PreviewQuestion = {
   displayOrder: 1,
 };
 
-function render(questions: PreviewQuestion[]): string {
-  return renderToStaticMarkup(createElement(FormPreview, { questions }));
+function render(questions: PreviewQuestion[], reason?: string): string {
+  return renderToStaticMarkup(createElement(FormPreview, { questions, reason }));
 }
 
 describe("FormPreview", () => {
@@ -26,7 +27,7 @@ describe("FormPreview", () => {
     expect(render([])).toContain("保存済みの設問はありません。");
   });
 
-  it("全回答形式の答え方・選択肢・単位・範囲・必須/任意・補足を静的に表示する", () => {
+  it("全回答形式の答え方・選択肢・単位・範囲・必須/任意・補足を表示する", () => {
     const html = render([
       {
         ...base,
@@ -93,9 +94,10 @@ describe("FormPreview", () => {
     expect(html).toContain("（必須）");
     expect(html).toContain("（任意）");
     expect(html).toContain("この半期について答えてください。");
-    expect(html).toMatch(/>2<\/span>/);
-    expect(html).toMatch(/>3<\/span>/);
-    expect(html).toMatch(/>4<\/span>/);
+    // 段階は回答画面と同じ押せる札（ChoiceChip）で出す（S12: 以前は押せない札で、押しても何も起きなかった）
+    expect(html).toMatch(/>2<\/button>/);
+    expect(html).toMatch(/>3<\/button>/);
+    expect(html).toMatch(/>4<\/button>/);
   });
 
   it("空・壊れた選択肢を安全に扱い、yesnoだけは回答画面と同じ既定値を出す", () => {
@@ -121,14 +123,73 @@ describe("FormPreview", () => {
     expect(html.indexOf("支援の2問目")).toBeLessThan(html.indexOf("最後の設問"));
   });
 
-  it("回答や自動保存につながる操作要素を一切描画しない", () => {
+  it("選択肢は試しに選べるが、回答や自動保存につながる操作要素は描画しない", () => {
     const html = render([
       { ...base, id: "yesno", questionType: "yesno", optionsJson: null },
+      {
+        ...base,
+        id: "multi",
+        questionType: "multi",
+        optionsJson: JSON.stringify([{ value: "a", label: "研修A" }]),
+      },
       { ...base, id: "text", questionType: "text" },
+      { ...base, id: "number", questionType: "number", unit: "件" },
     ]);
 
-    expect(html).not.toMatch(/<(?:input|button|form|select|textarea)\b/i);
+    // 送る・保存する操作と、文字・数を打つ欄は作らない
+    expect(html).not.toMatch(/<(?:form|select|textarea)\b/i);
+    expect(html).not.toContain('type="submit"');
     expect(html).not.toContain("/api/responses/");
     expect(html).not.toContain("昇格の必須要件");
+    // 押せるのは選ぶ札だけ（どれも選択中かどうかを aria-pressed で持つ）
+    const buttons = html.match(/<button\b[^>]*>/g) ?? [];
+    expect(buttons).toHaveLength(2);
+    for (const b of buttons) expect(b).toMatch(/aria-pressed="(?:true|false)"/);
+    // 入力欄はいくつでも選ぶ設問のチェックボックスだけ
+    const inputs = html.match(/<input\b[^>]*>/g) ?? [];
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0]).toContain('type="checkbox"');
+  });
+
+  it("見本であること・選んだ内容が保存されないこと・回答できない理由を先頭に出す", () => {
+    const html = render([{ ...base, id: "yesno", questionType: "yesno", title: "確認しましたか" }]);
+
+    expect(html).toContain("見本です。");
+    expect(html).toContain("保存も提出もされません。");
+    expect(html).toContain("ここからは回答できません。");
+    expect(html.indexOf("見本です。")).toBeLessThan(html.indexOf("確認しましたか"));
+  });
+
+  it("回答できない理由は呼び出し側から渡せる", () => {
+    const html = render(
+      [{ ...base, id: "yesno", questionType: "yesno" }],
+      "このアンケートは別の等級向けのため、あなたは回答できません。",
+    );
+
+    expect(html).toContain("このアンケートは別の等級向けのため、あなたは回答できません。");
+    expect(html).not.toContain("ここからは回答できません。");
+  });
+
+  it("設問が0件なら見本の説明は出さない", () => {
+    expect(render([])).not.toContain("見本です。");
+  });
+
+  it("選択肢の束に設問名で名前を付ける（label for で束を指さない）", () => {
+    const html = render([
+      {
+        ...base,
+        id: "single",
+        questionType: "single",
+        title: "もっとも近い行動",
+        optionsJson: JSON.stringify([
+          { value: "a", label: "自分から行った" },
+          { value: "b", label: "助言を受けて行った" },
+        ]),
+      },
+    ]);
+
+    expect(html).toContain('id="preview_t_single"');
+    expect(html).toMatch(/role="group"[^>]*aria-labelledby="preview_t_single"/);
+    expect(html).not.toMatch(/<label\b[^>]*\bfor=/);
   });
 });

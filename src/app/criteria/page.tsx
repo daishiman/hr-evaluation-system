@@ -1,5 +1,6 @@
+import { clsx } from "clsx";
 import { redirect } from "next/navigation";
-import { canSeeCriteria, homePathFor, requireRole } from "@/lib/session";
+import { canSeeCriteria, homePathFor, requireRoute } from "@/lib/session";
 import {
   listBehaviorGuidelines,
   listGradeRequirements,
@@ -9,6 +10,7 @@ import {
   listRaiseSettings,
 } from "@/lib/queries";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
+import { pointGroupLabel, promotionStepFrom } from "@/lib/domain/grade-label";
 import {
   Badge,
   Card,
@@ -55,9 +57,9 @@ export default async function CriteriaPage({
 }: {
   searchParams: Promise<{ grade?: string; item?: string }>;
 }) {
-  const viewer = await requireRole("MANAGER");
+  const viewer = await requireRoute("/criteria");
   // 配点・閾値・必要点数は一般の方に出さない（明示要件）。
-  // requireRole と canSeeCriteria の二重で止めるのは、見せてよいロールの定義が
+  // requireRoute と canSeeCriteria の二重で止めるのは、見せてよいロールの定義が
   // 変わったときにこの画面だけ取り残されないようにするため。
   if (!canSeeCriteria(viewer.role)) redirect(`${homePathFor(viewer.role)}?denied=1`);
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
@@ -101,6 +103,8 @@ export default async function CriteriaPage({
   const withoutCriteria = selectable.filter((i) => !i.hasCriteria).sort((a, b) => a.no - b.no);
 
   const th = grade ? (thresholds.find((t) => t.fromGradeId === grade.id) ?? null) : null;
+  /* 昇格の段階の呼び名は等級名から作る（S1・A1）。保存してある段階の文字列は名前を変えても追従しない */
+  const step = grade ? promotionStepFrom(grade.id, grades, thresholds) : null;
   const raise = grade ? (raises.find((r) => r.gradeId === grade.id) ?? null) : null;
   const myReqs = grade
     ? currentVersionRows(gradeReqs).filter((r) => r.gradeId === grade.id && r.isActive)
@@ -167,10 +171,10 @@ export default async function CriteriaPage({
 
           <div className="mt-3">
             <Disclosure summary="ほかの等級区分と見くらべる" meta={`全${rules.length}区分`}>
-              <PointRuleComparison rules={rules} currentGroup={pointGroup} />
+              <PointRuleComparison rules={rules} grades={grades} currentGroup={pointGroup} />
               <p className="footnote mt-2">
                 等級区分は配点をまとめる単位です。
-                AMⅠとAMⅡ、ManagerⅠとManagerⅡは配点が同じです。
+                同じ区分の等級（{pointGroupLabel("AM", grades)}、{pointGroupLabel("Manager", grades)}）は配点が同じです。
                 違うのは等級要件の中身だけです。
               </p>
             </Disclosure>
@@ -187,7 +191,7 @@ export default async function CriteriaPage({
                     <span className="unit">点</span>
                   </span>{" "}
                   ／ 満点 <Num value={rule?.totalPoints ?? null} unit="点" />。行動指針は{" "}
-                  <Num value={th.requiredBehaviorPoints} unit="点" /> 以上（{th.label}）
+                  <Num value={th.requiredBehaviorPoints} unit="点" /> 以上{step && `（${step}）`}
                   {th.isProvisional && (
                     <>
                       {" "}
@@ -242,7 +246,19 @@ export default async function CriteriaPage({
             />
           )}
 
-          <SectionHeading>いま採用している項目</SectionHeading>
+          {/* 合計と満点は一覧の要約なので、一覧の下に1行で積まず見出しの右に置く（左に1行だけ残ると右側が空く。§28-9） */}
+          <SectionHeading
+            aside={
+              scheme && adopted.length > 0 ? (
+                <span className="footnote">
+                  合計 <Num value={adopted.reduce((sum, a) => sum + a.weight, 0)} unit="点" /> ／ 満点{" "}
+                  <Num value={rule?.totalPoints ?? scheme.totalPoints} unit="点" />
+                </span>
+              ) : undefined
+            }
+          >
+            いま採用している項目
+          </SectionHeading>
           {!scheme ? (
             <ReasonNote>
               有効な評価セットが登録されていません。会社の管理者が等級区分ごとに項目と配点を設定すると表示されます。
@@ -253,48 +269,44 @@ export default async function CriteriaPage({
               {rule ? slotCountOf(rule) : 0} 件を選ぶ必要があります。
             </ReasonNote>
           ) : (
-            <>
-              <Card>
-                {adopted.map((a) => {
-                  const item = selectable.find((i) => i.kpiItemId === a.kpiItemId);
-                  return (
-                    <CardRow
-                      key={a.id}
-                      alignTop
-                      title={
-                        <>
-                          {item ? `No.${item.no} ${item.name}` : "（この等級区分では選べない項目が入っています）"}{" "}
-                          {a.isFixedSlot && <Badge tone="done">固定枠</Badge>}
-                          {a.isMajorSlot && <Badge tone="active">金銭の枠</Badge>}
-                        </>
-                      }
-                      sub={item ? `${item.categoryName ?? "カテゴリ未設定"} ／ 単位 ${item.unit}` : ""}
-                      value={
-                        <>
-                          <Num value={a.weight} display />
-                          <span className="unit">点</span>
-                          {item && (
-                            <p className="m-0 mt-1">
-                              <a href={criteriaHref(item.kpiItemId)} className="text-note underline">
-                                評価の基準を見る
-                              </a>
-                            </p>
-                          )}
-                        </>
-                      }
-                    />
-                  );
-                })}
-              </Card>
-              <p className="footnote mt-2">
-                合計 <Num value={adopted.reduce((sum, a) => sum + a.weight, 0)} unit="点" /> ／ 満点{" "}
-                <Num value={rule?.totalPoints ?? scheme.totalPoints} unit="点" />。
-              </p>
-            </>
+            <Card>
+              {adopted.map((a) => {
+                const item = selectable.find((i) => i.kpiItemId === a.kpiItemId);
+                return (
+                  <CardRow
+                    key={a.id}
+                    alignTop
+                    title={
+                      <>
+                        {item ? `No.${item.no} ${item.name}` : "（この等級区分では選べない項目が入っています）"}{" "}
+                        {a.isFixedSlot && <Badge tone="done">固定枠</Badge>}
+                        {a.isMajorSlot && <Badge tone="active">金銭の枠</Badge>}
+                      </>
+                    }
+                    sub={item ? `${item.categoryName ?? "カテゴリ未設定"} ／ 単位 ${item.unit}` : ""}
+                    value={
+                      <>
+                        <Num value={a.weight} display />
+                        <span className="unit">点</span>
+                        {item && (
+                          <p className="m-0 mt-1">
+                            <a href={criteriaHref(item.kpiItemId)} className="text-note underline">
+                              評価の基準を見る
+                            </a>
+                          </p>
+                        )}
+                      </>
+                    }
+                  />
+                );
+              })}
+            </Card>
           )}
 
-          <SectionHeading>1項目ずつの採点の流れ</SectionHeading>
-          <p className="footnote mb-2">見たい項目を開いてください。</p>
+          {/* 読み方の案内は見出しに添える1行なので、見出しの右に置く（§28-9）。項目が無いときは案内しない */}
+          <SectionHeading aside={selectable.length > 0 ? <span className="footnote">見たい項目を開いてください</span> : undefined}>
+            1項目ずつの採点の流れ
+          </SectionHeading>
           {/* 点数の決まり方（式とランクごとの割合）は仕組みの解説。
               33項目の一覧より前に置くと、毎回そこを読み飛ばすことになる */}
           <div className="mb-2">
@@ -372,8 +384,17 @@ export default async function CriteriaPage({
                 <CardRow
                   key={p.id}
                   title={p.text}
-                  sub={`${p.kind === "report" ? "受講して報告書を提出" : "独学してテストに合格"}${p.transitionLabel ? ` ／ ${p.transitionLabel}` : ""}`}
-                  marks={p.isGate ? <Badge tone="alert">必須（未提出だと昇格不可）</Badge> : <Badge tone="done">任意</Badge>}
+                  /* 種類と段階は短い補足なので、札と一緒に行の右端へまとめる
+                     （名前の下に積むと、件数ぶん右側が空いたまま残る。§28-9） */
+                  marks={
+                    <div className="row-actions gap-x-3">
+                      <span className="text-note text-ink-muted">
+                        {p.kind === "report" ? "受講して報告書を提出" : "独学してテストに合格"}
+                        {step ? ` ／ ${step}` : ""}
+                      </span>
+                      {p.isGate ? <Badge tone="alert">必須（未提出だと昇格不可）</Badge> : <Badge tone="done">任意</Badge>}
+                    </div>
+                  }
                 />
               ))}
             </Card>
@@ -382,24 +403,32 @@ export default async function CriteriaPage({
           {myBehaviors.length > 0 && (
             <>
               <SectionHeading>行動指針（{grade.name} の等級帯）</SectionHeading>
-              <Card>
-                {myBehaviors.map((b) => (
-                  <CardRow
-                    key={b.id}
-                    alignTop
-                    title={b.aspectName}
-                    detail={
-                      <ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-note text-ink-muted">
+              {/* 観点ごとの段階は1行が短いので、等級要件と同じく広い画面では2列のカードに並べる
+                  （1列に積むと右側が空いたまま残る。§28-9） */}
+              <div className="card-grid">
+                {myBehaviors.map((b, i) => {
+                  /* 観点が奇数のとき、最後の1枚は2列ぶんに広げて段階を2段に組む
+                     （1枚だけ左に残ると、その高さぶん右側が空く） */
+                  const wide = myBehaviors.length % 2 === 1 && i === myBehaviors.length - 1;
+                  return (
+                    <Card key={b.id} className={clsx("card-pad", wide && "sm:col-span-2")}>
+                      <p className="section-heading m-0 mb-2">{b.aspectName}</p>
+                      <ul
+                        className={clsx(
+                          "m-0 list-none space-y-0.5 p-0 text-note text-ink-muted",
+                          wide && "md:columns-2 md:gap-x-8",
+                        )}
+                      >
                         {b.levels.map((l) => (
-                          <li key={l.id}>
+                          <li key={l.id} className="break-inside-avoid">
                             <span className="num font-bold">{l.score}</span> {l.label}：{l.text}
                           </li>
                         ))}
                       </ul>
-                    }
-                  />
-                ))}
-              </Card>
+                    </Card>
+                  );
+                })}
+              </div>
             </>
           )}
         </>

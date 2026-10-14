@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { minRoleFor } from "@/lib/route-access";
 import { FINALIZED_SKIP_MESSAGE, summarizeBuildResults } from "./build-summary";
 
 const ROOT = process.cwd();
@@ -27,10 +28,10 @@ describe("集計し直しの結果の要約", () => {
 
   it("作れなかった人は名前と理由を出す", () => {
     const msg = summarizeBuildResults([
-      { employeeName: "田中", ok: false, message: "等級区分「AM」の評価セットが未設定です。" },
+      { employeeName: "田中", ok: false, message: "等級区分「等級4-1・等級4-2」の評価セットが未設定です。" },
     ]);
     expect(msg).toContain("1人ぶんは作れませんでした");
-    expect(msg).toContain("田中：等級区分「AM」の評価セットが未設定です。");
+    expect(msg).toContain("田中：等級区分「等級4-1・等級4-2」の評価セットが未設定です。");
   });
 
   it("対象が0件のときは「動かなかった」と区別できる文を返す", () => {
@@ -56,7 +57,9 @@ describe("集計し直しの受け口（buildEvaluations）", () => {
   });
 
   it("マネージャー以上でなければ実行できない（サーバー側で判定）", () => {
-    expect(route).toContain('role: "MANAGER", input: buildSchema');
+    // サーバー側の入口は台帳の操作 id。どの役割からできるかは台帳が決める（D-007）
+    expect(route).toContain('operation: "evaluations.build", input: buildSchema');
+    expect(minRoleFor("evaluations.build")).toBe("MANAGER");
   });
 
   it("会社の境界を守る（サイクルを自社に絞ってから集計する）", () => {

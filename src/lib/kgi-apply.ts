@@ -9,6 +9,9 @@ import {
   type KgiCoefficientRow,
 } from "@/lib/domain/kgi";
 
+/** 会社ごとの値（事業所など）の正本。users の同じ列は読まない（src/lib/memberships.ts） */
+const mem = s.companyMemberships;
+
 /**
  * 事業所KGIの達成率を、その事業所・そのサイクルの評価に反映する文を作る。
  *
@@ -52,11 +55,12 @@ export async function officeKgiRateStatements(
         totalScore: s.evaluations.totalScore,
         evalOfficeId: s.evaluations.officeId,
         responseOfficeId: s.formResponses.officeId,
-        userOfficeId: s.users.officeId,
+        // いまの所属の事業所は、評価の会社での所属から読む（他社の所属の事業所を混ぜない）
+        userOfficeId: mem.officeId,
       })
       .from(s.evaluations)
       .leftJoin(s.formResponses, eq(s.formResponses.id, s.evaluations.responseId))
-      .leftJoin(s.users, eq(s.users.id, s.evaluations.employeeId))
+      .leftJoin(mem, and(eq(mem.userId, s.evaluations.employeeId), eq(mem.companyId, s.evaluations.companyId)))
       .where(and(eq(s.evaluations.companyId, companyId), eq(s.evaluations.cycleId, cycleId))),
   ]);
 

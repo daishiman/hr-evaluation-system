@@ -6,7 +6,8 @@
  * ここには DOM もDBも持ち込まない（純粋な計算だけを置く）。
  */
 
-import type { Role } from "@/lib/session";
+import type { Role } from "@/lib/roles";
+import { roleCan } from "@/lib/route-access";
 
 /* ───────────────────────── 状態 ───────────────────────── */
 
@@ -79,7 +80,7 @@ export function improvementHandlingError(
  * 画面の出し分けだけに頼らず、API と各画面もこの関数を通す。
  */
 export function canReadImprovements(role: Role): boolean {
-  return role === "COMPANY_ADMIN" || role === "SUPER_ADMIN";
+  return roleCan(role, "improvements.updateStatus");
 }
 
 /** 状態を書き換えてよいか。読める人と同じ範囲にする。 */

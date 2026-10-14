@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { canViewEmployee, requireRole, ROLE_LABEL, type Role } from "@/lib/session";
+import { canViewEmployee, ROLE_LABEL, type Role, requireRoute } from "@/lib/session";
 import { getMember, listEvaluations, listNotes } from "@/lib/queries";
 import { Badge, Card, DefList, PageTitle, RecordList, SectionHeading } from "@/components/ui";
 import { EvaluationTrend, type TrendItem } from "@/components/EvaluationTrend";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * 過去の評価を並べて比較できるようにする（半期ごとの推移が本人の成長の記録になる）。
  */
 export default async function MemberDetail({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await requireRole("MANAGER");
+  const viewer = await requireRoute("/manager/members/[id]");
   const { id } = await params;
   if (!viewer.companyId) notFound();
   if (!(await canViewEmployee(viewer, id))) notFound();

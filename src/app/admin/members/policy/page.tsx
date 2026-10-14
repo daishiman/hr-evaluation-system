@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { listProfileFieldPolicies } from "@/lib/queries";
 import { CONFIGURABLE_FIELDS, PROFILE_FIELDS, resolveSelfEditMap } from "@/lib/domain/profile-fields";
 import { Card, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /** 社員が自分で変えてよい項目を、会社ごとに決める。 */
 export default async function ProfilePolicyPage() {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/members/policy");
   if (!viewer.companyId) {
     return <EmptyState title="対象の会社が選ばれていません" body="上のメニューから会社を選んでください。" />;
   }

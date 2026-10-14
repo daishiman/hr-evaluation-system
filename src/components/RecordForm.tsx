@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { Button, Card, ReasonNote } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { useSaveAction } from "@/lib/use-refresh";
@@ -69,6 +69,7 @@ export function RecordForm({
   resetAfterSubmit,
   onSaved,
   boundsPair,
+  inline,
 }: {
   /** 保存する Server Action（src/actions/*）。入力の検査と権限の確認はその中で行う */
   action: SaveAction<Record<string, unknown>>;
@@ -90,6 +91,12 @@ export function RecordForm({
    * 同じ判定はサーバー側にも置く（画面を通さずに送られたときに素通りしないため）。
    */
   boundsPair?: { lower: string; upper: string };
+  /**
+   * 入力欄と保存ボタンを1行に並べる（ボタンは右端）。項目が2〜3個の短い欄だけのフォーム向け。
+   * 入れ物が狭いときは、いつもどおり縦に積む（.split-host のコンテナクエリ）。
+   * 文章欄（textarea）・チェックボックス・発行する値の欄があるフォームには使わない。
+   */
+  inline?: boolean;
 }) {
   const { save, saving } = useSaveAction(action, { resource });
   const formRef = useRef<HTMLFormElement>(null);
@@ -131,7 +138,7 @@ export function RecordForm({
   const onKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
     if (e.key !== "Enter") return;
     const t = e.target as HTMLElement;
-    if (t.tagName === "TEXTAREA") return;
+    if (t.tagName === "TEXTAREA" || t.closest("button")) return;
     // 日本語変換の確定Enterでは何もしない
     if ((e.nativeEvent as unknown as { isComposing?: boolean }).isComposing) return;
     e.preventDefault();
@@ -216,101 +223,111 @@ export function RecordForm({
       {title && <p className="section-heading m-0 mb-1">{title}</p>}
       {description && <p className="footnote m-0 mb-3">{description}</p>}
       {issuedGenerated === null && (
-        <form
-          ref={formRef}
-          onKeyDown={onKeyDown}
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
-          }}
-          className="field-grid"
-        >
-          {fields.map((f) => (
-          <label key={f.name} className={f.type === "textarea" ? "md:col-span-2" : undefined}>
-            <span className="block text-note text-ink-muted">
-              {f.label}
-              {"required" in f && f.required && <span className="ml-1 text-danger">必須</span>}
-            </span>
-            {f.type === "select" ? (
-              <select name={f.name} defaultValue={f.defaultValue ?? ""} className="input mt-1 w-full">
-                {/* 「空欄」に意味がある項目（例: 適用しない）は自前の選択肢を持っているので、案内文の行を足さない */}
-                {!f.options.some((o) => o.value === "") && <option value="">選択してください</option>}
-                {f.options.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            ) : f.type === "checkbox" ? (
-              <span className="mt-1 flex items-center gap-2 text-sub">
-                <input type="checkbox" name={f.name} defaultChecked={f.defaultValue ?? false} />
-                {f.help}
+        <div className={inline ? "split-host" : undefined}>
+          <form
+            ref={formRef}
+            onKeyDown={onKeyDown}
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+            className="field-grid"
+            data-inline={inline ? "true" : undefined}
+            style={inline ? ({ "--field-count": fields.length } as CSSProperties) : undefined}
+          >
+            {fields.map((f) => (
+            <label key={f.name} className={f.type === "textarea" ? "md:col-span-2" : undefined}>
+              <span className="block text-note text-ink-muted">
+                {f.label}
+                {"required" in f && f.required && <span className="ml-1 text-danger">必須</span>}
               </span>
-            ) : f.type === "textarea" ? (
-              <textarea name={f.name} defaultValue={f.defaultValue ?? ""} rows={3} className="input mt-1 w-full" />
-            ) : f.type === "number" ? (
-              <span className="mt-1 block">
-                <NumberField name={f.name} defaultValue={f.defaultValue ?? null} policy={f.policy} unit={f.unit} />
-              </span>
-            ) : "generate" in f && f.generate ? (
-              /* 発行して相手に渡す値。伏せ字にすると渡す側が読めないので、そのまま見せる。
-                 打ち直しもできるが、初期表示は必ず作った値にする */
-              <span className="mt-1 flex flex-wrap items-center gap-2">
+              {f.type === "select" ? (
+                <select name={f.name} defaultValue={f.defaultValue ?? ""} className="input mt-1 w-full">
+                  {/* 「空欄」に意味がある項目（例: 適用しない）は自前の選択肢を持っているので、案内文の行を足さない */}
+                  {!f.options.some((o) => o.value === "") && <option value="">選択してください</option>}
+                  {f.options.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              ) : f.type === "checkbox" ? (
+                <span className="mt-1 flex items-center gap-2 text-sub">
+                  <input type="checkbox" name={f.name} defaultChecked={f.defaultValue ?? false} />
+                  {f.help}
+                </span>
+              ) : f.type === "textarea" ? (
+                <textarea name={f.name} defaultValue={f.defaultValue ?? ""} rows={3} className="input mt-1 w-full" />
+              ) : f.type === "number" ? (
+                <span className="mt-1 block">
+                  <NumberField name={f.name} defaultValue={f.defaultValue ?? null} policy={f.policy} unit={f.unit} />
+                </span>
+              ) : "generate" in f && f.generate ? (
+                /* 発行して相手に渡す値。伏せ字にすると渡す側が読めないので、そのまま見せる。
+                   打ち直しもできるが、初期表示は必ず作った値にする */
+                <span className="mt-1 flex flex-wrap items-center gap-2">
+                  <input
+                    name={f.name}
+                    type="text"
+                    value={generated[f.name] ?? ""}
+                    onChange={(e) => {
+                      setGenerated((s) => ({ ...s, [f.name]: e.target.value }));
+                      setCopied(null);
+                    }}
+                    autoComplete="off"
+                    spellCheck={false}
+                    enterKeyHint="next"
+                    className="input input-code w-full sm:w-64"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setGenerated((s) => ({ ...s, [f.name]: generateInitialPassword() }));
+                      setCopied(null);
+                    }}
+                  >
+                    作り直す
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard
+                        .writeText(generated[f.name] ?? "")
+                        .then(() => setCopied(f.name))
+                        .catch(() => setCopied(null));
+                    }}
+                  >
+                    {copied === f.name ? "写しました" : "写す"}
+                  </Button>
+                </span>
+              ) : (
                 <input
                   name={f.name}
-                  type="text"
-                  value={generated[f.name] ?? ""}
-                  onChange={(e) => {
-                    setGenerated((s) => ({ ...s, [f.name]: e.target.value }));
-                    setCopied(null);
-                  }}
-                  autoComplete="off"
-                  spellCheck={false}
+                  type={f.type === "date" ? "date" : f.type}
+                  defaultValue={"defaultValue" in f ? (f.defaultValue ?? "") : ""}
+                  placeholder={"placeholder" in f ? f.placeholder : undefined}
+                  autoComplete={f.type === "password" ? "new-password" : "off"}
                   enterKeyHint="next"
-                  className="input input-code w-full sm:w-64"
+                  className="input mt-1 w-full"
                 />
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setGenerated((s) => ({ ...s, [f.name]: generateInitialPassword() }));
-                    setCopied(null);
-                  }}
-                >
-                  作り直す
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    void navigator.clipboard
-                      .writeText(generated[f.name] ?? "")
-                      .then(() => setCopied(f.name))
-                      .catch(() => setCopied(null));
-                  }}
-                >
-                  {copied === f.name ? "写しました" : "写す"}
-                </Button>
-              </span>
-            ) : (
-              <input
-                name={f.name}
-                type={f.type === "date" ? "date" : f.type}
-                defaultValue={"defaultValue" in f ? (f.defaultValue ?? "") : ""}
-                placeholder={"placeholder" in f ? f.placeholder : undefined}
-                autoComplete={f.type === "password" ? "new-password" : "off"}
-                enterKeyHint="next"
-                className="input mt-1 w-full"
-              />
-            )}
-            {f.help && f.type !== "checkbox" && <span className="footnote block">{f.help}</span>}
-          </label>
-          ))}
-          <div className="md:col-span-2">
-            {/* 一覧へ反映し終わるまで押せないままにする。二度押しで同じものが2件できるのを防ぐ */}
-            <Button type="submit" variant="primary" disabled={saving}>
-              {saving ? "保存しています…" : submitLabel}
-            </Button>
-          </div>
-        </form>
+              )}
+              {f.help && f.type !== "checkbox" && <span className="footnote block">{f.help}</span>}
+            </label>
+            ))}
+            <div className="field-submit md:col-span-2">
+              {/* 1行に並べたときは、ラベル1行ぶん下げて入力欄の高さにそろえる */}
+              {inline && (
+                <span className="field-submit-spacer text-note" aria-hidden="true">
+                  &nbsp;
+                </span>
+              )}
+              {/* 一覧へ反映し終わるまで押せないままにする。二度押しで同じものが2件できるのを防ぐ */}
+              <Button type="submit" variant="primary" disabled={saving} className={inline ? "mt-1" : undefined}>
+                {saving ? "保存しています…" : submitLabel}
+              </Button>
+            </div>
+          </form>
+        </div>
       )}
       {error && (
         <div className="mt-3">

@@ -10,7 +10,7 @@ import {
   listKpiItems,
   listPromotionRequirements,
 } from "@/lib/queries";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { SetupGuide, type SetupStep } from "./SetupGuide";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
  * viewer.companyId で絞り、選択中の1社以外の件数を混ぜない。
  */
 export default async function AdminSetupPage() {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/setup");
   if (!viewer.companyId) {
     return <EmptyState title="操作する会社が選ばれていません" body="サイドバーで会社を選んでから、設定を確認してください。" />;
   }
@@ -104,6 +104,7 @@ export default async function AdminSetupPage() {
       actions: [{ href: "/admin/scheme", label: "KPI・評価セットを設定する" }],
       detail:
         "評価セットで選んだKPIから、アンケートのKPI設問と評価時の配点が決まります。評価期間やアンケートを作る前に、対象項目を確定します。",
+      gaps: schemeReadiness.schemeGaps,
     },
     {
       number: 4,

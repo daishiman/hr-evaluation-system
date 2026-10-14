@@ -5,14 +5,14 @@ import { daysUntilDeadline, formatJpDate, jstDateString } from "@/lib/domain/for
 import { listPendingRespondents } from "@/lib/evaluate";
 import { getOpenCycle, listEvaluations, listForms, listMembers } from "@/lib/queries";
 import { listMyForms } from "@/lib/response-access";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { listStalledEvaluations } from "@/lib/stalled";
 
 export const dynamic = "force-dynamic";
 
 /** マネージャーのホーム。未確定評価、締切、担当チームの順に次の作業を示す。 */
 export default async function ManagerHome() {
-  const viewer = await requireRole("MANAGER");
+  const viewer = await requireRoute("/manager");
   if (!viewer.companyId) {
     return <EmptyState title="所属している会社がありません" body="システム全体管理者にご連絡ください。" />;
   }

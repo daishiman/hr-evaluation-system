@@ -155,3 +155,28 @@ describe("indexRules / ruleBreakdown", () => {
     for (const note of RULE_NOTES) expect(note.length).toBeLessThanOrEqual(40);
   });
 });
+
+describe("checkGradePointRule — 指摘に出す区分の呼び名", () => {
+  const broken: GradePointRule = {
+    pointGroup: "Manager",
+    totalPoints: 100,
+    fixedSlotPoints: 0,
+    majorSlotPoints: 20,
+    majorSlotCount: 1,
+    minorSlotPoints: 10,
+    minorSlotCount: 6,
+  };
+
+  it("区分は渡した呼び名（等級名）で知らせ、区分の鍵（英語の区分名）は出さない", () => {
+    const errors = checkGradePointRule(broken, "等級5-1・等級5-2");
+    expect(errors.length).toBeGreaterThan(0);
+    for (const e of errors) {
+      expect(e.startsWith("等級5-1・等級5-2")).toBe(true);
+      expect(e).not.toContain("Manager");
+    }
+  });
+
+  it("呼び名を渡さなければ「この等級区分」と呼ぶ", () => {
+    expect(checkGradePointRule(broken)[0]).toMatch(/^この等級区分の/);
+  });
+});

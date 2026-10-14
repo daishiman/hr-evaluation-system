@@ -3,6 +3,7 @@ import { getDb, schema as s } from "@/lib/db";
 import { batchAll } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
 import { parseCsv } from "@/lib/csv";
+import { joinMembership } from "@/lib/memberships";
 import { HttpError } from "@/lib/session";
 import { parseOptions, questionSnapshot, type QuestionSnapshot } from "@/lib/domain/answer-snapshot";
 import { normalizeKey } from "@/lib/csv-normalize";
@@ -125,13 +126,34 @@ export async function importResponsesCsv(
   if (table.length < 2) throw new HttpError(400, "見出し行と回答行が読み取れませんでした。1行目に設問名、2行目以降に回答を入れてください。");
 
   const header = table[0];
-  const questions = await db
-    .select()
-    .from(s.formQuestions)
-    .where(and(eq(s.formQuestions.companyId, companyId), eq(s.formQuestions.formId, formId)));
+  const [questions, formerTitles] = await Promise.all([
+    db
+      .select()
+      .from(s.formQuestions)
+      .where(and(eq(s.formQuestions.companyId, companyId), eq(s.formQuestions.formId, formId))),
+    // 移行 0035 で直す前の設問名（「スキルアップ研修（チーフ以上）」など）。
+    // 会社の Google フォームが前の設問名のままでも、その列を取り込めるようにする
+    db
+      .select({ id: s.displayNameRewrites.rowId, title: s.displayNameRewrites.oldValue })
+      .from(s.displayNameRewrites)
+      .where(
+        and(
+          eq(s.displayNameRewrites.tableName, "form_questions"),
+          eq(s.displayNameRewrites.columnName, "title"),
+          eq(s.displayNameRewrites.companyId, companyId),
+        ),
+      ),
+  ]);
 
   // 設問文 → 設問 の対応表（表記ゆれを吸収したキーで引く）
   const byKey = new Map(questions.map((q) => [normalizeKey(q.title), q]));
+  // 前の設問名は、今の設問名のどれにも当たらないときだけ使う（今の名前が優先。このアンケートの設問にだけ結ぶ）
+  const questionById = new Map(questions.map((q) => [q.id, q]));
+  for (const f of formerTitles) {
+    const q = questionById.get(f.id);
+    const key = normalizeKey(f.title);
+    if (q && !byKey.has(key)) byKey.set(key, q);
+  }
 
   const NAME_KEYS = ["氏名回答者", "氏名", "回答者", "名前", "社員名"];
   const CODE_KEYS = ["社員番号", "職員番号", "ユーザーキー", "社員コード"];
@@ -165,11 +187,13 @@ export async function importResponsesCsv(
     throw new HttpError(400, "設問に対応する列が1つも見つかりませんでした。このアンケートの回答一覧かご確認ください。");
   }
 
-  // 突き合わせ先の利用者（この会社・この等級）
+  // 突き合わせ先の利用者（この会社に所属する人）。社員番号・事業所・等級は会社ごとに違うので、
+  // この会社の所属の値を読む（users の同じ列は元の所属の写しで、別の会社の値のことがある）。
+  const mem = s.companyMemberships;
   const members = await db
-    .select({ id: s.users.id, name: s.users.name, employeeCode: s.users.employeeCode, officeId: s.users.officeId, gradeId: s.users.gradeId, isActive: s.users.isActive })
+    .select({ id: s.users.id, name: s.users.name, employeeCode: mem.employeeCode, officeId: mem.officeId, gradeId: mem.gradeId, isActive: s.users.isActive })
     .from(s.users)
-    .where(eq(s.users.companyId, companyId));
+    .innerJoin(mem, joinMembership(companyId));
 
   const rows: ImportRowResult[] = [];
   type ResponsePlan = {

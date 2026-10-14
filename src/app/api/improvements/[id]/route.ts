@@ -1,5 +1,4 @@
-import { apiViewer } from "@/lib/session";
-import { handle } from "@/lib/api";
+import { apiViewerFor, handle } from "@/lib/api";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
 import {
   handlerOf,
@@ -19,7 +18,7 @@ export const dynamic = "force-dynamic";
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   return handle(async () => {
-    const viewer = await apiViewer("COMPANY_ADMIN");
+    const viewer = await apiViewerFor("improvements.updateStatus");
     const handler = handlerOf(viewer);
 
     const { id } = await ctx.params;

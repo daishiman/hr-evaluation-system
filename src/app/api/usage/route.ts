@@ -1,7 +1,7 @@
-import { handle } from "@/lib/api";
+import { apiViewerFor, handle } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { consumeRateLimit, USAGE_INGEST_RATE_LIMIT } from "@/lib/rate-limit";
-import { apiViewer, HttpError } from "@/lib/session";
+import { HttpError } from "@/lib/session";
 import { readJsonBodyWithinLimit } from "@/lib/request-body";
 import { recordUsageBatch, USAGE_BATCH_MAX_BYTES, usageBatchSchema } from "@/lib/usage";
 
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   return handle(async () => {
-    const viewer = await apiViewer();
+    const viewer = await apiViewerFor("usage.record");
 
     // 会社に紐づかない記録は置き場所が無い（会社を選んでいない全体管理者など）
     if (!viewer.companyId) return { message: "記録しませんでした。" };

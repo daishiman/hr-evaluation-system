@@ -25,14 +25,53 @@ function toRoute(file) {
   return route ? `/${route}` : "/";
 }
 
-test("46個の page.tsx とルート台帳が完全に一致する", () => {
+test("47個の page.tsx とルート台帳が完全に一致する", () => {
   const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
   const implemented = walkPages(join(root, "src/app")).map(toRoute).sort();
   const documented = ledger.routes.map((route) => route.path).sort();
 
-  assert.equal(implemented.length, 46);
+  assert.equal(implemented.length, 47);
   assert.equal(new Set(documented).size, documented.length, "台帳のパスが重複しています");
   assert.deepEqual(documented, implemented);
+  assert.match(ledger.$schemaNote, /47個/);
+});
+
+/* 権限一覧（S5）と画面名（S10）。台帳が権限の正本なので、どちらも台帳の側で固定する */
+test("権限一覧の画面は全体管理者だけが開ける", () => {
+  const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
+  const route = ledger.routes.find((r) => r.path === "/system/permissions");
+  assert.ok(route, "/system/permissions が台帳に無い");
+  assert.equal(route.label, "権限一覧");
+  assert.equal(route.accessClass, "superStatic");
+  assert.equal(route.widthPolicy, "all");
+});
+
+test("Claude Code 連携の画面名は『Claude Code連携（システム開発者専用）』", () => {
+  const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
+  const route = ledger.routes.find((r) => r.path === "/system/agent-keys");
+  assert.equal(route.label, "Claude Code連携（システム開発者専用）");
+  assert.equal(route.accessClass, "superStatic", "役割は増やさない（全体管理者のまま）");
+});
+
+test("全ページに permissions、全 accessClass に access がある", () => {
+  const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
+  for (const route of ledger.routes) {
+    assert.ok(route.permissions?.summary, `${route.path}: permissions.summary が無い`);
+    assert.ok(Array.isArray(route.permissions?.operations), `${route.path}: permissions.operations が無い`);
+  }
+  for (const [name, accessClass] of Object.entries(ledger.accessClasses)) {
+    assert.ok(accessClass.access, `${name}: access が無い`);
+    assert.deepEqual(Object.keys(accessClass.access.byRole).sort(), [...roles].sort(), name);
+    for (const value of Object.values(accessClass.access.byRole)) {
+      assert.ok(["full", "conditional", "none"].includes(value), `${name}: ${value}`);
+    }
+  }
+});
+
+test("共有の操作と公開の入口は配列で、台帳の上の階層にある", () => {
+  const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
+  assert.ok(Array.isArray(ledger.sharedOperations));
+  assert.ok(Array.isArray(ledger.publicEndpoints));
 });
 
 test("全ルートが4ロール×状態×期待結果と4つの検証幅へ展開できる", () => {

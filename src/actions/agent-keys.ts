@@ -45,7 +45,7 @@ const decideSchema = z.object({ userCode: z.string().max(50), approve: z.boolean
  * 止めるのは失効の操作だけに寄せる（発行のついでに止まる道を作らない）。
  */
 export async function createAgentKey(raw: unknown) {
-  return runAction({ role: "SUPER_ADMIN", input: issueSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "agentKeys.manage", input: issueSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
     const labelError = agentKeyLabelError(input.label);
     if (labelError) throw new HttpError(400, labelError);
 
@@ -69,7 +69,7 @@ export async function createAgentKey(raw: unknown) {
  * すでに止まっている鍵を押されたときは、成功にせず理由を返す。
  */
 export async function revokeAgentKey(raw: unknown) {
-  return runAction({ role: "SUPER_ADMIN", input: idSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "agentKeys.manage", input: idSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
     if (!input.id) throw new HttpError(400, "止める鍵が選ばれていません。");
     const revoked = await stopAgentKey(viewer.id, input.id);
     if (!revoked) throw new HttpError(400, "この鍵はすでに止まっています。");
@@ -84,7 +84,7 @@ export async function revokeAgentKey(raw: unknown) {
  * 設定値の鍵は残るため、画面だけで完全に止められる道をここで用意する。
  */
 export async function setAgentEnvKey(raw: unknown) {
-  return runAction({ role: "SUPER_ADMIN", input: envSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "agentKeys.manage", input: envSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
     await setEnvKeyEnabled(viewer.id, input.envKeyEnabled);
     return {
       message: input.envKeyEnabled
@@ -96,7 +96,7 @@ export async function setAgentEnvKey(raw: unknown) {
 
 /** 打ち込まれた合言葉が何なのかを、押す前に見せる。何も書き換えない。 */
 export async function checkDeviceCode(raw: unknown) {
-  return runRead({ role: "SUPER_ADMIN", input: codeSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ input }) => {
+  return runRead({ operation: "agentKeys.approveDevice", input: codeSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ input }) => {
     const code = normalizeUserCode(input.userCode);
     if (!code) throw new HttpError(400, DEVICE_UNKNOWN_MESSAGE);
     const found = await findDeviceGrant(code);
@@ -113,7 +113,7 @@ export async function checkDeviceCode(raw: unknown) {
  * 「どの会社の話か」が決まらないまま読み書きできる端末ができてしまう。
  */
 export async function approveDevice(raw: unknown) {
-  return runAction({ role: "SUPER_ADMIN", input: decideSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "agentKeys.approveDevice", input: decideSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
     const code = normalizeUserCode(input.userCode);
     if (!code) throw new HttpError(400, DEVICE_UNKNOWN_MESSAGE);
 
@@ -132,7 +132,7 @@ export async function approveDevice(raw: unknown) {
 
 /** 通した端末を1台だけ止める。他の端末は動き続ける。 */
 export async function revokeAgentSession(raw: unknown) {
-  return runAction({ role: "SUPER_ADMIN", input: idSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "agentKeys.approveDevice", input: idSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
     if (!input.id) throw new HttpError(400, "止める端末が選ばれていません。");
     const revoked = await stopAgentSession(viewer.id, input.id);
     if (!revoked) throw new HttpError(400, "この端末はすでに止まっています。");

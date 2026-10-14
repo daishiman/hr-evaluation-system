@@ -1,4 +1,4 @@
-import { requireViewer } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { Card, PageTitle } from "@/components/ui";
 import { PasswordChangeForm } from "@/components/PasswordChangeForm";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  * この画面はまさにその案内の行き先なので、ここで同じ文言を繰り返さない。
  */
 export default async function AccountPasswordPage() {
-  const viewer = await requireViewer();
+  const viewer = await requireRoute("/account/password");
 
   return (
     <>

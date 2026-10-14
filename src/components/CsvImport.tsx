@@ -90,7 +90,8 @@ export function CsvImport({ formId, formTitle }: { formId: string; formTitle: st
         1行でも修正が必要な場合は、ほかの行も含めて保存しません。
       </p>
 
-      <div className="mt-3 grid gap-3">
+      {/* ファイルと貼り付けはどちらか一方を使うので、広い画面では横に並べる（縦に積むと右側が空いたまま残る。§28-9） */}
+      <div className="mt-3 grid gap-3 md:grid-cols-2 md:items-start">
         <label className="block text-sub font-bold">
           回答一覧のファイル（CSV）
           <input

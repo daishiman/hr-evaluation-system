@@ -4,11 +4,16 @@ import { z } from "zod";
  * 制度マスタ更新 API の入力スキーマ。
  * 画面ごとのフォームと、このスキーマの kind を一致させる。
  */
+
+/** 並べ替えで送る並び全体（重複や過不足はサーバーが今の並びと照合して 409 にする） */
+const REORDER_IDS = z.array(z.string().min(1)).min(1).max(200);
+
 export const bodySchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("grade"),
     id: z.string().min(1),
-    name: z.string().min(1).max(40).optional(),
+    /** 等級名は区分・行動指針のセットの呼び名の元になる。空白だけの名前は「等級未設定」に崩れるので受け付けない */
+    name: z.string().trim().min(1).max(40).optional(),
     targetCap: z.number().int().min(1).max(50).optional(),
     autonomyLevel: z.string().max(200).nullable().optional(),
     responsibilityLevel: z.string().max(200).nullable().optional(),
@@ -77,10 +82,12 @@ export const bodySchema = z.discriminatedUnion("kind", [
     sourceVersionId: z.string().min(1),
   }),
   z.object({
-    /** 等級要件の並べ替え（同じ区分の中で1つ上／下、または先頭／末尾へ移動） */
+    /**
+     * 等級要件の並べ替え（S11・DD-005）。同じ等級・同じ区分の、使用中の現行版の並び全体を id で送る。
+     * 対象の等級と区分は先頭の id の保存済みの行から決める（画面の申告を信じない）。
+     */
     kind: z.literal("gradeRequirementOrder"),
-    id: z.string().min(1),
-    direction: z.enum(["up", "down", "top", "bottom"]),
+    ids: REORDER_IDS,
   }),
   z.object({
     kind: z.literal("promotionRequirementCreate"),
@@ -108,10 +115,9 @@ export const bodySchema = z.discriminatedUnion("kind", [
     sourceVersionId: z.string().min(1),
   }),
   z.object({
-    /** 昇格要件の並べ替え（同じ種類の中で1つ上／下、または先頭／末尾へ移動） */
+    /** 昇格要件の並べ替え（S11・DD-005）。同じ等級・同じ種類の、使用中の現行版の並び全体を id で送る */
     kind: z.literal("promotionRequirementOrder"),
-    id: z.string().min(1),
-    direction: z.enum(["up", "down", "top", "bottom"]),
+    ids: REORDER_IDS,
   }),
   z.object({
     /**

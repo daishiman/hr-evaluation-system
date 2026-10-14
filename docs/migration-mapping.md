@@ -487,3 +487,10 @@
 版管理・再開・サンプルと放置評価通知の境界は、次の文書に分離した（500行上限）。
 
 → [`docs/migration-mapping-requirement-revisions.md`](./migration-mapping-requirement-revisions.md)
+
+## 12. 等級名と表示名の書き換え（移行 0033・0034・0035）の旧から新への対応
+
+所属の作成（0033）、等級名と等級名を含む表示名の旧から新への対応（0034）、予行で見つかった直し（0035）、
+前の名前を受け付ける取り込み、戻し方は、次の文書に分離した（500行上限）。
+
+→ [`docs/migration-mapping-grade-display-names.md`](./migration-mapping-grade-display-names.md)

@@ -7,6 +7,7 @@ import { getDb, schema as s } from "@/lib/db";
 import { assertCompanyChosen, canManageEmployee, HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
 import { formatJpDate, jstDateString } from "@/lib/domain/form-deadline";
+import { joinMembership } from "@/lib/memberships";
 
 /**
  * 回答期限の個別延長。
@@ -27,7 +28,7 @@ const grantSchema = z.object({
 
 /** 期限を延ばす。 */
 export async function grantFormExtension(raw: unknown) {
-  return runAction({ role: "MANAGER", input: grantSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "formExtensions.manage", input: grantSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const companyId = viewer.companyId;
     const db = await getDb();
@@ -50,11 +51,13 @@ export async function grantFormExtension(raw: unknown) {
       );
     }
 
+    // その会社に所属している人だけ（会社は所属の表で見る）
     const employee = (
       await db
         .select({ id: s.users.id, name: s.users.name })
         .from(s.users)
-        .where(and(eq(s.users.id, input.employeeId), eq(s.users.companyId, companyId)))
+        .innerJoin(s.companyMemberships, joinMembership(companyId))
+        .where(eq(s.users.id, input.employeeId))
         .limit(1)
     )[0];
     if (!employee) throw new HttpError(404, "対象の方が見つかりませんでした。");
@@ -94,7 +97,7 @@ const revokeSchema = z.object({ formId: z.string().min(1), extensionId: z.string
 
 /** 延長を取り消す。行は消さず、取り消した日時と人を残す。 */
 export async function revokeFormExtension(raw: unknown) {
-  return runAction({ role: "MANAGER", input: revokeSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "formExtensions.manage", input: revokeSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const companyId = viewer.companyId;
     const db = await getDb();

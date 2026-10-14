@@ -4,7 +4,7 @@ import { schema as s } from "@/lib/db";
 import type { Viewer } from "@/lib/session";
 import { CREDENTIAL_KEY_NAME, importVaultKey, memoUpsert, sealMemo } from "@/lib/credential-vault";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
  * 取り込みの「まず内容を確認する」（runRead）が、どの表にも1行も書かないこと。
@@ -71,6 +71,7 @@ beforeEach(async () => {
   mocked.viewer = ADMIN;
   mocked.env = { BETTER_AUTH_SECRET: "preview-test-secret-0123456789abcdef", [CREDENTIAL_KEY_NAME]: KEY };
   await seedCompany(t);
+  seedMemberships(t);
   // 本取込なら同じ batch で掃除される、期限切れの控え。確認で消えたら「書いた」ことになる
   const vault = (await importVaultKey(KEY))!;
   await memoUpsert(t.db, {

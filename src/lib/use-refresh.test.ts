@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => {
     startTransition: vi.fn((run: () => void) => run()),
     announceChange: vi.fn(),
     recordActionCall: vi.fn(),
+    /** 画面を描いた会社（undefined は会社の画面の外） */
+    scope: undefined as string | null | undefined,
     /** 登録された useLayoutEffect と、それが返した後片付け */
     layoutEffects: [] as (() => void | (() => void))[],
     cleanups: [] as (() => void)[],
@@ -47,6 +49,7 @@ vi.mock("react", () => ({
 
 vi.mock("@/lib/freshness", () => ({ announceChange: mocks.announceChange }));
 vi.mock("@/lib/usage-client", () => ({ recordActionCall: mocks.recordActionCall }));
+vi.mock("@/lib/company-scope-context", () => ({ useCompanyScope: () => mocks.scope }));
 
 import {
   createCommitGate,
@@ -180,6 +183,50 @@ describe("useSaveAction（画面からの保存）", () => {
     expect(mocks.recordActionCall).toHaveBeenCalledWith("forms", expect.any(Number), false);
   });
 
+  describe("画面を描いた会社（__scope）を添える（S7）", () => {
+    beforeEach(() => {
+      mocks.scope = undefined;
+    });
+
+    it("会社の画面の中では、入力に __scope を添えて送る", async () => {
+      mocks.scope = "co_a";
+      const action = vi.fn(async () => ({ ok: true as const, message: "保存しました。" }));
+      await useSaveAction(action, { resource: "members" }).save({ name: "a" });
+      expect(action).toHaveBeenCalledWith({ name: "a", __scope: "co_a" });
+    });
+
+    it("会社を選んでいない全体管理者は、空の文字を添える", async () => {
+      mocks.scope = null;
+      const action = vi.fn(async () => ({ ok: true as const, message: "保存しました。" }));
+      await useSaveAction(action, { resource: "members" }).save({ name: "a" });
+      expect(action).toHaveBeenCalledWith({ name: "a", __scope: "" });
+    });
+
+    it("会社の画面の外（ログイン画面など）では何も添えない", async () => {
+      const action = vi.fn(async () => ({ ok: true as const, message: "保存しました。" }));
+      await useSaveAction(action, { resource: "account" }).save({ name: "a" });
+      expect(action).toHaveBeenCalledWith({ name: "a" });
+    });
+
+    it("会社そのものを切り替える操作（scoped: false）には添えない", async () => {
+      mocks.scope = "co_a";
+      const action = vi.fn(async () => ({ ok: true as const, message: "切り替えました。" }));
+      await useSaveAction(action, { resource: "company-scope", scoped: false }).save({ companyId: "co_b" });
+      expect(action).toHaveBeenCalledWith({ companyId: "co_b" });
+    });
+
+    it("FormData や配列の入力はそのまま送る", async () => {
+      mocks.scope = "co_a";
+      const action = vi.fn(async () => ({ ok: true as const, message: "保存しました。" }));
+      const { save } = useSaveAction(action, { resource: "forms" });
+      const form = new FormData();
+      await save(form);
+      await save(["a"]);
+      expect(action).toHaveBeenNthCalledWith(1, form);
+      expect(action).toHaveBeenNthCalledWith(2, ["a"]);
+    });
+  });
+
   it("保存中かどうかを saving として返す", () => {
     const action = async () => ({ ok: true as const, message: "" });
     expect(useSaveAction(action, { resource: "members" }).saving).toBe(false);
@@ -240,6 +287,14 @@ describe("useReadAction（読み出しだけの呼び出し）", () => {
     expect(await read({})).toEqual({ ok: true, message: "確認しました。", created: 2 });
     expect(mocks.announceChange).not.toHaveBeenCalled();
     expect(mocks.recordActionCall).toHaveBeenCalledWith("members", expect.any(Number), true);
+  });
+
+  it("読み出しにも、画面を描いた会社（__scope）を添える", async () => {
+    mocks.scope = "co_a";
+    const action = vi.fn(async () => ({ ok: true as const, message: "確認しました。" }));
+    await useReadAction(action, { resource: "members" }).read({ id: "x" });
+    expect(action).toHaveBeenCalledWith({ id: "x", __scope: "co_a" });
+    mocks.scope = undefined;
   });
 
   it("読み出し中かどうかを reading として返す", () => {

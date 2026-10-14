@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { listBehaviorBandSets, listBehaviorGuidelines, listGrades } from "@/lib/queries";
 import { getDb } from "@/lib/db";
 import { bandSetUsedBy, behaviorGuidelineUsage } from "@/lib/master-usage";
@@ -7,6 +7,7 @@ import { BehaviorBandAssignmentEditor } from "@/components/BehaviorBandAssignmen
 import { BehaviorBandSetEditor } from "@/components/BehaviorBandSetEditor";
 import { BehaviorGuidelineEditor } from "@/components/BehaviorGuidelineEditor";
 import { gradesUsingBand } from "@/lib/domain/behavior";
+import { bandSetLabel, pointGroupLabel } from "@/lib/domain/grade-label";
 import { ChipLink, Disclosure, EmptyState, PageTitle, SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export default async function AdminBehavior({
 }: {
   searchParams: Promise<{ band?: string; grade?: string }>;
 }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/behavior");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
@@ -51,6 +52,10 @@ export default async function AdminBehavior({
   const assignableBands = bandSets
     .filter((set) => set.isActive && guidelines.some((g) => g.band === set.code && g.isActive))
     .map((set) => set.code);
+
+  /* 基準セットの呼び名は保存した名前ではなく、割り当てた等級の名前から作る（「等級1・等級2向け」）。
+     下の部品へはこの呼び名を name として渡す。 */
+  const labeledSets = bandSets.map((set) => ({ ...set, name: bandSetLabel(set, grades) }));
 
   const rows = guidelines.map((g) => ({
     id: g.id,
@@ -89,7 +94,7 @@ export default async function AdminBehavior({
             <BehaviorBandAssignmentEditor
               key={selectedGrade.id}
               grade={{ id: selectedGrade.id, name: selectedGrade.name, behaviorBand: selectedGrade.behaviorBand }}
-              bandSets={bandSets}
+              bandSets={labeledSets}
               availableBands={assignableBands}
             />
           )}
@@ -99,7 +104,7 @@ export default async function AdminBehavior({
       <div className="mt-3">
         <Disclosure summary="行動指針の初期設定について">
           <p className="footnote m-0">
-            移行元には、AM Ⅰ・AM Ⅱへ行動指針を出さない記録がありました。実際に出したアンケートも残っていました。
+            移行元には、{pointGroupLabel("AM", grades)}へ行動指針を出さない記録がありました。実際に出したアンケートも残っていました。
             初期値は実際のアンケートを採用しています。会社の制度に合わせて上で切り替えてください。
           </p>
         </Disclosure>
@@ -109,7 +114,7 @@ export default async function AdminBehavior({
 
       <div className="mb-3">
         <BehaviorBandSetEditor
-          sets={bandSets.map((set) => ({
+          sets={labeledSets.map((set) => ({
             id: set.id,
             code: set.code,
             name: set.name,
@@ -134,7 +139,7 @@ export default async function AdminBehavior({
       ) : (
         <>
           <div className="mb-4 flex flex-wrap gap-2">
-            {bandSets.map((set) => (
+            {labeledSets.map((set) => (
               <ChipLink
                 key={set.code}
                 href={`/admin/behavior?band=${set.code}${selectedGrade ? `&grade=${selectedGrade.id}` : ""}`} current={set.code === band}
@@ -152,7 +157,7 @@ export default async function AdminBehavior({
             </Link>
             で決めます。
           </p>
-          <BehaviorGuidelineEditor key={band} band={band} bandSets={bandSets} rows={rows} usage={usage} />
+          <BehaviorGuidelineEditor key={band} band={band} bandSets={labeledSets} rows={rows} usage={usage} />
         </>
       )}
     </>

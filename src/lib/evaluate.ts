@@ -19,8 +19,13 @@ import {
 } from "@/lib/domain/scoring";
 import { computeBonus, type KgiCoefficientRow } from "@/lib/domain/kgi";
 import { FINALIZED_SKIP_MESSAGE } from "@/lib/domain/build-summary";
+import { pointGroupLabel } from "@/lib/domain/grade-label";
 import { newId } from "@/lib/id";
 import { resolveAuthoritativeResponses } from "@/lib/domain/authoritative-response";
+import { joinMembership } from "@/lib/memberships";
+
+/** 会社ごとの値（等級・事業所など）の正本。users の同じ列は読まない（src/lib/memberships.ts） */
+const mem = s.companyMemberships;
 
 /** 実績値を出せなかったときに、評価者向けに出す既定の理由。 */
 export const UNRATED_RATIONALE =
@@ -107,7 +112,11 @@ export async function buildEvaluationsForCycle(
   if (targets.length === 0) return [];
 
   const [users, categories, behaviorGuidelines] = await Promise.all([
-    db.select().from(s.users).where(eq(s.users.companyId, companyId)),
+    // その会社に所属する人。事業所は、その会社での所属の値を使う（他社の所属の事業所を混ぜない）
+    db
+      .select({ id: s.users.id, name: s.users.name, officeId: mem.officeId })
+      .from(s.users)
+      .innerJoin(mem, joinMembership(companyId)),
     db.select().from(s.kpiCategories).where(eq(s.kpiCategories.companyId, companyId)),
     db.select().from(s.behaviorGuidelines).where(eq(s.behaviorGuidelines.companyId, companyId)),
   ]);
@@ -171,12 +180,14 @@ export async function buildEvaluationsForCycle(
          「設定がない」ことが「成績が0点だった」に化ける。手前で止めて理由を返す。 */
       const items = allSchemeItems.filter((si) => si.pointGroup === grade.pointGroup);
       if (items.length === 0) {
+        // 区分は英語の区分名ではなく、その区分の等級名（「等級4-1・等級4-2」）で知らせる
+        const groupLabel = pointGroupLabel(grade.pointGroup, grades);
         out.push({
           evaluationId: existing?.id ?? "",
           employeeId: res.employeeId,
           employeeName: user.name,
           ok: false,
-          message: `等級区分「${grade.pointGroup}」の評価セットが未設定です。評価セットの画面で ${grade.pointGroup} の項目を選んでから集計してください。`,
+          message: `等級区分「${groupLabel}」の評価セットが未設定です。評価セットの画面で ${groupLabel} の項目を選んでから集計してください。`,
         });
         continue;
       }
@@ -527,12 +538,12 @@ export async function listPendingRespondents(companyId: string, cycleId: string)
     .where(and(eq(s.forms.companyId, companyId), eq(s.forms.cycleId, cycleId)));
   if (forms.length === 0) return [];
   const gradeIds = forms.map((f) => f.gradeId);
+  // その会社に所属し、その会社での等級がアンケートの等級に当たる人（等級は会社ごとの所属の値）
   const members = await db
-    .select({ id: s.users.id, name: s.users.name, gradeId: s.users.gradeId })
+    .select({ id: s.users.id, name: s.users.name, gradeId: mem.gradeId })
     .from(s.users)
-    .where(
-      and(eq(s.users.companyId, companyId), inArray(s.users.gradeId, gradeIds), eq(s.users.isActive, true)),
-    );
+    .innerJoin(mem, joinMembership(companyId))
+    .where(and(inArray(mem.gradeId, gradeIds), eq(s.users.isActive, true)));
   const responses = await db
     .select({ response: s.formResponses, formVersion: s.forms.version })
     .from(s.formResponses)

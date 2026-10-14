@@ -1,6 +1,7 @@
-import { and, eq, gt, lte } from "drizzle-orm";
+import { eq, gt, lte } from "drizzle-orm";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { schema as s, type DB } from "@/lib/db";
+import { joinMembership } from "@/lib/memberships";
 
 /**
  * 初期パスワードの控え（あとから一覧の行で開き直せるもの）。
@@ -194,7 +195,8 @@ export async function readMemo(db: DB, userId: string) {
  * 控えを持っている人の ID。一覧の行に「控えを見る」を出すかどうかに使う。
  *
  * 中身（暗号文）は読まない。開くのは押した人だけ・押したときだけ（revealCredentialMemo）。
- * companyId を渡すとその会社の人だけ、null なら全社（システム全体管理者の一覧）。
+ * companyId を渡すとその会社に所属する人だけ（ほかの会社にも所属していてよい）、
+ * null なら全社（システム全体管理者の一覧）。
  * 期限を過ぎた控えは、表に残っていても数えない（押しても開けないボタンを出さない）。
  */
 export async function listMemoHolderIds(db: DB, companyId: string | null, now = new Date()): Promise<string[]> {
@@ -207,7 +209,8 @@ export async function listMemoHolderIds(db: DB, companyId: string | null, now = 
     .select({ userId: memo.userId })
     .from(memo)
     .innerJoin(s.users, eq(s.users.id, memo.userId))
-    .where(and(eq(s.users.companyId, companyId), live));
+    .innerJoin(s.companyMemberships, joinMembership(companyId))
+    .where(live);
   return rows.map((r) => r.userId);
 }
 

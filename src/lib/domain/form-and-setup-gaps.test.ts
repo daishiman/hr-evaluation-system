@@ -129,9 +129,10 @@ describe("アンケートの締切", () => {
 describe("評価セットの手順の言葉", () => {
   it("手順ごとに、見出しと1行の説明が対になっている", () => {
     expect(stepTitle("select")).toBe("使うKPIを選ぶ");
-    expect(stepLede("select", "Chief")).toContain("Chief の評価に使うKPIを選びます");
+    // 区分の鍵（英語の区分名）ではなく、等級名から作った呼び名を受け取る
+    expect(stepLede("select", "等級4")).toContain("等級4の評価に使うKPIを選びます");
     expect(stepTitle("criteria")).toContain("基準を決める");
-    expect(stepLede("criteria", "Chief")).toContain("A〜Eのどれになるか");
+    expect(stepLede("criteria", "等級4")).toContain("A〜Eのどれになるか");
   });
 });
 

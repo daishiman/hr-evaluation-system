@@ -8,6 +8,10 @@ import { assertCompanyChosen, canManageEmployee, HttpError } from "@/lib/session
 import { isOwnEvaluation, SELF_EVALUATION_BLOCK_REASON } from "@/lib/domain/evaluation-authority";
 import { buildEvaluationsForCycle } from "@/lib/evaluate";
 import { summarizeBuildResults } from "@/lib/domain/build-summary";
+import { joinMembership } from "@/lib/memberships";
+
+/** 会社ごとの値（上長など）の正本。users の同じ列は読まない（src/lib/memberships.ts） */
+const mem = s.companyMemberships;
 
 /**
  * 評価の確定・差し戻し・コメント保存と、提出済みの回答からの評価づくり（マネージャー以上）。
@@ -31,7 +35,7 @@ const updateSchema = z.object({
  * どの分岐も評価の1行だけを書き換える（1文）ので、batch にまとめるものはない。
  */
 export async function updateEvaluation(raw: unknown) {
-  return runAction({ role: "MANAGER", input: updateSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "evaluations.update", input: updateSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const id = input.evaluationId;
     const db = await getDb();
@@ -103,7 +107,7 @@ const buildSchema = z.object({
  * だけは、自分自身の分を塞いである（src/lib/domain/evaluation-authority.ts）。
  */
 export async function buildEvaluations(raw: unknown) {
-  return runAction({ role: "MANAGER", input: buildSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "evaluations.build", input: buildSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const db = await getDb();
 
@@ -118,10 +122,12 @@ export async function buildEvaluations(raw: unknown) {
 
     let employeeIds = input.employeeIds;
     if (viewer.role === "MANAGER") {
+      // 直属メンバー＝この会社での所属の上長が自分の人（上長は会社ごとに違う）
       const assigned = await db
         .select({ id: s.users.id })
         .from(s.users)
-        .where(and(eq(s.users.companyId, viewer.companyId), eq(s.users.managerId, viewer.id)));
+        .innerJoin(mem, joinMembership(viewer.companyId))
+        .where(eq(mem.managerId, viewer.id));
       const assignedIds = new Set(assigned.map((employee) => employee.id));
       if (employeeIds?.some((employeeId) => !assignedIds.has(employeeId))) {
         throw new HttpError(403, "直属メンバー以外の評価は集計できません。");

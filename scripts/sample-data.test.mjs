@@ -65,6 +65,9 @@ describe("既にあるデータに触らないこと", () => {
   it("作る会社・利用者・評価はすべてサンプル会社のもの", () => {
     expect(rowsOf("companies").map((c) => c.id)).toEqual([SAMPLE_COMPANY_ID]);
     expect(rowsOf("users").every((u) => u.company_id === SAMPLE_COMPANY_ID)).toBe(true);
+    // 所属も1人1件、サンプル会社だけ（他社との兼務の見本はサンプルには入れない）
+    expect(rowsOf("company_memberships").map((m) => m.user_id)).toEqual(rowsOf("users").map((u) => u.id));
+    expect(rowsOf("company_memberships").every((m) => m.company_id === SAMPLE_COMPANY_ID)).toBe(true);
     expect(rowsOf("evaluations").every((e) => e.company_id === SAMPLE_COMPANY_ID)).toBe(true);
   });
 });

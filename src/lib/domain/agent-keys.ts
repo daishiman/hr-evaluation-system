@@ -23,8 +23,12 @@ export const AGENT_KEY_PREFIX_LENGTH = 8;
 /** 鍵を発行する画面。案内文とAPIの断り文から、同じ場所を指す。 */
 export const AGENT_KEY_PAGE_PATH = "/system/agent-keys";
 
-/** 鍵を発行する画面の呼び名。メニュー・案内文で同じ言葉を使う。 */
-export const AGENT_KEY_PAGE_LABEL = "Claude Code 連携の鍵";
+/**
+ * 鍵を発行する画面の呼び名。見出しに使う。メニューは台帳（route-ledger.json）の label から引くので、
+ * 両方を同じ文字列にしておく（nav.test.ts が突き合わせる）。
+ * 一般の利用者が開く画面と取り違えないよう、誰のための画面かを名前に入れる（spec.md §28-2）。
+ */
+export const AGENT_KEY_PAGE_LABEL = "Claude Code連携（システム開発者専用）";
 
 /**
  * 乱数から鍵の文字列を作る。

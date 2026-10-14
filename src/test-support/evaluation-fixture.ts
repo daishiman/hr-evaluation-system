@@ -310,6 +310,28 @@ export async function seedCompany(t: TestDatabase, opts: SeedOptions = {}) {
   }
 }
 
+/**
+ * users の会社の列から、所属の表（company_memberships）を作る（S7・D-004）。
+ *
+ * 本番は移行 0033 が今の利用者の会社を最初の所属として写し、その後はアプリが所属を書く。
+ * テストは移行のあとに users を入れるので、users を入れ終えたところでこれを呼び、0033 と同じ写しを作る。
+ * id は 0033 と同じく 'mem_' || 利用者の id。すでに所属がある人（同じ会社）は INSERT OR IGNORE で飛ばす。
+ * 全体管理者は所属を持たない。seedCompany には入れない（所属を自分で作るテストと衝突させないため）。
+ */
+export function seedMemberships(t: TestDatabase): void {
+  t.raw.exec(`
+    INSERT OR IGNORE INTO company_memberships (
+      id, user_id, company_id, role, grade_id, office_id, manager_id,
+      employee_code, department, hired_at, profile_note, created_at, updated_at
+    )
+    SELECT
+      'mem_' || id, id, company_id, role, grade_id, office_id, manager_id,
+      employee_code, department, hired_at, profile_note, created_at, updated_at
+    FROM users
+    WHERE company_id IS NOT NULL AND role IN ('EMPLOYEE', 'MANAGER', 'COMPANY_ADMIN')
+  `);
+}
+
 export interface QuestionSpec {
   id: string;
   section: string;

@@ -153,7 +153,8 @@ describe("validateScheme — 重い枠（20点枠）の数", () => {
       ];
       const r = validateScheme(rows, opts(group));
       expect(r.ok, group).toBe(false);
-      expect(r.errors.some((e) => e.includes("点枠はありません")), group).toBe(true);
+      // 呼び名を渡さなければ「この等級区分」と呼ぶ（区分の鍵は出さない）
+      expect(r.errors.some((e) => e.startsWith("この等級区分に") && e.includes("点枠はありません")), group).toBe(true);
     }
   });
 });
@@ -199,13 +200,19 @@ describe("validateScheme — ランク基準が未設定の項目", () => {
     const ids = VALID.Manager.map((x) => x.kpiItemId).filter((id) => id !== "k11");
     const r = validateScheme(
       VALID.Manager,
-      opts("Manager", { ratedItemIds: ids, itemNameOf: (id) => (id === "k11" ? "利用率" : id) }),
+      opts("Manager", {
+        ratedItemIds: ids,
+        itemNameOf: (id) => (id === "k11" ? "利用率" : id),
+        groupLabel: "等級5-1・等級5-2",
+      }),
     );
     expect(r.errors).toEqual([]);
     expect(r.ok).toBe(true);
     expect(r.warnings).toHaveLength(1);
     expect(r.warnings[0]).toContain("利用率");
-    expect(r.warnings[0]).toContain("Manager");
+    // 区分は等級名で呼び、英語の区分名（鍵）は文に出さない
+    expect(r.warnings[0]).toContain("等級5-1・等級5-2");
+    expect(r.warnings[0]).not.toContain("Manager");
     /* 「点が付かない」ではない。採点は target_grades を見ないため点は付く。
        付いたうえで上位等級向けの閾値が当たる、という事実のほうを伝える。 */
     expect(r.warnings[0]).toContain("厳しすぎる可能性");

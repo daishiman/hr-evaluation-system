@@ -7,6 +7,10 @@ import {
   type StalledRow,
   type StalledSource,
 } from "@/lib/domain/stalled-evaluations";
+import { joinMembership } from "@/lib/memberships";
+
+/** 会社ごとの値（上長など）の正本。users の同じ列は読まない（src/lib/memberships.ts） */
+const mem = s.companyMemberships;
 
 /**
  * 「締め切った期間に置き去りになっている評価」をDBから読む。
@@ -52,7 +56,8 @@ async function readAwaitingFinalize(companyId: string, scope: StalledScope = {})
     cycleId ? eq(s.evaluations.cycleId, cycleId) : eq(s.evaluationCycles.status, CLOSED),
   ];
   // マネージャーは自分が上長のメンバーだけ。自分で確定できない分を「次の作業」として出さない。
-  if (managerId) conds.push(eq(s.users.managerId, managerId));
+  // 上長は会社ごとに違うので、この評価の会社での所属の上長で見る。
+  if (managerId) conds.push(eq(mem.managerId, managerId));
   // ご本人の画面から呼ぶとき。**必ずここで自分の分だけに絞る**。
   if (employeeId) conds.push(eq(s.evaluations.employeeId, employeeId));
 
@@ -69,6 +74,8 @@ async function readAwaitingFinalize(companyId: string, scope: StalledScope = {})
     .from(s.evaluations)
     .innerJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.evaluations.cycleId))
     .innerJoin(s.users, eq(s.users.id, s.evaluations.employeeId))
+    // 所属を外れた人の評価も管理者の一覧には残すので left join（上長で絞るときは所属のある行だけが残る）
+    .leftJoin(mem, joinMembership(s.evaluations.companyId))
     .leftJoin(s.grades, eq(s.grades.id, s.evaluations.gradeId))
     .where(and(...conds));
 
@@ -91,7 +98,7 @@ async function readAwaitingBuild(companyId: string, scope: StalledScope = {}): P
     // 同じ期・同じ人の評価がまだ無いものだけ
     isNull(s.evaluations.id),
   ];
-  if (managerId) conds.push(eq(s.users.managerId, managerId));
+  if (managerId) conds.push(eq(mem.managerId, managerId));
   if (employeeId) conds.push(eq(s.formResponses.employeeId, employeeId));
 
   const rows = await db
@@ -106,6 +113,7 @@ async function readAwaitingBuild(companyId: string, scope: StalledScope = {}): P
     .from(s.formResponses)
     .innerJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.formResponses.cycleId))
     .innerJoin(s.users, eq(s.users.id, s.formResponses.employeeId))
+    .leftJoin(mem, joinMembership(s.formResponses.companyId))
     .leftJoin(s.grades, eq(s.grades.id, s.formResponses.gradeId))
     .leftJoin(
       s.evaluations,

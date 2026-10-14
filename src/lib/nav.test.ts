@@ -14,6 +14,7 @@ import {
   type NavGroup,
 } from "@/lib/nav";
 import { stepTitle } from "@/lib/domain/scheme-steps";
+import { AGENT_KEY_PAGE_LABEL, AGENT_KEY_PAGE_PATH } from "@/lib/domain/agent-keys";
 
 const hrefsOf = (groups: NavGroup[]) => groups.flatMap((g) => g.items.map((i) => i.href));
 
@@ -202,6 +203,16 @@ describe("メニューの用語", () => {
     );
     expect(new Set(labels).size).toBe(1);
     expect(labels[0]).toBe("評価・結果を確認する");
+  });
+
+  it("Claude Code 連携の画面は、メニューと見出しで同じ新しい名前を使う（A9）", () => {
+    const entry = navGroupsFor("SUPER_ADMIN")
+      .flatMap((g) => g.items)
+      .find((i) => i.href === AGENT_KEY_PAGE_PATH);
+    expect(entry?.label).toBe("Claude Code連携（システム開発者専用）");
+    // 見出しは domain の定数から出す。メニュー（台帳）と別の名前にしない
+    expect(entry?.label).toBe(AGENT_KEY_PAGE_LABEL);
+    expect(allLabels.filter((l) => l.includes("連携の鍵"))).toEqual([]);
   });
 });
 

@@ -6,7 +6,7 @@ import { HttpError, type Viewer } from "@/lib/session";
 import { _resetRateLimitStoreForTest } from "@/lib/rate-limit";
 import { AGENT_BULK_MAX, AGENT_KEY_NAME } from "@/lib/domain/agent-api";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 const AGENT_KEY = "test-agent-key-0123456789abcdefghij";
 
@@ -88,6 +88,7 @@ function patchRequest(status: string, note: string) {
 beforeEach(async () => {
   testDb = createTestDatabase();
   await seedCompany(testDb);
+  seedMemberships(testDb);
   await testDb.db.insert(s.users).values({
     id: "usr_admin",
     name: "会社管理者",

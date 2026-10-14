@@ -10,6 +10,7 @@ import { assertCompanyChosen, HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
 import { validateScheme } from "@/lib/domain/scheme";
 import { pointsForSlot, slotKindOf, targetsPointGroup, type GradePointRule } from "@/lib/domain/grade-points";
+import { pointGroupLabel } from "@/lib/domain/grade-label";
 
 /**
  * 評価セット（等級区分ごとの項目選択）と、全等級区分に共通の設定の保存（会社の管理者以上）。
@@ -114,7 +115,7 @@ function commonStatements(
  * ここで必ず確かめる（画面が正しく送ることに依存しない）。
  */
 export async function saveScheme(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: saveSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "scheme.save", input: saveSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const companyId = viewer.companyId;
     const db = await getDb();
@@ -149,8 +150,14 @@ export async function saveScheme(raw: unknown) {
       .where(and(eq(s.gradePointRules.companyId, companyId), eq(s.gradePointRules.pointGroup, pointGroup)))
       .limit(1);
     if (!ruleRow) {
-      throw new HttpError(400, `等級区分「${pointGroup}」の配点ルールが登録されていません。`);
+      throw new HttpError(400, "この等級区分の配点ルールが登録されていません。");
     }
+    /* 区分は鍵（pointGroup）で照合し、利用者に返す文には会社の等級名から作った呼び名を出す */
+    const groupGrades = await db
+      .select({ name: s.grades.name, pointGroup: s.grades.pointGroup, displayOrder: s.grades.displayOrder })
+      .from(s.grades)
+      .where(and(eq(s.grades.companyId, companyId), eq(s.grades.pointGroup, pointGroup)));
+    const groupLabel = pointGroupLabel(pointGroup, groupGrades);
     const rule: GradePointRule = {
       pointGroup: ruleRow.pointGroup,
       totalPoints: ruleRow.totalPoints,
@@ -194,6 +201,7 @@ export async function saveScheme(raw: unknown) {
       fixedSlotItemIds: kpiItems.filter((k) => k.isFixedSlot).map((k) => k.id),
       ratedItemIds,
       itemNameOf: (id) => kpiItems.find((k) => k.id === id)?.name ?? id,
+      groupLabel,
     });
     if (!v.ok) throw new HttpError(400, v.errors.join(" "));
 
@@ -224,7 +232,7 @@ export async function saveScheme(raw: unknown) {
 
     return {
       message:
-        `${pointGroup} の評価セット（${selections.length}項目・${v.total}点）を保存しました。` +
+        `${groupLabel}の評価セット（${selections.length}項目・${v.total}点）を保存しました。` +
         "確定済みの評価は判定当時の設定のまま残るため、過去の結果は変わりません。",
       // 保存はできたが伝えるべきこと（ランク基準が未定義の項目など）。画面がそのまま出す。
       warnings: v.warnings,

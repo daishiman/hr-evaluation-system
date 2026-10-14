@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { minRoleFor } from "@/lib/route-access";
 import {
   canActOnEmployeeEvaluation,
   canReadEmployee,
@@ -111,7 +112,9 @@ describe("対象者ごとの契約がすべての入口で使われること", (
   it("評価のbuild・確定・再開・コメントは直属範囲をサーバー側で検査する", () => {
     const build = read("src/actions/evaluations.ts");
     const update = read("src/actions/evaluations.ts");
-    expect(build).toContain("eq(s.users.managerId, viewer.id)");
+    // 上長はその会社での所属から読む（S7・D-004）。users の写しは他社の上長を指すことがある
+    expect(build).toContain("joinMembership(viewer.companyId)");
+    expect(build).toContain("eq(mem.managerId, viewer.id)");
     expect(build).toContain("直属メンバー以外の評価は集計できません");
     expect(update).toContain("canManageEmployee(viewer, row.employeeId)");
   });
@@ -130,8 +133,11 @@ describe("対象者ごとの契約がすべての入口で使われること", (
   });
 
   it("回答・社員CSVは会社管理者以上、結果・KPIはマネージャー以上に分ける", () => {
+    // 入口は台帳の操作 id で判定し、どの役割からできるかは台帳が決める（D-007）
     const route = read("src/app/api/export/route.ts");
-    expect(route).toContain('q.type === "responses" || q.type === "members" ? "COMPANY_ADMIN" : "MANAGER"');
+    expect(route).toContain('q.type === "responses" || q.type === "members" ? "exports.companyData" : "exports.evaluationData"');
+    expect(minRoleFor("exports.companyData")).toBe("COMPANY_ADMIN");
+    expect(minRoleFor("exports.evaluationData")).toBe("MANAGER");
   });
 
   it("本人向け結果の詳細は確定済みだけを開く", () => {

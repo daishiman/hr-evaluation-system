@@ -10,7 +10,7 @@ import {
   type HandoutEvent,
 } from "@/lib/domain/improvement-handout";
 import { isImprovementKind } from "@/lib/domain/improvement-instruction";
-import { canSeeCriteria, type Viewer } from "@/lib/session";
+import { canSeeCriteria, crossesCompanies, type Role, type Viewer } from "@/lib/session";
 import {
   employeePromotionBlockedReason,
   employeeRaiseReason,
@@ -19,6 +19,15 @@ import {
 } from "@/lib/domain/evaluation-view";
 import { rangeLabel } from "@/lib/domain/scoring";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
+import {
+  activeMembershipFor,
+  activeMembershipsOf,
+  hasMembershipElsewhere,
+  isSuperAdmin,
+  joinEveryMembership,
+  joinMembership,
+  roleOrSuperAdmin,
+} from "@/lib/memberships";
 
 /**
  * 読み取り。すべての関数が company_id での絞り込みを前提にする。
@@ -26,6 +35,8 @@ import { currentVersionRows } from "@/lib/domain/versioned-master";
  */
 
 const s = schema;
+/** 会社ごとの値（役割・等級・社員番号など）の正本。users の同じ列は読まない（src/lib/memberships.ts） */
+const mem = schema.companyMemberships;
 
 /* ───────────────── 会社・等級 ───────────────── */
 
@@ -33,6 +44,19 @@ const s = schema;
 export async function listCompanies() {
   const db = await getDb();
   return db.select().from(s.companies).where(eq(s.companies.isTemplate, false)).orderBy(asc(s.companies.name));
+}
+
+/**
+ * 会社の切り替えで選べる会社（S7・D-004）。
+ * 全体管理者は、利用中でひな形でないすべての会社。それ以外の役割は、自分に有効な所属がある会社だけ
+ * （選べる会社が1つなら切り替えは出さないので、呼び出し側で数を見る）。
+ */
+export async function listSwitchableCompanies(viewer: Viewer): Promise<{ id: string; name: string }[]> {
+  if (crossesCompanies(viewer.role)) {
+    return (await listCompanies()).filter((c) => c.isActive).map((c) => ({ id: c.id, name: c.name }));
+  }
+  const db = await getDb();
+  return (await activeMembershipsOf(db, viewer.id)).map((x) => ({ id: x.companyId, name: x.companyName }));
 }
 
 /**
@@ -326,11 +350,11 @@ export async function countEvaluationsByOffice(companyId: string, cycleId: strin
       personalPoints: s.evaluations.personalPoints,
       evalOfficeId: s.evaluations.officeId,
       responseOfficeId: s.formResponses.officeId,
-      userOfficeId: s.users.officeId,
+      userOfficeId: mem.officeId,
     })
     .from(s.evaluations)
     .leftJoin(s.formResponses, eq(s.formResponses.id, s.evaluations.responseId))
-    .leftJoin(s.users, eq(s.users.id, s.evaluations.employeeId))
+    .leftJoin(mem, and(eq(mem.userId, s.evaluations.employeeId), eq(mem.companyId, s.evaluations.companyId)))
     .where(and(eq(s.evaluations.companyId, companyId), eq(s.evaluations.cycleId, cycleId)));
 
   const byOffice = new Map<string, { draft: number; finalized: number; withBonus: number }>();
@@ -541,79 +565,48 @@ export async function getResponse(companyId: string, formId: string, employeeId:
   return { ...r[0], answers };
 }
 
-/**
- * アンケート1本の回答状況。
- *
- * 対象等級に在籍している人を全員並べ、提出済み・下書き・未回答を1行ずつ返す。
- * 「誰がまだ出していないか」を数えなくても分かるようにするため、
- * 回答が無い人も行として残す（左外部結合）。
- */
-export async function listResponseStatus(companyId: string, formId: string) {
-  const db = await getDb();
-  const form = (
-    await db
-      .select({ id: s.forms.id, gradeId: s.forms.gradeId })
-      .from(s.forms)
-      .where(and(eq(s.forms.companyId, companyId), eq(s.forms.id, formId)))
-      .limit(1)
-  )[0];
-  if (!form) return [];
-
-  return db
-    .select({
-      employeeId: s.users.id,
-      name: s.users.name,
-      employeeCode: s.users.employeeCode,
-      department: s.users.department,
-      isActive: s.users.isActive,
-      responseId: s.formResponses.id,
-      status: s.formResponses.status,
-      submittedAt: s.formResponses.submittedAt,
-      importSource: s.formResponses.importSource,
-      officeName: s.offices.name,
-    })
-    .from(s.users)
-    .leftJoin(
-      s.formResponses,
-      and(eq(s.formResponses.employeeId, s.users.id), eq(s.formResponses.formId, form.id)),
-    )
-    .leftJoin(s.offices, eq(s.offices.id, s.users.officeId))
-    .where(and(eq(s.users.companyId, companyId), eq(s.users.gradeId, form.gradeId)))
-    .orderBy(asc(s.users.name));
-}
-
 /* ───────────────── 利用者 ───────────────── */
 
+/**
+ * その会社に所属する人の一覧。会社ごとの値は、その会社の所属の値を出す
+ * （ほかの会社にも所属する人でも、他社の社員番号・部署・人物メモは出さない）。
+ */
 export async function listMembers(companyId: string, opts?: { managerId?: string }) {
   const db = await getDb();
-  const where = opts?.managerId
-    ? and(eq(s.users.companyId, companyId), eq(s.users.managerId, opts.managerId))
-    : eq(s.users.companyId, companyId);
   return db
     .select({
       id: s.users.id,
       name: s.users.name,
       email: s.users.email,
-      role: s.users.role,
-      department: s.users.department,
-      employeeCode: s.users.employeeCode,
-      hiredAt: s.users.hiredAt,
+      role: mem.role,
+      department: mem.department,
+      employeeCode: mem.employeeCode,
+      hiredAt: mem.hiredAt,
       isActive: s.users.isActive,
-      gradeId: s.users.gradeId,
+      gradeId: mem.gradeId,
       gradeName: s.grades.name,
       gradeOrder: s.grades.displayOrder,
-      managerId: s.users.managerId,
-      profileNote: s.users.profileNote,
+      managerId: mem.managerId,
+      profileNote: mem.profileNote,
     })
     .from(s.users)
-    .leftJoin(s.grades, and(eq(s.grades.id, s.users.gradeId), eq(s.grades.companyId, s.users.companyId)))
-    .where(where)
+    .innerJoin(mem, joinMembership(companyId))
+    .leftJoin(s.grades, and(eq(s.grades.id, mem.gradeId), eq(s.grades.companyId, mem.companyId)))
+    .where(opts?.managerId ? eq(mem.managerId, opts.managerId) : undefined)
     .orderBy(asc(s.grades.displayOrder), asc(s.users.name));
 }
 
+/**
+ * 1人ぶん。belongsElsewhere は、ほかの会社にも所属しているか。
+ * 氏名・パスワード・利用の停止はその人の全ての会社に効くので、会社の管理者の画面では
+ * ほかの会社にも所属する人のこれらを変えられないようにする（変えられない理由を示すのに使う）。
+ */
 export async function getMember(companyId: string, userId: string) {
   const rows = await listMembers(companyId);
-  return rows.find((r) => r.id === userId) ?? null;
+  const row = rows.find((r) => r.id === userId);
+  if (!row) return null;
+  const db = await getDb();
+  return { ...row, belongsElsewhere: await hasMembershipElsewhere(db, userId, companyId) };
 }
 
 export async function listNotes(companyId: string, employeeId: string) {
@@ -661,7 +654,7 @@ export async function listEvaluations(
       periodEnd: s.evaluationCycles.periodEnd,
       employeeId: s.evaluations.employeeId,
       employeeName: s.users.name,
-      department: s.users.department,
+      department: mem.department,
       gradeId: s.evaluations.gradeId,
       gradeName: s.grades.name,
       gradeOrder: s.grades.displayOrder,
@@ -690,6 +683,7 @@ export async function listEvaluations(
     .from(s.evaluations)
     .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.evaluations.cycleId))
     .leftJoin(s.users, eq(s.users.id, s.evaluations.employeeId))
+    .leftJoin(mem, and(eq(mem.userId, s.evaluations.employeeId), eq(mem.companyId, s.evaluations.companyId)))
     .leftJoin(s.grades, eq(s.grades.id, s.evaluations.gradeId))
     .where(and(...conds))
     .orderBy(desc(s.evaluationCycles.periodStart), asc(s.grades.displayOrder), asc(s.users.name));
@@ -832,97 +826,151 @@ export async function listProfileFieldPolicies(companyId: string) {
  *
  * listMembers と違い、会社に属さない利用者（システム全体管理者）でも読める。
  * 本人の情報なので、人物メモ以外はすべて返す。
+ *
+ * 会社ごとの値は、いま使っている会社（preferredCompanyId。ふつうは viewer.companyId）の所属の値。
+ * 全体管理者の viewer.companyId は「操作する会社」で所属ではないので、所属は見つからず
+ * companyId は null になる（全体管理者の本人の情報に会社の値は無い）。
  */
-export async function getSelfProfile(userId: string) {
+export async function getSelfProfile(userId: string, preferredCompanyId: string | null) {
   const db = await getDb();
-  const rows = await db
-    .select({
-      id: s.users.id,
-      name: s.users.name,
-      email: s.users.email,
-      role: s.users.role,
-      department: s.users.department,
-      employeeCode: s.users.employeeCode,
-      hiredAt: s.users.hiredAt,
-      isActive: s.users.isActive,
-      gradeId: s.users.gradeId,
-      gradeName: s.grades.name,
-      managerId: s.users.managerId,
-      companyId: s.users.companyId,
-      companyName: s.companies.name,
-      mustChangePassword: s.users.mustChangePassword,
-      createdAt: s.users.createdAt,
-    })
-    .from(s.users)
-    .leftJoin(s.grades, and(eq(s.grades.id, s.users.gradeId), eq(s.grades.companyId, s.users.companyId)))
-    .leftJoin(s.companies, eq(s.companies.id, s.users.companyId))
-    .where(eq(s.users.id, userId))
-    .limit(1);
-  const me = rows[0];
-  if (!me) return null;
+  const user = (
+    await db
+      .select({
+        id: s.users.id,
+        name: s.users.name,
+        email: s.users.email,
+        isActive: s.users.isActive,
+        mustChangePassword: s.users.mustChangePassword,
+        createdAt: s.users.createdAt,
+      })
+      .from(s.users)
+      .where(eq(s.users.id, userId))
+      .limit(1)
+  )[0];
+  if (!user) return null;
 
-  // 上長の名前は、誰が自分の評価を確定するのかを本人に示すために添える
+  const membership = await activeMembershipFor(db, userId, preferredCompanyId);
+  const role: Role = membership?.role ?? ((await isSuperAdmin(db, userId)) ? "SUPER_ADMIN" : "EMPLOYEE");
+
+  let gradeName: string | null = null;
   let managerName: string | null = null;
-  if (me.managerId && me.companyId) {
-    const m = await db
+  if (membership?.gradeId) {
+    const grade = await db
+      .select({ name: s.grades.name })
+      .from(s.grades)
+      .where(and(eq(s.grades.id, membership.gradeId), eq(s.grades.companyId, membership.companyId)))
+      .limit(1);
+    gradeName = grade[0]?.name ?? null;
+  }
+  // 上長の名前は、誰が自分の評価を確定するのかを本人に示すために添える（同じ会社に所属する人だけ）
+  if (membership?.managerId) {
+    const manager = await db
       .select({ name: s.users.name })
       .from(s.users)
-      .where(and(eq(s.users.id, me.managerId), eq(s.users.companyId, me.companyId)))
+      .innerJoin(mem, joinMembership(membership.companyId))
+      .where(eq(s.users.id, membership.managerId))
       .limit(1);
-    managerName = m[0]?.name ?? null;
+    managerName = manager[0]?.name ?? null;
   }
-  return { ...me, managerName };
+
+  return {
+    ...user,
+    role,
+    department: membership?.department ?? null,
+    employeeCode: membership?.employeeCode ?? null,
+    hiredAt: membership?.hiredAt ?? null,
+    gradeId: membership?.gradeId ?? null,
+    gradeName,
+    managerId: membership?.managerId ?? null,
+    companyId: membership?.companyId ?? null,
+    companyName: membership?.companyName ?? null,
+    managerName,
+  };
 }
 
-/** システム全体管理者向け。会社に属さない利用者も含めた全利用者。 */
+/**
+ * システム全体管理者向け。会社に属さない利用者も含めた全利用者。
+ * 所属ごとに1行（2社に所属する人は2行）で、行ごとにその会社の値を出す。全体管理者は1行。
+ * 同じ人が複数行になるので、画面の行の key には membershipId（全体管理者は null）を使う。
+ */
 export async function listAllUsers() {
   const db = await getDb();
   return db
     .select({
       id: s.users.id,
+      membershipId: mem.id,
       name: s.users.name,
       email: s.users.email,
-      role: s.users.role,
-      department: s.users.department,
-      employeeCode: s.users.employeeCode,
-      hiredAt: s.users.hiredAt,
+      role: roleOrSuperAdmin,
+      department: mem.department,
+      employeeCode: mem.employeeCode,
+      hiredAt: mem.hiredAt,
       isActive: s.users.isActive,
-      gradeId: s.users.gradeId,
+      gradeId: mem.gradeId,
       gradeName: s.grades.name,
-      managerId: s.users.managerId,
-      companyId: s.users.companyId,
+      managerId: mem.managerId,
+      companyId: mem.companyId,
       companyName: s.companies.name,
+      companyActive: s.companies.isActive,
     })
     .from(s.users)
-    .leftJoin(s.grades, and(eq(s.grades.id, s.users.gradeId), eq(s.grades.companyId, s.users.companyId)))
-    .leftJoin(s.companies, eq(s.companies.id, s.users.companyId))
+    .leftJoin(mem, joinEveryMembership())
+    .leftJoin(s.grades, and(eq(s.grades.id, mem.gradeId), eq(s.grades.companyId, mem.companyId)))
+    .leftJoin(s.companies, eq(s.companies.id, mem.companyId))
     .orderBy(asc(s.companies.name), asc(s.users.name));
 }
 
+/**
+ * 全体管理者の利用者画面の1人ぶん。利用者全体の値と、所属の一覧（古い順。停止中の会社も含む）。
+ * 一番上の欄（会社・役割・等級など）には元の所属（一番古い有効な所属）の値を入れる。
+ */
 export async function getAnyUser(userId: string) {
   const db = await getDb();
-  const rows = await db
+  const user = (
+    await db
+      .select({ id: s.users.id, name: s.users.name, email: s.users.email, isActive: s.users.isActive })
+      .from(s.users)
+      .where(eq(s.users.id, userId))
+      .limit(1)
+  )[0];
+  if (!user) return null;
+
+  const memberships = await db
     .select({
-      id: s.users.id,
-      name: s.users.name,
-      email: s.users.email,
-      role: s.users.role,
-      department: s.users.department,
-      employeeCode: s.users.employeeCode,
-      hiredAt: s.users.hiredAt,
-      isActive: s.users.isActive,
-      gradeId: s.users.gradeId,
-      gradeName: s.grades.name,
-      managerId: s.users.managerId,
-      companyId: s.users.companyId,
+      membershipId: mem.id,
+      companyId: mem.companyId,
       companyName: s.companies.name,
+      companyActive: s.companies.isActive,
+      companyIsTemplate: s.companies.isTemplate,
+      role: mem.role,
+      gradeId: mem.gradeId,
+      gradeName: s.grades.name,
+      managerId: mem.managerId,
+      employeeCode: mem.employeeCode,
+      department: mem.department,
+      hiredAt: mem.hiredAt,
     })
-    .from(s.users)
-    .leftJoin(s.grades, and(eq(s.grades.id, s.users.gradeId), eq(s.grades.companyId, s.users.companyId)))
-    .leftJoin(s.companies, eq(s.companies.id, s.users.companyId))
-    .where(eq(s.users.id, userId))
-    .limit(1);
-  return rows[0] ?? null;
+    .from(mem)
+    .innerJoin(s.companies, eq(s.companies.id, mem.companyId))
+    .leftJoin(s.grades, and(eq(s.grades.id, mem.gradeId), eq(s.grades.companyId, mem.companyId)))
+    .where(eq(mem.userId, userId))
+    .orderBy(asc(mem.createdAt), asc(mem.id));
+
+  const primary = memberships.find((x) => x.companyActive && !x.companyIsTemplate) ?? memberships.at(0) ?? null;
+  const role: Role = primary?.role ?? ((await isSuperAdmin(db, userId)) ? "SUPER_ADMIN" : "EMPLOYEE");
+  return {
+    ...user,
+    role,
+    companyId: primary?.companyId ?? null,
+    companyName: primary?.companyName ?? null,
+    gradeId: primary?.gradeId ?? null,
+    gradeName: primary?.gradeName ?? null,
+    managerId: primary?.managerId ?? null,
+    employeeCode: primary?.employeeCode ?? null,
+    department: primary?.department ?? null,
+    hiredAt: primary?.hiredAt ?? null,
+    memberships,
+  };
 }
 
 /* ───────────────── 改善要望（各画面からの共有） ───────────────── */

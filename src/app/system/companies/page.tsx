@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { getTemplateSummary, listCompanies } from "@/lib/queries";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /** 会社の追加と停止（システム全体管理者のみ）。 */
 export default async function SystemCompanies() {
-  await requireRole("SUPER_ADMIN");
+  await requireRoute("/system/companies");
   const [companies, template] = await Promise.all([listCompanies(), getTemplateSummary()]);
 
   return (

@@ -55,21 +55,23 @@ describe("等級要件・昇格要件の版管理UI", () => {
     const grade = read("GradeRequirementEditor.tsx");
     const promotion = read("PromotionRequirementEditor.tsx");
 
-    expect(grade).toContain('send({ kind: "gradeRequirementOrder", id: r.id, direction: "up" })');
     expect(grade).toContain('send({ kind: "gradeRequirementActivation", id: r.id, isActive: false })');
-    expect(promotion).toContain('send({ kind: "promotionRequirementOrder", id: r.id, direction: "up" })');
     expect(promotion).toContain('send({ kind: "promotionRequirementActivation", id: r.id, isActive: false })');
   });
 
-  it("等級要件・昇格要件のどちらも先頭・末尾へ移動する指示を送れる", () => {
+  it("並べ替えは共通の ReorderList に任せ、並び全体（ids）を1回で送る（S11・DD-005）", () => {
     const grade = read("GradeRequirementEditor.tsx");
     const promotion = read("PromotionRequirementEditor.tsx");
 
+    expect(grade).toContain('send({ kind: "gradeRequirementOrder", ids })');
+    expect(promotion).toContain('send({ kind: "promotionRequirementOrder", ids })');
     for (const editor of [grade, promotion]) {
-      expect(editor).toContain('direction: "top"');
-      expect(editor).toContain('direction: "bottom"');
-      expect(editor).toContain('aria-label="先頭に移動"');
-      expect(editor).toContain('aria-label="末尾に移動"');
+      expect(editor).toContain("<ReorderList");
+      expect(editor).toContain("onCommit={(ids) => commitOrder(ids)}");
+      // 1段ずつの移動（up/down/top/bottom）は送らない
+      expect(editor).not.toContain("direction:");
+      // 並びの保存中は fieldset を止めない（止めると、つまみのフォーカスが外れる）
+      expect(editor).toContain("disabled={saving && !reordering}");
     }
   });
 });

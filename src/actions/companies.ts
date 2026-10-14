@@ -8,6 +8,7 @@ import { prepareCredential } from "@/lib/credential-issue";
 import { memoNotice } from "@/lib/credential-vault";
 import { getDb, schema as s } from "@/lib/db";
 import { newId } from "@/lib/id";
+import { insertMembership, resumeCompanyStatements, stopCompanyStatements } from "@/lib/memberships";
 import { HttpError } from "@/lib/session";
 import { copyCompanyMasters, deleteCompanyMasters, findTemplateCompany } from "@/lib/template";
 import { assertEmailAvailable } from "@/lib/user-integrity";
@@ -41,7 +42,7 @@ const createSchema = z.object({
  * ひな形の複製は数百行になりうるので、1回の batch には収めない。
  */
 export async function createCompany(raw: unknown) {
-  return runAction({ role: "SUPER_ADMIN", input: createSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "companies.create", input: createSchema }, raw, async ({ viewer, input }) => {
     const db = await getDb();
 
     const dupSlug = await db.select({ id: s.companies.id }).from(s.companies).where(eq(s.companies.slug, input.slug)).limit(1);
@@ -82,7 +83,9 @@ export async function createCompany(raw: unknown) {
           )
         : null;
 
-      // 管理者・ログイン用アカウント・控えは1つの batch で書く（どれか1つだけが残らない）
+      // 管理者・所属・ログイン用アカウント・控えは1つの batch で書く（どれか1つだけが残らない）。
+      // 役割は所属の行に書き、users の写しは所属の文が同じ batch の中で書く
+      const membership = await insertMembership(db, { userId, companyId, role: "COMPANY_ADMIN" }, { writeCopy: true });
       await step(
         "admin",
         () =>
@@ -92,11 +95,10 @@ export async function createCompany(raw: unknown) {
               name: input.adminName,
               email,
               emailVerified: true,
-              companyId,
-              role: "COMPANY_ADMIN",
               isActive: true,
               mustChangePassword: true,
             }),
+            ...membership,
             db.insert(s.accounts).values({
               id: newId("acc"),
               accountId: userId,
@@ -106,7 +108,7 @@ export async function createCompany(raw: unknown) {
             }),
             ...credential.memo,
           ]),
-        // アカウントと控えは利用者の削除に連なって消える
+        // 所属・アカウント・控えは利用者の削除に連なって消える
         () => db.delete(s.users).where(eq(s.users.id, userId)),
       );
       return counts;
@@ -136,7 +138,7 @@ const patchSchema = z.object({
 
 /** 会社の情報変更・利用停止。データは消さず停止で扱う。 */
 export async function updateCompany(raw: unknown) {
-  return runAction({ role: "SUPER_ADMIN", input: patchSchema }, raw, async ({ input }) => {
+  return runAction({ operation: "companies.update", input: patchSchema }, raw, async ({ input }) => {
     const db = await getDb();
 
     const co = (await db.select().from(s.companies).where(eq(s.companies.id, input.companyId)).limit(1))[0];
@@ -149,11 +151,17 @@ export async function updateCompany(raw: unknown) {
     if (Object.keys(patch).length === 0) return { message: "変更はありませんでした。" };
 
     if (input.isActive === false) {
-      // 会社を止めたら、その会社の利用者もログインできない状態にする。
+      // 会社を止めたら、その会社の利用者もログインできない状態にする。ただし、ほかの会社に
+      // 有効な所属が残る人は止めない（users の写しを残る所属へ移す）。所属の行は消さない。
       // 会社だけ止まって利用者が残る（またはその逆の）状態を作らないよう、1つの batch で書く
       await db.batch([
         db.update(s.companies).set(patch).where(eq(s.companies.id, co.id)),
-        db.update(s.users).set({ isActive: false }).where(eq(s.users.companyId, co.id)),
+        ...(await stopCompanyStatements(db, co.id)),
+      ]);
+    } else if (input.isActive === true) {
+      await db.batch([
+        db.update(s.companies).set(patch).where(eq(s.companies.id, co.id)),
+        ...(await resumeCompanyStatements(db, co.id)),
       ]);
     } else {
       await db.update(s.companies).set(patch).where(eq(s.companies.id, co.id));

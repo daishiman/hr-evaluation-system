@@ -9,6 +9,7 @@ import {
   listRankRatios,
 } from "@/lib/queries";
 import type { GradePointRule } from "@/lib/domain/grade-points";
+import { pointGroupLabel } from "@/lib/domain/grade-label";
 import type { GroupProgress } from "@/lib/domain/scheme-steps";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 
@@ -17,11 +18,14 @@ import { loadSchemeReadiness } from "@/lib/scheme-readiness";
  *
  * 同じ問い合わせを画面ごとに書き起こすと、片方だけ会社の絞り込みを落とす事故が起きる。
  * 会社の絞り込み（マルチテナント境界）はこの1箇所に閉じ込める。
- * 呼び出し側は必ず requireRole で通した viewer.companyId を渡すこと。
+ * 呼び出し側は必ず requireRoute で通した viewer.companyId を渡すこと。
  */
 
 export interface SchemeGroup {
+  /** 区分の鍵（URL・照合に使う）。画面の文には出さない */
   pointGroup: string;
+  /** 区分の呼び名（「等級4-1・等級4-2」）。画面の文にはこちらを出す */
+  label: string;
   /**
    * その等級区分に属する等級の名前。
    *
@@ -56,7 +60,8 @@ export async function loadSchemeSetup(companyId: string): Promise<SchemeSetup> {
   const groups: SchemeGroup[] = readiness.groups.map(({ rule, saved, ratedItemIds, progress }) => {
     return {
       pointGroup: progress.pointGroup,
-      // AMⅠ/Ⅱ・ManagerⅠ/Ⅱ は同じ等級区分なので、その区分に入る等級をまとめて渡す
+      label: pointGroupLabel(progress.pointGroup, grades),
+      // 等級4-1と等級4-2のように同じ区分に入る等級があるので、その区分に入る等級をまとめて渡す
       gradeNames: grades.filter((g) => g.pointGroup === progress.pointGroup).map((g) => g.name),
       rule,
       ratedItemIds,

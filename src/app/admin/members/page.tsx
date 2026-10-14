@@ -1,16 +1,18 @@
 import Link from "next/link";
-import { requireRole, ROLE_LABEL } from "@/lib/session";
+import { ROLE_LABEL, requireRoute } from "@/lib/session";
 import { listGrades, listMembers, listProfileFieldPolicies } from "@/lib/queries";
 import { resolveSelfEditMap, CONFIGURABLE_FIELDS } from "@/lib/domain/profile-fields";
 import { Card, Disclosure, DownloadButton, EmptyState, LinkButton, PageTitle, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { RecordForm } from "@/components/RecordForm";
+import { RoleCapabilities } from "@/components/permissions/RoleCapabilities";
 import { MembersCsvImport } from "@/components/MembersCsvImport";
 import { MembersFilter } from "@/components/MembersFilter";
 import { createMember } from "@/actions/members";
 import { listMemoHolderIds } from "@/lib/credential-vault";
 import { getDb } from "@/lib/db";
+import { withGradeAndScore } from "@/lib/score-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -22,21 +24,24 @@ export const dynamic = "force-dynamic";
  * 一覧には「名前・等級・役割・状態」だけを出し、細かい情報は個人のページに置く。
  */
 export default async function AdminMembers() {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/members");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 
+  const db = await getDb();
   const [members, grades, policies, memoHolders] = await Promise.all([
     listMembers(companyId),
     listGrades(companyId),
     listProfileFieldPolicies(companyId),
-    getDb().then((db) => listMemoHolderIds(db, companyId)),
+    listMemoHolderIds(db, companyId),
   ]);
   // 初期パスワードの控えがある人（中身は押したときにだけ開く）
   const hasMemo = new Set(memoHolders);
   const managers = members.filter((m) => m.role !== "EMPLOYEE" && m.isActive);
   const active = members.filter((m) => m.isActive);
   const inactive = members.filter((m) => !m.isActive);
+  // 一覧に出す等級と確定した最新の点数は、見てよい役割にだけサーバーで付ける（S6）
+  const listed = await withGradeAndScore(db, viewer, active);
   const selfEdit = resolveSelfEditMap(policies);
   const selfEditableLabels = CONFIGURABLE_FIELDS.filter((f) => selfEdit[f.key as keyof typeof selfEdit]).map(
     (f) => f.label,
@@ -83,12 +88,13 @@ export default async function AdminMembers() {
         <EmptyState title="社員がまだ登録されていません" body="下の「アカウントを発行する」から追加してください。" />
       ) : (
         <MembersFilter
-          members={active.map((m) => ({
+          members={listed.map((m) => ({
             id: m.id,
             name: m.name,
             email: m.email,
             roleLabel: ROLE_LABEL[m.role as keyof typeof ROLE_LABEL] ?? m.role,
             gradeName: m.gradeName,
+            latestScore: m.latestScore,
             department: m.department,
             hasMemo: hasMemo.has(m.id),
           }))}
@@ -162,6 +168,11 @@ export default async function AdminMembers() {
         ]}
       />
       </Disclosure>
+
+      <div className="mt-3">
+        {/* 会社の管理者は全体管理者を作れないので、選べる3つの役割だけを並べる */}
+        <RoleCapabilities roles={["COMPANY_ADMIN", "MANAGER", "EMPLOYEE"]} />
+      </div>
 
       <div className="mt-3">
         <Disclosure summary="名簿をまとめて取り込む" meta="CSVから一括で登録します">

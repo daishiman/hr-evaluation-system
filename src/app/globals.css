@@ -1379,9 +1379,12 @@ main {
 /* 見出しの前後の余白は、見出しを包むこの箱でだけ付ける（二重に空けない） */
 .section-head {
   display: flex;
+  /* 見出しの右に置くもの（補助リンク・期間の切り替えなど）が入りきらないときは、
+     見出しを潰さず次の行へ送る（横にはみ出させない） */
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--space-block);
+  gap: 4px var(--space-block);
   margin: var(--space-section) 0 10px;
 }
 .page-head + .section-head { margin-top: var(--space-tight); }
@@ -1429,6 +1432,43 @@ main {
 @media (min-width: 640px) {
   .field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ---- 行の右端に補足を寄せる2列（SplitRow / RecordForm の inline）----
+   左に読むもの、右にその行の補足（答え方・期間・状態・押すもの）を置く。
+   短い要素を左に縦積みして、同じ高さの右側を空けたままにしない（docs/product/spec.md §28-9）。
+   広さは画面ではなく入れ物の幅で決める（コンテナクエリ）。折りたたみの中や狭い欄でも同じに振る舞う。
+   狭いときは縦に積み、補足は本文の下に左寄せで続く（読む順番は 本文 → 補足 のまま変えない）。 */
+.split-host { container-type: inline-size; }
+.split-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px var(--space-block);
+  align-items: start;
+}
+.split-main,
+.split-aside,
+.split-wide { min-width: 0; }
+@container (min-width: 560px) {
+  /* 補足が長くても本文を半分より細くしない */
+  .split-row { grid-template-columns: minmax(0, 1fr) fit-content(50%); }
+  .split-aside {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+  }
+  /* 補足の1段目を本文の1行目にそろえる（部品が持つ上の余白を打ち消す） */
+  .split-aside > :first-child { margin-top: 0; }
+  .split-wide { grid-column: 1 / -1; }
+  /* 項目の少ない入力フォームは、入力欄と保存ボタンを1行に並べる（ボタンは右端） */
+  .field-grid[data-inline="true"] {
+    grid-template-columns: repeat(var(--field-count, 2), minmax(0, 1fr)) auto;
+  }
+  .field-grid[data-inline="true"] > .field-submit { grid-column: auto; }
+  .field-grid[data-inline="true"] .field-submit-spacer { display: block; }
+}
+/* 1行に並べたときだけ、ボタンの上にラベル1行ぶんの空きを入れて入力欄の高さにそろえる */
+.field-submit-spacer { display: none; }
 
 /* ============================================================
    面・カード
@@ -1865,6 +1905,35 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .list-card-note { margin: 6px 0 0; font-size: var(--text-sub); line-height: 1.7; }
 .list-card-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: var(--space-tight); }
 
+/* カードの一覧（RecordList）が広いときの並べ方。
+   縦1列に「見出し → 値 → 理由 → 操作」と積むと、同じ高さの右側が空いたまま残る（docs/product/spec.md §28-9）。
+   広い入れ物では、操作を見出しの行の右端へ寄せ、ラベル付きの値を横に流す。
+   寄せるのは見た目だけで、読む順（HTML の並び）は変えない。表を畳んだカード（.list-host の中）には効かせない。 */
+.record-list { container: record-list / inline-size; }
+@container record-list (min-width: 560px) {
+  .record-list .list-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--space-block);
+    align-items: start;
+  }
+  .record-list .list-card > * { grid-column: 1 / -1; }
+  .record-list .list-card > .list-card-head { grid-column: 1; grid-row: 1; align-self: center; }
+  .record-list .list-card > .list-card-actions {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    margin-top: 0;
+    justify-content: flex-end;
+  }
+  /* 1組の幅は「ラベル 7rem + 値 12rem」が1行に収まる 20rem を下限にする（それより細いと値がラベルの下へ折れる） */
+  .record-list .list-card .def-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    column-gap: var(--space-block);
+  }
+}
+
 /* ============================================================
    フォーム
    出典: jp-web-design references/components.md「フォーム」
@@ -1965,8 +2034,17 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 }
 /* 「読み込み中」なのか「本当に0件」なのかは文字だけだと判別が遅い。
    空の入れ物を絵でも示す。色は付けず、薄い墨のまま(意味は文言が持つ) */
-.empty-state .es-mark { margin: 0 0 8px; line-height: 1; color: var(--ink-muted); }
-.empty-state .es-title { font-size: var(--text-sub); font-weight: 600; margin: 0; }
+.empty-state .es-mark { flex: none; margin-top: 1px; line-height: 1; color: var(--ink-muted); }
+/* 絵と見出しを1つの塊にして中央へ置く。見出しが折り返しても絵は1行目の高さに留まる */
+.empty-state .es-title {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-tight);
+  max-width: 100%;
+  font-size: var(--text-sub);
+  font-weight: 600;
+  margin: 0;
+}
 .empty-state .es-body { font-size: var(--text-sub); color: var(--ink-muted); margin: 4px 0 16px; }
 
 .caution-panel {
@@ -2292,6 +2370,97 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 /* 読むだけの窓の見出し（節見出しではないので SectionHeading は使わない） */
 .detail-dialog-title { font-size: var(--text-sub); font-weight: 700; margin-bottom: 8px; }
 
+/* ============================================================
+   権限一覧（DD-006）と、短い説明（InfoTip）
+   表とカードの切り替えは DataTable（.list-host）に任せる。ここは中身の見た目だけ。
+   ============================================================ */
+/* 表を見比べる窓。確認の窓より広くし、注意の色を外す */
+.detail-dialog-wide {
+  width: min(1080px, calc(100vw - 32px));
+  border-color: var(--line);
+  background: var(--surface);
+  /* 窓の中には固定ヘッダーが無い。表の列見出しは窓の上端に貼り付ける */
+  --table-head-top: 0px;
+}
+.role-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.role-tab {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 6px 14px;
+  font: inherit;
+  font-size: var(--text-note);
+  color: var(--ink-muted);
+  cursor: pointer;
+  min-height: 36px;
+}
+.role-tab:hover { background: var(--subtle); color: var(--ink); }
+.role-tab[aria-selected="true"] {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand-deep);
+  font-weight: 600;
+}
+@media (pointer: coarse) {
+  .role-tab { min-height: 44px; }
+}
+.perm-legend { margin: 0 0 10px; }
+.perm-screen { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.perm-group { font-size: var(--text-note); font-weight: 600; color: var(--brand-deep); }
+.perm-screen-name { font-weight: 600; }
+.perm-screen-summary { font-size: var(--text-note); font-weight: 400; color: var(--ink-muted); }
+.perm-ops { font-size: var(--text-note); font-weight: 400; }
+.perm-ops ul { margin: 0; padding-left: 1.2em; }
+.perm-ops-min { color: var(--ink-muted); }
+.grant { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.grant-mark { font-weight: 700; }
+.grant[data-grant="full"] .grant-mark { color: var(--brand-deep); }
+.grant[data-grant="none"] { color: var(--ink-muted); }
+
+/* 「i」は 24px 以上（WCAG 2.2 SC 2.5.8）。指で押す端末だけ 44px にそろえる */
+.info-tip { display: inline-flex; }
+.info-tip-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.info-tip-button:hover,
+.info-tip-button[aria-expanded="true"] { background: var(--subtle); color: var(--brand-deep); }
+@media (pointer: coarse) {
+  .info-tip-button { min-width: 44px; min-height: 44px; }
+}
+/* 置き場所は画面に固定（表の横スクロールの枠で切れないように）。位置は InfoTip.tsx が決める */
+.info-tip-bubble {
+  position: fixed;
+  z-index: 60;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 8px 24px rgba(22, 25, 29, .16);
+  font-size: var(--text-note);
+  font-weight: 400;
+  line-height: 1.7;
+  white-space: normal;
+}
+
 .footnote { font-size: var(--text-note); color: var(--ink-muted); }
 
 /* ============================================================
@@ -2380,8 +2549,12 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   padding: 8px 4px;
   font-size: var(--text-note);
   text-align: center;
-  cursor: pointer;
   font-family: inherit;
+}
+/* 指の形は押せる札（ChoiceChip・ChipLink）だけに出す。
+   読むだけの ChipTag（span）にまで出すと、押しても何も起きない札に見える。 */
+.chip:is(button, a) {
+  cursor: pointer;
 }
 /* 選択中の見た目。ボタンは aria-pressed、リンク（現在地を表す）は aria-current。
    リンクに aria-pressed を付けない（読み上げが「ボタン」として扱えず意味が壊れる）。 */
@@ -2572,9 +2745,12 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .user-row:hover { background: var(--subtle); }
 .user-row[data-muted="true"] .avatar { filter: grayscale(1); }
 .user-row-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+/* 確定した最新の点数（S6）。点数と、達成率・評価期間の2行を右寄せで積む */
+.user-row-score { display: flex; flex-direction: column; align-items: flex-end; text-align: right; flex-shrink: 0; }
 @media (max-width: 640px) {
   .user-row { flex-wrap: wrap; }
   .user-row-tags { flex-basis: 100%; justify-content: flex-start; }
+  .user-row-score { flex-basis: 100%; align-items: flex-start; text-align: left; }
 }
 /* 行（リンク）と、その行の控えを開く操作の組。
    ボタンをリンクの中へ入れると押す先が入れ子になるので、リンクの下に並べる。
@@ -2936,7 +3112,7 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .feedback-fab {
   position: fixed;
   right: max(12px, env(safe-area-inset-right));
-  bottom: max(12px, env(safe-area-inset-bottom));
+  bottom: calc(var(--action-bar-height, 0px) + max(12px, env(safe-area-inset-bottom)));
   z-index: 35;
 }
 .feedback-fab .btn {
@@ -3078,4 +3254,86 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   height: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+/* 並べ替え（S11・DD-005）
+   つまみと矢印のボタンは 24px 以上（SC 2.5.8）。指で押す端末では、ほかのボタンと同じ 44px にする。
+   スクロールを止めるのはつまみだけ。行の残りを指でなぞれば、今までどおり画面が流れる。 */
+.reorder-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.reorder-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+.reorder-body { flex: 1 1 16rem; min-width: 0; }
+/* カードの中の一覧（等級要件・昇格の条件）。行の区切りと余白は、カードの行（.card-row）にそろえる */
+.reorder-list.reorder-in-card { gap: 0; }
+.reorder-in-card > .reorder-row {
+  align-items: flex-start;
+  padding: 12px 16px;
+  border-width: 0 0 1px;
+  border-color: var(--line);
+  border-radius: 0;
+}
+.reorder-in-card > .reorder-row:last-child { border-bottom-width: 0; }
+/* 1行がカード1枚の一覧（アンケートの設問）。つまみと矢印はカードの頭の高さにそろえる */
+.reorder-list.reorder-cards { gap: 12px; }
+.reorder-cards > .reorder-row { align-items: flex-start; padding: 4px; }
+.reorder-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+  margin-left: auto;
+}
+.reorder-handle,
+.reorder-step {
+  padding: 0;
+  min-width: 36px;
+}
+.reorder-handle {
+  /* 長押しを待つ間にブラウザがスクロール・文字の選択・長押しメニューを始めないようにする */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: grab;
+}
+.reorder-handle[aria-disabled="true"],
+.reorder-step[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+/* つまみの印（2列×3段の点）。文字の色に合わせるので、テーマごとの値は要らない */
+.reorder-grip {
+  width: 10px;
+  height: 15px;
+  background-image: radial-gradient(circle, currentColor 1.5px, transparent 1.6px);
+  background-size: 5px 5px;
+}
+/* 長押しを待っている間（指が届いたことを見せる） */
+.reorder-row[data-reorder-state="pressing"] .reorder-handle { background: var(--brand-soft); }
+/* 持ち上げた行＝置く位置。色だけに頼らず、左の太い線と枠でも示す */
+.reorder-row[data-reorder-state="lifted"] {
+  background: var(--brand-soft);
+  border-color: var(--line);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.reorder-list[data-reorder-phase="dragging"] {
+  cursor: grabbing;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.reorder-list[data-reorder-phase="dragging"] .reorder-handle { cursor: grabbing; }
+@media (pointer: coarse) {
+  .reorder-handle,
+  .reorder-step { min-width: 44px; }
 }

@@ -40,6 +40,20 @@ describe("SystemDashboard", () => {
     expect(html).toContain("利用停止中");
   });
 
+  it("利用中のアカウントは、渡された人数（人で数えた値）を出す。2社に所属する人を2回数えない（S7）", () => {
+    const two = [ready, { ...ready, id: "company-b", name: "二社目株式会社", activeUsers: 3 }];
+    const kpi = (html: string) => html.match(/利用中のアカウント<\/div><div class="kpi-value">(.*?)<\/div>/)?.[1] ?? "";
+
+    const summed = renderToStaticMarkup(createElement(SystemDashboard, { companies: two, selectedCompanyId: null, scopeControl: null }));
+    expect(kpi(summed)).toContain(">13<");
+
+    // 1人が2社に所属していると、会社ごとの人数の合計（13）より実際の人数（12）が少ない
+    const counted = renderToStaticMarkup(
+      createElement(SystemDashboard, { companies: two, selectedCompanyId: null, scopeControl: null, totalActiveUsers: 12 }),
+    );
+    expect(kpi(counted)).toContain(">12<");
+  });
+
   it("操作会社、未設定、全社詳細を短い順序で表示する", () => {
     const needsSetup = { ...ready, id: "company-new", name: "準備中株式会社", companyAdmins: 0, cycles: 0 };
     const scopeControl = createElement(

@@ -9,11 +9,13 @@
  *
  * 設問形式ごとの入れ場所（作れる形式は全部答えられるようにする、という方針の実装箇所）:
  *  yesno  … value_number（はい=1 / いいえ=0）＋ value_text に選んだ言葉
- *  single … value_number（選択肢の score）＋ value_text に選んだ言葉
+ *  single … value_number（選択肢の score。無ければ数字の value）＋ value_text に選んだ言葉
+ *           （点数を持たない選択肢は value_number が空で、言葉だけが入る）
  *  scale  … value_number（段階の数値）
  *  number … value_number
  *  text   … value_text（自由記述。数値は入らない）
  *  multi  … value_json（選んだ選択肢の value の配列）＋ value_text に読める形の控え
+ *           （回答画面の手元では valueChoices に配列のまま持つ）
  */
 
 export type QuestionLike = {
@@ -51,6 +53,8 @@ export type AnswerValueLike = {
   valueNumber: number | null | undefined;
   valueText: string | null | undefined;
   valueJson?: string | null | undefined;
+  /** 回答画面の手元の形（複数選択で選んだ value の配列）。保存すると value_json になる */
+  valueChoices?: readonly string[] | null | undefined;
 };
 
 /**
@@ -58,16 +62,22 @@ export type AnswerValueLike = {
  *
  * これまでは形式によらず value_number だけを見ていたため、
  * 必須の自由記述（text）は何を書いても「未入力」になり提出できなかった。
+ * 複数選択も保存済みの形（value_json）しか見ておらず、画面で押しても回答数が増えなかった。
  */
 export function isAnswered(questionType: string, v: AnswerValueLike | null | undefined): boolean {
   if (!v) return false;
+  const hasText = typeof v.valueText === "string" && v.valueText.trim() !== "";
+  const hasNumber = v.valueNumber !== null && v.valueNumber !== undefined;
   switch (questionType) {
     case "text":
-      return typeof v.valueText === "string" && v.valueText.trim() !== "";
+      return hasText;
     case "multi":
-      return parseMulti(v.valueJson).length > 0;
+      return (v.valueChoices ?? parseMulti(v.valueJson)).length > 0;
+    case "single":
+      // 点数を持たない（値が数字でない）選択肢は、選んだ言葉だけが入る
+      return hasNumber || hasText;
     default:
-      return v.valueNumber !== null && v.valueNumber !== undefined;
+      return hasNumber;
   }
 }
 
@@ -94,6 +104,52 @@ export function parseOptions(optionsJson: string | null | undefined): OptionLike
   } catch {
     return [];
   }
+}
+
+/**
+ * 選択肢の点数。score を優先し、無ければ値（value）を数字として読む。
+ *
+ * 素の Number(value) だと、数字でない値は NaN になって選択中にならず、
+ * 空白だけの値は 0 点になる。どちらも点数なし（null）として扱う。
+ */
+export function optionScore(o: OptionLike): number | null {
+  if (typeof o.score === "number" && Number.isFinite(o.score)) return o.score;
+  // 古いデータでは value が数のまま入っていることがあるので、文字にしてから読む
+  const text = String(o.value).trim();
+  if (text === "") return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** 1つ選ぶ設問で、その選択肢を選んだときの答え（回答画面の手元の形） */
+export function optionAnswer(o: OptionLike): { valueNumber: number | null; valueText: string; valueChoices: null } {
+  return { valueNumber: optionScore(o), valueText: o.label, valueChoices: null };
+}
+
+/**
+ * 1つ選ぶ設問で、その選択肢が選ばれているか。
+ *
+ * 値や点数が重なった古いデータでも押した1つだけを選択中にするため、選んだ言葉（value_text）を先に見る。
+ * 同じ言葉の選択肢が複数あるときは点数で絞る。言葉がどの選択肢とも合わないとき
+ * （取込で値や「○」と書かれた行など）だけ点数で照らす。
+ * options には o を含む同じ設問の選択肢を全部渡す（省くと、この選択肢だけを候補とみなす）。
+ */
+export function isOptionSelected(
+  o: OptionLike,
+  v: AnswerValueLike | null | undefined,
+  options: readonly OptionLike[] = [o],
+): boolean {
+  if (!v) return false;
+  const byScore = (xs: readonly OptionLike[]) =>
+    xs.filter((x) => {
+      const score = optionScore(x);
+      return score !== null && score === v.valueNumber;
+    });
+  const text = v.valueText?.trim();
+  const byText = text ? options.filter((x) => String(x.label).trim() === text) : [];
+  if (byText.length === 0) return byScore([o]).length > 0;
+  const both = byScore(byText);
+  return (both.length > 0 ? both : byText).includes(o);
 }
 
 /**

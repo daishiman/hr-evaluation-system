@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { minRoleFor, roleCanOpen } from "@/lib/route-access";
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -65,9 +66,11 @@ describe("一覧からまとめて指示文を払い出す", () => {
   it("払い出せるのはシステム全体管理者だけ（画面で隠すだけにしない）", () => {
     // ボタンを隠すのは見た目の話。誰でも直接呼べるので、入口でも役割を確かめる。
     const api = read("src/actions/improvements.ts");
-    expect(api).toMatch(/handOutImprovement[\s\S]*?role: "SUPER_ADMIN"/);
+    // 入口は台帳の操作 id。どの役割からできるかは台帳が決める（D-007）
+    expect(api).toMatch(/handOutImprovement[\s\S]*?operation: "improvements.handOut"/);
+    expect(minRoleFor("improvements.handOut")).toBe("SUPER_ADMIN");
     const page = read("src/app/admin/improvements/page.tsx");
-    expect(page).toContain('canHandOut={viewer.role === "SUPER_ADMIN"}');
+    expect(page).toContain('canHandOut={can(viewer, "improvements.handOut")}');
   });
 
   it("鍵が無ければ、要望の中身は1文字も返さない", () => {
@@ -169,7 +172,8 @@ describe("要望を落とす・戻す", () => {
   });
 
   it("落とす・戻すもシステム全体管理者だけ", () => {
-    expect(read("src/actions/improvements.ts")).toMatch(/disposeImprovement[\s\S]*?role: "SUPER_ADMIN"/);
+    expect(read("src/actions/improvements.ts")).toMatch(/disposeImprovement[\s\S]*?operation: "improvements.dispose"/);
+    expect(minRoleFor("improvements.dispose")).toBe("SUPER_ADMIN");
     expect(read("src/app/admin/improvements/page.tsx")).toContain("canDispose={canDisposeImprovements(viewer.role)}");
   });
 
@@ -189,8 +193,10 @@ describe("要望を落とす・戻す", () => {
  */
 describe("Claude Code 連携の鍵", () => {
   it("発行できるのはシステム全体管理者だけ（画面でもサーバー側でも確かめる）", () => {
-    expect(read("src/actions/agent-keys.ts")).toMatch(/createAgentKey[\s\S]*?role: "SUPER_ADMIN"/);
-    expect(read("src/app/system/agent-keys/page.tsx")).toContain('requireRole("SUPER_ADMIN")');
+    expect(read("src/actions/agent-keys.ts")).toMatch(/createAgentKey[\s\S]*?operation: "agentKeys.manage"/);
+    expect(minRoleFor("agentKeys.manage")).toBe("SUPER_ADMIN");
+    expect(read("src/app/system/agent-keys/page.tsx")).toContain('requireRoute("/system/agent-keys")');
+    expect(roleCanOpen("COMPANY_ADMIN", "/system/agent-keys")).toBe(false);
   });
 
   it("生の鍵は保存しない（保管場所に入るのはハッシュと先頭数文字だけ）", () => {

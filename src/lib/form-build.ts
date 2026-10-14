@@ -35,6 +35,28 @@ export const SECTION_LABEL: Record<string, string> = {
   free: "自由記入",
 };
 
+/**
+ * 選択肢の値で重なっているもの（重なった値を1回ずつ、最初に重なった順）。前後の空白は同じ値とみなす。
+ *
+ * 値が重なると、回答画面で2つの選択肢が一緒に光り、押した方が選ばれたように見えない。
+ * 組み立て画面が作る値だけに頼らず、設問の保存の入口でこれを通して断る。
+ */
+export function duplicateOptionValues(options: readonly { value: string; label: string }[]): string[] {
+  const seen = new Set<string>();
+  const duplicated = new Set<string>();
+  for (const o of options) {
+    const value = o.value.trim();
+    if (seen.has(value)) duplicated.add(value);
+    seen.add(value);
+  }
+  return [...duplicated];
+}
+
+/** 値の重なりを断るときの文。組み立て画面では値が見えないので、直し方は「消して足し直す」で伝える。 */
+export function duplicateOptionMessage(title: string, values: readonly string[]): string {
+  return `「${title}」の選択肢で、内部の値（${values.join("、")}）が重なっています。重なっている選択肢をいったん消し、「選択肢を足す」で足し直してください。`;
+}
+
 type Row = typeof s.formQuestions.$inferInsert;
 type Db = Awaited<ReturnType<typeof getDb>>;
 type SqliteBatchItem = BatchItem<"sqlite">;
@@ -326,7 +348,9 @@ async function prepareFormDraft(db: Db, opts: FormDraftInput): Promise<PreparedF
     companyId,
     gradeId,
     cycleId,
-    title: opts.title?.trim() || `${cycle.name} ${grade.name} 実績アンケート`,
+    /* 題名を付けなければ空（既定の題名）で保存する。画面では formDisplayTitle が評価期間と等級名から作るので、
+       あとで等級名を変えても題名が古い名前のまま残らない */
+    title: opts.title?.trim() ?? "",
     description: "半期の実績を入力してください。点数や評価基準はこの画面には表示されません。",
     version,
     status: "draft",
@@ -396,9 +420,11 @@ export function assertFormContentEditable(form: { status: string; title: string 
       : form.status === "closed"
         ? "締め切り済み"
         : `現在の状態（${form.status}）`;
+  // 題名が空（既定の題名）のときは「「」は」にせず、このアンケートと呼ぶ
+  const subject = form.title.trim() ? `「${form.title.trim()}」` : "このアンケート";
   throw new HttpError(
     400,
-    `「${form.title}」は${state}のため、内容を変更できません。いまの評価項目で聞き直すときは、アンケート一覧から新しい版を作ってください。`,
+    `${subject}は${state}のため、内容を変更できません。いまの評価項目で聞き直すときは、アンケート一覧から新しい版を作ってください。`,
   );
 }
 

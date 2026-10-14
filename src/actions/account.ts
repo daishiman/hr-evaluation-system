@@ -9,11 +9,15 @@ import { userNameSchema } from "@/lib/user-name-schema";
 import { getAuth } from "@/lib/auth";
 import { rollForward } from "@/lib/compensation";
 import { memoDelete } from "@/lib/credential-vault";
+import type { BatchItem } from "drizzle-orm/batch";
 import { getDb, schema as s } from "@/lib/db";
 import { selfEditableFieldsForCompany, type SelfEditableField } from "@/lib/domain/profile-fields";
+import { writeMembership, type MembershipValues } from "@/lib/memberships";
 import { getSelfProfile, listProfileFieldPolicies } from "@/lib/queries";
 import { AUTH_ATTEMPT_RATE_LIMIT, consumeRateLimit } from "@/lib/rate-limit";
 import { HttpError } from "@/lib/session";
+
+type SqliteBatchItem = BatchItem<"sqlite">;
 
 /**
  * 本人による自分のアカウントの変更（パスワード・登録内容）。
@@ -42,7 +46,7 @@ const PASSWORD_CHANGED_BUT_UNSETTLED =
  * 他の端末のログインは切る（発行時のパスワードを知っている人が入ったままにならないようにするため）。
  */
 export async function changeOwnPassword(raw: unknown) {
-  return runAction({ role: "EMPLOYEE", input: passwordSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "account.changePassword", input: passwordSchema }, raw, async ({ viewer, input }) => {
     // ログイン試行と同じ制限（10秒に3回まで）を「いまのパスワード」欄にもかける。
     // Better Auth のルーター（auth.handler）を経由しない呼び出しなので、
     // Better Auth 既定の制限は素通りしてしまう（src/lib/rate-limit.ts 参照）。
@@ -119,12 +123,13 @@ const profileSchema = z
   .strict();
 
 export async function updateOwnProfile(raw: unknown) {
-  return runAction({ role: "EMPLOYEE", input: profileSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "account.updateProfile", input: profileSchema }, raw, async ({ viewer, input }) => {
     const db = await getDb();
 
     // SUPER_ADMIN の viewer.companyId は「操作対象の会社」なので、本人の所属会社とは限らない。
-    // 画面と同じく users.company_id を読み、本人の実所属会社の設定だけを使う。
-    const me = await getSelfProfile(viewer.id);
+    // 画面と同じく、いま使っている会社の所属を読み、その所属の会社の設定だけを使う
+    // （全体管理者は所属を持たないので me.companyId は null）。
+    const me = await getSelfProfile(viewer.id, viewer.companyId);
     if (!me) throw new HttpError(404, "利用者情報が見つかりませんでした。");
     const rows = me.companyId ? await listProfileFieldPolicies(me.companyId) : [];
     // 所属会社が無い場合は既定値（氏名のみ可）も適用しない。会社ポリシーの適用元が無いため。
@@ -151,7 +156,15 @@ export async function updateOwnProfile(raw: unknown) {
       return { message: "変更はありませんでした。" };
     }
 
-    await db.update(s.users).set(patch).where(eq(s.users.id, viewer.id));
+    // 氏名は利用者全体の値、部署・社員番号・入社日はいまの会社の所属の値
+    const { name, ...memberPatch } = patch;
+    const statements: SqliteBatchItem[] = [];
+    if (typeof name === "string") statements.push(db.update(s.users).set({ name }).where(eq(s.users.id, viewer.id)));
+    if (me.companyId) {
+      statements.push(...(await writeMembership(db, viewer.id, me.companyId, memberPatch as MembershipValues)));
+    }
+    const [first, ...rest] = statements;
+    if (first) await db.batch([first, ...rest]);
     return { message: "あなたの登録内容を保存しました。" };
   });
 }

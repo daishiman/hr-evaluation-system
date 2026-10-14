@@ -3,7 +3,7 @@ import { schema as s } from "@/lib/db";
 import type { Viewer } from "@/lib/session";
 import { _resetRateLimitStoreForTest } from "@/lib/rate-limit";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
  * 画面から発行する鍵。
@@ -114,6 +114,7 @@ async function seedImprovement() {
 beforeEach(async () => {
   testDb = createTestDatabase();
   await seedCompany(testDb);
+  seedMemberships(testDb);
   await testDb.db.insert(s.users).values({
     id: "usr_super",
     name: "システム管理者",

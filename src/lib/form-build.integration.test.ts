@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
 import * as s from "@/db/schema";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /**
  * 等級区分「Manager」（等級5）に行動指針の帯域を割り当てたとき、
@@ -39,6 +39,7 @@ afterEach(() => {
 describe("等級区分がManagerでも、行動指針の帯域を割り当てればアンケートに設問が出る", () => {
   it("Managerの等級に既存の基準セットを割り当てると、行動指針の設問が組み立てられる", async () => {
     await seedCompany(current);
+    seedMemberships(current);
 
     // 等級5（Manager）相当に切り替える。行動指針の帯域は既存セット g1_2 をそのまま割り当てる。
     // g1_2 / g3_4 という帯域そのものに「対応する等級区分」の制約は無い。
@@ -62,6 +63,7 @@ describe("等級区分がManagerでも、行動指針の帯域を割り当てれ
 
   it("Managerの等級で帯域を割り当てなければ、これまでどおり行動指針の設問は出ない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await current.db
       .update(s.grades)
       .set({ pointGroup: "Manager", behaviorBand: null })
@@ -82,6 +84,7 @@ describe("等級区分がManagerでも、行動指針の帯域を割り当てれ
 describe("アンケート下書きの原子性と版競合", () => {
   it("同じサイクル・等級の同時作成は連番にして両方成功する", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     const before = await current.db
       .select({ version: s.forms.version })
       .from(s.forms)
@@ -109,6 +112,7 @@ describe("アンケート下書きの原子性と版競合", () => {
 
   it("複数等級の準備中に1件でも失敗したら、先の等級も保存しない", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     const before = await current.db.select({ id: s.forms.id }).from(s.forms);
 
     await expect(

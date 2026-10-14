@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { formatAnswer, isAnswered, parseMulti, questionSnapshot, scaleSteps, toAnswerRows } from "./answer-snapshot";
+import {
+  formatAnswer,
+  isAnswered,
+  isOptionSelected,
+  optionAnswer,
+  optionScore,
+  parseMulti,
+  parseOptions,
+  questionSnapshot,
+  scaleSteps,
+  toAnswerRows,
+} from "./answer-snapshot";
 
 const q = {
   id: "fq_1",
@@ -43,8 +54,152 @@ describe("isAnswered 設問形式ごとの必須判定", () => {
     expect(isAnswered("multi", { valueNumber: 1, valueText: null })).toBe(false);
   });
 
+  it("複数選択は回答画面の手元の valueChoices を先に見る（押しても回答数が増えなかった不具合）", () => {
+    expect(isAnswered("multi", { valueNumber: null, valueText: "研修A", valueChoices: ["a"] })).toBe(true);
+    expect(isAnswered("multi", { valueNumber: null, valueText: null, valueChoices: [] })).toBe(false);
+    // 手元に無いとき（保存済みの行）は value_json を読む
+    expect(isAnswered("multi", { valueNumber: null, valueText: null, valueChoices: null, valueJson: '["b"]' })).toBe(true);
+  });
+
+  it("1つ選ぶ設問は、点数を持たない選択肢（言葉だけ）を選んでも回答済み", () => {
+    expect(isAnswered("single", { valueNumber: null, valueText: "自分から行った" })).toBe(true);
+    expect(isAnswered("single", { valueNumber: 0, valueText: null })).toBe(true);
+    expect(isAnswered("single", { valueNumber: null, valueText: "  " })).toBe(false);
+    expect(isAnswered("single", { valueNumber: null, valueText: null })).toBe(false);
+  });
+
   it("値が無ければ未回答", () => {
     expect(isAnswered("number", undefined)).toBe(false);
+  });
+});
+
+describe("parseOptions", () => {
+  it("壊れた値・配列でない値・形の合わない要素を落とす", () => {
+    expect(parseOptions(null)).toEqual([]);
+    expect(parseOptions("{壊れ")).toEqual([]);
+    expect(parseOptions('{"value":"a","label":"あ"}')).toEqual([]);
+    expect(parseOptions('[{"value":"a","label":"あ","score":1},null,"x",{"value":"b"}]')).toEqual([
+      { value: "a", label: "あ", score: 1 },
+    ]);
+  });
+});
+
+describe("optionScore 選択肢の点数", () => {
+  it("score があればそれを使う", () => {
+    expect(optionScore({ value: "a", label: "自分から行った", score: 3 })).toBe(3);
+    expect(optionScore({ value: "9", label: "x", score: 0 })).toBe(0);
+  });
+
+  it("score が無い・数でないときは、数字の value を点数として読む", () => {
+    expect(optionScore({ value: "2", label: "x" })).toBe(2);
+    expect(optionScore({ value: " 1.5 ", label: "x" })).toBe(1.5);
+    expect(optionScore({ value: "4", label: "x", score: Number.NaN })).toBe(4);
+    expect(optionScore({ value: "4", label: "x", score: Number.POSITIVE_INFINITY })).toBe(4);
+  });
+
+  it("古いデータで value が数のまま入っていても読める", () => {
+    expect(optionScore({ value: 5 as unknown as string, label: "x" })).toBe(5);
+  });
+
+  it("value が数字でない・空なら点数は無い（NaN を返さない）", () => {
+    expect(optionScore({ value: "a", label: "x" })).toBeNull();
+    expect(optionScore({ value: "  ", label: "x" })).toBeNull();
+    expect(optionScore({ value: "", label: "x" })).toBeNull();
+  });
+});
+
+describe("optionAnswer 選択肢を押したときの答え", () => {
+  it("点数と選んだ言葉を一緒に入れ、複数選択の手元は空にする", () => {
+    expect(optionAnswer({ value: "2", label: "助言を受けて行った" })).toEqual({
+      valueNumber: 2,
+      valueText: "助言を受けて行った",
+      valueChoices: null,
+    });
+  });
+
+  it("点数を持たない選択肢は言葉だけを入れる", () => {
+    expect(optionAnswer({ value: "a", label: "自分から行った" })).toEqual({
+      valueNumber: null,
+      valueText: "自分から行った",
+      valueChoices: null,
+    });
+  });
+});
+
+describe("isOptionSelected 選択中の判定", () => {
+  it("答えが無ければどれも選ばれていない", () => {
+    const o = { value: "1", label: "はい" };
+    expect(isOptionSelected(o, null)).toBe(false);
+    expect(isOptionSelected(o, undefined)).toBe(false);
+  });
+
+  it("言葉が無い答え（取込や古い行）は点数で見る", () => {
+    const options = [
+      { value: "1", label: "はい" },
+      { value: "0", label: "いいえ" },
+    ];
+    const v = { valueNumber: 1, valueText: null };
+    expect(isOptionSelected(options[0], v, options)).toBe(true);
+    expect(isOptionSelected(options[1], v, options)).toBe(false);
+    // 言葉が空白だけでも点数で見る
+    expect(isOptionSelected(options[1], { valueNumber: 0, valueText: " " }, options)).toBe(true);
+  });
+
+  it("点数を持たない選択肢は、言葉が合わなければ選ばれていない", () => {
+    const o = { value: "a", label: "自分から行った" };
+    expect(isOptionSelected(o, { valueNumber: null, valueText: null })).toBe(false);
+  });
+
+  it("値が重なった古いデータでも、選んだ言葉の1つだけが選択中になる", () => {
+    const options = [
+      { value: "1", label: "選択肢1" },
+      { value: "3", label: "選択肢3" },
+      { value: "3", label: "選択肢4" },
+    ];
+    const v = optionAnswer(options[2]);
+    expect(options.map((o) => isOptionSelected(o, v, options))).toEqual([false, false, true]);
+  });
+
+  it("値が数字でない選択肢も、言葉で選択中になる", () => {
+    const options = [
+      { value: "a", label: "自分から行った" },
+      { value: "b", label: "助言を受けて行った" },
+    ];
+    const v = optionAnswer(options[1]);
+    expect(options.map((o) => isOptionSelected(o, v, options))).toEqual([false, true]);
+  });
+
+  it("同じ言葉が複数あるときは点数で絞る", () => {
+    const options = [
+      { value: "1", label: "同じ" },
+      { value: "2", label: "同じ" },
+    ];
+    expect(options.map((o) => isOptionSelected(o, { valueNumber: 2, valueText: "同じ" }, options))).toEqual([
+      false,
+      true,
+    ]);
+  });
+
+  it("同じ言葉が複数あり点数で絞れないときは、その言葉の選択肢を選択中とする", () => {
+    const options = [
+      { value: "a", label: "同じ" },
+      { value: "b", label: "同じ" },
+      { value: "c", label: "別" },
+    ];
+    expect(options.map((o) => isOptionSelected(o, { valueNumber: null, valueText: "同じ" }, options))).toEqual([
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it("言葉がどの選択肢にも合わない答え（取込の「○」など）は点数に戻る", () => {
+    const options = [
+      { value: "1", label: "はい" },
+      { value: "0", label: "いいえ" },
+    ];
+    const v = { valueNumber: 1, valueText: "○" };
+    expect(options.map((o) => isOptionSelected(o, v, options))).toEqual([true, false]);
   });
 });
 
@@ -141,6 +296,22 @@ describe("formatAnswer", () => {
       ],
     };
     expect(formatAnswer(row)).toBe("研修A、研修C");
+  });
+
+  it("複数選択で選択肢が消えた値はそのまま出し、選んだ値が無ければ取込の文字を出す", () => {
+    const row = { ...base, questionType: "multi", options: [{ value: "a", label: "研修A" }] };
+    expect(formatAnswer({ ...row, valueJson: '["a","z"]' })).toBe("研修A、z");
+    expect(formatAnswer({ ...row, valueText: " 研修A、研修B " })).toBe("研修A、研修B");
+    expect(formatAnswer({ ...row })).toBeNull();
+  });
+
+  it("自由記述は前後の空白を落とす", () => {
+    expect(formatAnswer({ ...base, questionType: "text", valueText: " 交代しました " })).toBe("交代しました");
+  });
+
+  it("数値の設問で数が無ければ、取込で残った文字を出す", () => {
+    expect(formatAnswer({ ...base, questionType: "number", valueText: " 不明 " })).toBe("不明");
+    expect(formatAnswer({ ...base, questionType: "number", valueNumber: 3 })).toBe("3");
   });
 
   it("未回答は null", () => {

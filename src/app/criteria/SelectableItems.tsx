@@ -134,7 +134,8 @@ export function SelectableItems({
       {withoutCriteria.length > 0 && (
         <div className="mb-2">
           <p className="footnote m-0">次の項目のランク基準（A〜E）についてのご注意です。</p>
-          <ul className="footnote m-0 mt-1 list-disc pl-5">
+          {/* 名前は1件が1行と短いので、広い画面では複数列に並べる（1列だと右側が空いたまま残る。§28-9） */}
+          <ul className="footnote m-0 mt-1 grid list-disc gap-x-8 pl-5 sm:grid-cols-2 lg:grid-cols-3">
             {withoutCriteria.map((i) => (
               <li key={i.kpiItemId}>
                 <a href={criteriaHref(i.kpiItemId)} className="underline">

@@ -1,4 +1,4 @@
-import { canSeeCriteria, requireViewer } from "@/lib/session";
+import { canSeeCriteria, requireRoute } from "@/lib/session";
 import { listEvaluations } from "@/lib/queries";
 import { EmptyState, PageTitle } from "@/components/ui";
 import { EvaluationTrend, type TrendItem } from "@/components/EvaluationTrend";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /** 自分の評価の履歴と推移。過去のサイクルは消さずに全部残す。 */
 export default async function MyResults() {
-  const viewer = await requireViewer();
+  const viewer = await requireRoute("/me/results");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="会社の管理者にご確認ください。" />;
 
   /* 確定した結果と並べて、「まだ確定していない期」も出す。

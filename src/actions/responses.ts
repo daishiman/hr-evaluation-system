@@ -43,7 +43,7 @@ const responseSchema = z.object({
  * 入力し終えてから初めて締切に気づくことになり、いちばん徒労が大きいため。
  */
 export async function saveResponse(raw: unknown) {
-  return runAction({ role: "EMPLOYEE", input: responseSchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "responses.save", input: responseSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const formId = input.formId;
     const db = await getDb();
@@ -143,16 +143,11 @@ export async function saveResponse(raw: unknown) {
     }
 
     const responseId = existing?.id ?? newId("res");
-    let officeId = existing?.officeId ?? null;
-    if (!existing) {
-      // 回答時点の所属事業所を写し取る。
-      // 期中に異動すると、いまの所属で賞与の事業所KGI係数が決まってしまい、
-      // 「実績を出した事業所」と「係数を借りた事業所」がずれるため（CSV取込では以前から写している）。
-      const me = (
-        await db.select({ officeId: s.users.officeId }).from(s.users).where(eq(s.users.id, viewer.id)).limit(1)
-      )[0];
-      officeId = me?.officeId ?? null;
-    }
+    // 回答時点の所属事業所を写し取る。
+    // 期中に異動すると、いまの所属で賞与の事業所KGI係数が決まってしまい、
+    // 「実績を出した事業所」と「係数を借りた事業所」がずれるため（CSV取込では以前から写している）。
+    // 事業所は会社ごとの値なので、いまの会社での所属の値（viewer.officeId）を使う。
+    const officeId = existing ? existing.officeId : (viewer.officeId ?? null);
 
     const answerRows = incoming.map((a) => ({
       id: newId("fa"),

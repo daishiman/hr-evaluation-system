@@ -51,7 +51,7 @@ function operatorOf(viewer: Viewer): { id: string; companyId: string } {
 export async function submitImprovement(raw: unknown) {
   return runAction(
     {
-      role: "EMPLOYEE",
+      operation: "improvements.submit",
       input: improvementSubmitSchema,
       maxBytes: IMPROVEMENT_REQUEST_MAX_BYTES,
       tooLargeMessage: "送信内容が大きすぎます。画像を外すか、撮り直してお試しください。",
@@ -68,7 +68,7 @@ export async function submitImprovement(raw: unknown) {
 /** 要望の対応状況とメモを変える（会社の管理者とシステム全体管理者）。 */
 export async function updateImprovementStatus(raw: unknown) {
   return runAction(
-    { role: "COMPANY_ADMIN", input: statusSchema, maxBytes: IMPROVEMENT_STATUS_MAX_BYTES },
+    { operation: "improvements.updateStatus", input: statusSchema, maxBytes: IMPROVEMENT_STATUS_MAX_BYTES },
     raw,
     async ({ viewer, input }) => {
       const { id, ...change } = input;
@@ -82,7 +82,7 @@ export async function updateImprovementStatus(raw: unknown) {
  * 廃棄済み・内容が変わっていないものは渡さず、その理由を結果に載せる。
  */
 export async function handOutImprovement(raw: unknown) {
-  return runAction({ role: "SUPER_ADMIN", input: handoutSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "improvements.handOut", input: handoutSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
     const result = await recordScreenHandout(operatorOf(viewer), input.id);
     return { result, message: result.reason };
   });
@@ -93,7 +93,7 @@ export async function handOutImprovement(raw: unknown) {
  * 理由が無い・統合先が無いなどは失敗（ok: false）として返す。
  */
 export async function disposeImprovement(raw: unknown) {
-  return runAction({ role: "SUPER_ADMIN", input: disposeSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "improvements.dispose", input: disposeSchema, maxBytes: SMALL_JSON_MAX_BYTES }, raw, async ({ viewer, input }) => {
     const result = await applyDisposition(operatorOf(viewer), input.id, {
       action: input.action,
       reasonCode: input.reasonCode,

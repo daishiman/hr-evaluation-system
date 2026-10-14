@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { getDb, schema as s } from "@/lib/db";
 import { getForm, listFormQuestions, listKpiItems } from "@/lib/queries";
+import { formRowTitle } from "@/lib/domain/grade-label";
 import { FormBuilder, type BuilderQuestion } from "@/components/FormBuilder";
 import { FormPreview } from "@/components/FormPreview";
 import { ActionButton } from "@/components/ActionButton";
@@ -20,13 +21,16 @@ export const dynamic = "force-dynamic";
  * その場合は理由を画面に出し、閲覧だけにする。
  */
 export default async function AdminFormDetail({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/forms/[id]");
   const { id } = await params;
   if (!viewer.companyId) notFound();
   const companyId = viewer.companyId;
 
   const form = await getForm(companyId, id);
   if (!form) notFound();
+  // 画面に出す題名。空（既定の題名）なら評価期間と等級名から作る
+  const displayTitle = formRowTitle(form);
+  const defaultTitle = formRowTitle({ ...form, title: "" });
 
   const [questions, kpiItems] = await Promise.all([
     listFormQuestions(companyId, form.id, viewer.role),
@@ -91,7 +95,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
       <PageTitle
         sticky
         breadcrumb={[{ label: "アンケート", href: `/admin/forms?cycle=${form.cycleId}` }]}
-        title={form.title}
+        title={displayTitle}
         lede={`${form.cycleName ?? ""} ／ 対象：${form.gradeName ?? "—"} ／ 第${form.version}版`}
         tags={
           <>
@@ -143,7 +147,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
               input={{ formId: form.id }}
               label="いまの評価項目に合わせて設問を作り直す"
               variant="secondary"
-              confirm={`「${form.title}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ回答は1件もありません。よろしいですか？`}
+              confirm={`「${displayTitle}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ回答は1件もありません。よろしいですか？`}
             />
           </div>
         )}
@@ -168,7 +172,15 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
           fixed={{ formId: form.id }}
           submitLabel="保存する"
           fields={[
-            { name: "title", label: "タイトル", type: "text", required: true, defaultValue: form.title },
+            {
+              name: "title",
+              label: "タイトル",
+              type: "text",
+              defaultValue: form.title,
+              /* 空のまま保存すると既定の題名。既定の題名は評価期間と等級名から作るので、等級名を変えると追従する */
+              placeholder: defaultTitle,
+              help: `空のままにすると「${defaultTitle}」と表示します。`,
+            },
             { name: "description", label: "冒頭の説明文", type: "textarea", defaultValue: form.description ?? "" },
           ]}
         />
@@ -183,7 +195,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
             内容を変えるときは、アンケート一覧から新しい版を作ってください。
           </ReasonNote>
           <Card className="card-pad mt-2">
-            <p className="m-0 text-sub font-bold">{form.title}</p>
+            <p className="m-0 text-sub font-bold">{displayTitle}</p>
             {form.description && <p className="m-0 mt-1 text-sub whitespace-pre-wrap">{form.description}</p>}
           </Card>
         </>
@@ -198,13 +210,20 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
         resource="forms"
         fixed={{ formId: form.id }}
         submitLabel="回答期間を保存する"
+        inline
         fields={[
           { name: "opensAt", label: "受付の開始日", type: "date", defaultValue: form.opensAt ?? "" },
           { name: "closesAt", label: "締切日", type: "date", defaultValue: form.closesAt ?? "" },
         ]}
       />
 
-      <SectionHeading aside={<span className="footnote">上下の矢印で並べ替えられます</span>}>設問（{rows.length}問）</SectionHeading>
+      {/* 並べ替えの案内は、設問を変えられるとき（下書き）だけ出す。変えられない版でも出すと、
+          つまみが無いのに「並べ替えられます」と読めてしまう（理由は FormBuilder が lockReason で出す） */}
+      <SectionHeading
+        aside={editable ? <span className="footnote">つまみの長押し・ドラッグか、矢印のボタンで並べ替えられます</span> : undefined}
+      >
+        設問（{rows.length}問）
+      </SectionHeading>
       <FormBuilder
         formId={form.id}
         initial={rows}

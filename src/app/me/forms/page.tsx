@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireViewer } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { listMyForms, type MyFormRow } from "@/lib/response-access";
 import { Badge, Card, CardRow, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { formatPeriod, RESPONSE_STATUS_LABEL } from "@/lib/view";
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * どちらも並べる。
  */
 export default async function MyForms() {
-  const viewer = await requireViewer();
+  const viewer = await requireRoute("/me/forms");
   if (!viewer.companyId) {
     return <EmptyState title="所属している会社がありません" body="会社の管理者にご連絡ください。" />;
   }

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { canSeeCriteria, homePathFor, requireRole } from "@/lib/session";
+import { canSeeCriteria, homePathFor, requireRoute } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * 最低ロールの指定に加えてその関数でももう一度確かめる（定義が変わったときの取り残しを防ぐため）。
  */
 export default async function CriteriaLayout({ children }: { children: React.ReactNode }) {
-  const viewer = await requireRole("MANAGER");
+  const viewer = await requireRoute("/criteria");
   if (!canSeeCriteria(viewer.role)) redirect(`${homePathFor(viewer.role)}?denied=1`);
   return <AppShell viewer={viewer}>{children}</AppShell>;
 }

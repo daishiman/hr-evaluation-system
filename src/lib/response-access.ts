@@ -2,6 +2,11 @@ import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { getDb, schema as s } from "@/lib/db";
 import { toAnswerRows, type AnswerReadRow } from "@/lib/domain/answer-snapshot";
 import { judgeFormDeadline, type DeadlineJudgement } from "@/lib/domain/form-deadline";
+import { formRowTitle } from "@/lib/domain/grade-label";
+import { joinMembership } from "@/lib/memberships";
+
+/** 会社ごとの値（上長など）の正本。users の同じ列は読まない（src/lib/memberships.ts） */
+const mem = s.companyMemberships;
 
 /**
  * 「自分が答えたアンケート」を読むための問い合わせ。
@@ -119,7 +124,8 @@ export async function listMyForms(companyId: string, employeeId: string, gradeId
 
     return {
       formId: f.id,
-      title: f.title,
+      // 空の題名（既定の題名）は評価期間と等級名から作る
+      title: formRowTitle(f),
       version: f.version,
       status: f.status,
       opensAt: f.opensAt,
@@ -143,7 +149,7 @@ export async function listMyForms(companyId: string, employeeId: string, gradeId
         extensions: extensions.filter((e) => e.formId === f.id).map((e) => e.extendedUntil),
         now,
       }),
-      supersededBy: supersede ? { formId: supersede.id, title: supersede.title } : null,
+      supersededBy: supersede ? { formId: supersede.id, title: formRowTitle(supersede) } : null,
     };
   });
 }
@@ -224,7 +230,8 @@ export async function getResponseDetail(companyId: string, responseId: string): 
         formId: s.formResponses.formId,
         employeeId: s.formResponses.employeeId,
         employeeName: s.users.name,
-        managerId: s.users.managerId,
+        // 上長は会社ごとに違うので、この回答の会社での所属の上長
+        managerId: mem.managerId,
         status: s.formResponses.status,
         submittedAt: s.formResponses.submittedAt,
         respondentNote: s.formResponses.respondentNote,
@@ -240,6 +247,7 @@ export async function getResponseDetail(companyId: string, responseId: string): 
       })
       .from(s.formResponses)
       .leftJoin(s.users, eq(s.users.id, s.formResponses.employeeId))
+      .leftJoin(mem, joinMembership(s.formResponses.companyId))
       .leftJoin(s.forms, eq(s.forms.id, s.formResponses.formId))
       .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.formResponses.cycleId))
       .leftJoin(s.grades, eq(s.grades.id, s.formResponses.gradeId))
@@ -272,7 +280,10 @@ export async function getResponseDetail(companyId: string, responseId: string): 
     },
     form: {
       id: head.formId,
-      title: head.formTitle ?? "（削除されたアンケート）",
+      title:
+        head.formTitle === null
+          ? "（削除されたアンケート）"
+          : formRowTitle({ title: head.formTitle, cycleName: head.cycleName, gradeName: head.gradeName }),
       version: head.formVersion ?? 1,
       status: head.formStatus ?? "closed",
       cycleName: head.cycleName,

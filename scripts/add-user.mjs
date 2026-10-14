@@ -2,22 +2,31 @@
  * 利用者を1人だけ追加する（既存のデータには一切触らない）。
  *
  *   pnpm run user:add -- --email a@b.jp --name "氏名" --role SUPER_ADMIN --password "..." [--remote]
+ *   会社の役割は --company <会社ID> が必須。SUPER_ADMIN には会社を指定しない。
+ *   既存メールは失敗として伝え、既存の利用者・資格情報・所属は変更しない。
  *
  * パスワードはアプリのログインと同じ方式（Better Auth の scrypt）で暗号化して保存する。
  * 発行時のパスワードは本人のものではないため、must_change_password を立てて
  * ログイン後に変更をお願いし続ける状態にする。
  */
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { hashPassword } from "better-auth/crypto";
+import { assertAddUserCompanyRole, buildAddUserSql, buildAddUserOutcomeSql, normalizeAddUserEmail } from "./add-user-data.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name) => {
   const i = args.indexOf(`--${name}`);
-  return i >= 0 ? args[i + 1] : undefined;
+  if (i < 0) return undefined;
+  const value = args[i + 1];
+  if (value === undefined || value.startsWith("--")) throw new Error(`--${name} の値を指定してください。`);
+  return value;
 };
 
-const email = flag("email");
+const email = normalizeAddUserEmail(flag("email") ?? "");
 const name = flag("name");
 const role = flag("role") ?? "EMPLOYEE";
 const password = flag("password");
@@ -30,42 +39,46 @@ if (!email || !name || !password) {
   console.error("必要な指定が足りません: --email --name --password");
   process.exit(1);
 }
-if (!["SUPER_ADMIN", "COMPANY_ADMIN", "MANAGER", "EMPLOYEE"].includes(role)) {
-  console.error(`--role は SUPER_ADMIN / COMPANY_ADMIN / MANAGER / EMPLOYEE のいずれかです（指定: ${role}）`);
-  process.exit(1);
-}
+assertAddUserCompanyRole({ role, companyId });
 if (password.length < 8) {
   console.error("パスワードは8文字以上にしてください（ログイン側の最低文字数と合わせています）。");
   process.exit(1);
 }
 
-const q = (v) => (v === null || v === undefined ? "NULL" : `'${String(v).replace(/'/g, "''")}'`);
-const now = Date.now();
-const userId = crypto.randomUUID();
-const accountId = crypto.randomUUID();
-const pw = await hashPassword(password);
-
-// 同じメールアドレスが既にあるときは何もしない（既存アカウントを壊さないため INSERT OR IGNORE）
-const sql = `
-INSERT OR IGNORE INTO users
-  (id, name, email, email_verified, image, company_id, role, grade_id, office_id, manager_id,
-   employee_code, department, hired_at, profile_note, must_change_password, is_active, created_at, updated_at)
-VALUES
-  (${q(userId)}, ${q(name)}, ${q(email)}, 1, NULL, ${q(companyId)}, ${q(role)}, NULL, NULL, NULL,
-   ${q(employeeCode)}, ${q(department)}, NULL, NULL, 1, 1, ${now}, ${now});
-INSERT OR IGNORE INTO accounts
-  (id, account_id, provider_id, user_id, access_token, refresh_token, id_token,
-   access_token_expires_at, refresh_token_expires_at, scope, password, created_at, updated_at)
-SELECT ${q(accountId)}, u.id, 'credential', u.id, NULL, NULL, NULL, NULL, NULL, NULL, ${q(pw)}, ${now}, ${now}
-FROM users u WHERE u.email = ${q(email)}
-  AND NOT EXISTS (SELECT 1 FROM accounts a WHERE a.user_id = u.id AND a.provider_id = 'credential');
-`.trim();
-
-mkdirSync("drizzle", { recursive: true });
-const file = "drizzle/.add-user.sql";
-writeFileSync(file, sql);
-
-const cmd = ["d1", "execute", "hr-evaluation-db", remote ? "--remote" : "--local", "--file", file, "--yes"];
-execFileSync("pnpm", ["exec", "wrangler", ...cmd], { stdio: "inherit" });
-console.log(`\n${remote ? "本番" : "ローカル"}に ${email}（${role}）を追加しました。`);
-console.log("初回ログイン後、画面の案内からパスワードを変更してください。");
+const values = {
+  userId: crypto.randomUUID(), accountId: crypto.randomUUID(), now: Date.now(),
+  email, name, role, companyId, employeeCode, department, passwordHash: await hashPassword(password),
+};
+const directory = mkdtempSync(join(tmpdir(), "hr-add-user-"));
+const file = join(directory, "add-user.sql");
+const cwd = fileURLToPath(new URL("..", import.meta.url));
+const command = ["exec", "wrangler", "d1", "execute", "hr-evaluation-db", remote ? "--remote" : "--local", "--yes", "--json"];
+let outcome;
+let written = false;
+try {
+  // SQL には資格情報のハッシュがある。権限を絞り、成功・失敗どちらでも削除する。
+  writeFileSync(file, buildAddUserSql(values).join("\n"), { mode: 0o600 });
+  execFileSync("pnpm", [...command, "--file", file], { cwd, stdio: "pipe" });
+  written = true;
+  const output = execFileSync("pnpm", [...command, "--command", buildAddUserOutcomeSql(values)], { cwd, stdio: "pipe", encoding: "utf8" });
+  const results = JSON.parse(output);
+  outcome = results.flatMap((entry) => entry.results ?? []).find((row) => row.outcome)?.outcome;
+  if (!["created", "exists", "invalid_company"].includes(outcome)) throw new Error("unknown_result");
+} catch {
+  // Wrangler の例外や標準出力には送ったSQLが含まれる可能性があるため、そのまま出さない。
+  console.error(written
+    ? "書込みは受け付けられましたが結果を確認できませんでした。利用者一覧で確認してください。"
+    : "利用者を追加できませんでした。接続・権限・会社と移行の状態を確認してください。");
+  process.exitCode = 1;
+} finally {
+  rmSync(directory, { recursive: true, force: true });
+}
+if (outcome === "created") {
+  console.log(`\n${remote ? "本番" : "ローカル"}に ${email}（${role}）を追加しました。`);
+  console.log("初回ログイン後、画面の案内からパスワードを変更してください。");
+} else if (outcome) {
+  console.error(outcome === "exists"
+    ? "このメールアドレスはすでに登録されています。既存の利用者・資格情報・所属は変更していません。"
+    : "会社が見つからないか、停止中・テンプレートです。利用者は追加していません。");
+  process.exitCode = 1;
+}

@@ -32,11 +32,12 @@ export function stepTitle(step: StepKey): string {
   return step === "select" ? "使うKPIを選ぶ" : "選んだ項目の基準を決める";
 }
 
-/** その手順で何をするのかの1行。見出しの下にそのまま出す。 */
-export function stepLede(step: StepKey, pointGroup: string): string {
+/** その手順で何をするのかの1行。見出しの下にそのまま出す。
+    groupLabel は区分の呼び名（pointGroupLabel で等級名から作ったもの）。区分の鍵（英語の区分名）は渡さない。 */
+export function stepLede(step: StepKey, groupLabel: string): string {
   return step === "select"
-    ? `${pointGroup} の評価に使うKPIを選びます。ここでは全項目から選べます。`
-    : `${pointGroup} で選んだ項目だけが対象です。実績値がどこからどこまでならA〜Eのどれになるかを決めます。`;
+    ? `${groupLabel}の評価に使うKPIを選びます。ここでは全項目から選べます。`
+    : `${groupLabel}で選んだ項目だけが対象です。実績値がどこからどこまでならA〜Eのどれになるかを決めます。`;
 }
 
 /** 手順のURL。パスの組み立てを画面ごとに書き起こさない。 */
@@ -172,8 +173,10 @@ export interface OverallProgress {
  * 「次に手をつける等級区分」は、終わっていないもののうち**並びが最初のもの**にする。
  * 未完了のうち一番進んでいるものを勧めると、制度の順番（Beginner から上へ）と
  * 案内の順番が食い違い、どこまでやったのかを人が数え直すことになる。
+ *
+ * nextGroup は区分の鍵（URL や照合に使う）。summary に出す呼び名は labelOf で等級名から作る。
  */
-export function overallProgress(list: GroupProgress[]): OverallProgress {
+export function overallProgress(list: GroupProgress[], labelOf: (pointGroup: string) => string): OverallProgress {
   const total = list.length;
   const done = list.filter((g) => g.done).length;
   const next = list.find((g) => !g.done) ?? null;
@@ -182,7 +185,7 @@ export function overallProgress(list: GroupProgress[]): OverallProgress {
     total,
     nextGroup: next?.pointGroup ?? null,
     summary: next
-      ? `${total}つの等級区分のうち${done}つが設定済みです。次は「${next.pointGroup}」の設定です。`
+      ? `${total}つの等級区分のうち${done}つが設定済みです。次は「${labelOf(next.pointGroup)}」の設定です。`
       : `${total}つの等級区分すべての設定が終わっています。`,
   };
 }

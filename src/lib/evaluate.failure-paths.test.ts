@@ -9,7 +9,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import * as s from "@/db/schema";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
-import { IDS, seedCompany, seedResponse } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedResponse, seedMemberships } from "@/test-support/evaluation-fixture";
 
 let current: TestDatabase;
 
@@ -52,6 +52,7 @@ describe("計算式そのものが手に負えない場合", () => {
    */
   it("その項目だけを判定外にし、直せる言葉を添える。ほかの項目とほかの人の集計は続く", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     // 括弧を2万重ねた式。書式としては正しいが、複雑すぎるものとして断られる。
     const deep = "(".repeat(20000) + "q2_1" + ")".repeat(20000);
     await current.db.update(s.kpiItems).set({ formula: deep }).where(eq(s.kpiItems.id, IDS.itemHigher));
@@ -87,6 +88,7 @@ describe("計算式そのものが手に負えない場合", () => {
    */
   it("計算式の不備として説明できない止まり方なら、既定の理由にする", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, questions());
 
     const formula = await import("@/lib/domain/formula");
@@ -111,6 +113,7 @@ describe("計算式そのものが手に負えない場合", () => {
 describe("保存の途中で、理由の分からない止まり方をした場合", () => {
   it("子行の保存が失敗したら、作り直す前の評価と根拠を丸ごと保持する", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, questions());
     const first = await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
     expect(first[0].ok).toBe(true);
@@ -142,6 +145,7 @@ describe("保存の途中で、理由の分からない止まり方をした場�
    */
   it("その人だけを失敗として残し、画面に出せる言葉にする", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, questions());
 
     const real = current.db;
@@ -174,6 +178,7 @@ describe("保存の途中で、理由の分からない止まり方をした場�
 
   it("文章になっている止まり方なら、その中身を添えて出す", async () => {
     await seedCompany(current);
+    seedMemberships(current);
     await seedResponse(current, questions());
 
     const real = current.db;

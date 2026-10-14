@@ -149,11 +149,15 @@ function ItemFlow({
           <>
             <span className="font-semibold">
               No.{item.no} {item.name}
-            </span>{" "}
-            <span className="footnote">／ {slotLabel}</span>{" "}
-            <span className="num font-bold">{weight}</span>
-            <span className="unit">点</span>
+            </span>
             {adopted && <> <Badge tone="active">この等級で採用中</Badge></>}
+          </>
+        }
+        /* 枠と点数は項目名の補足なので、見出しの行の右端へ寄せる（名前の後ろに詰めると、33項目ぶん右側が空いたまま残る。§28-9） */
+        meta={
+          <>
+            {slotLabel} ／ <span className="num font-bold">{weight}</span>
+            <span className="unit">点</span>
           </>
         }
       >

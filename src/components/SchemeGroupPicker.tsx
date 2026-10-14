@@ -49,6 +49,7 @@ interface Pick {
 export function SchemeGroupPicker({
   schemeId,
   pointGroup,
+  groupLabel,
   gradeNames,
   rule,
   ratedItemIds,
@@ -58,7 +59,10 @@ export function SchemeGroupPicker({
   criteriaPath,
 }: {
   schemeId: string;
+  /** 区分の鍵。保存と下書きの照合にだけ使い、画面の文には出さない */
   pointGroup: string;
+  /** 区分の呼び名（pointGroupLabel で等級名から作ったもの）。画面の文にはこちらを出す */
+  groupLabel: string;
   /** この等級区分に入る等級の名前。つないだ1行にせず、並びで出す */
   gradeNames: string[];
   rule: GradePointRule;
@@ -174,6 +178,7 @@ export function SchemeGroupPicker({
     fixedSlotItemIds: kpiItems.filter((k) => k.isFixedSlot).map((k) => k.id),
     ratedItemIds,
     itemNameOf: (id) => itemOf(id)?.name ?? id,
+    groupLabel,
   });
 
   const rated = new Set(ratedItemIds);
@@ -236,7 +241,7 @@ export function SchemeGroupPicker({
   return (
     <>
       <Card className="card-pad hero-tint mt-1">
-        <p className="m-0 text-note text-ink-muted">{pointGroup} の配点</p>
+        <p className="m-0 text-note text-ink-muted">{groupLabel}の配点</p>
         <p className="num-display m-0 text-hero-sp leading-tight text-accent">
           {v.total}
           <span className="unit"> / {rule.totalPoints} 点</span>
@@ -545,7 +550,7 @@ export function SchemeGroupPicker({
         <Card className="card-pad mt-4">
           <p className="section-heading m-0">選ぶ項目はありません</p>
           <p className="footnote m-0">
-            {pointGroup} は{fixedItem?.name ?? "固定枠の項目"}だけで{rule.totalPoints}点です。
+            {groupLabel}は{fixedItem?.name ?? "固定枠の項目"}だけで{rule.totalPoints}点です。
             ほかのKPIは、この等級区分では評価しません。
             0点として数えるのではなく、評価の対象にしません。
             そのまま下のボタンで次の手順へ進めます。
@@ -565,7 +570,7 @@ export function SchemeGroupPicker({
         status={
           <>
             <span className="text-sub text-ink">
-              {pointGroup} 合計 <span className="num font-bold">{v.total}</span>
+              {groupLabel} 合計 <span className="num font-bold">{v.total}</span>
               <span className="unit"> / {rule.totalPoints} 点</span>
             </span>
             <span className="mx-2 text-line">|</span>

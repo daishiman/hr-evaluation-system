@@ -66,7 +66,21 @@ export async function signIn(page: Page, account: Account): Promise<void> {
   await waitForHydration(page, "#email");
   await page.locator("#email").fill(account.email);
   await page.locator("#password").fill(account.password);
-  await page.getByRole("button", { name: "ログイン" }).click();
+  for (let attempt = 0; ; attempt++) {
+    const [response] = await Promise.all([
+      page.waitForResponse((r) => new URL(r.url()).pathname === "/api/auth/sign-in/email" && r.request().method() === "POST"),
+      page.getByRole("button", { name: "ログイン", exact: true }).click(),
+    ]);
+    if (response.status() !== 429) {
+      expect(response.ok(), "ログインAPIが成功する").toBe(true);
+      break;
+    }
+    // 同じ端末で多役割を続けて確認しても、本番と同じ試行制限は緩めない。
+    if (attempt >= 2) throw new Error("ログイン試行制限が続いています");
+    const retry = Number(response.headers()["retry-after"] ?? 10);
+    if (!Number.isFinite(retry) || retry < 0 || retry > 15) throw new Error("ログイン制限の待機時間が試験の上限を超えています");
+    await page.waitForTimeout((retry + 0.1) * 1000);
+  }
   await page.waitForURL((url) => !url.pathname.startsWith("/login"));
   // role="alert" では確かめない。Next.js の画面遷移の読み上げ役が空の alert として常にある
   await expect(page.getByRole("complementary", { name: "メニュー" })).toBeVisible();

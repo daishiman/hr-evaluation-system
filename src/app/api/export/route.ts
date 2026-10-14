@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema as s } from "@/lib/db";
-import { apiViewer, HttpError, requireTargetCompany } from "@/lib/session";
-import { jsonError } from "@/lib/api";
+import { HttpError, requireTargetCompany } from "@/lib/session";
+import { apiViewerFor, jsonError } from "@/lib/api";
 import { csvResponse } from "@/lib/csv";
 import { buildKpiDetailCsv, buildMembersCsv, buildResponsesCsv, buildResultsCsv } from "@/lib/export";
 
@@ -24,7 +24,10 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const q = querySchema.parse(Object.fromEntries(url.searchParams));
-    const viewer = await apiViewer(q.type === "responses" || q.type === "members" ? "COMPANY_ADMIN" : "MANAGER");
+    // 回答・社員の書き出しは会社の個人情報をまとめて出すので、評価の書き出しより強い操作として分ける
+    const viewer = await apiViewerFor(
+      q.type === "responses" || q.type === "members" ? "exports.companyData" : "exports.evaluationData",
+    );
 
     const companyId = requireTargetCompany(viewer, q.companyId);
 

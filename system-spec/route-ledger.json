@@ -1,5 +1,5 @@
 {
-  "$schemaNote": "44個の page.tsx の正本台帳。各routeはaccessClassの全state×4roleを、375/768/1280/1600pxの全幅で検証する。",
+  "$schemaNote": "47個の page.tsx の正本台帳。各routeはaccessClassの全state×4roleを、375/768/1280/1600pxの全幅で検証する。accessClasses[].access は役割ごとに画面を開けるか（full・conditional・none）、routes[].permissions はその画面でできる操作と、操作ができる最も弱い役割。sharedOperations は複数の画面で使う操作、publicEndpoints はログインの役割で判定しない入口と理由。権限一覧の画面・ページの入口・サーバー処理・メニューはこの台帳を読む（D-007）。",
   "widths": [
     375,
     768,
@@ -31,6 +31,15 @@
             "EMPLOYEE": "redirect"
           }
         }
+      },
+      "access": {
+        "minRole": null,
+        "byRole": {
+          "SUPER_ADMIN": "none",
+          "COMPANY_ADMIN": "none",
+          "MANAGER": "none",
+          "EMPLOYEE": "none"
+        }
       }
     },
     "login": {
@@ -51,6 +60,15 @@
             "EMPLOYEE": "redirect"
           }
         }
+      },
+      "access": {
+        "minRole": null,
+        "byRole": {
+          "SUPER_ADMIN": "none",
+          "COMPANY_ADMIN": "none",
+          "MANAGER": "none",
+          "EMPLOYEE": "none"
+        }
       }
     },
     "selfStatic": {
@@ -70,6 +88,15 @@
             "MANAGER": "redirect",
             "EMPLOYEE": "redirect"
           }
+        }
+      },
+      "access": {
+        "minRole": "EMPLOYEE",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "full",
+          "MANAGER": "full",
+          "EMPLOYEE": "full"
         }
       }
     },
@@ -98,6 +125,15 @@
             "MANAGER": "redirect",
             "EMPLOYEE": "redirect"
           }
+        }
+      },
+      "access": {
+        "minRole": "EMPLOYEE",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "full",
+          "MANAGER": "full",
+          "EMPLOYEE": "full"
         }
       }
     },
@@ -135,6 +171,17 @@
             "EMPLOYEE": "redirect"
           }
         }
+      },
+      "access": {
+        "minRole": "EMPLOYEE",
+        "byRole": {
+          "SUPER_ADMIN": "conditional",
+          "COMPANY_ADMIN": "conditional",
+          "MANAGER": "conditional",
+          "EMPLOYEE": "conditional"
+        },
+        "condition": "自分の等級あてのアンケート、またはすでに回答したアンケートだけ",
+        "conditionRef": "src/lib/domain/form-entry.ts#canAnswerForm"
       }
     },
     "selfResponse": {
@@ -187,6 +234,17 @@
             "EMPLOYEE": "redirect"
           }
         }
+      },
+      "access": {
+        "minRole": "EMPLOYEE",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "full",
+          "MANAGER": "conditional",
+          "EMPLOYEE": "conditional"
+        },
+        "condition": "自分の回答と、マネージャーは自分の部下が提出した回答だけ（下書きは本人だけ）",
+        "conditionRef": "src/lib/domain/evaluation-authority.ts#canReadResponseBody"
       }
     },
     "selfResult": {
@@ -223,6 +281,17 @@
             "EMPLOYEE": "redirect"
           }
         }
+      },
+      "access": {
+        "minRole": "EMPLOYEE",
+        "byRole": {
+          "SUPER_ADMIN": "conditional",
+          "COMPANY_ADMIN": "conditional",
+          "MANAGER": "conditional",
+          "EMPLOYEE": "conditional"
+        },
+        "condition": "自分の評価で、確定したものだけ",
+        "conditionRef": "src/lib/domain/evaluation-authority.ts#canReadSelfResult"
       }
     },
     "managerStatic": {
@@ -242,6 +311,15 @@
             "MANAGER": "redirect",
             "EMPLOYEE": "redirect"
           }
+        }
+      },
+      "access": {
+        "minRole": "MANAGER",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "full",
+          "MANAGER": "full",
+          "EMPLOYEE": "none"
         }
       }
     },
@@ -279,6 +357,17 @@
             "EMPLOYEE": "redirect"
           }
         }
+      },
+      "access": {
+        "minRole": "MANAGER",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "full",
+          "MANAGER": "conditional",
+          "EMPLOYEE": "none"
+        },
+        "condition": "マネージャーは自分と自分の部下だけ",
+        "conditionRef": "src/lib/domain/evaluation-authority.ts#canReadEmployee"
       }
     },
     "managerEvaluationSubject": {
@@ -315,6 +404,17 @@
             "EMPLOYEE": "redirect"
           }
         }
+      },
+      "access": {
+        "minRole": "MANAGER",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "full",
+          "MANAGER": "conditional",
+          "EMPLOYEE": "none"
+        },
+        "condition": "マネージャーは自分の部下の評価だけ（自分の評価は扱えない）",
+        "conditionRef": "src/lib/domain/evaluation-authority.ts#canActOnEmployeeEvaluation"
       }
     },
     "companyAdminStatic": {
@@ -334,6 +434,15 @@
             "MANAGER": "redirect",
             "EMPLOYEE": "redirect"
           }
+        }
+      },
+      "access": {
+        "minRole": "COMPANY_ADMIN",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "full",
+          "MANAGER": "none",
+          "EMPLOYEE": "none"
         }
       }
     },
@@ -363,6 +472,15 @@
             "EMPLOYEE": "redirect"
           }
         }
+      },
+      "access": {
+        "minRole": "COMPANY_ADMIN",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "full",
+          "MANAGER": "none",
+          "EMPLOYEE": "none"
+        }
       }
     },
     "superStatic": {
@@ -382,6 +500,15 @@
             "MANAGER": "redirect",
             "EMPLOYEE": "redirect"
           }
+        }
+      },
+      "access": {
+        "minRole": "SUPER_ADMIN",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "none",
+          "MANAGER": "none",
+          "EMPLOYEE": "none"
         }
       }
     },
@@ -410,6 +537,15 @@
             "MANAGER": "redirect",
             "EMPLOYEE": "redirect"
           }
+        }
+      },
+      "access": {
+        "minRole": "SUPER_ADMIN",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "none",
+          "MANAGER": "none",
+          "EMPLOYEE": "none"
         }
       }
     },
@@ -455,6 +591,15 @@
             "EMPLOYEE": "redirect"
           }
         }
+      },
+      "access": {
+        "minRole": null,
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "full",
+          "MANAGER": "full",
+          "EMPLOYEE": "full"
+        }
       }
     },
     "legacyRedirect": {
@@ -475,9 +620,131 @@
             "EMPLOYEE": "redirect"
           }
         }
+      },
+      "access": {
+        "minRole": null,
+        "byRole": {
+          "SUPER_ADMIN": "none",
+          "COMPANY_ADMIN": "none",
+          "MANAGER": "none",
+          "EMPLOYEE": "none"
+        }
       }
     }
   },
+  "sharedOperations": [
+    {
+      "id": "formExtensions.manage",
+      "label": "回答の締め切りを延ばす",
+      "minRole": "MANAGER",
+      "actions": [
+        "actions/form-extensions.ts#grantFormExtension",
+        "actions/form-extensions.ts#revokeFormExtension"
+      ],
+      "description": "締め切りを過ぎた人に、回答できる期間を個別に延ばす・取り消す。"
+    },
+    {
+      "id": "credentialMemos.reveal",
+      "label": "初期パスワードの控えを見る",
+      "minRole": "COMPANY_ADMIN",
+      "actions": [
+        "actions/credential-memos.ts#revealCredentialMemo"
+      ],
+      "description": "登録したときの初期パスワードの控えを表示する。全体管理者は会社をまたいで見られる。"
+    },
+    {
+      "id": "improvements.submit",
+      "label": "改善要望を送る",
+      "minRole": "EMPLOYEE",
+      "actions": [
+        "actions/improvements.ts#submitImprovement",
+        "api/improvements#POST"
+      ],
+      "description": "どの画面からでも「ここが使いにくい」を送る。"
+    },
+    {
+      "id": "usage.record",
+      "label": "画面の利用を記録する",
+      "minRole": "EMPLOYEE",
+      "actions": [
+        "api/usage#POST"
+      ],
+      "description": "どの画面をどれだけ使ったかを記録する（利用状況の集計に使う）。"
+    },
+    {
+      "id": "companyScope.switch",
+      "label": "操作する会社を選ぶ",
+      "minRole": "EMPLOYEE",
+      "actions": [
+        "actions/company-scope.ts#switchCompanyScope"
+      ],
+      "description": "どの会社の画面を操作するかを選ぶ。全体管理者は有効な会社ならどこでも、ほかの役割は自分が所属している会社だけ。"
+    },
+    {
+      "id": "search.run",
+      "label": "画面を検索する",
+      "minRole": "EMPLOYEE",
+      "actions": [
+        "api/search#GET"
+      ],
+      "description": "ヘッダーの検索から、画面と人を探す。探せる人の範囲は役割で決まる。"
+    },
+    {
+      "id": "search.people",
+      "label": "人を検索する",
+      "minRole": "MANAGER",
+      "actions": [],
+      "description": "検索で人を探す。一般の方は他の人の一覧を見られないので、人は探せない。"
+    },
+    {
+      "id": "appearance.save",
+      "label": "画面の外観を保存する",
+      "minRole": "EMPLOYEE",
+      "actions": [
+        "api/theme-choice#PUT"
+      ],
+      "description": "明るさと配色の選択を、自分の設定として保存する。"
+    },
+    {
+      "id": "appearance.read",
+      "label": "外観の選択を集計する",
+      "minRole": "SUPER_ADMIN",
+      "actions": [
+        "api/theme-choice#GET"
+      ],
+      "description": "利用者が選んだ明るさと配色の内訳を見る。"
+    }
+  ],
+  "publicEndpoints": [
+    {
+      "api": "api/auth/[...all]#GET",
+      "reason": "ログインの前に使う認証の入口（Better Auth）。役割はログインのあとに決まる。"
+    },
+    {
+      "api": "api/auth/[...all]#POST",
+      "reason": "ログインの前に使う認証の入口（Better Auth）。役割はログインのあとに決まる。"
+    },
+    {
+      "api": "api/improvements#GET",
+      "reason": "Claude Code が連携の鍵で改善要望を受け取る入口。ログインの役割ではなく、鍵の検証で通す。"
+    },
+    {
+      "api": "api/improvements#PATCH",
+      "reason": "Claude Code が連携の鍵で改善要望の対応結果を返す入口。ログインの役割ではなく、鍵の検証で通す。"
+    },
+    {
+      "api": "api/agent/token#POST",
+      "reason": "Claude Code が承認済みの番号と引き換えに鍵を受け取る入口。番号の検証で通す。"
+    },
+    {
+      "api": "api/agent/device#POST",
+      "reason": "Claude Code が接続の番号を発行してもらう入口。ログインの前に使う。"
+    },
+    {
+      "api": "api/agent/device#PUT",
+      "reason": "Claude Code が接続の承認を待つ入口。番号の検証で通す。"
+    }
+  ],
   "routes": [
     {
       "path": "/",
@@ -485,7 +752,11 @@
       "accessClass": "rootRouter",
       "widthPolicy": "all",
       "purpose": "役割別ホームへ振り分ける",
-      "subject": "ログイン中の本人"
+      "subject": "ログイン中の本人",
+      "permissions": {
+        "summary": "ログインしている人を、役割ごとのホームへ案内するだけの入口。",
+        "operations": []
+      }
     },
     {
       "path": "/login",
@@ -493,7 +764,11 @@
       "accessClass": "login",
       "widthPolicy": "all",
       "purpose": "メールとパスワードでログインする",
-      "subject": "未ログイン利用者"
+      "subject": "未ログイン利用者",
+      "permissions": {
+        "summary": "メールとパスワードでログインする。ログインの前に開く。",
+        "operations": []
+      }
     },
     {
       "path": "/account",
@@ -501,7 +776,21 @@
       "accessClass": "selfStatic",
       "widthPolicy": "all",
       "purpose": "自分の情報を確認・許可範囲で更新する",
-      "subject": "ログイン中の本人"
+      "subject": "ログイン中の本人",
+      "permissions": {
+        "summary": "自分の情報を見て、会社が許した項目だけ自分で変える。",
+        "operations": [
+          {
+            "id": "account.updateProfile",
+            "label": "自分の情報を変える",
+            "minRole": "EMPLOYEE",
+            "actions": [
+              "actions/account.ts#updateOwnProfile"
+            ],
+            "description": "会社が「本人が変更できる」とした項目だけを、自分で書き換える。"
+          }
+        ]
+      }
     },
     {
       "path": "/account/password",
@@ -509,7 +798,21 @@
       "accessClass": "selfStatic",
       "widthPolicy": "all",
       "purpose": "自分のパスワードを変更する",
-      "subject": "ログイン中の本人"
+      "subject": "ログイン中の本人",
+      "permissions": {
+        "summary": "自分のパスワードを変える。",
+        "operations": [
+          {
+            "id": "account.changePassword",
+            "label": "パスワードを変える",
+            "minRole": "EMPLOYEE",
+            "actions": [
+              "actions/account.ts#changeOwnPassword"
+            ],
+            "description": "いまのパスワードを確かめてから、新しいパスワードにする。"
+          }
+        ]
+      }
     },
     {
       "path": "/forms",
@@ -517,7 +820,11 @@
       "accessClass": "selfStatic",
       "widthPolicy": "all",
       "purpose": "自社アンケートの中身を一覧で確認する",
-      "subject": "操作対象会社のアンケート"
+      "subject": "操作対象会社のアンケート",
+      "permissions": {
+        "summary": "自分の会社のアンケートの中身（設問）を一覧で読む。配点と昇格の条件は出さない。",
+        "operations": []
+      }
     },
     {
       "path": "/forms/[id]",
@@ -525,7 +832,11 @@
       "accessClass": "formContent",
       "widthPolicy": "all",
       "purpose": "アンケート1本の設問内容を読む",
-      "subject": "操作対象会社のアンケート"
+      "subject": "操作対象会社のアンケート",
+      "permissions": {
+        "summary": "アンケート1本の設問を読む。回答はできない。",
+        "operations": []
+      }
     },
     {
       "path": "/me",
@@ -533,7 +844,11 @@
       "accessClass": "selfStatic",
       "widthPolicy": "all",
       "purpose": "自分の次の回答と確定結果を確認する",
-      "subject": "ログイン中の本人"
+      "subject": "ログイン中の本人",
+      "permissions": {
+        "summary": "次に答えるアンケートと、確定した評価を確かめる。",
+        "operations": []
+      }
     },
     {
       "path": "/me/forms",
@@ -541,7 +856,14 @@
       "accessClass": "selfStatic",
       "widthPolicy": "all",
       "purpose": "自分が回答するアンケートを確認する",
-      "subject": "ログイン中の本人"
+      "subject": "ログイン中の本人",
+      "permissions": {
+        "summary": "自分が答えるアンケートの一覧を見る。",
+        "operations": []
+      },
+      "navHiddenFor": [
+        "SUPER_ADMIN"
+      ]
     },
     {
       "path": "/me/forms/[id]",
@@ -549,7 +871,21 @@
       "accessClass": "selfForm",
       "widthPolicy": "all",
       "purpose": "自分のアンケートへ回答する",
-      "subject": "本人の等級対象または本人が回答済みのアンケート"
+      "subject": "本人の等級対象または本人が回答済みのアンケート",
+      "permissions": {
+        "summary": "自分あてのアンケートに答え、下書き保存・提出する。",
+        "operations": [
+          {
+            "id": "responses.save",
+            "label": "アンケートに答える",
+            "minRole": "EMPLOYEE",
+            "actions": [
+              "actions/responses.ts#saveResponse"
+            ],
+            "description": "自分の回答を下書き保存し、締め切りまでに提出する。"
+          }
+        ]
+      }
     },
     {
       "path": "/me/responses/[id]",
@@ -557,7 +893,11 @@
       "accessClass": "selfResponse",
       "widthPolicy": "all",
       "purpose": "回答時点の設問と回答本文を読み返す",
-      "subject": "本人の回答、または閲覧を許された提出済み回答"
+      "subject": "本人の回答、または閲覧を許された提出済み回答",
+      "permissions": {
+        "summary": "提出した回答を、答えたときの設問のまま読み返す。",
+        "operations": []
+      }
     },
     {
       "path": "/me/results",
@@ -565,7 +905,14 @@
       "accessClass": "selfStatic",
       "widthPolicy": "all",
       "purpose": "自分の確定済み評価を一覧する",
-      "subject": "ログイン中の本人"
+      "subject": "ログイン中の本人",
+      "permissions": {
+        "summary": "自分の確定した評価を一覧で見る。",
+        "operations": []
+      },
+      "navHiddenFor": [
+        "SUPER_ADMIN"
+      ]
     },
     {
       "path": "/me/results/[id]",
@@ -573,7 +920,11 @@
       "accessClass": "selfResult",
       "widthPolicy": "all",
       "purpose": "自分の確定済み評価の根拠を読む",
-      "subject": "本人の確定済み評価"
+      "subject": "本人の確定済み評価",
+      "permissions": {
+        "summary": "自分の確定した評価1件の点数と根拠を読む。",
+        "operations": []
+      }
     },
     {
       "path": "/f/[token]",
@@ -581,7 +932,11 @@
       "accessClass": "publicToken",
       "widthPolicy": "all",
       "purpose": "配布URLから回答または内容確認へ案内する",
-      "subject": "操作対象会社の配布トークン"
+      "subject": "操作対象会社の配布トークン",
+      "permissions": {
+        "summary": "配られたURLから、回答の画面または内容の確認へ案内する。",
+        "operations": []
+      }
     },
     {
       "path": "/criteria",
@@ -589,7 +944,11 @@
       "accessClass": "managerStatic",
       "widthPolicy": "all",
       "purpose": "評価基準を確認する",
-      "subject": "操作対象会社の評価基準"
+      "subject": "操作対象会社の評価基準",
+      "permissions": {
+        "summary": "評価の基準（等級ごとの配点と要件）を読む。",
+        "operations": []
+      }
     },
     {
       "path": "/manager",
@@ -597,7 +956,11 @@
       "accessClass": "managerStatic",
       "widthPolicy": "all",
       "purpose": "担当者の次の評価作業を確認する",
-      "subject": "管理者は自社全員、マネージャーは直属部下"
+      "subject": "管理者は自社全員、マネージャーは直属部下",
+      "permissions": {
+        "summary": "担当する評価の、次にやることを確かめる。",
+        "operations": []
+      }
     },
     {
       "path": "/manager/cycles",
@@ -605,7 +968,30 @@
       "accessClass": "managerStatic",
       "widthPolicy": "all",
       "purpose": "評価期間ごとの提出・評価状況を確認する",
-      "subject": "管理者は自社全員、マネージャーは直属部下"
+      "subject": "管理者は自社全員、マネージャーは直属部下",
+      "permissions": {
+        "summary": "評価期間ごとに、提出と評価の進み具合を見て、評価を作る。",
+        "operations": [
+          {
+            "id": "evaluations.build",
+            "label": "評価を作る",
+            "minRole": "MANAGER",
+            "actions": [
+              "actions/evaluations.ts#buildEvaluations"
+            ],
+            "description": "提出された回答から、部下の評価の下書きを作る。"
+          },
+          {
+            "id": "exports.evaluationData",
+            "label": "評価をCSVで書き出す",
+            "minRole": "MANAGER",
+            "actions": [
+              "api/export#GET"
+            ],
+            "description": "評価期間の評価の一覧をCSVで書き出す。マネージャーは自分の部下の分だけ。"
+          }
+        ]
+      }
     },
     {
       "path": "/manager/members",
@@ -613,7 +999,19 @@
       "accessClass": "managerStatic",
       "widthPolicy": "all",
       "purpose": "評価対象メンバーを一覧する",
-      "subject": "管理者は自社全員、マネージャーは直属部下"
+      "subject": "管理者は自社全員、マネージャーは直属部下",
+      "permissions": {
+        "summary": "評価するメンバーを一覧する。",
+        "operations": [
+          {
+            "id": "members.viewGradeScore",
+            "label": "等級と最新の点数を見る",
+            "minRole": "MANAGER",
+            "actions": [],
+            "description": "一覧で、メンバーの等級と、最後に確定した評価の点数を見る。一般の方の画面には出さない。"
+          }
+        ]
+      }
     },
     {
       "path": "/manager/members/[id]",
@@ -621,7 +1019,21 @@
       "accessClass": "managerMemberSubject",
       "widthPolicy": "all",
       "purpose": "メンバーのプロフィールと評価推移を読む",
-      "subject": "管理者は自社社員、マネージャーは本人または直属部下"
+      "subject": "管理者は自社社員、マネージャーは本人または直属部下",
+      "permissions": {
+        "summary": "メンバー1人のプロフィールと、評価の移り変わりを読む。",
+        "operations": [
+          {
+            "id": "notes.create",
+            "label": "メモを残す",
+            "minRole": "MANAGER",
+            "actions": [
+              "actions/notes.ts#createNote"
+            ],
+            "description": "メンバーについての面談などのメモを残す。"
+          }
+        ]
+      }
     },
     {
       "path": "/manager/evaluations/[id]",
@@ -629,7 +1041,21 @@
       "accessClass": "managerEvaluationSubject",
       "widthPolicy": "all",
       "purpose": "評価根拠を確認して確定・差し戻す",
-      "subject": "管理者は自社評価、マネージャーは直属部下の評価"
+      "subject": "管理者は自社評価、マネージャーは直属部下の評価",
+      "permissions": {
+        "summary": "評価1件の根拠を確かめ、点を付けて確定する・差し戻す。",
+        "operations": [
+          {
+            "id": "evaluations.update",
+            "label": "評価を付けて確定する",
+            "minRole": "MANAGER",
+            "actions": [
+              "actions/evaluations.ts#updateEvaluation"
+            ],
+            "description": "評価の点とコメントを保存し、確定または差し戻しをする。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin",
@@ -637,7 +1063,11 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "制度と評価運用の詰まりを確認する",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "制度の設定と評価の運用で、止まっているところを確かめる。",
+        "operations": []
+      }
     },
     {
       "path": "/admin/setup",
@@ -645,7 +1075,11 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "制度設定を依存順に進める",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "制度の設定を、依存する順番に進める。",
+        "operations": []
+      }
     },
     {
       "path": "/admin/masters",
@@ -653,7 +1087,30 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "等級を設定する",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "等級（名前・並び・配点の区分）を設定する。等級名を変えられるのは会社の管理者以上。",
+        "operations": [
+          {
+            "id": "masters.save",
+            "label": "制度の設定を保存する",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/masters.ts#saveMaster"
+            ],
+            "description": "等級名・等級要件・昇格の条件・行動指針・KGI・昇給など、制度の設定を保存する。"
+          },
+          {
+            "id": "masters.deleteItem",
+            "label": "制度の設定を消す",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/masters.ts#deleteMasterItem"
+            ],
+            "description": "使われていない制度の設定を1件消す。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/masters/requirements",
@@ -661,7 +1118,11 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "等級要件を設定する",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "等級要件（支援・運営）を設定する。保存は「制度の設定を保存する」と同じ操作。",
+        "operations": []
+      }
     },
     {
       "path": "/admin/masters/promotion",
@@ -669,7 +1130,11 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "昇格の条件と要件を設定する",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "昇格の条件と要件を設定する。保存は「制度の設定を保存する」と同じ操作。",
+        "operations": []
+      }
     },
     {
       "path": "/admin/masters/kpi-categories",
@@ -677,7 +1142,11 @@
       "accessClass": "legacyRedirect",
       "widthPolicy": "all",
       "purpose": "旧KPIカテゴリ入口から評価セットへ移す",
-      "subject": "旧URLへ来た利用者"
+      "subject": "旧URLへ来た利用者",
+      "permissions": {
+        "summary": "古い入口。KPI・評価セットの画面へ移すだけ。",
+        "operations": []
+      }
     },
     {
       "path": "/admin/behavior",
@@ -685,7 +1154,11 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "行動指針を設定する",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "行動指針と、等級ごとに使う基準セットを設定する。保存は「制度の設定を保存する」と同じ操作。",
+        "operations": []
+      }
     },
     {
       "path": "/admin/scheme",
@@ -693,7 +1166,21 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "KPI・評価セットの進捗を確認する",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "KPI・評価セットの進み具合を見て、共通の設定を保存する。",
+        "operations": [
+          {
+            "id": "scheme.save",
+            "label": "KPI・評価セットを保存する",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/scheme.ts#saveScheme"
+            ],
+            "description": "等級の区分ごとに使うKPIと、その基準を保存する。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/scheme/[group]",
@@ -701,7 +1188,11 @@
       "accessClass": "companyAdminSubject",
       "widthPolicy": "all",
       "purpose": "等級区分で使うKPIを選ぶ",
-      "subject": "操作対象会社の有効な等級区分"
+      "subject": "操作対象会社の有効な等級区分",
+      "permissions": {
+        "summary": "等級の区分で使うKPIを選ぶ。",
+        "operations": []
+      }
     },
     {
       "path": "/admin/scheme/[group]/criteria",
@@ -709,7 +1200,11 @@
       "accessClass": "companyAdminSubject",
       "widthPolicy": "all",
       "purpose": "選んだKPIのA〜E基準を決める",
-      "subject": "操作対象会社の有効な等級区分"
+      "subject": "操作対象会社の有効な等級区分",
+      "permissions": {
+        "summary": "選んだKPIの A〜E の基準を決める。",
+        "operations": []
+      }
     },
     {
       "path": "/admin/cycles",
@@ -717,7 +1212,30 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "評価期間を作成・開始・締め切る",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "評価期間を作り、始める・締め切る。",
+        "operations": [
+          {
+            "id": "cycles.create",
+            "label": "評価期間を作る",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/cycles.ts#createCycle"
+            ],
+            "description": "新しい評価期間を作る。"
+          },
+          {
+            "id": "cycles.updateStatus",
+            "label": "評価期間を始める・締め切る",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/cycles.ts#updateCycleStatus"
+            ],
+            "description": "評価期間の状態（準備中・実施中・締め切り）を変える。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/forms",
@@ -725,7 +1243,30 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "アンケートを作成・公開・締め切る",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "アンケートを作り、公開・締め切る。",
+        "operations": [
+          {
+            "id": "forms.create",
+            "label": "アンケートを作る",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/forms.ts#createForms"
+            ],
+            "description": "評価期間の等級ごとに、アンケートをまとめて作る。"
+          },
+          {
+            "id": "forms.update",
+            "label": "アンケートを公開・締め切る",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/forms.ts#updateForm"
+            ],
+            "description": "アンケートの題名・締め切り・状態を変える。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/forms/[id]",
@@ -733,7 +1274,30 @@
       "accessClass": "companyAdminSubject",
       "widthPolicy": "all",
       "purpose": "アンケートの設問を組み立てる",
-      "subject": "操作対象会社のアンケート"
+      "subject": "操作対象会社のアンケート",
+      "permissions": {
+        "summary": "アンケートの設問を組み立てる。",
+        "operations": [
+          {
+            "id": "forms.rebuildQuestions",
+            "label": "設問を作り直す",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/forms.ts#rebuildFormQuestions"
+            ],
+            "description": "制度の設定から、設問を作り直す。"
+          },
+          {
+            "id": "forms.saveQuestions",
+            "label": "設問を保存する",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/forms.ts#saveFormQuestions"
+            ],
+            "description": "設問の文・選択肢・並びを保存する。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/forms/[id]/responses",
@@ -741,7 +1305,22 @@
       "accessClass": "companyAdminSubject",
       "widthPolicy": "all",
       "purpose": "アンケートの提出状況と回答を確認する",
-      "subject": "操作対象会社のアンケート"
+      "subject": "操作対象会社のアンケート",
+      "permissions": {
+        "summary": "アンケートの提出・未提出と回答を確かめ、CSVで取り込む。",
+        "operations": [
+          {
+            "id": "responses.import",
+            "label": "回答をCSVで取り込む",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/response-import.ts#previewResponsesImport",
+              "actions/response-import.ts#importResponses"
+            ],
+            "description": "CSVの回答を確かめてから取り込む。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/members",
@@ -749,7 +1328,40 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "社員を一覧・登録する",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "社員を一覧し、登録する・CSVで取り込む・書き出す。",
+        "operations": [
+          {
+            "id": "members.create",
+            "label": "社員を登録する",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/members.ts#createMember"
+            ],
+            "description": "社員を1人登録する。"
+          },
+          {
+            "id": "members.import",
+            "label": "社員をCSVで取り込む",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/member-import.ts#previewMembersImport",
+              "actions/member-import.ts#importMembers"
+            ],
+            "description": "CSVの社員を確かめてから取り込む。"
+          },
+          {
+            "id": "exports.companyData",
+            "label": "社員と回答をCSVで書き出す",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "api/export#GET"
+            ],
+            "description": "社員の一覧と、アンケートの回答をCSVで書き出す。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/members/policy",
@@ -757,7 +1369,21 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "本人が変更できるプロフィール項目を決める",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "社員本人が変えられるプロフィールの項目を決める。",
+        "operations": [
+          {
+            "id": "members.saveProfilePolicy",
+            "label": "本人が変えられる項目を決める",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/masters.ts#saveProfilePolicy"
+            ],
+            "description": "本人が自分で変えられるプロフィールの項目を保存する。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/improvements",
@@ -765,7 +1391,30 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "各画面から届いた改善要望を読み、対応状況を決める",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "各画面から届いた改善要望を読み、対応を決める。",
+        "operations": [
+          {
+            "id": "improvements.handOut",
+            "label": "改善要望を開発へ渡す",
+            "minRole": "SUPER_ADMIN",
+            "actions": [
+              "actions/improvements.ts#handOutImprovement"
+            ],
+            "description": "改善要望を、Claude Code への作業指示として渡す。"
+          },
+          {
+            "id": "improvements.dispose",
+            "label": "改善要望の扱いを決める",
+            "minRole": "SUPER_ADMIN",
+            "actions": [
+              "actions/improvements.ts#disposeImprovement"
+            ],
+            "description": "改善要望を見送る・まとめるなど、扱いを決める。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/improvements/[id]",
@@ -773,7 +1422,22 @@
       "accessClass": "companyAdminSubject",
       "widthPolicy": "all",
       "purpose": "要望1件の内容と画面の写しを読み、対応状況を変える",
-      "subject": "改善要望1件"
+      "subject": "改善要望1件",
+      "permissions": {
+        "summary": "改善要望1件の内容と画面の写しを読み、対応の状態を変える。",
+        "operations": [
+          {
+            "id": "improvements.updateStatus",
+            "label": "改善要望の状態を変える",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/improvements.ts#updateImprovementStatus",
+              "api/improvements/[id]#PATCH"
+            ],
+            "description": "改善要望の対応の状態（受付・対応中・完了など）を変える。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/members/[id]",
@@ -781,7 +1445,30 @@
       "accessClass": "companyAdminSubject",
       "widthPolicy": "all",
       "purpose": "社員情報と利用状態を管理する",
-      "subject": "操作対象会社の社員"
+      "subject": "操作対象会社の社員",
+      "permissions": {
+        "summary": "社員1人の情報と、使える状態を管理する。",
+        "operations": [
+          {
+            "id": "members.update",
+            "label": "社員の情報を変える",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/members.ts#updateMember"
+            ],
+            "description": "社員の名前・役割・等級・上長・使える状態を変える。"
+          },
+          {
+            "id": "memberships.remove",
+            "label": "この会社の所属を外す",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/memberships.ts#removeMembership"
+            ],
+            "description": "他の会社にも所属している社員を、この会社の所属から外す。部下が残っているときは外せない。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/kgi",
@@ -789,7 +1476,21 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "事業所KGI達成率と係数を設定する",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "事業所KGIの達成率と係数を設定する。",
+        "operations": [
+          {
+            "id": "kgi.saveResult",
+            "label": "KGIの達成率を保存する",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/kgi-results.ts#saveKgiResult"
+            ],
+            "description": "評価期間ごとの事業所KGIの達成率を保存する。"
+          }
+        ]
+      }
     },
     {
       "path": "/admin/raises",
@@ -797,7 +1498,11 @@
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
       "purpose": "昇給条件と金額を設定する",
-      "subject": "操作対象会社"
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "昇給の条件と金額を設定する。保存は「制度の設定を保存する」と同じ操作。",
+        "operations": []
+      }
     },
     {
       "path": "/system",
@@ -805,7 +1510,11 @@
       "accessClass": "superStatic",
       "widthPolicy": "all",
       "purpose": "全社の稼働状況を確認する",
-      "subject": "全会社"
+      "subject": "全会社",
+      "permissions": {
+        "summary": "全社の動きを確かめ、操作する会社を選ぶ。",
+        "operations": []
+      }
     },
     {
       "path": "/system/companies",
@@ -813,7 +1522,30 @@
       "accessClass": "superStatic",
       "widthPolicy": "all",
       "purpose": "会社を一覧・追加・停止する",
-      "subject": "全会社"
+      "subject": "全会社",
+      "permissions": {
+        "summary": "会社を一覧し、追加・停止する。",
+        "operations": [
+          {
+            "id": "companies.create",
+            "label": "会社を追加する",
+            "minRole": "SUPER_ADMIN",
+            "actions": [
+              "actions/companies.ts#createCompany"
+            ],
+            "description": "新しい会社を追加する。"
+          },
+          {
+            "id": "companies.update",
+            "label": "会社の情報を変える",
+            "minRole": "SUPER_ADMIN",
+            "actions": [
+              "actions/companies.ts#updateCompany"
+            ],
+            "description": "会社の名前・使える状態を変える。"
+          }
+        ]
+      }
     },
     {
       "path": "/system/users",
@@ -821,7 +1553,21 @@
       "accessClass": "superStatic",
       "widthPolicy": "all",
       "purpose": "全利用者を会社別に一覧する",
-      "subject": "全会社の利用者"
+      "subject": "全会社の利用者",
+      "permissions": {
+        "summary": "全ての利用者を会社ごとに一覧し、追加する。",
+        "operations": [
+          {
+            "id": "systemUsers.create",
+            "label": "利用者を追加する",
+            "minRole": "SUPER_ADMIN",
+            "actions": [
+              "actions/system-users.ts#createSystemUser"
+            ],
+            "description": "会社をまたいで利用者を追加する。"
+          }
+        ]
+      }
     },
     {
       "path": "/system/users/[id]",
@@ -829,7 +1575,30 @@
       "accessClass": "superSubject",
       "widthPolicy": "all",
       "purpose": "利用者の役割・所属・利用状態を管理する",
-      "subject": "存在する利用者"
+      "subject": "存在する利用者",
+      "permissions": {
+        "summary": "利用者1人の役割・所属・使える状態を管理する。",
+        "operations": [
+          {
+            "id": "systemUsers.update",
+            "label": "利用者の役割と所属を変える",
+            "minRole": "SUPER_ADMIN",
+            "actions": [
+              "actions/system-users.ts#updateSystemUser"
+            ],
+            "description": "利用者の役割・所属する会社・使える状態を変える。"
+          },
+          {
+            "id": "memberships.add",
+            "label": "別の会社への所属を足す",
+            "minRole": "SUPER_ADMIN",
+            "actions": [
+              "actions/memberships.ts#addMembership"
+            ],
+            "description": "登録済みの利用者を、別の会社にも所属させる。パスワードは変えず、初期パスワードも発行しない。"
+          }
+        ]
+      }
     },
     {
       "path": "/system/usage",
@@ -837,15 +1606,58 @@
       "accessClass": "superStatic",
       "widthPolicy": "all",
       "purpose": "どの画面で人が詰まっているかを見て、次に直す1画面を決める",
-      "subject": "全会社の利用状況"
+      "subject": "全会社の利用状況",
+      "permissions": {
+        "summary": "どの画面で人が詰まっているかを見て、次に直す画面を決める。",
+        "operations": []
+      }
+    },
+    {
+      "path": "/system/permissions",
+      "label": "権限一覧",
+      "accessClass": "superStatic",
+      "widthPolicy": "all",
+      "purpose": "役割ごとに、どの画面を開けてどの操作ができるかを確かめる",
+      "subject": "全ての役割と画面",
+      "permissions": {
+        "summary": "役割ごとに、どの画面を開けてどの操作ができるかを一覧で確かめる。台帳から作るので、実際の動きと同じ。",
+        "operations": []
+      }
     },
     {
       "path": "/system/agent-keys",
-      "label": "Claude Code 連携の鍵",
+      "label": "Claude Code連携（システム開発者専用）",
       "accessClass": "superStatic",
       "widthPolicy": "all",
-      "purpose": "作業指示文を受け取るための鍵を発行・失効する",
-      "subject": "鍵1本"
+      "purpose": "システム開発者が作業指示文を受け取るための鍵を発行・失効する",
+      "subject": "鍵1本",
+      "permissions": {
+        "summary": "システム開発者が Claude Code から作業指示を受け取るための鍵と接続を管理する。",
+        "operations": [
+          {
+            "id": "agentKeys.manage",
+            "label": "連携の鍵を発行・失効する",
+            "minRole": "SUPER_ADMIN",
+            "actions": [
+              "actions/agent-keys.ts#createAgentKey",
+              "actions/agent-keys.ts#revokeAgentKey",
+              "actions/agent-keys.ts#setAgentEnvKey"
+            ],
+            "description": "Claude Code 連携の鍵を発行・失効し、つなぐ環境を決める。"
+          },
+          {
+            "id": "agentKeys.approveDevice",
+            "label": "Claude Code の接続を承認する",
+            "minRole": "SUPER_ADMIN",
+            "actions": [
+              "actions/agent-keys.ts#checkDeviceCode",
+              "actions/agent-keys.ts#approveDevice",
+              "actions/agent-keys.ts#revokeAgentSession"
+            ],
+            "description": "Claude Code に表示された番号を確かめて接続を承認し、不要になった接続を切る。"
+          }
+        ]
+      }
     }
   ]
 }

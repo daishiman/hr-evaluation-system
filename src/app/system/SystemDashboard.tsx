@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { StalledByCompanyNotice } from "@/components/StalledEvaluationsNotice";
-import { Badge, Bar, Card, CardRow, Disclosure, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
+import { Badge, Card, CardRow, Disclosure, EmptyState, LinkButton, Num, PageTitle, SectionHeading } from "@/components/ui";
 import { PALETTE_LABELS, PALETTES } from "@/lib/palette";
 import type { ThemePreferenceUsage } from "@/lib/theme-preferences";
 
@@ -43,6 +43,7 @@ export function SystemDashboard({
   scopeControl,
   stalledByCompany = [],
   themeUsage = { activeUsers: 0, measuredUsers: 0, coverageRate: 0, rows: [] },
+  totalActiveUsers,
 }: {
   companies: SystemCompanySummary[];
   selectedCompanyId: string | null;
@@ -51,12 +52,17 @@ export function SystemDashboard({
   stalledByCompany?: { companyId: string; companyName: string; total: number; worstDays: number | null; long: number }[];
   /** 外観の現在設定。個人を特定できる値は含まない。 */
   themeUsage?: ThemePreferenceUsage;
+  /**
+   * 利用中のアカウントの合計（人で数えた値）。2社に所属する人を2回数えないよう、呼び出し側で数えて渡す。
+   * 渡されないときは会社ごとの人数を足す（1人1社のときと同じ値）。
+   */
+  totalActiveUsers?: number;
 }) {
   const selected = companies.find((company) => company.id === selectedCompanyId) ?? null;
   const activeCompanies = companies.filter((company) => company.isActive);
   // 停止済みの会社は運用対象ではないため、「先に直す未設定」には混ぜない。
   const needsAttention = companies.filter((company) => company.isActive && companySetupIssues(company).length > 0);
-  const totalActiveUsers = companies.reduce((sum, company) => sum + company.activeUsers, 0);
+  const activeUserTotal = totalActiveUsers ?? companies.reduce((sum, company) => sum + company.activeUsers, 0);
   const paletteUsage = PALETTES.map((palette) => {
     const users = themeUsage.rows
       .filter((row) => row.palette === palette)
@@ -108,7 +114,8 @@ export function SystemDashboard({
             <div>{scopeControl}</div>
             {selected ? (
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
+                {/* 状態の札は会社名と同じ行の右端に置く。名前のすぐ後ろに詰めると、行の右側が空く（spec.md §28-9） */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="todo-row-title m-0 text-strong">{selected.name}</p>
                   <CompanyState company={selected} />
                 </div>
@@ -117,8 +124,25 @@ export function SystemDashboard({
                 <p className="todo-row-sub m-0 mt-1">
                   事業の種類 {selected.businessType} ／ 在籍 {selected.activeUsers}人 ／ 評価期間 {selected.cycles}件
                 </p>
-                <div className="mt-3 max-w-xl">
-                  <Bar value={selected.activeUsers} max={selected.users} label="利用中のアカウント" />
+                {/* 何の割合かを左、人数を右に置いてから棒を出す（下の「配色の利用状況」と同じ並び）。
+                    人数を棒の下の左に置くと、その段の右側がまるごと空く（spec.md §28-9） */}
+                <div className="mt-3">
+                  <div className="flex items-baseline justify-between gap-3 text-note text-ink-muted">
+                    <span>利用中のアカウント</span>
+                    <span className="tnum">
+                      <Num value={selected.activeUsers} /> / <Num value={selected.users} unit="人" />
+                    </span>
+                  </div>
+                  <div
+                    className="bar-track mt-1"
+                    role="img"
+                    aria-label={`利用中のアカウント ${selected.users}人中 ${selected.activeUsers}人`}
+                  >
+                    <div
+                      className="bar-fill"
+                      style={{ width: `${selected.users > 0 ? Math.min(100, (selected.activeUsers / selected.users) * 100) : 0}%` }}
+                    />
+                  </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <LinkButton href={`/system/users?company=${selected.id}`}>利用者を確認する</LinkButton>
@@ -135,10 +159,13 @@ export function SystemDashboard({
         </Card>
       )}
 
-      <SectionHeading>先に確認すること</SectionHeading>
-      {needsAttention.length === 0 ? (
-        <p className="footnote">運用を止めている未設定はありません。</p>
-      ) : (
+      {/* 未設定が無いときは、その旨を見出しの右端に添える。見出しの下に1行で置くと、行の右側が空く（spec.md §28-9） */}
+      <SectionHeading
+        aside={needsAttention.length === 0 ? <span className="footnote">運用を止めている未設定はありません。</span> : undefined}
+      >
+        先に確認すること
+      </SectionHeading>
+      {needsAttention.length > 0 && (
         <div className="card-grid">
           {needsAttention.map((company) => {
             const issues = companySetupIssues(company);
@@ -167,7 +194,7 @@ export function SystemDashboard({
         </Link>
         <Link href="/system/users" className="kpi no-underline">
           <div className="kpi-label">利用中のアカウント</div>
-          <div className="kpi-value"><Num value={totalActiveUsers} unit="人" /></div>
+          <div className="kpi-value"><Num value={activeUserTotal} unit="人" /></div>
         </Link>
       </div>
 

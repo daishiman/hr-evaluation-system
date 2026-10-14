@@ -71,7 +71,8 @@ export async function copyCompanyMasters(
   await copyRows(offices, "off", toCompanyId, () => ({}), (v) => db.insert(s.offices).values(v as never));
   counts["事業所"] = offices.length;
 
-  /* 等級 */
+  /* 等級（名前はひな形のまま写す。ひな形の等級名は seed と移行 0034 で DEFAULT_GRADE_NAMES の「等級1」〜「等級5-2」になっている。
+     区分（pointGroup）と行動指針の基準セットの名前も同じ値を写し、呼び名は画面で等級名から作る） */
   const grades = await db.select().from(s.grades).where(byCompany(s.grades)).orderBy(asc(s.grades.displayOrder));
   const gradeMap = await copyRows(grades, "grd", toCompanyId, () => ({}), (v) => db.insert(s.grades).values(v as never));
   counts["等級"] = grades.length;

@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import {
   getRaisePolicy,
   listGrades,
@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
  * 金額を変えたときは改定履歴に1行残す（あとから「いつ・いくらから・なぜ」を説明できるようにするため）。
  */
 export default async function AdminRaises({ searchParams }: { searchParams: Promise<{ grade?: string }> }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/raises");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const companyId = viewer.companyId;
 

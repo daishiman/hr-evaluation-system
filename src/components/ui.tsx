@@ -3,6 +3,7 @@ import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { clsx } from "clsx";
 import { Icon, type IconName } from "@/components/Icon";
 import { PageHeadIcon } from "@/components/PageHeadIcon";
+import { RememberOpen } from "@/components/RememberOpen";
 
 /* ───────────────────────── ボタン ───────────────────────── */
 
@@ -538,12 +539,15 @@ export function Disclosure({
   meta,
   children,
   defaultOpen = false,
+  rememberAs,
 }: {
   /** 押す場所に出る見出し。空にできない（＝開く手がかりが必ず残る）。 */
   summary: ReactNode;
   meta?: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;
+  /** 渡すと、開け閉めをその端末に覚える（次に開いたときも同じ状態で出す）。値は画面をまたいで一意にする */
+  rememberAs?: string;
 }) {
   return (
     <details className="disclosure card" open={defaultOpen || undefined}>
@@ -551,7 +555,10 @@ export function Disclosure({
         <span>{summary}</span>
         {meta && <span className="disclosure-meta">{meta}</span>}
       </summary>
-      <div className="disclosure-body">{children}</div>
+      <div className="disclosure-body">
+        {rememberAs && <RememberOpen storageKey={rememberAs} />}
+        {children}
+      </div>
     </details>
   );
 }
@@ -592,11 +599,14 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
   return (
     <div className="empty-state">
       {/* 「まだ何も入っていない入れ物」を絵でも示す。文字だけの空白は、
-          読み込み中なのか本当に0件なのかが一目で分かりにくい */}
-      <p className="es-mark">
-        <Icon name="inbox" size={22} />
+          読み込み中なのか本当に0件なのかが一目で分かりにくい。
+          絵は見出しの頭に添える（絵だけの段を作ると、その段は左右とも空く） */}
+      <p className="es-title">
+        <span className="es-mark">
+          <Icon name="inbox" size={22} />
+        </span>
+        {title}
       </p>
-      <p className="es-title">{title}</p>
       <p className="es-body">{body}</p>
       {action}
     </div>
@@ -620,15 +630,17 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
  *
  * 置いてよいのは、実際に中身を描く画面（/me /admin /manager /system）の配下だけ。
  * この決まりは common-state-ui.test.ts が機械的に見張っている。
+ *
+ * 置き場所は AppShell の `main` の内側なので、自分では `main` を作らない（`main` を入れ子にしない）。
  */
 export function PageLoading({ lede }: { lede: string }) {
   return (
-    <main className="narrow-form" aria-live="polite" aria-busy="true">
+    <div className="narrow-form" aria-live="polite" aria-busy="true">
       <p className="page-title">画面を読み込んでいます</p>
       <p className="page-lede">{lede}</p>
       <div className="skeleton h-12 w-full" aria-hidden="true" />
       <div className="skeleton mt-3 h-28 w-full" aria-hidden="true" />
-    </main>
+    </div>
   );
 }
 
@@ -719,6 +731,9 @@ export function StatGrid({ stats }: { stats: { label: string; value: ReactNode }
  *
  * 並びは上から: 見出し（+ 状態の札）→ ラベル付きの値 → 長い文章 → 操作。
  * この順番は画面ごとに変えない。
+ * 入れ物が広いときは、操作を見出しの行の右端へ寄せ、ラベル付きの値を横に流して並べる
+ * （縦1列に積むと、同じ高さの右側が空いたまま残るため。docs/product/spec.md §28-9）。
+ * 寄せるのは見た目だけで、読む順（HTML の並び）はこのまま。
  */
 export interface RecordItem {
   key: string;
@@ -733,7 +748,7 @@ export interface RecordItem {
 
 export function RecordList({ items }: { items: RecordItem[] }) {
   return (
-    <Card>
+    <Card className="record-list">
       {items.map((it) => (
         <div key={it.key} className="list-card" data-off={it.off ? "true" : undefined}>
           <div className="list-card-head">
@@ -746,6 +761,39 @@ export function RecordList({ items }: { items: RecordItem[] }) {
         </div>
       ))}
     </Card>
+  );
+}
+
+/**
+ * 1つの行を「左に読むもの・右端に補足」の2列にする器。
+ *
+ * 設問の見本（答え方を右に）、作成フォームの行など、短い要素を左に縦積みすると
+ * 同じ高さの右側が空いたままになる行に使う（docs/product/spec.md §28-9）。
+ * 列の切り替えは画面幅ではなく入れ物の幅で行う（.split-host のコンテナクエリ）。
+ * 狭いときは 本文 → 補足 → 幅いっぱいの中身 の順に縦へ積む。
+ */
+export function SplitRow({
+  children,
+  aside,
+  below,
+  className,
+}: {
+  /** 左に置く読むもの（設問名・名前・説明）。 */
+  children: ReactNode;
+  /** 右端に寄せる補足（答え方・期間・状態・押すもの）。狭いときは本文の下に左寄せで続く。 */
+  aside?: ReactNode;
+  /** 幅いっぱいに使う中身（長い選択肢の並びなど）。本文と補足の下に置く。 */
+  below?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={clsx("split-host", className)}>
+      <div className="split-row">
+        <div className="split-main">{children}</div>
+        {aside && <div className="split-aside">{aside}</div>}
+        {below && <div className="split-wide">{below}</div>}
+      </div>
+    </div>
   );
 }
 

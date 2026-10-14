@@ -25,7 +25,7 @@ import { assertCompanyChosen } from "@/lib/session";
  * 入力は kind ごとに分かれる1つの形（bodySchema）で受け、振り分けは applyMasterUpdate が行う。
  */
 export async function saveMaster(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: bodySchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "masters.save", input: bodySchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const db = await getDb();
     return applyMasterUpdate({
@@ -46,7 +46,7 @@ export async function saveMaster(raw: unknown) {
  * 権限は変更と同じく制度設定を扱える人だけ。会社の境界は対象の取り出しで担保する。
  */
 export async function deleteMasterItem(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: deleteBodySchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "masters.deleteItem", input: deleteBodySchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const db = await getDb();
     return removeMasterItem({ db, companyId: viewer.companyId, viewerId: viewer.id, body: input });
@@ -67,7 +67,7 @@ const profilePolicySchema = z
   .strict();
 
 export async function saveProfilePolicy(raw: unknown) {
-  return runAction({ role: "COMPANY_ADMIN", input: profilePolicySchema }, raw, async ({ viewer, input }) => {
+  return runAction({ operation: "members.saveProfilePolicy", input: profilePolicySchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const companyId = viewer.companyId;
     const db = await getDb();

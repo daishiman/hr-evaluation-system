@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireViewer, ROLE_LABEL, type Role } from "@/lib/session";
+import { ROLE_LABEL, type Role, requireRoute } from "@/lib/session";
 import { getSelfProfile, listProfileFieldPolicies } from "@/lib/queries";
 import { PROFILE_FIELDS, resolveSelfEditMapForCompany, isSelfEditableField } from "@/lib/domain/profile-fields";
 import { Avatar } from "@/components/Avatar";
@@ -17,8 +17,8 @@ export const dynamic = "force-dynamic";
  * 変えられない項目も値は隠さない（見るのは自由、変えるのだけ制限する）。
  */
 export default async function AccountPage() {
-  const viewer = await requireViewer();
-  const me = await getSelfProfile(viewer.id);
+  const viewer = await requireRoute("/account");
+  const me = await getSelfProfile(viewer.id, viewer.companyId);
   if (!me) notFound();
 
   const policies = me.companyId ? await listProfileFieldPolicies(me.companyId) : [];

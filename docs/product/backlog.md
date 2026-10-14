@@ -1,6 +1,6 @@
 # 現在の残課題
 
-最終更新: 2026-10-13
+最終更新: 2026-10-14
 
 この文書は、未解決事項だけを扱う current SSOT です。完了した内容と判断の経緯は [統合台帳の履歴](./backlog-history-2026-08-13.md) と [回ごとの記録](./backlog-session-notes.md) に保存します。
 
@@ -33,7 +33,6 @@
 | FEATURE-001 | ready | ログイン不要の閲覧専用フォーム URL がない | 公開閲覧の要件を優先 | トークン・期限・公開範囲を決めて実装 | [旧台帳 B1](./backlog-history-2026-08-13.md) |
 | FEATURE-002 | ready | 設問・回答へのコメント欄がない | 評価者間の補足共有を優先 | 閲覧権限と保持期間を決めて実装 | [旧台帳 B2](./backlog-history-2026-08-13.md) |
 | FEATURE-003 | blocked | Google OAuth は未導入 | OAuth の資格情報と運用責任者が揃う | Better Auth 設定・callback・疎通を追加 | [旧台帳 B3](./backlog-history-2026-08-13.md) |
-| FEATURE-004 | ready | アンケート設問の並べ替えが上下ボタンだけ | 編集 UX の改善を優先 | キーボード操作を含む DnD を設計 | [旧台帳 B4](./backlog-history-2026-08-13.md) |
 | FEATURE-005 | ready | 行動指針セット・項目の並べ替えがない | 並び順運用が頻発 | 並び順の保存契約と操作を実装 | [旧台帳 B5・B6](./backlog-history-2026-08-13.md) |
 | FEATURE-006 | ready | 評価結果の PDF・Excel 出力がない | 外部共有・保管要件を優先 | 出力範囲と個人情報の扱いを定義 | [旧台帳 B7](./backlog-history-2026-08-13.md) |
 | FEATURE-007 | ready | 未回答者への自動リマインドがない | 通知チャネルと期限運用を確定 | 冪等な送信ジョブと監査ログを実装 | [旧台帳 B8・UX81](./backlog-history-2026-08-13.md) |
@@ -127,6 +126,8 @@
 | OPS-011 | decision | キット 1.11.0 の導入で見つけたキット側の改善点19件（U1〜U19）を、配布元へ出していない | 次のキット更新の前 | 出すかどうかと単位を本人が決める。出すなら1提案1件で、U1+U3 と U2 を先にする | [導入レビュー](../reviews/aidd-kit-1.11-2026-09-29.md) |
 | OPS-012 | decision | キットに同梱の、特定顧客（平賀）名を冠した配色の資料と他顧客向けの配色案が、公開リポジトリの管理対象に入っている。リポジトリ側で消すと配置の検査が落ちる | 配布元が配色の既定を見直したとき（提案 U9） | 配布元の対応を待つか、キット更新時に除く手順を足すかを本人が決める | [導入レビュー](../reviews/aidd-kit-1.11-2026-09-29.md) / [規約](../../AGENTS.md) |
 | OPS-013 | decision | キットの更新を「丸ごと置き換えて sync」で続けるか、改善要望を backlog にも載せるかが決まっていない | 次のキット更新の前 | 追従の単位（毎版・節目の版）と、改善要望の正本（一覧だけか backlog にも写すか）を決める | [受け入れ確認](../../AGENTS.md) / [改善要望の手順](../../.claude/commands/improve-request.md) |
+| OPS-014 | ready | デモ会社の受付中の評価期間（2026年度 上期）は締切が 2026-09-30 の固定日付で、seed を入れ直しても回答の締切を過ぎた状態から始まる | 画面を手で試す人が、回答の画面で「締切を過ぎています」に当たる | 期間の開始・終了を、seed を流した日からの相対日付で作る。それまでは、アンケートの回答状況の画面（`/admin/forms/[id]/responses`）の「回答期限の延長」で本人ごとに開ける | [デモの評価期間](../../scripts/seed-data.mjs) |
+| OPS-015 | blocked | DD-009 の訂正を `system-spec/` の3章（要件定義・auth・security）に描いたため、dev-graph の3 node（`spec-system-spec-requirements`・`arch-system-spec-auth`・`arch-system-spec-security`）の取込元の digest が古い。dev-graph の writer に既存の node を取り込み直す操作が無い | dev-graph の writer に取り込み直しの操作が入ったとき | `run-dev-graph-system-spec` を R0 からやり直して3 node を取り込み直す。digest を手で書き換えない | [最終レビューの受領書](./spec-receipts/2026-10-14-improvement-requests-final-review.md) |
 | PERFORMANCE-001 | observe | 一覧は数百件超でページングが必要 | 対象データが数百件に達する | cursor または keyset 方式を導入 | [旧台帳 D1](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-002 | observe | マスタ参照は都度 D1 を読む | 読取負荷・待ち時間が問題化 | キャッシュ範囲と無効化を設計 | [旧台帳 D11](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-003 | ready | 本番端末・回線で Core Web Vitals を計測していない | 次の性能確認 | 主要画面を実測し基準超過だけ改善 | [旧台帳 UX101](./backlog-history-2026-08-13.md) |

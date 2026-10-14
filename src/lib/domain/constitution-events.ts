@@ -9,6 +9,7 @@ type Db = Awaited<ReturnType<typeof getDb>>;
  * 制度マスタの実体種別。既存の各テーブルと1対1で対応する。
  * 等級要件・昇格要件は previous_version_id の版チェーンを持つが、
  * entityId には系譜の起点ID（lineageRootId）を使い、チェーン全体を1つの実体として追う。
+ * membership は制度マスタではないが、会社の所属を足す・外す記録を同じ表に残す（S7）。
  */
 export type ConstitutionEntityType =
   | "grade"
@@ -24,7 +25,8 @@ export type ConstitutionEntityType =
   | "kpiRankCriteria"
   | "kgiCoefficient"
   | "kpiCategory"
-  | "kpiItem";
+  | "kpiItem"
+  | "membership";
 
 export type ConstitutionEventType =
   | "created"

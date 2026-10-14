@@ -1,4 +1,5 @@
-import { requireRole } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
+import { can } from "@/lib/route-access";
 import { listImprovementRequests } from "@/lib/queries";
 import { ChipLink, EmptyState, PageTitle, SectionHeading, StatGrid } from "@/components/ui";
 import { ImprovementBulkTable } from "@/components/ImprovementBulkTable";
@@ -34,14 +35,14 @@ export const dynamic = "force-dynamic";
  * 使われる場面: 会社の管理者が週に一度まとめて読み、次に直すものを決める。
  * だから最初に見せるのは「未対応が何件か」で、次が絞り込み、最後が本文。
  *
- * 見えるのは自社ぶんだけ。会社の絞り込みは requireRole が返す companyId で行う。
+ * 見えるのは自社ぶんだけ。会社の絞り込みは requireRoute が返す companyId で行う。
  */
 export default async function AdminImprovements({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string; route?: string; period?: string; view?: string; sort?: string }>;
 }) {
-  const viewer = await requireRole("COMPANY_ADMIN");
+  const viewer = await requireRoute("/admin/improvements");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
   const sp = await searchParams;
@@ -149,7 +150,7 @@ export default async function AdminImprovements({
 
       <SectionHeading
         help={
-          viewer.role === "SUPER_ADMIN"
+          can(viewer, "improvements.handOut")
             ? "選んだ要望の指示文を、まとめて払い出せます。"
             : undefined
         }
@@ -165,7 +166,7 @@ export default async function AdminImprovements({
         // 絞り込みで0件になっても部品は外さない。表示中の要望を全て処理した直後に外すと、結果の表まで消える
         <ImprovementBulkTable
           emptyNote="この絞り込みに当てはまる要望はありません。条件を外してください。"
-          canHandOut={viewer.role === "SUPER_ADMIN"}
+          canHandOut={can(viewer, "improvements.handOut")}
           canDispose={canDisposeImprovements(viewer.role)}
           rows={rows.map((r) => ({
             id: r.id,

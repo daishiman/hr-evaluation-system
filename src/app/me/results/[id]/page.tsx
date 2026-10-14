@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireViewer } from "@/lib/session";
+import { requireRoute } from "@/lib/session";
 import { EvaluationDetail } from "@/components/EvaluationDetail";
 import { listEvaluations } from "@/lib/queries";
 import { canReadSelfResult } from "@/lib/domain/evaluation-authority";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function MyResult({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const viewer = await requireViewer();
+  const viewer = await requireRoute("/me/results/[id]");
   if (!viewer.companyId) notFound();
 
   // 自分の評価しか開けない（URLを書き換えても他人の結果は出さない）
