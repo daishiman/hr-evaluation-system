@@ -3260,9 +3260,19 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
    つまみと矢印のボタンは 24px 以上（SC 2.5.8）。指で押す端末では、ほかのボタンと同じ 44px にする。
    スクロールを止めるのはつまみだけ。行の残りを指でなぞれば、今までどおり画面が流れる。
 
-   行の段組みは、画面の幅ではなく一覧の幅（container query）で決める。同じ部品を、カードの中・設問のカード・
+   行の段組みは、画面の幅ではなく一覧の幅で決める。同じ部品を、カードの中・設問のカード・
    設問の中の選択肢と、幅の違う場所に置くため。どの段組みでも、見える順は読む順（DOM）と同じ
-   「つまみ → 本文 → 行の操作 → 矢印」にする（SC 1.3.2・2.4.3）。行の操作と矢印は、どちらも行の右端にそろえる。 */
+   「つまみ → 本文 → 行の操作 → 矢印」にする（SC 1.3.2・2.4.3）。行の操作と矢印は、どちらも行の右端にそろえる。
+
+   一覧の幅は ReorderList が測り、超えた境目を data-reorder-w に rem で書く（"30 36 60" など）。
+   container query は使わない。Chromium の不具合（issues.chromium.org/379030050）で、並べ替えを2回続けると
+   一覧の中の行が描かれなくなり、再読み込みまで戻らないため（DD-005）。
+   測るまで（サーバーから届いた HTML を描いてから JS が動くまで）は、同じ境目を container query で当て、
+   読み込みのたびに狭い段組みから広い段組みへ行が跳ねないようにする。測ったら container をやめる
+   （不具合が起きるのは並べ替えを2回続けたときで、そのころには測り終えている）。
+   境目の規則は :where() で包み、詳細度を container query だけで書いていたときと同じにする
+   （「行の操作のある行」の規則が、30rem の規則より強い関係を保つ）。
+   子の結合子（>）で、設問の中の選択肢の一覧には外側の一覧の幅を当てない。 */
 .reorder-list {
   list-style: none;
   margin: 0;
@@ -3270,11 +3280,13 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   display: flex;
   flex-direction: column;
   gap: 8px;
-  container: reorder / inline-size;
+  /* 一覧の幅を中身から切り離す。測った幅で段組みを変えても、一覧の幅は変わらない */
+  contain: inline-size;
   /* 置き場所の目印（::before）を行の位置に重ねる基準。持ち上げた行の重なりは、この一覧の中で閉じる */
   position: relative;
   isolation: isolate;
 }
+.reorder-list:not([data-reorder-w]) { container: reorder / inline-size; }
 .reorder-row {
   position: relative;
   display: grid;
@@ -3292,8 +3304,12 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .reorder-handle { grid-area: handle; }
 .reorder-body { grid-area: body; min-width: 0; }
 .reorder-steps { grid-area: steps; justify-self: end; }
+:where(.reorder-list[data-reorder-w~="30"]) > .reorder-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "handle body steps";
+}
 @container reorder (min-width: 30rem) {
-  .reorder-row {
+  :where(.reorder-list:not([data-reorder-w])) > .reorder-row {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: "handle body steps";
   }
@@ -3307,19 +3323,29 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
     "actions actions"
     "steps   steps";
 }
+/* 36rem 以上: 本文を1段目に広く取り、操作と矢印は2段目の右端にまとめる */
+:where(.reorder-list[data-reorder-w~="36"]) > .reorder-row:has(> .reorder-actions) {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "handle body    body"
+    ".      actions steps";
+}
 @container reorder (min-width: 36rem) {
-  /* 本文を1段目に広く取り、操作と矢印は2段目の右端にまとめる */
-  .reorder-row:has(> .reorder-actions) {
+  :where(.reorder-list:not([data-reorder-w])) > .reorder-row:has(> .reorder-actions) {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
       "handle body    body"
       ".      actions steps";
   }
 }
+/* 60rem 以上: 十分に広ければ1段に並べる。本文・操作・矢印の頭がそろい、行が低くなって見渡しやすい。
+   本文は 16rem を下回らせず、操作が収まらなければ操作のほうを折り返す */
+:where(.reorder-list[data-reorder-w~="60"]) > .reorder-row:has(> .reorder-actions) {
+  grid-template-columns: auto minmax(16rem, 1fr) minmax(0, max-content) auto;
+  grid-template-areas: "handle body actions steps";
+}
 @container reorder (min-width: 60rem) {
-  /* 十分に広ければ1段に並べる。本文・操作・矢印の頭がそろい、行が低くなって見渡しやすい。
-     本文は 16rem を下回らせず、操作が収まらなければ操作のほうを折り返す */
-  .reorder-row:has(> .reorder-actions) {
+  :where(.reorder-list:not([data-reorder-w])) > .reorder-row:has(> .reorder-actions) {
     grid-template-columns: auto minmax(16rem, 1fr) minmax(0, max-content) auto;
     grid-template-areas: "handle body actions steps";
   }
@@ -3338,9 +3364,11 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
    確認のある操作（ConfirmButton）は包みの div の中のボタンまで伸ばす */
 .reorder-actions > *,
 .reorder-actions > * > .btn { flex: 1 1 8rem; }
+:where(.reorder-list[data-reorder-w~="36"] > .reorder-row) > .reorder-actions > *,
+:where(.reorder-list[data-reorder-w~="36"] > .reorder-row) > .reorder-actions > * > .btn { flex: 0 0 auto; }
 @container reorder (min-width: 36rem) {
-  .reorder-actions > *,
-  .reorder-actions > * > .btn { flex: 0 0 auto; }
+  :where(.reorder-list:not([data-reorder-w]) > .reorder-row) > .reorder-actions > *,
+  :where(.reorder-list:not([data-reorder-w]) > .reorder-row) > .reorder-actions > * > .btn { flex: 0 0 auto; }
 }
 /* カードの中の一覧（等級要件・昇格の条件）。行の区切りと余白は、カードの行（.card-row）にそろえる */
 .reorder-list.reorder-in-card { gap: 0; }

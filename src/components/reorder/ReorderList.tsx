@@ -13,10 +13,20 @@ import { HANDLE_ATTR, useLongPressReorder } from "@/components/reorder/useLongPr
  * 置いたら onCommit へ並び全体（id の配列）を渡す。保存の結果で items が変われば、並びはそれに合わせ直す。
  *
  * 行の操作（内容を直す・今後使わない など）は renderActions で渡す。本文の中に置かず行の列として描くので、
- * 操作の右端と矢印の右端が1本にそろう。段組みは一覧の幅（container query）で決める（globals.css の並べ替えの節）。
+ * 操作の右端と矢印の右端が1本にそろう。段組みは一覧の幅で決める（globals.css の並べ替えの節）。
+ * 幅はこの部品が測って ol の data-reorder-w に書く。測ったあとは size container を使わない（Chromium の不具合で、
+ * 並べ替えを2回続けると行が描かれなくなる。DD-005）。測るまでの間だけ、同じ境目を container query で当てる。
  */
 
 export type ReorderItem = { id: string; label: string };
+
+/** 段組みを切り替える一覧の幅（rem）。globals.css の並べ替えの節の data-reorder-w の値と同じにする */
+export const REORDER_WIDTHS = [30, 36, 60] as const;
+
+/** 一覧の幅（px）が超えている境目を、data-reorder-w に書く形（"30 36" など。どれも超えなければ ""）で返す */
+export function reorderWidthTokens(widthPx: number, remPx: number): string {
+  return REORDER_WIDTHS.filter((rem) => widthPx >= rem * remPx).join(" ");
+}
 
 /** つまみの使い方（aria-describedby で読み上げる） */
 export const REORDER_HINT =
@@ -96,6 +106,21 @@ export function ReorderList<T extends ReorderItem>({
     const target = [button(pending.action), button(FALLBACK[pending.action])].find((b) => b && !b.disabled);
     (target ?? row?.querySelector<HTMLElement>(`:scope > [${HANDLE_ATTR}]`))?.focus();
   }, [state.order, state.phase, listRef]);
+
+  // 一覧の幅を測り、超えた境目を data-reorder-w に書く（段組みは CSS がこの値で選ぶ）。
+  // 一覧は inline-size で封じ込めてあり、幅が中身で変わらないので、書き換えで測り直しが続くことはない。
+  // 印が付くと、測る前の container（globals.css の .reorder-list:not([data-reorder-w])）も外れる
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const tokens = reorderWidthTokens(entry.contentRect.width, rem);
+      if (list.dataset.reorderW !== tokens) list.dataset.reorderW = tokens;
+    });
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [listRef]);
 
   return (
     <>
