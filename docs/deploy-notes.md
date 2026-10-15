@@ -235,3 +235,49 @@ pnpm test:e2e
 - 全体管理者はメニュー「権限一覧」（`/system/permissions`）で、47画面ぶんの「できる（○）・条件つき（△）・できない（—）」を役割ごとに見られる。上のタブで役割を1つに絞れる。△ の条件は「i」を指すか押すと出る。
 - 利用者の一覧（`/system/users`・`/admin/members`）の「権限一覧を開く」でも、同じ内容をその場で開ける。
 - 一覧はルート台帳から作るので、画面の入口・メニュー・保存の処理の判定と食い違わない。役割の決まりを変えるときは、台帳を直して契約テスト（`src/lib/permissions-contract.test.ts`）を通す。
+
+## 11. 社員CSVの取り込みの直し（移行 0036）
+
+0033 で所属の表が会社ごとの値の正本になったあとも、社員CSVの取り込みは `users` だけを書いていました。そのため次の2つが起きていました。
+
+- 取り込みで新しく作った人に所属の行が無く、社員の一覧・評価の画面に出ない。
+- 登録済みの人を取り込みで変えたとき、役割・等級・上長などが `users` の写しにだけ入り、所属の行（正本）は前の値のまま。
+
+取り込みは所属の行を書くように直しました（`src/lib/import-members.ts`）。ほかの会社にも所属している人の氏名・利用状態は、社員の画面と同じく全体管理者の取り込みでだけ変えられます。
+
+移行 0036 は、1つ目の人たちに所属の行を足します。足すのは、取り込みの記録（`import_batches` の `before_json`）で「その取り込みで新しく作った」と分かり、今もその会社の役割を持ち、所属の行が無い人だけです。値は `users` の写しから取り、id は `mem_imp_` で始まります。2回流しても変化0です。§1 の順序のとおり Deploy workflow が当てるので、手で流しません。
+
+確かめる要点（配布の後に読み取りだけで見る）:
+
+- 足した行の数: `SELECT COUNT(*) FROM company_memberships WHERE id LIKE 'mem_imp_%';`
+- 会社に属するのに所属の行が無い人が0件である:
+
+  ```sql
+  SELECT u.id, u.company_id, u.role FROM users u
+  WHERE u.company_id IS NOT NULL AND u.role IN ('EMPLOYEE', 'MANAGER', 'COMPANY_ADMIN')
+    AND NOT EXISTS (SELECT 1 FROM company_memberships m WHERE m.user_id = u.id AND m.company_id = u.company_id);
+  ```
+
+  ここに出る人は、取り込みの記録に無い経路で作られた人です。移行では足さないので、1人ずつ原因を調べてから全体管理者の画面で所属を足します。
+
+2つ目（登録済みの人の取り込みでの変更）は、この移行では直しません。写しと所属の行のどちらが正しいかは、その会社に確かめないと決められないためです。次の照会（読み取りだけ）で、写しと元の所属の値がずれている人を出せます。
+
+```sql
+SELECT u.id, u.name, u.company_id,
+  u.role AS copy_role, m.role AS membership_role,
+  u.grade_id AS copy_grade, m.grade_id AS membership_grade,
+  u.manager_id AS copy_manager, m.manager_id AS membership_manager,
+  u.office_id AS copy_office, m.office_id AS membership_office,
+  u.employee_code AS copy_code, m.employee_code AS membership_code,
+  u.department AS copy_department, m.department AS membership_department,
+  u.hired_at AS copy_hired, m.hired_at AS membership_hired
+FROM users u
+JOIN company_memberships m ON m.user_id = u.id AND m.company_id = u.company_id
+WHERE u.role IS NOT m.role OR u.grade_id IS NOT m.grade_id OR u.manager_id IS NOT m.manager_id
+  OR u.office_id IS NOT m.office_id OR u.employee_code IS NOT m.employee_code
+  OR u.department IS NOT m.department OR u.hired_at IS NOT m.hired_at;
+```
+
+本番で流すときは `pnpm wrangler d1 execute hr-evaluation-db --remote --command "<上の SQL>"` を使います（`SELECT` だけ）。出た人は、会社に確かめて正しい値を社員の画面（`/admin/members`）で保存し直します。保存すると所属の行と写しの両方が同じ値になります。同じCSVをもう一度取り込んでも直せます（今の取り込みは所属の行に書くため）。
+
+戻すとき: アプリの版を戻します。足した行は取り込みが本来書くべきだった行なので、残したままで構いません。消すときは書き出してから `DELETE FROM company_memberships WHERE id LIKE 'mem_imp_%';` を流します（足したあとに画面で変えた値も消えます）。

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { runAction, runRead } from "@/lib/action";
 import { loadVaultKey, memoNotice } from "@/lib/credential-vault";
 import { IMPORT_MAX_BYTES, IMPORT_TOO_LARGE_MESSAGE, importMembersCsv } from "@/lib/import";
-import { requireTargetCompany } from "@/lib/session";
+import { crossesCompanies, requireTargetCompany } from "@/lib/session";
 
 /**
  * 社員一覧のまとめ取り込み（会社の管理者のみ）。
@@ -31,6 +31,7 @@ export async function previewMembersImport(raw: unknown) {
       const result = await importMembersCsv(requireTargetCompany(viewer, input.companyId), input.csv, {
         dryRun: true,
         actorId: viewer.id,
+        crossesCompanies: crossesCompanies(viewer.role),
       });
       return {
         ...result,
@@ -53,6 +54,7 @@ export async function importMembers(raw: unknown) {
         dryRun: false,
         actorId: viewer.id,
         vault: await loadVaultKey(),
+        crossesCompanies: crossesCompanies(viewer.role),
       });
       // 不備が1行でもあれば importMembersCsv が 409 で断るので、ここに来るのは全行を保存できたときだけ
       return {

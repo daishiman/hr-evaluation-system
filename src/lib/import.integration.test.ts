@@ -6,7 +6,7 @@
  * ここでは極端な値を実際に流し、**保存された行の中身**で結果を確かめる。
  */
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as s from "@/db/schema";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
 import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
@@ -262,6 +262,102 @@ describe("社員CSVの部分更新", () => {
     expect(event.actorId).toBe(IDS.evaluator);
     expect(event.beforeJson).toContain("emp@example.com");
     expect(event.sourceHash).toHaveLength(64);
+  });
+});
+
+describe("社員CSVは会社ごとの値を、この会社の所属の行に書く（S7・D-004）", () => {
+  /** 本人が、あとから別の会社にも所属した（元の所属はテスト社のまま） */
+  async function joinOtherCompany() {
+    await current.db.insert(s.companies).values({ id: "cmp_other", name: "別の会社", slug: "other" });
+    await current.db.insert(s.companyMemberships).values({
+      id: "mem_other", userId: IDS.employee, companyId: "cmp_other", role: "MANAGER",
+      department: "別の会社の部署", createdAt: new Date(Date.now() + 60_000),
+    });
+  }
+  const membershipOf = async (userId: string, companyId: string = IDS.company) =>
+    (await current.db.select().from(s.companyMemberships)
+      .where(and(eq(s.companyMemberships.userId, userId), eq(s.companyMemberships.companyId, companyId))))[0];
+
+  it("新しく作った人には、この会社の所属の行を作る（社員の一覧・評価はこの行を読む）", async () => {
+    await seedCompany(current);
+    seedMemberships(current);
+    await importMembersCsv(
+      IDS.company,
+      ["氏名,メールアドレス,役割,等級,所属,上長", "新人,new@example.com,マネージャー,Regular,営業部,上長"].join("\n"),
+    );
+    const [user] = await current.db.select().from(s.users).where(eq(s.users.email, "new@example.com"));
+    const membership = await membershipOf(user.id);
+    expect(membership).toMatchObject({
+      role: "MANAGER", gradeId: IDS.gradeFrom, department: "営業部", managerId: IDS.evaluator,
+    });
+    // users の写しも元の所属と同じ値になる（版を戻したときの動き）
+    expect(user).toMatchObject({ companyId: IDS.company, role: "MANAGER", department: "営業部" });
+  });
+
+  it("登録済みの人の変更は、この会社の所属の行に書く", async () => {
+    await seedCompany(current);
+    seedMemberships(current);
+    await importMembersCsv(
+      IDS.company,
+      ["氏名,メールアドレス,役割,所属", "本人,emp@example.com,マネージャー,新しい部署"].join("\n"),
+    );
+    expect(await membershipOf(IDS.employee)).toMatchObject({ role: "MANAGER", department: "新しい部署" });
+  });
+
+  it("ほかの会社にも所属している人の所属は、この会社の行だけを変え、写しは元の所属のまま", async () => {
+    await seedCompany(current);
+    seedMemberships(current);
+    await joinOtherCompany();
+    await importMembersCsv(
+      "cmp_other",
+      ["氏名,メールアドレス,所属", "本人,emp@example.com,別の会社の新しい部署"].join("\n"),
+    );
+    expect((await membershipOf(IDS.employee, "cmp_other")).department).toBe("別の会社の新しい部署");
+    expect((await membershipOf(IDS.employee)).department).toBeNull();
+    const [user] = await current.db.select().from(s.users).where(eq(s.users.id, IDS.employee));
+    expect(user).toMatchObject({ companyId: IDS.company, department: null });
+  });
+
+  it("ほかの会社にも所属している人の氏名・利用状態は、会社の管理者の取り込みでは変えない", async () => {
+    await seedCompany(current);
+    seedMemberships(current);
+    await joinOtherCompany();
+    const rows = ["氏名,メールアドレス,利用状態", "本人（改名）,emp@example.com,利用停止"].join("\n");
+
+    const preview = await importMembersCsv("cmp_other", rows, { dryRun: true });
+    expect(preview.failed).toBe(1);
+    expect(preview.rows[0].reason).toContain("全体管理者だけ");
+    await expect(importMembersCsv("cmp_other", rows)).rejects.toMatchObject({ status: 409 });
+
+    // 全体管理者の取り込みなら変えられる
+    await importMembersCsv("cmp_other", rows, { crossesCompanies: true });
+    const [user] = await current.db.select().from(s.users).where(eq(s.users.id, IDS.employee));
+    expect(user).toMatchObject({ name: "本人（改名）", isActive: false });
+  });
+
+  it("この会社に所属していない人のメールアドレスは、他社の人として止める", async () => {
+    await seedCompany(current);
+    seedMemberships(current);
+    await current.db.insert(s.companies).values({ id: "cmp_other", name: "別の会社", slug: "other" });
+    const out = await importMembersCsv(
+      "cmp_other",
+      ["氏名,メールアドレス", "本人,emp@example.com"].join("\n"),
+      { dryRun: true },
+    );
+    expect(out.rows[0]).toMatchObject({ status: "エラー", reason: "このメールアドレスは他社で使われています" });
+  });
+
+  it("社員番号の重なりは、この会社の所属の社員番号で見る", async () => {
+    await seedCompany(current);
+    seedMemberships(current);
+    await joinOtherCompany();
+    await current.db.update(s.companyMemberships).set({ employeeCode: "E-1" })
+      .where(eq(s.companyMemberships.id, "mem_other"));
+    // テスト社では E-1 は誰も使っていない（別の会社の所属の番号とは重ならない）
+    const ok = await importMembersCsv(IDS.company, ["氏名,メールアドレス,社員番号", "新人,new@example.com,E-1"].join("\n"), { dryRun: true });
+    expect(ok.failed).toBe(0);
+    const clash = await importMembersCsv("cmp_other", ["氏名,メールアドレス,社員番号", "新人,new@example.com,E-1"].join("\n"), { dryRun: true });
+    expect(clash.rows[0].reason).toContain("本人さんが使っています");
   });
 });
 

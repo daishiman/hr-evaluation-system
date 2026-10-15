@@ -1,8 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
 import { getDb, schema as s } from "@/lib/db";
 import { batchAll, type BatchStatement } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
+import { insertMembership, writeMembership, type MembershipValues } from "@/lib/memberships";
 import { parseCsv } from "@/lib/csv";
 import { HttpError } from "@/lib/session";
 import { generateUniqueInitialPassword, type IssuedMemberCredential } from "@/lib/domain/initial-password";
@@ -78,11 +79,20 @@ function toIsoDate(raw: string): string | null {
  *
  * `vault` を渡すと、新しく作った人の仮パスワードを暗号化した控えも同じ batch で残す
  * （一覧の行から開き直せる）。鍵の読み込みは呼び出し側（Server Action）が行う。
+ *
+ * 会社ごとの値（役割・等級・事業所・上長・社員番号・部署・入社日）は、この会社の所属の行に書く（S7・D-004）。
+ * 氏名と利用状態は利用者全体の値なので、ほかの会社にも所属している人のものは、
+ * `crossesCompanies`（全体管理者の取り込み）のときだけ変えられる（社員の編集 updateMember と同じ決まり）。
  */
 export async function importMembersCsv(
   companyId: string,
   csvText: string,
-  options: { dryRun?: boolean; actorId?: string | null; vault?: VaultKey | null } = {},
+  options: {
+    dryRun?: boolean;
+    actorId?: string | null;
+    vault?: VaultKey | null;
+    crossesCompanies?: boolean;
+  } = {},
 ): Promise<MemberImportResult> {
   const dryRun = options.dryRun === true;
   const vault = dryRun ? null : (options.vault ?? null);
@@ -113,10 +123,17 @@ export async function importMembersCsv(
     throw new HttpError(400, "「氏名」と「メールアドレス」の列が必要です。見出し行をご確認ください。");
   }
 
-  const [grades, offices, existingUsers, formerGradeNames] = await Promise.all([
+  const [grades, offices, existingUsers, memberships, sharedUsers, formerGradeNames] = await Promise.all([
     db.select({ id: s.grades.id, name: s.grades.name, code: s.grades.code }).from(s.grades).where(eq(s.grades.companyId, companyId)),
     db.select({ id: s.offices.id, name: s.offices.name }).from(s.offices).where(eq(s.offices.companyId, companyId)),
     db.select().from(s.users),
+    // この会社の所属（会社ごとの値の正本）
+    db.select().from(s.companyMemberships).where(eq(s.companyMemberships.companyId, companyId)),
+    // ほかの会社にも所属している人（氏名・利用状態を会社の管理者が変えないための判定）
+    db
+      .selectDistinct({ userId: s.companyMemberships.userId })
+      .from(s.companyMemberships)
+      .where(ne(s.companyMemberships.companyId, companyId)),
     // 移行 0034 で書き換える前の等級名（「等級１：Beginner」など）。前に書き出した CSV もそのまま取り込めるようにする
     db
       .select({ id: s.displayNameRewrites.rowId, name: s.displayNameRewrites.oldValue })
@@ -143,6 +160,14 @@ export async function importMembersCsv(
   }
   const officeByKey = new Map(offices.map((o) => [normalizeKey(o.name), o.id]));
   const userByEmail = new Map(existingUsers.map((u) => [u.email.trim().toLowerCase(), u]));
+  const userById = new Map(existingUsers.map((u) => [u.id, u]));
+  const membershipByUser = new Map(memberships.map((m) => [m.userId, m]));
+  const sharedUserIds = new Set(sharedUsers.map((x) => x.userId));
+  // この会社の社員（所属の値に、氏名とメールを添える）。社員番号の重なりと上長の指定はこの中で見る
+  const members = memberships.flatMap((m) => {
+    const u = userById.get(m.userId);
+    return u ? [{ ...m, name: u.name, email: u.email.trim().toLowerCase() }] : [];
+  });
 
   type Plan = {
     row: number;
@@ -181,14 +206,13 @@ export async function importMembersCsv(
     seenEmail.set(email, rowNo);
 
     const existing = userByEmail.get(email);
-    if (existing && existing.companyId !== companyId) { fail("このメールアドレスは他社で使われています"); continue; }
+    // この会社に所属していない人（他社だけの人・全体管理者）は、取り込みでは変えない
+    if (existing && !membershipByUser.has(existing.id)) { fail("このメールアドレスは他社で使われています"); continue; }
 
     const employeeCode = at(line, col.employeeCode) || null;
     if (employeeCode) {
       if (seenCode.has(employeeCode)) { fail(`同じ社員番号がこのファイルの${seenCode.get(employeeCode)}行目にもあります`); continue; }
-      const clash = existingUsers.find(
-        (u) => u.companyId === companyId && (u.employeeCode ?? "") === employeeCode && u.id !== existing?.id,
-      );
+      const clash = members.find((x) => (x.employeeCode ?? "") === employeeCode && x.userId !== existing?.id);
       if (clash) { fail(`社員番号「${employeeCode}」はすでに${clash.name}さんが使っています`); continue; }
       seenCode.set(employeeCode, rowNo);
     }
@@ -211,6 +235,14 @@ export async function importMembersCsv(
 
     const activeRaw = normalizeKey(at(line, col.active));
     const isActive = activeRaw === "" ? null : !["利用停止", "停止", "退職", "無効", "false", "0"].map(normalizeKey).includes(activeRaw);
+    const changesSharedUser =
+      existing !== undefined &&
+      sharedUserIds.has(existing.id) &&
+      (name !== existing.name || (isActive !== null && isActive !== existing.isActive));
+    if (changesSharedUser && !options.crossesCompanies) {
+      fail("ほかの会社にも所属している方の氏名・利用状態は、全体管理者だけが変えられます");
+      continue;
+    }
 
     plans.push({
       row: rowNo, name, email, employeeCode, role, gradeId, officeId,
@@ -230,10 +262,10 @@ export async function importMembersCsv(
       (p) => normalizeKey(p.name) === key || p.email === raw.toLowerCase() || normalizeKey(p.employeeCode ?? "") === key,
     );
     if (inFile) return { id: inFile.existingId ?? `row:${inFile.row}` };
-    const inDb = existingUsers.find(
-      (u) => u.companyId === companyId && (normalizeKey(u.name) === key || u.email === raw.toLowerCase() || normalizeKey(u.employeeCode ?? "") === key),
+    const inDb = members.find(
+      (x) => normalizeKey(x.name) === key || x.email === raw.toLowerCase() || normalizeKey(x.employeeCode ?? "") === key,
     );
-    if (inDb) return { id: inDb.id };
+    if (inDb) return { id: inDb.userId };
     return { id: null, error: `上長「${raw}」が見つかりません。この会社の社員か、このファイルの中の方を指定してください` };
   };
 
@@ -267,9 +299,7 @@ export async function importMembersCsv(
     }
   }
 
-  const plannedManagerById = new Map(
-    existingUsers.filter((user) => user.companyId === companyId).map((user) => [user.id, user.managerId]),
-  );
+  const plannedManagerById = new Map(memberships.map((m) => [m.userId, m.managerId]));
   for (const p of plans) {
     if (!p.managerSpecified) continue;
     const mp = managerPlan.get(p.row);
@@ -325,12 +355,19 @@ export async function importMembersCsv(
         : undefined;
       if (!p.existingId) {
         const credential = credentials.find((item) => item.row === p.row)!;
+        // 利用者の行を先に作り、所属の行と users の写しは insertMembership が同じ batch で書く
         statements.push(db.insert(s.users).values({
-          id: selfId, name: p.name, email: p.email, emailVerified: true, companyId,
-          role: p.role ?? "EMPLOYEE", gradeId: p.gradeId, officeId: p.officeId,
-          employeeCode: p.employeeCode, department: p.department, hiredAt: p.hiredAt,
-          isActive: p.isActive ?? true, mustChangePassword: true, managerId: managerId ?? null,
+          id: selfId, name: p.name, email: p.email, emailVerified: true,
+          isActive: p.isActive ?? true, mustChangePassword: true,
         }));
+        statements.push(...(await insertMembership(
+          db,
+          {
+            userId: selfId, companyId, role: p.role ?? "EMPLOYEE", gradeId: p.gradeId, officeId: p.officeId,
+            managerId: managerId ?? null, employeeCode: p.employeeCode, department: p.department, hiredAt: p.hiredAt,
+          },
+          { writeCopy: true },
+        )));
         statements.push(db.insert(s.accounts).values({
           id: newId("acc"), accountId: selfId, providerId: "credential", userId: selfId,
           password: await hashPassword(credential.initialPassword),
@@ -340,21 +377,26 @@ export async function importMembersCsv(
           statements.push(memoUpsert(db, { userId: selfId, issuedBy: options.actorId ?? null, ...sealed }));
         }
       } else {
-        const patch: Record<string, unknown> = { name: p.name };
-        if (p.managerSpecified) patch.managerId = managerId ?? null;
-        if (p.role !== null) patch.role = p.role;
-        if (p.gradeId !== null) patch.gradeId = p.gradeId;
-        if (p.officeId !== null) patch.officeId = p.officeId;
-        if (p.employeeCode !== null) patch.employeeCode = p.employeeCode;
-        if (p.department !== null) patch.department = p.department;
-        if (p.hiredAt !== null) patch.hiredAt = p.hiredAt;
-        if (p.isActive !== null) patch.isActive = p.isActive;
-        statements.push(db.update(s.users).set(patch).where(eq(s.users.id, selfId)));
+        // 氏名・利用状態は利用者全体の値（users）、ほかは会社ごとの値（この会社の所属）
+        const userPatch: Record<string, unknown> = { name: p.name };
+        if (p.isActive !== null) userPatch.isActive = p.isActive;
+        statements.push(db.update(s.users).set(userPatch).where(eq(s.users.id, selfId)));
+        const values: MembershipValues = {};
+        if (p.managerSpecified) values.managerId = managerId ?? null;
+        if (p.role !== null) values.role = p.role;
+        if (p.gradeId !== null) values.gradeId = p.gradeId;
+        if (p.officeId !== null) values.officeId = p.officeId;
+        if (p.employeeCode !== null) values.employeeCode = p.employeeCode;
+        if (p.department !== null) values.department = p.department;
+        if (p.hiredAt !== null) values.hiredAt = p.hiredAt;
+        statements.push(...(await writeMembership(db, selfId, companyId, values)));
       }
     }
+    // 復元の記録。before は取り込む前の利用者の行（新しく作った人は null）、membershipBefore はこの会社の所属の行
     const beforeJson = JSON.stringify(plans.map((plan) => ({
       userId: newIdByRow.get(plan.row),
       before: plan.existingId ? userByEmail.get(plan.email) : null,
+      membershipBefore: plan.existingId ? (membershipByUser.get(plan.existingId) ?? null) : null,
     })));
     if (beforeJson.length > 1_500_000 || statements.length + 1 > 500) {
       throw new HttpError(413, "1回で安全に保存・復元記録を作れる量を超えています。ファイルを分けてください。");
