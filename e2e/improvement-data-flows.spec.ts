@@ -92,7 +92,10 @@ test("全体管理者が2社目の所属を足すと同じ資格情報で切り�
     await expect(employee.locator("#company-scope option")).toHaveCount(2);
     await context.addCookies([{ name: "hr_company", value: "cmp_mirai", url: test.info().project.use.baseURL as string }]);
     await employee.goto("/me");
-    await expect(employee.locator("#company-scope")).toHaveValue(fixture.company.id);
+    // 所属の無い会社の cookie は使わず、切り替えの一覧の先頭（会社名の順）を開く（D-009）
+    const first = await employee.locator("#company-scope option").first().getAttribute("value");
+    expect([fixture.company.id, fixture.secondCompany.id]).toContain(first);
+    await expect(employee.locator("#company-scope")).toHaveValue(first!);
     await expect(employee.locator("main")).not.toContainText("83.5");
   } finally { await context.close(); }
 });
