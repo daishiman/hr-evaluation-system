@@ -77,9 +77,22 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
       </div>
 
       {/* 上がる先の等級が無い（最上位）なら、線引きが無いのは正しい状態。警告の枠ではなく見出しの右の1行で知らせる
-          （§28-9。上がる先があるのに線引きが無いときだけ、登録漏れとして警告を出す） */}
+          （§28-9。上がる先があるのに線引きが無いときだけ、登録漏れとして警告を出す）。
+          線引きがあるときは、行動指針の中身を決める画面への道を見出しの右に置く（フォームの下に1行だけ積むと右が空く） */}
       <SectionHeading
-        aside={!th && !step ? <span className="footnote">{grade.name} は最上位の等級なので、設定は要りません</span> : undefined}
+        aside={
+          th ? (
+            <span className="footnote">
+              行動指針の中身は
+              <Link href="/admin/behavior" className="mx-1 text-brand-deep">
+                行動指針
+              </Link>
+              で決めます
+            </span>
+          ) : !step ? (
+            <span className="footnote">{grade.name} は最上位の等級なので、設定は要りません</span>
+          ) : undefined
+        }
       >
         点数の線引き
       </SectionHeading>
@@ -102,7 +115,7 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
             submitLabel="昇格の条件を保存する"
             /* 短い数の欄が2つだけなので、保存ボタンを同じ行の右端に置く（§28-9） */
             inline
-            description={`${step ? `${step}。` : ""}行動指針の点数は、観点ごとの点数（模範3〜悪影響-1）の合計です。何を問うかは行動指針の画面で決めます。`}
+            description={`${step ? `${step}。` : ""}行動指針の点数は、観点ごとの点数（模範3〜悪影響-1）の合計です。行動指針を出さない等級では、この点数は判定に使われません。`}
             fields={[
               {
                 name: "requiredKpiPoints",
@@ -124,17 +137,13 @@ export default async function AdminPromotion({ searchParams }: { searchParams: P
               },
             ]}
           />
-          <p className="footnote">
-            行動指針の中身は
-            <Link href="/admin/behavior" className="mx-1 text-brand-deep">
-              行動指針
-            </Link>
-            で決めます。行動指針を出さない等級では、この点数は判定に使われません。
-          </p>
         </>
       )}
 
-      <SectionHeading>昇格要件</SectionHeading>
+      {/* 2つの種類に共通の決まり（件数）は、見出しの右に1回だけ書く（§28-9） */}
+      <SectionHeading aside={<span className="footnote">どちらの種類も件数の上限はなく、0項目のままでもかまいません</span>}>
+        昇格要件
+      </SectionHeading>
       <PromotionRequirementEditor
         key={grade.id}
         gradeId={grade.id}

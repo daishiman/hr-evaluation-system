@@ -2,8 +2,9 @@
 
 import { useSaveAction } from "@/lib/use-refresh";
 import { useState } from "react";
-import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
+import { Button, Card, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { ListAddRow, ListRowBody } from "@/components/ListRow";
 import { UsedByDetail } from "@/components/UsedByDetail";
 import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
 import {
@@ -66,64 +67,65 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
       {error && <ReasonNote>{error}</ReasonNote>}
       <RefreshStatus message={message} refreshing={saving} />
 
-      {categories.map((c) => {
-        const mark = blockedMark(usedByOf(c.id));
-        return (
-          <Card key={c.id} className="card-pad">
-            <CardHead
-              title={c.name}
-              sub={c.description ?? undefined}
-              actions={
-                <>
-                  {mark !== null ? (
-                    <Badge tone="active">使用中</Badge>
-                  ) : (
-                    <ConfirmButton
-                      label={DELETE_LABEL}
-                      variant="danger-outline"
-                      busy={saving}
-                      busyLabel="削除しています…"
-                      confirm={kpiCategoryDeleteConfirmText(c.name)}
-                      onConfirm={() => void remove(c.id)}
-                    />
+      {/* 行の形はほかの一覧と同じ（番号 → 本文 → 補足 → 使っている場所、操作は右の列。spec §28-14） */}
+      <Card>
+        {categories.length > 0 && (
+          <ol className="list-rows" aria-label="KPIカテゴリ">
+            {categories.map((c, index) => {
+              const mark = blockedMark(usedByOf(c.id));
+              return (
+                <li key={c.id} className="card-row">
+                  <ListRowBody number={index + 1} text={c.name} note={c.description ?? undefined}>
+                    {mark !== null && <UsedByDetail mark={mark} usedBy={usedByOf(c.id)} />}
+                  </ListRowBody>
+                  {/* 使っているカテゴリは消せないので、操作の列を作らない（使っている場所は本文の下に出る） */}
+                  {mark === null && (
+                    <div className="row-actions">
+                      <ConfirmButton
+                        label={DELETE_LABEL}
+                        variant="danger-outline"
+                        busy={saving}
+                        busyLabel="削除しています…"
+                        confirm={kpiCategoryDeleteConfirmText(c.name)}
+                        onConfirm={() => void remove(c.id)}
+                      />
+                    </div>
                   )}
-                </>
-              }
-            />
-            {mark !== null && <UsedByDetail mark={mark} usedBy={usedByOf(c.id)} />}
-          </Card>
-        );
-      })}
-
-      <Card className="card-pad">
-        {newName === null ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" disabled={saving} onClick={() => setNewName("")}>
-              カテゴリを追加する
-            </Button>
-            <span className="footnote">新しいKPIの分類を1つ増やします。</span>
-          </div>
-        ) : (
-          <>
-            <label className="block text-note text-ink-muted">
-              カテゴリの名前
-              <input
-                value={newName}
-                onChange={(event) => setNewName(event.target.value)}
-                className="input mt-1 w-full"
-                placeholder="例：品質"
-              />
-            </label>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button variant="primary" disabled={saving || newName.trim() === ""} onClick={() => void create()}>
-                {saving ? "追加しています…" : "追加する"}
-              </Button>
-              <Button variant="tertiary" disabled={saving} onClick={() => setNewName(null)}>
-                やめる
-              </Button>
-            </div>
-          </>
+                </li>
+              );
+            })}
+          </ol>
         )}
+        {/* 足すボタンは、どの一覧でも一覧の下の左端に置く。カテゴリが無いことは、その右に書く（spec §28-14） */}
+        <div className={categories.length > 0 ? "card-pad border-t border-line" : "card-pad"}>
+          {newName === null ? (
+            <ListAddRow empty={categories.length === 0 && "カテゴリはまだありません。"} note="新しいKPIの分類を1つ増やします。">
+              <Button variant="secondary" disabled={saving} onClick={() => setNewName("")}>
+                ＋ カテゴリを追加
+              </Button>
+            </ListAddRow>
+          ) : (
+            <>
+              <label className="block text-note text-ink-muted">
+                カテゴリの名前
+                <input
+                  value={newName}
+                  onChange={(event) => setNewName(event.target.value)}
+                  className="input mt-1 w-full"
+                  placeholder="例：品質"
+                />
+              </label>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button variant="primary" disabled={saving || newName.trim() === ""} onClick={() => void create()}>
+                  {saving ? "追加しています…" : "追加する"}
+                </Button>
+                <Button variant="tertiary" disabled={saving} onClick={() => setNewName(null)}>
+                  やめる
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </Card>
 
       {anyBlocked && (

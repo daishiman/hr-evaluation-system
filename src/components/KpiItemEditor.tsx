@@ -2,8 +2,9 @@
 
 import { useSaveAction } from "@/lib/use-refresh";
 import { useState } from "react";
-import { Badge, Button, Card, CardHead, Code, Disclosure, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, Code, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { ListAddRow, ListRowBody } from "@/components/ListRow";
 import { UsedByDetail } from "@/components/UsedByDetail";
 import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
 import {
@@ -185,94 +186,125 @@ export function KpiItemEditor({
       {error && <ReasonNote>{error}</ReasonNote>}
       <RefreshStatus message={message} refreshing={saving} />
 
-      {items.map((row) => {
-        const mark = blockedMark(usedByOf(row.id));
-        const locked = usedByOf(row.id).length > 0;
-        const isEditing = editingId === row.id;
+      {/* 行の形は等級要件・昇格の条件と同じ（番号 → 本文と札 → 補足 → 使っている場所、操作は右の列。spec §28-14）。
+          KPI 項目は No. で並ぶので並べ替えは置かない */}
+      <Card>
+        {items.length > 0 && (
+          <ol className="list-rows" aria-label="KPI項目">
+            {items.map((row) => {
+              const mark = blockedMark(usedByOf(row.id));
+              const locked = usedByOf(row.id).length > 0;
+              const isEditing = editingId === row.id;
 
-        return (
-          <Card key={row.id} className="card-pad" off={!row.isActive}>
-            {!isEditing ? (
-              <>
-                <CardHead
-                  title={`No.${row.no} ${row.name}`}
-                  sub={`${row.categoryName ?? "分類未設定"} ／ ${row.measureType} ／ 単位 ${row.unit} ／ ${
-                    row.direction === "lower" ? "低いほど良い" : "高いほど良い"
-                  }`}
-                  actions={
-                    <>
-                      {row.isFixedSlot && <Badge tone="done">固定枠</Badge>}
-                      {row.isProvisional && <Badge tone="dropped">仮置き</Badge>}
-                      <Badge tone={row.isActive ? "active" : "dropped"}>{row.isActive ? "使用中" : "使用しない"}</Badge>
-                      {mark !== null && <Badge tone="active">{mark}</Badge>}
-                    </>
-                  }
-                />
-                {row.formula && (
-                  <p className="footnote m-0 mt-1">
-                    計算式 <Code>{row.formula}</Code>
-                  </p>
-                )}
-                {mark !== null && <UsedByDetail mark={mark} usedBy={usedByOf(row.id)} />}
-                {!row.isFixedSlot && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Button variant="tertiary" disabled={saving} onClick={() => startEdit(row)}>
-                      内容を直す
-                    </Button>
-                    <Button variant="tertiary" disabled={saving} onClick={() => void toggleActive(row)}>
-                      {row.isActive ? "使わない" : "もう一度使う"}
-                    </Button>
-                    {mark === null && (
-                      <ConfirmButton
-                        label={DELETE_LABEL}
-                        variant="danger-outline"
+              return (
+                <li key={row.id} className="card-row" data-off={row.isActive ? undefined : "true"}>
+                  {isEditing ? (
+                    <ListRowBody number={`No.${row.no}`} wide>
+                      <ItemForm
+                        draft={editDraft!}
+                        onChange={setEditDraft}
+                        categories={categories}
+                        locked={locked}
                         busy={saving}
-                        confirm={kpiItemDeleteConfirmText(row.name)}
-                        onConfirm={() => void remove(row.id)}
+                        submitLabel="保存する"
+                        onSubmit={() => void saveEdit(row)}
+                        onCancel={() => {
+                          setEditingId(null);
+                          setEditDraft(null);
+                        }}
                       />
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              <ItemForm
-                draft={editDraft!}
-                onChange={setEditDraft}
-                categories={categories}
-                locked={locked}
-                busy={saving}
-                submitLabel="保存する"
-                onSubmit={() => void saveEdit(row)}
-                onCancel={() => {
-                  setEditingId(null);
-                  setEditDraft(null);
-                }}
-              />
-            )}
-          </Card>
-        );
-      })}
-
-      <Card className="card-pad">
-        {creating === null ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" disabled={saving} onClick={() => setCreating(emptyDraft())}>
-              KPI項目を追加する
-            </Button>
-            <span className="footnote">名前・単位・向き・分類などを決めて、新しい項目を1件増やします。</span>
-          </div>
-        ) : (
-          <ItemForm
-            draft={creating}
-            onChange={setCreating}
-            categories={categories}
-            locked={false}
-            busy={saving}
-            submitLabel="追加する"
-            onSubmit={() => void create()}
-            onCancel={() => setCreating(null)}
-          />
+                    </ListRowBody>
+                  ) : (
+                    <>
+                      <ListRowBody
+                        number={`No.${row.no}`}
+                        wide
+                        text={row.name}
+                        badges={
+                          (row.isFixedSlot || row.isProvisional || !row.isActive) && (
+                            <span className="inline-flex flex-wrap gap-1">
+                              {row.isFixedSlot && <Badge tone="done">固定枠</Badge>}
+                              {row.isProvisional && <Badge tone="dropped">仮置き</Badge>}
+                              {!row.isActive && <Badge tone="dropped">使用しない</Badge>}
+                            </span>
+                          )
+                        }
+                        note={
+                          <>
+                            {row.categoryName ?? "分類未設定"} ／ {row.measureType} ／ 単位 {row.unit} ／{" "}
+                            {row.direction === "lower" ? "低いほど良い" : "高いほど良い"}
+                            {row.formula && (
+                              <>
+                                <br />
+                                計算式 <Code>{row.formula}</Code>
+                              </>
+                            )}
+                          </>
+                        }
+                      >
+                        {mark !== null && <UsedByDetail mark={mark} usedBy={usedByOf(row.id)} />}
+                      </ListRowBody>
+                      {/* 固定枠（等級要件達成率）は制度の決まりなので、直す・止める・消すを出さない */}
+                      {!row.isFixedSlot && (
+                        <div className="row-actions">
+                          <Button variant="tertiary" disabled={saving} onClick={() => startEdit(row)}>
+                            内容を直す
+                          </Button>
+                          {row.isActive ? (
+                            <ConfirmButton
+                              label="今後使わない"
+                              variant="danger-outline"
+                              busy={saving}
+                              confirm={`「${row.name}」を今後使わない設定にします。評価セットで選べる項目から外れます。過去のアンケートと評価は変わりません。`}
+                              onConfirm={() => void toggleActive(row)}
+                            />
+                          ) : (
+                            <Button variant="secondary" disabled={saving} onClick={() => void toggleActive(row)}>
+                              もう一度使う
+                            </Button>
+                          )}
+                          {mark === null && (
+                            <ConfirmButton
+                              label={DELETE_LABEL}
+                              variant="danger-outline"
+                              busy={saving}
+                              confirm={kpiItemDeleteConfirmText(row.name)}
+                              onConfirm={() => void remove(row.id)}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
         )}
+        {/* 足すボタンは、どの一覧でも一覧の下の左端に置く。項目が無いことは、その右に書く（spec §28-14） */}
+        <div className={items.length > 0 ? "card-pad border-t border-line" : "card-pad"}>
+          {creating === null ? (
+            <ListAddRow
+              empty={items.length === 0 && "KPI項目はまだありません。"}
+              note="名前・単位・向き・分類などを決めて、新しい項目を1件増やします。"
+            >
+              <Button variant="secondary" disabled={saving} onClick={() => setCreating(emptyDraft())}>
+                ＋ KPI項目を追加
+              </Button>
+            </ListAddRow>
+          ) : (
+            <ItemForm
+              draft={creating}
+              onChange={setCreating}
+              categories={categories}
+              locked={false}
+              busy={saving}
+              submitLabel="追加する"
+              onSubmit={() => void create()}
+              onCancel={() => setCreating(null)}
+            />
+          )}
+        </div>
       </Card>
 
       {anyBlocked && (
@@ -308,7 +340,7 @@ function ItemForm({
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => onChange({ ...draft, [key]: value });
 
   return (
-    <div className="rounded-lg border border-line p-3">
+    <div>
       <div className="field-grid">
         <label>
           <span className="block text-note text-ink-muted">項目名</span>

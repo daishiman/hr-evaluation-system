@@ -4,6 +4,7 @@ import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
 import { Button, Card, CardHead, Disclosure, InlineDetail, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { ListAddRow } from "@/components/ListRow";
 import { UsedByDetail } from "@/components/UsedByDetail";
 import { VersionedMasterSections } from "@/components/VersionedMasterSections";
 import {
@@ -102,14 +103,6 @@ export function GradeRequirementEditor({
           }
         />
 
-        {list.length === 0 && (
-          <div className="card-pad">
-            <p className="footnote m-0">
-              この等級の「{label}」はまだ1項目もありません。0項目のままでも保存できます（そのぶん達成率の分母が小さくなります）。
-            </p>
-          </div>
-        )}
-
         {/* 並べ替えはつまみの長押し・ドラッグか矢印のボタン（S11・DD-005）。置いたら並び全体を1回で保存する */}
         {list.length > 0 && (
         <ReorderList
@@ -165,17 +158,26 @@ export function GradeRequirementEditor({
               </div>
             </div>
           ) : (
-            <>
+            /* 足すボタンは、どの一覧でも一覧の下の左端に置く。足せない理由と、項目が無いことはその右に添える（spec §28-14） */
+            <ListAddRow
+              empty={
+                list.length === 0 && (
+                  <>この等級の「{label}」はまだ1項目もありません。0項目のままでも保存できます（そのぶん達成率の分母が小さくなります）。</>
+                )
+              }
+              note={
+                rest === 0 && (
+                  <>
+                    「{label}」は{GRADE_REQUIREMENT_MAX}項目までのため、これ以上追加できません。
+                    追加したい場合は、いまある項目を1つ「今後使わない」にしてください。
+                  </>
+                )
+              }
+            >
               <Button variant="secondary" disabled={saving || rest === 0} onClick={() => setDrafts((s) => ({ ...s, [category]: { open: true, text: "" } }))}>
                 ＋ 項目を追加
               </Button>
-              {rest === 0 && (
-                <p className="footnote m-0 mt-2">
-                  「{label}」は{GRADE_REQUIREMENT_MAX}項目までのため、これ以上追加できません。
-                  追加したい場合は、いまある項目を1つ「今後使わない」にしてください。
-                </p>
-              )}
-            </>
+            </ListAddRow>
           )}
         </div>
 

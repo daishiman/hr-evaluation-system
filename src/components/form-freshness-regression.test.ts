@@ -54,10 +54,14 @@ function find(tree: unknown, predicate: (node: Node) => boolean): Node {
     } else if (isValidElement<Record<string, unknown>>(value)) {
       if (predicate(value)) return value;
       for (const prop of Object.values(value.props)) { const found = visit(prop); if (found) return found; }
-      // 並べ替えの一覧（ReorderList）は行の中身を renderItem で描く。その中も探す
-      const { items, renderItem } = value.props;
+      // 並べ替えの一覧（ReorderList）は行の中身を renderItem、行の操作を renderActions で描く。その中も探す
+      const { items, renderItem, renderActions } = value.props;
       if (Array.isArray(items) && typeof renderItem === "function") {
-        return visit(items.map((item, index) => (renderItem as (item: unknown, index: number) => unknown)(item, index)));
+        type Draw = (item: unknown, index: number) => unknown;
+        return visit(items.map((item, index) => [
+          (renderItem as Draw)(item, index),
+          typeof renderActions === "function" ? (renderActions as Draw)(item, index) : null,
+        ]));
       }
     }
   };
@@ -186,7 +190,7 @@ describe("FormBuilder の再取得", () => {
   const initial = [{ ...createBlankQuestion("free", "text", "unused"), id: "q1", title: "旧設問" }];
   it("保存待ちの外部更新と保存失敗では未保存の入力を消さない", async () => {
     const props = { formId: "f1", initial, editable: true };
-    (find(render(FormBuilder, props), (node) => node.props.children === "編集").props.onClick as () => void)();
+    (find(render(FormBuilder, props), (node) => node.props.children === "内容を直す").props.onClick as () => void)();
     (find(render(FormBuilder, props), (node) => node.type === "input" && node.props.value === "旧設問").props.onChange as (event: { target: { value: string } }) => void)({ target: { value: "保持する未保存入力" } });
     let finish!: (result: { ok: boolean; message: string }) => void;
     hooks.save.mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
@@ -204,7 +208,7 @@ describe("FormBuilder の再取得", () => {
 
   it("成功しても最新propsが送った内容と違えば外部更新を自分の保存結果と誤認しない", async () => {
     const props = { formId: "f1", initial, editable: true };
-    (find(render(FormBuilder, props), (node) => node.props.children === "編集").props.onClick as () => void)();
+    (find(render(FormBuilder, props), (node) => node.props.children === "内容を直す").props.onClick as () => void)();
     (find(render(FormBuilder, props), (node) => node.type === "input" && node.props.value === "旧設問").props.onChange as (event: { target: { value: string } }) => void)({ target: { value: "今回送る内容" } });
     const latest = { ...props, initial: [{ ...initial[0], title: "別タブの更新" }] };
     hooks.save.mockImplementationOnce(async () => {
@@ -220,7 +224,7 @@ describe("FormBuilder の再取得", () => {
 
   it.each(["number", "text"])("singleから%sへ変えた設問には選択肢を残さない", async (questionType) => {
     const props = { formId: "f1", initial: [{ ...initial[0], questionType: "single", options: [{ value: "1", label: "甲" }, { value: "2", label: "乙" }] }], editable: true };
-    (find(render(FormBuilder, props), (node) => node.props.children === "編集").props.onClick as () => void)();
+    (find(render(FormBuilder, props), (node) => node.props.children === "内容を直す").props.onClick as () => void)();
     const type = find(render(FormBuilder, props), (node) => node.type === "select" && node.props.value === "single");
     (type.props.onChange as (event: { target: { value: string } }) => void)({ target: { value: questionType } });
     const save = find(render(FormBuilder, props), (node) => node.props.children === "設問を保存する");
@@ -271,7 +275,7 @@ describe("FormBuilder の再取得", () => {
   it("編集可能なまま再取得しても未保存の設問文と開いている欄を保持する", () => {
     const props = { formId: "f1", initial, editable: true };
     const tree = render(FormBuilder, props);
-    const edit = find(tree, (node) => node.props.children === "編集");
+    const edit = find(tree, (node) => node.props.children === "内容を直す");
     (edit.props.onClick as () => void)();
     const opened = render(FormBuilder, props);
     const input = find(opened, (node) => node.type === "input" && node.props.value === "旧設問");

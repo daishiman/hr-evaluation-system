@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { ListRowBody } from "@/components/ListRow";
 import { UsedByDetail } from "@/components/UsedByDetail";
 import type { DraftMap } from "@/components/use-draft-map";
 import { DELETE_LABEL, blockedMark, deleteConfirmText } from "@/lib/domain/master-delete";
@@ -9,7 +10,7 @@ import { DELETE_LABEL, blockedMark, deleteConfirmText } from "@/lib/domain/maste
  * 版を持つ要件（等級要件・昇格要件）の、並べ替えの一覧の1行。
  * ReorderList の renderItem に本文（RevisableRequirementBody）、renderActions に行の操作を渡す。
  *
- * 2つの画面で行の形をそろえる:
+ * 2つの画面で行の形をそろえる（行の形そのものは ListRowBody。ほかの一覧とも同じ。spec §28-14）:
  *   - 本文: 番号・本文・「使用中（◯件）」。直している間は入力欄と「新版として保存」「やめる」
  *   - 行の操作: 内容を直す・今後使わない・完全に消す（一度も使っていない行だけ）
  * 画面ごとに違うのは、本文の後ろの札・保存で送る中身・足す操作・入力欄の読み上げ名の頭の語だけなので、それを受け取る。
@@ -48,49 +49,40 @@ export function RevisableRequirementBody({
 }) {
   const mark = blockedMark(usedBy);
   const draft = editing.drafts[id];
+  if (draft === undefined) {
+    return (
+      <ListRowBody number={index + 1} text={text} badges={badge}>
+        {mark !== null && <UsedByDetail mark={mark} usedBy={usedBy} />}
+      </ListRowBody>
+    );
+  }
   return (
-    <div className="flex items-start gap-3">
-      <span className="num mt-[2px] w-6 shrink-0 text-sub text-ink-muted">{index + 1}</span>
-      <div className="row-main">
-        {draft === undefined ? (
-          <>
-            {/* 札は行の性質なので、押すボタンの列ではなく本文の直後に置く */}
-            <p className="m-0 text-sub">
-              {text}
-              {badge && <>{" "}{badge}</>}
-            </p>
-            {mark !== null && <UsedByDetail mark={mark} usedBy={usedBy} />}
-          </>
-        ) : (
-          <>
-            <textarea
-              value={draft}
-              autoFocus
-              onChange={(e) => editing.change(id, e.target.value)}
-              rows={2}
-              className="input w-full"
-              aria-label={`${groupLabel} ${index + 1}件目の内容`}
-            />
-            <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
-            <div className="mt-2 flex gap-2">
-              <Button
-                variant="primary"
-                disabled={busy || draft.trim() === ""}
-                onClick={async () => {
-                  const ok = await onSave(draft.trim());
-                  if (ok) editing.stop(id);
-                }}
-              >
-                新版として保存
-              </Button>
-              <Button variant="tertiary" disabled={busy} onClick={() => editing.stop(id)}>
-                やめる
-              </Button>
-            </div>
-          </>
-        )}
+    <ListRowBody number={index + 1}>
+      <textarea
+        value={draft}
+        autoFocus
+        onChange={(e) => editing.change(id, e.target.value)}
+        rows={2}
+        className="input w-full"
+        aria-label={`${groupLabel} ${index + 1}件目の内容`}
+      />
+      <p className="footnote m-0 mt-1">以前の内容は変更履歴に残ります。</p>
+      <div className="mt-2 flex gap-2">
+        <Button
+          variant="primary"
+          disabled={busy || draft.trim() === ""}
+          onClick={async () => {
+            const ok = await onSave(draft.trim());
+            if (ok) editing.stop(id);
+          }}
+        >
+          新版として保存
+        </Button>
+        <Button variant="tertiary" disabled={busy} onClick={() => editing.stop(id)}>
+          やめる
+        </Button>
       </div>
-    </div>
+    </ListRowBody>
   );
 }
 

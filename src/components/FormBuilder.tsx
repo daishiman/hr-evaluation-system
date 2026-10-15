@@ -21,6 +21,7 @@ import {
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { ReorderList } from "@/components/reorder/ReorderList";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { ListAddRow, ListRowBody, ListRowNumber } from "@/components/ListRow";
 
 export type { BuilderQuestion } from "@/components/form-builder-model";
 
@@ -28,7 +29,7 @@ export type { BuilderQuestion } from "@/components/form-builder-model";
  * アンケートの設問をクリックで組み立てる画面。
  *
  * 設問文を打ち込む以外は、すべてボタンで完結するようにしている
- * （種類を選ぶ・並べ替える・選択肢を足す）。並べ替えは共通の ReorderList（つまみの長押し・ドラッグ・
+ * （種類を選ぶ・並べ替える・選択肢を追加する）。並べ替えは共通の ReorderList（つまみの長押し・ドラッグ・
  * キーボード・矢印のボタン）で、設問と選択肢の両方に使う（S11）。並べ替えは手元の並びだけを変え、
  * 保存は今までどおり「設問を保存する」でまとめて行う。
  * 集計に使う紐づけ（等級要件・KPI項目）は編集させない。ここを人が触ると
@@ -121,8 +122,8 @@ export function FormBuilder({
     setOpenKey(clientKey);
   };
 
-  /* 一覧が長くなるほど、末尾の「設問を足す」まで押しに戻るのが遠くなる。
-     いま見ているカードのすぐ下に、同じまとまり・同じ答え方で1問差し込めるようにする。 */
+  /* 一覧が長くなるほど、一覧の下の「＋ 設問を追加」まで押しに戻るのが遠くなる。
+     いま見ている行のすぐ下に、同じまとまり・同じ答え方で1問差し込めるようにする。 */
   const addAfter = (i: number) => {
     setDirty(true);
     const clientKey = newClientKey();
@@ -206,10 +207,13 @@ export function FormBuilder({
       )}
       <RefreshStatus message={message} refreshing={saving} target="画面" className="m-0 mb-3 text-sub text-brand-deep" />
 
+      <Card>
+      {/* 行の形はほかの一覧と同じ（番号・本文・札・補足／右端に行の操作。spec §28-14） */}
+      {rows.length > 0 && (
       <ReorderList
         items={rows.map((r) => ({ id: r.clientKey, label: r.title || "（設問文が未入力です）" }))}
         label="設問の並び"
-        className="reorder-cards"
+        className="reorder-in-card"
         busy={saving}
         onCommit={reorderQuestions}
         renderItem={(item, position) => {
@@ -219,48 +223,51 @@ export function FormBuilder({
           if (!r) return null;
           const open = openKey === r.clientKey;
           const keys = optionKeys(r.options);
-          const title = (
-            <>
-              <span className="num mr-2 text-ink-muted">{position + 1}.</span>
-              {r.title || <span className="text-ink-muted">（設問文が未入力です）</span>}
-            </>
-          );
+          const title = r.title || <span className="text-ink-muted">（設問文が未入力です）</span>;
+          const badge = r.isGate ? <Badge tone="alert">昇格の必須要件</Badge> : undefined;
           const sub = (
             <>
               {SECTION_LABEL[r.section] ?? r.section} ／ {TYPE_LABEL[r.questionType] ?? r.questionType}
               {r.unit ? ` ／ 単位 ${r.unit}` : ""} ／ {r.required ? "必須" : "任意"}
             </>
           );
-          const actions = (
-            <>
-              {r.isGate && <Badge tone="alert">昇格の必須要件</Badge>}
-              <Button onClick={() => addAfter(i)} aria-label="この下に自由設問を追加">
-                この下に追加
-              </Button>
-              <Button onClick={() => setOpenKey(open ? null : r.clientKey)}>{open ? "閉じる" : "編集"}</Button>
-            </>
-          );
           return (
-          <Card className="card-pad">
-            {/* 頭を固定するのは「編集を開いているカード」だけ。
+          <>
+            {/* 頭を固定するのは「編集を開いている設問」だけ。
                 開くと選択肢の並びまで含めて縦に長くなり、下のほうを直しているときに
                 「何問目を・どの答え方で・どの単位で」直しているのかが画面の外へ出てしまう。
-                閉じているカードは2行しかなく、固定しても貼り付く前に流れ去るため付けない
+                閉じている行は2行しかなく、固定しても貼り付く前に流れ去るため付けない
                 （帯の見た目だけが増えて一覧が読みにくくなる）。
-                集計との紐づけは一度読めば済むので帯には載せず、開いた本文の先頭に置く。 */}
+                集計との紐づけは一度読めば済むので帯には載せず、開いた本文の先頭に置く。
+                番号は閉じた行と同じ列に置く（ListRowNumber）。 */}
             {open ? (
-              <CardHead pinned title={title} sub={sub} actions={actions} />
-            ) : (
               <CardHead
-                title={title}
+                pinned
+                lead={<ListRowNumber>{position + 1}</ListRowNumber>}
+                title={<>{title}{badge && <> {badge}</>}</>}
                 sub={sub}
-                detail={r.linkLabel ? <p className="footnote m-0 mt-1">集計との紐づけ：{r.linkLabel}</p> : undefined}
-                actions={actions}
+                actions={
+                  <Button variant="tertiary" onClick={() => setOpenKey(null)}>
+                    閉じる
+                  </Button>
+                }
+              />
+            ) : (
+              <ListRowBody
+                number={position + 1}
+                text={title}
+                badges={badge}
+                note={
+                  <>
+                    {sub}
+                    {r.linkLabel && <><br />集計との紐づけ：{r.linkLabel}</>}
+                  </>
+                }
               />
             )}
 
             {open && (
-              <div className="field-grid mt-3 border-t border-line pt-3">
+              <div className="field-grid mt-3 ml-9">
                 <p className="footnote m-0 md:col-span-2">
                   {r.linkLabel ? `集計との紐づけ：${r.linkLabel}` : "自由設問（評価集計には使いません）"}
                 </p>
@@ -353,9 +360,12 @@ export function FormBuilder({
                         </p>
                       )}
                       {r.options.length > 0 && (
+                        /* 選択肢の行も同じ形（番号・本文／右端に行の操作）。入力欄1つの短い行なので、
+                           広さが足りれば操作を本文の右に1段で並べる（reorder-inline） */
                         <ReorderList
                           items={r.options.map((o, oi) => ({ id: keys[oi], label: o.label || "（未入力の選択肢）" }))}
                           label={`「${r.title || `${position + 1}問目`}」の選択肢の並び`}
+                          className="reorder-inline"
                           busy={saving}
                           onCommit={(order) => reorderOptions(i, order)}
                           renderItem={(option, at) => {
@@ -364,9 +374,9 @@ export function FormBuilder({
                             const o = r.options[oi];
                             if (!o) return null;
                             return (
-                              <div className="flex items-center gap-2">
+                              <ListRowBody number={at + 1}>
                                 <input
-                                  className="input min-w-0 flex-1"
+                                  className="input w-full"
                                   aria-label={`${at + 1}番目の選択肢の文言`}
                                   value={o.label}
                                   onChange={(e) =>
@@ -375,25 +385,33 @@ export function FormBuilder({
                                     })
                                   }
                                 />
-                                <Button onClick={() => patch(i, { options: r.options.filter((_, xi) => xi !== oi) })}>
-                                  削除
-                                </Button>
-                              </div>
+                              </ListRowBody>
                             );
                           }}
+                          renderActions={(option) => (
+                            <Button
+                              variant="tertiary"
+                              aria-label={`選択肢「${option.label}」を削除`}
+                              // 値が重なる選択肢を1件ずつ消せるよう、値ではなくキーの位置で消す
+                              onClick={() => patch(i, { options: r.options.filter((_, xi) => xi !== keys.indexOf(option.id)) })}
+                            >
+                              削除
+                            </Button>
+                          )}
                         />
                       )}
-                      <div>
+                      <ListAddRow>
                         <Button
+                          variant="secondary"
                           onClick={() => {
                             // 件数＋1 ではなく今ある値の最大＋1にする（消してから足しても値が重ならない）
                             const value = nextOptionValue(r.options);
                             patch(i, { options: [...r.options, { value, label: `選択肢${value}` }] });
                           }}
                         >
-                          選択肢を足す
+                          ＋ 選択肢を追加
                         </Button>
-                      </div>
+                      </ListAddRow>
                     </div>
                   </div>
                 )}
@@ -409,21 +427,46 @@ export function FormBuilder({
                 </div>
               </div>
             )}
-          </Card>
+          </>
+          );
+        }}
+        renderActions={(item) => {
+          // 開いている設問は操作の列を作らず（null）、入力欄を行の幅いっぱいに使う。閉じるは固定する頭に置く
+          const i = rows.findIndex((row) => row.clientKey === item.id);
+          if (i < 0 || openKey === item.id) return null;
+          return (
+            <>
+              <Button variant="tertiary" onClick={() => setOpenKey(item.id)}>
+                内容を直す
+              </Button>
+              <Button onClick={() => addAfter(i)} aria-label="この下に自由設問を追加">
+                この下に追加
+              </Button>
+            </>
           );
         }}
       />
+      )}
 
-      <div className="mt-4">
-        <p className="section-heading m-0 mb-2">設問を足す</p>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => add("free", "yesno")}>はい / いいえ</Button>
-          <Button onClick={() => add("free", "single")}>1つ選ぶ</Button>
-          <Button onClick={() => add("free", "multi")}>いくつでも選ぶ</Button>
-          <Button onClick={() => add("kpi", "number")}>数値を入れる</Button>
-          <Button onClick={() => add("free", "text")}>文章で書く</Button>
-        </div>
+      {/* 足すボタンは、どの一覧でも一覧の下の左端に置く（spec §28-14）。
+          設問は答え方で入力欄が変わるので、「＋ 設問を追加」の後ろに答え方を並べ、1回押せば足せるようにする。
+          設問が無いことは、別の段にせずその右に書く */}
+      <div className={rows.length > 0 ? "card-pad border-t border-line" : "card-pad"}>
+        <ListAddRow
+          empty={rows.length === 0 && "設問はまだありません。"}
+          note="押した答え方で、一覧の最後に1問足して入力欄を開きます。"
+        >
+          <div role="group" aria-label="設問を追加" className="flex flex-wrap items-center gap-2">
+            <span aria-hidden="true" className="text-sub font-bold">＋ 設問を追加</span>
+            <Button onClick={() => add("free", "yesno")}>はい / いいえ</Button>
+            <Button onClick={() => add("free", "single")}>1つ選ぶ</Button>
+            <Button onClick={() => add("free", "multi")}>いくつでも選ぶ</Button>
+            <Button onClick={() => add("kpi", "number")}>数値を入れる</Button>
+            <Button onClick={() => add("free", "text")}>文章で書く</Button>
+          </div>
+        </ListAddRow>
       </div>
+      </Card>
 
       {/* 設問が増えるほど縦に伸びる画面。設問数と保存ボタンは画面下に固定する */}
       <StickyActionBar

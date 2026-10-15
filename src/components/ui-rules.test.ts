@@ -50,14 +50,13 @@ describe("画面の器の作法", () => {
   });
 
   it("一覧の1行は CardRow に集約する（title と sub を画面で組み立て直さない）", () => {
-    const owner = join(SRC, "components", "ui.tsx");
+    // 読むだけの一覧は CardRow（ui.tsx）、並べ替え・直す操作のある編集の一覧は ListRowBody（ListRow.tsx。spec §28-14）
+    const owners = new Set([join(SRC, "components", "ui.tsx"), join(SRC, "components", "ListRow.tsx")]);
     // .row-main（見出し＋補足の入れ物）を自前で書いている画面を検出する。
-    // 入力欄が並ぶ編集画面は行の中身が画面ごとに違うため、下の許可リストで除く。
-    const editors = new Set(
-      ["FormAnswer.tsx", "RevisableRequirementRow.tsx", "PointDesign.tsx", "BehaviorGuidelineEditor.tsx", "BehaviorBandSetEditor.tsx"].map((n) => n),
-    );
+    // 入力欄が並ぶ回答・配点の画面は行の中身が画面ごとに違うため、下の許可リストで除く。
+    const editors = new Set(["FormAnswer.tsx", "PointDesign.tsx"]);
     const offenders = sourceFiles.filter(
-      (p) => p !== owner && !editors.has(p.split("/").pop() ?? "") && readFileSync(p, "utf8").includes('className="row-main"'),
+      (p) => !owners.has(p) && !editors.has(p.split("/").pop() ?? "") && readFileSync(p, "utf8").includes('className="row-main"'),
     );
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
@@ -580,11 +579,13 @@ describe("画面の器の作法", () => {
     }
   });
 
-  it("設問の組み立ては、編集を開いているカードだけ頭を固定する", () => {
-    // 閉じているカードは2行しかなく、貼り付く前に流れ去る。
+  it("設問の組み立ては、編集を開いている設問だけ頭を固定する", () => {
+    // 閉じている行は2行しかなく、貼り付く前に流れ去る。
     // 全部に帯を付けると、設問の一覧としての読みやすさだけが落ちる。
     const source = readFileSync(join(SRC, "components", "FormBuilder.tsx"), "utf8");
-    expect(source).toMatch(/\{open \? \(\s*<CardHead pinned/);
+    expect(source).toMatch(/\{open \? \(\s*<CardHead\s+pinned/);
+    // 閉じている行はほかの一覧と同じ行の形（spec §28-14）
+    expect(source).toMatch(/\) : \(\s*<ListRowBody/);
   });
 
   it("読むだけの画面（提出済みの回答・一覧）には帯を作らない", () => {

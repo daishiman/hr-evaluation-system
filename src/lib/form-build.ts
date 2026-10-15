@@ -54,7 +54,7 @@ export function duplicateOptionValues(options: readonly { value: string; label: 
 
 /** 値の重なりを断るときの文。組み立て画面では値が見えないので、直し方は「消して足し直す」で伝える。 */
 export function duplicateOptionMessage(title: string, values: readonly string[]): string {
-  return `「${title}」の選択肢で、内部の値（${values.join("、")}）が重なっています。重なっている選択肢をいったん消し、「選択肢を足す」で足し直してください。`;
+  return `「${title}」の選択肢で、内部の値（${values.join("、")}）が重なっています。重なっている選択肢をいったん消し、「＋ 選択肢を追加」で足し直してください。`;
 }
 
 type Row = typeof s.formQuestions.$inferInsert;
