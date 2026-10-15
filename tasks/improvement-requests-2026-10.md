@@ -93,6 +93,7 @@
 | `git diff --check` | PASS |
 | E2E（`e2e/` の全 spec） | Chromium 57 件成功（`7040c10`、隔離した DB） |
 | ログイン後のスモーク | 14 件中 14 件 OK（ローカルの preview） |
+| dev-graph（schema / lineage） | このツリーの graph（2026-10-15 に作り直した 23 node。IR の node を含まない）は pass / pass。IR の node を持つ別のツリーの graph は、今も 3 node が `lineage_digest_mismatch`（OPS-015 のまま） |
 
 ## 残課題
 
