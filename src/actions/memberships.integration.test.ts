@@ -68,7 +68,7 @@ import { switchCompanyScope } from "@/actions/company-scope";
 import { createMember, updateMember } from "@/actions/members";
 import { updateCompany } from "@/actions/companies";
 import { revealCredentialMemo } from "@/actions/credential-memos";
-import { listAllUsers, listMembers } from "@/lib/queries";
+import { listAllUsers, listMembers, listSwitchableCompanies } from "@/lib/queries";
 
 let t: TestDatabase;
 
@@ -203,9 +203,16 @@ describe("どの所属を使うか（activeMembershipFor）", () => {
     expect(m).toMatchObject({ companyId: COMPANY_B, role: "MANAGER", gradeId: "grd_b", employeeCode: "B-777" });
   });
 
-  it("選んだ会社が無い・所属していないときは、一番古い有効な所属", async () => {
-    expect(await activeMembershipFor(t.db, DUAL, null)).toMatchObject({ companyId: IDS.company, role: "EMPLOYEE" });
-    expect(await activeMembershipFor(t.db, DUAL, COMPANY_C)).toMatchObject({ companyId: IDS.company });
+  it("選んだ会社が無い・所属していないときは、有効な所属のうち会社名の順で最初の会社（D-009）", async () => {
+    // 一番古い所属はテスト社だが、会社名の順では B社 が先
+    expect(await activeMembershipFor(t.db, DUAL, null)).toMatchObject({ companyId: COMPANY_B, role: "MANAGER" });
+    expect(await activeMembershipFor(t.db, DUAL, COMPANY_C)).toMatchObject({ companyId: COMPANY_B });
+  });
+
+  it("切り替えの一覧も会社名の順で、先頭は選んでいないときに開く会社と同じ（D-009）", async () => {
+    const list = await listSwitchableCompanies(as("EMPLOYEE", DUAL, IDS.company));
+    expect(list.map((c) => c.id)).toEqual([COMPANY_B, IDS.company]);
+    expect((await activeMembershipFor(t.db, DUAL, null))?.companyId).toBe(list[0].id);
   });
 
   it("停止中の会社とテンプレートの会社の所属は選ばない。有効な所属が無ければ null", async () => {
@@ -400,6 +407,7 @@ describe("会社の管理者は、他社にもいる人の利用者全体の値�
   });
 
   it("元の所属（一番古い所属）を変えたときは、users の写しも同じ値になる。元でない所属を変えても写しは変わらない", async () => {
+    // 開く会社は会社名の順で B社 だが、写しの基準は古い順のテスト社のまま（DD-009 の更新）
     mocked.viewer = as("COMPANY_ADMIN", ADMIN_A, IDS.company);
     await updateMember({ userId: DUAL, employeeCode: "A-003" });
     expect((await userRow(DUAL)).employeeCode).toBe("A-003");

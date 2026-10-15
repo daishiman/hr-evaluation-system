@@ -21,7 +21,7 @@ import { rangeLabel } from "@/lib/domain/scoring";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
 import {
   activeMembershipFor,
-  activeMembershipsOf,
+  activeMembershipsByCompanyName,
   hasMembershipElsewhere,
   isSuperAdmin,
   joinEveryMembership,
@@ -56,7 +56,8 @@ export async function listSwitchableCompanies(viewer: Viewer): Promise<{ id: str
     return (await listCompanies()).filter((c) => c.isActive).map((c) => ({ id: c.id, name: c.name }));
   }
   const db = await getDb();
-  return (await activeMembershipsOf(db, viewer.id)).map((x) => ({ id: x.companyId, name: x.companyName }));
+  // 選んでいる会社が無いときに開く会社と同じ順（会社名の順・D-009）
+  return (await activeMembershipsByCompanyName(db, viewer.id)).map((x) => ({ id: x.companyId, name: x.companyName }));
 }
 
 /**

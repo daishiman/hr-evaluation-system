@@ -96,7 +96,7 @@ indigo と graphite の4枚とテーマメニュー1枚は 2026-09-29 に撮影�
 3. 2つ目のターミナルで `pnpm exec node scripts/capture-theme-gallery.mjs` を実行する。系統を1つ足しただけのときは `--palettes <足した系統>` を付けると、既存の系統の画像を撮り直さずに済む。
 4. 標準出力で比較・説明画像（全系統なら13枚）と4枚の幅確認画像について、CSS viewport、DPR、PNG実寸、横方向のはみ出しがないことを確認する。
 
-撮影用利用者を変える場合は `--email` と `--password`、Chromeの場所が標準と違う場合は `--chrome` で指定できます。全オプションは `pnpm exec node scripts/capture-theme-gallery.mjs --help` で確認できます。
+撮影用利用者を変える場合は `--email` と `--password`、Chromeの場所が標準と違う場合は `--chrome` で指定できます。既定の撮影用利用者はさくら福祉会にも一般として所属しているため、スクリプトはマネージャーとして開く会社（既定は `cmp_kyufu`）を、会社の切り替えと同じ cookie で選んでから `/manager` を開きます。別の会社で撮るときは `--company` で会社の id を指定します。全オプションは `pnpm exec node scripts/capture-theme-gallery.mjs --help` で確認できます。
 
 ## 見比べるときの読みどころ
 

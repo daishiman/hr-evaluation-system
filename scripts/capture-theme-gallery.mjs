@@ -22,6 +22,10 @@ const DEFAULT_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Ch
 const DEFAULT_ORIGIN = "http://localhost:8787";
 const DEFAULT_EMAIL = "manager@kyufu.hyoka-demo.jp";
 const DEFAULT_PASSWORD = "Hyoka2026!demo";
+// 見本のマネージャーは、さくら福祉会にも一般として所属している。会社を選ばないと
+// 会社名の順で先の会社（一般）が開き、/manager を開けない（DD-009）。src/lib/session.ts の COMPANY_SCOPE_COOKIE と同じ名前
+const DEFAULT_COMPANY = "cmp_kyufu";
+const COMPANY_SCOPE_COOKIE = "hr_company";
 
 // src/lib/palette.ts の PALETTES・DEFAULT_PALETTE と同じ値（palette-contract.test.ts が一致を検査する）。
 // 既定の系統は保存値を消した状態で表すため、撮るときも html に属性が付かない。
@@ -44,6 +48,7 @@ options:
   --origin <URL>       preview の URL（既定: ${DEFAULT_ORIGIN}）
   --email <address>    撮影用 MANAGER（既定: ${DEFAULT_EMAIL}）
   --password <value>   撮影用パスワード（既定: ローカル seed のデモ値）
+  --company <id>       マネージャーとして開く会社の id（既定: ${DEFAULT_COMPANY}）
   --chrome <path>      Google Chrome 実行ファイル
   --palettes <list>    撮り直す系統をカンマ区切りで指定（既定: ${GALLERY_PALETTES.join(",")}）
                        系統を足したときに、既存の系統の画像を撮り直さないために使う
@@ -58,6 +63,7 @@ function parseArgs(argv) {
     origin: DEFAULT_ORIGIN,
     email: process.env.THEME_GALLERY_EMAIL || DEFAULT_EMAIL,
     password: process.env.THEME_GALLERY_PASSWORD || DEFAULT_PASSWORD,
+    company: DEFAULT_COMPANY,
     chrome: process.env.THEME_GALLERY_CHROME || DEFAULT_CHROME,
     palettes: GALLERY_PALETTES.join(","),
   };
@@ -67,7 +73,7 @@ function parseArgs(argv) {
       usage();
       process.exit(0);
     }
-    if (!["--origin", "--email", "--password", "--chrome", "--palettes"].includes(arg)) {
+    if (!["--origin", "--email", "--password", "--company", "--chrome", "--palettes"].includes(arg)) {
       throw new Error(`不明な引数です: ${arg}`);
     }
     const value = argv[index + 1];
@@ -286,6 +292,17 @@ async function login(client, options) {
     { awaitPromise: true },
   );
   if (!result?.ok) throw new Error(`撮影用MANAGERでログインできませんでした（HTTP ${result?.status ?? "不明"}）。`);
+  // 会社の切り替えと同じ cookie を置く。値はサーバーが有効な所属で確かめ直すので、所属の無い会社は開けない
+  const { success } = await client.send("Network.setCookie", {
+    name: COMPANY_SCOPE_COOKIE,
+    value: options.company,
+    url: options.origin,
+    path: "/",
+    httpOnly: true,
+    sameSite: "Lax",
+    secure: options.origin.startsWith("https:"),
+  });
+  if (!success) throw new Error(`会社の cookie（${options.company}）を置けませんでした。`);
   await navigate(client, `${options.origin}/manager`);
   const path = await evaluate(client, "location.pathname");
   if (path !== "/manager") throw new Error(`ログイン後に /manager を開けませんでした（現在地: ${path}）。`);
