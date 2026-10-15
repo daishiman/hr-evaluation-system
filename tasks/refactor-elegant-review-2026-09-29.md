@@ -5,7 +5,7 @@
 | graph_node_id | `refactor-elegant-review-2026-09-29` |
 | beads_id | `hr-s4s` |
 | 種別 | refactor / fix / docs / chore |
-| 状態 | implemented（main へのマージ待ち） |
+| 状態 | merged。PR [#92](https://github.com/daishiman/hr-evaluation-system/pull/92) を 2026-10-13 に main へマージした（squash `2922479`）。受け入れ条件1〜7は 2026-10-15 に測り直した（下の「再確認」） |
 | base branch | `main` |
 | work branch | `devgraph/refactor-elegant-review-2026-09-29` |
 
@@ -42,6 +42,21 @@
 | 空白 | `git diff --check` | PASS |
 
 実測日: 2026-10-13。MVP のため、e2e と本番の確認はしていない。テーマの契約テストと `globals.css` 冒頭の `brand_color_*` 宣言は変えていない。
+
+### 再確認（2026-10-15）
+
+マージ後の main（`42b7f6b`）の上にほかの修正を載せた `153b41a` で、受け入れ条件を測り直した。
+
+| 条件 | 結果 |
+|---|---|
+| 1・2 | `useAppearanceChoice` を通るのは `ThemeToggle.tsx`・`PaletteToggle.tsx`。全量テスト（2973 件成功）に `use-appearance-choice.test.ts` を含む |
+| 3 | `src/lib/ux-patterns.tsx` は無く、`src/` に参照が 0 件。型検査は exit 0 |
+| 4 | マネージャーのホームの見出しは「メンバーの一覧」。製品仕様の MANAGER 行は直属メンバーの範囲 |
+| 5 | backlog に SECURITY-013 があり、README は権限と判定条件の正本へリンクする |
+| 6 | `.gitignore` に `.artifact-delivery/`・`.dev-graph/`・`eval-log/`。`.beads/` のデータベース本体は `.beads/.gitignore` で対象外 |
+| 7 | `pnpm run check:docs` PASS |
+
+外観の切り替えは E2E に入っていない（単体の試験だけ）。2026-10-13 の MVP の判断のまま。
 
 ## 残課題
 

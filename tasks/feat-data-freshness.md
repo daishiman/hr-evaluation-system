@@ -5,7 +5,7 @@
 | graph_node_id | `feat-data-freshness` |
 | beads_id | `hr-czp`（task は `hr-czp.1`〜`hr-czp.13`） |
 | 種別 | feat / reliability / security / docs |
-| 状態 | review（draft PR。default branch へ merge されたら done） |
+| 状態 | merged。PR [#90](https://github.com/daishiman/hr-evaluation-system/pull/90) を main へマージし（squash `40362db`）、Deploy run 36988220392（2026-10-02）で移行 0031・0032 と Worker を本番へ配布した。本番でしか確かめられない W2・W3 が残る（下の「残課題」） |
 | base branch | `main`（`580ec2d`。origin/main と同じで、dev ブランチは無い） |
 | work branch | `devgraph/feat-data-freshness` |
 | 仕様反映 | [2026-10-01 の受領書](../docs/product/spec-receipts/2026-10-01-data-freshness.md) / [最終レビューの受領書](../docs/product/spec-receipts/2026-10-02-data-freshness-final-review.md) |
@@ -74,6 +74,63 @@
 | 空白 | `git diff --check` | PASS |
 
 実測日: 2026-10-02。最終レビューで Typecheck・テスト全量・Docs drift・空白・システム仕様の4つの検証を測り直した（すべて PASS）。node_modules が x64 で入れ直されていたため、x64 の node（Rosetta）で実行した。Workers ビルドと画面の通し試験は、同じ日の再検証（`docs/reviews/elegant-review-2026-10-02.md`）の値で、最終レビューでは測り直していない（同じツリーで別のエージェントの preview が `.open-next` を使っていたため）。応答の保存指示と保存直後の反映は、2026-10-02 の前半の測定。
+
+## 受入の判定（A0〜A17）
+
+番号と条件の正本は [仕様メモ「受入18項目（A0〜A17）」](../specs/data-freshness.md)。判定は 2026-10-15 の再確認（下の節）で測り直した。上の「受け入れ条件」の20項目は task の粒度の条件で、この18項目は feature の受入。
+
+| 番号 | 判定 | 証跡 |
+|---|---|---|
+| A0 | PASS | `server-actions-contract.test.ts`（13件） |
+| A1 | PASS | `action.test.ts`（11件）・`evaluation-flow.integration.test.ts`（7件） |
+| A2 | PASS | `api.test.ts`（4件）・`generated-at.test.ts`（5件）。preview への GET で、`/login`（200）・`/me`（307）・`/api/export`（401）・存在しない `/api/*`（404）のどれも `private, no-store` と `x-generated-at` を返した。ログイン後の画面は E2E 2 |
+| A3 | PASS | `freshness.test.ts`（12件）・`use-refresh.test.ts`（23件） |
+| A4 | PASS | `compensation.test.ts`（7件）・`companies.integration.test.ts`（4件） |
+| A5 | PASS | `master-concurrent-save.integration.test.ts`（18件）・`constitution-events-seq-migration.test.ts`（2件） |
+| A6 | PASS | `credential-vault.test.ts`（9件）・`credential-memo-lifecycle.integration.test.ts`（18件） |
+| A7 | PASS | E2E 1・2 が同じ経路を preview の画面で通した（会社の追加の直後と、キャッシュを使わない再読み込み） |
+| A8 | PASS | `pnpm run check:docs`（current backlog 103 件） |
+| A9 | PASS | E2E 1 |
+| A10 | PASS | E2E 2 |
+| A11 | PASS | E2E 3a・3b・4a・4b |
+| A12 | PASS | E2E 5・`RecordForm.test.ts`（8件） |
+| A13 | PASS | `write-atomicity-contract.test.ts`（2件）・`credential-memo-lifecycle.integration.test.ts`・`agent/device/route.integration.test.ts`（14件） |
+| A14 | PASS | `action-origin.test.ts`（7件）。`next.config.ts` に `allowedOrigins` が無い（grep で 0 件） |
+| A15 | PASS | `credential-vault.test.ts`・`credential-memo-lifecycle.integration.test.ts` |
+| A16 | PASS | `account-and-company-admin.integration.test.ts`（49件） |
+| A17 | PASS | E2E 6-1・6-5（375px・768px） |
+
+E2E の番号は `e2e/data-freshness.spec.ts` の経路の一覧の番号。本番でしか確かめられないもの（作成直後の ⌘+Shift+R、`CREDENTIAL_ENC_KEY`）は A0〜A17 に入れず、残課題の W2・W3 に置いた。
+
+## 赤の記録（P04）
+
+P04 の時点の赤の実行記録が残っていなかったため、2026-10-15 に後から再現した。マージ前の `580ec2d` の上に、`40362db` の契約テスト3本（`server-actions-contract.test.ts`・`action-origin.test.ts`・`write-atomicity-contract.test.ts`）だけを写して流した。
+
+| ファイル | 結果 | 赤の理由 |
+|---|---|---|
+| `server-actions-contract.test.ts` | 12件中6件が失敗 | `src/actions` の入口が0件・画面側の書き込みの `fetch` が27件・一覧に載らない通信のファイルが29件 など |
+| `action-origin.test.ts` | 読み込みで失敗 | `@/lib/action` がまだ無い |
+| `write-atomicity-contract.test.ts` | 2件中1件が失敗 | batch の外で2つ以上の表を書く関数が14 |
+
+合計 14件中 7件が失敗・7件が成功（成功は「探し方が壊れて0件で通らない」などの検査そのものの確認）。実装の前は赤で、`40362db` で緑になることを確かめた。後からの再現なので、P04 の当時の試験の形と完全に同じとは限らない。
+
+## 再確認（2026-10-15）
+
+マージ後の main（`42b7f6b`）の上に、このツリーの修正（D-009 の更新・社員CSV の所属・権限の監査記録など）を載せた `153b41a` で測り直した。文書だけの後続のコミットはコードを変えない。
+
+| ゲート | 結果 |
+|---|---|
+| `pnpm typecheck` | exit 0 |
+| `pnpm test` | 191 ファイル成功・1 スキップ、2973 件成功・1 件スキップ |
+| `pnpm test:coverage`（domain） | 100%（文 2626・分岐 2117・関数 693・行 2149） |
+| 受入の18ファイル（上の表のテスト） | 18 ファイル・213 件すべて成功 |
+| `pnpm run check:docs` | PASS（current backlog 103 件） |
+| `pnpm run cf:dry-run` / `check:bundle-size` | exit 0 / PASS（2055.8 KiB、上限 3072 KiB の 66.9%） |
+| `git diff --check` | PASS |
+| E2E（`e2e/` の全 spec） | Chromium 57 件成功（`7040c10`、隔離した DB。`E2E_PERSIST_TO`。2.0 分） |
+| ログイン後のスモーク（`node scripts/smoke-authenticated.mjs --origin http://localhost:8791`） | 14 件中 14 件 OK |
+
+E2E は1回目に1件（`improvement-data-flows.spec.ts` の A6）が落ちた。D-009 の更新で、所属の無い会社の cookie のあとに開く会社が会社名の順の先頭になったのに、試験が1社目を決め打ちしていたため。試験を切り替えの一覧の先頭で確かめる形に直し（`7040c10`）、57 件すべてが通った。実行の記録はローカルの `eval-log/`（git の対象外）に置いた。
 
 ## 残課題
 

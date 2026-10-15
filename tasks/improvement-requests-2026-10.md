@@ -4,7 +4,7 @@
 |---|---|
 | graph_node_id | `feature-improvement-requests-2026-10`（task は `SYS-IR-P01`〜`SYS-IR-P13`） |
 | beads_id | `hr-wcv`（task は `hr-wcv.1`〜`hr-wcv.13`） |
-| 状態 | review。11項目の PR [#93](https://github.com/daishiman/hr-evaluation-system/pull/93) は 2026-10-14 に main へマージし（squash `03787cb`）、Deploy run 38509015552 で本番へ配布した。追加要望 A〜C は main 向けの draft PR [#94](https://github.com/daishiman/hr-evaluation-system/pull/94)。マージと本番への配布のあと done |
+| 状態 | merged・配布済み。11項目の PR [#93](https://github.com/daishiman/hr-evaluation-system/pull/93) は 2026-10-14 に main へマージし（squash `03787cb`）、Deploy run 38509015552 で本番へ配布した。追加要望 A〜C の PR [#94](https://github.com/daishiman/hr-evaluation-system/pull/94) も同じ日にマージし（squash `42b7f6b`）、Deploy run 38560660381 で配布した。本番の画面の確認（P13）と本番の行動指針の直し（追加C の残り）が済んだら done |
 | base branch | `main`（追加要望の PR は `03787cb`＝#93 のマージ後の上に載せる。dev ブランチは無い） |
 | work branch | `devgraph/feature-improvement-requests-2026-10` |
 | 仕様反映 | [2026-10-13 の受領書](../docs/product/spec-receipts/2026-10-13-improvement-requests.md) / [最終レビューの受領書](../docs/product/spec-receipts/2026-10-14-improvement-requests-final-review.md) / [追加要望の受領書](../docs/product/spec-receipts/2026-10-14-improvement-requests-additional.md) |
@@ -27,11 +27,11 @@
 | P10 突き合わせ | `hr-wcv.10` | 範囲14件・受入13項目・変えてはいけないものを突き合わせた | P07・P09 のあと |
 | P11 証跡のまとめ | `hr-wcv.11` | 仕様メモの受入の表にまとめた | P10 のあと |
 | P12 文書 | `hr-wcv.12` | 製品仕様 §28・機能の地図・運用の文書・README をそろえた | P10 のあと |
-| P13 配布 | `hr-wcv.13` | PR #93 の `gh:pr` ゲートを付けた。配布の準備まで（[デプロイ時の注意](../docs/deploy-notes.md)、戻す手順は `drizzle/rollback/`）。#93 のマージ後、Deploy run 38509015552 が 0034・0035 を適用し（0033 は適用済み）、Worker を配布した。本番の画面を確かめた記録はまだ | マージのあと、0033 → 0034 → 0035 と Worker を配布し、本番の画面を確かめて記録を残したとき |
+| P13 配布 | `hr-wcv.13` | PR #93 の `gh:pr` ゲートを付けた。配布の準備まで（[デプロイ時の注意](../docs/deploy-notes.md)、戻す手順は `drizzle/rollback/`）。#93 のマージ後、Deploy run 38509015552 が 0034・0035 を適用し（0033 は適用済み）、Worker を配布した。#94 は run 38560660381 で配布だけを流した（未適用の移行 0 件）。配布の記録は [デプロイ時の注意 §9](../docs/deploy-notes.md)。本番の画面を確かめた記録はまだ | マージのあと、0033 → 0034 → 0035 と Worker を配布し、本番の画面を確かめて記録を残したとき |
 
 ## 追加要望（2026-10-14、本番を見て受けた3件）
 
-#93 を本番へ配布したあとに受けた。draft PR #94 で出す。範囲 S1〜S14・受入 A1〜A13 の番号の外に置く。task は増やさず、P04（試験）・P05（実装）・P07（preview での受入）・P12（文書）の中で扱った。
+#93 を本番へ配布したあとに受けた。PR #94 で出し、2026-10-14 にマージして配布した。範囲 S1〜S14・受入 A1〜A13 の番号の外に置く。task は増やさず、P04（試験）・P05（実装）・P07（preview での受入）・P12（文書）の中で扱った。
 
 | 記号 | 要望 | 状態 | 反映先 |
 |---|---|---|---|
@@ -45,7 +45,7 @@
 |---|---|
 | 誰が | その会社の管理者（利用者本人） |
 | 何を | `/admin/behavior` で 等級1 を 等級2 と同じ行動指針へ戻す |
-| いつ | PR #94 のマージと本番への配布のあと |
+| いつ | PR #94 のマージと本番への配布のあと（2026-10-14 に配布済みなので、今できる） |
 | 確認（閉じる条件） | 飛び飛びの警告が消え、枠が「等級1・等級2」「等級3・等級4-1・等級4-2」になる |
 | しないこと | D1 へ直接書かない（DD-010） |
 
@@ -78,6 +78,21 @@
 | E2E（`e2e/` の全 spec） | Chromium 57 件成功（隔離した DB。`E2E_PERSIST_TO`） |
 | system-spec（coverage・citation・spec-doc-sync） | OK |
 | dev-graph（schema / lineage） | pass / fail（3 node の digest が古い。OPS-015。追加要望で増えていない） |
+
+### 再確認（2026-10-15、`153b41a`）
+
+#94 のマージ後の main（`42b7f6b`）の上に、このツリーの修正（D-009 の更新・社員CSV の所属・全体管理者を会社の役割へ下げる保存・権限の監査記録・ログイン後のスモーク）を載せて測り直した。P10（突き合わせ）と P11（証跡）は、この値で読み直してよい。
+
+| ゲート | 結果 |
+|---|---|
+| `pnpm typecheck` | exit 0 |
+| `pnpm test` | 191 ファイル成功・1 スキップ、2973 件成功・1 件スキップ |
+| `pnpm test:coverage`（domain） | 100%（文 2626・分岐 2117・関数 693・行 2149） |
+| `pnpm run check:docs` | PASS（current backlog 103 件） |
+| `pnpm run cf:dry-run` / `check:bundle-size` | exit 0 / PASS（上限の 66.9%） |
+| `git diff --check` | PASS |
+| E2E（`e2e/` の全 spec） | Chromium 57 件成功（`7040c10`、隔離した DB） |
+| ログイン後のスモーク | 14 件中 14 件 OK（ローカルの preview） |
 
 ## 残課題
 
