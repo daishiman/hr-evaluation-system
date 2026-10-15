@@ -230,6 +230,12 @@ pnpm test:e2e
 | 0034 | 既存の会社の等級名と、等級名を含む表示名を『等級1』〜『等級5-2』へ書き換える。前の値は `display_name_rewrites` に残す | 変化0 |
 | 0035 | 予行で見つかった漏れ（前の等級名で保存された既定の題名・KPI 項目の文・昇格要件の本文の写し）を直す | 変化0 |
 
+配布の記録:
+
+- Deploy workflow の実行 `38509015552`（2026-10-14 03:58〜04:04 UTC、PR #93 の `03787cb`）。本番 D1 の書き出し → 保管 → 0033・0034・0035 の適用 → 未適用0件 → 配布 → 2回のスモークが、すべて success。
+- 書き出しは Artifact `d1-backup-38509015552` に保管した。保管の期限は 2026-10-28 04:01 UTC。0034・0035 を書き出しから戻す手順（[移行の対応表 §12-5](./migration-mapping-grade-display-names.md)）は、この期限の内だけ使える。
+- 続く実行 `38560660381`（2026-10-14 12:00〜12:05 UTC、PR #94 の `42b7f6b`）は未適用の移行が0件だったので、書き出し・保管・適用を飛ばして配布とスモークだけを流した（どちらも success）。
+
 確かめる要点（配布の後に読み取りだけで見る）:
 
 - `wrangler d1 migrations list` の未適用が0件である（Deploy workflow が確かめて、記録に残す）。
@@ -341,3 +347,29 @@ LIMIT 50;
 記録は書き換えられません（UPDATE はトリガーが `account_security_events_append_only` で止めます）。操作した人の利用者を消したときだけ、`actor_id` が NULL になります。
 
 戻すとき: アプリの版を戻します。古いコードはこの表を読み書きしないので、表を残したままで構いません。表ごと消すときは、記録も消えるので書き出してから `DROP TABLE account_security_events;` を流します（トリガーと索引も一緒に消えます）。
+
+## 13. 保存した結果の鮮度の配布（移行 0031・0032）
+
+保存の入口の一本化（[製品仕様 §27](./product/spec.md)）は、移行2本と、それを読む新しいコードを同時に出しました（PR #90、`40362db`）。§1 の順序のとおり、Deploy workflow が本番 DB を書き出してから移行を当て、未適用0件を確かめてから Worker を配っています。手で `db:migrate:remote` を流しません。
+
+| 移行 | 中身 | 2回流したとき |
+|---|---|---|
+| 0031 | 初期パスワードの控えの表 `initial_credential_memos` を作る。暗号文だけを持ち、利用者を消すと控えも消える | 2回目は表が既にあるので、Deploy workflow は適用済みとして流さない |
+| 0032 | 制度マスタの監査記録 `constitution_events` の番号の重なりを、同じ実体の中で並び順を変えずに振り直し、索引を一意（`uq_ce_entity_seq`）に張り替える | 振り直しの対象が無くなるので、変化0 |
+
+配布の記録:
+
+- Deploy workflow の実行 `36988220392`（2026-10-02 09:10〜09:15 UTC、`40362db`）。未適用の確認 → 本番 D1 の書き出し → 保管 → 0031・0032 の適用 → 未適用0件 → 配布 → 2回のスモークが、すべて success。
+- 書き出しは Artifact `d1-backup-36988220392` に保管した。保管の期限は 2026-10-16 09:12 UTC。期限を過ぎると、この時点の DB へは戻せない。
+
+確かめる要点（配布の後に読み取りだけで見る）:
+
+- 表と索引がある: `SELECT name, type FROM sqlite_master WHERE name IN ('initial_credential_memos', 'uq_ce_entity_seq', 'idx_ce_entity');`（表と `uq_ce_entity_seq` が出て、`idx_ce_entity` は出ない）
+- 番号の重なりが0件: `SELECT company_id, entity_type, entity_id, seq, COUNT(*) FROM constitution_events GROUP BY 1, 2, 3, 4 HAVING COUNT(*) > 1;`（0行）
+- 控えを使うには、§6 の鍵 `CREDENTIAL_ENC_KEY` が要る。鍵が無いあいだは控えを作らず、表は空のまま。
+
+戻すとき: まずアプリの版を戻します（§8）。移行は戻さずに残すのが既定です。
+
+- 0031 の表は、古いコードが読み書きしないので残したままで構いません。消すときは `DROP TABLE initial_credential_memos;` を流します。控えは開けなくなるので、要る人だけ初期パスワードを再発行します。
+- 0032 の一意索引は、古いコードでも残したままで構いません。古いコードで同じ項目を同時に保存すると、後のほうが重なりの代わりに失敗します。元の索引に戻すときは `DROP INDEX uq_ce_entity_seq;` のあと、`CREATE INDEX idx_ce_entity ON constitution_events (company_id, entity_type, entity_id, seq);` を流します。振り直した番号は元に戻せませんが、並び順は変わっていません。
+- DB そのものを書き出しの時点へ戻すのは、上の保管の期限の内だけです。戻すとその後の保存がすべて消えるので、別に承認を取ってから行います。

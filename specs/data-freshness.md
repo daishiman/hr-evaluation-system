@@ -49,7 +49,7 @@ implementation_readiness: {"status": "complete", "missing_sections": [], "checke
 # 仕様メモ: 保存した結果が、どの画面・タブ・端末でもすぐ見える
 
 - feature: `feat-data-freshness`
-- beads: 未採番
+- beads: `hr-czp`（task は `hr-czp.1`〜`hr-czp.13`）
 - 正本（製品）: `docs/product/spec.md` §27
 - 正本（システム）: `system-spec/00-requirements-definition.md`（U1・G1〜G5）と8章（`system-spec/index.md`「章一覧と集約状態」）
 - 正本（運用）: `docs/deploy-notes.md` §6・§7
@@ -530,6 +530,33 @@ HTTP の列は入口の中の区分で、画面へは HTTP 200 の `{ ok: false,
 - [ ] `AC-009`: Given 発行から14日を過ぎた控え, When 一覧を開く・開こうとする, Then ボタンが出ず、開くと 410 で再発行を頼み、次の発行で消える。
 - [ ] `AC-010`: Given 別のサイトかポート違いの送信元, When サーバーアクションを送る, Then ログインを確かめる前に断る（`action-origin.test.ts`）。
 - Contract/integration/e2e/security/performance: どのテストが何を固定するかは [アーキテクチャ「テスト」](../architecture/data-freshness.md#テスト) が正本。E2E は `e2e/data-freshness.spec.ts` と `e2e/data-freshness-component-types.spec.ts`（経路の一覧は前者の冒頭の注釈が正本。ローカル以外へは向けない）。2026-10-02 の実測で、`pnpm test` は 144 ファイル・2246 件が通り、E2E は 14 件が3回続けて通った。性能は O3 の1秒を E2E で見る（負荷試験は持たない）。
+
+### 受入18項目（A0〜A17）
+
+feature の受入（`features/feat-data-freshness.md`「受入」の1〜18）と同じ順・同じ意味で並べる。A0〜A17 はその1〜18を0から数えた呼び名で、task 仕様書（`tasks/feat-data-freshness/`）はこの呼び名で受入を指す。[製品仕様 §27-7](../docs/product/spec.md) にも同じ18項目を同じ番号で置く。上の AC-001〜AC-010 は、このうち画面と結合テストで確かめる場面を Given/When/Then に書き直したもの。
+
+| 番号 | 受入の条件 | 対応する要件 | 確かめるもの |
+|---|---|---|---|
+| A0 | 画面の部品に書き込みの `fetch` が無く、どのサーバーアクションも `runAction` か `runRead` を通る | FR-001・FR-004・BR-001・AC-008 | `server-actions-contract.test.ts` |
+| A1 | 成功した保存だけが1回描き直し、断られた保存は1行も書かず描き直さない | FR-002・FR-003 | `action.test.ts`・`evaluation-flow.integration.test.ts` |
+| A2 | ログイン後の画面と `/api/*` の応答が `private, no-store` | FR-007・FR-008 | `api.test.ts`・`generated-at.test.ts`・品質ゲートのキャッシュの確認 |
+| A3 | 保存の知らせが他のタブに届き、送ったタブには届かない。取り直しは1.5秒に1回へ間引かれる | FR-005・FR-006・AC-003 | `freshness.test.ts`・`use-refresh.test.ts` |
+| A4 | 会社の追加が最後の段で失敗しても、会社・制度・管理者・控えが1行も残らない | FR-009・AC-006 | `compensation.test.ts`・`companies.integration.test.ts` |
+| A5 | 制度マスタの同時保存で後のほうが 409 になり、監査記録の番号が重ならない | FR-010 | `master-concurrent-save.integration.test.ts`・`constitution-events-seq-migration.test.ts` |
+| A6 | 控えを開けるのはシステム全体管理者と同じ会社の管理者だけで、本人のパスワード変更で消える | FR-011・BR-004 | `credential-vault.test.ts`・`credential-memo-lifecycle.integration.test.ts` |
+| A7 | ローカルの preview で、会社の追加の応答に新しい会社が載り、直後の再読み込みにも出る | AC-001・AC-002 | ローカルの preview での確認（E2E 1・2 と同じ経路） |
+| A8 | `check:docs` が通り、system-spec の要件定義（U1・G1〜G5）から8章へ辿れる | 決定事項の全体 | `pnpm check:docs` |
+| A9 | 成功の知らせが出た瞬間の画面に、新しい会社の行・1つ増えた件数・会社切替の選択肢がある（待機なし） | FR-003・FR-011・AC-001 | E2E 1 |
+| A10 | 作成直後のキャッシュを使わない再読み込みで新しい会社が出て、応答の `x-generated-at` が作成より後 | FR-008・AC-002 | E2E 2 |
+| A11 | 他のタブ・画面復帰・戻る・bfcache の復元で、新しい会社が1秒以内に出る | FR-005・FR-006・AC-003・AC-004・AC-005 | E2E 3a・3b・4a・4b |
+| A12 | 発行した控えは成功の知らせの後ろに畳まれて始まり、押したときだけ値が出る。控えを保存できなかったときは最初から開いている | FR-011 | E2E 5・`RecordForm.test.ts` |
+| A13 | 別々の `await` で2つ以上の表を書く関数が無い。パスワード変更の続きが2回とも失敗しても「変更済み」と伝え、`rollforward_failed` を残す。端末の承認を同時に2回引き換えても1回だけ通る | FR-009・BR-002・AC-007 | `write-atomicity-contract.test.ts`・`credential-memo-lifecycle.integration.test.ts`・`agent/device/route.integration.test.ts` |
+| A14 | 別のサイト・ポート違いからの書き込みと読み出しを、ログインを確かめる前に断る。`allowedOrigins` を足していない | FR-013・AC-010 | `action-origin.test.ts` |
+| A15 | 発行から14日を過ぎた控えは一覧に出ず、開こうとすると 410 と再発行を頼む文面になり、次の発行で消える | FR-012・BR-004・AC-009 | `credential-vault.test.ts`・`credential-memo-lifecycle.integration.test.ts` |
+| A16 | 会社の変更・会社の切替・利用者の追加と変更は、システム全体管理者以外だと1行も書かず描き直さない。本人の登録内容は本人の行と会社が開放した項目だけ。応答に仮パスワードが無い（SECURITY-001） | BR-003 | `account-and-company-admin.integration.test.ts` |
+| A17 | スマホ（375px）・タブレット（768px）の幅でも、E2E 1（A9）と E2E 5（A12）が同じに通る | AC-001 | E2E 6-1・6-5 |
+
+判定と証跡の場所は [`tasks/feat-data-freshness.md`](../tasks/feat-data-freshness.md)「受入の判定（A0〜A17）」に置く。
 
 ## 決定事項
 
