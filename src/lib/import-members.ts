@@ -2,6 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
 import { getDb, schema as s } from "@/lib/db";
 import { batchAll, type BatchStatement } from "@/lib/db-batch";
+import { accountSecurityEventStatements } from "@/lib/account-security-events";
 import { newId } from "@/lib/id";
 import { insertMembership, writeMembership, type MembershipValues } from "@/lib/memberships";
 import { parseCsv } from "@/lib/csv";
@@ -345,6 +346,10 @@ export async function importMembersCsv(
 
   if (!dryRun) {
     const statements: BatchStatement[] = [];
+    // 権限にかかわる変更の監査記録（E7）。本体の文のあと・取り込みの記録の前に、同じ batch で書く。
+    // 1回の取り込みで書く記録には、取り込みの記録の id を共通の operation_id として付ける
+    const importId = newId("import");
+    const auditStatements: BatchStatement[] = [];
     // 期限を過ぎた控えの掃除も同じ batch に入れる（このあと書く新しい控えより前に置く）
     if (credentials.length > 0) statements.push(memoPurgeExpired(db));
     for (const p of plans) {
@@ -376,6 +381,11 @@ export async function importMembersCsv(
           const sealed = await sealMemo(vault, selfId, credential.initialPassword);
           statements.push(memoUpsert(db, { userId: selfId, issuedBy: options.actorId ?? null, ...sealed }));
         }
+        auditStatements.push(...accountSecurityEventStatements(db, {
+          userId: selfId, actorId: options.actorId ?? null, source: "member_import", operationId: importId,
+          before: null,
+          after: { superAdmin: false, isActive: p.isActive ?? true, membership: { companyId, role: p.role ?? "EMPLOYEE" } },
+        }));
       } else {
         // 氏名・利用状態は利用者全体の値（users）、ほかは会社ごとの値（この会社の所属）
         const userPatch: Record<string, unknown> = { name: p.name };
@@ -390,8 +400,18 @@ export async function importMembersCsv(
         if (p.department !== null) values.department = p.department;
         if (p.hiredAt !== null) values.hiredAt = p.hiredAt;
         statements.push(...(await writeMembership(db, selfId, companyId, values)));
+        const user = userByEmail.get(p.email)!;
+        const role = membershipByUser.get(selfId)!.role;
+        auditStatements.push(...accountSecurityEventStatements(db, {
+          userId: selfId, actorId: options.actorId ?? null, source: "member_import", operationId: importId,
+          before: { superAdmin: false, isActive: user.isActive, membership: { companyId, role } },
+          after: {
+            superAdmin: false, isActive: p.isActive ?? user.isActive, membership: { companyId, role: p.role ?? role },
+          },
+        }));
       }
     }
+    statements.push(...auditStatements);
     // 復元の記録。before は取り込む前の利用者の行（新しく作った人は null）、membershipBefore はこの会社の所属の行
     const beforeJson = JSON.stringify(plans.map((plan) => ({
       userId: newIdByRow.get(plan.row),
@@ -404,7 +424,7 @@ export async function importMembersCsv(
     const sourceHash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(csvText))))
       .map((byte) => byte.toString(16).padStart(2, "0")).join("");
     statements.push(db.insert(s.importBatches).values({
-      id: newId("import"), companyId, kind: "members", subjectId: companyId,
+      id: importId, companyId, kind: "members", subjectId: companyId,
       actorId: options.actorId ?? null, beforeJson, sourceHash, rowCount: plans.length,
     }));
     await batchAll(db, statements);

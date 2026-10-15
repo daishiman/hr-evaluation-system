@@ -281,3 +281,36 @@ WHERE u.role IS NOT m.role OR u.grade_id IS NOT m.grade_id OR u.manager_id IS NO
 本番で流すときは `pnpm wrangler d1 execute hr-evaluation-db --remote --command "<上の SQL>"` を使います（`SELECT` だけ）。出た人は、会社に確かめて正しい値を社員の画面（`/admin/members`）で保存し直します。保存すると所属の行と写しの両方が同じ値になります。同じCSVをもう一度取り込んでも直せます（今の取り込みは所属の行に書くため）。
 
 戻すとき: アプリの版を戻します。足した行は取り込みが本来書くべきだった行なので、残したままで構いません。消すときは書き出してから `DELETE FROM company_memberships WHERE id LIKE 'mem_imp_%';` を流します（足したあとに画面で変えた値も消えます）。
+
+## 12. アカウント操作の監査記録（移行 0037）
+
+全体管理者にする・外す、会社の役割を変える、所属の会社を移す、利用を止める・再開する、パスワードを再発行する、アカウントを作る、の操作を（出来事は8種類）、表 `account_security_events` に残すようにしました（E7。決めたことは [前例のない設計判断の記録 DD-013](./product/design-decisions.md)）。入口は「システム全体の利用者」「社員」「会社の追加（最初の管理者）」「社員CSVの取り込み」の4つです。
+
+移行 0037 は表・索引2つ・書き換えを止めるトリガーを足すだけで、既存の行は変えません。2回流しても変化0です。§1 の順序のとおり Deploy workflow が当てるので、手で流しません。移行の前の操作は記録にありません（表はこの移行から書き始めます）。
+
+確かめる要点（配布の後に読み取りだけで見る）:
+
+- 表とトリガーがある: `SELECT name, type FROM sqlite_master WHERE tbl_name = 'account_security_events';`（表・`idx_ase_user_time`・`idx_ase_company_time`・`trg_ase_append_only` が出る）
+- 画面で利用者を1人保存したあとに、記録が1件以上増えている: `SELECT COUNT(*) FROM account_security_events;`
+
+記録を読むときの照会（読み取りだけ。画面はまだありません）:
+
+```sql
+SELECT e.occurred_at, e.event_type, e.source, e.company_id,
+  target.email AS target_email, actor.email AS actor_email,
+  e.before_json, e.after_json, e.operation_id
+FROM account_security_events e
+JOIN users target ON target.id = e.user_id
+LEFT JOIN users actor ON actor.id = e.actor_id
+ORDER BY e.occurred_at DESC, e.rowid DESC
+LIMIT 50;
+```
+
+- 1人に絞るときは `WHERE e.user_id = '<利用者の id>'`、1社に絞るときは `WHERE e.company_id = '<会社の id>'` を足します。会社の列は移した先の会社です。全体管理者の付け外しのように所属の無い出来事は NULL です。
+- 同じ保存で起きたことは同じ `operation_id` です。社員CSVの取り込みは、取り込みの記録の id（`import_batches.id`）と同じ値です。
+- `occurred_at` はミリ秒の数値です。日時で見るときは `datetime(e.occurred_at / 1000, 'unixepoch', '+9 hours')` にします。
+- 本番で流すときは `pnpm wrangler d1 execute hr-evaluation-db --remote --command "<上の SQL>"` を使います（`SELECT` だけ）。結果には利用者のメールアドレスが入るので、文書・Issue・ログに貼りません。
+
+記録は書き換えられません（UPDATE はトリガーが `account_security_events_append_only` で止めます）。操作した人の利用者を消したときだけ、`actor_id` が NULL になります。
+
+戻すとき: アプリの版を戻します。古いコードはこの表を読み書きしないので、表を残したままで構いません。表ごと消すときは、記録も消えるので書き出してから `DROP TABLE account_security_events;` を流します（トリガーと索引も一緒に消えます）。

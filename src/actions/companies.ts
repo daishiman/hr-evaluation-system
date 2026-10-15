@@ -3,6 +3,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { runAction } from "@/lib/action";
+import { accountSecurityEventStatements } from "@/lib/account-security-events";
 import { withCompensation } from "@/lib/compensation";
 import { prepareCredential } from "@/lib/credential-issue";
 import { memoNotice } from "@/lib/credential-vault";
@@ -83,7 +84,7 @@ export async function createCompany(raw: unknown) {
           )
         : null;
 
-      // 管理者・所属・ログイン用アカウント・控えは1つの batch で書く（どれか1つだけが残らない）。
+      // 管理者・所属・ログイン用アカウント・控え・監査記録は1つの batch で書く（どれか1つだけが残らない）。
       // 役割は所属の行に書き、users の写しは所属の文が同じ batch の中で書く
       const membership = await insertMembership(db, { userId, companyId, role: "COMPANY_ADMIN" }, { writeCopy: true });
       await step(
@@ -107,8 +108,15 @@ export async function createCompany(raw: unknown) {
               password: credential.hashed,
             }),
             ...credential.memo,
+            ...accountSecurityEventStatements(db, {
+              userId,
+              actorId: viewer.id,
+              source: "company_create",
+              before: null,
+              after: { superAdmin: false, isActive: true, membership: { companyId, role: "COMPANY_ADMIN" } },
+            }),
           ]),
-        // 所属・アカウント・控えは利用者の削除に連なって消える
+        // 所属・アカウント・控え・監査記録は利用者の削除に連なって消える
         () => db.delete(s.users).where(eq(s.users.id, userId)),
       );
       return counts;

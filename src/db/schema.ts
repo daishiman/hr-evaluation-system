@@ -1280,6 +1280,45 @@ export const constitutionEvents = sqliteTable(
   ],
 );
 
+/* ─────────────────────── アカウントの権限にかかわる操作の監査記録 ───────────────────────
+ *
+ * 全体管理者にする・外す、会社の役割を変える、所属の会社を移す、利用を止める・再開する、
+ * パスワードを再発行する、アカウントを作る（E7・DD-013）。追記だけで、書き換えも消しもしない。
+ * 本体の書き込みと同じ D1 batch で書く（本体だけ書かれて記録が欠ける、を作らない）。
+ *
+ * constitution_events と分けるのは、会社の列が null になりうるため（全体管理者は所属を持たない）。
+ * 所属を足す・外すは、これまでどおり constitution_events の membership に残す（同じことを2か所に書かない）。
+ * パスワードの本文・hash・セッションの token は持たない。
+ */
+export const accountSecurityEvents = sqliteTable(
+  "account_security_events",
+  {
+    id: id(),
+    /** 操作を受けた利用者。利用者を消すのは会社追加の取り消しだけで、そのときは記録ごと消えてよい。 */
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    /** 操作した人。 */
+    actorId: text("actor_id").references(() => users.id, { onDelete: "set null" }),
+    /** 出来事が起きた会社（会社の管理者が自社の分を読むため）。会社を消しても残すので外部キーは張らない。 */
+    companyId: text("company_id"),
+    /** account_created | super_admin_granted | super_admin_revoked | role_changed | company_moved |
+     *  deactivated | reactivated | password_reissued（src/lib/domain/account-security-events.ts） */
+    eventType: text("event_type").notNull(),
+    /** system_users | members | company_create | member_import（どの入口からの操作か） */
+    source: text("source").notNull(),
+    /** 1回の保存で書いた記録に共通の id。CSV の取り込みは import_batches の id と同じ。 */
+    operationId: text("operation_id").notNull(),
+    /** 変更前の値（変わったものだけ）。作成と再発行では null。 */
+    beforeJson: text("before_json"),
+    /** 変更後の値（変わったものだけ）。再発行では null。 */
+    afterJson: text("after_json"),
+    occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (t) => [
+    index("idx_ase_user_time").on(t.userId, t.occurredAt),
+    index("idx_ase_company_time").on(t.companyId, t.occurredAt),
+  ],
+);
+
 /* ─────────────────────── 移行で書き換えた表示名の記録 ───────────────────────
  *
  * 移行 0034 が等級名と、等級名を含む表示名（既定の題名・基準セットの名前・昇格の段階など）を

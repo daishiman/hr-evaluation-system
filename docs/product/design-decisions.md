@@ -178,3 +178,25 @@
 - **規範との関係**: `jp-web-design` の表の作法（見出しに `scope`、記号だけに頼らず読み上げの文字を添える）に従う。配色は DD-003 のまま。配色の値を含め `globals.css` を変えない（横に流す枠は `DataTable` の class で足りる）。
 - **固定した検査**: `src/lib/domain/comparison-gap.test.ts`（全件が2つのページを持つ・直す操作の選び方・行の並び・版の違う2本の名前が違う）、`src/components/ComparisonGapNotice.test.ts`（閉じた状態では `<details>` に `open` が無く、文と札だけが外に出る・開いた中のリンクと表・`scope`・読み上げの文字・横に流す枠・カードに組み替えない）、`src/lib/comparison-gap-source.test.ts`（差を使う場所・入口が `formSyncGaps` の1つ・3画面が部品を使う・画面ごとのいま開いているページ・字面の閉じ込め）、`src/lib/comparison-gap-links.test.ts`（台帳・役割・D1 の2社の見本で他社の名前と id が出ない）、`src/actions/forms-grade-scope.test.ts`（その等級の版だけ増える・他社の等級は拒否）。
 - **見直す条件**: 使うKPIを選ぶとアンケート以外の比べる警告を足すとき（ページの種類を足す）。比べる相手が3つ以上になったら、表の列を可変にする。
+
+## DD-013 アカウントの権限にかかわる操作を、専用の追記だけの表に、本体と同じ batch で残した（2026-10-15）
+
+- **場面の1文**: 全体管理者にする・外す、所属の会社を移す、利用を止める・再開する、パスワードを再発行する、はログインと見られる範囲そのものを変えるのに、誰がいつ行ったかを後から説明できなかった（E7。[バックログの履歴 2026-08-13](./backlog-history-2026-08-13.md) の E7）。
+- **選んだ形**:
+  1. 表：`account_security_events`（移行 0037）。列は対象の人（`user_id`）・操作した人（`actor_id`）・会社（`company_id`）・出来事（`event_type`）・入口（`source`）・1回の保存の id（`operation_id`）・変更前と変更後（`before_json`・`after_json`）・時刻（`occurred_at`）。出来事と入口は CHECK で決まった値だけにする。
+  2. 出来事は8つ：`account_created`・`super_admin_granted`・`super_admin_revoked`・`role_changed`・`company_moved`・`deactivated`・`reactivated`・`password_reissued`。何を残すかは純粋な計算（`src/lib/domain/account-security-events.ts` の `accountSecurityChanges`）が変更前と変更後の状態から決める。1回の保存で複数のことが変われば1件ずつ残し、同じ `operation_id` でまとめる。何も変わらない保存（氏名・所属の名前だけ、同じ役割のまま）は残さない。作成は1件にまとめ、最初の仮パスワードは再発行として数えない。全体管理者の付け外しは、伴う所属の作り直しを会社の移動・役割の変更として別に数えず、付け外しの変更前と変更後に元の会社と役割を入れる。
+  3. 入口は4つ：システム全体の利用者（`system_users`）・社員（`members`）・会社を作るときの最初の管理者（`company_create`）・社員CSVの取り込み（`member_import`）。取り込みは、1回の取り込みで書く記録に取り込みの記録の id（`import_batches.id`）を `operation_id` として付け、取り込みの記録からたどれるようにする。試し（dry-run）では書かない。
+  4. 書き方：記録の文（`src/lib/account-security-events.ts` の `accountSecurityEventStatements`）を、本体の書き込みと同じ D1 batch の末尾に入れる。本体だけ書かれて記録が欠ける、を作らない。最後の全体管理者を落とさない条件付きの UPDATE のように、batch の中で本体が0行で終わりうる保存では、記録の文に条件（`when`。`noLongerActiveSuperAdmin`）を付け、起きなかった変更を残さない。記録の文は `db.insert(…).select(sql…)` で書く。値を埋めた `db.run(sql…)` は drizzle の D1 の batch に入れられない（同じ理由の不具合が `demoteFromSuperAdminStatements` にあったので、併せて直した）。
+  5. 残さないもの：パスワードの本文・hash・セッションの token・控えの暗号文。型（`AccountAccess`）に入る場所を作らず、残しようがない形にする。
+  6. 書き換えさせない：トリガー（`trg_ase_append_only`）で、`actor_id` 以外の列の UPDATE を止める。操作した人を消したときは `actor_id` を NULL にする（記録は残る）。対象の人を消したときは記録も消える（`ON DELETE CASCADE`）。利用者を消す画面は無く、利用停止を使う。消すのは、会社を作る処理が途中で失敗したときに最初の管理者を片付けるときだけで、そのとき作った記録も一緒に消える。DELETE はトリガーで止めない（この CASCADE を通すため）。
+  7. 会社の列：変更後の所属の会社（無ければ変更前の会社）。会社の管理者が自社の分だけを読むための列で、全体管理者の操作のように所属の無い出来事は NULL。
+- **決め手の軸**: 記録と本体が食い違わないこと（同じ batch・起きた変更だけ）。秘密を残す道が型の上で無いこと。入口ごとに漏れなく通ること（4つの入口すべてを結合テストで確かめる）。
+- **却下した候補と理由**:
+  - 制度マスタの監査（`constitution_events`）に相乗りする: あの表は会社ごとの制度の版を残す表で、会社を持たない全体管理者の出来事や、入口・1回の保存の id を持てない。権限の記録だけを読む用途（誰が全体管理者にしたか）で、制度の記録と混ざる。
+  - 理由の欄を足し、画面で理由を書かせる（E7 の元の案）: 今の画面には理由を書く欄が無く、保存のたびに入力を求めると操作が増える。入口（`source`）と1回の保存の id で「どの画面から・どのまとまりで」を代える。理由の文が要るとわかったら、列と画面の欄を足す。
+  - 変更前と変更後の行をそのまま JSON で残す: パスワードの hash や控えが混ざりうる。権限にかかわる値（役割・会社・利用状態）だけを型で選ぶ。
+  - batch のあとに別の書き込みで残す: 本体だけ書かれて記録が欠ける時間ができ、記録の失敗で本体を戻せない。
+- **範囲の外**: 所属の追加・外し（`addMembership`・`removeMembership`）は、すでに `constitution_events`（`entityType` が `membership`）に残している。制度設定の削除（D2）も `constitution_events` の `deleted` で残している（`src/lib/masters/delete-master-item.ts`）。どちらもこの表には重ねない。記録を読む画面は作っていない（読むときは [デプロイ時の注意 §12](../deploy-notes.md) の照会）。移す前の会社の管理者は、会社の列が移した先なので、自社から移った人の記録を会社の列では引けない。
+- **規範との関係**: 規範に定めが無い。
+- **固定した検査**: `src/lib/domain/account-security-events.test.ts`（出来事の選び方・作成は1件・付け外しは移動や役割と別に数えない・何も変わらなければ空）、`src/actions/account-security-events.integration.test.ts`（4つの入口・最後の全体管理者で止めたときは残さない・1回の保存の id・パスワードと hash が入らない・取り込みの id と試しで書かない・トリガー・操作した人を消したときの NULL・移行 0037 を2回流しても行と表が残る）。
+- **見直す条件**: 記録を画面で読む要望が出たとき（会社の管理者が自社の分を読む画面。移す前の会社でも引けるよう、変更前の会社の列を足すかを決める）。理由の文が要るとき。全体管理者の数が増え、1人の操作を日ごとに追う必要が出たとき。
