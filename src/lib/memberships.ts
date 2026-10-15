@@ -462,8 +462,9 @@ export function demoteFromSuperAdminStatements(
       .set({ ...userPatch, ...copyOf(values) })
       .where(and(eq(s.users.id, values.userId), guard))
       .returning({ id: s.users.id }),
-    db.run(sql`
-      insert into ${m} (id, user_id, company_id, role, grade_id, office_id, manager_id, employee_code, department, hired_at, profile_note, created_at, updated_at)
+    // db.run(sql`…`) は値を埋めると D1 の batch に入れられない（drizzle の SQLiteRaw が stmt を持たない）ので、
+    // insert … select にする。select の列は表の定義の順（id, user_id, …, updated_at）に並べる。
+    db.insert(m).select(sql`
       select ${id}, ${values.userId}, ${values.companyId}, ${values.role}, ${values.gradeId ?? null}, ${values.officeId ?? null},
              ${values.managerId ?? null}, ${values.employeeCode ?? null}, ${values.department ?? null}, ${values.hiredAt ?? null},
              ${values.profileNote ?? null}, ${now}, ${now}

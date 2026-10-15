@@ -365,6 +365,37 @@ describe("システム全体の利用者（createSystemUser / updateSystemUser�
     });
     expect(snapshot()).toEqual(before);
   });
+
+  describe("別の全体管理者を会社の役割へ下げる", () => {
+    const membershipsOf = (userId: string) =>
+      t.raw.prepare("select company_id, role from company_memberships where user_id = ?").all(userId);
+
+    beforeEach(async () => {
+      await t.db.insert(s.users).values({ id: "usr_super2", name: "もう1人の管理者", email: "super2@example.com", role: "SUPER_ADMIN" });
+    });
+
+    it("その会社の所属を1つ作り、users の写しも同じ会社と役割になる", async () => {
+      const result = await updateSystemUser({ userId: "usr_super2", role: "COMPANY_ADMIN", companyId: IDS.company });
+
+      expect(result.ok).toBe(true);
+      expect(membershipsOf("usr_super2")).toEqual([{ company_id: IDS.company, role: "COMPANY_ADMIN" }]);
+      expect(await userRow("usr_super2")).toMatchObject({ role: "COMPANY_ADMIN", companyId: IDS.company });
+    });
+
+    it("最後の有効な全体管理者なら断り、users も所属も変えない", async () => {
+      await t.db.update(s.users).set({ isActive: false }).where(eq(s.users.id, "usr_super"));
+      const before = snapshot();
+
+      const result = await updateSystemUser({ userId: "usr_super2", role: "COMPANY_ADMIN", companyId: IDS.company });
+
+      expect(result).toEqual({
+        ok: false,
+        message: "最後のシステム全体管理者です。先に別の方をシステム全体管理者にしてください。",
+      });
+      expect(snapshot()).toEqual(before);
+      expect(membershipsOf("usr_super2")).toEqual([]);
+    });
+  });
 });
 
 
