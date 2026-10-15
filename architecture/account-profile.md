@@ -74,4 +74,4 @@ role / grade / manager / isActive を `profile_field_policies.field` に入れ�
 ## マイグレーション
 
 - `0010_profile_field_policies.sql` を local / remote の両方に適用すること
-- 未適用だとログイン後の `/account` や policy 画面で `no such table` になる（backlog E8）
+- 未適用だとログイン後の `/account` や policy 画面で `no such table` になる（backlog E8）。`pnpm run smoke:auth`（`scripts/smoke-authenticated.mjs`）を流すと、役割ごとにログインして `/account`・`/admin/members` とその1人・`/admin/members/policy` などを開き、この漏れを NG（終了コード 1）として検知できる（手順は `docs/deploy-notes.md` §3）

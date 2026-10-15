@@ -10,7 +10,7 @@
 2. 自動の [Deploy workflow](../.github/workflows/deploy.yml) が文書・型・テスト・ビルド・容量の各ゲートを通す。
 3. 未適用 migration があれば、本番DBのバックアップを取得して14日間Artifactに保管する。バックアップできなければ停止する。
 4. migrationを自動適用し、同じ本番DBを再照会して未適用0件を確認してから配布する。
-5. 自動スモークを確認し、必要な認証付き操作を人が確認する。
+5. 自動スモークを確認し、必要な認証付き操作を人が確認する。ログインしたあとの画面が新しい表を読めるかは、§3 の「移行のあとに、ログインしたスモークを流す」で確かめる。
 
 migration がない変更はバックアップと適用をスキップしてそのまま配布します。通常運用で手動操作は不要です。[Migration workflow](../.github/workflows/migrate.yml) は、Deployのmigration適用後に別工程で失敗した場合の復旧確認や、後方互換なmigrationだけを先行適用したい場合に使います。DeployとMigrateは同じconcurrency groupで直列化し、未適用状態が判定不能ならfail-closedで停止します。
 
@@ -54,6 +54,33 @@ Cloudflare Workers では配布直後に旧 isolate が短時間残ることが�
 - ログイン API には対象 URL と一致する `origin` ヘッダーを送る。
 - `429` は失敗として連打せず、待機または上限付きリトライを使う。
 - 秘密値や個人データをログへ出さない。
+
+### 移行のあとに、ログインしたスモークを流す
+
+ログイン前の2枚（`/` と `/login`）は、表が足りなくても通ります。表が無いと落ちるのは、ログインしたあとに DB を読む画面です（0010 の当て漏れで `/account` が `no such table` になった件。[アカウント設定の設計](../architecture/account-profile.md) の「マイグレーション」）。移行を足したら、[認証付きスモーク](../scripts/smoke-authenticated.mjs) で役割ごとに入り直して確かめます。
+
+手元の preview で流す手順:
+
+```bash
+pnpm run db:migrate:local
+pnpm run preview
+# preview を起動したまま、別の端末で
+pnpm run smoke:auth -- --origin http://localhost:8787
+```
+
+- 見本の利用者（`scripts/seed-data.mjs`）で入ります。ローカル D1 が空なら、先に `pnpm run db:seed:local` を流します（全置換）。
+- 8787 以外の港番号で preview を上げるときは、`.dev.vars` の `BETTER_AUTH_URL` を同じ港番号に合わせます。合っていないとログインが `INVALID_ORIGIN` で断られ、NG になります。
+- 役割は一般・マネージャー・会社の管理者・システム全体管理者の4つで、開く画面は14件です（`/account`・`/me`・`/manager`・`/admin`・`/admin/members` とそこから拾った1人・`/admin/members/policy`・`/system`・`/system/users`）。役割と画面の表はスクリプトの `PAGES` の1か所にあります。移行で表を足したら、その表を読む画面が `PAGES` にあるかを確かめます。`--roles` で役割を絞れます（`--help` で一覧）。
+- 結果は「OK/NG・役割・パス・状態」を1行ずつ出します。NG にするのは、200 以外（`/login` や自分のホームへの転送も含む）と、200 でも本文にエラーの印があるものです。印は `no such table`・`no such column`・Next.js のエラー画面と、例外の印 `data-dgst` です。本番では例外の文面が伏せられ、`data-dgst` の数字だけが残ります。
+- 終了コードは、0 = 全部 OK、1 = NG が1件以上、2 = 引数や利用者の指定が足りない（通信の前に止めた）です。
+- ログインの試行制限（`429`）に当たったら、言われた秒数だけ待って入り直します（回数に上限あり）。
+
+本番に向けるとき:
+
+- 見本の利用者では入りません。役割ごとに本番の専用の利用者を用意し、`SMOKE_<役割>_EMAIL` と `SMOKE_<役割>_PASSWORD` を環境変数で渡します。会社を選ぶ役割は `SMOKE_<役割>_COMPANY`（会社 id）も渡します。`<役割>` は `EMPLOYEE`・`MANAGER`・`COMPANY_ADMIN`・`SUPER_ADMIN` です。確かめる役割の分がそろっていなければ、通信の前に終了コード 2 で止まります。
+- 宛先は `--origin` か、環境変数 `APP_URL`（`smoke.sh` と同じ名前）で渡します。
+- パスワードは出力に出しません。資格情報を文書・スクリプト・ログに書きません。
+- [Deploy workflow](../.github/workflows/deploy.yml) には組み込んでいません。本番では §1 の5のとおり人が確かめます。
 
 ## 4. アセットサイズ
 

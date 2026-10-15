@@ -1,6 +1,6 @@
 # 現在の残課題
 
-最終更新: 2026-10-14
+最終更新: 2026-10-15
 
 この文書は、未解決事項だけを扱う current SSOT です。完了した内容と判断の経緯は [統合台帳の履歴](./backlog-history-2026-08-13.md) と [回ごとの記録](./backlog-session-notes.md) に保存します。
 
@@ -115,7 +115,7 @@
 
 | ID | 状態 | 現在の論点 | 着手トリガー | 次アクション | 根拠 |
 |---|---|---|---|---|---|
-| OPS-001 | ready | マイグレーション後の認証付きスモークが手動 | 次のスキーマ変更 | 再利用可能なスモーク手順を整備 | [回ごとの記録 E8](./backlog-session-notes.md) / [デプロイ注意](../deploy-notes.md) |
+| OPS-001 | observe | マイグレーション後の認証付きスモークは手元で `pnpm run smoke:auth` で流せるが、本番の配布には組み込まれていない（本番の専用利用者が無い） | 本番に役割ごとの専用の利用者と secret を用意すると決める | Deploy workflow の配布後のスモークのあとに `smoke:auth` を足す | [回ごとの記録 E8](./backlog-session-notes.md) / [デプロイ注意 §3](../deploy-notes.md) |
 | OPS-003 | observe | サンプル会社は本番運用開始時に削除が必要 | 実会社データの利用開始前 | 専用コマンドで削除し結果を記録 | [製品仕様](./spec.md) / [package scripts](../../package.json) |
 | OPS-004 | observe | KPI ランク境界・係数は初回半期後の再調整候補 | 初回半期が終了 | 実分布と端数影響を確認して制度値を見直す | [回ごとの記録 N2・S4](./backlog-session-notes.md) |
 | OPS-005 | ready | サーバー描画でクライアント API 混入を検出する専用 CI がない | 同種の回帰を予防 | 静的スキャナーを CI に追加 | [回ごとの記録 T3](./backlog-session-notes.md) |
