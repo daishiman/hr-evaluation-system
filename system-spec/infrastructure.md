@@ -836,7 +836,7 @@ D-007 ① に合わせて直した文面のうち、上のとおり承認する�
 - **I6**: 応答に鮮度の手がかり（生成時刻）を載せ、反映されない報告を切り分けられるようにする。
 - **I7**: 等級の呼び名を作る共通の関数を作り、区分名・行動指針のセット名・昇格の段階名・警告文・アンケートのタイトルの表示をすべてそこから作る。既定の等級名を『等級1』『等級2』『等級3』『等級4-1』『等級4-2』『等級5-1』『等級5-2』にし、既存の会社の等級名と、英語を含む表示名を一律に書き換える移行を入れる。
 - **I9**: ページごとの権限を1つの定義（ページ・操作・役割ごとの可否・説明）にまとめ、『システムを管理する』に権限一覧ページを足し、利用者一覧に開閉できるボタンとモーダルを置く。説明はポインター・フォーカス・タップのどれでも出す。『Claude Code連携の鍵』を『Claude Code連携（システム開発者専用）』に改める。
-- **I11**: 会社への所属を表にし、会社ごとに役割・等級・上司を持たせる。メールアドレスの重複の検査を所属の単位に改め、ヘッダーの会社の切り替えを複数の会社に所属する人にも出す。
+- **I11**: 会社への所属を表にし、会社ごとに役割・等級・上司を持たせる。メールアドレスの重複はシステム全体で拒否したままにし、他社に既にアカウントがある人へ別の会社の所属を足すのは、全体管理者だけの専用操作にする。ヘッダーの会社の切り替えを複数の会社に所属する人にも出し、選んでいる会社が無いときは、有効な所属のうち会社名の順で最初の会社を開く。
 - **I14**: 並べ替えを共通の部品にし、長押しのドラッグ・矢印・キーボードで動かせるようにする。保存には、並び順の全体を送る形を足す。
 
 ### 本章に効く確定意思決定
@@ -853,6 +853,12 @@ D-007 ① に合わせて直した文面のうち、上のとおり承認する�
 - **D-007**: 権限の定義（各ページでできる操作と、その説明）をどこに置くか。
   - 採択: route-ledger.json に操作と説明を足す (`opt-route-ledger-extend`)
   - 目的適合: ページの可否・操作・説明が1つの台帳に揃い、表示が判定と食い違わないという G8 を満たせる。
+- **D-008**: 他の会社に既にアカウントがある人を、別の会社にも所属させる操作を、誰が行えるようにするか。
+  - 採択: 全体管理者だけが専用の操作（addMembership）で所属を足す (`opt-super-admin-only`)
+  - 目的適合: G10 の『1つのアカウントのまま複数の会社に所属できる』を、全体管理者の操作で満たす。会社の管理者だけでは足せない。
+- **D-009**: 複数の会社に所属している人が、選んでいる会社が無いとき（cookie が無い・所属していない会社を指している）に、どの会社を開くか。
+  - 採択: 有効な所属のうち会社名の順で最初の会社を開く（同名は会社 id の順） (`opt-company-name-order`)
+  - 目的適合: G10 の『会社ごとの役割・等級・上司で使える』を満たし、切り替えの一覧と同じ順なので、どの会社が開くかを利用者が予想できる。
 
 ## 適用された設計知識
 
@@ -870,9 +876,9 @@ resource-map にインフラ用の deep knowledge card が無いため、上流�
 
 | 対象 | バージョン | 公式発行元 | 出典URL | 取得 | 最新確認 |
 |---|---|---|---|---|---|
-| opennext-cloudflare-caching | @opennextjs/cloudflare 1.20.10 | OpenNext (opennext.js.org) | https://opennext.js.org/cloudflare/caching | 2026-10-12T23:18:53Z | 2026-10-12T23:18:53Z |
-| cloudflare-workers-pricing | 2026-10-02 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/platform/pricing/ | 2026-10-13T04:01:43Z | 2026-10-13T04:01:43Z |
-| cloudflare-wrangler-config | 2026-10-12 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/wrangler/configuration/ | 2026-10-13T04:01:43Z | 2026-10-13T04:01:43Z |
-| opennext-cloudflare-get-started | @opennextjs/cloudflare 1.20.10 | OpenNext (opennext.js.org) | https://opennext.js.org/cloudflare/get-started | 2026-10-12T23:18:53Z | 2026-10-12T23:18:53Z |
-| cloudflare-workers-secrets | 2026-07-03 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/configuration/secrets/ | 2026-10-01T01:28:01Z | 2026-10-01T01:28:03Z |
-| cloudflare-wrangler-d1-commands | 2026-04-23 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/wrangler/commands/d1/ | 2026-10-12T22:14:32Z | 2026-10-12T22:15:33Z |
+| opennext-cloudflare-caching | @opennextjs/cloudflare 1.20.11 | OpenNext (opennext.js.org) | https://opennext.js.org/cloudflare/caching | 2026-10-14T21:15:35Z | 2026-10-14T21:20:05Z |
+| cloudflare-workers-pricing | 2026-10-02 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/platform/pricing/ | 2026-10-14T21:15:28Z | 2026-10-14T21:26:14Z |
+| cloudflare-wrangler-config | 2026-10-12 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/wrangler/configuration/ | 2026-10-14T21:15:28Z | 2026-10-14T21:26:14Z |
+| opennext-cloudflare-get-started | @opennextjs/cloudflare 1.20.11 | OpenNext (opennext.js.org) | https://opennext.js.org/cloudflare/get-started | 2026-10-14T21:15:35Z | 2026-10-14T21:20:05Z |
+| cloudflare-workers-secrets | 2026-07-03 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/configuration/secrets/ | 2026-10-14T21:15:58Z | 2026-10-14T21:26:14Z |
+| cloudflare-wrangler-d1-commands | 2026-04-23 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/wrangler/commands/d1/ | 2026-10-14T21:15:58Z | 2026-10-14T21:26:14Z |

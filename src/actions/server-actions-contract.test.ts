@@ -158,10 +158,22 @@ describe("画面からの書き込み", () => {
       new RegExp(`from\\s*["'][^"']*/${basename(file, ".ts")}["']`).test(source),
     );
 
-  /** Server Action 自身と、"use client" の無い app のファイル（サーバーの画面）。action を部品へ渡す側 */
+  /**
+   * app の外にあり、サーバーで描く部品。サーバーの画面と同じく、action を ActionButton へ渡すだけで呼ばない
+   * （呼んでいないことは下の「その場で呼ばずに渡すだけ」で確かめる）。増やすときは必ず理由を書く。
+   */
+  const SERVER_PARTS: Record<string, string> = {
+    "components/ComparisonGapNotice.tsx":
+      "比べる警告（DD-012）。3つのサーバーの画面に同じ直す操作を出すため、部品の中で ActionButton へ渡す",
+  };
+
+  const isClientFile = (source: string) => /^\s*["']use client["']/.test(source);
+
+  /** Server Action 自身と、"use client" の無い app のファイル（サーバーの画面）と、上の部品。action を部品へ渡す側 */
   const runsOnServer = (p: string, source: string) =>
     source.trimStart().startsWith('"use server"') ||
-    (p.startsWith(`${join(SRC, "app")}/`) && !/^\s*["']use client["']/.test(source));
+    (p.startsWith(`${join(SRC, "app")}/`) && !isClientFile(source)) ||
+    (!!SERVER_PARTS[rel(p)] && !isClientFile(source));
 
   it("画面の部品から Server Action を呼ぶときは、useSaveAction か useReadAction を通す", () => {
     /* 部品から action を直に await すると、保存中の状態・他タブへの知らせ・
@@ -193,6 +205,11 @@ describe("画面からの書き込み", () => {
 
   it("中継の一覧に、もう存在しないファイルや、Server Action を import しなくなったファイルを残さない", () => {
     expect(Object.keys(RELAYS).filter(listedFileLacks(new RegExp(ACTIONS_IMPORT.source)))).toEqual([]);
+  });
+
+  it("サーバーの部品の一覧に、もう無いファイル・action を import しないファイル・\"use client\" のファイルを残さない", () => {
+    expect(Object.keys(SERVER_PARTS).filter(listedFileLacks(new RegExp(ACTIONS_IMPORT.source)))).toEqual([]);
+    expect(Object.keys(SERVER_PARTS).filter((p) => isClientFile(code(join(SRC, p))))).toEqual([]);
   });
 
   it("import した Server Action は、その場で呼ばずに渡すだけにする", () => {

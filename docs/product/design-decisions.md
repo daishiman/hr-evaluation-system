@@ -148,3 +148,33 @@
 - **規範との関係**: 規範に定めが無い。
 - **固定した検査**: `src/lib/domain/people-list.test.ts`（正規化・AND・見えない欄で当たらない・値の無い行は末尾・選べる並べ替え・URL の読み書き）、`src/components/PeopleList.test.ts`（選べない並べ替えを出さない・人数の読み上げ・利用停止の見た目・3つの一覧が利用停止の人も同じ一覧に入れる）、`src/lib/score-visibility.integration.test.ts`（一般の社員の応答に等級の並びを含めない）、`e2e/people-list-navigation.spec.ts`（書き戻しを待たずに会社の札へ進んでも検索語を引き継ぐ・戻ると URL の検索語と並びに戻る）。全社の等級順は会社名のあとに会社IDでまとまりを分け、同名の別会社を混ぜない（`people-list.test.ts`）。
 - **見直す条件**: 1社の人数が数千人を超えて一覧を一度に返すのが重くなったら、サーバーでの検索とページ分けに移す。名前の読みの順が要るなら、ふりがなの欄を足す。
+
+## DD-012 比べる警告を1つの型（ComparisonGap）と1つの部品にし、比べている2つのページの名前とリンクを必須にした（2026-10-15）
+
+- **場面の1文**: アンケートの一覧の警告が、どのページとどのページの食い違いかを示さず、たどれなかった。文が長く並び、読むのが億劫だった（qa-w01・qa-w03。受領書 [2026-10-15](./spec-receipts/2026-10-15-comparison-gap-two-page-links.md)）。
+- **選んだ形**:
+  1. 型：`src/lib/domain/comparison-gap.ts` の `ComparisonGap`。`pages`（使うKPIを選ぶ・このアンケートの2つ。階層つきの名前・`href`・台帳の道筋・いま開いているページか）、`rows`（ズレた項目だけ。使うKPIを選ぶにあるか・このアンケートにあるか）、足りない件数と余分の件数、直す操作（`fix`）、注記1行（`note`）を持つ。台帳の道筋は必須。`href` は、見る人の役割で開けないページなら `null` にし、名前だけを出す。
+  2. 名前とリンク：台帳の親の画面名と見出しをつなぐ。`KPI・評価セット › {区分の呼び名}：使うKPIを選ぶ`（`pointGroupLabel`・`stepTitle("select")`）と `アンケート › {formRowTitle(f)}（第N版）`。版の番号を入れて、同じ等級の版が並んでも名前で区別できるようにする。リンクは `schemeStepPath(区分, "select")` と `/admin/forms/{id}`。いま開いているページのリンクには `aria-current="page"` と「（このページ）」を付ける。
+  3. 読み出し：`src/lib/comparison-gap-loader.ts`。一覧とアンケート1本は、評価期間ごとに一度に読む。使うKPIを選ぶは、受付前か受付中の評価期間ごとに、その区分の等級の下書きか公開中のアンケートを読む。既存の `listForms`・`listFormKpiCoverage`・`listGrades`・`loadSchemeReadiness` を使い、SQL を足さない。どれも会社の範囲で絞る。評価期間の数だけ評価セットを読み直すのは、受付前か受付中の評価期間が数本に限られるため許す。
+  4. 部品：`src/components/ComparisonGapNotice.tsx`。閉じた状態は注意の枠（`caution-panel`）の1つの段で、件数の文と『直すところを見る』の札だけを置く（狭い幅では札が次の行に回ってよい）。表・リンク・ボタンは `InlineDetail` の中に閉じる。ボタンは `ActionButton`、表は `DataTable` の `scroll` 指定。`scroll` はカードに組み替えず、横に流す枠（`overflow-x-auto`）に入れ、列見出しの貼り付き先を枠の上端（`--table-head-top: 0px`）にし、項目の列に最小の幅を付ける。枠は `relative` にする（読み上げの文字の `.sr-only` は `absolute` なので、基準が枠の外にあると枠で切り取られず、横に流した先の列の文字が画面の幅を広げる）。直す操作の札は長いので、部品の中だけ `.btn` の折り返さない指定を `[&_.btn]:whitespace-normal!` で上書きする（375px で開いた本文からボタンがはみ出さないように）。注意の枠には `text-pretty [word-break:auto-phrase]` を付け、文節で折って最後の行を短く残さない（効かない環境では今までどおりの折り方）。どれも `DataTable` と部品の class で書き、`globals.css` は変えない。3画面はこの部品だけを使う。
+  5. 直す操作（上から順に1つだけ）：
+     - 同じ評価期間・等級により新しい版があれば（状態を問わない）、その版を開くリンク。下書きなら『第N版の下書きを開く』、それ以外は『第N版を開く』。最新の版でないアンケートには作るボタンを出さない。
+     - 下書きで回答0件なら『設問を作り直す』（`rebuildFormQuestions`。確認つき）。アンケート1本の画面では、同じ操作のボタンが見出しの下の枠の外に既にあるので、部品には出さない。
+     - 評価期間が締め切り済みなら出さない（新しい版を作れない）。注記に理由を1行出す。
+     - 評価セットの準備が整っていなければ（`createForms` が 409 になる）、残っている手順へのリンク（`loadSchemeReadiness` の最初の不足の `href` と `linkLabel`）。
+     - それ以外は『この等級だけ新しい版の下書きを作る』（`createForms` に `gradeIds` を1件。確認つき）。
+     - どれも、見る人の役割でその操作ができなければ出さない（台帳の `forms.rebuildQuestions`・`forms.create` と、開くページ）。
+  6. 照合：字面ではなく作りで閉じる。項目の差（`diffFormKpiItems`・`FormKpiDiff`）を使ってよいのは `comparison-gap.ts` だけにし、3画面が `ComparisonGapNotice` を使い、差を自分で作っていないことを静的なテストで確かめる。字面の検査も残す。`src/app`・`src/components`・`src/lib`・`src/actions` の、テストを除くファイルの文字列リテラルと JSX の地の文（`ui-rules.test.ts` の `splitSource` と同じ数え方。注釈は数えない）に、『食い違』『ズレ』『ずれ』を置いてよいのは `comparison-gap.ts` と `ComparisonGapNotice.tsx` だけ。2つのページの比べでない2件は、理由つきで許す（`src/app/admin/scheme/page.tsx` の配点の決まりの警告、`src/lib/domain/improvement-instruction.ts` の作業の規約の文）。`formSyncGaps` は `ComparisonGap` を返す入口に変え、中で `comparisonGapOf` を呼ぶだけにした（`SetupGap` の形の比べる警告は残さない）。本番で `comparisonGapOf` を呼ぶのはこの入口だけで、読み出し（`comparison-gap-loader.ts`）がこれを通し、3画面は読み出しだけを使う。画面から呼ばれていなかった `describeFormKpiDiff` と、それだけが使っていた `isFormInSync` は P08 で消した。
+  7. gradeIds の検査：`createForms` は、自社の等級に無い id が1件でもあれば 400（`HttpError`）で断り、何も作らない（今までは黙って外していた）。画面へは、ほかの失敗と同じく理由の文（「この会社に無い等級が含まれています。」）を返す（`ActionFail` は状態コードを持たない）。使用を止めた自社の等級（`isActive` が偽）は、今どおり名指しすれば通す（狭めるのは他社の id だけ。`gradeIds` を省いたときに使用中の等級だけを作る振る舞いも変えない）。
+- **決め手の軸**: どちらのページからも1回で相手のページへ移れること。今後足す比べる警告にも、型で2つのページを強制できること。既定で目に入る量を1行に抑えること（§22-2）。
+- **却下した候補と理由**:
+  - `SetupGap`（何が・どう直す・直す画面1つ）に2つ目のリンクを足す: `SetupGap` は公開前の不足などほかの設定不足も使う型で、比べる警告だけに2つのページを必須にできない。範囲の外（U7）の一覧の形まで変わる。
+  - 窓（`DetailDialogButton`）で開く: カードの中の短い補足は `InlineDetail`（§22-4）。窓だとどのカードの話かが隠れ、開いたまま見比べられない（qa-w04）。
+  - 表を `DataTable` の外で書く: `<table>` は `DataTable` だけに置く決まり（`ui-rules.test.ts`）。表の作法（`scope`・読み上げの見出し）を1か所に保つ。
+  - `DataTable` の既定（狭い幅でカード）のまま使う: ○ と — の3列がカードになると、どの列の印かが読めない。4つの幅で同じ振る舞いにならない（受入 AC6）。
+  - 公開後のアンケートの設問を差し替える: 回答済みの設問を変えると、過去の回答の意味が変わる。新しい版で直す。
+  - 新しい版を作るサーバー処理を足す: 既存の `createForms` に等級を1件渡せば足りる。
+  - 使うKPIを選ぶの画面にも、アンケートごとに ○ と — の表を並べる: アンケートの本数×項目で長くなる。行ごとの要約にし、細かい表はアンケート側で見る。
+- **規範との関係**: `jp-web-design` の表の作法（見出しに `scope`、記号だけに頼らず読み上げの文字を添える）に従う。配色は DD-003 のまま。配色の値を含め `globals.css` を変えない（横に流す枠は `DataTable` の class で足りる）。
+- **固定した検査**: `src/lib/domain/comparison-gap.test.ts`（全件が2つのページを持つ・直す操作の選び方・行の並び・版の違う2本の名前が違う）、`src/components/ComparisonGapNotice.test.ts`（閉じた状態では `<details>` に `open` が無く、文と札だけが外に出る・開いた中のリンクと表・`scope`・読み上げの文字・横に流す枠・カードに組み替えない）、`src/lib/comparison-gap-source.test.ts`（差を使う場所・入口が `formSyncGaps` の1つ・3画面が部品を使う・画面ごとのいま開いているページ・字面の閉じ込め）、`src/lib/comparison-gap-links.test.ts`（台帳・役割・D1 の2社の見本で他社の名前と id が出ない）、`src/actions/forms-grade-scope.test.ts`（その等級の版だけ増える・他社の等級は拒否）。
+- **見直す条件**: 使うKPIを選ぶとアンケート以外の比べる警告を足すとき（ページの種類を足す）。比べる相手が3つ以上になったら、表の列を可変にする。

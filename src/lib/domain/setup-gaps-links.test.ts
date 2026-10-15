@@ -8,6 +8,7 @@ import {
   schemeGaps,
   type SetupGap,
 } from "@/lib/domain/setup-gaps";
+import type { ComparisonGapInput } from "@/lib/domain/comparison-gap";
 
 /*
  * 設定不足の示し方（S9・A8）。
@@ -131,16 +132,32 @@ describe("formPublicationGaps（アンケートを公開する前）", () => {
   });
 });
 
-describe("formSyncGaps（評価セットとアンケートのずれ）", () => {
-  it("欠落・余分のどちらも、そのアンケートの画面へ案内する", () => {
-    const gaps = formSyncGaps({ missing: ["k1"], extra: ["k2"] }, (id) => (id === "k1" ? "売上" : "訪問数"), "f1");
-    expectComplete(gaps);
-    expect(gaps.every((g) => g.href === "/admin/forms/f1")).toBe(true);
-    expect(gaps.map((g) => g.what).join()).toContain("売上");
-    expect(gaps.map((g) => g.what).join()).toContain("訪問数");
+describe("formSyncGaps（評価セットとアンケートの比べ）", () => {
+  const nameOf = (id: string) => (id === "k1" ? "売上" : "訪問数");
+  const input = (selected: string[], asked: string[]): ComparisonGapInput => ({
+    form: {
+      id: "f1", title: null, cycleName: "2026年度上期", gradeName: "等級2", cycleId: "c1", gradeId: "g2",
+      status: "draft", version: 1, responseCount: 0, cycleStatus: "open",
+    },
+    pointGroup: "Regular",
+    groupLabel: "等級2",
+    selected,
+    asked,
+    nameOf,
+    newer: null,
+    schemeGap: null,
+    current: null,
+    role: "COMPANY_ADMIN",
   });
 
-  it("ずれが無ければ空", () => {
-    expect(formSyncGaps({ missing: [], extra: [] }, (id) => id, "f1")).toEqual([]);
+  it("見比べる2つのページ（使うKPIを選ぶ・そのアンケート）へ案内し、どちらも台帳にある画面", () => {
+    const gap = formSyncGaps(input(["k1"], ["k2"]));
+    expect(gap?.pages.map((page) => page.href)).toEqual(["/admin/scheme/Regular", "/admin/forms/f1"]);
+    for (const page of gap?.pages ?? []) expect(ROUTE_PATTERNS.some((re) => re.test(page.href ?? "")), page.href ?? "").toBe(true);
+    expect(gap?.rows.map((row) => row.name)).toEqual(["売上", "訪問数"]);
+  });
+
+  it("違いが無ければ null", () => {
+    expect(formSyncGaps(input(["k1"], ["k1"]))).toBeNull();
   });
 });

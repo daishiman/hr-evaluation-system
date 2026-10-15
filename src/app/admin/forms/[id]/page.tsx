@@ -11,6 +11,8 @@ import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { rebuildFormQuestions, updateForm } from "@/actions/forms";
 import { Badge, Card, Disclosure, InlineDetail, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { ComparisonGapNotice } from "@/components/ComparisonGapNotice";
+import { loadFormComparisonGap } from "@/lib/comparison-gap-loader";
 import { FORM_STATUS_LABEL } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -32,9 +34,10 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
   const displayTitle = formRowTitle(form);
   const defaultTitle = formRowTitle({ ...form, title: "" });
 
-  const [questions, kpiItems] = await Promise.all([
+  const [questions, kpiItems, comparisonGap] = await Promise.all([
     listFormQuestions(companyId, form.id, viewer.role),
     listKpiItems(companyId),
+    loadFormComparisonGap(companyId, { id: form.id, cycleId: form.cycleId }, { role: viewer.role, current: "form" }),
   ]);
 
   const db = await getDb();
@@ -129,8 +132,10 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
           下書きで回答がまだない場合だけ、制度側の設定を直してから作り直せます。
           公開済み・締め切り済みの版は変えられません。内容を変えるときは新しい版を作ってください。
         </p>
-        {/* 「なぜ配点を隠すのか」は、この画面で操作する前に読む必要はない。押したときだけ出す。 */}
-        <div className="mt-1">
+        {/* 「なぜ配点を隠すのか」は、この画面で操作する前に読む必要はない。押したときだけ出す。
+            札は長く、globals.css（層の外）で折り返さない指定のため、320px では画面ごと横に流れる。
+            この枠の中だけ important で折り返しを許し、文節で折る（auto-phrase。効かない環境では今までどおり）。 */}
+        <div className="mt-1 text-pretty [word-break:auto-phrase] [&_summary]:whitespace-normal!">
           <InlineDetail summary="回答画面に配点・ランク基準は表示されません">
             <p className="footnote m-0">
               回答画面には、配点・ランク基準・昇格に必要な点数は一切表示されません。
@@ -139,8 +144,15 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
             </p>
           </InlineDetail>
         </div>
-        {editable && form.status === "draft" && (
+        {/* 使うKPIを選ぶで選んだ項目との比べ（DD-012）。作り直しは下のボタンで行うので、部品には出さない */}
+        {comparisonGap && (
           <div className="mt-3">
+            <ComparisonGapNotice gaps={[comparisonGap]} />
+          </div>
+        )}
+        {editable && form.status === "draft" && (
+          // ボタンの札も長いので、上の札と同じく、この枠の中だけ折り返しを許す
+          <div className="mt-3 text-pretty [word-break:auto-phrase] [&_.btn]:whitespace-normal!">
             <ActionButton
               action={rebuildFormQuestions}
               resource="forms"

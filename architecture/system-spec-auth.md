@@ -16,11 +16,11 @@ file_path: "architecture/system-spec-auth.md"
 template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
-evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "07b0352821bf986a91bebb4d27ada51f3761a86442d84423c95b7db4e9eebd67", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "system-spec/completeness-findings.json"}
-source_lineage: {"imported_at": "2026-10-13T05:04:21Z", "origin_kind": "system-spec-harness", "source_digest": "07b0352821bf986a91bebb4d27ada51f3761a86442d84423c95b7db4e9eebd67", "source_path": "system-spec/auth.md", "source_plugin": "system-spec-harness", "source_version": "0.1.21"}
-created_at: "2026-10-13T05:05:39.858264Z"
-updated_at: "2026-10-13T05:05:39.858264Z"
+evaluation_status: "stale"
+confirmation_evidence: {"evaluated_digest": "1a4419354b7c05cb76dc0c4125a6cac687c0ce27fa88bfc53fceaab6bf741442", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
+source_lineage: {"imported_at": "2026-10-15T00:07:42Z", "origin_kind": "system-spec-harness", "source_digest": "1a4419354b7c05cb76dc0c4125a6cac687c0ce27fa88bfc53fceaab6bf741442", "source_path": "system-spec/auth.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-15T01:28:34.699201Z"
+updated_at: "2026-10-15T08:18:18.870953Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -44,11 +44,8 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-13T05:05:39.858264Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-15T08:18:18.870953Z", "missing_sections": [], "status": "complete"}
 ---
-
-
-2026-10-14 の現行契約は [DD-009](../docs/product/design-decisions.md) と `system-spec/spec-state.json` の `qa-v27` / `qa-v28` の訂正を優先する。旧 `source_lineage`・`confirmation_evidence` の digest と評価は取り込み時点の記録であり、今回の訂正後に独立評価を再実行した証跡ではない。利用者の委任は `qa-v32-delegated-membership-policy` に逐語で記録し、具体案の選択はエージェントの裁定として区別する。
 
 # Architecture overview
 
@@ -72,7 +69,7 @@ Goals: 認可に失敗した要求では何も書かず、作り直さず、通�
 
 ## Container and component view
 
-better-auth（メールとパスワード、セッションの有効期間7日・更新間隔1日、cookieCache なし）がセッションとアカウントを D1 に持つ。getViewer は cookie が指す会社への有効な所属を確かめてから会社・役割・等級を作り、cookie が無いときや所属していない会社を指すときは、有効な所属の createdAt 昇順（同時刻は id 昇順）の先頭を使う（D-004）。requireRole がページの入口で、apiViewer と ActionSpec.role が Server Functions の入口で役割を判定する。権限の定義として、ページを開ける役割（accessClass）・ページ名・主な操作・役割ごとの可否・説明を route-ledger.json の各ページに置く（D-007）。サイドバー（nav.ts。今も台帳を読んでいる）・requireRole・ActionSpec.role・session.ts の canEdit〜 などの判定をこの台帳から引き、台帳と突き合わせる契約テストで食い違いを落とす。権限一覧のページとモーダルの表とカードも、この台帳から描く。会社の切り替えの処理（switchCompanyScope）は全ての役割に開いて所属を確かめ、所属していない会社を拒否する。会社の切り替えの部品（CompanyScopeSwitcher）は、所属が2社以上の人にも出す。等級名を変える処理（saveMaster の等級の表と BehaviorBandAssignmentEditor から呼ぶ処理）が役割と会社を判定する。
+better-auth（メールとパスワード、セッションの有効期間7日・更新間隔1日、cookieCache なし）がセッションとアカウントを D1 に持つ。getViewer は cookie が指す会社への有効な所属を確かめてから会社・役割・等級を作り、cookie が無いときや所属していない会社を指すときは、有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使う（D-004）。requireRole がページの入口で、apiViewer と ActionSpec.role が Server Functions の入口で役割を判定する。権限の定義として、ページを開ける役割（accessClass）・ページ名・主な操作・役割ごとの可否・説明を route-ledger.json の各ページに置く（D-007）。サイドバー（nav.ts。今も台帳を読んでいる）・requireRole・ActionSpec.role・session.ts の canEdit〜 などの判定をこの台帳から引き、台帳と突き合わせる契約テストで食い違いを落とす。権限一覧のページとモーダルの表とカードも、この台帳から描く。会社の切り替えの処理（switchCompanyScope）は全ての役割に開いて所属を確かめ、所属していない会社を拒否する。会社の切り替えの部品（CompanyScopeSwitcher）は、所属が2社以上の人にも出す。等級名を変える処理（saveMaster の等級の表と BehaviorBandAssignmentEditor から呼ぶ処理）が役割と会社を判定する。
 根拠: qa-f03、qa-r-auth-3、qa-v27、qa-v30、D-004、D-007（system-spec/auth.md、system-spec/backend.md）
 
 ## Cross-cutting contracts
@@ -94,7 +91,7 @@ Security: architecture-security.md を合成し、subtype_sections の security 
 
 #### Identity and authorization
 
-認証は better-auth のメールアドレスとパスワード（本人登録なし、セッション7日・更新1日、cookieCache なし）である。アカウントは1つで所属は複数持てるが、ログインとセッションはアカウントの単位のまま1つにし、会社ごとに資格情報を分けない。認可は入口で送り元・セッション・役割の順に確かめ、認可に失敗したら何もしない既定拒否で、権限の無い画面は 404 かログイン画面になる。テナントの境界は選んでいる会社の所属である。getViewer がリクエストのたびに cookie が指す会社への所属を確かめ、所属が無ければ有効な所属の createdAt 昇順（同時刻は id 昇順）の先頭を使う。会社の切り替えはセッションを作り直さず cookie だけを変え、所属していない会社への切り替えは拒否する（システム全体管理者は全社から選べる）。全ての読み書きをその所属で絞る（D-004）。等級名の変更はシステム全体管理者と自社の会社の管理者だけで、他社の等級を指す要求は拒否する。開けるページ（accessClass）とできる操作・役割ごとの可否・説明は route-ledger.json の各ページから引き、サイドバー・ページの入口・サーバー処理の役割の指定・session.ts の can〜 の判定・権限一覧がこの台帳だけを読む（D-007）。権限の定義を画面から編集できるようにはしない。
+認証は better-auth のメールアドレスとパスワード（本人登録なし、セッション7日・更新1日、cookieCache なし）である。アカウントは1つで所属は複数持てるが、ログインとセッションはアカウントの単位のまま1つにし、会社ごとに資格情報を分けない。認可は入口で送り元・セッション・役割の順に確かめ、認可に失敗したら何もしない既定拒否で、権限の無い画面は 404 かログイン画面になる。テナントの境界は選んでいる会社の所属である。getViewer がリクエストのたびに cookie が指す会社への所属を確かめ、所属が無ければ有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使う。会社の切り替えはセッションを作り直さず cookie だけを変え、所属していない会社への切り替えは拒否する（システム全体管理者は全社から選べる）。全ての読み書きをその所属で絞る（D-004）。等級名の変更はシステム全体管理者と自社の会社の管理者だけで、他社の等級を指す要求は拒否する。開けるページ（accessClass）とできる操作・役割ごとの可否・説明は route-ledger.json の各ページから引き、サイドバー・ページの入口・サーバー処理の役割の指定・session.ts の can〜 の判定・権限一覧がこの台帳だけを読む（D-007）。権限の定義を画面から編集できるようにはしない。
 根拠: qa-f03、qa-r-auth-3、qa-v27、qa-v28、D-004、D-007（system-spec/auth.md、system-spec/security.md）
 
 #### Data and secret protection
@@ -121,6 +118,8 @@ server-actions-contract.test.ts（入口を通らない書き込みを0件に保
 
 D-002（採択 opt-server-functions）: 画面からの書き込みを Server Functions へすべて移し、成功したら同じ応答で画面を作り直す。代替の『Route Handler のまま画面側で router.refresh を呼ぶ』は変更が小さいが、利用者は Next.js が勧める即時更新の経路を選んだ。移行中に認可が抜ける危険は、入口（runAction・runRead）に検査の順序を固定して抑えた。セッション: cookieCache を入れると、ロールの変更や会社の利用停止が最大でキャッシュの期間だけ遅れて反映されるため、要求ごとに D1 から読む形を保つ。D-004（採択 opt-membership-cookie）: 利用者が選んだ（qa-v12）。今システム全体管理者だけが使う hr_company の cookie と会社の切り替えの部品を全員に広げ、所属は自前の表に持つ。代替の better-auth の organization plugin は既存の companies 表と二重になり、等級・上司を member の表の外に持ち、版上げへの追随が要る。URL に会社を入れる案は46画面のルートとリンクを全て移す。この案の危険は、cookie の会社への所属の確認を1か所でも漏らすと所属していない会社のデータが見えることで、getViewer がリクエストのたびに確かめる形で抑える。D-007（採択 opt-route-ledger-extend）: 利用者が①（route-ledger.json に操作と説明を足す）を名指しで選んだ（qa-v25、2026-10-13T03:40:15Z）。委任に基づいて AI が選んだ別の案とは違う案である。3案は権限の定義の正本の置き場所の択一で、全てに持つと正本が複数になる。①は、開けるページ（accessClass）に加え、主な操作・役割ごとの可否・説明も route-ledger.json の各ページに置き、権限の定義を台帳1つにまとめる。サイドバーと判定が同じ台帳を読むので、表示と判定のずれを既存の route-ledger のテストで見つけられる。DB の表で編集する②は、表と実際の判定のずれに気づけない（比べたときの不利な点）。①の不利な点は、説明を直すたびに仕様文書の変更になることである。役割の種類は増やさない。利用者は、D-007 ① に合わせて (4) を直した本章の文面を、旧と新を逐語で示されたうえで承認した（qa-v27、2026-10-13T03:48:20Z）。
 根拠: D-002（qa-u18）、D-004（qa-v12）、D-007（qa-v25）、qa-r-auth-3、qa-v27（system-spec/auth.md、system-spec/spec-state.json）
+
+2026-10-14 の会社所属の現在の契約：既存アカウントへ別の会社の所属を足すのは全体管理者だけの専用操作（addMembership）とする（qa-w11、D-008）。選んでいる会社が無いとき（cookie が無い・所属していない会社を指す）は、有効な所属のうち会社名の順で最初の会社を開く（同名は会社 id の順。qa-w12、D-009）。委任（qa-v32）に基づく DD-009 の『最も古い有効な所属』は利用者の選択で取り消し、実装は 2026-10-15 に会社名の順へ直した（src/lib/memberships.ts の activeMembershipsByCompanyName。users の写しの基準は古い順のまま。DD-009 の更新）。どちらの順でも、リクエストのたびに所属をサーバーで確かめることは変わらない。根拠: qa-w11, qa-w12, qa-v27／system-spec/auth.md・system-spec/security.md・docs/product/design-decisions.md
 
 ## Delivery, migration and rollback
 

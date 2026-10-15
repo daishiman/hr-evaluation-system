@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { requireRoute } from "@/lib/session";
 import { Badge, EmptyState, PageTitle, ReasonNote } from "@/components/ui";
 import { SchemeGroupPicker } from "@/components/SchemeGroupPicker";
+import { ComparisonGapNotice } from "@/components/ComparisonGapNotice";
+import { loadGroupComparisonGaps } from "@/lib/comparison-gap-loader";
 import { groupPosition, schemeStepPath, stepLede, stepNumber, STEPS, stepTitle } from "@/lib/domain/scheme-steps";
 import { loadKpiChoices, loadSchemeSetup } from "../data";
 
@@ -17,7 +19,12 @@ export default async function SchemeSelectPage({ params }: { params: Promise<{ g
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
   const pointGroup = decodeURIComponent((await params).group);
 
-  const [setup, choices] = await Promise.all([loadSchemeSetup(viewer.companyId), loadKpiChoices(viewer.companyId)]);
+  const [setup, choices, comparisonGaps] = await Promise.all([
+    loadSchemeSetup(viewer.companyId),
+    loadKpiChoices(viewer.companyId),
+    // 他社の区分名なら会社で絞った読み出しに出てこないので、空のまま
+    loadGroupComparisonGaps(viewer.companyId, pointGroup, { role: viewer.role, current: "selection" }),
+  ]);
   const group = setup.groups.find((g) => g.pointGroup === pointGroup);
   // 他社の等級区分名を打ち込まれても、この会社に無ければ存在しない画面として扱う
   if (!group) notFound();
@@ -57,6 +64,12 @@ export default async function SchemeSelectPage({ params }: { params: Promise<{ g
   return (
     <>
       {head}
+      {/* ここで選んだ項目と、配ってあるアンケートが聞いている項目の比べ（DD-012）。直す操作はアンケート側に置く */}
+      {comparisonGaps.length > 0 && (
+        <div className="mb-4">
+          <ComparisonGapNotice gaps={comparisonGaps} />
+        </div>
+      )}
       <SchemeGroupPicker
         schemeId={setup.scheme.id}
         pointGroup={group.pointGroup}

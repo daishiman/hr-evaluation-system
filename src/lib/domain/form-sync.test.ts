@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeFormKpiDiff, diffFormKpiItems, effectiveAskedItems, isFormInSync } from "./form-sync";
+import { diffFormKpiItems, effectiveAskedItems } from "./form-sync";
 
 /**
  * 評価セットとアンケートのズレ検出。
@@ -15,29 +15,23 @@ describe("diffFormKpiItems", () => {
   it("同じ顔ぶれならズレなし（並び順は見ない）", () => {
     const d = diffFormKpiItems(["k1", "k9"], ["k9", "k1"]);
     expect(d).toEqual({ missing: [], extra: [] });
-    expect(isFormInSync(d)).toBe(true);
-    expect(describeFormKpiDiff(d, nameOf)).toBeNull();
   });
 
   it("選んだのに聞いていない項目を欠落として出す", () => {
     const d = diffFormKpiItems(["k1", "k9"], ["k1"]);
     expect(d.missing).toEqual(["k9"]);
     expect(d.extra).toEqual([]);
-    expect(describeFormKpiDiff(d, nameOf)).toContain("「売上達成率」");
-    expect(describeFormKpiDiff(d, nameOf)).toContain("点が付きません");
   });
 
   it("聞いているのに使わない項目を余分として出す", () => {
     const d = diffFormKpiItems(["k1"], ["k1", "k24"]);
-    expect(d.extra).toEqual(["k24"]);
-    expect(describeFormKpiDiff(d, nameOf)).toContain("「利益率」");
+    expect(d).toEqual({ missing: [], extra: ["k24"] });
   });
 
-  it("欠落と余分が同時にあるときは1文にまとめる", () => {
-    const msg = describeFormKpiDiff(diffFormKpiItems(["k1", "k9"], ["k1", "k24"]), nameOf);
-    expect(msg).toContain("「売上達成率」");
-    expect(msg).toContain("「利益率」");
-    expect(msg).toContain("作り直すと揃います");
+  it("欠落と余分が同時にあれば、両方をそれぞれの側に出す（文にするのは comparison-gap.ts）", () => {
+    const d = diffFormKpiItems(["k1", "k9"], ["k1", "k24"]);
+    expect(d).toEqual({ missing: ["k9"], extra: ["k24"] });
+    expect([...d.missing, ...d.extra].map(nameOf)).toEqual(["売上達成率", "利益率"]);
   });
 
   it("同じ項目が重複して渡されても1件として数える（設問は1項目に複数ある）", () => {
@@ -53,7 +47,7 @@ describe("effectiveAskedItems", () => {
   it("等級要件の設問があれば、固定枠も聞いているものとして数える", () => {
     const asked = effectiveAskedItems(["k9"], { fixedSlotItemIds: ["k1"], hasRequirementQuestions: true });
     expect(new Set(asked)).toEqual(new Set(["k1", "k9"]));
-    expect(isFormInSync(diffFormKpiItems(["k1", "k9"], asked))).toBe(true);
+    expect(diffFormKpiItems(["k1", "k9"], asked)).toEqual({ missing: [], extra: [] });
   });
 
   it("等級要件の設問が1問も無ければ、固定枠は欠落として残す", () => {

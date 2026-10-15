@@ -49,6 +49,10 @@ export async function createForms(raw: unknown) {
     if (!schemeReadiness.schemeReady) throw new HttpError(409, schemeReadiness.schemeMessage);
 
     const grades = await db.select().from(s.grades).where(eq(s.grades.companyId, companyId));
+    // 名指しした等級は1件でも自社に無ければ止める。黙って外すと、作ったつもりの版が無いまま進む（DD-012 の7）
+    if (input.gradeIds?.some((id) => !grades.some((g) => g.id === id))) {
+      throw new HttpError(400, "この会社に無い等級が含まれています。");
+    }
     const targets = input.gradeIds
       ? grades.filter((g) => input.gradeIds!.includes(g.id))
       : grades.filter((g) => g.isActive);

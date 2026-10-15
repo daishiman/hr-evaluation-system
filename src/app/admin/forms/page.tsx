@@ -1,11 +1,11 @@
 import { requireRoute } from "@/lib/session";
-import { listCycles, listFormKpiCoverage, listForms, listGrades } from "@/lib/queries";
+import { listCycles, listForms, listGrades } from "@/lib/queries";
 import { formRowTitle } from "@/lib/domain/grade-label";
-import { diffFormKpiItems, effectiveAskedItems } from "@/lib/domain/form-sync";
-import { formSyncGaps, type SetupGap } from "@/lib/domain/setup-gaps";
 import { SUBMISSION_STATE_LABEL } from "@/lib/domain/submission-status";
 import { ActionButton } from "@/components/ActionButton";
-import { createForms, rebuildFormQuestions, updateForm } from "@/actions/forms";
+import { createForms, updateForm } from "@/actions/forms";
+import { ComparisonGapNotice } from "@/components/ComparisonGapNotice";
+import { loadCycleComparisonGaps } from "@/lib/comparison-gap-loader";
 import { CopyUrl } from "@/components/CopyUrl";
 import { SetupGapList } from "@/components/SetupGapList";
 import { appOrigin, formUrl } from "@/lib/origin";
@@ -45,29 +45,13 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
      ドメインを書き込むと必ずどこかで間違ったURLを配ることになる）。 */
   const origin = await appOrigin();
   const selected = cycles.find((c) => c.id === sp.cycle) ?? cycles.find((c) => c.status === "open") ?? cycles[0];
-  const [forms, grades, coverage, schemeReadiness, submissionCounts] = await Promise.all([
+  const [forms, grades, comparisonGaps, schemeReadiness, submissionCounts] = await Promise.all([
     listForms(companyId, selected.id),
     listGrades(companyId),
-    listFormKpiCoverage(companyId, selected.id),
+    loadCycleComparisonGaps(companyId, selected.id, { role: viewer.role, current: null }),
     loadSchemeReadiness(companyId, selected.schemeId),
     listFormSubmissionCounts(companyId, selected.id),
   ]);
-
-  /* このアンケートが聞いている項目と、いま選んでいる項目のズレ。
-     ズレていても自動では直さない（回答済みのアンケートを書き換えないため）。
-     直すかどうかは回答状況を見て人が決めることなので、事実と直し方だけを出す。 */
-  const mismatchOf = (formId: string, gradeId: string | null): SetupGap[] => {
-    if (!coverage) return [];
-    const pointGroup = grades.find((g) => g.id === gradeId)?.pointGroup;
-    if (!pointGroup) return [];
-    const selectedItems = coverage.selectedByGroup.get(pointGroup);
-    if (!selectedItems) return []; // この等級区分の項目がまだ選ばれていない
-    const asked = effectiveAskedItems(coverage.askedByForm.get(formId) ?? [], {
-      fixedSlotItemIds: coverage.fixedSlotItemIds,
-      hasRequirementQuestions: coverage.hasRequirementQuestions(formId),
-    });
-    return formSyncGaps(diffFormKpiItems(selectedItems, asked), coverage.nameOf, formId);
-  };
 
   return (
     <>
@@ -133,7 +117,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
               questionCount: Number(f.questionCount ?? 0),
               formId: f.id,
             });
-            const mismatch = mismatchOf(f.id, f.gradeId);
+            const comparisonGap = comparisonGaps.get(f.id);
             const submission = submissionCounts.get(f.id);
             return (
             <Card key={f.id} className="card-pad" off={f.status === "closed"}>
@@ -220,28 +204,10 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                 </div>
               )}
 
-              {mismatch.length > 0 && (
+              {/* 使うKPIを選ぶで選んだ項目と、このアンケートが聞いている項目の比べ（DD-012） */}
+              {comparisonGap && (
                 <div className="mt-3">
-                  <SetupGapList
-                    gaps={mismatch}
-                    title={
-                      Number(f.responseCount ?? 0) > 0 || f.status !== "draft"
-                        ? "いま選んでいる評価項目と、このアンケートが聞いている項目が食い違っています。公開後のアンケートは設問を差し替えません。回答が0件でも、読まれている可能性があるためです。"
-                        : "いま選んでいる評価項目と、このアンケートが聞いている項目が食い違っています。"
-                    }
-                    action={
-                      Number(f.responseCount ?? 0) === 0 && f.status === "draft" ? (
-                        <ActionButton
-                          action={rebuildFormQuestions}
-                          resource="forms"
-                          input={{ formId: f.id }}
-                          label="いまの評価項目に合わせて設問を作り直す"
-                          variant="secondary"
-                          confirm={`「${formRowTitle(f)}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ公開前で、回答は1件もありません。よろしいですか？`}
-                        />
-                      ) : undefined
-                    }
-                  />
+                  <ComparisonGapNotice gaps={[comparisonGap]} />
                 </div>
               )}
             </Card>

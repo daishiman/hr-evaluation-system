@@ -10,7 +10,7 @@
  * 区分（pointGroup）の英語名は文に出さず、等級名の呼び名（grade-label.ts）で言う。
  */
 
-import type { FormKpiDiff } from "./form-sync";
+import { comparisonGapOf, type ComparisonGap, type ComparisonGapInput } from "./comparison-gap";
 import { pointGroupLabel, type GradeLike } from "./grade-label";
 import { schemeStepPath } from "./scheme-steps";
 
@@ -133,30 +133,13 @@ export function formPublicationGaps(input: {
 }
 
 /**
- * 評価セットとアンケートのずれ（form-sync.ts の diffFormKpiItems の結果）。
- * 欠落と余分をそれぞれ1件にする。nameOf は項目名の引き当て。
- * 回答済みのアンケートは書き換えないので、直し方は「作り直す」か「新しい版」のどちらか。
+ * 評価セットとアンケートの比べ（DD-012 の6）。
+ * 比べる警告は2つのページと直す操作1つの組（ComparisonGap）で返し、SetupGap の形では返さない。
+ * 文を書き起こすと、画面ごとに別の言い方の警告が増えるため。中身は comparisonGapOf を呼ぶだけ。
+ * 呼ぶのは comparison-gap-loader.ts だけで、3画面はその読み出しを通す（画面からは直接呼ばない）。
  */
-export function formSyncGaps(diff: FormKpiDiff, nameOf: (id: string) => string, formId: string): SetupGap[] {
-  const names = (ids: readonly string[]) => ids.map((id) => `「${nameOf(id)}」`).join("・");
-  const gaps: SetupGap[] = [];
-  if (diff.missing.length > 0) {
-    gaps.push({
-      what: `${names(diff.missing)}を評価に使うKPIに選んでいますが、このアンケートでは実績を聞いていません。このままでは判定外になり、配点ぶんの点が付きません。`,
-      how: "回答がまだ無い下書きなら、設問を作り直すと揃います。公開後のアンケートは書き換えないため、新しい版を作って公開してください。",
-      href: formPath(formId),
-      linkLabel: "このアンケートを開く",
-    });
-  }
-  if (diff.extra.length > 0) {
-    gaps.push({
-      what: `${names(diff.extra)}を聞いていますが、いまの評価セットでは使いません。`,
-      how: "回答がまだ無い下書きなら、設問を作り直すと外れます。公開後のアンケートは書き換えないため、次の版で外してください。",
-      href: formPath(formId),
-      linkLabel: "このアンケートを開く",
-    });
-  }
-  return gaps;
+export function formSyncGaps(input: ComparisonGapInput): ComparisonGap | null {
+  return comparisonGapOf(input);
 }
 
 /** 基準を変えたあと集計し直していない評価期間（impact.ts の detectStaleCycles の結果） */

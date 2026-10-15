@@ -17,10 +17,10 @@ template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
 evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "995b74df98c776c2766e7fd06d7dd4eaf4768082e0b246dae0e51cf28febac72", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "system-spec/completeness-findings.json"}
-source_lineage: {"imported_at": "2026-10-13T05:04:21Z", "origin_kind": "system-spec-harness", "source_digest": "995b74df98c776c2766e7fd06d7dd4eaf4768082e0b246dae0e51cf28febac72", "source_path": "system-spec/frontend.md", "source_plugin": "system-spec-harness", "source_version": "0.1.21"}
-created_at: "2026-10-13T05:05:39.858264Z"
-updated_at: "2026-10-13T05:05:39.858264Z"
+confirmation_evidence: {"evaluated_digest": "452898d9797aebcf4c071252d8ea792a6dad3fba40265a652f907d282d83d6f8", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
+source_lineage: {"imported_at": "2026-10-15T00:07:42Z", "origin_kind": "system-spec-harness", "source_digest": "452898d9797aebcf4c071252d8ea792a6dad3fba40265a652f907d282d83d6f8", "source_path": "system-spec/frontend.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-15T01:28:34.699201Z"
+updated_at: "2026-10-15T01:28:34.699201Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -44,12 +44,14 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-13T05:05:39.858264Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-15T01:28:34.699201Z", "missing_sections": [], "status": "complete"}
 ---
 
 # Architecture overview
 
 この章は、画面側の部品と実装の構造を受け持つ。書き込みは useSaveAction から Server Functions を呼び、応答に載った新しい描画で成功の知らせと一覧・件数・会社切替メニュー（layout）を同じ描画で更新し、createCommitGate で新しい描画が終わってから成功を返す。他タブと画面復帰は、画面の骨格に1回だけ置いた FreshnessSync が受け持つ。2026-10-12 の追加では、等級名をサーバーから受け取って出す部品、並べ替えの共通の部品（D-005）、権限一覧の部品（表・役割のタブ・スマホのカード・説明の吹き出し。D-006）、設定不足の共通の部品、アンケートの回答と見本の部品、端末ごとの状態の置き場、画面ごとの段組みを足す。この追加の全文は、利用者が全文のまま承認した（qa-v22、2026-10-13T00:03:46Z）。根拠: qa-v22, qa-r-frontend-3, qa-v13, qa-v14／system-spec/frontend.md
+
+2026-10-14 の追加で、比べる警告の部品（ComparisonGapNotice）を1つ作り、アンケートの一覧・アンケート1本・使うKPIを選ぶの3画面はこれだけを使う（G16・I17）。この追加の全文は、利用者が全文のまま承認した（qa-w07、2026-10-14T20:46:24Z）。根拠: qa-w07, qa-w01, qa-w03／system-spec/frontend.md
 
 ## Context and drivers
 
@@ -66,6 +68,8 @@ implementation_readiness: {"checked_at": "2026-10-13T05:05:39.858264Z", "missing
 ## Container and component view
 
 鮮度の部品は、書き込みを呼ぶ useSaveAction、成功を新しい描画の後まで待たせる createCommitGate、他タブと画面復帰を受ける FreshnessSync、連続作成フォームの RecordForm（generate 経路）からなる。追加の共通部品は、等級名をサーバーから受け取って出す表示、並べ替えの部品（Pointer Events による長押しと押したままのドラッグ・矢印のボタン・キーボード・aria-live での読み上げ。D-005）、権限一覧の部品（表・役割のタブ・スマホのカード・説明の吹き出し。D-006）、設定不足の部品（何が・どう直す・リンク）である。権限一覧の部品はページとモーダルで共用し、表は table 要素、タブは APG の tabs の形、モーダルは dialog 要素で作る。説明は aria-describedby で結び、フォーカスとタップでも出す。表とカードは画面の幅で切り替え、どちらも同じデータから描く。等級要件・昇格の条件と要件・アンケートの設問と選択肢の編集は並べ替えの部品へ寄せ、設定不足を出している ReasonNote は新しい部品へ置き換え、他の用途の ReasonNote は残す。アンケートの回答の部品は設問名の label を入力の要素へ結んで選択肢を label の全面で押せるようにし、見本の部品は試しに選べる状態を持ち送信の操作を出さない。根拠: qa-v22, qa-r-frontend-3, qa-v13, qa-v14／system-spec/frontend.md
+
+ComparisonGapNotice は、閉じた1行（件数）と、開いた中のリンク2行・表・ボタンを1つの部品に収める。開閉は既存の InlineDetail で作り、画面ごとに <details> を書かない。ボタンは ActionButton を使う。SetupGapList（公開前の不足など）は今の形のまま残す。根拠: qa-w07／system-spec/frontend.md
 
 ## Cross-cutting contracts
 
@@ -89,13 +93,19 @@ route-ledger は 46 画面の page.tsx（権限一覧のページを足して 47
 
 共通部品は、並べ替え（Pointer Events の長押しと押したままのドラッグ・矢印のボタン・キーボード・aria-live での読み上げ、新しい依存なし。D-005）、権限一覧（表・役割のタブ・スマホのカード・説明の吹き出しをページとモーダルで共用。D-006）、設定不足（何が・どう直す・リンク）、アンケートの回答（label を入力へ結び、全面で押せる）と見本（試しに選べ、送信の操作を出さない）である。権限一覧の表は table 要素、タブは APG の tabs の形、モーダルは dialog 要素で作り、説明は aria-describedby で結んでフォーカスとタップでも出す。並べ替えの方針（持ち上げる・動かす・置く・戻す・読み上げる）は部品に置き、入力の詳細はその内側に閉じる。ReasonNote は設定不足の用途だけを新しい部品へ置き換え、他の用途は残す。読み取り専用の .chip はポインターの形とホバーの変化を出さない。globals.css の配色・テーマの宣言とテーマの契約テストは変えない（AGENTS.md、DD-003）。出典は mdn-pointer-events、mdn-dialog-element、w3c-apg-tabs、w3c-apg-tooltip、mdn-aria-live-regions である。根拠: qa-v22, qa-v13, qa-v14／system-spec/frontend.md
 
+比べる警告の表は table 要素で、列見出しの th に scope を付け、○ と — に『ある』『ない』の読み上げの文字を添える。根拠: qa-w07／system-spec/frontend.md
+
 #### State and data flow
 
 書き込みの結果は {ok, message} で返り、一覧・件数・layout の値は応答の新しい描画に入る。連続作成フォーム（RecordForm の generate 経路）も一覧の更新を省略せず、控えは成功の知らせの後ろに畳み、畳んでいる間は値を画面に置かない（暗号化して残せない鍵の無い環境だけ最初から開く）。他タブへは BroadcastChannel（hr-evaluation:freshness）で資源の種類と時刻だけを送り、受け手は1.5秒に1回へ間引いて router.refresh を呼ぶ。開閉の状態など端末ごとのものは localStorage に置き、読めないときは既定の状態で動く。権限一覧の表とカードは同じデータから描き、幅で切り替えるだけにして内容をずらさない。等級名はクライアントで持たず、サーバーから受け取った値を出す。根拠: qa-v22, qa-r-frontend-3, qa-v14／system-spec/frontend.md
 
+比べる警告の件数の行は閉じていても出し、開閉の状態は覚えない。根拠: qa-w07／system-spec/frontend.md
+
 #### Backend integration
 
 画面は Server Functions の共通の入口 runAction（送り元の検査と認可、大きさの上限 413、zod による入力の検証、本体、成功時だけ next/cache の refresh）を通して書き、結果を {ok, message} の形で受け取る。読むだけの処理は runRead を通す。画面から書き込みの fetch を直接呼ぶ箇所は server-actions-contract.test.ts で落とし、sendBeacon と外観の選択の記録だけを理由付きの例外にする。並べ替えの保存には並び順の全体を送る形を足す（I14）。送った集まりが今の集まりと違うときは 409 になり、取り直しを求める。権限一覧は route-ledger.json の各ページに置いた権限の定義から描き、サイドバー（nav.ts）・ページの入口（requireRole）・ActionSpec.role・session.ts の canEdit〜 などの判定も同じ台帳から引く（D-007 ①）。根拠: qa-v22, qa-r-frontend-3, qa-u25, qa-v30, qa-v25, qa-v27, qa-v28／system-spec/frontend.md・system-spec/backend.md・system-spec/auth.md・system-spec/security.md
+
+ComparisonGapNotice は、サーバーが返す ComparisonGap（比べている2つのページの名前と href、項目ごとの有無）をそのまま描き、ページ名やリンクを画面の側で組み立てない。根拠: qa-w07, qa-w08／system-spec/frontend.md・system-spec/backend.md
 
 #### Performance and observability
 
@@ -104,6 +114,8 @@ route-ledger は 46 画面の page.tsx（権限一覧のページを足して 47
 #### Frontend verification
 
 pnpm test に、入口を通らない書き込みの検査（server-actions-contract.test.ts）、batch の外で2つ以上の表を書く関数の検査（write-atomicity-contract.test.ts）、送り元の二重の検査（action-origin.test.ts）を入れ、違反が0件でなければ失敗にする。画面の通し試験（Playwright、pnpm test:e2e）で6つの経路と控えの畳み方を確かめ、375px・768px の幅でも回し、相手はローカルの preview に限る（LOCAL_HOSTS）。追加要件では、並べ替えの3つの操作の一致と全編集画面での部品の使用（O13。タッチでのスクロールとの区別はテストを厚くする）、等級名の結合テストと英語の区分名の静的検査（O6）、ルート台帳の権限の定義とサイドバー・ページの判定・サーバー処理の役割の指定の一致の検査（O8）、権限一覧の表とカードが同じ内容を出す検査、設定不足の契約テスト（O12）、選択肢のテスト（O14）、4幅の撮影（O15）で確かめる。根拠: qa-v22, qa-r-frontend-3, qa-u25, qa-v13, qa-v31／system-spec/frontend.md・system-spec/maintenance-ops.md
+
+3画面が ComparisonGapNotice だけを使うこと、閉じた1行と開いた表が出ることをテストで確かめる。根拠: qa-w07, qa-w10／system-spec/frontend.md・system-spec/maintenance-ops.md
 
 ## Architecture decisions
 

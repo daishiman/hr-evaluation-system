@@ -17,10 +17,10 @@ template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
 evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "891f78a97e11f5314c969f0e8a1517612eb12e372e3f41505371486a814faadb", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "system-spec/completeness-findings.json"}
-source_lineage: {"imported_at": "2026-10-13T05:04:21Z", "origin_kind": "system-spec-harness", "source_digest": "891f78a97e11f5314c969f0e8a1517612eb12e372e3f41505371486a814faadb", "source_path": "system-spec/database.md", "source_plugin": "system-spec-harness", "source_version": "0.1.21"}
-created_at: "2026-10-13T05:05:39.858264Z"
-updated_at: "2026-10-13T05:05:39.858264Z"
+confirmation_evidence: {"evaluated_digest": "d52615d669afbe47dcdfedcb7accaa1668f20bf152175ff77c5847229a05850d", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
+source_lineage: {"imported_at": "2026-10-15T00:07:42Z", "origin_kind": "system-spec-harness", "source_digest": "d52615d669afbe47dcdfedcb7accaa1668f20bf152175ff77c5847229a05850d", "source_path": "system-spec/database.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-15T01:28:34.699201Z"
+updated_at: "2026-10-15T01:28:34.699201Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -44,7 +44,7 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-13T05:05:39.858264Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-15T01:28:34.699201Z", "missing_sections": [], "status": "complete"}
 ---
 
 # Architecture overview
