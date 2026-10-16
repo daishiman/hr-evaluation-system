@@ -18,6 +18,7 @@ import {
   type BuilderQuestion,
   type BuilderQuestionDraft,
 } from "@/components/form-builder-model";
+import { isLinkedQuestion } from "@/lib/domain/form-question-links";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { ReorderList } from "@/components/reorder/ReorderList";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -225,6 +226,8 @@ export function FormBuilder({
           const keys = optionKeys(r.options);
           const title = r.title || <span className="text-ink-muted">（設問文が未入力です）</span>;
           const badge = r.isGate ? <Badge tone="alert">昇格の必須要件</Badge> : undefined;
+          // 集計に使う設問は、まとまりと答え方を変えさせない（サーバーも断る。DD-015）
+          const linked = isLinkedQuestion(r);
           const sub = (
             <>
               {SECTION_LABEL[r.section] ?? r.section} ／ {TYPE_LABEL[r.questionType] ?? r.questionType}
@@ -269,7 +272,13 @@ export function FormBuilder({
             {open && (
               <div className="field-grid mt-3 ml-9">
                 <p className="footnote m-0 md:col-span-2">
-                  {r.linkLabel ? `集計との紐づけ：${r.linkLabel}` : "自由設問（評価集計には使いません）"}
+                  {r.linkLabel ? `集計との紐づけ：${r.linkLabel}` : linked ? "集計に使う設問です" : "自由設問（評価集計には使いません）"}
+                  {linked && (
+                    <>
+                      <br />
+                      まとまりと答え方は、点数の計算が読む形なので変えられません。変えるときは、制度の設定を直してから設問を作り直してください。
+                    </>
+                  )}
                 </p>
                 <label className="md:col-span-2">
                   <span className="block text-note text-ink-muted">設問文</span>
@@ -285,7 +294,12 @@ export function FormBuilder({
                 </label>
                 <label>
                   <span className="block text-note text-ink-muted">まとまり</span>
-                  <select className="input mt-1 w-full" value={r.section} onChange={(e) => patch(i, { section: e.target.value })}>
+                  <select
+                    className="input mt-1 w-full"
+                    value={r.section}
+                    disabled={linked}
+                    onChange={(e) => patch(i, { section: e.target.value })}
+                  >
                     {SECTION_ORDER.concat("free").map((sec) => (
                       <option key={sec} value={sec}>
                         {SECTION_LABEL[sec] ?? sec}
@@ -298,6 +312,7 @@ export function FormBuilder({
                   <select
                     className="input mt-1 w-full"
                     value={r.questionType}
+                    disabled={linked}
                     onChange={(e) => patch(i, {
                       questionType: e.target.value,
                       options: ["yesno", "single", "multi", "scale"].includes(e.target.value) ? r.options : [],

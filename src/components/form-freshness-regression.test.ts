@@ -287,3 +287,32 @@ describe("FormBuilder の再取得", () => {
     expect(renderToStaticMarkup(find(refreshed, named("ReasonNote")))).toContain("未保存の入力は残しています");
   });
 });
+
+describe("FormBuilder の集計に使う設問（DD-015）", () => {
+  const selects = (linked: boolean) => {
+    const row = {
+      ...createBlankQuestion(linked ? "kpi" : "free", linked ? "number" : "text", "unused"),
+      id: "q1",
+      title: "設問",
+      ...(linked ? { kpiItemId: "kpi_a", kpiQuestionKey: "q1_1", linkLabel: "稼働率（q1_1）" } : {}),
+    };
+    const props = { formId: "f1", initial: [row], editable: true };
+    (find(render(FormBuilder, props), (node) => node.props.children === "内容を直す").props.onClick as () => void)();
+    const opened = render(FormBuilder, props);
+    const section = find(opened, (node) => node.type === "select" && node.props.value === row.section);
+    const type = find(opened, (node) => node.type === "select" && node.props.value === row.questionType);
+    return { opened, disabled: [section.props.disabled, type.props.disabled] };
+  };
+
+  it("紐づけのある設問は、まとまりと答え方を選べず、理由を添える", () => {
+    const { opened, disabled } = selects(true);
+    expect(disabled).toEqual([true, true]);
+    expect(renderToStaticMarkup(opened as ReactElement)).toContain("まとまりと答え方は、点数の計算が読む形なので変えられません");
+  });
+
+  it("自由設問は、まとまりも答え方も選べる", () => {
+    const { opened, disabled } = selects(false);
+    expect(disabled).toEqual([false, false]);
+    expect(renderToStaticMarkup(opened as ReactElement)).not.toContain("点数の計算が読む形");
+  });
+});

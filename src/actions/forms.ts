@@ -17,6 +17,7 @@ import {
 } from "@/lib/form-build";
 import { loadFormComparisonGap } from "@/lib/comparison-gap-loader";
 import { NO_TEMPLATE_HINT, noTemplateNamesOf, noTemplateNote } from "@/lib/domain/comparison-gap";
+import { checkQuestionLinks } from "@/lib/domain/form-question-links";
 import { checkNumberMagnitude, defaultIntegerFlag } from "@/lib/domain/number-input";
 import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
@@ -371,8 +372,26 @@ export async function saveFormQuestions(raw: unknown) {
       }
     }
 
+    // 集計との紐づけは、保存済みの同じ設問からの引き継ぎだけを受け付ける（DD-015）
+    const stored = await db
+      .select({
+        id: s.formQuestions.id,
+        section: s.formQuestions.section,
+        questionType: s.formQuestions.questionType,
+        gradeRequirementId: s.formQuestions.gradeRequirementId,
+        promotionRequirementId: s.formQuestions.promotionRequirementId,
+        behaviorGuidelineId: s.formQuestions.behaviorGuidelineId,
+        kpiItemId: s.formQuestions.kpiItemId,
+        kpiQuestionKey: s.formQuestions.kpiQuestionKey,
+        isGate: s.formQuestions.isGate,
+      })
+      .from(s.formQuestions)
+      .where(and(eq(s.formQuestions.companyId, companyId), eq(s.formQuestions.formId, form.id)));
+    const links = checkQuestionLinks(q, stored);
+    if (!links.ok) throw new HttpError(400, links.message);
+
     const rows = q.map((x, i) => ({
-      id: x.id ?? newId("fq"),
+      id: links.ids[i] === "keep" && x.id ? x.id : newId("fq"),
       companyId,
       formId: form.id,
       section: x.section,
