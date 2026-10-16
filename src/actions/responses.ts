@@ -12,6 +12,7 @@ import { isAnswered, questionSnapshot } from "@/lib/domain/answer-snapshot";
 import { checkAnswerNumbers } from "@/lib/domain/number-input";
 import { saveResponseWithAnswers } from "@/lib/response-write";
 import { getForm } from "@/lib/queries";
+import { inScreenOrder } from "@/lib/question-order";
 
 const responseSchema = z.object({
   formId: z.string().min(1),
@@ -115,25 +116,31 @@ export async function saveResponse(raw: unknown) {
       });
 
     if (input.status === "submitted") {
+      // 断るときに挙げる欄は、回答画面の上から最初のもの（画面の「最初の未入力の欄へ移る」と同じ順）
+      const screen = inScreenOrder(questions);
+      const screenRank = new Map(screen.map((q, i) => [q.id, i]));
       /* 数値の回答が設問の決まり（0以上・1以上・整数だけ、など）に収まっているかを、受け口の側でも見る。
          画面の制限だけでは、画面を通さずに送られたときに素通りするため。
-         下書きの自動保存には当てない（打っている最中に断ると入力が止まる）。 */
+         下書きの自動保存には当てない（打っている最中に断ると入力が止まる）。
+         送られた順のまま調べると、範囲を外れた欄が2つあるときに画面の下の欄を挙げることがある。 */
       const range = checkAnswerNumbers(
-        incoming.map((a) => ({
-          title: a.question.title,
-          validationMin: a.question.validationMin,
-          validationMax: a.question.validationMax,
-          validationInteger: a.question.validationInteger,
-          unit: a.question.unit,
-          value: a.valueNumber,
-        })),
+        [...incoming]
+          .sort((a, b) => screenRank.get(a.question.id)! - screenRank.get(b.question.id)!)
+          .map((a) => ({
+            title: a.question.title,
+            validationMin: a.question.validationMin,
+            validationMax: a.question.validationMax,
+            validationInteger: a.question.validationInteger,
+            unit: a.question.unit,
+            value: a.valueNumber,
+          })),
       );
       if (!range.ok) throw new HttpError(400, range.message);
 
       const answeredIds = new Set(
         incoming.filter((a) => isAnswered(a.question.questionType, a)).map((a) => a.question.id),
       );
-      const missing = questions.filter((q) => q.required && !answeredIds.has(q.id));
+      const missing = screen.filter((q) => q.required && !answeredIds.has(q.id));
       if (missing.length > 0) {
         throw new HttpError(
           400,

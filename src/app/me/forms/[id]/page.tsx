@@ -10,7 +10,7 @@ import { Card, DefList, PageTitle, ReasonNote } from "@/components/ui";
 import { formatDate, formatPeriod } from "@/lib/view";
 import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
 import { parseMulti, toAnswerRows } from "@/lib/domain/answer-snapshot";
-import { judgeFormEntry } from "@/lib/domain/form-entry";
+import { answerLockedReason, judgeAnswerBlock, judgeFormEntry } from "@/lib/domain/form-entry";
 
 export const dynamic = "force-dynamic";
 
@@ -37,17 +37,10 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
   if (judgeFormEntry({ viewerGradeId: viewer.gradeId, formGradeId: form.gradeId, hasResponse: !!response }) === "content-only") {
     redirect(`/forms/${form.id}`);
   }
-  if (form.status === "draft") {
-    return (
-      <>
-        <PageTitle title={formRowTitle(form)} />
-        <ReasonNote>このアンケートはまだ準備中です。公開されるとこの画面から回答できます。</ReasonNote>
-      </>
-    );
-  }
-
+  const draft = form.status === "draft";
+  // 下書きの設問は配っていないので読まない（下の draft の return で入力欄も出さない）
   const [questions, extensions] = await Promise.all([
-    listFormQuestions(viewer.companyId, id, viewer.role),
+    draft ? [] : listFormQuestions(viewer.companyId, id, viewer.role),
     listActiveExtensions(id, viewer.id),
   ]);
 
@@ -59,6 +52,27 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
     extensions,
     now: new Date(),
   });
+  // 入力欄を止めるかは、保存APIが断る条件（等級・締切）と同じ線引きで決める。
+  // 締切だけで決めると、等級が変わった人の下書きが開いたままになり、保存が毎回断られる
+  const lockedReason = answerLockedReason({
+    block: judgeAnswerBlock({
+      draft,
+      viewerGradeId: viewer.gradeId,
+      formGradeId: form.gradeId,
+      deadline: judgement,
+    }),
+    deadline: judgement,
+    hasResponse: !!response,
+  });
+  // 準備中の文も answerLockedReason だけが持つ。ここで自前の文を出すと、同じ理由の文が2通りになる
+  if (draft) {
+    return (
+      <>
+        <PageTitle title={formRowTitle(form)} />
+        <ReasonNote>{lockedReason}</ReasonNote>
+      </>
+    );
+  }
 
   /* 設問を上から順に埋めていく縦長の画面。
      どの期の・どの等級のアンケートかを帯に固定して、スクロールしても見えるようにする。 */
@@ -105,7 +119,7 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
     );
   }
 
-  const deadlineNote = judgement.canAnswer
+  const deadlineNote = lockedReason === null
     ? judgement.effectiveUntil
       ? `${formatJpDate(judgement.effectiveUntil)}まで回答できます${judgement.extended ? "（期限を延ばしてもらっています）" : ""}`
       : "回答期限は設けられていません"
@@ -114,7 +128,7 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
   return (
     <>
       {header}
-      {form.description && <p className="mb-4 text-sub leading-relaxed">{form.description}</p>}
+      {form.description && <p className="mb-4 whitespace-pre-wrap text-sub leading-relaxed">{form.description}</p>}
       {/* 操作の帯（FormAnswer の中）はページの一番下に置く決まり。後ろに置くと帯の下に隠れて押せない */}
       <p className="footnote mb-4">
         ほかの回では答えた内容も見返せます。
@@ -147,11 +161,9 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
           valueChoices: a.valueJson ? parseMulti(a.valueJson) : null,
         }))}
         submitted={false}
-        lockedReason={
-          judgement.canAnswer
-            ? null
-            : `${judgement.message}${response ? "入力した内容は消えずに残っています。" : ""}事情があって今から提出したい場合は、上長または会社の管理者にご相談ください。個別に期限を延ばすことができます。`
-        }
+        // 連絡先と延長の案内は judgement.message が状態ごとに1回だけ持つ（延長は期限切れにしか効かない）。
+        // ここで継ぎ足すと、同じ案内が2回並んだり、延長できない状態にまで延長を約束したりする
+        lockedReason={lockedReason}
         deadlineNote={deadlineNote}
         note={response?.respondentNote ?? null}
       />

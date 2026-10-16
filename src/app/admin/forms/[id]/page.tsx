@@ -7,6 +7,7 @@ import { getForm, listFormQuestions, listKpiItems } from "@/lib/queries";
 import { formRowTitle } from "@/lib/domain/grade-label";
 import { FormBuilder, type BuilderQuestion } from "@/components/FormBuilder";
 import { FormPreview } from "@/components/FormPreview";
+import { RespondentGuide } from "@/components/RespondentGuide";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { rebuildFormQuestions, updateForm } from "@/actions/forms";
@@ -173,10 +174,15 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
       <SectionHeading>回答者に見える内容（確認専用）</SectionHeading>
       <Disclosure summary="アンケートの中身を表示する" meta={`${previewQuestions.length}問`}>
         <p className="footnote mt-0">
-          保存済みの設問文・補足・必須／任意・答え方を表示します。ここには入力欄がなく、開いても回答や下書きは作られません。
+          保存済みの設問文・補足・答え方を表示します。印の無い設問は必須、「（任意）」の設問は空欄でも提出できます。
+          文字や数値を打つ欄はなく、選択肢を試しに選んでも保存されません。開いても回答や下書きは作られません。
         </p>
         <div className="mt-4 border-t border-line pt-4">
-          {form.description && <p className="mb-4 whitespace-pre-wrap text-sub leading-relaxed">{form.description}</p>}
+          {form.description && (
+            <p className="mb-4 whitespace-pre-wrap text-sub leading-relaxed">
+              <RespondentGuide>{form.description}</RespondentGuide>
+            </p>
+          )}
           <FormPreview questions={previewQuestions} />
         </div>
       </Disclosure>

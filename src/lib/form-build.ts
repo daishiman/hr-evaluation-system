@@ -68,7 +68,7 @@ function questionInsertStatements(db: Db, rows: Row[]): SqliteBatchItem[] {
 
 /**
  * この会社・この等級のアンケートに載せる設問を、いまの制度マスタから組み立てる。
- * 並び順は回答画面の並び（view.ts の SECTION_ORDER）と同じにする。
+ * 並び順は回答画面の節の並び（question-order.ts の SCREEN_SECTIONS。自由記入はここでは作らない）と同じにする。
  */
 export async function buildQuestionRows(opts: {
   companyId: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   formatOnBlur,
   normalizeNumericText,
@@ -8,6 +8,12 @@ import {
   parseNumberInput,
   type NumberFieldPolicy,
 } from "@/lib/domain/number-input";
+
+/** 欄の文字を、親へ渡す値に読む（空欄・読めない値は null） */
+function readValue(raw: string, policy?: NumberFieldPolicy): number | null {
+  const parsed = parseNumberInput(raw, policy);
+  return parsed.kind === "ok" ? parsed.value : null;
+}
 
 /**
  * 数値を入れる欄（共通）。数値の欄はすべてこれを使う。
@@ -56,6 +62,19 @@ export function NumberField({
 }) {
   const [text, setText] = useState(defaultValue === null || defaultValue === undefined ? "" : String(defaultValue));
   const [error, setError] = useState<string | null>(null);
+  // 最後に親へ渡した値。最初は、親が持っている初期値と同じとみなす。
+  // 初期値が数なら、欄の決まりで読み直さずにその数を使う（整数だけの欄に 1.5 が残っていると、
+  // 読み直した null を「渡し済み」とみなし、空にしても親へ知らせず 1.5 が保存され続けた）。
+  const reported = useRef<number | null>(typeof defaultValue === "number" ? defaultValue : readValue(text, policy));
+
+  /* 親へ渡すのは、最後に渡した値から変わったときだけ。
+     同じ値でも欄から離れるたびに渡していたので、回答画面が「書き換えられた」と受け取って
+     「保存済み」を消し、提出ボタンが押している途中で動いていた。 */
+  const report = (next: number | null) => {
+    if (Object.is(next, reported.current)) return;
+    reported.current = next;
+    onValueChange?.(next);
+  };
 
   const numeric = policy?.allowDecimal === false && !policy?.allowNegative;
 
@@ -78,10 +97,7 @@ export function NumberField({
             const next = normalizeWhileTyping(e.target.value);
             setText(next);
             if (error) setError(null);
-            if (reportWhileTyping) {
-              const parsed = parseNumberInput(next, policy);
-              onValueChange?.(parsed.kind === "ok" ? parsed.value : null);
-            }
+            if (reportWhileTyping) report(readValue(next, policy));
           }}
           onPaste={(e) => {
             /* 貼り付けは「打っている途中」ではないので、その場でカンマ・空白まで落とす。
@@ -96,10 +112,7 @@ export function NumberField({
             const next = el.value.slice(0, start) + cleaned + el.value.slice(end);
             setText(next);
             if (error) setError(null);
-            if (reportWhileTyping) {
-              const parsed = parseNumberInput(next, policy);
-              onValueChange?.(parsed.kind === "ok" ? parsed.value : null);
-            }
+            if (reportWhileTyping) report(readValue(next, policy));
             const caret = start + cleaned.length;
             requestAnimationFrame(() => el.setSelectionRange(caret, caret));
           }}
@@ -115,7 +128,7 @@ export function NumberField({
             setText(shaped);
             const parsed = parseNumberInput(shaped, policy);
             setError(parsed.kind === "invalid" ? parsed.reason : null);
-            onValueChange?.(parsed.kind === "ok" ? parsed.value : null);
+            report(parsed.kind === "ok" ? parsed.value : null);
           }}
           className={className ?? "input input-num w-32"}
         />

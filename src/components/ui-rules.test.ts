@@ -467,6 +467,37 @@ describe("画面の器の作法", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("画面下の操作の帯は、状態の文の長さで押す場所を動かさない", () => {
+    // 回答画面で、状態の文が「保存済み 14:42」から長い文に変わった瞬間にボタンが次の行の左端へ折り返し、
+    // 押している途中の指の下から逃げて提出が空振りした（幅1280px、数値欄から離れた直後）。
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const rule = (selector: string) => {
+      const block = css.slice(css.indexOf(`${selector} {`));
+      return block.slice(0, block.indexOf("}"));
+    };
+    // 状態の幅の基準は文の長さ（auto）でなく決まった長さにする。折り返すかどうかを画面の幅だけで決める
+    expect(rule(".action-bar-status")).toMatch(/flex:\s*\d+\s+\d+\s+\d+(\.\d+)?(rem|px)\s*;/);
+    // 両端へ振り分けると、状態が伸びたぶんだけボタンが動く。ボタンは帯の右下にそろえる
+    const inner = rule(".action-bar-inner");
+    expect(inner).not.toContain("space-between");
+    expect(inner).toContain("align-items: flex-end");
+    const actions = rule(".action-bar-actions");
+    expect(actions).toContain("flex: 0 0 auto");
+    expect(actions).toContain("margin-inline-start: auto");
+  });
+
+  it("画面下の操作の帯は、状態の欄が空なら幅を確保しない", () => {
+    // status を渡さない帯で、空の欄が 16rem を取ってボタンの束を次の行へ押し出さないようにする。
+    // 中身があるときの 16rem（上の試験）はそのまま。空のときだけ畳む
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const at = css.indexOf(".action-bar-status:empty {");
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(css.slice(at, css.indexOf("}", at))).toMatch(/display:\s*none|flex-basis:\s*0/);
+    // :empty が効く前提：部品は status が無くても欄を描き、欄の中に空白を足さない
+    const bar = readFileSync(join(SRC, "components", "layout", "StickyActionBar.tsx"), "utf8");
+    expect(bar).toMatch(/className="action-bar-status"[^>]*>\{status\}<\/div>/);
+  });
+
   it("固定表示の帯には、一度読めば済む注記を載せられない（型で縛る）", () => {
     // 帯に説明文を足していくと厚くなり、肝心の入力欄が画面から押し出される。
     // pinned のときは detail（注記の段落）を渡せない、を型で禁止する。

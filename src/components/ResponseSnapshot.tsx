@@ -1,5 +1,6 @@
 import { Card, DefList, ReasonNote, SectionHeading } from "@/components/ui";
-import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
+import { SECTION_LABEL } from "@/lib/view";
+import { SCREEN_SECTIONS } from "@/lib/question-order";
 import { formatAnswer, type AnswerReadRow } from "@/lib/domain/answer-snapshot";
 
 /**
@@ -15,7 +16,7 @@ export function ResponseSnapshot({ rows }: { rows: AnswerReadRow[] }) {
     return <ReasonNote>この回答には保存された項目がありません。</ReasonNote>;
   }
 
-  const sections = SECTION_ORDER.concat("free")
+  const sections = SCREEN_SECTIONS
     .map((sec) => ({ section: sec, rows: rows.filter((r) => r.section === sec) }))
     .filter((g) => g.rows.length > 0);
   // 見出しに当てはまらないまとまりが残っても取りこぼさない

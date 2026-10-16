@@ -9,8 +9,15 @@ import { SECTION_HELP, SECTION_LABEL } from "@/lib/view";
 import { isAnswered } from "@/lib/domain/answer-snapshot";
 import { QuestionField, type AnswerQuestion, type AnswerValue } from "@/components/QuestionField";
 import { orderedQuestionSections } from "@/components/question-sections";
+import { inScreenOrder } from "@/lib/question-order";
 export { QuestionField, QuestionInput, type AnswerQuestion, type AnswerValue } from "@/components/QuestionField";
 import { RefreshStatus } from "@/components/RefreshStatus";
+
+/** 答えの1項目が同じか。選んだ選択肢（配列）は、数と並びで比べる */
+function sameAnswerValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
+  return Object.is(a ?? null, b ?? null);
+}
 
 /**
  * アンケート回答画面。
@@ -40,7 +47,7 @@ export function FormAnswer({
   questions: AnswerQuestion[];
   initial: AnswerValue[];
   submitted: boolean;
-  /** 回答できない理由（締切・締め切り済みなど）。null なら回答できる */
+  /** 回答できない理由（answerLockedReason の文）。null なら回答できる */
   lockedReason: string | null;
   /** 回答できるときに上部へ常時出す期限の案内 */
   deadlineNote: string | null;
@@ -56,13 +63,30 @@ export function FormAnswer({
   const [memo, setMemo] = useState(note ?? "");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  /* 断られた理由は、提出と下書きで分けて持つ。1つにまとめていると、提出を断られたあとの
+     下書きの保存し直しが成功した時点で、提出の断りまで消えていた（下書きは範囲を問わずに通る）。
+     提出の断りを消すのは、次に答えを変えたときと、次に提出するときだけ。 */
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
+  // いちばん新しい入力の下書きが断られたか（提出を断られたこととは分ける）
+  const [draftFailed, setDraftFailed] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  /* 「提出する」を押してから返事が来るまで。saving は送り始めてから立つので、
+     前の下書きの保存を待っている間（並んでいる間）も押したことが分かるように別に持つ */
+  const [submitting, setSubmitting] = useState(false);
+  // この画面を開いてから、答えを1つでも変えたか。変える前は保存の状態を何も書かない
+  const [touched, setTouched] = useState(false);
+  const confirmBox = useRef<HTMLDivElement>(null);
+  const confirmHeading = useRef<HTMLParagraphElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const readOnly = submitted || lockedReason !== null;
   const canSaveDraft = useRef(!readOnly);
   const queuedSave = useRef<Promise<unknown>>(Promise.resolve());
   const editVersion = useRef(0);
+  // 保存できた入力の版。editVersion と違えば、まだ保存していない変更がある
+  const savedVersion = useRef(0);
+  // 描き直しを待たずに2回目の「提出する」を止めるための印（state は次の描画まで変わらない）
+  const submitLock = useRef(false);
   const latestInput = useRef({ values, memo });
 
   const ordered = useMemo(() => orderedQuestionSections(questions), [questions]);
@@ -76,7 +100,7 @@ export function FormAnswer({
       // 保存中も入力を受け付けるが、送信は順番に行う。古い下書きが後から上書きしない。
       const task = queuedSave.current.then(async () => {
         if (status === "draft" && !canSaveDraft.current) return false;
-        setError(null);
+        if (status === "draft") setDraftError(null);
         const payload = {
           formId,
           status,
@@ -89,9 +113,15 @@ export function FormAnswer({
         const result = status === "submitted" ? await save(payload) : await saveDraft(payload);
         // 失敗しても入力内容は消さない（この画面に残したまま直してもらう）
         if (!result.ok) {
-          setError(result.message);
+          if (status === "submitted") {
+            setSubmitError(result.message);
+          } else {
+            setDraftError(result.message);
+            if (version === editVersion.current) setDraftFailed(true);
+          }
           return false;
         }
+        savedVersion.current = version;
         if (version === editVersion.current) setSavedAt(new Date());
         if (status === "submitted") setMessage(result.message);
         return true;
@@ -103,25 +133,61 @@ export function FormAnswer({
     [formId, save, saveDraft],
   );
 
+  /** 1秒後に、いちばん新しい入力を下書きとして送る（待っている予約は差し替える） */
+  const queueDraft = useCallback(() => {
+    clearTimeout(timer.current);
+    const version = editVersion.current;
+    timer.current = setTimeout(() => {
+      const { values: nextValues, memo: nextMemo } = latestInput.current;
+      void persist("draft", nextValues, nextMemo, version);
+    }, 1000);
+  }, [persist]);
+
   const scheduleDraft = useCallback((nextValues: Record<string, AnswerValue>, nextMemo: string) => {
     latestInput.current = { values: nextValues, memo: nextMemo };
-    const version = ++editVersion.current;
+    ++editVersion.current;
     setSavedAt(null);
+    setDraftFailed(false);
+    setSubmitError(null);
+    setTouched(true);
+    queueDraft();
+  }, [queueDraft]);
+
+  const submit = async (event: { detail: number }) => {
+    /* 「内容を確認して提出する」を2回続けて押すと、2回目がこのボタンに当たる（帯の同じ場所に出るため）。
+       続けて押した2回目以降（detail が 2 以上）では提出しない。キーボードで押したときの detail は 0。 */
+    if (event.detail > 1 || submitLock.current) return;
+    submitLock.current = true;
+    setSubmitting(true);
+    setSubmitError(null);
+    // 待っている下書きの予約は取り消す（提出のあとに届くと「提出済み」で断られるため）
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => void persist("draft", nextValues, nextMemo, version), 1000);
-  }, [persist]);
+    let ok = false;
+    try {
+      // 押した時点の描画ではなく、いちばん新しい入力を送る（欄を離れた知らせが描き直しより先に届く場合がある）
+      const { values: nextValues, memo: nextMemo } = latestInput.current;
+      ok = await persist("submitted", nextValues, nextMemo);
+    } finally {
+      submitLock.current = false;
+      setSubmitting(false);
+    }
+    if (ok) {
+      setConfirming(false);
+      return;
+    }
+    // 断られた提出は何も保存していない。取り消した予約の変更が残っていれば、下書きとして保存し直す
+    if (savedVersion.current !== editVersion.current) queueDraft();
+  };
 
   const update = useCallback(
     (questionId: string, patch: Partial<AnswerValue>) => {
       const prev = latestInput.current.values;
-      const next = {
-        ...prev,
-        [questionId]: {
-          ...{ questionId, valueNumber: null, valueText: null, valueChoices: null },
-          ...prev[questionId],
-          ...patch,
-        },
-      };
+      const current: AnswerValue = prev[questionId] ?? { questionId, valueNumber: null, valueText: null, valueChoices: null };
+      /* 値が変わらない知らせ（同じ数のまま欄を離れた・同じ選択肢を押し直した）では何もしない。
+         下書きを予約すると「保存済み」が消え、押そうとしていた提出ボタンが動いていた。 */
+      const keys = Object.keys(patch) as (keyof AnswerValue)[];
+      if (keys.every((key) => sameAnswerValue(current[key], patch[key]))) return;
+      const next = { ...prev, [questionId]: { ...current, ...patch } };
       setValues(next);
       scheduleDraft(next, latestInput.current.memo);
     },
@@ -137,6 +203,14 @@ export function FormAnswer({
     };
   }, [readOnly]);
 
+  /* 確認の欄は画面の下に開く。押した人の目と、読み上げの位置をそこへ移す
+     （開いたことに気づかず、もう一度押そうとして帯を探さないように）。 */
+  useEffect(() => {
+    if (!confirming) return;
+    confirmBox.current?.scrollIntoView({ block: "nearest" });
+    confirmHeading.current?.focus({ preventScroll: true });
+  }, [confirming]);
+
   const focusNext = (id: string) => {
     const i = fieldOrder.indexOf(id);
     const nextId = fieldOrder[i + 1];
@@ -144,7 +218,21 @@ export function FormAnswer({
     document.getElementById(`f_${nextId}`)?.focus();
   };
 
-  const missing = questions.filter((q) => q.required && !isAnswered(q.questionType, values[q.id]));
+  /* 画面の上から下の順に拾う。「例：」には画面で最初に見える未入力の欄を挙げる
+     （受け口の断りの文も同じ順で選ぶ。inScreenOrder） */
+  const missing = inScreenOrder(questions).filter((q) => q.required && !isAnswered(q.questionType, values[q.id]));
+  const missingNote =
+    missing.length > 0
+      ? `未入力の項目が${missing.length}件あります（例：${missing[0].title}）。入力してから提出してください。`
+      : null;
+
+  /* 最初の、未入力の欄へ移る。選ぶ設問は選択肢のまとまり（role=group）に移る */
+  const focusFirstMissing = () => {
+    const field = missing.length > 0 ? document.getElementById(`f_${missing[0].id}`) : null;
+    if (!field) return;
+    field.focus({ preventScroll: true });
+    field.scrollIntoView({ block: "center" });
+  };
 
   if (readOnly) {
     return (
@@ -162,15 +250,35 @@ export function FormAnswer({
     );
   }
 
+  /* 帯の状態は事実だけを書く（案内は本文の先頭へ）。
+     文の長さが変わっても押す場所は動かない（globals.css の .action-bar-status）。 */
+  const saveState = saving || submitting
+    ? "提出しています…"
+    : savingDraft
+      ? "保存しています…"
+      : savedAt
+        ? `保存済み ${savedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`
+        : draftFailed
+          ? "保存できていません"
+          : touched
+            ? "保存待ち"
+            : null;
+
   return (
-    <FieldGroup disabled={saving} aria-busy={saving}>
-      {error && <ReasonNote>{error}</ReasonNote>}
+    <FieldGroup disabled={saving || submitting} aria-busy={saving || submitting}>
+      {/* 提出の断りは、確認の欄を開いている間はその欄の中に出す（同じ文を2か所に出さない）。
+          下書きの失敗は提出の断りではないので、確認の欄には入れず、ここと帯の「保存できていません」に出す */}
+      {submitError && !confirming && <ReasonNote>{submitError}</ReasonNote>}
+      {draftError && draftError !== submitError && <ReasonNote>{draftError}</ReasonNote>}
       <RefreshStatus
         message={message}
         refreshing={saving}
         target="画面"
         className="m-0 mb-3 text-sub text-brand-deep"
       />
+      <p className="footnote m-0 mb-4">
+        入力した内容は、1秒ほどで自動で下書きに保存されます。すべて入れたら、画面下の「内容を確認して提出する」から提出します。
+      </p>
 
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
@@ -224,19 +332,33 @@ export function FormAnswer({
       </section>
 
       {confirming && (
-        <Card className="card-pad">
-          <p className="todo-row-title m-0">この内容で提出します</p>
-          <p className="todo-row-sub m-0 mt-1">
-            提出すると自分では変更できなくなります。修正が必要になったときは上長にご連絡ください。
-          </p>
-          {missing.length > 0 && (
-            <div className="mt-3">
-              <ReasonNote>
-                未入力の項目が{missing.length}件あります（例：{missing[0].title}）。入力してから提出してください。
-              </ReasonNote>
-            </div>
-          )}
-        </Card>
+        <div ref={confirmBox}>
+          <Card className="card-pad">
+            <p ref={confirmHeading} tabIndex={-1} className="todo-row-title m-0">この内容で提出します</p>
+            <p className="todo-row-sub m-0 mt-1">
+              提出すると自分では変更できなくなります。修正が必要になったときは上長にご連絡ください。
+            </p>
+            {/* 未入力で断られたときは、下の知らせと同じ文になるので1つだけ出す */}
+            {submitError && submitError !== missingNote && (
+              <div className="mt-3">
+                <ReasonNote>{submitError}</ReasonNote>
+              </div>
+            )}
+            {missingNote && (
+              <div className="mt-3">
+                <ReasonNote
+                  action={
+                    <Button type="button" onClick={focusFirstMissing}>
+                      最初の未入力の欄へ移る
+                    </Button>
+                  }
+                >
+                  {missingNote}
+                </ReasonNote>
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
       {/* 進み具合・保存状態・締切と、次に押すものを画面下に固定する。
@@ -248,37 +370,23 @@ export function FormAnswer({
               入力できた項目 <span className="num font-bold">{answeredCount}</span>
               <span className="unit"> / {questions.length}</span>
             </span>
-            <span className="mx-2 text-line">|</span>
-            {saving
-              ? "提出しています…"
-              : savingDraft
-              ? "保存しています…"
-              : savedAt
-                ? `保存済み ${savedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`
-                : "入力すると自動で保存されます"}
+            {(saveState || deadlineNote) && <span className="mx-2 text-line">|</span>}
+            {saveState}
             {/* 締切は常に見えるところに置く（気づかないまま入力し続けるのを防ぐ） */}
-            {deadlineNote && <span className="ml-2">／ {deadlineNote}</span>}
+            {deadlineNote && <span className={saveState ? "ml-2" : undefined}>{saveState && "／ "}{deadlineNote}</span>}
           </>
         }
       >
         {confirming ? (
           <>
-            <Button disabled={saving} onClick={() => setConfirming(false)}>入力に戻る</Button>
-            <Button
-              variant="primary"
-              disabled={saving || savingDraft}
-              onClick={async () => {
-                // 待っている下書きの保存は捨てる（提出のあとに届くと「提出済み」で断られるため）
-                clearTimeout(timer.current);
-                const ok = await persist("submitted", values, memo);
-                if (ok) setConfirming(false);
-              }}
-            >
-              {saving ? "提出しています…" : "提出する"}
+            <Button disabled={saving || submitting} onClick={() => setConfirming(false)}>入力に戻る</Button>
+            {/* 下書きの保存中も押せる（提出は保存の後ろに並び、前の保存を追い越さない。persist） */}
+            <Button variant="primary" disabled={saving || submitting} onClick={submit}>
+              {saving || submitting ? "提出しています…" : "提出する"}
             </Button>
           </>
         ) : (
-          <Button variant="primary" disabled={saving} onClick={() => setConfirming(true)}>
+          <Button variant="primary" disabled={saving || submitting} onClick={() => setConfirming(true)}>
             内容を確認して提出する
           </Button>
         )}

@@ -1358,17 +1358,31 @@ main {
   background: var(--surface);
   border-top: 1px solid var(--line);
 }
+/* 状態の文の長さで、押す場所を動かさない。
+   状態の幅の基準は文の長さでなく 16rem に決め、折り返すかどうかを画面の幅だけで決める。
+   長い文は状態の中で折り返し、ボタンは帯の右下にそろえる（帯は下端に貼り付くので、下端も動かない）。 */
 .action-bar-inner {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-end;
   gap: var(--space-tight) var(--space-block);
   max-width: var(--content-max);
   margin: 0 auto;
 }
-.action-bar-status { font-size: var(--text-note); color: var(--ink-muted); min-width: 0; }
-.action-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-tight); }
+.action-bar-status { flex: 1 1 16rem; min-width: 0; align-self: center; font-size: var(--text-note); color: var(--ink-muted); }
+/* 状態の欄が空（status を渡さない帯）なら 16rem を確保しない。中身があるときの 16rem は上のとおり残す。
+   flex-basis: 0 だけだと、狭い画面で空の1行と行の間隔が残るので、欄ごと畳む。 */
+.action-bar-status:empty { display: none; }
+.action-bar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-tight);
+  max-width: 100%;
+  margin-inline-start: auto;
+}
 @media (max-width: 639px) {
   /* 狭い画面では、押すものを1行いっぱいに広げて親指で押せるようにする */
   .action-bar-inner { justify-content: stretch; }

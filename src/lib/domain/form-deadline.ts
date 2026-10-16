@@ -84,8 +84,18 @@ export interface DeadlineJudgement {
   effectiveUntil: string | null;
   /** 延長によって回答できている状態か */
   extended: boolean;
-  /** 画面にもAPIのエラーにもそのまま出せる日本語。「何が起きたか＋どうすればよいか」を書く */
+  /**
+   * 画面にもAPIのエラーにもそのまま出せる日本語。「何が起きたか＋どうすればよいか」を書く。
+   * 回答画面のほか、読むだけの見本（/forms/[id]）・管理画面の回答一覧（「いまの状態：」）・配るURL（/f/[token]）にも出る。
+   * そのため「この画面から入力してください」のような画面の操作は書かない（answerHint に分ける）。
+   */
   message: string;
+  /**
+   * 回答画面（/me/forms/[id]）でだけ message の後ろに添える、画面の操作の案内。
+   * これから受付が始まる状態（未公開・評価期間が準備中・開始前）にだけあり、ほかは null。
+   * 回答画面の外では添えない（その画面からは回答できないため）。
+   */
+  answerHint: string | null;
 }
 
 /** 取り消されていない延長のうち、一番遅い日付を返す。 */
@@ -114,10 +124,12 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
       state: "not_published",
       effectiveUntil,
       extended: false,
-      message: "このアンケートはまだ準備中です。公開されるとこの画面から回答できます。開始時期は会社からお知らせがあります。",
+      message: "このアンケートはまだ準備中です。開始時期は会社からお知らせがあります。",
+      answerHint: "公開されると、この画面から回答できます。",
     };
   }
 
+  // 延長は期限切れ（past_deadline）にしか効かない。締め切ったアンケートには延長を約束しない
   if (input.status === "closed") {
     return {
       canAnswer: false,
@@ -125,7 +137,8 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
       effectiveUntil,
       extended: false,
       message:
-        "このアンケートは締め切られました。提出済みの回答はそのまま残っています。事情があって回答できなかった場合は、上長または会社の管理者にご連絡ください。本人ごとに期限を延ばすことができます。",
+        "このアンケートは締め切られました。提出済みの回答はそのまま残っています。事情があって回答できなかった場合は、上長または会社の管理者にご連絡ください。",
+      answerHint: null,
     };
   }
 
@@ -140,7 +153,8 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
       extended: false,
       message: closed
         ? "この評価期間は終了しているため、回答を保存できません。提出済みの回答はそのまま残っています。必要な場合は会社の管理者にご相談ください。"
-        : "この評価期間はまだ準備中です。受付が始まると、この画面から回答できます。",
+        : "この評価期間はまだ準備中です。",
+      answerHint: closed ? null : "受付が始まると、この画面から回答できます。",
     };
   }
 
@@ -150,7 +164,8 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
       state: "before_open",
       effectiveUntil,
       extended: false,
-      message: `このアンケートは${formatJpDate(input.opensAt)}から回答できます。その日になったら、この画面から入力してください。`,
+      message: `このアンケートは${formatJpDate(input.opensAt)}から回答できます。`,
+      answerHint: "その日になったら、この画面から入力してください。",
     };
   }
 
@@ -162,6 +177,7 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
       effectiveUntil,
       extended: false,
       message: `回答期限（${formatJpDate(effectiveUntil)}）を過ぎたため、保存できません。事情があって間に合わなかった場合は、上長または会社の管理者にご連絡ください。本人ごとに期限を延ばすことができます。`,
+      answerHint: null,
     };
   }
 
@@ -172,6 +188,7 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
       effectiveUntil,
       extended: true,
       message: `あなたの回答期限は${formatJpDate(effectiveUntil)}まで延長されています。その日のうちに提出してください。`,
+      answerHint: null,
     };
   }
 
@@ -183,6 +200,7 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
     message: effectiveUntil
       ? `${formatJpDate(effectiveUntil)}まで回答できます。`
       : "いつでも回答できます（期限は決まっていません）。",
+    answerHint: null,
   };
 }
 

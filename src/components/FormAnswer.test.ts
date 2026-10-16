@@ -99,6 +99,26 @@ describe("選択肢の束の名前", () => {
   });
 });
 
+describe("「最初の未入力の欄へ移る」の飛び先", () => {
+  // 回答画面のボタンは f_<設問id> の要素へ focus する。飛び先が無いと、押しても何も起きない
+  it.each([
+    ["yesno", null],
+    ["single", OPTIONS],
+    ["multi", OPTIONS],
+    ["scale", null],
+    ["text", null],
+    ["number", null],
+    // 選択肢が登録されていない設問は答えられない。案内の文へ移り、なぜ提出できないかを見せる
+    ["single", null],
+    ["multi", null],
+  ])("%s（選択肢 %s）: f_ の id を持ち、focus できる要素がある", (questionType, optionsJson) => {
+    const html = render({ questionType, optionsJson, validationMin: 1, validationMax: 3 });
+    const tag = html.match(/<([a-z]+)[^>]*\sid="f_q1"[^>]*>/);
+    expect(tag, "f_q1 の要素が無い").not.toBeNull();
+    expect(["input", "textarea", "select"].includes(tag![1]) || /tabindex="-1"/.test(tag![0])).toBe(true);
+  });
+});
+
 describe("行のどこを押しても選べる", () => {
   it("1つ選ぶ: 選択肢の文は全部ボタンの中にあり、選択中を aria-pressed で示す", () => {
     const html = render({ optionsJson: OPTIONS }, { valueNumber: 2, valueText: "半分" });

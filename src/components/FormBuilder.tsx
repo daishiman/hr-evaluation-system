@@ -6,7 +6,8 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Badge, Button, Card, CardHead, CardRow, FieldGroup, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { NumberField } from "@/components/NumberField";
-import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
+import { SECTION_LABEL } from "@/lib/view";
+import { SCREEN_SECTIONS } from "@/lib/question-order";
 import {
   createBlankQuestion,
   insertBlankQuestionAfter,
@@ -66,21 +67,25 @@ export function FormBuilder({
   const initialKey = JSON.stringify(initial);
   const [loadedKey, setLoadedKey] = useState(initialKey);
   const [dirty, setDirty] = useState(false);
+  // 保存済みの設問を読み込んだ回数。下限の欄（NumberField）は打った文字を自分で持つので、
+  // 読み込むたびに作り直して読み込んだ値を見せる（打った値では作り直さない。読めない文字と誤りの文を残すため）
+  const [loads, setLoads] = useState(0);
   const latestInitial = useRef(initial);
   useLayoutEffect(() => { latestInitial.current = initial; }, [initial]);
 
-  // 未編集の再取得だけを採用する。保存待ちの外部更新も、編集中の入力に上書きしない。
-  if (loadedKey !== initialKey && !dirty) {
-    setRows(withClientKeys(initial));
-    setLoadedKey(initialKey);
+  const load = (next: BuilderQuestionDraft[], key: string) => {
+    setRows(next);
+    setLoadedKey(key);
     setDirty(false);
-  }
+    setLoads((n) => n + 1);
+  };
+
+  // 未編集の再取得だけを採用する。保存待ちの外部更新も、編集中の入力に上書きしない。
+  if (loadedKey !== initialKey && !dirty) load(withClientKeys(initial), initialKey);
   const conflict = dirty && loadedKey !== initialKey;
 
   const acceptLatest = () => {
-    setRows(withClientKeys(initial));
-    setLoadedKey(initialKey);
-    setDirty(false);
+    load(withClientKeys(initial), initialKey);
     setOpenKey(null);
   };
 
@@ -174,9 +179,7 @@ export function FormBuilder({
     // useSaveActionは応答の画面が描き終わってから返る。成功と送信内容の一致を確認してから採番IDも採用する。
     const saved = latestInitial.current;
     if (matchesSavedQuestions(sent, saved)) {
-      setRows(withClientKeys(saved).map((row, i) => ({ ...row, clientKey: sent[i]?.clientKey ?? row.clientKey })));
-      setLoadedKey(JSON.stringify(saved));
-      setDirty(false);
+      load(withClientKeys(saved).map((row, i) => ({ ...row, clientKey: sent[i]?.clientKey ?? row.clientKey })), JSON.stringify(saved));
     }
     setMessage(result.message);
   };
@@ -300,7 +303,7 @@ export function FormBuilder({
                     disabled={linked}
                     onChange={(e) => patch(i, { section: e.target.value })}
                   >
-                    {SECTION_ORDER.concat("free").map((sec) => (
+                    {SCREEN_SECTIONS.map((sec) => (
                       <option key={sec} value={sec}>
                         {SECTION_LABEL[sec] ?? sec}
                       </option>
@@ -341,6 +344,7 @@ export function FormBuilder({
                           以前はここで打った文字をそのまま数値にしていたため、全角で打つと
                           「決めたつもりなのに決まっていない」状態になっていた。 */}
                       <NumberField
+                        key={`validationMin_${loads}`}
                         className="input input-num mt-1 w-24"
                         name={`validationMin_${i}`}
                         ariaLabel="入力できる最小値"

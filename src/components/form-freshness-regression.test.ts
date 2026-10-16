@@ -10,6 +10,8 @@ import { createBlankQuestion } from "@/components/form-builder-model";
 const hooks = vi.hoisted(() => ({
   slots: [] as unknown[], cursor: 0, changed: false, save: vi.fn(),
   effects: new Map<number, { deps: unknown[]; cleanup?: () => void }>(),
+  // useSaveAction を描画の中で呼んだ数。FormAnswer は 0 番目が提出、1 番目が下書きの保存
+  actions: 0, pending: { submit: false, draft: false },
 }));
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react")>();
@@ -42,7 +44,9 @@ vi.mock("react", async (importOriginal) => {
     },
   };
 });
-vi.mock("@/lib/use-refresh", () => ({ useSaveAction: () => ({ save: hooks.save, saving: false }) }));
+vi.mock("@/lib/use-refresh", () => ({
+  useSaveAction: () => ({ save: hooks.save, saving: hooks.actions++ === 0 ? hooks.pending.submit : hooks.pending.draft }),
+}));
 vi.mock("@/actions/forms", () => ({ saveFormQuestions: vi.fn() }));
 vi.mock("@/actions/responses", () => ({ saveResponse: vi.fn() }));
 
@@ -73,6 +77,7 @@ const named = (name: string) => (node: Node) => typeof node.type === "function" 
 function render<T>(component: (props: T) => ReactNode, props: T) {
   for (let attempt = 0; attempt < 20; attempt++) {
     hooks.cursor = 0;
+    hooks.actions = 0;
     hooks.changed = false;
     const tree = component(props);
     if (!hooks.changed) return tree;
@@ -82,6 +87,7 @@ function render<T>(component: (props: T) => ReactNode, props: T) {
 
 beforeEach(() => {
   hooks.slots = []; hooks.cursor = 0; hooks.effects.clear();
+  hooks.actions = 0; hooks.pending = { submit: false, draft: false };
   hooks.save.mockReset().mockResolvedValue({ ok: true, message: "保存しました。" });
   vi.useFakeTimers();
 });
@@ -186,6 +192,255 @@ describe("FormAnswer の再取得", () => {
   });
 });
 
+describe("FormAnswer の保存の状態と確認の欄", () => {
+  const choice: AnswerQuestion = { ...question, id: "q2", questionType: "multi", title: "選ぶ設問" };
+  const props = { formId: "f1", questions: [question, choice], submitted: false, lockedReason: null, note: null,
+    initial: [answer("旧回答"), { questionId: "q2", valueNumber: null, valueText: null, valueChoices: ["甲"] }],
+    deadlineNote: null as string | null };
+  const onChangeOf = (id: string, current = props) =>
+    find(render(FormAnswer, current), (node) => named("QuestionField")(node) && (node.props.q as AnswerQuestion).id === id)
+      .props.onChange as (patch: Partial<AnswerValue>) => void;
+  // 帯の状態の文（タグと、文字の並びの区切りを落とした文字だけ）
+  const status = (current = props) => renderToStaticMarkup(
+    find(render(FormAnswer, current), named("StickyActionBar")).props.status as ReactElement,
+  ).replace(/<[^>]*>/g, "");
+  const has = (tree: unknown, predicate: (node: Node) => boolean) => {
+    try { find(tree, predicate); return true; } catch { return false; }
+  };
+  // 理由の知らせ（ReasonNote）の文を、木の中からすべて集める
+  const notes = (tree: unknown) => {
+    const found: string[] = [];
+    has(tree, (node) => { if (named("ReasonNote")(node)) found.push(renderToStaticMarkup(node)); return false; });
+    return found;
+  };
+  // detail は続けて押した回数（1 回目は 1、2 回目は 2。キーボードで押すと 0）
+  const press = (tree: unknown, label: string, detail = 1) =>
+    (find(tree, (node) => named("Button")(node) && node.props.children === label).props.onClick as (event: { detail: number }) => Promise<void> | void)({ detail });
+  // 確認の欄の「提出する」。送っている間は文が変わるので、文ではなく種類で探す
+  const submitButton = (tree: unknown) => find(tree, (node) => named("Button")(node) && node.props.variant === "primary");
+  const sentAnswer = (call: number, id: string) =>
+    (hooks.save.mock.calls[call][0].answers as AnswerValue[]).find((a) => a.questionId === id);
+
+  it("保存済みのあと、同じ値の知らせでは保存済みを消さず、下書きも送り直さない", async () => {
+    onChangeOf("q1")({ valueText: "新しい回答" });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(hooks.save).toHaveBeenCalledTimes(1);
+    expect(status()).toContain("保存済み");
+    // 数値欄から離れたときと同じ形の知らせ（値は変わっていない）
+    onChangeOf("q1")({ valueText: "新しい回答" });
+    expect(status()).toContain("保存済み");
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(hooks.save).toHaveBeenCalledTimes(1);
+    // 値が変われば、保存済みは消す（保存できていないのに保存済みと見せない）
+    onChangeOf("q1")({ valueText: "さらに直した回答" });
+    expect(status()).not.toContain("保存済み");
+  });
+
+  it("選んだ選択肢は中身で比べる（同じ並びの選び直しは変更にしない）", async () => {
+    onChangeOf("q2")({ valueChoices: ["甲"] });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(hooks.save).not.toHaveBeenCalled();
+    expect(status()).not.toContain("保存待ち");
+    onChangeOf("q2")({ valueChoices: ["甲", "乙"] });
+    expect(status()).toContain("保存待ち");
+  });
+
+  it("開いた直後は保存の状態を書かず、変えたら「保存待ち」、保存できなければそう書く", async () => {
+    const initial = status();
+    expect(initial).toContain("入力できた項目");
+    // 「入力すると自動で保存されます」のような案内は帯に置かない（本文の先頭に置く）
+    expect(initial).not.toContain("保存");
+    expect(initial).not.toContain("|");
+    hooks.save.mockResolvedValueOnce({ ok: false, message: "送れませんでした。" });
+    onChangeOf("q1")({ valueText: "直した回答" });
+    expect(status()).toContain("保存待ち");
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(status()).toContain("保存できていません");
+  });
+
+  it("締切の案内は、保存の状態が無いときも区切りの「／」なしで出す", () => {
+    const withDeadline = { ...props, deadlineNote: "期限の案内" };
+    expect(status(withDeadline)).toMatch(/\|期限の案内$/);
+    onChangeOf("q1", withDeadline)({ valueText: "直した回答" });
+    expect(status(withDeadline)).toMatch(/保存待ち／ 期限の案内$/);
+  });
+
+  it("確認の欄を開いている間は、断られた理由をその欄の中に1回だけ出す", async () => {
+    const message = "回答期限を過ぎたため、保存できません。";
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    hooks.save.mockResolvedValueOnce({ ok: false, message });
+    await press(render(FormAnswer, props), "提出する");
+    const tree = render(FormAnswer, props);
+    const card = find(tree, (node) => named("Card")(node) && has(node.props.children, (child) => child.props.children === "この内容で提出します"));
+    expect(notes(card).filter((html) => html.includes(message))).toHaveLength(1);
+    expect(notes(tree).filter((html) => html.includes(message))).toHaveLength(1);
+    // 見出しへ読み上げの位置を移せる（確認の欄に入ったとき）
+    expect(find(card, (node) => node.props.children === "この内容で提出します").props.tabIndex).toBe(-1);
+    // 入力に戻ったら、理由は本文の先頭に出す
+    press(tree, "入力に戻る");
+    const back = render(FormAnswer, props);
+    expect(has(back, (node) => node.props.children === "この内容で提出します")).toBe(false);
+    expect(notes(back).filter((html) => html.includes(message))).toHaveLength(1);
+  });
+
+  it("未入力で断られたときは、同じ文を2つ出さず、最初の未入力の欄へ移る手段を添える", async () => {
+    const required = { ...props, questions: [question, { ...choice, required: true }], initial: [answer("旧回答")] };
+    const missing = "未入力の項目が1件あります（例：選ぶ設問）。入力してから提出してください。";
+    press(render(FormAnswer, required), "内容を確認して提出する");
+    hooks.save.mockResolvedValueOnce({ ok: false, message: missing });
+    await press(render(FormAnswer, required), "提出する");
+    const tree = render(FormAnswer, required);
+    expect(notes(tree).filter((html) => html.includes(missing))).toHaveLength(1);
+    expect(has(tree, (node) => named("Button")(node) && node.props.children === "最初の未入力の欄へ移る")).toBe(true);
+  });
+
+  it("未入力の例は、画面の上から最初の未入力の欄にする（設問を保存した順ではない）", () => {
+    // 保存した順は 自由記入 → 実績 だが、画面では 実績の数値 の節が 自由記入 より上に来る
+    const free: AnswerQuestion = { ...question, id: "q3", title: "自由に書く設問", required: true };
+    const kpi: AnswerQuestion = { ...question, id: "q4", section: "kpi", questionType: "number", title: "実績の設問", required: true };
+    const order = { ...props, questions: [free, kpi], initial: [] };
+    press(render(FormAnswer, order), "内容を確認して提出する");
+    expect(notes(render(FormAnswer, order)).join("")).toContain("（例：実績の設問）");
+  });
+
+  it("提出を断られたあとに値を変えたら「保存待ち」と書く（保存に失敗したとは書かない）", async () => {
+    onChangeOf("q1")({ valueText: "直した回答" });
+    await vi.advanceTimersByTimeAsync(1000);
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    hooks.save.mockResolvedValueOnce({ ok: false, message: "回答期限を過ぎたため、保存できません。" });
+    await press(render(FormAnswer, props), "提出する");
+    onChangeOf("q1")({ valueText: "さらに直した回答" });
+    expect(status()).toContain("保存待ち");
+    expect(status()).not.toContain("保存できていません");
+  });
+
+  it("下書きの保存に失敗したあとも、値を変えたら次の保存までは「保存待ち」と書く", async () => {
+    hooks.save.mockResolvedValueOnce({ ok: false, message: "送れませんでした。" });
+    onChangeOf("q1")({ valueText: "直した回答" });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(status()).toContain("保存できていません");
+    onChangeOf("q1")({ valueText: "さらに直した回答" });
+    expect(status()).toContain("保存待ち");
+    expect(status()).not.toContain("保存できていません");
+  });
+
+  it("下書きを保存している間も「提出する」を押せる（提出は保存の後ろに並ぶ）", () => {
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    hooks.pending.draft = true;
+    const tree = render(FormAnswer, props);
+    expect(submitButton(tree).props.disabled).toBe(false);
+    expect(find(tree, named("FieldGroup")).props.disabled).toBe(false);
+  });
+
+  it("提出の返事を待つ間は押せず、描き直す前に続けて押しても1回しか送らない", async () => {
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    let finish!: (result: { ok: boolean; message: string }) => void;
+    hooks.save.mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    const before = render(FormAnswer, props);
+    const first = press(before, "提出する");
+    // 描き直す前の木（押せる見た目のまま）をもう一度押す
+    const second = press(before, "提出する");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(hooks.save).toHaveBeenCalledTimes(1);
+    const waiting = render(FormAnswer, props);
+    expect(submitButton(waiting).props.disabled).toBe(true);
+    expect(submitButton(waiting).props.children).toBe("提出しています…");
+    expect(find(waiting, named("FieldGroup")).props.disabled).toBe(true);
+    expect(status()).toContain("提出しています…");
+    finish({ ok: false, message: "回答期限を過ぎたため、保存できません。" });
+    await Promise.all([first, second]);
+    expect(hooks.save).toHaveBeenCalledTimes(1);
+    // 断られたら、また押せる
+    expect(submitButton(render(FormAnswer, props)).props.disabled).toBe(false);
+  });
+
+  it("続けて押した2回目（確認を開いたボタンと同じ場所に出る）では提出しない", async () => {
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    await press(render(FormAnswer, props), "提出する", 2);
+    expect(hooks.save).not.toHaveBeenCalled();
+  });
+
+  it.each([1, 0])("1回だけ押したとき（detail=%i。0 はキーボード）は提出する", async (detail) => {
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    await press(render(FormAnswer, props), "提出する", detail);
+    expect(hooks.save).toHaveBeenCalledTimes(1);
+    expect(hooks.save.mock.calls[0][0]).toMatchObject({ status: "submitted" });
+  });
+
+  it("提出を断られたら、押す前に予約を取り消した変更を下書きに保存し直す", async () => {
+    onChangeOf("q1")({ valueText: "直した回答" });
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    hooks.save.mockResolvedValueOnce({ ok: false, message: "回答期限を過ぎたため、保存できません。" });
+    await press(render(FormAnswer, props), "提出する");
+    expect(hooks.save).toHaveBeenCalledTimes(1);
+    expect(status()).toContain("保存待ち");
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(hooks.save).toHaveBeenCalledTimes(2);
+    expect(hooks.save.mock.calls[1][0]).toMatchObject({ status: "draft" });
+    expect(sentAnswer(1, "q1")?.valueText).toBe("直した回答");
+    expect(status()).toContain("保存済み");
+  });
+
+  it("提出を断られた理由は、取り消した変更を下書きに保存し直したあとも確認の欄に残る", async () => {
+    // 下書きは範囲を問わずに通るので、保存し直しが成功しても提出の断りは片づいていない
+    const reason = "回答内容は100文字以内で入力してください。";
+    onChangeOf("q1")({ valueText: "直した回答" });
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    hooks.save.mockResolvedValueOnce({ ok: false, message: reason });
+    await press(render(FormAnswer, props), "提出する");
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(hooks.save.mock.calls[1][0]).toMatchObject({ status: "draft" });
+    const card = find(render(FormAnswer, props), (node) => named("Card")(node) && has(node.props.children, (child) => child.props.children === "この内容で提出します"));
+    expect(notes(card).filter((html) => html.includes(reason))).toHaveLength(1);
+  });
+
+  it("確認の欄を開いている間の下書きの失敗は、欄の中に提出の断りとして出さない", async () => {
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    hooks.save.mockResolvedValueOnce({ ok: false, message: "送れませんでした。" });
+    onChangeOf("q1")({ valueText: "確認中に直した回答" });
+    await vi.advanceTimersByTimeAsync(1000);
+    const tree = render(FormAnswer, props);
+    const card = find(tree, (node) => named("Card")(node) && has(node.props.children, (child) => child.props.children === "この内容で提出します"));
+    expect(notes(card).join("")).not.toContain("送れませんでした。");
+    // 下書きの失敗は、帯の「保存できていません」と本文の先頭の知らせに出す
+    expect(notes(tree).filter((html) => html.includes("送れませんでした。"))).toHaveLength(1);
+    expect(status()).toContain("保存できていません");
+  });
+
+  it("提出と下書きの保存し直しが同じ理由で断られても、その文は画面に1回だけ出す", async () => {
+    const reason = "回答期限を過ぎたため、保存できません。";
+    onChangeOf("q1")({ valueText: "直した回答" });
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    hooks.save.mockResolvedValueOnce({ ok: false, message: reason }).mockResolvedValueOnce({ ok: false, message: reason });
+    await press(render(FormAnswer, props), "提出する");
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(hooks.save).toHaveBeenCalledTimes(2);
+    expect(notes(render(FormAnswer, props)).filter((html) => html.includes(reason))).toHaveLength(1);
+    press(render(FormAnswer, props), "入力に戻る");
+    expect(notes(render(FormAnswer, props)).filter((html) => html.includes(reason))).toHaveLength(1);
+  });
+
+  it("保存済みのまま提出を断られたときは、下書きを送り直さない", async () => {
+    onChangeOf("q1")({ valueText: "直した回答" });
+    await vi.advanceTimersByTimeAsync(1000);
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    hooks.save.mockResolvedValueOnce({ ok: false, message: "回答期限を過ぎたため、保存できません。" });
+    await press(render(FormAnswer, props), "提出する");
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(hooks.save).toHaveBeenCalledTimes(2);
+    expect(status()).toContain("保存済み");
+  });
+
+  it("描き直す前の木の「提出する」を押しても、いちばん新しい入力を送る", async () => {
+    press(render(FormAnswer, props), "内容を確認して提出する");
+    const before = render(FormAnswer, props);
+    onChangeOf("q1")({ valueText: "押す直前に直した回答" });
+    await press(before, "提出する");
+    expect(hooks.save.mock.calls[0][0]).toMatchObject({ status: "submitted" });
+    expect(sentAnswer(0, "q1")?.valueText).toBe("押す直前に直した回答");
+  });
+});
+
 describe("FormBuilder の再取得", () => {
   const initial = [{ ...createBlankQuestion("free", "text", "unused"), id: "q1", title: "旧設問" }];
   it("保存待ちの外部更新と保存失敗では未保存の入力を消さない", async () => {
@@ -285,6 +540,24 @@ describe("FormBuilder の再取得", () => {
     const save = find(refreshed, (node) => node.props.children === "設問を保存する");
     expect(save.props.disabled).toBe(true);
     expect(renderToStaticMarkup(find(refreshed, named("ReasonNote")))).toContain("未保存の入力は残しています");
+  });
+
+  it("下限の欄は、外から設問を読み直したときだけ作り直す（手元で打った値では作り直さない）", () => {
+    // NumberField は打った文字を自分で持つ。読み直した値を渡すだけでは、欄に古い下限が残る。
+    // 逆に、打った値で作り直すと「3a」のような読めない文字と誤りの文が消える
+    const numbered = [{ ...createBlankQuestion("free", "number", "unused"), id: "q1", title: "数の設問", validationMin: 1 }];
+    const props = { formId: "f1", initial: numbered, editable: true };
+    (find(render(FormBuilder, props), (node) => node.props.children === "内容を直す").props.onClick as () => void)();
+    const minField = (tree: unknown) => find(tree, (node) => named("NumberField")(node) && node.props.name === "validationMin_0");
+    const before = minField(render(FormBuilder, props));
+
+    const reloaded = { ...props, initial: [{ ...numbered[0], validationMin: 5 }] };
+    const after = minField(render(FormBuilder, reloaded));
+    expect(after.props.defaultValue).toBe(5);
+    expect(after.key).not.toBe(before.key);
+
+    (after.props.onValueChange as (value: number | null) => void)(null);
+    expect(minField(render(FormBuilder, reloaded)).key).toBe(after.key);
   });
 });
 

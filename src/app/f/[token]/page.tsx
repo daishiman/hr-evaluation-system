@@ -5,7 +5,7 @@ import { getDb, schema as s } from "@/lib/db";
 import { AppShell } from "@/components/AppShell";
 import { LinkButton, PageTitle, ReasonNote } from "@/components/ui";
 import { listActiveExtensions } from "@/lib/response-access";
-import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
+import { judgeFormDeadline } from "@/lib/domain/form-deadline";
 import { judgeFormEntry } from "@/lib/domain/form-entry";
 import { formDisplayTitle } from "@/lib/domain/grade-label";
 
@@ -82,21 +82,21 @@ export default async function PublicForm({ params }: { params: Promise<{ token: 
 
   // 提出済み・回答途中なら、締切後でも読み返せるように回答画面へ送る（そこで読み取り専用になる）
   if (!judgement.canAnswer && !mine) {
-    const detail =
-      judgement.state === "before_open" && form.opensAt
-        ? `受付は${formatJpDate(form.opensAt)}に始まります。`
-        : judgement.state === "not_published"
-          ? "担当の方が公開の準備をしています。"
-          : "";
+    // 開始日と準備中であることは judgement.message が1回だけ言う。ここで言い直さない（同じ事実が2回並ぶ）。
+    // 「この画面から入力してください」の案内は回答画面だけが添える（form-deadline.ts の説明）。この画面には添えない。
+    // 「受付が始まると」は、これから始まる状態（開始前・未公開・評価期間が準備中）にだけ添える。
+    // 評価期間の準備中と終了は、judgeFormDeadline と同じく cycle の status が closed かどうかで分ける。
+    // 期限切れ・管理者が締め切ったとき・評価期間の終了は message だけにする（連絡先と延長の案内は message が1回だけ持つ）
+    const upcoming =
+      judgement.state === "before_open" ||
+      judgement.state === "not_published" ||
+      (judgement.state === "cycle_not_open" && cycle?.status !== "closed");
     return (
       <AppShell viewer={viewer}>
         <PageTitle title={title} />
         <ReasonNote action={<LinkButton href="/me/forms">自分のアンケートを見る</LinkButton>}>
           {judgement.message}
-          {detail}
-          {judgement.state === "past_deadline" || judgement.state === "closed_by_admin"
-            ? "事情があって今から提出したい場合は、上長または会社の管理者にご相談ください。個別に期限を延ばすことができます。"
-            : "受付が始まると「実績を報告する」の一覧にも並びます。"}
+          {upcoming && "受付が始まると「実績を報告する」の一覧にも並びます。"}
         </ReasonNote>
       </AppShell>
     );

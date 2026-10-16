@@ -174,8 +174,28 @@ describe("断られた保存は何も書かず、画面も描き直さない", (
 
     expect(result.ok).toBe(false);
     expect(result.message).toContain("未入力の項目が4件あります");
+    // 例は回答画面の上から最初の未入力の欄（行動指針の節は実績の数値の節より上に描かれる）
+    expect(result.message).toContain("（例：創造性について）");
     expect(await responses()).toEqual([]);
     expect(mocked.refresh).not.toHaveBeenCalled();
+  });
+
+  it("範囲を外れた数が2つあれば、送られた順ではなく回答画面の上にある欄を挙げる", async () => {
+    // 残業率を行動指針の節（実績の数値の節より上に描かれる）へ移し、2問に下限0を課す
+    await t.db.update(s.formQuestions).set({ validationMin: 0 }).where(eq(s.formQuestions.id, "fq_q2_1"));
+    await t.db
+      .update(s.formQuestions)
+      .set({ validationMin: 0, section: "behavior" })
+      .where(eq(s.formQuestions.id, "fq_q3_1"));
+    const answers = FULL_ANSWERS.map((a) =>
+      a.questionId === "fq_q2_1" || a.questionId === "fq_q3_1" ? { ...a, valueNumber: -1 } : a,
+    );
+
+    const result = await saveResponse({ formId: IDS.form, status: "submitted", answers });
+
+    // 送られた順では稼働日数が先だが、画面では残業率が上にある
+    expect(result).toEqual({ ok: false, message: "「残業率」は 0 以上の数字を入力してください。" });
+    expect(await responses()).toEqual([]);
   });
 
   it("入力の形が違えば、中身を読む前に断る", async () => {
