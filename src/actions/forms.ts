@@ -21,6 +21,7 @@ import { checkQuestionLinks } from "@/lib/domain/form-question-links";
 import { checkNumberMagnitude, defaultIntegerFlag } from "@/lib/domain/number-input";
 import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
+import { loadStaleAsking } from "@/lib/stale-asking-loader";
 
 /**
  * アンケートの作成・公開・締め切り・内容の変更と、設問の保存（会社の管理者のみ）。
@@ -168,12 +169,16 @@ export async function updateForm(raw: unknown) {
       ]);
       const cycleRow = cycle[0];
       if (!cycleRow) throw new HttpError(404, "評価期間が見つかりませんでした。");
-      const schemeReadiness = await loadSchemeReadiness(companyId, cycleRow.schemeId);
+      const [schemeReadiness, staleAsking] = await Promise.all([
+        loadSchemeReadiness(companyId, cycleRow.schemeId),
+        loadStaleAsking(companyId, cycleRow.schemeId, [form]),
+      ]);
       const readiness = formPublicationReadiness({
         schemeGaps: schemeReadiness.schemeGaps,
         cycleStatus: cycleRow.status,
         questionCount: qs.length,
         formId: form.id,
+        staleAsking: staleAsking.get(form.id) ?? [],
       });
       if (!readiness.ready) throw new HttpError(409, readiness.message);
       // 同じサイクル・等級で公開中のものは自動で締める（回答先が2つに割れないようにする）

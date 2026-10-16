@@ -5,7 +5,7 @@ import { batchAll } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
 import { HttpError } from "@/lib/session";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
-import { targetsPointGroup } from "@/lib/domain/grade-points";
+import { questionsForPointGroup } from "@/lib/domain/grade-points";
 import {
   BEHAVIOR_HELP,
   kpiQuestion,
@@ -241,8 +241,7 @@ export async function buildQuestionRows(opts: {
          管理者がこの等級区分で選んだ以上、実績を聞かなければ評価そのものが成立しないため、
          「設問が消える」より「想定外の等級に設問が出る」ほうが害が小さい。 */
       const mine = questions.filter((x) => x.kpiItemId === i.kpiItemId);
-      const forThisGrade = mine.filter((x) => targetsPointGroup(x.targetGrades, grade.pointGroup));
-      for (const q of forThisGrade.length > 0 ? forThisGrade : mine) {
+      for (const q of questionsForPointGroup(mine, grade.pointGroup)) {
         const built = kpiQuestion(q, kpiNames.find((k) => k.id === i.kpiItemId)?.name ?? "");
         push({
           section: "kpi",

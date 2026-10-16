@@ -40,12 +40,22 @@ describe("設定・評価期間・アンケートのreadiness正本", () => {
 
   it("アンケートは準備中/受付中の期間・完了した評価セット・1問以上でだけ公開できる", () => {
     const schemeMissing = setupReadiness({ hasScheme: false, groups: [] }, GRADES).schemeGaps;
-    const form = { formId: "f1" };
+    const form = { formId: "f1", staleAsking: [] };
     expect(formPublicationReadiness({ ...form, schemeGaps: [], cycleStatus: "planning", questionCount: 1 }).ready).toBe(true);
     expect(formPublicationReadiness({ ...form, schemeGaps: [], cycleStatus: "closed", questionCount: 1 }).ready).toBe(false);
     expect(formPublicationReadiness({ ...form, schemeGaps: schemeMissing, cycleStatus: "open", questionCount: 1 }).ready).toBe(false);
     const noQuestion = formPublicationReadiness({ ...form, schemeGaps: [], cycleStatus: "open", questionCount: 0 });
     expect(noQuestion.ready).toBe(false);
     expect(noQuestion.gaps.map((gap) => gap.href)).toEqual(["/admin/forms/f1"]);
+    // 版の設問が式と合わない項目があれば、ほかがそろっていても公開できない（DD-016）
+    const stale = formPublicationReadiness({
+      ...form,
+      schemeGaps: [],
+      cycleStatus: "open",
+      questionCount: 3,
+      staleAsking: [{ kpiItemId: "kpi_a", name: "稼働率", rebuildFixes: true }],
+    });
+    expect(stale.ready).toBe(false);
+    expect(stale.message).toContain("「稼働率」の設問が、いまの聞き方と合っていません。");
   });
 });

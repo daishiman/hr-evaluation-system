@@ -5,6 +5,7 @@ import {
   expectedItemCount,
   indexRules,
   pointsForSlot,
+  questionsForPointGroup,
   ruleBreakdown,
   slotKindOf,
   targetsPointGroup,
@@ -118,6 +119,20 @@ describe("targetsPointGroup — 「対象等級」欄の解釈", () => {
     expect(targetsPointGroup("AM／Manager", "AM")).toBe(true);
     expect(targetsPointGroup("Manager", "AM")).toBe(false);
     expect(targetsPointGroup("Beginner", "Begin")).toBe(false);
+  });
+});
+
+describe("questionsForPointGroup — その等級区分のアンケートに載せるひな形", () => {
+  const q = (questionKey: string, targetGrades: string | null) => ({ questionKey, targetGrades });
+
+  it("対象等級で絞る", () => {
+    const all = [q("q2_1", "Chief／AM"), q("q2_2", null), q("q2_3", "Regular")];
+    expect(questionsForPointGroup(all, "Chief").map((x) => x.questionKey)).toEqual(["q2_1", "q2_2"]);
+  });
+
+  it("1件も残らなければ全部を使う（どの区分にも当たらない書き方で設問が消えないように）", () => {
+    const all = [q("q2_1", "Manager"), q("q2_2", "AM")];
+    expect(questionsForPointGroup(all, "Regular").map((x) => x.questionKey)).toEqual(["q2_1", "q2_2"]);
   });
 });
 

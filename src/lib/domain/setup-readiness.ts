@@ -1,3 +1,4 @@
+import type { StaleAsking } from "./form-sync";
 import type { GradeLike } from "./grade-label";
 import {
   cycleOpenGaps,
@@ -36,6 +37,7 @@ export function formPublicationReadiness(input: {
   cycleStatus: string;
   questionCount: number;
   formId: string;
+  staleAsking: readonly StaleAsking[];
 }) {
   const gaps = formPublicationGaps(input);
   return { ready: gaps.length === 0, gaps, message: gapsMessage(gaps) };

@@ -105,6 +105,16 @@ export function targetsPointGroup(targetGrades: string | null | undefined, point
     .includes(pointGroup);
 }
 
+/**
+ * 1つのKPI項目の設問のひな形から、その等級区分のアンケートに載せるものを選ぶ。
+ * 対象等級で絞り、1件も残らなければ全部を使う（理由は form-build.ts）。
+ * アンケートの組み立てと、公開の前に「作り直せば直るか」を見る検査（form-sync.ts）で同じ決まりを使う。
+ */
+export function questionsForPointGroup<T extends { targetGrades: string | null }>(questions: readonly T[], pointGroup: string): T[] {
+  const forThisGrade = questions.filter((q) => targetsPointGroup(q.targetGrades, pointGroup));
+  return forThisGrade.length > 0 ? forThisGrade : [...questions];
+}
+
 /** 等級区分ごとの行を引きやすい形に直す */
 export function indexRules(rules: GradePointRule[]): Map<string, GradePointRule> {
   return new Map(rules.map((r) => [r.pointGroup, r]));

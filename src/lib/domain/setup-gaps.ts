@@ -10,9 +10,10 @@
  * 区分（pointGroup）の英語名は文に出さず、等級名の呼び名（grade-label.ts）で言う。
  */
 
-import { comparisonGapOf, type ComparisonGap, type ComparisonGapInput } from "./comparison-gap";
+import { comparisonGapOf, REBUILD_LABEL, type ComparisonGap, type ComparisonGapInput } from "./comparison-gap";
+import type { StaleAsking } from "./form-sync";
 import { pointGroupLabel, type GradeLike } from "./grade-label";
-import { schemeStepPath } from "./scheme-steps";
+import { kpiItemPath, schemeStepPath } from "./scheme-steps";
 
 export interface SetupGap {
   /** 何が足りないか */
@@ -111,6 +112,8 @@ export function formPublicationGaps(input: {
   cycleStatus: string;
   questionCount: number;
   formId: string;
+  /** 版の設問が、いまの計算式の変数をそろえていない項目（form-sync.ts の staleAskingItems） */
+  staleAsking: readonly StaleAsking[];
 }): SetupGap[] {
   const gaps = [...input.schemeGaps];
   if (input.cycleStatus !== "planning" && input.cycleStatus !== "open") {
@@ -129,7 +132,31 @@ export function formPublicationGaps(input: {
       linkLabel: "設問を編集する",
     });
   }
-  return gaps;
+  return [...gaps, ...staleAskingGaps(input.staleAsking, input.formId)];
+}
+
+/**
+ * 版の設問が式と合わない項目（DD-016）。KPI項目で直すものを先に、項目ごとに出す。
+ * 作り直せば直るものは、アンケートの画面の1回の操作で済むのでまとめて1件にする。設問の key は人に見せない。
+ */
+function staleAskingGaps(items: readonly StaleAsking[], formId: string): SetupGap[] {
+  const atItem = items.filter((item) => !item.rebuildFixes).map((item) => ({
+    what: `「${item.name}」の計算式が、いまの聞き方と合っていません。`,
+    how: "作り直しても点が付きません。KPI項目の画面で聞き方か計算式を直し、そのあと設問を作り直してください。",
+    href: kpiItemPath(item.kpiItemId),
+    linkLabel: `「${item.name}」の聞き方を直す`,
+  }));
+  const rebuildable = items.filter((item) => item.rebuildFixes).map((item) => item.name);
+  if (rebuildable.length === 0) return atItem;
+  return [
+    ...atItem,
+    {
+      what: `「${rebuildable.join("」「")}」の設問が、いまの聞き方と合っていません。`,
+      how: `このまま公開すると、その項目には点が付きません。アンケートの画面で「${REBUILD_LABEL}」を押してください。`,
+      href: formPath(formId),
+      linkLabel: "設問を作り直す",
+    },
+  ];
 }
 
 /**

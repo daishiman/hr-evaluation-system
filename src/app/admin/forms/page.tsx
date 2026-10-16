@@ -13,6 +13,7 @@ import { Badge, Card, ChipLink, EmptyState, LinkButton, Num, PageTitle, SectionH
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
 import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
+import { loadStaleAsking } from "@/lib/stale-asking-loader";
 import { listFormSubmissionCounts } from "@/lib/submission-queries";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,8 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
     loadSchemeReadiness(companyId, selected.schemeId),
     listFormSubmissionCounts(companyId, selected.id),
   ]);
+  // 公開ボタンを出すかは、公開の処理（updateForm）と同じ読み出しで決める。見るのは下書きだけ
+  const staleAsking = await loadStaleAsking(companyId, selected.schemeId, forms.filter((f) => f.status === "draft"));
 
   return (
     <>
@@ -116,6 +119,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
               cycleStatus: selected.status,
               questionCount: Number(f.questionCount ?? 0),
               formId: f.id,
+              staleAsking: staleAsking.get(f.id) ?? [],
             });
             const comparisonGap = comparisonGaps.get(f.id);
             const submission = submissionCounts.get(f.id);
