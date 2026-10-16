@@ -56,6 +56,7 @@
 6. パスワード再発行時は `mustChangePassword=true` とし、既存セッションを削除する（users / accounts / sessions を途中状態なく更新）
 7. 自分自身を利用停止にできない。SUPER_ADMIN は自分の role を下げられない
 8. 他社にも所属する利用者の氏名・メール・利用状態・資格情報を会社管理者が変更することは拒否する。自社の所属の値だけを変更できる
+9. 権限にかかわる8つの出来事（作成・全体管理者の付け外し・会社の役割の変更・所属の会社の移動・利用を止める／再開する・パスワードの再発行）は、追記だけの表 `account_security_events`（移行 0037）に、本体と同じ D1 batch で、起きた変更だけを残す。入口は4つ（`system_users`・`members`・`company_create`・`member_import`）。パスワードの本文・hash・セッションの token は型の上で入らない。行の書き換えはトリガーで止める（[DD-013](../docs/product/design-decisions.md)）
 
 ## 4. セッション
 

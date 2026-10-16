@@ -30,6 +30,7 @@
 | `/me/results/[id]` | 本人の確定済み評価だけ | 未確定・他人・他社・不存在はnotFound |
 | `/me/responses/[id]` | 下書きは本人だけ。提出済みは本人・直属上長・COMPANY_ADMIN以上 | 対象外は本文を出さないdenied、他社・不存在はnotFound |
 | `/f/[token]` | ログイン必須。対象なら回答へ、別等級なら内容確認へredirect | 無効・他社・受付外は理由と復帰先を200表示 |
+| `/forms/[id]?try=1` | アンケートを設定できる人（`canEditForm`）だけ。回答画面と同じ部品を、何も保存しない試しの回答として開く | 設定できない人が付けても通常の見本を出す（新しい route は足さない。[DD-019](../docs/product/design-decisions.md)） |
 
 COMPANY_ADMIN と SUPER_ADMIN も評価される本人になりうるため、`/me/*` は EMPLOYEE 専用ではなく全ロール共通の自己サービスである。ロールだけでなく、会社・本人・直属上長・確定状態を組み合わせて判定する。
 

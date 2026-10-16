@@ -95,9 +95,22 @@
 | ログイン後のスモーク | 14 件中 14 件 OK（ローカルの preview） |
 | dev-graph（schema / lineage） | このツリーの graph（2026-10-15 に作り直した 23 node。IR の node を含まない）は pass / pass。IR の node を持つ別のツリーの graph は、今も 3 node が `lineage_digest_mismatch`（OPS-015 のまま） |
 
+### 最終レビュー（2026-10-16、`f9c2e75`）
+
+`origin/main`（`42b7f6b`）からの24コミットを、branch `devgraph/feature-comparison-gap-two-page-links` で draft PR に出した。`main` は `origin/main` と同じで、取り込むコミットは無かった。仕様・設計への影響は、権限の記録（E7）・社員CSVの所属（0036）・試しの回答・紐づけの保存・KPI 項目の実績の聞き方の5件を `system-spec/` の手で保つ仕様書と `architecture/account-profile.md` へ反映し、`specs/` に 2026-10-15〜16 の追加の照合表を足した。compile する章は変えていない。判断の理由とゲートの結果は[受領書](../docs/product/spec-receipts/2026-10-16-final-review-pr.md)に残した。
+
+| ゲート | 結果 |
+|---|---|
+| task 仕様書（exact-13） / dev-graph schema | PASS / PASS（23 node） |
+| dev-graph lineage | このブランチの中身で 9 node 一致 |
+| `pnpm typecheck` / `pnpm test:coverage` | exit 0 / 3,358 件 PASS（全指標 100%） |
+| `pnpm run check:docs` | PASS |
+| E2E | 54 件中 52 件 PASS（A12 の余白2件。下の残課題） |
+
 ## 残課題
 
-- OPS-016: 通し試験が作る会社がローカル DB にたまり、利用者一覧の余白の検査（40%）が前提ごと崩れる。同じ DB で通し試験を繰り返す前に、試験の会社を片付けるか隔離した DB で流す
+- 配布：最終レビューの PR をマージしたあと、Deploy workflow が移行 0036・0037 を本番に当てる。`hr-c76`・`hr-nm6`・`hr-wcv.13` は配布の確かめのあとに閉じる
+- OPS-016: 通し試験が作る会社がローカル DB にたまり、利用者一覧の余白の検査（40%）が前提ごと崩れる。同じ DB で通し試験を繰り返す前に、試験の会社を片付けるか隔離した DB で流す。2026-10-16 の E2E の A12 のうち `/system/users`（42%）はこの系統。`/admin/masters/promotion`（43%）は前からの失敗
 - OPS-015: graph の取込元の digest が古い3 node。dev-graph の writer に取り込み直しの操作が入ったら、R0 からやり直す
 - FEATURE-005（行動指針の並べ替え）・OPS-014（見本データの締切が固定の日付）・`/criteria` の網羅率 42% は範囲外のまま
 - 等級の並び順（`displayOrder`）が同着のとき、等級の一覧・書き出しなどの読み出し（`src/lib/queries.ts` の `listGrades` ほか10か所余り）は並びが決まらない。前からの挙動で、今回の範囲外。行動指針の判定は `bandLine` が id で決めている

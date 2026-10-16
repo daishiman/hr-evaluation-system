@@ -85,6 +85,21 @@
 | SYS-IR-P12 | hr-wcv.12 | 製品仕様・機能の地図・運用の文書を、実装の最終の形にそろえる | P10 |
 | SYS-IR-P13 | hr-wcv.13 | 本番への配布の結果を確かめて配布の記録と戻し方を残し、利用者の確認のあと本番の画面を確かめて改善要望を対応済みにする | P11・P12 |
 
+## 2026-10-15〜16 の追加（S1〜S14・A1〜A13 の番号の外）
+
+#94 のマージのあとに受けた要望と、バックログから片付けたもの。番号は振らず、製品仕様の節と DD で辿る。仕様・設計への反映と、compile する章を変えない理由は [受領書（2026-10-16）](../docs/product/spec-receipts/2026-10-16-final-review-pr.md) に記録した。
+
+| 項目 | 製品仕様 | 決定 | システム仕様・設計の置き場所 |
+|---|---|---|---|
+| 比べる警告を2つのページへのリンクを持つ1つの部品にする | §22-9 | DD-012 | `system-spec/frontend.md`・`backend.md`（compile 済み）、`features/comparison-gap-two-page-links.md` |
+| 権限にかかわる操作の記録（E7） | — | DD-013 | `system-spec/account-and-users.md` §3-9、`architecture/account-profile.md` §6 |
+| 社員CSVの取り込みが所属の行を書く（移行 0036） | — | D-004 ② のとおり | `system-spec/imports-and-readiness.md` |
+| 選んでいる会社が無いときの開く会社 | — | D-009 の更新 | `architecture/improvement-requests-2026-10.md` |
+| 一覧の行の形・保存中に止める入力の束・操作の帯 | §28-14・§28-16 ほか | DD-014・DD-017・DD-018 | 画面の組み立ての決まり。システム仕様の層には置かない |
+| 設問の集計との紐づけの保存 | §3 の 20（`/admin/forms/[id]`） | DD-015 | `system-spec/release-and-forms.md` §7 |
+| KPI 項目の実績の聞き方 | §28-15 | DD-016 | `system-spec/master-settings.md`「KPI項目の実績の聞き方」、`release-and-forms.md` §7-3 |
+| 試しの回答 | §28-17 | DD-019 | `system-spec/routes-and-access.md` §2、`release-and-forms.md` §6-6 |
+
 ## 変えないもの
 
 - 配色・テーマ（`docs/product/spec.md` のテーマ契約、DD-003、AGENTS.md）。テーマの契約テストと `globals.css` 冒頭の `brand_color_*` の宣言。

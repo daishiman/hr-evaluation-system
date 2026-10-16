@@ -60,6 +60,12 @@ role / grade / manager / isActive を `profile_field_policies.field` に入れ�
 `grades` を `user.grade_id` だけで join すると、会社を跨いだゴミ参照で名前が混ざる可能性がある。  
 `grade_id` かつ `grades.company_id = users.company_id` で join する。
 
+### 6. 権限にかかわる操作は、本体と同じ batch で追記だけの表に残す
+
+何を残すかは純粋な計算（`accountSecurityChanges`）が変更前と変更後の状態から決め、記録の文（`accountSecurityEventStatements`）を本体の書き込みと同じ D1 batch の末尾に入れる。本体だけ書かれて記録が欠ける、を作らない。
+最後の全体管理者を落とさない条件付きの UPDATE のように本体が0行で終わりうる保存では、記録の文にも同じ条件を付け、起きなかった変更を残さない。
+制度マスタの監査（`constitution_events`）には相乗りしない。会社を持たない全体管理者の出来事と、入口・1回の保存の id を持てないため（[DD-013](../docs/product/design-decisions.md)）。
+
 ## 主要ファイル
 
 | 役割 | パス |
@@ -70,8 +76,11 @@ role / grade / manager / isActive を `profile_field_policies.field` に入れ�
 | スキーマ | `src/db/schema.ts` (`profileFieldPolicies`) |
 | クエリ | `src/lib/queries.ts` (`listProfileFieldPolicies`, `getSelfProfile`, `listAllUsers`, `getAnyUser`) |
 | ナビ | `src/lib/nav.ts` / `AppShell.tsx` / `AccountMenu.tsx` |
+| 権限の記録（何を残すか・記録の文） | `src/lib/domain/account-security-events.ts` / `src/lib/account-security-events.ts` |
 
 ## マイグレーション
 
 - `0010_profile_field_policies.sql` を local / remote の両方に適用すること
 - 未適用だとログイン後の `/account` や policy 画面で `no such table` になる（backlog E8）。`pnpm run smoke:auth`（`scripts/smoke-authenticated.mjs`）を流すと、役割ごとにログインして `/account`・`/admin/members` とその1人・`/admin/members/policy` などを開き、この漏れを NG（終了コード 1）として検知できる（手順は `docs/deploy-notes.md` §3）
+- `0036_import_member_memberships.sql`: 社員CSVで作った人のうち所属の行が無い人に、所属の行を足す（冪等。見分け方は `docs/deploy-notes.md` の「移行 0036」）
+- `0037_account_security_events.sql`: 権限の記録の表を足す（既存の行は書き換えない。読み方は `docs/deploy-notes.md` §12）
