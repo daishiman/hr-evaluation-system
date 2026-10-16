@@ -5,6 +5,7 @@ import { getForm, getResponse, listFormQuestions } from "@/lib/queries";
 import { formRowTitle } from "@/lib/domain/grade-label";
 import { listActiveExtensions } from "@/lib/response-access";
 import { FormAnswer } from "@/components/FormAnswer";
+import { toAnswerQuestions } from "@/components/answer-questions";
 import { ResponseSnapshot } from "@/components/ResponseSnapshot";
 import { Card, DefList, PageTitle, ReasonNote } from "@/components/ui";
 import { formatDate, formatPeriod } from "@/lib/view";
@@ -140,20 +141,7 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
 
       <FormAnswer
         formId={form.id}
-        questions={questions.map((q) => ({
-          id: q.id,
-          section: q.section,
-          questionType: q.questionType,
-          title: q.title,
-          helpText: q.helpText,
-          unit: q.unit,
-          required: q.required,
-          validationMin: q.validationMin,
-          validationMax: q.validationMax,
-          validationInteger: q.validationInteger,
-          optionsJson: q.optionsJson,
-          displayOrder: q.displayOrder,
-        }))}
+        questions={toAnswerQuestions(questions)}
         initial={(response?.answers ?? []).map((a) => ({
           questionId: a.questionId,
           valueNumber: a.valueNumber,

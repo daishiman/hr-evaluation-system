@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { FormPreview, type PreviewQuestion } from "./FormPreview";
 import { RespondentGuide } from "./RespondentGuide";
+import { toAnswerQuestions } from "./answer-questions";
 import { answerBlockLabel, type AnswerBlock } from "@/lib/domain/form-entry";
 import { SECTION_HELP } from "@/lib/view";
 
@@ -366,5 +367,50 @@ describe("FormPreview", () => {
     expect(html).toContain('id="preview_t_single"');
     expect(html).toMatch(/role="group"[^>]*aria-labelledby="preview_t_single"/);
     expect(html).not.toMatch(/<label\b[^>]*\bfor=/);
+  });
+});
+
+describe("見本の画面からの試しの回答（?try=1）", () => {
+  const read = (file: string) => readFileSync(path.join(process.cwd(), file), "utf8");
+  const page = read("src/app/forms/[id]/page.tsx");
+  const start = page.indexOf('if (sp.try === "1" && canTry)');
+  // 試しの回答の分岐（通常の見本の return の手前まで）
+  const trialBranch = start < 0 ? "" : page.slice(start, page.indexOf("\n  return (", start));
+
+  it("設定できる人だけが、回答者と同じ入力欄（FormAnswer の trial）を開ける", () => {
+    // 見本（FormPreview）には入力欄も送信ボタンも無い。数を入れて提出の検査まで試す画面は別に要る
+    expect(page).toContain("const canTry = canEditForm(viewer.role);");
+    expect(start).toBeGreaterThan(0);
+    expect(trialBranch).toContain("<FormAnswer");
+    // 保存しない部品として出す（下書きも提出も送らない）。何も入っていない状態から始める
+    expect(trialBranch).toMatch(/<FormAnswer\b[^>]*\btrial\s*\/>/);
+    expect(trialBranch).toMatch(/<FormAnswer\b[^>]*\binitial=\{\[\]\}/);
+    expect(trialBranch).toContain("見本に戻る");
+    // 通常の見本は入力欄の無いまま（回答者でない人の操作で、回答や下書きを作らない）
+    expect(page.replace(trialBranch, "")).not.toContain("<FormAnswer");
+  });
+
+  it("試しの回答と本物の回答画面は、設問を同じ1つの関数で渡す（片方だけ項目が欠けない）", () => {
+    expect(trialBranch).toContain("questions={toAnswerQuestions(questions)}");
+    expect(read("src/app/me/forms/[id]/page.tsx")).toContain("questions={toAnswerQuestions(questions)}");
+    // 回答画面に要る項目だけを渡す（配点や昇格の要件は、行に入っていても渡さない）
+    const row = { id: "q1", section: "kpi", questionType: "number", title: "件数", helpText: null, unit: "件",
+      required: true, validationMin: 0, validationMax: null, validationInteger: true, optionsJson: null,
+      displayOrder: 1, isGate: true, weight: 3 };
+    const [passed] = toAnswerQuestions([row]);
+    expect(Object.keys(passed).sort()).toEqual(["displayOrder", "helpText", "id", "optionsJson", "questionType",
+      "required", "section", "title", "unit", "validationInteger", "validationMax", "validationMin"].sort());
+    expect(passed).toMatchObject({ validationInteger: true, validationMin: 0, unit: "件" });
+  });
+
+  it("見本の上の操作と、管理画面の「回答者に見える内容」から、設定できる人だけに入口を出す", () => {
+    expect(page).toContain("{canTry && <LinkButton href={`/forms/${form.id}?try=1`}>試しに回答する</LinkButton>}");
+    const admin = read("src/app/admin/forms/[id]/page.tsx");
+    const link = admin.indexOf("href={`/forms/${form.id}?try=1`}");
+    expect(link).toBeGreaterThan(0);
+    // 入口は設定できる人の条件の中に置く
+    const gate = admin.lastIndexOf("{canEditForm(viewer.role) && (", link);
+    expect(gate).toBeGreaterThan(0);
+    expect(admin.slice(gate, link)).not.toContain(")}");
   });
 });

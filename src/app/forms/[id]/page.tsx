@@ -7,6 +7,8 @@ import { answerBlockLabel, judgeAnswerBlock, type AnswerBlock } from "@/lib/doma
 import { judgeFormDeadline } from "@/lib/domain/form-deadline";
 import { listActiveExtensions } from "@/lib/response-access";
 import { FormPreview } from "@/components/FormPreview";
+import { FormAnswer } from "@/components/FormAnswer";
+import { toAnswerQuestions } from "@/components/answer-questions";
 import { RespondentGuide } from "@/components/RespondentGuide";
 import { Badge, Card, InlineDetail, LinkButton, PageTitle, ReasonNote } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
@@ -23,12 +25,24 @@ const ANSWERER_REASON = "回答は上の「このアンケートに回答する�
  * 回答画面ではなく読むための画面なので、入力欄は作らない。開いても回答や
  * 下書きの行はできない（回答は「実績を報告する」から行う）。
  *
+ * ただしアンケートを設定できる人には、?try=1 で「試しの回答」を出す。回答者と同じ入力欄
+ * （FormAnswer の trial）で、数値の入力から提出前の確認・提出の検査までを試せる。何も保存しない。
+ * 管理者には等級が無く本物の回答画面を開けないため、見本だけでは「数を入れる欄が無い」
+ * 「送信ボタンが無い」と見え、回答の機能が成り立っているかを確かめられなかった。
+ *
  * 他社のアンケートは getForm の会社の絞り込みで届かない。URLにIDを入れられても
  * 自社のものしか開けない。
  */
-export default async function FormContentDetail({ params }: { params: Promise<{ id: string }> }) {
+export default async function FormContentDetail({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ try?: string }>;
+}) {
   const viewer = await requireRoute("/forms/[id]");
   const { id } = await params;
+  const sp = await searchParams;
   if (!viewer.companyId) notFound();
 
   const form = await getForm(viewer.companyId, id);
@@ -56,6 +70,62 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
     formGradeId: form.gradeId,
     deadline: judgement,
   });
+  const canTry = canEditForm(viewer.role);
+
+  // 試しの回答。設定できない人が ?try=1 を付けても、通常の見本を出す
+  if (sp.try === "1" && canTry) {
+    // 回答者の画面がいまどうなるかの事実だけを書く（ここでは期間や公開に関係なく試せる）
+    const trialNote =
+      form.status === "draft"
+        ? "まだ配っていない下書きです。回答者はまだ回答できません。公開までに設問が変わることがあります。"
+        : !judgement.canAnswer
+          ? "いまは回答期間の外です。回答者の画面では入力欄が止まり、理由だけが出ます。"
+          : null;
+    return (
+      <>
+        <PageTitle
+          sticky
+          breadcrumb={[
+            { label: "アンケートの中身", href: `/forms?cycle=${form.cycleId}` },
+            { label: formRowTitle(form), href: `/forms/${form.id}` },
+          ]}
+          title="試しに回答する"
+          lede={`${formRowTitle(form)} ／ 入力した内容は保存されません`}
+          tags={
+            <>
+              <span className="tag">対象 {form.gradeName ?? "—"}</span>
+              <span className="tag" data-tone="muted">
+                第{form.version}版
+              </span>
+            </>
+          }
+          actions={<LinkButton href={`/forms/${form.id}`}>見本に戻る</LinkButton>}
+        />
+        <Card className="card-pad">
+          <p className="m-0 text-sub">回答期間 {formatPeriod(form.opensAt, form.closesAt)}</p>
+          {trialNote && <p className="m-0 mt-1 text-sub">{trialNote}</p>}
+          {form.description && (
+            <p className="m-0 mt-2 whitespace-pre-wrap text-sub leading-relaxed">
+              <RespondentGuide>{form.description}</RespondentGuide>
+            </p>
+          )}
+        </Card>
+        {/* 操作の帯（FormAnswer の中）はページの一番下に置く決まり。後ろに置くと帯の下に隠れて押せない */}
+        <div className="mt-5">
+          <FormAnswer
+            formId={form.id}
+            questions={toAnswerQuestions(questions)}
+            initial={[]}
+            submitted={false}
+            lockedReason={null}
+            deadlineNote={null}
+            note={null}
+            trial
+          />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -78,7 +148,9 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
         actions={
           <>
             {block.kind === "can-answer" && <LinkButton href={`/me/forms/${form.id}`}>このアンケートに回答する</LinkButton>}
-            {canEditForm(viewer.role) && (
+            {/* 回答者と同じ入力欄で、入力から提出の検査までを試す（保存しない）。設定する人が公開の前後に確かめる */}
+            {canTry && <LinkButton href={`/forms/${form.id}?try=1`}>試しに回答する</LinkButton>}
+            {canTry && (
               <LinkButton href={`/admin/forms/${form.id}`} variant="secondary">
                 このアンケートを設定する
               </LinkButton>
@@ -95,6 +167,7 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
             gradeName={form.gradeName ?? "—"}
             deadlineMessage={judgement.message}
             canSeeResponses={canSeeFormResponses(viewer.role)}
+            canTry={canTry}
           />
         </div>
       )}
@@ -121,6 +194,11 @@ export default async function FormContentDetail({ params }: { params: Promise<{ 
             <p className="m-0 mt-1 text-sub">
               文字や数値を打つ欄はなく、選択肢を試しに選んでも保存されません。開いても回答や下書きは作られません。
             </p>
+            {canTry && (
+              <p className="m-0 mt-1 text-sub">
+                数値の入力から提出の検査までは、上の「試しに回答する」で試せます。回答者と同じ画面で、内容は保存されません。
+              </p>
+            )}
             {!canSeeCriteria(viewer.role) && (
               <p className="m-0 mt-1 text-sub">
                 配点などを出さないのは、回答が点数合わせにならないようにするためです。
@@ -154,12 +232,15 @@ function AnswerBlockNote({
   gradeName,
   deadlineMessage,
   canSeeResponses,
+  canTry,
 }: {
   block: AnswerBlock;
   formId: string;
   gradeName: string;
   deadlineMessage: string;
   canSeeResponses: boolean;
+  /** 試しの回答（?try=1）を開けるか。開ける人には、入力と提出を確かめる先として示す */
+  canTry: boolean;
 }) {
   switch (block.kind) {
     case "can-answer":
@@ -176,6 +257,7 @@ function AnswerBlockNote({
         <ReasonNote action={<LinkButton href={`/admin/forms/${formId}/responses`}>回答一覧を見る</LinkButton>}>
           このアンケートに回答するのは、対象の等級（{gradeName}）の方です。あなたには等級が設定されていないため、回答画面は開きません。
           集まった回答は「回答一覧」で確かめられます。
+          {canTry && "入力と提出の流れは「試しに回答する」で確かめられます（保存されません）。"}
         </ReasonNote>
       ) : (
         <ReasonNote>

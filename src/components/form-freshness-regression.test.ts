@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { FormAnswer, type AnswerQuestion, type AnswerValue } from "@/components/FormAnswer";
 import { FormBuilder } from "@/components/FormBuilder";
 import { createBlankQuestion } from "@/components/form-builder-model";
+import { checkSubmission, normalizeAnswers } from "@/lib/submission-check";
 
 // DOM 環境を追加せず、同じ部品の再描画で hook の状態を保持する。
 // 実際の onChange を呼び、props 更新後の編集値と読み取り表示を検証する。
@@ -438,6 +439,82 @@ describe("FormAnswer の保存の状態と確認の欄", () => {
     await press(before, "提出する");
     expect(hooks.save.mock.calls[0][0]).toMatchObject({ status: "submitted" });
     expect(sentAnswer(0, "q1")?.valueText).toBe("押す直前に直した回答");
+  });
+
+  describe("管理者の試しの回答（trial）", () => {
+    const count: AnswerQuestion = { ...question, id: "q5", section: "kpi", questionType: "number", title: "件数の設問",
+      required: true, validationMin: 0, validationInteger: true, unit: "件" };
+    const trialProps = { ...props, questions: [question, choice, count], initial: [], trial: true };
+    // 要素の子に直接書かれた文を、木の中からすべて集める
+    const textOf = (tree: unknown) => {
+      const found: string[] = [];
+      has(tree, (node) => {
+        const children = ([] as unknown[]).concat(node.props.children);
+        found.push(...children.filter((c): c is string => typeof c === "string"));
+        return false;
+      });
+      return found.join("\n");
+    };
+    const confirmCard = (tree: unknown) =>
+      find(tree, (node) => named("Card")(node) && has(node.props.children, (child) => child.props.children === "この内容で試しに提出します"));
+    const passed = (tree: unknown) =>
+      has(tree, (node) => named("RefreshStatus")(node) && String(node.props.message).startsWith("試しの提出は通りました"));
+    const tryToSubmit = async () => {
+      press(render(FormAnswer, trialProps), "内容を確認して提出する");
+      await press(render(FormAnswer, trialProps), "試しに提出する");
+      return render(FormAnswer, trialProps);
+    };
+
+    it("値を変えても下書きを送らず、帯と本文の先頭で「保存されない」と伝える", async () => {
+      expect(status(trialProps)).toContain("試しの回答（保存されません）");
+      onChangeOf("q1", trialProps)({ valueText: "試しの文" });
+      onChangeOf("q5", trialProps)({ valueNumber: 3 });
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(hooks.save).not.toHaveBeenCalled();
+      expect(status(trialProps)).toContain("試しの回答（保存されません）");
+      expect(status(trialProps)).not.toContain("保存待ち");
+      const text = textOf(render(FormAnswer, trialProps));
+      expect(text).toContain("入力した内容は保存されず");
+      expect(text).not.toContain("自動で下書きに保存");
+    });
+
+    it("空のまま試しに提出すると、未入力の知らせを1回だけ出し、何も送らない", async () => {
+      const tree = await tryToSubmit();
+      const missing = "未入力の項目が1件あります（例：件数の設問）。入力してから提出してください。";
+      expect(notes(confirmCard(tree)).filter((html) => html.includes(missing))).toHaveLength(1);
+      expect(notes(tree).filter((html) => html.includes(missing))).toHaveLength(1);
+      expect(passed(tree)).toBe(false);
+      expect(hooks.save).not.toHaveBeenCalled();
+    });
+
+    it("範囲を外れた数は、本物の提出（checkSubmission）と同じ文で断る", async () => {
+      onChangeOf("q5", trialProps)({ valueNumber: 1.5 });
+      const tree = await tryToSubmit();
+      const expected = checkSubmission(trialProps.questions, normalizeAnswers(trialProps.questions, [{ questionId: "q5", valueNumber: 1.5 }]));
+      const message = expected.ok ? "" : expected.message;
+      expect(message).toContain("「件数の設問」");
+      expect(notes(confirmCard(tree)).filter((html) => html.includes(message))).toHaveLength(1);
+      expect(passed(tree)).toBe(false);
+      expect(hooks.save).not.toHaveBeenCalled();
+    });
+
+    it("通ったら確認の欄の中で知らせ、値を変えるか開き直すまでその知らせを残す", async () => {
+      onChangeOf("q5", trialProps)({ valueNumber: 3 });
+      let tree: unknown = await tryToSubmit();
+      expect(passed(confirmCard(tree))).toBe(true);
+      expect(notes(tree)).toEqual([]);
+      // 値を変えたら、前の結果は出さない（変えたあとの値はまだ試していない）
+      onChangeOf("q5", trialProps)({ valueNumber: 4 });
+      expect(passed(render(FormAnswer, trialProps))).toBe(false);
+      // 通ったあとに入力へ戻り、確認を開き直しても、押し直すまでは出さない
+      await press(render(FormAnswer, trialProps), "試しに提出する");
+      expect(passed(render(FormAnswer, trialProps))).toBe(true);
+      press(render(FormAnswer, trialProps), "入力に戻る");
+      press(render(FormAnswer, trialProps), "内容を確認して提出する");
+      tree = render(FormAnswer, trialProps);
+      expect(passed(tree)).toBe(false);
+      expect(hooks.save).not.toHaveBeenCalled();
+    });
   });
 });
 

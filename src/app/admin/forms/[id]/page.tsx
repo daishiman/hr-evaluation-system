@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { requireRoute } from "@/lib/session";
+import { canEditForm, requireRoute } from "@/lib/session";
 import { getDb, schema as s } from "@/lib/db";
 import { getForm, listFormQuestions, listKpiItems } from "@/lib/queries";
 import { formRowTitle } from "@/lib/domain/grade-label";
@@ -177,6 +177,16 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
           保存済みの設問文・補足・答え方を表示します。印の無い設問は必須、「（任意）」の設問は空欄でも提出できます。
           文字や数値を打つ欄はなく、選択肢を試しに選んでも保存されません。開いても回答や下書きは作られません。
         </p>
+        {/* 見本には入力欄も送信ボタンも無い。入力と提出の動きは、回答者と同じ画面の試しの回答で確かめる */}
+        {canEditForm(viewer.role) && (
+          <p className="footnote m-0 mt-2">
+            数値の入力から提出の検査までは
+            <Link href={`/forms/${form.id}?try=1`} className="text-brand-deep">
+              試しに回答する
+            </Link>
+            で試せます（保存されません）。
+          </p>
+        )}
         <div className="mt-4 border-t border-line pt-4">
           {form.description && (
             <p className="mb-4 whitespace-pre-wrap text-sub leading-relaxed">

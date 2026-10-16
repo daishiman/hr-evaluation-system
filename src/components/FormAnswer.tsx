@@ -10,6 +10,7 @@ import { isAnswered } from "@/lib/domain/answer-snapshot";
 import { QuestionField, type AnswerQuestion, type AnswerValue } from "@/components/QuestionField";
 import { orderedQuestionSections } from "@/components/question-sections";
 import { inScreenOrder } from "@/lib/question-order";
+import { checkSubmission, missingAnswersMessage, normalizeAnswers } from "@/lib/submission-check";
 export { QuestionField, QuestionInput, type AnswerQuestion, type AnswerValue } from "@/components/QuestionField";
 import { RefreshStatus } from "@/components/RefreshStatus";
 
@@ -17,6 +18,13 @@ import { RefreshStatus } from "@/components/RefreshStatus";
 function sameAnswerValue(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
   return Object.is(a ?? null, b ?? null);
+}
+
+/** 送る答え。何も入れていない欄は送らない（下書き・提出・試しの提出で同じものを使う） */
+function answersToSend(values: Record<string, AnswerValue>): AnswerValue[] {
+  return Object.values(values).filter(
+    (a) => a.valueNumber !== null || a.valueText || (a.valueChoices?.length ?? 0) > 0,
+  );
 }
 
 /**
@@ -33,6 +41,10 @@ function sameAnswerValue(a: unknown, b: unknown): boolean {
  * 設問の形式は、管理画面で作れるもの（はい/いいえ・1つ選ぶ・いくつでも選ぶ・数値・文章・段階）を
  * すべて答えられるようにしてある。以前は数値と選択肢しか描いておらず、
  * 選択肢の無い「文章で書く」設問が数値入力欄になって回答できなかった。
+ *
+ * trial は管理者の試しの回答（/forms/[id]?try=1）。同じ画面で数を入れ、選び、確認を開いて
+ * 提出までを試せる。下書きも提出も送らず、提出は保存の受け口と同じ検査（checkSubmission）に
+ * 当てて結果だけを出す。管理者には等級が無く、本物の回答画面は開けないため。
  */
 export function FormAnswer({
   formId,
@@ -42,6 +54,7 @@ export function FormAnswer({
   lockedReason,
   deadlineNote,
   note,
+  trial = false,
 }: {
   formId: string;
   questions: AnswerQuestion[];
@@ -52,6 +65,8 @@ export function FormAnswer({
   /** 回答できるときに上部へ常時出す期限の案内 */
   deadlineNote: string | null;
   note: string | null;
+  /** 試しの回答。何も保存しない（下書きも提出も送らない） */
+  trial?: boolean;
 }) {
   /* 提出と下書きの自動保存は同じ書き込みだが、待っている間の扱いを分けるため2つに受ける。
      提出中は入力欄ごと止める。下書きの保存中は止めない（打っている欄から focus が外れるため）。 */
@@ -76,11 +91,13 @@ export function FormAnswer({
   const [submitting, setSubmitting] = useState(false);
   // この画面を開いてから、答えを1つでも変えたか。変える前は保存の状態を何も書かない
   const [touched, setTouched] = useState(false);
+  // 試しの提出が検査を通ったか。答えを変えたら消す
+  const [trialPassed, setTrialPassed] = useState(false);
   const confirmBox = useRef<HTMLDivElement>(null);
   const confirmHeading = useRef<HTMLParagraphElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const readOnly = submitted || lockedReason !== null;
-  const canSaveDraft = useRef(!readOnly);
+  const canSaveDraft = useRef(!readOnly && !trial);
   const queuedSave = useRef<Promise<unknown>>(Promise.resolve());
   const editVersion = useRef(0);
   // 保存できた入力の版。editVersion と違えば、まだ保存していない変更がある
@@ -105,9 +122,7 @@ export function FormAnswer({
           formId,
           status,
           note: nextMemo || null,
-          answers: Object.values(nextValues).filter(
-            (a) => a.valueNumber !== null || a.valueText || (a.valueChoices?.length ?? 0) > 0,
-          ),
+          answers: answersToSend(nextValues),
         };
         // 提出の応答には、提出後の画面（提出済みの表示）が同梱される（サーバー側の refresh()）
         const result = status === "submitted" ? await save(payload) : await saveDraft(payload);
@@ -150,13 +165,22 @@ export function FormAnswer({
     setDraftFailed(false);
     setSubmitError(null);
     setTouched(true);
-    queueDraft();
-  }, [queueDraft]);
+    setTrialPassed(false);
+    // 試しの回答は下書きを送らない
+    if (!trial) queueDraft();
+  }, [queueDraft, trial]);
 
   const submit = async (event: { detail: number }) => {
     /* 「内容を確認して提出する」を2回続けて押すと、2回目がこのボタンに当たる（帯の同じ場所に出るため）。
        続けて押した2回目以降（detail が 2 以上）では提出しない。キーボードで押したときの detail は 0。 */
     if (event.detail > 1 || submitLock.current) return;
+    if (trial) {
+      // 送らずに、保存の受け口と同じ検査だけに当てる（試しで通った答えが、本物の提出で断られないように）
+      const check = checkSubmission(questions, normalizeAnswers(questions, answersToSend(latestInput.current.values)));
+      setSubmitError(check.ok ? null : check.message);
+      setTrialPassed(check.ok);
+      return;
+    }
     submitLock.current = true;
     setSubmitting(true);
     setSubmitError(null);
@@ -195,13 +219,13 @@ export function FormAnswer({
   );
 
   useEffect(() => {
-    canSaveDraft.current = !readOnly;
+    canSaveDraft.current = !readOnly && !trial;
     if (readOnly) clearTimeout(timer.current);
     return () => {
       canSaveDraft.current = false;
       clearTimeout(timer.current);
     };
-  }, [readOnly]);
+  }, [readOnly, trial]);
 
   /* 確認の欄は画面の下に開く。押した人の目と、読み上げの位置をそこへ移す
      （開いたことに気づかず、もう一度押そうとして帯を探さないように）。 */
@@ -221,10 +245,7 @@ export function FormAnswer({
   /* 画面の上から下の順に拾う。「例：」には画面で最初に見える未入力の欄を挙げる
      （受け口の断りの文も同じ順で選ぶ。inScreenOrder） */
   const missing = inScreenOrder(questions).filter((q) => q.required && !isAnswered(q.questionType, values[q.id]));
-  const missingNote =
-    missing.length > 0
-      ? `未入力の項目が${missing.length}件あります（例：${missing[0].title}）。入力してから提出してください。`
-      : null;
+  const missingNote = missing.length > 0 ? missingAnswersMessage(missing) : null;
 
   /* 最初の、未入力の欄へ移る。選ぶ設問は選択肢のまとまり（role=group）に移る */
   const focusFirstMissing = () => {
@@ -252,7 +273,9 @@ export function FormAnswer({
 
   /* 帯の状態は事実だけを書く（案内は本文の先頭へ）。
      文の長さが変わっても押す場所は動かない（globals.css の .action-bar-status）。 */
-  const saveState = saving || submitting
+  const saveState = trial
+    ? "試しの回答（保存されません）"
+    : saving || submitting
     ? "提出しています…"
     : savingDraft
       ? "保存しています…"
@@ -277,7 +300,9 @@ export function FormAnswer({
         className="m-0 mb-3 text-sub text-brand-deep"
       />
       <p className="footnote m-0 mb-4">
-        入力した内容は、1秒ほどで自動で下書きに保存されます。すべて入れたら、画面下の「内容を確認して提出する」から提出します。
+        {trial
+          ? "回答者と同じ画面で、数値の入力・選択・提出前の確認を試せます。入力した内容は保存されず、試しに提出しても回答一覧には出ません。"
+          : "入力した内容は、1秒ほどで自動で下書きに保存されます。すべて入れたら、画面下の「内容を確認して提出する」から提出します。"}
       </p>
 
       {ordered.map((g) => (
@@ -334,10 +359,21 @@ export function FormAnswer({
       {confirming && (
         <div ref={confirmBox}>
           <Card className="card-pad">
-            <p ref={confirmHeading} tabIndex={-1} className="todo-row-title m-0">この内容で提出します</p>
-            <p className="todo-row-sub m-0 mt-1">
-              提出すると自分では変更できなくなります。修正が必要になったときは上長にご連絡ください。
+            <p ref={confirmHeading} tabIndex={-1} className="todo-row-title m-0">
+              {trial ? "この内容で試しに提出します" : "この内容で提出します"}
             </p>
+            <p className="todo-row-sub m-0 mt-1">
+              {trial
+                ? "本物の提出と同じ検査（未入力の欄・数値の範囲）だけを行います。内容は保存しません。"
+                : "提出すると自分では変更できなくなります。修正が必要になったときは上長にご連絡ください。"}
+            </p>
+            {trialPassed && (
+              <RefreshStatus
+                message="試しの提出は通りました。本物の回答画面では、ここで提出が終わり、回答一覧に「提出済み」で出ます。この内容は保存していません。"
+                refreshing={false}
+                className="m-0 mt-3 text-sub text-brand-deep"
+              />
+            )}
             {/* 未入力で断られたときは、下の知らせと同じ文になるので1つだけ出す */}
             {submitError && submitError !== missingNote && (
               <div className="mt-3">
@@ -382,11 +418,19 @@ export function FormAnswer({
             <Button disabled={saving || submitting} onClick={() => setConfirming(false)}>入力に戻る</Button>
             {/* 下書きの保存中も押せる（提出は保存の後ろに並び、前の保存を追い越さない。persist） */}
             <Button variant="primary" disabled={saving || submitting} onClick={submit}>
-              {saving || submitting ? "提出しています…" : "提出する"}
+              {trial ? "試しに提出する" : saving || submitting ? "提出しています…" : "提出する"}
             </Button>
           </>
         ) : (
-          <Button variant="primary" disabled={saving || submitting} onClick={() => setConfirming(true)}>
+          <Button
+            variant="primary"
+            disabled={saving || submitting}
+            onClick={() => {
+              // 前に開いたときの試しの結果は、押し直すまで出さない
+              setTrialPassed(false);
+              setConfirming(true);
+            }}
+          >
             内容を確認して提出する
           </Button>
         )}
