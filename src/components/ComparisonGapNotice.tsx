@@ -161,10 +161,10 @@ function listOrMark(names: string) {
 function FixControl({ gap }: { gap: ComparisonGap }) {
   const { fix } = gap;
   if (!fix) return null;
-  return <div className="[&_.btn]:whitespace-normal!">{fixControlOf(fix, gap.formTitle)}</div>;
+  return <div className="[&_.btn]:whitespace-normal!">{fixControlOf(fix, gap)}</div>;
 }
 
-function fixControlOf(fix: NonNullable<ComparisonGap["fix"]>, formTitle: string) {
+function fixControlOf(fix: NonNullable<ComparisonGap["fix"]>, gap: ComparisonGap) {
   switch (fix.kind) {
     case "rebuild":
       return (
@@ -174,7 +174,7 @@ function fixControlOf(fix: NonNullable<ComparisonGap["fix"]>, formTitle: string)
           input={{ formId: fix.formId }}
           label={fixLabel(fix)}
           variant="secondary"
-          confirm={fixConfirm(fix, formTitle)}
+          confirm={fixConfirm(fix, gap)}
         />
       );
     case "newVersion":
@@ -185,7 +185,7 @@ function fixControlOf(fix: NonNullable<ComparisonGap["fix"]>, formTitle: string)
           input={{ cycleId: fix.cycleId, gradeIds: [fix.gradeId] }}
           label={fixLabel(fix)}
           variant="secondary"
-          confirm={fixConfirm(fix, formTitle)}
+          confirm={fixConfirm(fix, gap)}
         />
       );
     case "openNewer":

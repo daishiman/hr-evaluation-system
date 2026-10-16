@@ -325,7 +325,7 @@ test.describe("設問と保存済みデータの接続（A10・A11）", () => {
     await page.reload();
     await expect(previewTitle).toHaveAttribute("id", assignedId!);
 
-    const rebuild = "いまの評価項目に合わせて設問を作り直す";
+    const rebuild = "いまの制度の設定から設問を作り直す";
     await waitForHydration(page, "main button");
     await page.getByRole("button", { name: rebuild, exact: true }).click();
     await page.getByRole("dialog", { name: `${rebuild}の確認` }).getByRole("button", { name: rebuild, exact: true }).click();

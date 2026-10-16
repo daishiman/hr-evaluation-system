@@ -13,6 +13,7 @@ import { rebuildFormQuestions, updateForm } from "@/actions/forms";
 import { Badge, Card, Disclosure, InlineDetail, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { ComparisonGapNotice } from "@/components/ComparisonGapNotice";
 import { loadFormComparisonGap } from "@/lib/comparison-gap-loader";
+import { REBUILD_LABEL, noTemplateNamesOf, rebuildConfirm, rebuildWontFixNote } from "@/lib/domain/comparison-gap";
 import { FORM_STATUS_LABEL } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
 
   // 公開後は回答0件でもすでに読まれている可能性があるため、同じ版の内容は変えない。
   const editable = form.status === "draft" && responses.length === 0;
+  const rebuildNote = rebuildWontFixNote(comparisonGap);
   const previewQuestions = questions.map((q) => ({
     id: q.id,
     section: q.section,
@@ -151,15 +153,18 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
           </div>
         )}
         {editable && form.status === "draft" && (
-          // ボタンの札も長いので、上の札と同じく、この枠の中だけ折り返しを許す
-          <div className="mt-3 text-pretty [word-break:auto-phrase] [&_.btn]:whitespace-normal!">
+          // ボタンの札も長いので、上の札と同じく、この枠の中だけ折り返しを許す。
+          // ボタンは警告の有無にかかわらず出す。作り直しは等級要件・昇格要件・行動指針の変更を写す操作でもあるため。
+          // 押しても警告が消えないときは、押す前にその理由を1行で伝える（読み上げでもボタンより先に届く）
+          <div className="mt-3 grid justify-items-start gap-2 text-pretty [word-break:auto-phrase] [&_.btn]:whitespace-normal!">
+            {rebuildNote && <p className="m-0 text-sub">{rebuildNote}</p>}
             <ActionButton
               action={rebuildFormQuestions}
               resource="forms"
               input={{ formId: form.id }}
-              label="いまの評価項目に合わせて設問を作り直す"
+              label={REBUILD_LABEL}
               variant="secondary"
-              confirm={`「${displayTitle}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ回答は1件もありません。よろしいですか？`}
+              confirm={rebuildConfirm(displayTitle, noTemplateNamesOf(comparisonGap))}
             />
           </div>
         )}

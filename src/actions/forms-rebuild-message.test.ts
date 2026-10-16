@@ -75,7 +75,7 @@ describe("設問を作り直したときの返事", () => {
 
     expect(result).toMatchObject({ ok: true });
     const message = (result as { message: string }).message;
-    expect(message).toMatch(/^いまの評価項目に合わせて設問を作り直しました（\d+問）。/);
+    expect(message).toMatch(/^いまの制度の設定から設問を作り直しました（\d+問）。/);
     expect(message).toContain(NOTE + HINT);
     expect(message.endsWith("内容を確認してから公開してください。")).toBe(true);
   });
@@ -90,7 +90,7 @@ describe("設問を作り直したときの返事", () => {
 
     expect(result).toMatchObject({ ok: true });
     expect((result as { message: string }).message).toMatch(
-      /^いまの評価項目に合わせて設問を作り直しました（\d+問）。内容を確認してから公開してください。$/,
+      /^いまの制度の設定から設問を作り直しました（\d+問）。内容を確認してから公開してください。$/,
     );
   });
 });

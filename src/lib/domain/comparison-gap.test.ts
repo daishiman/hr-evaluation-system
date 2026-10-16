@@ -7,12 +7,16 @@ import {
   FORM_LEDGER_PATH,
   NO_TEMPLATE_BADGE,
   NO_TEMPLATE_HINT,
+  REBUILD_LABEL,
   SELECTION_LEDGER_PATH,
   comparisonGapOf,
   comparisonSummary,
   fixConfirm,
   fixLabel,
+  noTemplateNamesOf,
   noTemplateNote,
+  rebuildConfirm,
+  rebuildWontFixNote,
   type ComparisonForm,
   type ComparisonGap,
   type ComparisonGapInput,
@@ -390,7 +394,8 @@ describe("文言", () => {
   });
 
   it("直す操作の札", () => {
-    expect(fixLabel({ kind: "rebuild", formId: "frm_1" })).toBe("設問を作り直す");
+    expect(fixLabel({ kind: "rebuild", formId: "frm_1" })).toBe("いまの制度の設定から設問を作り直す");
+    expect(fixLabel({ kind: "rebuild", formId: "frm_1" })).toBe(REBUILD_LABEL);
     expect(fixLabel({ kind: "newVersion", cycleId: "cyc_1", gradeId: "grd_1" })).toBe("この等級だけ新しい版の下書きを作る");
     expect(fixLabel({ kind: "openNewer", formId: "frm_2", href: "/admin/forms/frm_2", version: 2, draft: true })).toBe("第2版の下書きを開く");
     expect(fixLabel({ kind: "openNewer", formId: "frm_3", href: "/admin/forms/frm_3", version: 3, draft: false })).toBe("第3版を開く");
@@ -399,15 +404,58 @@ describe("文言", () => {
   });
 
   it("作り直しと新しい版は確認つき。リンクは確認しない", () => {
-    const title = "春の実績アンケート";
-    expect(fixConfirm({ kind: "rebuild", formId: "frm_1" }, title)).toBe(
+    const gap = gapOf({ form: form({ title: "春の実績アンケート" }) });
+    expect(fixConfirm({ kind: "rebuild", formId: "frm_1" }, gap)).toBe(
       "「春の実績アンケート」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ公開前で、回答は1件もありません。よろしいですか？",
     );
-    expect(fixConfirm({ kind: "newVersion", cycleId: "cyc_1", gradeId: "grd_1" }, title)).toBe(
+    expect(fixConfirm({ kind: "newVersion", cycleId: "cyc_1", gradeId: "grd_1" }, gap)).toBe(
       "「春の実績アンケート」の等級だけ、いまの評価項目で新しい版の下書きを作ります。いまの版はそのまま残ります。よろしいですか？",
     );
-    expect(fixConfirm({ kind: "openNewer", formId: "frm_2", href: "/admin/forms/frm_2", version: 2, draft: true }, title)).toBeUndefined();
-    expect(fixConfirm({ kind: "finishScheme", ...SCHEME_GAP }, title)).toBeUndefined();
-    expect(fixConfirm({ kind: "reselect", href: "/admin/scheme/Regular" }, title)).toBeUndefined();
+    expect(fixConfirm({ kind: "openNewer", formId: "frm_2", href: "/admin/forms/frm_2", version: 2, draft: true }, gap)).toBeUndefined();
+    expect(fixConfirm({ kind: "finishScheme", ...SCHEME_GAP }, gap)).toBeUndefined();
+    expect(fixConfirm({ kind: "reselect", href: "/admin/scheme/Regular" }, gap)).toBeUndefined();
+  });
+
+  it("ひな形の無い項目があれば、作り直しにも新しい版にも、押す前にその項目を名指しする", () => {
+    const gap = gapOf({ form: form({ title: "春の実績アンケート" }), unaskable: ["kpi_c"] });
+    const note = "「粗利率」には設問のひな形がありません。作り直しても新しい版でも、設問は出ず点も付きません。";
+    expect(fixConfirm({ kind: "rebuild", formId: "frm_1" }, gap)).toBe(
+      `「春の実績アンケート」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。${note}まだ公開前で、回答は1件もありません。よろしいですか？`,
+    );
+    expect(fixConfirm({ kind: "newVersion", cycleId: "cyc_1", gradeId: "grd_1" }, gap)).toBe(
+      `「春の実績アンケート」の等級だけ、いまの評価項目で新しい版の下書きを作ります。いまの版はそのまま残ります。${note}よろしいですか？`,
+    );
+  });
+
+  it("アンケート1本の画面のボタンの確認は、警告の中の作り直しと同じ文", () => {
+    const gap = gapOf({ form: form({ status: "draft", title: "春の実績アンケート" }), unaskable: ["kpi_b", "kpi_c"] });
+    expect(rebuildConfirm(gap.formTitle, noTemplateNamesOf(gap))).toBe(fixConfirm({ kind: "rebuild", formId: "frm_1" }, gap));
+    // 警告が無いときは、ひな形の注記を入れない
+    expect(noTemplateNamesOf(null)).toEqual([]);
+    expect(rebuildConfirm("春の実績アンケート", [])).toBe(
+      "「春の実績アンケート」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ公開前で、回答は1件もありません。よろしいですか？",
+    );
+  });
+});
+
+describe("rebuildWontFixNote: 作り直しても警告が消えないときの1行", () => {
+  const draft = form({ status: "draft", responseCount: 0 });
+  const ONLY_UNASKABLE: Partial<ComparisonGapInput> = { asked: ["kpi_a"], unaskable: ["kpi_b", "kpi_c"], form: draft, current: "form" };
+  const LEAD = "下のボタンで作り直しても、上のズレは直りません。足りない項目に設問のひな形が無いためです。";
+
+  it("足りないのがひな形の無い項目だけで余分も無いときだけ出す。直し方があれば警告を開くよう促す", () => {
+    expect(rebuildWontFixNote(gapOf(ONLY_UNASKABLE))).toBe(`${LEAD}直し方は「直すところを見る」を開いてください。`);
+  });
+
+  it("直し方を出せない役割には、開くよう促さない", () => {
+    expect(rebuildWontFixNote(gapOf({ ...ONLY_UNASKABLE, role: "MANAGER" }))).toBe(LEAD);
+  });
+
+  it("作り直せば直る行が1つでもあれば出さない。警告が無ければ出さない", () => {
+    expect(rebuildWontFixNote(null)).toBeNull();
+    // 余分（定着率）は作り直せば消える
+    expect(rebuildWontFixNote(gapOf({ unaskable: ["kpi_b", "kpi_c"], form: draft, current: "form" }))).toBeNull();
+    // 足りない項目の片方にはひな形がある
+    expect(rebuildWontFixNote(gapOf({ asked: ["kpi_a"], unaskable: ["kpi_c"], form: draft, current: "form" }))).toBeNull();
   });
 });

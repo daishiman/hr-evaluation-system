@@ -144,12 +144,12 @@ describe("ComparisonGapNotice: アンケートの一覧・1本で開いた中（
 });
 
 describe("ComparisonGapNotice: 直す操作（1つだけ）", () => {
-  it("下書きで回答0件なら、一覧に確認つきの『設問を作り直す』を出す", () => {
+  it("下書きで回答0件なら、一覧に確認つきの作り直しを出す（札はアンケート1本の画面のボタンと同じ）", () => {
     const opened = openedPart(render([gap({ form: form({ status: "draft" }) })]));
     expect(count(opened, "<button")).toBe(1);
     expect(opened).toContain('data-action="rebuildFormQuestions"');
     expect(opened).toContain(`data-input="${escapeAttr(JSON.stringify({ formId: "frm_1" }))}"`);
-    expect(opened).toContain(">設問を作り直す</button>");
+    expect(opened).toContain(">いまの制度の設定から設問を作り直す</button>");
     expect(opened).toContain("まだ公開前で、回答は1件もありません。");
     expect(opened).not.toContain("設問を差し替えません");
   });

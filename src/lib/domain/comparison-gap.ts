@@ -252,11 +252,46 @@ export function comparisonSummary(gaps: readonly ComparisonGap[]): string {
   return `評価項目とのズレ ${missing + extra}件（足りない${missing}・余分${extra}）`;
 }
 
+/**
+ * 作り直しの札。アンケート1本の画面の枠の外のボタンと、一覧の警告の中のボタンで同じ字面にする。
+ * 作り直しは KPI だけでなく、等級要件・昇格要件・行動指針の設問も作り直すので、「評価項目に合わせて」とは書かない。
+ * 押せばズレが直ると約束する字面にもしない（ひな形の無い項目は作り直しても足りないまま。rebuildWontFixNote）
+ */
+export const REBUILD_LABEL = "いまの制度の設定から設問を作り直す";
+
+/** 警告の行のうち、設問のひな形が無い項目の名前（表に出した順） */
+export function noTemplateNamesOf(gap: ComparisonGap | null): string[] {
+  return gap ? gap.rows.filter((row) => row.noTemplate).map((row) => row.name) : [];
+}
+
+/**
+ * 作り直す前の確認。アンケート1本の画面のボタンと、警告の中の作り直しで同じ文を使う。
+ * ひな形の無い項目があれば、作り直しても設問が出ないことを押す前に伝える
+ */
+export function rebuildConfirm(formTitle: string, noTemplateNames: readonly string[]): string {
+  return (
+    `「${formTitle}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。` +
+    (noTemplateNames.length > 0 ? noTemplateNote(noTemplateNames) : "") +
+    "まだ公開前で、回答は1件もありません。よろしいですか？"
+  );
+}
+
+/**
+ * アンケート1本の画面で、警告とボタンの間に置く1行。作り直しを押しても警告が消えないときだけ出す。
+ * 足りないのが設問のひな形の無い項目だけで、余分も無いときがそれにあたる（余分は作り直せば消える）。
+ * 警告は閉じた段の件数だけが見えていて、その真下のボタンを押せば直ると読めるため、押す前に伝える
+ */
+export function rebuildWontFixNote(gap: ComparisonGap | null): string | null {
+  if (!gap || gap.extraCount > 0 || !gap.rows.every((row) => row.noTemplate)) return null;
+  const lead = "下のボタンで作り直しても、上のズレは直りません。足りない項目に設問のひな形が無いためです。";
+  return gap.fix ? `${lead}直し方は「${COMPARISON_OPEN_LABEL}」を開いてください。` : lead;
+}
+
 /** 直す操作の札 */
 export function fixLabel(fix: ComparisonFix): string {
   switch (fix.kind) {
     case "rebuild":
-      return "設問を作り直す";
+      return REBUILD_LABEL;
     case "newVersion":
       return "この等級だけ新しい版の下書きを作る";
     case "openNewer":
@@ -268,16 +303,19 @@ export function fixLabel(fix: ComparisonFix): string {
   }
 }
 
-/** 押す前の確認。書き込む操作（作り直し・新しい版）だけに付け、リンクには付けない */
-export function fixConfirm(fix: ComparisonFix, formTitle: string): string | undefined {
-  if (fix.kind === "rebuild") {
-    return (
-      `「${formTitle}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。` +
-      "手で足した設問は消えます。まだ公開前で、回答は1件もありません。よろしいですか？"
-    );
-  }
+/**
+ * 押す前の確認。書き込む操作（作り直し・新しい版）だけに付け、リンクには付けない。
+ * どちらも、ひな形の無い項目は入らないので、その項目を名指しする
+ */
+export function fixConfirm(fix: ComparisonFix, gap: ComparisonGap): string | undefined {
+  const noTemplate = noTemplateNamesOf(gap);
+  if (fix.kind === "rebuild") return rebuildConfirm(gap.formTitle, noTemplate);
   if (fix.kind === "newVersion") {
-    return `「${formTitle}」の等級だけ、いまの評価項目で新しい版の下書きを作ります。いまの版はそのまま残ります。よろしいですか？`;
+    return (
+      `「${gap.formTitle}」の等級だけ、いまの評価項目で新しい版の下書きを作ります。いまの版はそのまま残ります。` +
+      (noTemplate.length > 0 ? noTemplateNote(noTemplate) : "") +
+      "よろしいですか？"
+    );
   }
   return undefined;
 }
