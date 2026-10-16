@@ -12,7 +12,8 @@ const { rows, counts } = summarizeSubmissions(
     { employeeId: "u3", name: "上田" },
   ],
   [
-    { employeeId: "u1", status: "submitted", submittedAt: new Date(2026, 9, 1, 9, 5) },
+    // 日本時間の 9:05。機械の時間帯で作る new Date(2026, 9, 1, 9, 5) だと、UTC の CI では日本時間 18:05 になる
+    { employeeId: "u1", status: "submitted", submittedAt: new Date("2026-10-01T09:05:00+09:00") },
     { employeeId: "u2", status: "draft", submittedAt: null },
   ],
 );

@@ -11,21 +11,35 @@ export function rankToPercent(rank: string): number {
   return RATIO[rank] ?? 0;
 }
 
+/* 日付と時刻は日本時間（UTC+9。夏時間なし）で書く。サーバー（Workers）は UTC で動くので、
+   機械の時間帯で読む getDate・getHours を使うと、日本時間の0時〜9時の出来事が前の日・9時間前になる。
+   CSV（csv.ts の formatDateTime）と同じく、9時間進めてから getUTC* で読む。 */
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function toJstClock(d: Date): Date {
+  return new Date(d.getTime() + JST_OFFSET_MS);
+}
+
 export function formatDate(v: string | Date | null | undefined): string {
   if (!v) return "—";
+  // 「2026-09-30」は時刻を持たない暦の日付なので、時間帯を通さずにそのまま読む
+  const ymd = typeof v === "string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim()) : null;
+  if (ymd) return `${Number(ymd[1])}年${Number(ymd[2])}月${Number(ymd[3])}日`;
   const d = typeof v === "string" ? new Date(v) : v;
   if (Number.isNaN(d.getTime())) return String(v);
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  const j = toJstClock(d);
+  return `${j.getUTCFullYear()}年${j.getUTCMonth() + 1}月${j.getUTCDate()}日`;
 }
 
 /**
- * 日付と時刻。届いた順を追う画面（改善要望）で使う。
+ * 日付と時刻。届いた順や提出の時刻を追う画面（改善要望・回答一覧など）で使う。
  * 「今日の何時に届いたか」まで分からないと、同じ日の並びが読めないため。
  */
 export function formatDateTime(v: Date | null | undefined): string {
   if (!v || Number.isNaN(v.getTime())) return "—";
-  const hh = String(v.getHours()).padStart(2, "0");
-  const mm = String(v.getMinutes()).padStart(2, "0");
+  const j = toJstClock(v);
+  const hh = String(j.getUTCHours()).padStart(2, "0");
+  const mm = String(j.getUTCMinutes()).padStart(2, "0");
   return `${formatDate(v)} ${hh}:${mm}`;
 }
 
