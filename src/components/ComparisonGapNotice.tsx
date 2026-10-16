@@ -2,11 +2,12 @@ import Link from "next/link";
 import { ActionButton } from "@/components/ActionButton";
 import { DataTable } from "@/components/DataTable";
 import { Icon } from "@/components/Icon";
-import { InlineDetail, LinkButton } from "@/components/ui";
+import { Badge, InlineDetail, LinkButton } from "@/components/ui";
 import { createForms, rebuildFormQuestions } from "@/actions/forms";
 import {
   COMPARISON_LEAD,
   COMPARISON_OPEN_LABEL,
+  NO_TEMPLATE_BADGE,
   comparisonSummary,
   fixConfirm,
   fixLabel,
@@ -65,7 +66,7 @@ function FormBody({ gap }: { gap: ComparisonGap }) {
         scroll
         caption="使うKPIを選ぶとこのアンケートの項目の比べ"
         columns={[
-          { key: "name", header: "項目", cell: (row) => row.name, role: "title" },
+          { key: "name", header: "項目", cell: (row) => <RowName row={row} />, role: "title" },
           { key: "selection", header: "使うKPIを選ぶ", cell: (row) => <Mark on={row.inSelection} /> },
           { key: "form", header: "このアンケート", cell: (row) => <Mark on={row.inForm} /> },
         ]}
@@ -80,7 +81,8 @@ function FormBody({ gap }: { gap: ComparisonGap }) {
 
 /** 使うKPIを選ぶ：このページのリンク1行と、アンケートごとに1行の表 */
 function SelectionBody({ gaps }: { gaps: readonly ComparisonGap[] }) {
-  const names = (rows: readonly ComparisonRow[]) => rows.map((row) => row.name).join("・");
+  const names = (rows: readonly ComparisonRow[]) =>
+    rows.map((row) => (row.noTemplate ? `${row.name}（${NO_TEMPLATE_BADGE}）` : row.name)).join("・");
   return (
     <div className="mt-2 grid gap-2">
       <p className="m-0">
@@ -121,6 +123,16 @@ function PageLink({ page }: { page: ComparisonPage }) {
         <span>{page.label}</span>
       )}
       {page.current && "（このページ）"}
+    </>
+  );
+}
+
+/** 項目名。設問のひな形が無い項目には、使うKPIを選ぶの候補と同じ札を添える */
+function RowName({ row }: { row: ComparisonRow }) {
+  if (!row.noTemplate) return row.name;
+  return (
+    <>
+      {row.name} <Badge tone="required">{NO_TEMPLATE_BADGE}</Badge>
     </>
   );
 }
@@ -178,6 +190,7 @@ function fixControlOf(fix: NonNullable<ComparisonGap["fix"]>, formTitle: string)
       );
     case "openNewer":
     case "finishScheme":
+    case "reselect":
       return (
         <LinkButton href={fix.href} variant="secondary">
           {fixLabel(fix)}

@@ -228,3 +228,56 @@ describe("validateScheme — ランク基準が未設定の項目", () => {
     for (const id of ["k2", "k3", "k5", "k7"]) expect(r.warnings[0]).toContain(`項目${id}`);
   });
 });
+
+describe("validateScheme — 設問のひな形が無い項目", () => {
+  /* 画面で足したKPI項目には実績を聞く設問のひな形（kpi_questions）が無く、アンケートを作っても
+     作り直しても設問が出ない。作り直しで直ると思わせないよう、選んだ時点で知らせる。 */
+  const ALL = VALID.Manager.map((x) => x.kpiItemId);
+
+  it("askableItemIds を渡さなければ判定しない（未対応の呼び出し元で誤警告を出さない）", () => {
+    expect(validateScheme(VALID.Manager, opts("Manager")).warnings).toEqual([]);
+  });
+
+  it("すべての項目にひな形があれば何も言わない", () => {
+    const r = validateScheme(VALID.Manager, opts("Manager", { askableItemIds: ALL }));
+    expect(r.warnings).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("ひな形が無くても保存は通し、項目名と、作り直しても設問が出ず点も付かないことを伝える", () => {
+    const r = validateScheme(
+      VALID.Manager,
+      opts("Manager", {
+        askableItemIds: ALL.filter((id) => id !== "k11"),
+        itemNameOf: (id) => (id === "k11" ? "紹介件数" : id),
+      }),
+    );
+    expect(r.errors).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(r.warnings).toHaveLength(1);
+    expect(r.warnings[0]).toContain("「紹介件数」");
+    expect(r.warnings[0]).toContain("作り直しても");
+    expect(r.warnings[0]).toContain("点も付きません");
+  });
+
+  it("固定枠は等級要件の設問から数えるので、ひな形が無くても言わない", () => {
+    const r = validateScheme(VALID.Manager, opts("Manager", { askableItemIds: ALL.filter((id) => id !== "k1") }));
+    expect(r.warnings).toEqual([]);
+  });
+
+  it("ランク基準の警告とは別の1行にし、無い項目が複数でも1つにまとめる", () => {
+    const r = validateScheme(
+      VALID.Chief,
+      opts("Chief", {
+        ratedItemIds: ["k1", "k9", "k2", "k3", "k5"],
+        askableItemIds: ["k1", "k9", "k2"],
+        itemNameOf: (id) => `項目${id}`,
+      }),
+    );
+    expect(r.warnings).toHaveLength(2);
+    const [unrated, unaskable] = r.warnings;
+    expect(unrated).toContain("項目k7");
+    for (const id of ["k3", "k5", "k7"]) expect(unaskable).toContain(`項目${id}`);
+    expect(unaskable).not.toContain("項目k2");
+  });
+});

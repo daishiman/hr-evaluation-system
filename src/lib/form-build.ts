@@ -438,7 +438,7 @@ export function assertFormContentEditable(form: { status: string; title: string 
 export async function syncFormQuestions(opts: {
   companyId: string;
   formId: string;
-}): Promise<{ questionCount: number; removed: number }> {
+}): Promise<{ questionCount: number; removed: number; cycleId: string }> {
   const { companyId, formId } = opts;
   const db = await getDb();
 
@@ -493,5 +493,5 @@ export async function syncFormQuestions(opts: {
     ...questionInsertStatements(db, rows),
   ]);
 
-  return { questionCount: rows.length, removed: before.length };
+  return { questionCount: rows.length, removed: before.length, cycleId: form.cycleId };
 }

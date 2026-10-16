@@ -33,6 +33,13 @@
 
 import { expectedItemCount, pointsForSlot, slotKindOf, type GradePointRule } from "./grade-points";
 
+/**
+ * 設問のひな形が無い項目に付ける札。使うKPIを選ぶの候補（SchemeGroupPicker.tsx）と
+ * 比べる警告の表（comparison-gap.ts から ComparisonGapNotice.tsx）で同じ字面にする。
+ * 選ぶ画面はブラウザで動くので、台帳を読む comparison-gap.ts ではなくここに置く
+ */
+export const NO_TEMPLATE_BADGE = "設問なし";
+
 export interface SchemeSelection {
   kpiItemId: string;
   categoryId: string | null;
@@ -63,6 +70,12 @@ export interface ValidateSchemeOptions {
    * 渡さなかった場合は判定しない（呼び出し側がまだ対応していない箇所での誤警告を避ける）。
    */
   ratedItemIds?: Iterable<string>;
+  /**
+   * 実績を聞く設問のひな形（kpi_questions）を持つ項目のID（queries.ts の listAskableKpiItemIds）。
+   * ここに無い項目を選んでも、アンケートを作っても作り直しても設問が出ず、点も付かない。
+   * 渡さなかった場合は判定しない（ratedItemIds と同じ理由）。
+   */
+  askableItemIds?: Iterable<string>;
   /** 指摘に業務の言葉（項目名）を出すための引き当て */
   itemNameOf?: (id: string) => string;
   /**
@@ -133,6 +146,27 @@ export function validateScheme(selections: SchemeSelection[], opts: ValidateSche
           `ただし上位の等級を想定して作られた基準がそのまま使われます。` +
           `${group}には厳しすぎる可能性があります。` +
           `「評価基準」で閾値を確認してください。`,
+      );
+    }
+  }
+
+  /* ひな形の無い項目は、選べても設問が作られない。アンケートの「設問を作り直す」を押しても
+     足りないままなので、作り直しで直ると思わせないよう、選んだ時点で知らせる。
+     ランク基準と同じ理由で errors にはしない（先に評価軸を決める作業順を塞がない）。
+     固定枠は等級要件の設問から実績を数えるので除く（form-build.ts）。等級要件が1件も無い等級では
+     固定枠のひな形（seed.sql の q1_1）に頼る。q1_1 は見本の各会社にあり、新しい会社にもひな形ごと写す
+     （template.ts）。画面から足す項目は固定枠にならない（apply-master-update.ts の isFixedSlot: false）。
+     比べる警告の札（comparison-gap-loader.ts）も同じ線引きにしている。 */
+  if (opts.askableItemIds !== undefined) {
+    const askable = new Set(opts.askableItemIds);
+    const unaskable = selections.filter((x) => !x.isFixedSlot && !askable.has(x.kpiItemId));
+    if (unaskable.length > 0) {
+      warnings.push(
+        `${unaskable.map((x) => `「${nameOf(x.kpiItemId)}」`).join("・")}には、実績を聞く設問のひな形がありません。` +
+          "このまま保存はできます。" +
+          "アンケートを作っても作り直しても、この項目の設問は出ず、点も付きません。" +
+          "ひな形は画面からは足せません。" +
+          "ひな形のある別の項目を選ぶか、システム管理者にご連絡ください。",
       );
     }
   }

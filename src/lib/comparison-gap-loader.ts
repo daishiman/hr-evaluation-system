@@ -8,7 +8,7 @@
  * 自社の警告に混ぜず、他社の大きい版を「より新しい版」と取り違えない。
  */
 
-import { listCycles, listFormKpiCoverage, listForms, listGrades } from "@/lib/queries";
+import { listAskableKpiItemIds, listCycles, listFormKpiCoverage, listForms, listGrades } from "@/lib/queries";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 import type { Role } from "@/lib/roles";
 import type { ComparisonGap, ComparisonPageKey } from "@/lib/domain/comparison-gap";
@@ -53,15 +53,28 @@ async function gapsOfCycle(
   opts: ComparisonLoadOptions,
   keep: (form: FormRow, pointGroup: string) => boolean = () => true,
 ): Promise<Map<string, ComparisonGap>> {
-  const [forms, grades, coverage, readiness] = await Promise.all([
+  const [forms, grades, coverage, readiness, askableIds] = await Promise.all([
     listForms(companyId, cycle.id),
     listGrades(companyId),
     listFormKpiCoverage(companyId, cycle.id),
     loadSchemeReadiness(companyId, cycle.schemeId),
+    listAskableKpiItemIds(companyId),
   ]);
   const gaps = new Map<string, ComparisonGap>();
   // 有効な評価セットが無ければ比べる相手が無い（無いことを警告にしない）
   if (!coverage) return gaps;
+
+  // 聞いている項目の数え方は、比べる版と新しい版で同じにする（片方だけ固定枠を足すと、一致を取り違える）
+  const askedOf = (formId: string) =>
+    effectiveAskedItems(coverage.askedByForm.get(formId) ?? [], {
+      fixedSlotItemIds: coverage.fixedSlotItemIds,
+      hasRequirementQuestions: coverage.hasRequirementQuestions(formId),
+    });
+  // 設問のひな形が無い項目は、作り直しても新しい版でも聞けない。固定枠は等級要件の設問から数えるので除く
+  // （評価セットの保存時の警告 domain/scheme.ts と同じ線引き）
+  const askable = new Set(askableIds);
+  const fixedSlot = new Set(coverage.fixedSlotItemIds);
+  const unaskableOf = (selected: readonly string[]) => selected.filter((id) => !fixedSlot.has(id) && !askable.has(id));
 
   for (const form of forms) {
     const pointGroup = grades.find((g) => g.id === form.gradeId)?.pointGroup;
@@ -85,12 +98,10 @@ async function gapsOfCycle(
       pointGroup,
       groupLabel: pointGroupLabel(pointGroup, grades),
       selected,
-      asked: effectiveAskedItems(coverage.askedByForm.get(form.id) ?? [], {
-        fixedSlotItemIds: coverage.fixedSlotItemIds,
-        hasRequirementQuestions: coverage.hasRequirementQuestions(form.id),
-      }),
+      asked: askedOf(form.id),
+      unaskable: unaskableOf(selected),
       nameOf: coverage.nameOf,
-      newer: newer && { id: newer.id, version: newer.version, status: newer.status },
+      newer: newer && { id: newer.id, version: newer.version, status: newer.status, asked: askedOf(newer.id) },
       schemeGap: schemeGapOf(readiness.schemeGaps, pointGroup),
       current: opts.current,
       role: opts.role,

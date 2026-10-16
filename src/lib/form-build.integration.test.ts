@@ -25,6 +25,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { buildFormDrafts, buildQuestionRows } = await import("@/lib/form-build");
+const { listAskableKpiItemIds } = await import("@/lib/queries");
 
 beforeEach(() => {
   current = createTestDatabase();
@@ -78,6 +79,33 @@ describe("等級区分がManagerでも、行動指針の帯域を割り当てれ
     });
 
     expect(rows.filter((r) => r.section === "behavior")).toHaveLength(0);
+  });
+});
+
+describe("設問のひな形がある項目だけに、アンケートの設問ができる", () => {
+  /* 評価セットの「設問のひな形がありません」の警告（domain/scheme.ts）は listAskableKpiItemIds で判定する。
+     その一覧と、アンケートに実際に設問ができる項目が食い違うと、警告が外れるか、出るべき項目で出ない */
+  it("ひな形の無い項目は評価セットで選ばれていても設問ができず、一覧にも入らない", async () => {
+    await seedCompany(current);
+    await current.db.insert(s.kpiQuestions).values([
+      { id: "kq_higher", companyId: IDS.company, kpiItemId: IDS.itemHigher, questionKey: "q_h", text: "件数", role: "direct" },
+      // 項目に結び付かない共通の設問（氏名など）は、どの項目のひな形にも数えない
+      { id: "kq_common", companyId: IDS.company, kpiItemId: null, questionKey: "c_1", text: "氏名", role: "identify" },
+    ]);
+
+    expect(await listAskableKpiItemIds(IDS.company)).toEqual([IDS.itemHigher]);
+    expect(await listAskableKpiItemIds("cmp_other")).toEqual([]);
+
+    const rows = await buildQuestionRows({
+      companyId: IDS.company,
+      cycleId: IDS.cycle,
+      gradeId: IDS.gradeFrom,
+      formId: "frm_askable_test",
+    });
+    const asked = new Set(rows.filter((r) => r.section === "kpi").map((r) => r.kpiItemId));
+    expect(asked.has(IDS.itemHigher)).toBe(true);
+    // 評価セットでは選んであるが、ひな形が無いので設問ができない（作り直しても同じ）
+    expect(asked.has(IDS.itemLower)).toBe(false);
   });
 });
 

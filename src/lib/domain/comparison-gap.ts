@@ -4,11 +4,12 @@
  * 「使うKPIを選ぶ」で選んだ項目と、配ってあるアンケートが実績を聞いている項目を比べ、
  * 違いがあれば、どの2つのページを見比べればよいかと、直す操作1つを組で返す。
  *
- * 決めていることは4つ。
+ * 決めていることは5つ。
  *  1. 警告は必ず2つのページ（使うKPIを選ぶ・このアンケート）を持つ。名前は台帳の画面名から始まる階層つき
  *  2. 表の行は、足りない項目（選んだ順）のあとに余分な項目（聞いた順）
- *  3. 直す操作は上から順に1つだけ選ぶ（pickFix）
+ *  3. 直す操作は上から順に1つだけ選ぶ（pickFix）。足りないのが設問のひな形の無い項目だけで余分も無いなら、選び直しへ案内する
  *  4. リンクと直す操作は、見る人の役割で開ける・できるものだけ。開けない人には名前だけを残す
+ *  5. 同じ評価期間・等級の一番新しい版が選んだ項目と一致していれば、古い版には出さない（直し終わっている）
  *
  * 項目の差（diffFormKpiItems）を使ってよいのはこのファイルだけ。画面は ComparisonGapNotice を通す。
  */
@@ -37,6 +38,20 @@ export const COMPARISON_OPEN_LABEL = "直すところを見る";
 const PUBLISHED_NOTE = "公開後や回答のあるアンケートは設問を差し替えません";
 const CLOSED_NOTE = "締め切った評価期間には新しい版を作れません";
 
+/** 表の項目名に添える札（使うKPIを選ぶの候補の札と同じ字面。定義は scheme.ts） */
+export { NO_TEMPLATE_BADGE } from "./scheme";
+
+/**
+ * 設問のひな形が無い項目の注記。作り直しの返事（actions/forms.ts）でも同じ文を使う。
+ * ひな形は form-build.ts が設問を作る元なので、無い項目はどの版にも設問が出ない
+ */
+export function noTemplateNote(names: readonly string[]): string {
+  return `${names.map((name) => `「${name}」`).join("・")}には設問のひな形がありません。作り直しても新しい版でも、設問は出ず点も付きません。`;
+}
+
+/** 設問のひな形が無い項目の直し方。リンクを置けない作り直しの返事で使う */
+export const NO_TEMPLATE_HINT = `${stepTitle("select")}で、ひな形のある項目に選び直してください。`;
+
 export type ComparisonPageKey = "selection" | "form";
 
 export interface ComparisonPage {
@@ -58,13 +73,16 @@ export interface ComparisonRow {
   inSelection: boolean;
   /** このアンケートで聞いているか */
   inForm: boolean;
+  /** 実績を聞く設問のひな形が無いか。足りない行だけが true になる（作り直しても新しい版でも直らない） */
+  noTemplate: boolean;
 }
 
 export type ComparisonFix =
   | { kind: "rebuild"; formId: string }
   | { kind: "newVersion"; cycleId: string; gradeId: string }
   | { kind: "openNewer"; formId: string; href: string; version: number; draft: boolean }
-  | { kind: "finishScheme"; href: string; linkLabel: string };
+  | { kind: "finishScheme"; href: string; linkLabel: string }
+  | { kind: "reselect"; href: string };
 
 /** 比べるアンケート（一覧・詳細の読み出しの行の一部） */
 export interface ComparisonForm {
@@ -89,9 +107,11 @@ export interface ComparisonGapInput {
   selected: readonly string[];
   /** このアンケートが実績を聞いている項目（effectiveAskedItems で数え直したもの） */
   asked: readonly string[];
+  /** 選んだ項目のうち、実績を聞く設問のひな形が無いもの（固定枠を除く。queries.ts の listAskableKpiItemIds で判定） */
+  unaskable: readonly string[];
   nameOf: (id: string) => string;
-  /** 同じ評価期間・等級で、版がより大きいアンケートの最大のもの */
-  newer: { id: string; version: number; status: string } | null;
+  /** 同じ評価期間・等級で、版がより大きいアンケートの最大のもの。asked はその版が実績を聞いている項目（数え方は asked と同じ） */
+  newer: { id: string; version: number; status: string; asked: readonly string[] } | null;
   /** 評価セットの準備が残っていれば、その手順へのリンク */
   schemeGap: { href: string; linkLabel: string } | null;
   current: ComparisonPageKey | null;
@@ -122,13 +142,23 @@ const FIX_GUARD: Record<ComparisonFix["kind"], (role: Role) => boolean> = {
   rebuild: (role) => roleCan(role, "forms.rebuildQuestions"),
   finishScheme: (role) => roleCanOpen(role, SCHEME_LEDGER_PATH),
   newVersion: (role) => roleCan(role, "forms.create"),
+  reselect: (role) => roleCanOpen(role, SELECTION_LEDGER_PATH),
 };
 
 /** 直す操作を上から順に1つだけ選ぶ（DD-012 の5）。役割での絞り込みは呼び出し側で行う */
-function pickFix(input: ComparisonGapInput): ComparisonFix | null {
+function pickFix(input: ComparisonGapInput, rows: readonly ComparisonRow[]): ComparisonFix | null {
   const { form, newer } = input;
-  // 順は DD-012 の5（新しい版→作り直し→締切→準備の残り→新しい版を作る）。
-  // 新しい版があれば、まずそれを開かせて版を重ねて作らせない。下書きはその場で直すのが一番安い。
+  // 足りないのが設問のひな形の無い項目だけで余分も無いなら（余分の行は noTemplate が false なので every で外れる）、
+  // アンケート側のどの操作でも直らない。
+  // 作り直しや新しい版を出すと、押しても直らず版だけが増えるので、選び直しへ案内する。
+  // 締め切った期は選び直してもその期のアンケートは変わらず、使うKPIを選ぶの画面では今いるページなので出さない
+  if (rows.every((row) => row.noTemplate)) {
+    if (form.cycleStatus === "closed" || input.current === "selection") return null;
+    return { kind: "reselect", href: schemeStepPath(input.pointGroup, "select") };
+  }
+  // 残りの順は DD-012 の5（新しい版→作り直し→締切→準備の残り→新しい版を作る）。
+  // 新しい版があれば、まずそれを開かせて版を重ねて作らせない（ここに来るのは、その版もまだ一致していないとき）。
+  // 下書きはその場で直すのが一番安い。
   // 締め切った期では新しい版を作れない。準備が残ったまま新しい版を作ると、その版もまたズレる。
   if (newer) {
     return { kind: "openNewer", formId: newer.id, href: formPath(newer.id), version: newer.version, draft: newer.status === "draft" };
@@ -140,21 +170,49 @@ function pickFix(input: ComparisonGapInput): ComparisonFix | null {
   return { kind: "newVersion", cycleId: form.cycleId, gradeId: form.gradeId };
 }
 
-function noteOf(input: ComparisonGapInput): string | null {
+function stateNoteOf(input: ComparisonGapInput): string | null {
   if (isUntouchedDraft(input.form)) return null;
   if (input.form.cycleStatus === "closed" && !input.newer) return CLOSED_NOTE;
   return PUBLISHED_NOTE;
 }
 
-/** 選んだ項目と聞いている項目に違いがあれば警告を作る。並び順の違いだけなら null */
+/** 注記。設問のひな形が無い項目があれば先に置く（直す操作を押しても残る理由なので） */
+function noteOf(input: ComparisonGapInput, rows: readonly ComparisonRow[]): string | null {
+  const noTemplate = rows.filter((row) => row.noTemplate).map((row) => row.name);
+  const notes = [noTemplate.length > 0 ? noTemplateNote(noTemplate) : null, stateNoteOf(input)].filter((x) => x !== null);
+  return notes.length > 0 ? notes.join("") : null;
+}
+
+/** 選んだ項目と聞いている項目が、並び順を除いて同じか */
+function inSync(selected: readonly string[], asked: readonly string[]): boolean {
+  const diff = diffFormKpiItems(selected, asked);
+  return diff.missing.length === 0 && diff.extra.length === 0;
+}
+
+/**
+ * 選んだ項目と聞いている項目に違いがあれば警告を作る。並び順の違いだけなら null。
+ * 一番新しい版が一致していれば、この版に違いがあっても null（決めていることの5）
+ */
 export function comparisonGapOf(input: ComparisonGapInput): ComparisonGap | null {
   const { form, role } = input;
   const diff = diffFormKpiItems(input.selected, input.asked);
+  const unaskable = new Set(input.unaskable);
   const rows: ComparisonRow[] = [
-    ...diff.missing.map((itemId) => ({ itemId, name: input.nameOf(itemId), inSelection: true, inForm: false })),
-    ...diff.extra.map((itemId) => ({ itemId, name: input.nameOf(itemId), inSelection: false, inForm: true })),
+    ...diff.missing.map((itemId) => ({
+      itemId,
+      name: input.nameOf(itemId),
+      inSelection: true,
+      inForm: false,
+      noTemplate: unaskable.has(itemId),
+    })),
+    ...diff.extra.map((itemId) => ({ itemId, name: input.nameOf(itemId), inSelection: false, inForm: true, noTemplate: false })),
   ];
   if (rows.length === 0) return null;
+  // 直した結果は新しい版に出ることがある（公開済み・締め切り済みの版は変えられない）。DD-012 の5。
+  // 古い版は直す対象ではない。下書きでも、pickFix はまず新しい版を開かせ、古い版を作り直させない。
+  // だから新しい版が一致していれば、古い版の警告は直し終えたのに直っていないように見せるだけになる。
+  // 一致していない新しい版があるときは、従来どおり警告を出してその版を開かせる（pickFix の openNewer）
+  if (input.newer && inSync(input.selected, input.newer.asked)) return null;
 
   const formTitle = formRowTitle(form);
   const selection: ComparisonPage = {
@@ -171,7 +229,7 @@ export function comparisonGapOf(input: ComparisonGapInput): ComparisonGap | null
     ledgerPath: FORM_LEDGER_PATH,
     current: input.current === "form",
   };
-  const picked = pickFix(input);
+  const picked = pickFix(input, rows);
 
   return {
     formId: form.id,
@@ -183,7 +241,7 @@ export function comparisonGapOf(input: ComparisonGapInput): ComparisonGap | null
     missingCount: diff.missing.length,
     extraCount: diff.extra.length,
     fix: picked && FIX_GUARD[picked.kind](role) ? picked : null,
-    note: noteOf(input),
+    note: noteOf(input, rows),
   };
 }
 
@@ -205,6 +263,8 @@ export function fixLabel(fix: ComparisonFix): string {
       return fix.draft ? `第${fix.version}版の下書きを開く` : `第${fix.version}版を開く`;
     case "finishScheme":
       return fix.linkLabel;
+    case "reselect":
+      return `${stepTitle("select")}で選び直す`;
   }
 }
 

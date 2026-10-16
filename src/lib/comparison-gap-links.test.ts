@@ -146,6 +146,45 @@ describe("一覧（評価期間ごと）の読み出し", () => {
     expectNoLeak([...gaps.values()]);
   });
 
+  describe("新しい版が選んだ項目と一致したら、古い版の警告を消す（DD-012 の5）", () => {
+    /** 第2版。稼働率・残業率を聞き、withRequirement なら等級要件の設問も持つ（固定枠は等級要件の答えから出す） */
+    async function insertV2(status: string, withRequirement: boolean) {
+      await t.db.insert(s.forms).values({
+        id: "frm_test_v2", companyId: IDS.company, gradeId: IDS.gradeFrom, cycleId: IDS.cycle,
+        title: "", status, version: 2, publicToken: "tok_test_v2",
+      });
+      await t.db.insert(s.formQuestions).values([
+        { id: "q_v2_higher", companyId: IDS.company, formId: "frm_test_v2", section: "kpi", questionType: "number", title: "稼働率の実績", displayOrder: 1, kpiItemId: IDS.itemHigher },
+        { id: "q_v2_lower", companyId: IDS.company, formId: "frm_test_v2", section: "kpi", questionType: "number", title: "残業率の実績", displayOrder: 2, kpiItemId: IDS.itemLower },
+      ]);
+      if (!withRequirement) return;
+      await t.db.insert(s.gradeRequirements).values({
+        id: "gr_v2", companyId: IDS.company, gradeId: IDS.gradeFrom, category: "support", seq: 1, text: "等級要件1",
+      });
+      await t.db.insert(s.formQuestions).values({
+        id: "q_v2_req", companyId: IDS.company, formId: "frm_test_v2", section: "support", questionType: "yes_no",
+        title: "等級要件1", displayOrder: 3, gradeRequirementId: "gr_v2",
+      });
+    }
+
+    it.each(["draft", "published", "closed"])("第2版が一致していれば（%s）、第1版にも第2版にも出さない", async (status) => {
+      await insertV2(status, true);
+      // 固定枠（等級要件達成率）は KPI 設問が無くても、第2版の等級要件の設問で聞けている
+      expect([...(await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts())).keys()]).toEqual([]);
+      expect(await loadFormComparisonGap(IDS.company, { id: IDS.form, cycleId: IDS.cycle }, opts("COMPANY_ADMIN", "form"))).toBeNull();
+      expect(await loadGroupComparisonGaps(IDS.company, "Regular", opts("COMPANY_ADMIN", "selection"))).toEqual([]);
+    });
+
+    it("第2版がまだ一致していなければ（等級要件の設問が無く、固定枠が足りない）、第1版は第2版を開かせる", async () => {
+      await insertV2("draft", false);
+      const gaps = await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts());
+      expect(gaps.get(IDS.form)!.fix).toEqual({
+        kind: "openNewer", formId: "frm_test_v2", href: "/admin/forms/frm_test_v2", version: 2, draft: true,
+      });
+      expect(gaps.get("frm_test_v2")!.rows.map((r) => r.name)).toEqual(["等級要件達成率"]);
+    });
+  });
+
   it("他社の評価期間 id を渡しても、何も返さない", async () => {
     expect((await loadCycleComparisonGaps(IDS.company, CYCLE_B, opts())).size).toBe(0);
   });
@@ -165,6 +204,52 @@ describe("アンケート1本の読み出し", () => {
     { id: "frm_b_cross", cycleId: IDS.cycle },
   ])("他社のアンケート（$id）は null", async (form) => {
     expect(await loadFormComparisonGap(IDS.company, form, opts("COMPANY_ADMIN", "form"))).toBeNull();
+  });
+});
+
+describe("設問のひな形の無い項目（kpi_questions で判定）", () => {
+  const noTemplateOf = (gap: ComparisonGap | undefined) => gap?.rows.map((r) => [r.name, r.noTemplate]);
+
+  it("見本にはひな形が無いので、稼働率・残業率に印を付ける。固定枠（等級要件達成率）には付けない", async () => {
+    const gap = (await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts())).get(IDS.form);
+    expect(noTemplateOf(gap)).toEqual([["等級要件達成率", false], ["稼働率", true], ["残業率", true]]);
+    // ひな形のある固定枠も足りないので、直す操作は従来どおり
+    expect(gap?.fix?.kind).toBe("finishScheme");
+  });
+
+  it("自社のひな形があれば印を外す。他社が同じ項目 id にひな形を置いても数えない", async () => {
+    await t.db.insert(s.kpiQuestions).values([
+      { id: "kq_higher", companyId: IDS.company, kpiItemId: IDS.itemHigher, questionKey: "q_h", text: "稼働時間", role: "direct" },
+      { id: "kq_b_lower", companyId: COMPANY_B, kpiItemId: IDS.itemLower, questionKey: "q_b", text: "B社の秘密", role: "direct" },
+    ]);
+    const gap = (await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts())).get(IDS.form);
+    expect(noTemplateOf(gap)).toEqual([["等級要件達成率", false], ["稼働率", false], ["残業率", true]]);
+    expectNoLeak(gap);
+  });
+
+  it("足りないのがひな形の無い項目だけの版は、作り直しではなく使うKPIを選ぶへ戻す", async () => {
+    // 第2版は等級要件だけを聞く（固定枠は足りている）下書き。稼働率・残業率はひな形が無いので作り直しても入らない
+    await t.db.insert(s.forms).values({
+      id: "frm_test_v2", companyId: IDS.company, gradeId: IDS.gradeFrom, cycleId: IDS.cycle,
+      title: "", status: "draft", version: 2, publicToken: "tok_test_v2",
+    });
+    await t.db.insert(s.gradeRequirements).values({
+      id: "gr_v2", companyId: IDS.company, gradeId: IDS.gradeFrom, category: "support", seq: 1, text: "等級要件1",
+    });
+    await t.db.insert(s.formQuestions).values({
+      id: "q_v2_req", companyId: IDS.company, formId: "frm_test_v2", section: "support", questionType: "yes_no",
+      title: "等級要件1", displayOrder: 1, gradeRequirementId: "gr_v2",
+    });
+    const gaps = await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts());
+    expect(gaps.get("frm_test_v2")!.fix).toEqual({ kind: "reselect", href: "/admin/scheme/Regular" });
+    expect(gaps.get("frm_test_v2")!.note).toContain("「稼働率」・「残業率」には設問のひな形がありません。");
+    // 第1版は、まず新しい版を開かせる（直す場所は新しい版の警告が案内する）
+    expect(gaps.get(IDS.form)!.fix?.kind).toBe("openNewer");
+    // アンケート1本の画面でも同じ。使うKPIを選ぶの画面（今いるページ）では出さない
+    expect((await loadFormComparisonGap(IDS.company, { id: "frm_test_v2", cycleId: IDS.cycle }, opts("COMPANY_ADMIN", "form")))?.fix)
+      .toEqual({ kind: "reselect", href: "/admin/scheme/Regular" });
+    const onSelection = await loadGroupComparisonGaps(IDS.company, "Regular", opts("COMPANY_ADMIN", "selection"));
+    expect(onSelection.find((g) => g.formId === "frm_test_v2")?.fix).toBeNull();
   });
 });
 

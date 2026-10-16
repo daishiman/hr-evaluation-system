@@ -60,6 +60,10 @@ describe("KPI項目を追加する", () => {
     });
 
     expect(result.message).toContain("解約率");
+    /* 設問のひな形は作らないので、アンケートに設問が出ないことまで伝える。
+       「基準を設定すれば使える」と読める文に戻すと、作り直しても足りないままの理由が分からなくなる */
+    expect(result.message).toContain("アンケートに設問は出ず");
+    expect(await testDb.db.select().from(s.kpiQuestions)).toEqual([]);
     const created = await testDb.db.select().from(s.kpiItems).where(eq(s.kpiItems.name, "解約率"));
     expect(created).toHaveLength(1);
     expect(created[0].no).toBe(3);

@@ -77,6 +77,7 @@ export default async function SchemeSelectPage({ params }: { params: Promise<{ g
         gradeNames={group.gradeNames}
         rule={group.rule}
         ratedItemIds={group.ratedItemIds}
+        askableItemIds={choices.askableItemIds}
         initial={group.saved}
         categories={choices.categories}
         kpiItems={choices.kpiItems}

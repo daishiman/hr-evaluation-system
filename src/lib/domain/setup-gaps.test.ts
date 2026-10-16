@@ -72,6 +72,7 @@ describe("formSyncGaps の片側だけの違い", () => {
     groupLabel: "等級2",
     selected,
     asked,
+    unaskable: [],
     nameOf,
     newer: null,
     schemeGap: null,

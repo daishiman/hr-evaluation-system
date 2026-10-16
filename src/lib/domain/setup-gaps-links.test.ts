@@ -143,6 +143,7 @@ describe("formSyncGaps（評価セットとアンケートの比べ）", () => {
     groupLabel: "等級2",
     selected,
     asked,
+    unaskable: [],
     nameOf,
     newer: null,
     schemeGap: null,

@@ -15,6 +15,8 @@ import {
   syncFormQuestions,
   type FormDraftInput,
 } from "@/lib/form-build";
+import { loadFormComparisonGap } from "@/lib/comparison-gap-loader";
+import { NO_TEMPLATE_HINT, noTemplateNote } from "@/lib/domain/comparison-gap";
 import { checkNumberMagnitude, defaultIntegerFlag } from "@/lib/domain/number-input";
 import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
@@ -259,10 +261,17 @@ const formRefSchema = z.object({ formId: z.string().min(1) });
 export async function rebuildFormQuestions(raw: unknown) {
   return runAction({ operation: "forms.rebuildQuestions", input: formRefSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
-    const r = await syncFormQuestions({ companyId: viewer.companyId, formId: input.formId });
+    const { cycleId, ...r } = await syncFormQuestions({ companyId: viewer.companyId, formId: input.formId });
+    // 設問のひな形が無い項目は、作り直しても足りないまま残る。押しても直らなかった理由を返事で伝える
+    // （画面の警告と同じ読み出しを通し、数え方を変えない）
+    const gap = await loadFormComparisonGap(viewer.companyId, { id: input.formId, cycleId }, { role: viewer.role, current: "form" });
+    const noTemplate = gap?.rows.filter((row) => row.noTemplate).map((row) => row.name) ?? [];
     return {
       ...r,
-      message: `いまの評価項目に合わせて設問を作り直しました（${r.questionCount}問）。内容を確認してから公開してください。`,
+      message:
+        `いまの評価項目に合わせて設問を作り直しました（${r.questionCount}問）。` +
+        (noTemplate.length > 0 ? noTemplateNote(noTemplate) + NO_TEMPLATE_HINT : "") +
+        "内容を確認してから公開してください。",
     };
   });
 }

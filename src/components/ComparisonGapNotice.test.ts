@@ -40,7 +40,7 @@ function form(over: Partial<ComparisonForm> = {}): ComparisonForm {
 function gap(over: Partial<ComparisonGapInput> = {}): ComparisonGap {
   const g = comparisonGapOf({
     form: form(), pointGroup: "Regular", groupLabel: "等級２：Regular",
-    selected: ["kpi_a", "kpi_b", "kpi_c"], asked: ["kpi_d", "kpi_a"], nameOf: (id) => NAMES[id] ?? id,
+    selected: ["kpi_a", "kpi_b", "kpi_c"], asked: ["kpi_d", "kpi_a"], unaskable: [], nameOf: (id) => NAMES[id] ?? id,
     newer: null, schemeGap: null, current: null, role: "COMPANY_ADMIN", ...over,
   });
   if (!g) throw new Error("ズレがあるのに null が返った");
@@ -176,7 +176,8 @@ describe("ComparisonGapNotice: 直す操作（1つだけ）", () => {
   });
 
   it("より新しい版があれば、ボタンの代わりにその版を開くリンク", () => {
-    const opened = openedPart(render([gap({ newer: { id: "frm_2", version: 2, status: "draft" } })]));
+    // 新しい版もまだ一致していない（一致していれば古い版には警告を出さない。DD-012 の5）
+    const opened = openedPart(render([gap({ newer: { id: "frm_2", version: 2, status: "draft", asked: ["kpi_a"] } })]));
     expect(opened).not.toContain("<button");
     expect(opened).toContain('href="/admin/forms/frm_2"');
     expect(opened).toContain("第2版の下書きを開く");
@@ -202,6 +203,44 @@ describe("ComparisonGapNotice: 直す操作（1つだけ）", () => {
     expect(opened).not.toContain("<button");
     expect(opened).toContain("KPI・評価セット › 等級２：Regular：使うKPIを選ぶ");
     expect(opened).toContain("アンケート › 2026年度上期 等級２：Regular 実績アンケート（第1版）");
+  });
+});
+
+describe("ComparisonGapNotice: 設問のひな形が無い項目", () => {
+  /** 足りないのは残業率・粗利率で、どちらにもひな形が無い */
+  const ONLY_UNASKABLE: Partial<ComparisonGapInput> = { asked: ["kpi_a"], unaskable: ["kpi_b", "kpi_c"] };
+
+  it("表の項目名に「設問なし」の札を付ける（ひな形のある項目と余分な項目には付けない）", () => {
+    const opened = openedPart(render([gap({ unaskable: ["kpi_c"] })]));
+    expect(count(opened, '<span class="badge badge-required">設問なし</span>')).toBe(1);
+    expect(opened).toContain('粗利率 <span class="badge badge-required">設問なし</span>');
+    expect(opened).not.toContain('残業率 <span class="badge');
+    expect(opened).not.toContain('定着率 <span class="badge');
+  });
+
+  it("足りないのがひな形の無い項目だけなら、作り直しではなく使うKPIを選ぶへのリンク", () => {
+    for (const status of ["draft", "published"] as const) {
+      const opened = openedPart(render([gap({ ...ONLY_UNASKABLE, form: form({ status }) })]));
+      expect(opened).not.toContain("<button");
+      expect(opened).not.toContain("rebuildFormQuestions");
+      // 2つのページのリンクに加えて、直す操作のリンクが1つ
+      expect(count(opened, 'href="/admin/scheme/Regular"')).toBe(2);
+      expect(opened).toContain("使うKPIを選ぶで選び直す");
+      expect(opened).toContain("「残業率」・「粗利率」には設問のひな形がありません。");
+    }
+  });
+
+  it("使うKPIを選ぶの画面では、聞いていない項目に（設問なし）を添える", () => {
+    const opened = openedPart(render([gap({ ...ONLY_UNASKABLE, current: "selection" })]));
+    expect(opened).toContain("残業率（設問なし）・粗利率（設問なし）");
+    expect(opened).not.toContain("<button");
+    expect(count(opened, 'href="/admin/scheme/Regular"')).toBe(1);
+  });
+
+  it("使うKPIを選ぶの画面で、ひな形のある足りない項目には（設問なし）を添えない", () => {
+    const opened = openedPart(render([gap({ unaskable: ["kpi_c"], current: "selection" })]));
+    expect(opened).toContain("残業率・粗利率（設問なし）");
+    expect(opened).not.toContain("残業率（設問なし）");
   });
 });
 
