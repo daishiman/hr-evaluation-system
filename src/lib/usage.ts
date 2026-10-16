@@ -13,11 +13,11 @@ import {
   USAGE_BATCH_MAX_APIS,
   USAGE_BATCH_MAX_SCREENS,
   USAGE_MAX_DWELL_MS,
-  usageDateKey,
   usageRetentionCutoff,
   type UsageApiCounters,
   type UsageScreenCounters,
 } from "@/lib/domain/usage";
+import { jstDateKey } from "@/lib/domain/jst";
 
 /**
  * 利用状況の受け取りと読み出し。
@@ -129,7 +129,7 @@ export async function recordUsageBatch(
   batch: UsageBatch,
   now: Date = new Date(),
 ): Promise<{ screens: number; apis: number }> {
-  const date = usageDateKey(now);
+  const date = jstDateKey(now);
 
   /* 同じ送信の中に同じ画面が複数入っていることがある（別のIDの詳細画面など）。
      先にまとめてから書く。1回の送信で同じ行を2度更新しない。 */
@@ -254,7 +254,7 @@ export async function recordUsageBatch(
 let lastPrunedDate = "";
 
 async function pruneOldUsageOncePerDay(db: DB, now: Date): Promise<void> {
-  const today = usageDateKey(now);
+  const today = jstDateKey(now);
   if (lastPrunedDate === today) return;
   lastPrunedDate = today;
   const cutoff = usageRetentionCutoff(now);
@@ -375,7 +375,7 @@ export async function readUsageReport(
   db: DB,
   { companyId, days, now = new Date() }: { companyId: string | null; days: number; now?: Date },
 ): Promise<UsageReport> {
-  const to = usageDateKey(now);
+  const to = jstDateKey(now);
   const from = usageRetentionCutoff(now, days);
   const scope = companyId
     ? and(gte(s.usageScreenDaily.date, from), eq(s.usageScreenDaily.companyId, companyId))

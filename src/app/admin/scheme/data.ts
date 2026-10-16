@@ -4,6 +4,7 @@ import {
   getActiveScheme,
   listGrades,
   listKpiCategories,
+  listAskableKpiItemIds,
   listKpiItems,
   listRankCriteria,
   listRankRatios,
@@ -139,8 +140,14 @@ export async function loadGroupCriteria(companyId: string, schemeId: string, poi
 
 /** 選ぶ候補（全KPI項目と分類）。手順1でだけ読む。 */
 export async function loadKpiChoices(companyId: string) {
-  const [categories, kpiItems] = await Promise.all([listKpiCategories(companyId), listKpiItems(companyId)]);
+  const [categories, kpiItems, askableItemIds] = await Promise.all([
+    listKpiCategories(companyId),
+    listKpiItems(companyId),
+    listAskableKpiItemIds(companyId),
+  ]);
   return {
+    /** 設問のひな形がある項目のID。保存（actions/scheme.ts）と同じ読み出しで、選んだ時点の警告をそろえる */
+    askableItemIds,
     categories: categories.map((c) => ({ id: c.id, name: c.name, description: c.description })),
     kpiItems: kpiItems.map((k) => ({
       id: k.id,

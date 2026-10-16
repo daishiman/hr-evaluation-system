@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
 import { batchAll, type BatchStatement } from "@/lib/db-batch";
 import { computeActualValue, FormulaError } from "@/lib/domain/formula";
+import { gradeFormulaValues } from "@/lib/domain/kpi-asking";
 import {
   gradeRequirementRate,
   judgeOverall,
@@ -201,10 +202,7 @@ export async function buildEvaluationsForCycle(
       const answerOf = (qid: string) => answers.find((a) => a.questionId === qid) ?? null;
 
       /* ── 等級要件・昇格要件・行動指針を回答から拾う ── */
-      const vars: Record<string, number> = {
-        等級別の半期目標設定上限数: grade.targetCap,
-        等級別の1人あたり必要回数: grade.pointGroup === "AM" ? 3 : 2,
-      };
+      const vars: Record<string, number> = gradeFormulaValues(grade);
       let reqAchieved = 0;
       let reqTotal = 0;
       let behaviorTotal = 0;

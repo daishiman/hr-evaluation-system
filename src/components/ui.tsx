@@ -440,6 +440,47 @@ export function SectionHeading({
   );
 }
 
+/* ───────────────────────── 入力のまとまり ─────────────────────────
+ *
+ * 保存中にまとめて止める入力の束（fieldset）。生の <fieldset> は使わず、これを使う
+ * （fieldset-group.test.ts が固定する）。決め事の経緯は design-decisions.md の DD-017。
+ */
+
+/**
+ * 枠も余白も持たない fieldset。中身は必ず div 1つで包む。
+ *
+ * 包む理由は Chromium の描画の不具合（148・153 で確かめた）。fieldset の中に
+ * size container（container-type: inline-size。.split-host・.list-host・.record-list・
+ * 並べ替えの一覧）があり、同じフレームの中で「container の中身が変わる」ことと
+ * 「fieldset の直下に子が出入りする」ことが重なると、container の中身の箱が作られず
+ * 高さ0のまま消える（読み上げからも消え、フォーカスは body へ落ちる）。
+ * 保存のたびに出入りする ReasonNote・RefreshStatus がちょうどこの形になる。
+ * 中身を div で包むと出入りは div の中で起き、fieldset の直下は変わらない。
+ *
+ * legend は読み上げの名前になるよう fieldset の直下に置く（出入りしないので包まない）。
+ * className は外側（mt-4 などの外の余白）、bodyClassName は中身の並べ方（stack など）。
+ */
+export function FieldGroup({
+  legend,
+  className,
+  bodyClassName,
+  children,
+  ...rest
+}: Omit<ComponentProps<"fieldset">, "children"> & {
+  /** 束の名前。見出しの代わりに読み上げられる。 */
+  legend?: ReactNode;
+  /** 中身を包む div の class（stack・profile-rows など）。 */
+  bodyClassName?: string;
+  children: ReactNode;
+}) {
+  return (
+    <fieldset {...rest} className={clsx("m-0 min-w-0 border-0 p-0", className)}>
+      {legend && <legend className="p-0 text-sub font-bold">{legend}</legend>}
+      <div className={bodyClassName}>{children}</div>
+    </fieldset>
+  );
+}
+
 /* ───────────────────────── 順番のある説明 ─────────────────────────
  *
  * 「聞く → 計算する → 判定する → 点になる」のように、順番そのものが意味を持つ

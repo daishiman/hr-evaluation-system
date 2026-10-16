@@ -2,20 +2,12 @@
 
 import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
-import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { UsedByDetail } from "@/components/UsedByDetail";
+import { ListAddArea, ListAddRow, ListRowActions, ListRowBody, ListRowItem, ListRows } from "@/components/ListRow";
+import { BlockedHelp, UsedByDetail } from "@/components/UsedByDetail";
 import { copiedBandSetName } from "@/lib/domain/behavior";
-import {
-  BAND_SET_ASSIGNED_NEXT,
-  BLOCKED_HELP_LABEL,
-  BLOCKED_KEEP,
-  BLOCKED_WHAT,
-  BLOCKED_WHY,
-  DELETE_LABEL,
-  blockedMark,
-  deleteConfirmText,
-} from "@/lib/domain/master-delete";
+import { BAND_SET_ASSIGNED_NEXT, DELETE_LABEL, blockedMark, deleteConfirmText } from "@/lib/domain/master-delete";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { useDraftMap } from "@/components/use-draft-map";
 
@@ -29,7 +21,7 @@ import { useDraftMap } from "@/components/use-draft-map";
  * 全部書き起こすことになり、実際にはまず使われない。
  *
  * 止め方は2段階にしている（等級要件・昇格要件と同じ作法）。
- *   - 「使わない」: 選択肢から外すだけ。中身は残り、あとからもう一度使える。
+ *   - 「今後使わない」: 選択肢から外すだけ。中身は残り、あとからもう一度使える。
  *   - 「完全に消す」: 一度もアンケートに出しておらず、評価の記録にも無いときだけ出す。
  *     試しに作ったセットが一覧に残り続けないようにするための操作。
  * 一度でも使ったセットに「完全に消す」は出さない。消すと、公開したアンケートと
@@ -54,7 +46,7 @@ export interface BehaviorBandSetRow {
 export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBandSetRow[]; currentBand: string | null }) {
   const { send, remove, saving, error, message, clearResult } = useMasterAction("behaviorBandSet");
   const editingName = useDraftMap<string>();
-  /** 「新しく作る」を開いているときだけ持つ下書き。閉じているときは null。 */
+  /** 「＋ 基準を追加」を開いているときだけ持つ下書き。閉じているときは null。 */
   const [draft, setDraft] = useState<{ name: string; copyFromBand: string } | null>(null);
 
   const openDraft = () => {
@@ -67,84 +59,23 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
   };
 
   return (
-    <Card className="card-pad">
-      <CardHead
-        title="基準は何セット用意するか"
-        sub="等級ごとに問う内容を変えたいときは、基準を分けて作ります。よく使うのは、いまの基準を複製して一部だけ書き換えるやり方です。"
-        actions={
-          draft === null ? (
-            <Button variant="secondary" disabled={saving} onClick={openDraft}>
-              基準を新しく作る
-            </Button>
-          ) : (
-            <Button variant="tertiary" disabled={saving} onClick={() => setDraft(null)}>
-              やめる
-            </Button>
-          )
-        }
-      />
-
-      {error && (
-        <div className="mt-3">
-          <ReasonNote>{error}</ReasonNote>
-        </div>
-      )}
-      <RefreshStatus message={message} refreshing={saving} className="m-0 mt-3 text-sub text-brand-deep" />
-
-      {draft !== null && (
-        <div className="mt-3 rounded-lg border border-line p-3">
-          <div className="field-grid">
-            <label>
-              <span className="block text-note text-ink-muted">新しい基準の呼び名</span>
-              <input
-                value={draft.name}
-                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-                className="input mt-1 w-full"
-                placeholder="例：Manager向け"
-              />
-            </label>
-            <label>
-              <span className="block text-note text-ink-muted">中身の作り方</span>
-              <select
-                value={draft.copyFromBand}
-                onChange={(event) => setDraft({ ...draft, copyFromBand: event.target.value })}
-                className="input mt-1 w-full"
-              >
-                {sets.map((set) => (
-                  <option key={set.code} value={set.code}>
-                    {set.name}を複製する
-                  </option>
-                ))}
-                <option value="">空から作る（観点をひとつずつ足す）</option>
-              </select>
-            </label>
+    <Card>
+      <div className="card-pad">
+        <CardHead
+          title="基準は何セット用意するか"
+          sub="等級ごとに問う内容を変えたいときは、基準を分けて作ります。よく使うのは、いまの基準を複製して一部だけ書き換えるやり方です。"
+        />
+        {error && (
+          <div className="mt-3">
+            <ReasonNote>{error}</ReasonNote>
           </div>
-          <p className="footnote m-0 mt-2">
-            {draft.copyFromBand === ""
-              ? "観点がひとつも無い状態で作られます。作ったあとに「何を問うか」で観点を足してください。"
-              : "選んだ基準の観点と5段階の文章をそのまま写します。作ったあとにどちらを直しても、もう一方は変わりません。"}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              variant="primary"
-              disabled={saving || draft.name.trim() === ""}
-              onClick={async () => {
-                const ok = await send({
-                  kind: "behaviorBandSet",
-                  name: draft.name.trim(),
-                  ...(draft.copyFromBand ? { copyFromBand: draft.copyFromBand } : {}),
-                });
-                if (ok) setDraft(null);
-              }}
-            >
-              {saving ? "作っています…" : "この内容で作る"}
-            </Button>
-          </div>
-        </div>
-      )}
+        )}
+        <RefreshStatus message={message} refreshing={saving} className="m-0 mt-3 text-sub text-brand-deep" />
+      </div>
 
-      <div className="mt-3 grid gap-2">
-        {sets.map((set) => {
+      {/* 行の形はほかの一覧と同じ（番号 → 呼び名と札 → 補足 → 使っている場所、操作は右の列。spec §28-14） */}
+      <ListRows label="基準セット" className="border-t border-line">
+        {sets.map((set, index) => {
           const nameDraft = editingName.drafts[set.id];
           const inUse = set.usedByGradeNames.length > 0;
           /* 止められない理由は2種類あり、扱いが違う。
@@ -156,24 +87,30 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           const assignedReason = inUse ? BAND_SET_ASSIGNED_NEXT : null;
           const mark = blockedMark(set.usedBy);
           return (
-            <div
-              key={set.id}
-              className="card-row items-start rounded-lg border border-line"
-              data-off={set.isActive ? undefined : "true"}
-            >
-              <div className="row-main">
-                {nameDraft === undefined ? (
-                  <>
-                    <p className="m-0 text-sub font-bold">{set.name}</p>
-                    <p className="footnote m-0">
+            <ListRowItem key={set.id} off={!set.isActive}>
+              {nameDraft === undefined ? (
+                <ListRowBody
+                  number={index + 1}
+                  text={set.name}
+                  badges={!set.isActive && <Badge tone="dropped">使用しない</Badge>}
+                  note={
+                    <>
                       観点{set.aspectCount}件・
                       {inUse ? `${set.usedByGradeNames.join("／")}に出します` : "どの等級にも出していません"}
-                    </p>
-                    {/* 止められないときは、その理由と直す順番をここで読めるようにする */}
-                    {assignedReason !== null && <p className="footnote m-0 mt-1">{assignedReason}</p>}
-                    {mark !== null && <UsedByDetail mark={mark} usedBy={set.usedBy} />}
-                  </>
-                ) : (
+                      {/* 止められないときは、その理由と直す順番をここで読めるようにする */}
+                      {assignedReason !== null && (
+                        <>
+                          <br />
+                          {assignedReason}
+                        </>
+                      )}
+                    </>
+                  }
+                >
+                  {mark !== null && <UsedByDetail mark={mark} usedBy={set.usedBy} />}
+                </ListRowBody>
+              ) : (
+                <ListRowBody number={index + 1}>
                   <label className="block text-note text-ink-muted">
                     この基準の呼び名
                     <input
@@ -182,8 +119,6 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       className="input mt-1 w-full"
                     />
                   </label>
-                )}
-                {nameDraft !== undefined && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button
                       variant="primary"
@@ -195,24 +130,15 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     >
                       保存する
                     </Button>
-                    <Button
-                      variant="tertiary"
-                      disabled={saving}
-                      onClick={() => editingName.stop(set.id)}
-                    >
+                    <Button variant="tertiary" disabled={saving} onClick={() => editingName.stop(set.id)}>
                       やめる
                     </Button>
                   </div>
-                )}
-              </div>
+                </ListRowBody>
+              )}
               {nameDraft === undefined && (
-                <div className="row-actions">
-                  <Badge tone={set.isActive ? "active" : "dropped"}>{set.isActive ? "使用中" : "使用しない"}</Badge>
-                  <Button
-                    variant="tertiary"
-                    disabled={saving}
-                    onClick={() => editingName.start(set.id, set.name)}
-                  >
+                <ListRowActions>
+                  <Button variant="tertiary" disabled={saving} onClick={() => editingName.start(set.id, set.name)}>
                     呼び名を直す
                   </Button>
                   {set.isActive ? (
@@ -220,7 +146,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                        押してから断るより、なぜ止められないかを左で先に読めるほうが早い。 */
                     inUse ? null : (
                       <ConfirmButton
-                        label="使わない"
+                        label="今後使わない"
                         variant="danger-outline"
                         busy={saving}
                         busyLabel="保存しています…"
@@ -246,24 +172,85 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       onConfirm={() => void remove(set.id)}
                     />
                   )}
-                </div>
+                </ListRowActions>
               )}
-            </div>
+            </ListRowItem>
           );
         })}
-      </div>
+      </ListRows>
 
-      {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。
-          「使用中」の基準が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
-      {sets.some((set) => set.usedBy.length > 0) && (
-        <div className="mt-3">
-          <Disclosure summary={BLOCKED_HELP_LABEL}>
-            <p className="m-0 text-sub">{BLOCKED_WHY}</p>
-            <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
-            <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
-          </Disclosure>
-        </div>
-      )}
+      {/* 足すボタンは、どの一覧でも一覧の下の左端に置く（spec §28-14）。
+          頭との区切りは上の一覧の線が引くので、基準が0件でも線を2本重ねない */}
+      <ListAddArea hasRows={sets.length > 0}>
+        {draft === null ? (
+          <ListAddRow note="いまの基準を複製して作れます。空から作ることもできます。">
+            <Button variant="secondary" disabled={saving} onClick={openDraft}>
+              ＋ 基準を追加
+            </Button>
+          </ListAddRow>
+        ) : (
+          <>
+            <div className="field-grid">
+              <label>
+                <span className="block text-note text-ink-muted">新しい基準の呼び名</span>
+                <input
+                  value={draft.name}
+                  onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                  className="input mt-1 w-full"
+                  placeholder="例：Manager向け"
+                />
+              </label>
+              <label>
+                <span className="block text-note text-ink-muted">中身の作り方</span>
+                <select
+                  value={draft.copyFromBand}
+                  onChange={(event) => setDraft({ ...draft, copyFromBand: event.target.value })}
+                  className="input mt-1 w-full"
+                >
+                  {sets.map((set) => (
+                    <option key={set.code} value={set.code}>
+                      {set.name}を複製する
+                    </option>
+                  ))}
+                  <option value="">空から作る（観点をひとつずつ足す）</option>
+                </select>
+              </label>
+            </div>
+            <p className="footnote m-0 mt-2">
+              {draft.copyFromBand === ""
+                ? "観点がひとつも無い状態で作られます。作ったあとに「何を問うか」で観点を足してください。"
+                : "選んだ基準の観点と5段階の文章をそのまま写します。作ったあとにどちらを直しても、もう一方は変わりません。"}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                variant="primary"
+                disabled={saving || draft.name.trim() === ""}
+                onClick={async () => {
+                  const ok = await send({
+                    kind: "behaviorBandSet",
+                    name: draft.name.trim(),
+                    ...(draft.copyFromBand ? { copyFromBand: draft.copyFromBand } : {}),
+                  });
+                  if (ok) setDraft(null);
+                }}
+              >
+                {saving ? "作っています…" : "この内容で作る"}
+              </Button>
+              <Button variant="tertiary" disabled={saving} onClick={() => setDraft(null)}>
+                やめる
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。
+            「使用中」の基準が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
+        {sets.some((set) => set.usedBy.length > 0) && (
+          <div className="mt-3">
+            <BlockedHelp />
+          </div>
+        )}
+      </ListAddArea>
     </Card>
   );
 }

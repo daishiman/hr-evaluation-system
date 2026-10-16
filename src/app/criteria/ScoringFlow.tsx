@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Badge, Card, Code, DefList, Disclosure, NoteBlock, Num, RankMark, StepBlock, StepFlow } from "@/components/ui";
 import { DataTable } from "@/components/DataTable";
+import { roleLabel } from "@/lib/domain/kpi-asking";
 import type { SelectableItem } from "./data";
 
 /**
@@ -34,13 +35,6 @@ export interface QuestionRow {
   unit: string | null;
   role: string;
 }
-
-const ROLE_LABEL: Record<string, string> = {
-  numerator: "分子",
-  denominator: "分母",
-  direct: "そのまま実績値",
-  identify: "識別のため",
-};
 
 const RANK_ORDER = ["A", "B", "C", "D", "E"];
 
@@ -177,7 +171,7 @@ function ItemFlow({
             <ul className="m-0 list-none space-y-2 p-0 text-sub">
               {questions.map((q) => (
                 <li key={q.id}>
-                  <Code>{q.questionKey}</Code> <span className="footnote">{ROLE_LABEL[q.role] ?? q.role}</span>
+                  <Code>{q.questionKey}</Code> <span className="footnote">{roleLabel(q.role)}</span>
                   <br />
                   {q.text}
                 </li>

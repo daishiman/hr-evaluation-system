@@ -1358,17 +1358,31 @@ main {
   background: var(--surface);
   border-top: 1px solid var(--line);
 }
+/* 状態の文の長さで、押す場所を動かさない。
+   状態の幅の基準は文の長さでなく 16rem に決め、折り返すかどうかを画面の幅だけで決める。
+   長い文は状態の中で折り返し、ボタンは帯の右下にそろえる（帯は下端に貼り付くので、下端も動かない）。 */
 .action-bar-inner {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-end;
   gap: var(--space-tight) var(--space-block);
   max-width: var(--content-max);
   margin: 0 auto;
 }
-.action-bar-status { font-size: var(--text-note); color: var(--ink-muted); min-width: 0; }
-.action-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-tight); }
+.action-bar-status { flex: 1 1 16rem; min-width: 0; align-self: center; font-size: var(--text-note); color: var(--ink-muted); }
+/* 状態の欄が空（status を渡さない帯）なら 16rem を確保しない。中身があるときの 16rem は上のとおり残す。
+   flex-basis: 0 だけだと、狭い画面で空の1行と行の間隔が残るので、欄ごと畳む。 */
+.action-bar-status:empty { display: none; }
+.action-bar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-tight);
+  max-width: 100%;
+  margin-inline-start: auto;
+}
 @media (max-width: 639px) {
   /* 狭い画面では、押すものを1行いっぱいに広げて親指で押せるようにする */
   .action-bar-inner { justify-content: stretch; }
@@ -1448,6 +1462,8 @@ main {
 .split-main,
 .split-aside,
 .split-wide { min-width: 0; }
+/* 一覧に足す行（ListAddRow）は、右端の注記をボタンの高さの真ん中にそろえる */
+.list-add-row > .split-row { align-items: center; }
 @container (min-width: 560px) {
   /* 補足が長くても本文を半分より細くしない */
   .split-row { grid-template-columns: minmax(0, 1fr) fit-content(50%); }
@@ -1629,6 +1645,11 @@ tr[data-off="true"] > td {
    これだけだと隣に幅の広い箱が来たとき 0 まで潰れる。 */
 .row-main { flex: 1 1 16rem; min-width: 0; }
 .row-grow { flex: 1 1 auto; }
+/* 一覧の1行（ListRowBody）のうち、入力欄から始まる行（選択肢の文言・直している間の要件）は、
+   番号を入力欄の中の1行目の高さにそろえる。入力欄の文字は枠1px＋余白8pxの下から始まり、
+   その行の高さ（15px×1.5）は番号の行（15px×1.7）より 3px 低いので、半分を引いて 1+8−1.5=7.5px 下げる。
+   本文の段落から始まる行は ListRowNumber の mt-[2px] のまま。 */
+.list-row-body:has(> .row-main > .input:first-child) > .num { margin-top: 7.5px; }
 
 /* 行の右端にまとまる操作（札・ボタン・止められない理由の一文）。
    まとまり自体は縮んで折り返し、中のボタンだけは潰さない。
@@ -3260,9 +3281,19 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
    つまみと矢印のボタンは 24px 以上（SC 2.5.8）。指で押す端末では、ほかのボタンと同じ 44px にする。
    スクロールを止めるのはつまみだけ。行の残りを指でなぞれば、今までどおり画面が流れる。
 
-   行の段組みは、画面の幅ではなく一覧の幅（container query）で決める。同じ部品を、カードの中・設問のカード・
+   行の段組みは、画面の幅ではなく一覧の幅で決める。同じ部品を、カードの中・設問のカード・
    設問の中の選択肢と、幅の違う場所に置くため。どの段組みでも、見える順は読む順（DOM）と同じ
-   「つまみ → 本文 → 行の操作 → 矢印」にする（SC 1.3.2・2.4.3）。行の操作と矢印は、どちらも行の右端にそろえる。 */
+   「つまみ → 本文 → 行の操作 → 矢印」にする（SC 1.3.2・2.4.3）。行の操作と矢印は、どちらも行の右端にそろえる。
+
+   一覧の幅は ReorderList が測り、超えた境目を data-reorder-w に rem で書く（"30 36 60" など）。
+   測ったあとは container query を使わない。行が描かれなくなる Chromium の不具合の根は、fieldset の直下で子が
+   出入りするのと同じフレームに size container の中身が変わること（DD-017。FieldGroup が起こせなくした）。
+   この印の方式は DD-005 の保険として残す。
+   測るまで（サーバーから届いた HTML を描いてから JS が動くまで）は、同じ境目を container query で当て、
+   読み込みのたびに狭い段組みから広い段組みへ行が跳ねないようにする。測ったら container をやめる。
+   境目の規則は :where() で包み、詳細度を container query だけで書いていたときと同じにする
+   （「行の操作のある行」の規則が、30rem の規則より強い関係を保つ）。
+   子の結合子（>）で、設問の中の選択肢の一覧には外側の一覧の幅を当てない。 */
 .reorder-list {
   list-style: none;
   margin: 0;
@@ -3270,11 +3301,13 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   display: flex;
   flex-direction: column;
   gap: 8px;
-  container: reorder / inline-size;
+  /* 一覧の幅を中身から切り離す。測った幅で段組みを変えても、一覧の幅は変わらない */
+  contain: inline-size;
   /* 置き場所の目印（::before）を行の位置に重ねる基準。持ち上げた行の重なりは、この一覧の中で閉じる */
   position: relative;
   isolation: isolate;
 }
+.reorder-list:not([data-reorder-w]) { container: reorder / inline-size; }
 .reorder-row {
   position: relative;
   display: grid;
@@ -3292,8 +3325,12 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .reorder-handle { grid-area: handle; }
 .reorder-body { grid-area: body; min-width: 0; }
 .reorder-steps { grid-area: steps; justify-self: end; }
+:where(.reorder-list[data-reorder-w~="30"]) > .reorder-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "handle body steps";
+}
 @container reorder (min-width: 30rem) {
-  .reorder-row {
+  :where(.reorder-list:not([data-reorder-w])) > .reorder-row {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: "handle body steps";
   }
@@ -3307,19 +3344,29 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
     "actions actions"
     "steps   steps";
 }
+/* 36rem 以上: 本文を1段目に広く取り、操作と矢印は2段目の右端にまとめる */
+:where(.reorder-list[data-reorder-w~="36"]) > .reorder-row:has(> .reorder-actions) {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "handle body    body"
+    ".      actions steps";
+}
 @container reorder (min-width: 36rem) {
-  /* 本文を1段目に広く取り、操作と矢印は2段目の右端にまとめる */
-  .reorder-row:has(> .reorder-actions) {
+  :where(.reorder-list:not([data-reorder-w])) > .reorder-row:has(> .reorder-actions) {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
       "handle body    body"
       ".      actions steps";
   }
 }
+/* 60rem 以上: 十分に広ければ1段に並べる。本文・操作・矢印の頭がそろい、行が低くなって見渡しやすい。
+   本文は 16rem を下回らせず、操作が収まらなければ操作のほうを折り返す */
+:where(.reorder-list[data-reorder-w~="60"]) > .reorder-row:has(> .reorder-actions) {
+  grid-template-columns: auto minmax(16rem, 1fr) minmax(0, max-content) auto;
+  grid-template-areas: "handle body actions steps";
+}
 @container reorder (min-width: 60rem) {
-  /* 十分に広ければ1段に並べる。本文・操作・矢印の頭がそろい、行が低くなって見渡しやすい。
-     本文は 16rem を下回らせず、操作が収まらなければ操作のほうを折り返す */
-  .reorder-row:has(> .reorder-actions) {
+  :where(.reorder-list:not([data-reorder-w])) > .reorder-row:has(> .reorder-actions) {
     grid-template-columns: auto minmax(16rem, 1fr) minmax(0, max-content) auto;
     grid-template-areas: "handle body actions steps";
   }
@@ -3338,9 +3385,27 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
    確認のある操作（ConfirmButton）は包みの div の中のボタンまで伸ばす */
 .reorder-actions > *,
 .reorder-actions > * > .btn { flex: 1 1 8rem; }
+:where(.reorder-list[data-reorder-w~="36"] > .reorder-row) > .reorder-actions > *,
+:where(.reorder-list[data-reorder-w~="36"] > .reorder-row) > .reorder-actions > * > .btn { flex: 0 0 auto; }
 @container reorder (min-width: 36rem) {
-  .reorder-actions > *,
-  .reorder-actions > * > .btn { flex: 0 0 auto; }
+  :where(.reorder-list:not([data-reorder-w]) > .reorder-row) > .reorder-actions > *,
+  :where(.reorder-list:not([data-reorder-w]) > .reorder-row) > .reorder-actions > * > .btn { flex: 0 0 auto; }
+}
+/* 1段に収める一覧（アンケートの選択肢）。本文が入力欄1つの短い行なので、30rem 以上では操作を本文の右に置き、
+   行の高さを1段に保つ。行の形（番号・本文・右端の操作）は変えず、段組みだけを変える。上の規則より後に置いて勝たせる */
+:where(.reorder-list.reorder-inline[data-reorder-w~="30"]) > .reorder-row:has(> .reorder-actions) {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "handle body actions steps";
+}
+:where(.reorder-list.reorder-inline[data-reorder-w~="30"] > .reorder-row) > .reorder-actions > *,
+:where(.reorder-list.reorder-inline[data-reorder-w~="30"] > .reorder-row) > .reorder-actions > * > .btn { flex: 0 0 auto; }
+@container reorder (min-width: 30rem) {
+  :where(.reorder-list.reorder-inline:not([data-reorder-w])) > .reorder-row:has(> .reorder-actions) {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "handle body actions steps";
+  }
+  :where(.reorder-list.reorder-inline:not([data-reorder-w]) > .reorder-row) > .reorder-actions > *,
+  :where(.reorder-list.reorder-inline:not([data-reorder-w]) > .reorder-row) > .reorder-actions > * > .btn { flex: 0 0 auto; }
 }
 /* カードの中の一覧（等級要件・昇格の条件）。行の区切りと余白は、カードの行（.card-row）にそろえる */
 .reorder-list.reorder-in-card { gap: 0; }
@@ -3352,9 +3417,8 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   border-radius: 0;
 }
 .reorder-in-card > .reorder-row:last-child { border-bottom-width: 0; }
-/* 1行がカード1枚の一覧（アンケートの設問）。つまみと矢印はカードの頭の高さにそろえる */
-.reorder-list.reorder-cards { gap: 12px; }
-.reorder-cards > .reorder-row { align-items: start; padding: 4px; }
+/* 行の中で固定する頭（開いているアンケートの設問）。帯の左右の余白と角を外し、番号の列を閉じた行とそろえる */
+.reorder-body > .card-head-sticky { padding-inline: 0; border-radius: 0; }
 /* 矢印の4つは1つの部品に見せる（隣との境は左の枠を消して1本にする）。
    overflow: hidden で角を切らないのは、フォーカスの枠まで切れてしまうため */
 .reorder-steps { display: flex; }
@@ -3428,4 +3492,35 @@ body:has(.reorder-list[data-reorder-phase="dragging"]) .feedback-fab { opacity: 
   .reorder-row,
   .feedback-fab { transition: none; }
   .reorder-row[data-reorder-state="lifted"] { scale: none; }
+}
+
+/* 並べ替えの無い一覧（KPI 項目・行動指針の段階・基準セット。spec §28-14・DD-014）
+   行の形は、並べ替えの一覧の「行の操作のある行」と同じにする（番号・本文・札・補足を左に、行の操作を右端に）。
+   狭い一覧では操作を本文の下へ行の幅いっぱいに割り付け、36rem 以上では右へ寄せ、60rem 以上では本文の右に1段で並べる。
+   段組みは container query で決める。fieldset の中に置いても、子の出入りは FieldGroup の div の中で起きるので、
+   行が描かれなくなる不具合の条件に入らない（DD-017。並べ替えの一覧が測る印を使うのは DD-005 の保険）。
+   器は <ol class="list-rows">、行は <li class="card-row">。使わない行の見た目（data-off）は .card-row の規則がそのまま効く。 */
+.list-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  container: list-rows / inline-size;
+}
+.list-rows > .card-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+.list-rows > .card-row > .row-actions { gap: 8px; }
+.list-rows > .card-row > .row-actions > *,
+.list-rows > .card-row > .row-actions > * > .btn { flex: 1 1 8rem; }
+@container list-rows (min-width: 36rem) {
+  .list-rows > .card-row > .row-actions > *,
+  .list-rows > .card-row > .row-actions > * > .btn { flex: 0 0 auto; }
+}
+@container list-rows (min-width: 60rem) {
+  .list-rows > .card-row:has(> .row-actions) {
+    grid-template-columns: minmax(16rem, 1fr) minmax(0, max-content);
+  }
 }

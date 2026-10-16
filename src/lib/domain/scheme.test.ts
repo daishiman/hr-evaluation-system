@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { validateScheme, type SchemeSelection, type ValidateSchemeOptions } from "./scheme";
+import { routeOf } from "@/lib/route-access";
+import {
+  ASKING_PLACE_HINT,
+  isUnaskable,
+  unaskableLead,
+  validateScheme,
+  type SchemeSelection,
+  type ValidateSchemeOptions,
+} from "./scheme";
 import { pointsForSlot, type GradePointRule } from "./grade-points";
 
 /**
@@ -226,5 +234,97 @@ describe("validateScheme — ランク基準が未設定の項目", () => {
     expect(r.ok).toBe(true);
     expect(r.warnings).toHaveLength(1);
     for (const id of ["k2", "k3", "k5", "k7"]) expect(r.warnings[0]).toContain(`項目${id}`);
+  });
+});
+
+describe("validateScheme — 実績の聞き方（設問のひな形）が決まっていない項目", () => {
+  /* 画面で足したKPI項目には実績を聞く設問のひな形（kpi_questions）が無く、アンケートを作っても
+     作り直しても設問が出ない。作り直しで直ると思わせないよう、選んだ時点で知らせる。 */
+  const ALL = VALID.Manager.map((x) => x.kpiItemId);
+
+  it("askableItemIds を渡さなければ判定しない（未対応の呼び出し元で誤警告を出さない）", () => {
+    expect(validateScheme(VALID.Manager, opts("Manager")).warnings).toEqual([]);
+  });
+
+  it("すべての項目にひな形があれば何も言わない", () => {
+    const r = validateScheme(VALID.Manager, opts("Manager", { askableItemIds: ALL }));
+    expect(r.warnings).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("ひな形が無くても保存は通し、項目名と、作り直しても設問が出ず点も付かないことを伝える", () => {
+    const r = validateScheme(
+      VALID.Manager,
+      opts("Manager", {
+        askableItemIds: ALL.filter((id) => id !== "k11"),
+        itemNameOf: (id) => (id === "k11" ? "紹介件数" : id),
+      }),
+    );
+    expect(r.errors).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(r.warnings).toHaveLength(1);
+    expect(r.warnings[0]).toContain("「紹介件数」");
+    expect(r.warnings[0]).toContain("作り直しても");
+    expect(r.warnings[0]).toContain("点も付きません");
+  });
+
+  it("どこで聞き方を決めるかを、台帳と同じ画面名で添える", () => {
+    const r = validateScheme(VALID.Manager, opts("Manager", { askableItemIds: ALL.filter((id) => id !== "k11") }));
+    expect(r.warnings[0].endsWith(ASKING_PLACE_HINT)).toBe(true);
+    expect(ASKING_PLACE_HINT).toContain(`${routeOf("/admin/scheme")!.label}の「KPI項目」`);
+  });
+
+  it("固定枠は等級要件の設問から数えるので、ひな形が無くても言わない", () => {
+    const r = validateScheme(VALID.Manager, opts("Manager", { askableItemIds: ALL.filter((id) => id !== "k1") }));
+    expect(r.warnings).toEqual([]);
+  });
+
+  it("ランク基準の警告とは別の1行にし、無い項目が複数でも1つにまとめる", () => {
+    const r = validateScheme(
+      VALID.Chief,
+      opts("Chief", {
+        ratedItemIds: ["k1", "k9", "k2", "k3", "k5"],
+        askableItemIds: ["k1", "k9", "k2"],
+        itemNameOf: (id) => `項目${id}`,
+      }),
+    );
+    expect(r.warnings).toHaveLength(2);
+    const [unrated, unaskable] = r.warnings;
+    expect(unrated).toContain("項目k7");
+    for (const id of ["k3", "k5", "k7"]) expect(unaskable).toContain(`項目${id}`);
+    expect(unaskable).not.toContain("項目k2");
+  });
+});
+
+describe("isUnaskable・unaskableLead — 聞き方が決まっていない項目の線引きと書き出し", () => {
+  /* 選んだ時点の警告（validateScheme）と比べる警告の札（comparison-gap-loader.ts）は、isUnaskable の1つで線を引く。
+     書き出しの文は、選んだ時点の警告と比べる警告の注記（comparison-gap.ts の noTemplateNote）で同じ字面にする。 */
+  const askable = new Set(["k2"]);
+
+  it("固定枠でなく、ひな形も無い項目だけを聞き方が決まっていないとする", () => {
+    expect(isUnaskable({ kpiItemId: "k3", isFixedSlot: false }, askable)).toBe(true);
+    expect(isUnaskable({ kpiItemId: "k2", isFixedSlot: false }, askable)).toBe(false);
+  });
+
+  it("固定枠は等級要件の設問から数えるので、ひな形が無くても聞き方が決まっていないとしない", () => {
+    expect(isUnaskable({ kpiItemId: "k1", isFixedSlot: true }, askable)).toBe(false);
+    expect(isUnaskable({ kpiItemId: "k1", isFixedSlot: true }, new Set())).toBe(false);
+  });
+
+  it("書き出しは項目名を「」で囲み、2件以上は「・」でつなぐ", () => {
+    expect(unaskableLead(["粗利率"])).toBe("「粗利率」は、実績の聞き方がまだ決まっていません。");
+    expect(unaskableLead(["稼働率", "残業率"])).toBe("「稼働率」・「残業率」は、実績の聞き方がまだ決まっていません。");
+  });
+
+  it("選んだ時点の警告は、選んだ順に名指しする書き出しのあとに、この場面の続く文と決める場所を置く", () => {
+    const r = validateScheme(
+      VALID.Chief,
+      opts("Chief", { askableItemIds: ["k1", "k9", "k2"], itemNameOf: (id) => `項目${id}` }),
+    );
+    expect(r.warnings).toEqual([
+      unaskableLead(["項目k3", "項目k5", "項目k7"]) +
+        "このまま保存はできます。決めるまでは、アンケートを作っても作り直しても設問が出ず、点も付きません。" +
+        ASKING_PLACE_HINT,
+    ]);
   });
 });

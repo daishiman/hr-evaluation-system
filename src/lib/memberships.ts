@@ -102,31 +102,46 @@ export async function isSuperAdmin(db: DB, userId: string): Promise<boolean> {
   return row?.role === "SUPER_ADMIN";
 }
 
-/**
- * その利用者の有効な所属を古い順に返す（会社の切り替えの一覧にも使う）。
- * 古い順の先頭が「元の所属」。同じ時刻なら id の順で決める（並びが毎回変わらないように）。
- */
-export async function activeMembershipsOf(db: DB, userId: string) {
+/** その利用者の有効な所属を読む。並びは呼び出し側が役目に合わせて決める */
+function activeMembershipQuery(db: DB, userId: string) {
   return db
     .select({ ...membershipSelection(), companyName: s.companies.name })
     .from(m)
     .innerJoin(s.companies, eq(s.companies.id, m.companyId))
-    .where(and(eq(m.userId, userId), activeCompanyCondition()))
-    .orderBy(asc(m.createdAt), asc(m.id));
+    .where(and(eq(m.userId, userId), activeCompanyCondition()));
+}
+
+/**
+ * その利用者の有効な所属を古い順に返す。古い順の先頭が「元の所属」（users の写しの基準）。
+ * 同じ時刻なら id の順で決める（並びが毎回変わらないように）。
+ * 写しは改名では書き換えないので、改名で変わる会社名の順を写しの基準にしない（DD-009 の更新）。
+ */
+export async function activeMembershipsOf(db: DB, userId: string) {
+  return activeMembershipQuery(db, userId).orderBy(asc(m.createdAt), asc(m.id));
+}
+
+/**
+ * その利用者の有効な所属を会社名の順（同名は会社 id の順）に返す。
+ * 会社の切り替えの一覧と、選んでいる会社が無いときに開く会社はこの順（D-009）。
+ */
+export async function activeMembershipsByCompanyName(db: DB, userId: string) {
+  return activeMembershipQuery(db, userId).orderBy(asc(s.companies.name), asc(s.companies.id));
 }
 
 export type ActiveMembership = Awaited<ReturnType<typeof activeMembershipsOf>>[number];
 
 /**
  * いま使う所属を決める。選んだ会社（cookie の会社）に有効な所属があればそれ、
- * 無ければ一番古い有効な所属。有効な所属が無ければ null（全体管理者もここでは null）。
+ * 無ければ有効な所属のうち会社名の順で最初の会社（同名は会社 id の順・D-009）。
+ * 切り替えの一覧と同じ順なので、どの会社が開くかを画面から予想できる。
+ * 有効な所属が無ければ null（全体管理者もここでは null）。
  */
 export async function activeMembershipFor(
   db: DB,
   userId: string,
   preferredCompanyId: string | null,
 ): Promise<ActiveMembership | null> {
-  const all = await activeMembershipsOf(db, userId);
+  const all = await activeMembershipsByCompanyName(db, userId);
   return all.find((x) => x.companyId === preferredCompanyId) ?? all[0] ?? null;
 }
 
@@ -447,8 +462,9 @@ export function demoteFromSuperAdminStatements(
       .set({ ...userPatch, ...copyOf(values) })
       .where(and(eq(s.users.id, values.userId), guard))
       .returning({ id: s.users.id }),
-    db.run(sql`
-      insert into ${m} (id, user_id, company_id, role, grade_id, office_id, manager_id, employee_code, department, hired_at, profile_note, created_at, updated_at)
+    // db.run(sql`…`) は値を埋めると D1 の batch に入れられない（drizzle の SQLiteRaw が stmt を持たない）ので、
+    // insert … select にする。select の列は表の定義の順（id, user_id, …, updated_at）に並べる。
+    db.insert(m).select(sql`
       select ${id}, ${values.userId}, ${values.companyId}, ${values.role}, ${values.gradeId ?? null}, ${values.officeId ?? null},
              ${values.managerId ?? null}, ${values.employeeCode ?? null}, ${values.department ?? null}, ${values.hiredAt ?? null},
              ${values.profileNote ?? null}, ${now}, ${now}

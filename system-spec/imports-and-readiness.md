@@ -6,6 +6,7 @@
 - 回答CSVは同一form ID×CSV本文のdry-run署名tokenを本取込の前提とする。
 - 全業務変更と`import_batches`の対象ID・変更前snapshot・SHA-256・actorは1つのD1 batchへ入れる。任意statement失敗は全件rollbackする。
 - 1.5MBのsnapshotまたは500 statementを超える入力は413で止め、transactionを分割して部分commitしない。
+- 社員CSVで新しく作る人は、`users` の行と所属の行（`company_memberships`。会社ごとの値の正本、D-004 ②）を同じ batch で書く。権限の記録（`account_security_events`、入口 `member_import`、`operation_id` は `import_batches.id`）も同じ batch に入れ、dry-run では書かない。直す前に所属の行を持たずに作られた人は、移行 0036 が取り込みの記録から足す（冪等）。
 
 ## readiness
 

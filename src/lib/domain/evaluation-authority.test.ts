@@ -125,6 +125,13 @@ describe("対象者ごとの契約がすべての入口で使われること", (
     expect(read("src/app/me/responses/[id]/page.tsx")).toContain("canReadResponseBody(");
   });
 
+  it("回答一覧の氏名は、開ける回答のときだけ回答本文へのリンクにする（開けない下書きへ誘わない）", () => {
+    // 管理者でも他人の下書きは開けない。リンクにすると、押した先が「この回答は開けません」の行き止まりになる
+    expect(canReadResponseBody("admin-a", "COMPANY_ADMIN", { employeeId: "member-a", managerId: null }, "draft")).toBe(false);
+    // リンクを出す条件は、リンク先（/me/responses/[id]）と同じ関数で決める
+    expect(read("src/app/admin/forms/[id]/responses/page.tsx")).toContain("canReadResponseBody(");
+  });
+
   it("メモと個別期限も直属範囲へ閉じる", () => {
     expect(read("src/actions/notes.ts")).toContain("canManageEmployee(viewer, input.employeeId)");
     const deadline = read("src/actions/form-extensions.ts");

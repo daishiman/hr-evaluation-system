@@ -24,8 +24,9 @@ vi.mock("@/components/master-request", () => ({
 }));
 
 import { useMasterAction } from "./use-master-action";
+import type { MasterDeleteBody } from "@/lib/masters/body-schema";
 
-function render(kind: "gradeRequirement" | "promotionRequirement" | "behaviorGuideline" | "behaviorBandSet" = "gradeRequirement") {
+function render(kind: MasterDeleteBody["kind"] = "gradeRequirement") {
   mocks.cursor = 0;
   return useMasterAction(kind);
 }
@@ -55,7 +56,8 @@ describe("useMasterAction", () => {
     expect(render()).toMatchObject({ message: "保存しました。", error: null });
   });
 
-  it.each(["gradeRequirement", "promotionRequirement", "behaviorGuideline", "behaviorBandSet"] as const)("%sの削除拒否理由を保持し、次の送信で消す", async (kind) => {
+  // KPI 項目・KPI カテゴリも同じ hook で送る（消せない理由を残し、次の送信で消す振る舞いを画面ごとに持たない）
+  it.each(["gradeRequirement", "promotionRequirement", "behaviorGuideline", "behaviorBandSet", "kpiCategory", "kpiItem"] as const)("%sの削除拒否理由を保持し、次の送信で消す", async (kind) => {
     mocks.save.mockResolvedValueOnce({ ok: false, message: "使用中のため消せません。" });
     expect(await render(kind).remove("r")).toBe(false);
     expect(mocks.save).toHaveBeenCalledWith({ op: "delete", input: { kind, id: "r" } });

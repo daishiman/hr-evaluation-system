@@ -39,22 +39,25 @@ describe("認証セッションから会社別Viewerを作るDB結合", () => {
     mocked.companyId = "b";
     expect(await getViewer()).toMatchObject({ id: "dual", role: "MANAGER", companyId: "b", companyName: "B社", gradeId: "grade-b", managerId: "manager-b", employeeCode: "B-2", mustChangePassword: true });
   });
-  it.each([null, "missing", "template"])("cookie=%sなら最古の有効な所属へ戻す", async (companyId) => {
+  it.each([null, "missing", "template"])("cookie=%sなら有効な所属のうち会社名の順で最初の会社へ戻す", async (companyId) => {
     mocked.companyId = companyId;
     expect(await getViewer()).toMatchObject({ role: "EMPLOYEE", companyId: "a", employeeCode: "A-1" });
   });
-  it("会社名順が所属順と逆でも初期選択は最古の有効所属で、会社の改名でも変わらない", async () => {
+  it("初期選択は所属の古さではなく会社名の順で、改名すると開く会社も変わる（D-009）", async () => {
+    // a は最古の所属だが、名前の順では b が先になる
     await t.db.update(s.companies).set({ name: "Z社" }).where(eq(s.companies.id, "a"));
     await t.db.update(s.companies).set({ name: "A社" }).where(eq(s.companies.id, "b"));
-    expect(await getViewer()).toMatchObject({ companyId: "a", role: "EMPLOYEE" });
-    await t.db.update(s.companies).set({ name: "0社" }).where(eq(s.companies.id, "b"));
+    expect(await getViewer()).toMatchObject({ companyId: "b", role: "MANAGER" });
+    await t.db.update(s.companies).set({ name: "0社" }).where(eq(s.companies.id, "a"));
     expect(await getViewer()).toMatchObject({ companyId: "a", role: "EMPLOYEE" });
     // 明示的に選んだ有効な所属は、初期選択の順序より優先する。
     mocked.companyId = "b";
     expect(await getViewer()).toMatchObject({ companyId: "b", role: "MANAGER" });
   });
-  it("同時刻の所属も一意な所属IDで安定して選び、無効な会社は候補にしない", async () => {
-    await t.db.update(s.companyMemberships).set({ createdAt: new Date(1000) }).where(eq(s.companyMemberships.id, "mb"));
+  it("同名の会社は会社IDの順で安定して選び、無効な会社は候補にしない", async () => {
+    // 所属の古さを名前の順と逆にしても、同名なら会社IDの順で決まる
+    await t.db.update(s.companyMemberships).set({ createdAt: new Date(3000) }).where(eq(s.companyMemberships.id, "ma"));
+    await t.db.update(s.companies).set({ name: "同名社" });
     expect(await getViewer()).toMatchObject({ companyId: "a" });
     await t.db.update(s.companies).set({ isActive: false }).where(eq(s.companies.id, "a"));
     expect(await getViewer()).toMatchObject({ companyId: "b", role: "MANAGER" });

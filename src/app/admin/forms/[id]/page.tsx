@@ -1,16 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { requireRoute } from "@/lib/session";
+import { canEditForm, requireRoute } from "@/lib/session";
 import { getDb, schema as s } from "@/lib/db";
 import { getForm, listFormQuestions, listKpiItems } from "@/lib/queries";
 import { formRowTitle } from "@/lib/domain/grade-label";
 import { FormBuilder, type BuilderQuestion } from "@/components/FormBuilder";
 import { FormPreview } from "@/components/FormPreview";
+import { RespondentGuide } from "@/components/RespondentGuide";
+import { PREVIEW_MARK_NOTE, PREVIEW_NO_SAVE_NOTE } from "@/components/form-preview-notes";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
 import { rebuildFormQuestions, updateForm } from "@/actions/forms";
 import { Badge, Card, Disclosure, InlineDetail, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { ComparisonGapNotice } from "@/components/ComparisonGapNotice";
+import { loadFormComparisonGap } from "@/lib/comparison-gap-loader";
+import { REBUILD_LABEL, noTemplateNamesOf, rebuildConfirm, rebuildWontFixNote } from "@/lib/domain/comparison-gap";
 import { FORM_STATUS_LABEL } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -32,9 +37,10 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
   const displayTitle = formRowTitle(form);
   const defaultTitle = formRowTitle({ ...form, title: "" });
 
-  const [questions, kpiItems] = await Promise.all([
+  const [questions, kpiItems, comparisonGap] = await Promise.all([
     listFormQuestions(companyId, form.id, viewer.role),
     listKpiItems(companyId),
+    loadFormComparisonGap(companyId, { id: form.id, cycleId: form.cycleId }, { role: viewer.role, current: "form" }),
   ]);
 
   const db = await getDb();
@@ -74,6 +80,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
 
   // 公開後は回答0件でもすでに読まれている可能性があるため、同じ版の内容は変えない。
   const editable = form.status === "draft" && responses.length === 0;
+  const rebuildNote = rebuildWontFixNote(comparisonGap);
   const previewQuestions = questions.map((q) => ({
     id: q.id,
     section: q.section,
@@ -129,8 +136,10 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
           下書きで回答がまだない場合だけ、制度側の設定を直してから作り直せます。
           公開済み・締め切り済みの版は変えられません。内容を変えるときは新しい版を作ってください。
         </p>
-        {/* 「なぜ配点を隠すのか」は、この画面で操作する前に読む必要はない。押したときだけ出す。 */}
-        <div className="mt-1">
+        {/* 「なぜ配点を隠すのか」は、この画面で操作する前に読む必要はない。押したときだけ出す。
+            札は長く、globals.css（層の外）で折り返さない指定のため、320px では画面ごと横に流れる。
+            この枠の中だけ important で折り返しを許し、文節で折る（auto-phrase。効かない環境では今までどおり）。 */}
+        <div className="mt-1 text-pretty [word-break:auto-phrase] [&_summary]:whitespace-normal!">
           <InlineDetail summary="回答画面に配点・ランク基準は表示されません">
             <p className="footnote m-0">
               回答画面には、配点・ランク基準・昇格に必要な点数は一切表示されません。
@@ -139,15 +148,25 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
             </p>
           </InlineDetail>
         </div>
-        {editable && form.status === "draft" && (
+        {/* 使うKPIを選ぶで選んだ項目との比べ（DD-012）。作り直しは下のボタンで行うので、部品には出さない */}
+        {comparisonGap && (
           <div className="mt-3">
+            <ComparisonGapNotice gaps={[comparisonGap]} />
+          </div>
+        )}
+        {editable && form.status === "draft" && (
+          // ボタンの札も長いので、上の札と同じく、この枠の中だけ折り返しを許す。
+          // ボタンは警告の有無にかかわらず出す。作り直しは等級要件・昇格要件・行動指針の変更を写す操作でもあるため。
+          // 押しても警告が消えないときは、押す前にその理由を1行で伝える（読み上げでもボタンより先に届く）
+          <div className="mt-3 grid justify-items-start gap-2 text-pretty [word-break:auto-phrase] [&_.btn]:whitespace-normal!">
+            {rebuildNote && <p className="m-0 text-sub">{rebuildNote}</p>}
             <ActionButton
               action={rebuildFormQuestions}
               resource="forms"
               input={{ formId: form.id }}
-              label="いまの評価項目に合わせて設問を作り直す"
+              label={REBUILD_LABEL}
               variant="secondary"
-              confirm={`「${displayTitle}」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ回答は1件もありません。よろしいですか？`}
+              confirm={rebuildConfirm(displayTitle, noTemplateNamesOf(comparisonGap))}
             />
           </div>
         )}
@@ -156,10 +175,24 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
       <SectionHeading>回答者に見える内容（確認専用）</SectionHeading>
       <Disclosure summary="アンケートの中身を表示する" meta={`${previewQuestions.length}問`}>
         <p className="footnote mt-0">
-          保存済みの設問文・補足・必須／任意・答え方を表示します。ここには入力欄がなく、開いても回答や下書きは作られません。
+          保存済みの設問文・補足・答え方を表示します。{PREVIEW_MARK_NOTE} {PREVIEW_NO_SAVE_NOTE}
         </p>
+        {/* 見本には入力欄も送信ボタンも無い。入力と提出の動きは、回答者と同じ画面の試しの回答で確かめる */}
+        {canEditForm(viewer.role) && (
+          <p className="footnote m-0 mt-2">
+            数値の入力から提出の検査までは
+            <Link href={`/forms/${form.id}?try=1`} className="text-brand-deep">
+              試しに回答する
+            </Link>
+            で試せます（保存されません）。
+          </p>
+        )}
         <div className="mt-4 border-t border-line pt-4">
-          {form.description && <p className="mb-4 whitespace-pre-wrap text-sub leading-relaxed">{form.description}</p>}
+          {form.description && (
+            <p className="mb-4 whitespace-pre-wrap text-sub leading-relaxed">
+              <RespondentGuide>{form.description}</RespondentGuide>
+            </p>
+          )}
           <FormPreview questions={previewQuestions} />
         </div>
       </Disclosure>

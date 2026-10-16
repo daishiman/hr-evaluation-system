@@ -2,7 +2,7 @@ import { getEvaluationDetail, listEvaluations } from "@/lib/queries";
 import { Badge, Bar, Card, CardRow, Code, DefList, Disclosure, InlineDetail, LinkButton, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { EightAxisRadar } from "@/components/LazyCharts";
 import { PrintButton } from "@/components/PrintButton";
-import { formatPeriod } from "@/lib/view";
+import { formatDate, formatPeriod } from "@/lib/view";
 import { buildRadarValues, buildThresholdScale, parseReasonText, RANK_LEGEND } from "@/lib/domain/evaluation-view";
 import type { Role } from "@/lib/session";
 import type { ReactNode } from "react";
@@ -483,7 +483,7 @@ export async function EvaluationDetail({
             { label: "状態", value: head.status === "finalized" ? "確定済み" : "確認中" },
             {
               label: "確定日",
-              value: head.finalizedAt ? new Date(head.finalizedAt).toLocaleDateString("ja-JP") : "—",
+              value: head.finalizedAt ? formatDate(new Date(head.finalizedAt)) : "—",
             },
           ]}
         />

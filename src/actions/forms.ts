@@ -15,9 +15,14 @@ import {
   syncFormQuestions,
   type FormDraftInput,
 } from "@/lib/form-build";
+import { loadFormComparisonGap } from "@/lib/comparison-gap-loader";
+import { NO_TEMPLATE_HINT, noTemplateNamesOf, noTemplateNote } from "@/lib/domain/comparison-gap";
+import { checkQuestionLinks } from "@/lib/domain/form-question-links";
 import { checkNumberMagnitude, defaultIntegerFlag } from "@/lib/domain/number-input";
 import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
+import { loadStaleAsking } from "@/lib/stale-asking-loader";
+import { SCREEN_SECTIONS } from "@/lib/question-order";
 
 /**
  * アンケートの作成・公開・締め切り・内容の変更と、設問の保存（会社の管理者のみ）。
@@ -49,6 +54,10 @@ export async function createForms(raw: unknown) {
     if (!schemeReadiness.schemeReady) throw new HttpError(409, schemeReadiness.schemeMessage);
 
     const grades = await db.select().from(s.grades).where(eq(s.grades.companyId, companyId));
+    // 名指しした等級は1件でも自社に無ければ止める。黙って外すと、作ったつもりの版が無いまま進む（DD-012 の7）
+    if (input.gradeIds?.some((id) => !grades.some((g) => g.id === id))) {
+      throw new HttpError(400, "この会社に無い等級が含まれています。");
+    }
     const targets = input.gradeIds
       ? grades.filter((g) => input.gradeIds!.includes(g.id))
       : grades.filter((g) => g.isActive);
@@ -161,12 +170,16 @@ export async function updateForm(raw: unknown) {
       ]);
       const cycleRow = cycle[0];
       if (!cycleRow) throw new HttpError(404, "評価期間が見つかりませんでした。");
-      const schemeReadiness = await loadSchemeReadiness(companyId, cycleRow.schemeId);
+      const [schemeReadiness, staleAsking] = await Promise.all([
+        loadSchemeReadiness(companyId, cycleRow.schemeId),
+        loadStaleAsking(companyId, cycleRow.schemeId, [form]),
+      ]);
       const readiness = formPublicationReadiness({
         schemeGaps: schemeReadiness.schemeGaps,
         cycleStatus: cycleRow.status,
         questionCount: qs.length,
         formId: form.id,
+        staleAsking: staleAsking.get(form.id) ?? [],
       });
       if (!readiness.ready) throw new HttpError(409, readiness.message);
       // 同じサイクル・等級で公開中のものは自動で締める（回答先が2つに割れないようにする）
@@ -255,10 +268,18 @@ const formRefSchema = z.object({ formId: z.string().min(1) });
 export async function rebuildFormQuestions(raw: unknown) {
   return runAction({ operation: "forms.rebuildQuestions", input: formRefSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
-    const r = await syncFormQuestions({ companyId: viewer.companyId, formId: input.formId });
+    const { cycleId, ...r } = await syncFormQuestions({ companyId: viewer.companyId, formId: input.formId });
+    // 設問のひな形が無い（聞き方が決まっていない）項目は、作り直しても足りないまま残る。押しても直らなかった理由と、
+    // 聞き方を決める場所を返事で伝える
+    // （画面の警告と同じ読み出しを通し、数え方を変えない）
+    const gap = await loadFormComparisonGap(viewer.companyId, { id: input.formId, cycleId }, { role: viewer.role, current: "form" });
+    const noTemplate = noTemplateNamesOf(gap);
     return {
       ...r,
-      message: `いまの評価項目に合わせて設問を作り直しました（${r.questionCount}問）。内容を確認してから公開してください。`,
+      message:
+        `いまの制度の設定から設問を作り直しました（${r.questionCount}問）。` +
+        (noTemplate.length > 0 ? noTemplateNote(noTemplate) + NO_TEMPLATE_HINT : "") +
+        "内容を確認してから公開してください。",
     };
   });
 }
@@ -266,7 +287,8 @@ export async function rebuildFormQuestions(raw: unknown) {
 const questionSchema = z.object({
   /** 既存の設問はIDを付けて送る。新規は省略する。 */
   id: z.string().optional(),
-  section: z.enum(["support", "operation", "training", "test", "behavior", "kpi", "free"]),
+  // 受け付ける節は、画面に描く節（SCREEN_SECTIONS）と同じ組。手で写すと、節を足したときに保存だけ断る
+  section: z.enum(SCREEN_SECTIONS),
   questionType: z.enum(["yesno", "single", "multi", "number", "text", "scale"]),
   title: z.string().min(1, "設問文を入力してください").max(300),
   helpText: z.string().max(300).nullable().optional(),
@@ -358,8 +380,26 @@ export async function saveFormQuestions(raw: unknown) {
       }
     }
 
+    // 集計との紐づけは、保存済みの同じ設問からの引き継ぎだけを受け付ける（DD-015）
+    const stored = await db
+      .select({
+        id: s.formQuestions.id,
+        section: s.formQuestions.section,
+        questionType: s.formQuestions.questionType,
+        gradeRequirementId: s.formQuestions.gradeRequirementId,
+        promotionRequirementId: s.formQuestions.promotionRequirementId,
+        behaviorGuidelineId: s.formQuestions.behaviorGuidelineId,
+        kpiItemId: s.formQuestions.kpiItemId,
+        kpiQuestionKey: s.formQuestions.kpiQuestionKey,
+        isGate: s.formQuestions.isGate,
+      })
+      .from(s.formQuestions)
+      .where(and(eq(s.formQuestions.companyId, companyId), eq(s.formQuestions.formId, form.id)));
+    const links = checkQuestionLinks(q, stored);
+    if (!links.ok) throw new HttpError(400, links.message);
+
     const rows = q.map((x, i) => ({
-      id: x.id ?? newId("fq"),
+      id: links.ids[i] === "keep" && x.id ? x.id : newId("fq"),
       companyId,
       formId: form.id,
       section: x.section,

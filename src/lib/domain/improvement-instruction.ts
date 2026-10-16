@@ -10,6 +10,8 @@
  * 実際に払い出す側は src/lib/improvement-handout-write.ts。
  */
 
+import { formatJstTime, jstDateKey } from "./jst";
+
 /* ───────────────────────── 種類 ───────────────────────── */
 
 /**
@@ -432,20 +434,9 @@ export interface InstructionInput {
   diagnostics: ImprovementDiagnostics | null;
 }
 
-/** 日本時間の日時。サーバーは UTC で動くので、読む人の時間に直してから書く。 */
+/** 日本時間の日時。サーバーは UTC で動くので、読む人の時間に直してから書く（jst.ts）。 */
 export function formatJst(date: Date): string {
-  const parts = new Intl.DateTimeFormat("ja-JP", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(date);
-  const at: Record<string, string> = {};
-  for (const p of parts) at[p.type] = p.value;
-  return `${at.year}-${at.month}-${at.day} ${at.hour}:${at.minute} JST`;
+  return `${jstDateKey(date)} ${formatJstTime(date)} JST`;
 }
 
 const TITLE_MAX = 60;

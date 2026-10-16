@@ -2,19 +2,12 @@
 
 import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
-import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, FieldGroup, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { UsedByDetail } from "@/components/UsedByDetail";
+import { ListAddArea, ListAddRow } from "@/components/ListRow";
+import { BlockedHelp, UsedByDetail, blockedRows } from "@/components/UsedByDetail";
 import { classifyVersionedItems, VersionedMasterSections } from "@/components/VersionedMasterSections";
-import {
-  BLOCKED_HELP_LABEL,
-  BLOCKED_KEEP,
-  BLOCKED_WHAT,
-  BLOCKED_WHY,
-  DELETE_LABEL,
-  blockedMark,
-  deleteConfirmText,
-} from "@/lib/domain/master-delete";
+import { DELETE_LABEL, deleteConfirmText } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { ReorderList } from "@/components/reorder/ReorderList";
@@ -71,9 +64,7 @@ export function PromotionRequirementEditor({
   /* 使っている場所があるなら消させない。
      行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
      全行で同じになる「なぜ消せないか」は、この部品の一番下に1つだけ置く。 */
-  const usedByOf = (id: string) => usage[id] ?? [];
-  const markOf = (id: string) => blockedMark(usedByOf(id));
-  const anyBlocked = rows.some((r) => usedByOf(r.id).length > 0);
+  const { usedByOf, markOf, anyBlocked } = blockedRows(usage, rows);
   /** 並べ替えの一覧の1行（本文と行の操作）に、どちらにも同じく渡す値 */
   const rowOf = (r: PromotionRow) => ({ id: r.id, text: r.text, usedBy: usedByOf(r.id), editing, busy: saving });
 
@@ -89,7 +80,7 @@ export function PromotionRequirementEditor({
       <Card key={kind}>
         {/* 項目を上から書き足していく画面なので、頭は固定表示にする。
             帯に載せるのは「いま何の種類を書いているか」と「いま何項目あるか」だけ。 */}
-        {/* 「件数の上限なし・0項目でもよい」は2つの種類で同じ文なので、カードの頭ではなく冒頭の説明に1回だけ書く */}
+        {/* 「件数の上限なし・0項目でもよい」は2つの種類で同じ文なので、カードの頭ではなく、画面の「昇格要件」の見出しの右に1回だけ書く */}
         <CardHead
           pinned
           title={KIND_LABEL[kind]}
@@ -100,13 +91,6 @@ export function PromotionRequirementEditor({
             </span>
           }
         />
-
-        {/* 追加の入力欄を開いているときだけ、ここに「まだありません」を出す。閉じているときは追加ボタンと同じ行に置く */}
-        {list.length === 0 && draft.open && (
-          <div className="card-pad">
-            <p className="footnote m-0">この種類の項目はまだありません。</p>
-          </div>
-        )}
 
         {/* 並べ替えはつまみの長押し・ドラッグか矢印のボタン（S11・DD-005）。置いたら並び全体を1回で保存する */}
         {list.length > 0 && (
@@ -161,7 +145,7 @@ export function PromotionRequirementEditor({
           />
         )}
 
-        <div className="card-pad">
+        <ListAddArea hasRows={list.length > 0}>
           {draft.open ? (
             <div className="grid gap-2">
               <textarea
@@ -207,16 +191,18 @@ export function PromotionRequirementEditor({
               </div>
             </div>
           ) : (
-            /* 行の操作（内容を直す・今後使わない）と同じく右端に置く（左に1つだけ置くと右側が空いたまま残る。§28-9）。
-               項目が無いときは「まだありません」を同じ行の左に置く（別の段にすると、その段は右側が空く） */
-            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-              {list.length === 0 && <p className="footnote m-0 mr-auto">この種類の項目はまだありません。</p>}
+            /* 足すボタンは、どの一覧でも一覧の下の左端に置き、押すと何が起きるかを右端に添える。
+               項目が無いことも、別の段にせず同じ行の右端に書く（spec §28-14） */
+            <ListAddRow
+              empty={list.length === 0 && "この種類の項目はまだありません。"}
+              note="内容と、必須にするかどうかを決めて、項目を1つ増やします。"
+            >
               <Button variant="secondary" disabled={saving} onClick={() => setDrafts((s) => ({ ...s, [kind]: { open: true, text: "", gate: true } }))}>
                 ＋ 項目を追加
               </Button>
-            </div>
+            </ListAddRow>
           )}
-        </div>
+        </ListAddArea>
 
         <div className="card-pad grid gap-2 border-t border-line">
           <VersionedMasterSections
@@ -254,12 +240,11 @@ export function PromotionRequirementEditor({
   };
 
   return (
-    <fieldset disabled={saving && !reordering} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
+    <FieldGroup disabled={saving && !reordering} aria-busy={saving} bodyClassName="stack">
       {/* 冒頭の説明は1つの段落にまとめる（短い文を1行ずつ積むと、その行ごとに右側が空く。§28-9） */}
       <p className="footnote m-0">
         いま編集しているのは <b>{gradeName}</b> の昇格要件です{stepLabel && `（${stepLabel}）`}。ここでの変更は次に作るアンケートから反映されます。
         すでに作成・公開したアンケートと確定済みの評価は変わりません。内容を直すと、新版を作ります。
-        どちらの種類も件数の上限はなく、0項目のままでもかまいません。
       </p>
       {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
       <RefreshStatus message={message} refreshing={saving} />
@@ -267,13 +252,7 @@ export function PromotionRequirementEditor({
       {block("test")}
       {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。
           「使用中」の行が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
-      {anyBlocked && (
-        <Disclosure summary={BLOCKED_HELP_LABEL}>
-          <p className="m-0 text-sub">{BLOCKED_WHY}</p>
-          <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
-          <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
-        </Disclosure>
-      )}
-    </fieldset>
+      {anyBlocked && <BlockedHelp />}
+    </FieldGroup>
   );
 }

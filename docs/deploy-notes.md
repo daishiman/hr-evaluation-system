@@ -10,7 +10,7 @@
 2. 自動の [Deploy workflow](../.github/workflows/deploy.yml) が文書・型・テスト・ビルド・容量の各ゲートを通す。
 3. 未適用 migration があれば、本番DBのバックアップを取得して14日間Artifactに保管する。バックアップできなければ停止する。
 4. migrationを自動適用し、同じ本番DBを再照会して未適用0件を確認してから配布する。
-5. 自動スモークを確認し、必要な認証付き操作を人が確認する。
+5. 自動スモークを確認し、必要な認証付き操作を人が確認する。ログインしたあとの画面が新しい表を読めるかは、§3 の「移行のあとに、ログインしたスモークを流す」で確かめる。
 
 migration がない変更はバックアップと適用をスキップしてそのまま配布します。通常運用で手動操作は不要です。[Migration workflow](../.github/workflows/migrate.yml) は、Deployのmigration適用後に別工程で失敗した場合の復旧確認や、後方互換なmigrationだけを先行適用したい場合に使います。DeployとMigrateは同じconcurrency groupで直列化し、未適用状態が判定不能ならfail-closedで停止します。
 
@@ -54,6 +54,33 @@ Cloudflare Workers では配布直後に旧 isolate が短時間残ることが�
 - ログイン API には対象 URL と一致する `origin` ヘッダーを送る。
 - `429` は失敗として連打せず、待機または上限付きリトライを使う。
 - 秘密値や個人データをログへ出さない。
+
+### 移行のあとに、ログインしたスモークを流す
+
+ログイン前の2枚（`/` と `/login`）は、表が足りなくても通ります。表が無いと落ちるのは、ログインしたあとに DB を読む画面です（0010 の当て漏れで `/account` が `no such table` になった件。[アカウント設定の設計](../architecture/account-profile.md) の「マイグレーション」）。移行を足したら、[認証付きスモーク](../scripts/smoke-authenticated.mjs) で役割ごとに入り直して確かめます。
+
+手元の preview で流す手順:
+
+```bash
+pnpm run db:migrate:local
+pnpm run preview
+# preview を起動したまま、別の端末で
+pnpm run smoke:auth -- --origin http://localhost:8787
+```
+
+- 見本の利用者（`scripts/seed-data.mjs`）で入ります。ローカル D1 が空なら、先に `pnpm run db:seed:local` を流します（全置換）。
+- 8787 以外の港番号で preview を上げるときは、`.dev.vars` の `BETTER_AUTH_URL` を同じ港番号に合わせます。合っていないとログインが `INVALID_ORIGIN` で断られ、NG になります。
+- 役割は一般・マネージャー・会社の管理者・システム全体管理者の4つで、開く画面は14件です（`/account`・`/me`・`/manager`・`/admin`・`/admin/members` とそこから拾った1人・`/admin/members/policy`・`/system`・`/system/users`）。役割と画面の表はスクリプトの `PAGES` の1か所にあります。移行で表を足したら、その表を読む画面が `PAGES` にあるかを確かめます。`--roles` で役割を絞れます（`--help` で一覧）。
+- 結果は「OK/NG・役割・パス・状態」を1行ずつ出します。NG にするのは、200 以外（`/login` や自分のホームへの転送も含む）と、200 でも本文にエラーの印があるものです。印は `no such table`・`no such column`・Next.js のエラー画面と、例外の印 `data-dgst` です。本番では例外の文面が伏せられ、`data-dgst` の数字だけが残ります。
+- 終了コードは、0 = 全部 OK、1 = NG が1件以上、2 = 引数や利用者の指定が足りない（通信の前に止めた）です。
+- ログインの試行制限（`429`）に当たったら、言われた秒数だけ待って入り直します（回数に上限あり）。
+
+本番に向けるとき:
+
+- 見本の利用者では入りません。役割ごとに本番の専用の利用者を用意し、`SMOKE_<役割>_EMAIL` と `SMOKE_<役割>_PASSWORD` を環境変数で渡します。会社を選ぶ役割は `SMOKE_<役割>_COMPANY`（会社 id）も渡します。`<役割>` は `EMPLOYEE`・`MANAGER`・`COMPANY_ADMIN`・`SUPER_ADMIN` です。確かめる役割の分がそろっていなければ、通信の前に終了コード 2 で止まります。
+- 宛先は `--origin` か、環境変数 `APP_URL`（`smoke.sh` と同じ名前）で渡します。
+- パスワードは出力に出しません。資格情報を文書・スクリプト・ログに書きません。
+- [Deploy workflow](../.github/workflows/deploy.yml) には組み込んでいません。本番では §1 の5のとおり人が確かめます。
 
 ## 4. アセットサイズ
 
@@ -203,6 +230,12 @@ pnpm test:e2e
 | 0034 | 既存の会社の等級名と、等級名を含む表示名を『等級1』〜『等級5-2』へ書き換える。前の値は `display_name_rewrites` に残す | 変化0 |
 | 0035 | 予行で見つかった漏れ（前の等級名で保存された既定の題名・KPI 項目の文・昇格要件の本文の写し）を直す | 変化0 |
 
+配布の記録:
+
+- Deploy workflow の実行 `38509015552`（2026-10-14 03:58〜04:04 UTC、PR #93 の `03787cb`）。本番 D1 の書き出し → 保管 → 0033・0034・0035 の適用 → 未適用0件 → 配布 → 2回のスモークが、すべて success。
+- 書き出しは Artifact `d1-backup-38509015552` に保管した。保管の期限は 2026-10-28 04:01 UTC。0034・0035 を書き出しから戻す手順（[移行の対応表 §12-5](./migration-mapping-grade-display-names.md)）は、この期限の内だけ使える。
+- 続く実行 `38560660381`（2026-10-14 12:00〜12:05 UTC、PR #94 の `42b7f6b`）は未適用の移行が0件だったので、書き出し・保管・適用を飛ばして配布とスモークだけを流した（どちらも success）。
+
 確かめる要点（配布の後に読み取りだけで見る）:
 
 - `wrangler d1 migrations list` の未適用が0件である（Deploy workflow が確かめて、記録に残す）。
@@ -235,3 +268,108 @@ pnpm test:e2e
 - 全体管理者はメニュー「権限一覧」（`/system/permissions`）で、47画面ぶんの「できる（○）・条件つき（△）・できない（—）」を役割ごとに見られる。上のタブで役割を1つに絞れる。△ の条件は「i」を指すか押すと出る。
 - 利用者の一覧（`/system/users`・`/admin/members`）の「権限一覧を開く」でも、同じ内容をその場で開ける。
 - 一覧はルート台帳から作るので、画面の入口・メニュー・保存の処理の判定と食い違わない。役割の決まりを変えるときは、台帳を直して契約テスト（`src/lib/permissions-contract.test.ts`）を通す。
+
+## 11. 社員CSVの取り込みの直し（移行 0036）
+
+0033 で所属の表が会社ごとの値の正本になったあとも、社員CSVの取り込みは `users` だけを書いていました。そのため次の2つが起きていました。
+
+- 取り込みで新しく作った人に所属の行が無く、社員の一覧・評価の画面に出ない。
+- 登録済みの人を取り込みで変えたとき、役割・等級・上長などが `users` の写しにだけ入り、所属の行（正本）は前の値のまま。
+
+取り込みは所属の行を書くように直しました（`src/lib/import-members.ts`）。ほかの会社にも所属している人の氏名・利用状態は、社員の画面と同じく全体管理者の取り込みでだけ変えられます。
+
+移行 0036 は、1つ目の人たちに所属の行を足します。足すのは、取り込みの記録（`import_batches` の `before_json`）で「その取り込みで新しく作った」と分かり、今もその会社の役割を持ち、所属の行が無い人だけです。値は `users` の写しから取り、id は `mem_imp_` で始まります。2回流しても変化0です。§1 の順序のとおり Deploy workflow が当てるので、手で流しません。
+
+確かめる要点（配布の後に読み取りだけで見る）:
+
+- 足した行の数: `SELECT COUNT(*) FROM company_memberships WHERE id LIKE 'mem_imp_%';`
+- 会社に属するのに所属の行が無い人が0件である:
+
+  ```sql
+  SELECT u.id, u.company_id, u.role FROM users u
+  WHERE u.company_id IS NOT NULL AND u.role IN ('EMPLOYEE', 'MANAGER', 'COMPANY_ADMIN')
+    AND NOT EXISTS (SELECT 1 FROM company_memberships m WHERE m.user_id = u.id AND m.company_id = u.company_id);
+  ```
+
+  ここに出る人は、取り込みの記録に無い経路で作られた人です。移行では足さないので、1人ずつ原因を調べてから全体管理者の画面で所属を足します。
+
+2つ目（登録済みの人の取り込みでの変更）は、この移行では直しません。写しと所属の行のどちらが正しいかは、その会社に確かめないと決められないためです。次の照会（読み取りだけ）で、写しと元の所属の値がずれている人を出せます。
+
+```sql
+SELECT u.id, u.name, u.company_id,
+  u.role AS copy_role, m.role AS membership_role,
+  u.grade_id AS copy_grade, m.grade_id AS membership_grade,
+  u.manager_id AS copy_manager, m.manager_id AS membership_manager,
+  u.office_id AS copy_office, m.office_id AS membership_office,
+  u.employee_code AS copy_code, m.employee_code AS membership_code,
+  u.department AS copy_department, m.department AS membership_department,
+  u.hired_at AS copy_hired, m.hired_at AS membership_hired
+FROM users u
+JOIN company_memberships m ON m.user_id = u.id AND m.company_id = u.company_id
+WHERE u.role IS NOT m.role OR u.grade_id IS NOT m.grade_id OR u.manager_id IS NOT m.manager_id
+  OR u.office_id IS NOT m.office_id OR u.employee_code IS NOT m.employee_code
+  OR u.department IS NOT m.department OR u.hired_at IS NOT m.hired_at;
+```
+
+本番で流すときは `pnpm wrangler d1 execute hr-evaluation-db --remote --command "<上の SQL>"` を使います（`SELECT` だけ）。出た人は、会社に確かめて正しい値を社員の画面（`/admin/members`）で保存し直します。保存すると所属の行と写しの両方が同じ値になります。同じCSVをもう一度取り込んでも直せます（今の取り込みは所属の行に書くため）。
+
+戻すとき: アプリの版を戻します。足した行は取り込みが本来書くべきだった行なので、残したままで構いません。消すときは書き出してから `DELETE FROM company_memberships WHERE id LIKE 'mem_imp_%';` を流します（足したあとに画面で変えた値も消えます）。
+
+## 12. アカウント操作の監査記録（移行 0037）
+
+全体管理者にする・外す、会社の役割を変える、所属の会社を移す、利用を止める・再開する、パスワードを再発行する、アカウントを作る、の操作を（出来事は8種類）、表 `account_security_events` に残すようにしました（E7。決めたことは [前例のない設計判断の記録 DD-013](./product/design-decisions.md)）。入口は「システム全体の利用者」「社員」「会社の追加（最初の管理者）」「社員CSVの取り込み」の4つです。
+
+移行 0037 は表・索引2つ・書き換えを止めるトリガーを足すだけで、既存の行は変えません。2回流しても変化0です。§1 の順序のとおり Deploy workflow が当てるので、手で流しません。移行の前の操作は記録にありません（表はこの移行から書き始めます）。
+
+確かめる要点（配布の後に読み取りだけで見る）:
+
+- 表とトリガーがある: `SELECT name, type FROM sqlite_master WHERE tbl_name = 'account_security_events';`（表・`idx_ase_user_time`・`idx_ase_company_time`・`trg_ase_append_only` が出る）
+- 画面で利用者を1人保存したあとに、記録が1件以上増えている: `SELECT COUNT(*) FROM account_security_events;`
+
+記録を読むときの照会（読み取りだけ。画面はまだありません）:
+
+```sql
+SELECT e.occurred_at, e.event_type, e.source, e.company_id,
+  target.email AS target_email, actor.email AS actor_email,
+  e.before_json, e.after_json, e.operation_id
+FROM account_security_events e
+JOIN users target ON target.id = e.user_id
+LEFT JOIN users actor ON actor.id = e.actor_id
+ORDER BY e.occurred_at DESC, e.rowid DESC
+LIMIT 50;
+```
+
+- 1人に絞るときは `WHERE e.user_id = '<利用者の id>'`、1社に絞るときは `WHERE e.company_id = '<会社の id>'` を足します。会社の列は移した先の会社です。全体管理者の付け外しのように所属の無い出来事は NULL です。
+- 同じ保存で起きたことは同じ `operation_id` です。社員CSVの取り込みは、取り込みの記録の id（`import_batches.id`）と同じ値です。
+- `occurred_at` はミリ秒の数値です。日時で見るときは `datetime(e.occurred_at / 1000, 'unixepoch', '+9 hours')` にします。
+- 本番で流すときは `pnpm wrangler d1 execute hr-evaluation-db --remote --command "<上の SQL>"` を使います（`SELECT` だけ）。結果には利用者のメールアドレスが入るので、文書・Issue・ログに貼りません。
+
+記録は書き換えられません（UPDATE はトリガーが `account_security_events_append_only` で止めます）。操作した人の利用者を消したときだけ、`actor_id` が NULL になります。
+
+戻すとき: アプリの版を戻します。古いコードはこの表を読み書きしないので、表を残したままで構いません。表ごと消すときは、記録も消えるので書き出してから `DROP TABLE account_security_events;` を流します（トリガーと索引も一緒に消えます）。
+
+## 13. 保存した結果の鮮度の配布（移行 0031・0032）
+
+保存の入口の一本化（[製品仕様 §27](./product/spec.md)）は、移行2本と、それを読む新しいコードを同時に出しました（PR #90、`40362db`）。§1 の順序のとおり、Deploy workflow が本番 DB を書き出してから移行を当て、未適用0件を確かめてから Worker を配っています。手で `db:migrate:remote` を流しません。
+
+| 移行 | 中身 | 2回流したとき |
+|---|---|---|
+| 0031 | 初期パスワードの控えの表 `initial_credential_memos` を作る。暗号文だけを持ち、利用者を消すと控えも消える | 2回目は表が既にあるので、Deploy workflow は適用済みとして流さない |
+| 0032 | 制度マスタの監査記録 `constitution_events` の番号の重なりを、同じ実体の中で並び順を変えずに振り直し、索引を一意（`uq_ce_entity_seq`）に張り替える | 振り直しの対象が無くなるので、変化0 |
+
+配布の記録:
+
+- Deploy workflow の実行 `36988220392`（2026-10-02 09:10〜09:15 UTC、`40362db`）。未適用の確認 → 本番 D1 の書き出し → 保管 → 0031・0032 の適用 → 未適用0件 → 配布 → 2回のスモークが、すべて success。
+- 書き出しは Artifact `d1-backup-36988220392` に保管した。保管の期限は 2026-10-16 09:12 UTC。期限を過ぎると、この時点の DB へは戻せない。
+
+確かめる要点（配布の後に読み取りだけで見る）:
+
+- 表と索引がある: `SELECT name, type FROM sqlite_master WHERE name IN ('initial_credential_memos', 'uq_ce_entity_seq', 'idx_ce_entity');`（表と `uq_ce_entity_seq` が出て、`idx_ce_entity` は出ない）
+- 番号の重なりが0件: `SELECT company_id, entity_type, entity_id, seq, COUNT(*) FROM constitution_events GROUP BY 1, 2, 3, 4 HAVING COUNT(*) > 1;`（0行）
+- 控えを使うには、§6 の鍵 `CREDENTIAL_ENC_KEY` が要る。鍵が無いあいだは控えを作らず、表は空のまま。
+
+戻すとき: まずアプリの版を戻します（§8）。移行は戻さずに残すのが既定です。
+
+- 0031 の表は、古いコードが読み書きしないので残したままで構いません。消すときは `DROP TABLE initial_credential_memos;` を流します。控えは開けなくなるので、要る人だけ初期パスワードを再発行します。
+- 0032 の一意索引は、古いコードでも残したままで構いません。古いコードで同じ項目を同時に保存すると、後のほうが重なりの代わりに失敗します。元の索引に戻すときは `DROP INDEX uq_ce_entity_seq;` のあと、`CREATE INDEX idx_ce_entity ON constitution_events (company_id, entity_type, entity_id, seq);` を流します。振り直した番号は元に戻せませんが、並び順は変わっていません。
+- DB そのものを書き出しの時点へ戻すのは、上の保管の期限の内だけです。戻すとその後の保存がすべて消えるので、別に承認を取ってから行います。

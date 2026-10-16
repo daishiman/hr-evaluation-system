@@ -46,6 +46,20 @@ export function schemeStepPath(pointGroup: string, step: StepKey): string {
   return step === "select" ? base : `${base}/criteria`;
 }
 
+/** KPI項目の画面で、入力欄を開いておく項目を指すクエリの名前 */
+export const KPI_ITEM_PARAM = "item";
+
+/** KPI項目の一覧の行の id。URL の # で、その行へ飛ばす */
+export function kpiItemAnchor(itemId: string): string {
+  return `kpi-item-${itemId}`;
+}
+
+/** KPI項目の画面を、その項目の入力欄を開いた状態で、その行の位置から見せるURL */
+export function kpiItemPath(itemId: string): string {
+  const id = encodeURIComponent(itemId);
+  return `/admin/scheme?${KPI_ITEM_PARAM}=${id}#${encodeURIComponent(kpiItemAnchor(itemId))}`;
+}
+
 export interface SavedPick {
   kpiItemId: string;
   isFixedSlot: boolean;

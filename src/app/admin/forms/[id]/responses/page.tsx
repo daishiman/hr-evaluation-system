@@ -6,6 +6,7 @@ import { appOrigin, formUrl } from "@/lib/origin";
 import { requireRoute } from "@/lib/session";
 import { getForm } from "@/lib/queries";
 import { formRowTitle } from "@/lib/domain/grade-label";
+import { canReadResponseBody } from "@/lib/domain/evaluation-authority";
 import { listFormSubmissionRows } from "@/lib/submission-queries";
 import { parseSubmissionFilter, SUBMISSION_STATE_LABEL } from "@/lib/domain/submission-status";
 import { listFormExtensions } from "@/lib/response-access";
@@ -15,18 +16,16 @@ import { RecordForm } from "@/components/RecordForm";
 import { grantFormExtension, revokeFormExtension } from "@/actions/form-extensions";
 import { Badge, Card, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, RecordList, SectionHeading, StatGrid } from "@/components/ui";
 import { SubmissionStatusTable } from "@/components/SubmissionStatusTable";
-import { FORM_STATUS_LABEL, formatDate } from "@/lib/view";
-import { formatJpDate, judgeFormDeadline, jstDateString } from "@/lib/domain/form-deadline";
+import { FORM_STATUS_LABEL, formatDateTime } from "@/lib/view";
+import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
+import { jstDateKey } from "@/lib/domain/jst";
 
 export const dynamic = "force-dynamic";
 
-/** 「2026/07/24 12:32」の形にする（回答日時は分まで見えれば足りる）。 */
+/** 「2026年7月24日 12:32」の形にする（日時は分まで見えれば足りる）。日本時間で書くのは formatDateTime に任せる。 */
 function formatWhen(v: Date | string | null): string {
   if (!v) return "—";
-  const d = typeof v === "string" ? new Date(v) : v;
-  if (Number.isNaN(d.getTime())) return "—";
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${formatDate(d)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return formatDateTime(typeof v === "string" ? new Date(v) : v);
 }
 
 /**
@@ -154,8 +153,12 @@ export default async function AdminFormResponses({
           counts={counts}
           filter={filter}
           filterHref={(f) => `/admin/forms/${form.id}/responses${f === "all" ? "" : `?status=${f}`}`}
+          /* 氏名をリンクにするのは、リンク先（/me/responses/[id]）が開ける回答だけ。管理者でも他人の下書きは開けないので、
+             リンクにすると押した先が「この回答は開けません」の行き止まりになる。
+             この画面を開けるのは管理者だけで、管理者が読めるかは上長かどうかに依らない（managerId は見ない）。 */
           nameCell={(r) =>
-            r.response ? (
+            r.response &&
+            canReadResponseBody(viewer.id, viewer.role, { employeeId: r.employeeId, managerId: null }, r.response.status) ? (
               <Link href={`/me/responses/${r.response.id}`} className="text-brand-deep">
                 {r.name}
               </Link>
@@ -218,7 +221,7 @@ export default async function AdminFormResponses({
               type: "date",
               required: true,
               help: `もとの締切（${form.closesAt ? formatJpDate(form.closesAt) : "指定なし"}）より後の日付を選んでください。指定した日の終わりまで回答できます。`,
-              defaultValue: jstDateString(new Date()),
+              defaultValue: jstDateKey(new Date()),
             },
             {
               name: "reason",

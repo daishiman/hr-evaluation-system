@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cycleOpenGaps, formSyncGaps, gapsMessage, schemeGaps, staleCycleGaps } from "./setup-gaps";
+import type { ComparisonGapInput } from "./comparison-gap";
 
 /*
  * 設定不足の言葉とリンクの細部。リンク先が台帳にあることと英語の区分名を出さないことは
@@ -60,16 +61,33 @@ describe("cycleOpenGaps のリンク", () => {
   });
 });
 
-describe("formSyncGaps の片側だけのずれ", () => {
-  it("欠落だけ・余分だけなら1件", () => {
-    const nameOf = (id: string) => `項目${id}`;
-    const missing = formSyncGaps({ missing: ["a", "b"], extra: [] }, nameOf, "f1");
-    expect(missing).toHaveLength(1);
-    expect(missing[0].what).toContain("「項目a」・「項目b」");
-    expect(missing[0].what).toContain("聞いていません");
-    const extra = formSyncGaps({ missing: [], extra: ["c"] }, nameOf, "f1");
-    expect(extra).toHaveLength(1);
-    expect(extra[0].what).toContain("「項目c」を聞いていますが");
+describe("formSyncGaps の片側だけの違い", () => {
+  const nameOf = (id: string) => `項目${id}`;
+  const input = (selected: string[], asked: string[]): ComparisonGapInput => ({
+    form: {
+      id: "f1", title: null, cycleName: "2026年度上期", gradeName: "等級2", cycleId: "c1", gradeId: "g2",
+      status: "draft", version: 1, responseCount: 0, cycleStatus: "open",
+    },
+    pointGroup: "Regular",
+    groupLabel: "等級2",
+    selected,
+    asked,
+    unaskable: [],
+    nameOf,
+    newer: null,
+    schemeGap: null,
+    current: null,
+    role: "COMPANY_ADMIN",
+  });
+  const marks = (selected: string[], asked: string[]) =>
+    formSyncGaps(input(selected, asked))?.rows.map((row) => [row.name, row.inSelection, row.inForm]);
+
+  it("足りないだけ・余分だけでも、比べる警告を1つ返し、行は ○ と — で表せる", () => {
+    expect(marks(["a", "b"], [])).toEqual([
+      ["項目a", true, false],
+      ["項目b", true, false],
+    ]);
+    expect(marks([], ["c"])).toEqual([["項目c", false, true]]);
   });
 });
 

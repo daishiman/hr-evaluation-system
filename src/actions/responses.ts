@@ -8,10 +8,10 @@ import { assertCompanyChosen, HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
 import { judgeFormDeadline } from "@/lib/domain/form-deadline";
 import { canAnswerForm } from "@/lib/domain/form-entry";
-import { isAnswered, questionSnapshot } from "@/lib/domain/answer-snapshot";
-import { checkAnswerNumbers } from "@/lib/domain/number-input";
+import { questionSnapshot } from "@/lib/domain/answer-snapshot";
 import { saveResponseWithAnswers } from "@/lib/response-write";
 import { getForm } from "@/lib/queries";
+import { checkSubmission, normalizeAnswers } from "@/lib/submission-check";
 
 const responseSchema = z.object({
   formId: z.string().min(1),
@@ -98,48 +98,14 @@ export async function saveResponse(raw: unknown) {
       .select()
       .from(s.formQuestions)
       .where(eq(s.formQuestions.formId, formId));
-    const byId = new Map(questions.map((q) => [q.id, q]));
-
-    const incoming = input.answers
-      .filter((a) => byId.has(a.questionId))
-      .map((a) => {
-        const q = byId.get(a.questionId)!;
-        const choices = a.valueChoices ?? null;
-        return {
-          question: q,
-          valueNumber: q.questionType === "text" || q.questionType === "multi" ? null : (a.valueNumber ?? null),
-          valueText: a.valueText ?? null,
-          // 複数選択だけ value_json を使う（列を空けたまま multi を保存できない状態だった）
-          valueJson: q.questionType === "multi" && choices ? JSON.stringify(choices) : null,
-        };
-      });
+    // 設問でない答えを落とし、形式ごとの列にそろえる（submission-check.ts）
+    const incoming = normalizeAnswers(questions, input.answers);
 
     if (input.status === "submitted") {
-      /* 数値の回答が設問の決まり（0以上・1以上・整数だけ、など）に収まっているかを、受け口の側でも見る。
-         画面の制限だけでは、画面を通さずに送られたときに素通りするため。
-         下書きの自動保存には当てない（打っている最中に断ると入力が止まる）。 */
-      const range = checkAnswerNumbers(
-        incoming.map((a) => ({
-          title: a.question.title,
-          validationMin: a.question.validationMin,
-          validationMax: a.question.validationMax,
-          validationInteger: a.question.validationInteger,
-          unit: a.question.unit,
-          value: a.valueNumber,
-        })),
-      );
-      if (!range.ok) throw new HttpError(400, range.message);
-
-      const answeredIds = new Set(
-        incoming.filter((a) => isAnswered(a.question.questionType, a)).map((a) => a.question.id),
-      );
-      const missing = questions.filter((q) => q.required && !answeredIds.has(q.id));
-      if (missing.length > 0) {
-        throw new HttpError(
-          400,
-          `未入力の項目が${missing.length}件あります（例：${missing[0].title}）。入力してから提出してください。`,
-        );
-      }
+      /* 数値の範囲と必須を、受け口の側でも見る（画面の制限だけでは、画面を通さずに送られたときに素通りする）。
+         断るときに挙げる欄は、回答画面の上から最初のもの。管理者の試しの回答も同じ検査を使う。 */
+      const check = checkSubmission(questions, incoming);
+      if (!check.ok) throw new HttpError(400, check.message);
     }
 
     const responseId = existing?.id ?? newId("res");

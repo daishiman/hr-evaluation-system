@@ -17,7 +17,6 @@ import {
   pickNextScreenToFix,
   rankByFriction,
   shiftDateKey,
-  usageDateKey,
   usageRetentionCutoff,
   USAGE_MIN_VIEWS_FOR_RANKING,
   type UsageScreenCounters,
@@ -28,17 +27,7 @@ function counters(patch: Partial<UsageScreenCounters>): UsageScreenCounters {
   return { ...EMPTY_SCREEN_COUNTERS, ...patch };
 }
 
-describe("日付を日本時間で切る", () => {
-  it("日本の朝の操作を前日に入れない", () => {
-    // 世界標準時では前日23:00、日本時間では当日8:00
-    expect(usageDateKey(new Date("2026-08-16T23:00:00Z"))).toBe("2026-08-17");
-  });
-
-  it("日本時間の0時ちょうどから新しい日にする", () => {
-    expect(usageDateKey(new Date("2026-08-16T14:59:59Z"))).toBe("2026-08-16");
-    expect(usageDateKey(new Date("2026-08-16T15:00:00Z"))).toBe("2026-08-17");
-  });
-
+describe("日付の鍵をずらす（日本時間で切ることは jst.test.ts が確かめる）", () => {
   it("月をまたいでずらせる", () => {
     expect(shiftDateKey("2026-03-01", -1)).toBe("2026-02-28");
     expect(shiftDateKey("2026-02-28", 1)).toBe("2026-03-01");

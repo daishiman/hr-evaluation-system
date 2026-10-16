@@ -36,7 +36,9 @@ const MAX = 40;
 const ROLES = [
   { name: "全体管理者", email: "super@hyoka-demo.jp" },
   { name: "会社管理者", email: "admin@kyufu.hyoka-demo.jp" },
-  { name: "上長", email: "manager@kyufu.hyoka-demo.jp" },
+  // さくら福祉会にも一般として所属しているので、会社を選ばないと会社名の順で先の会社（一般）が開き、
+  // /manager が 200 にならず黙って走査から抜ける（DD-009）。会社の切り替えと同じ cookie で給付事業を選ぶ
+  { name: "上長", email: "manager@kyufu.hyoka-demo.jp", company: "cmp_kyufu" },
   { name: "本人", email: "e1@kyufu.hyoka-demo.jp" },
 ];
 
@@ -127,7 +129,8 @@ const results = [];
 let total = 0;
 
 for (const role of ROLES) {
-  const cookie = await login(role.email);
+  const session = await login(role.email);
+  const cookie = role.company ? `${session}; hr_company=${role.company}` : session;
   const seen = new Set();
   const queue = [...STATIC_ROUTES];
   const discovered = new Set();

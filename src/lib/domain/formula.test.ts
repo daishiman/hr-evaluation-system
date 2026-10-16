@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeActualValue, extractVariables, FormulaError } from "./formula";
+import { computeActualValue, extractVariables, FormulaError, variablePlacements } from "./formula";
 
 describe("computeActualValue — 元シートの計算式をそのまま扱える", () => {
   it("分子÷分母×100（No.3 報告書送付率）", () => {
@@ -90,6 +90,33 @@ describe("extractVariables", () => {
     expect(extractVariables("q1_1 ÷ 【等級別の半期目標設定上限数】 × 100")).toEqual([
       "q1_1",
       "等級別の半期目標設定上限数",
+    ]);
+  });
+});
+
+describe("variablePlacements（設問の役割を式から決めるときの、変数の置き場所）", () => {
+  const at = (formula: string) => variablePlacements(formula).map((p) => [p.name, p.inDenominator, p.subtracted]);
+
+  it("割り算の右側は分母、引き算の右側は引かれる側にする", () => {
+    expect(at("q1_1 ÷ ( q1_2 − q1_3 )")).toEqual([
+      ["q1_1", false, false],
+      ["q1_2", true, false],
+      ["q1_3", true, true],
+    ]);
+  });
+
+  it("マイナスの付いた側も引かれる側にし、2回付けば元に戻す", () => {
+    expect(at("-q1_1 + q1_2")).toEqual([
+      ["q1_1", false, true],
+      ["q1_2", false, false],
+    ]);
+    expect(at("-( q1_1 − q1_2 )")).toEqual([
+      ["q1_1", false, true],
+      ["q1_2", false, false],
+    ]);
+    expect(at("q1_1 ÷ -q1_2")).toEqual([
+      ["q1_1", false, false],
+      ["q1_2", true, true],
     ]);
   });
 });

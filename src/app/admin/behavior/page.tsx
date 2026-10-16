@@ -214,7 +214,7 @@ export default async function AdminBehavior({
       {band === null ? (
         <EmptyState
           title="行動指針の基準がまだありません"
-          body="上の「基準を新しく作る」から作ると、この下で問う内容を決められます。"
+          body="上の「＋ 基準を追加」から作ると、この下で問う内容を決められます。"
         />
       ) : (
         <>

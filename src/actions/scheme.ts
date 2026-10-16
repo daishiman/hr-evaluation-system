@@ -11,6 +11,7 @@ import { newId } from "@/lib/id";
 import { validateScheme } from "@/lib/domain/scheme";
 import { pointsForSlot, slotKindOf, targetsPointGroup, type GradePointRule } from "@/lib/domain/grade-points";
 import { pointGroupLabel } from "@/lib/domain/grade-label";
+import { listAskableKpiItemIds } from "@/lib/queries";
 
 /**
  * 評価セット（等級区分ごとの項目選択）と、全等級区分に共通の設定の保存（会社の管理者以上）。
@@ -186,6 +187,8 @@ export async function saveScheme(raw: unknown) {
     const ratedItemIds = new Set(
       criteriaRows.filter((r) => targetsPointGroup(r.targetGrades, pointGroup)).map((r) => r.kpiItemId),
     );
+    // 設問のひな形が無い項目は、アンケートに設問が出ない。これも検証側で知らせる
+    const askableItemIds = await listAskableKpiItemIds(companyId);
 
     const selections = items.map((i) => ({
       kpiItemId: i.kpiItemId,
@@ -200,6 +203,7 @@ export async function saveScheme(raw: unknown) {
       rule,
       fixedSlotItemIds: kpiItems.filter((k) => k.isFixedSlot).map((k) => k.id),
       ratedItemIds,
+      askableItemIds,
       itemNameOf: (id) => kpiItems.find((k) => k.id === id)?.name ?? id,
       groupLabel,
     });

@@ -4,10 +4,12 @@ import { and, eq, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { z } from "zod";
 import { runAction } from "@/lib/action";
+import { accountSecurityEventStatements, noLongerActiveSuperAdmin } from "@/lib/account-security-events";
 import { userNameSchema } from "@/lib/user-name-schema";
 import { prepareCredential } from "@/lib/credential-issue";
 import { memoNotice } from "@/lib/credential-vault";
 import { getDb, schema as s, type DB } from "@/lib/db";
+import type { AccountAccess } from "@/lib/domain/account-security-events";
 import { newId } from "@/lib/id";
 import {
   activeMembershipsOf,
@@ -159,12 +161,20 @@ export async function updateSystemUser(raw: unknown) {
     )`;
 
     const statements: SqliteBatchItem[] = [];
+    // 監査記録（E7）の変更前と変更後。所属は「この保存で触った所属」だけを比べる
+    let beforeMembership: AccountAccess["membership"] = null;
+    let afterMembership: AccountAccess["membership"] = null;
     if (becomesSuperAdmin) {
       if (Object.keys(patch).length > 0) {
         const where = losesSuperAdmin ? and(eq(s.users.id, target.id), lastSuperAdminGuard) : eq(s.users.id, target.id);
         statements.push(db.update(s.users).set(patch).where(where).returning({ id: s.users.id }));
       }
-      if (!wasSuperAdmin) statements.push(...promoteToSuperAdminStatements(db, target.id));
+      if (!wasSuperAdmin) {
+        // 所属をすべて外すので、記録には元の所属（有効な所属のうち一番古いもの）を残す
+        const primary = (await activeMembershipsOf(db, target.id))[0] ?? (await membershipsOf(db, target.id))[0];
+        beforeMembership = primary ? { companyId: primary.companyId, role: primary.role } : null;
+        statements.push(...promoteToSuperAdminStatements(db, target.id));
+      }
     } else {
       const membership = await planMembership(db, {
         userId: target.id,
@@ -172,6 +182,8 @@ export async function updateSystemUser(raw: unknown) {
         isActive: effectiveIsActive,
         input,
       });
+      beforeMembership = membership.base ? { companyId: membership.base.companyId, role: membership.base.role } : null;
+      afterMembership = { companyId: membership.values.companyId, role: membership.values.role };
       if (wasSuperAdmin) {
         const guard = losesSuperAdmin ? lastSuperAdminGuard : sql`1 = 1`;
         statements.push(...demoteFromSuperAdminStatements(db, membership.values, guard, patch));
@@ -185,7 +197,21 @@ export async function updateSystemUser(raw: unknown) {
 
     statements.push(...credentialStatements);
 
-    // 利用者・所属・アカウント・控え・ログインの解除を1つの batch で書く。
+    // 監査記録は batch の末尾に置く（1つ目の文の結果で最後の全体管理者を判定するため）。
+    // 全体管理者を外す・止める保存は、条件に止められたときに記録しない
+    statements.push(
+      ...accountSecurityEventStatements(db, {
+        userId: target.id,
+        actorId: viewer.id,
+        source: "system_users",
+        before: { superAdmin: wasSuperAdmin, isActive: target.isActive, membership: beforeMembership },
+        after: { superAdmin: becomesSuperAdmin, isActive: effectiveIsActive, membership: afterMembership },
+        passwordReissued: input.password !== undefined,
+        when: losesSuperAdmin ? noLongerActiveSuperAdmin(target.id) : undefined,
+      }),
+    );
+
+    // 利用者・所属・アカウント・控え・ログインの解除・監査記録を1つの batch で書く。
     // 全体管理者を外す変更では、1つ目の文が条件付きの UPDATE で、更新した行を返す。
     const [first, ...rest] = statements;
     if (first) {
@@ -274,7 +300,7 @@ async function planMembership(
   } else if (!wasSuperAdmin) {
     statements = await insertMembership(db, values, { writeCopy: true });
   }
-  return { values, statements };
+  return { values, statements, base };
 }
 
 const createSchema = z
@@ -306,7 +332,7 @@ export async function createSystemUser(raw: unknown) {
       input.role === "SUPER_ADMIN"
         ? []
         : await insertMembership(db, { userId, companyId: input.companyId!, role: input.role }, { writeCopy: true });
-    // 利用者・所属・ログイン用アカウント・控えを1つの batch で書く（どれか1つだけが残らない）
+    // 利用者・所属・ログイン用アカウント・控え・監査記録を1つの batch で書く（どれか1つだけが残らない）
     await db.batch([
       db.insert(s.users).values({
         id: userId,
@@ -326,6 +352,16 @@ export async function createSystemUser(raw: unknown) {
         password: credential.hashed,
       }),
       ...credential.memo,
+      ...accountSecurityEventStatements(db, {
+        userId,
+        actorId: viewer.id,
+        source: "system_users",
+        before: null,
+        after:
+          input.role === "SUPER_ADMIN"
+            ? { superAdmin: true, isActive: true, membership: null }
+            : { superAdmin: false, isActive: true, membership: { companyId: input.companyId!, role: input.role } },
+      }),
     ]);
 
     return {

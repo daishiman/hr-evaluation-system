@@ -7,7 +7,7 @@ import { Badge, Button, Card, DefList, Disclosure, InlineDetail, Num, OptionCard
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { useSaveAction } from "@/lib/use-refresh";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
-import { validateScheme, type SchemeSelection } from "@/lib/domain/scheme";
+import { NO_TEMPLATE_BADGE, validateScheme, type SchemeSelection } from "@/lib/domain/scheme";
 import { RULE_NOTES, expectedItemCount, pointsForSlot, ruleBreakdown, type GradePointRule } from "@/lib/domain/grade-points";
 
 export interface KpiOption {
@@ -53,6 +53,7 @@ export function SchemeGroupPicker({
   gradeNames,
   rule,
   ratedItemIds,
+  askableItemIds,
   initial,
   categories,
   kpiItems,
@@ -67,6 +68,8 @@ export function SchemeGroupPicker({
   gradeNames: string[];
   rule: GradePointRule;
   ratedItemIds: string[];
+  /** 実績を聞く設問のひな形がある項目のID。無い項目は選んでもアンケートに設問が出ない */
+  askableItemIds: string[];
   initial: { kpiItemId: string; isFixedSlot: boolean; isMajorSlot: boolean }[];
   categories: CategoryOption[];
   kpiItems: KpiOption[];
@@ -177,11 +180,13 @@ export function SchemeGroupPicker({
     rule,
     fixedSlotItemIds: kpiItems.filter((k) => k.isFixedSlot).map((k) => k.id),
     ratedItemIds,
+    askableItemIds,
     itemNameOf: (id) => itemOf(id)?.name ?? id,
     groupLabel,
   });
 
   const rated = new Set(ratedItemIds);
+  const askable = new Set(askableItemIds);
   const majorOptions = kpiItems.filter((k) => !k.isFixedSlot);
   const minorRemaining = rule.minorSlotCount - pick.minorIds.length;
 
@@ -485,6 +490,12 @@ export function SchemeGroupPicker({
                         <Badge tone="required">基準未設定</Badge>
                       </>
                     )}
+                    {!askable.has(o.id) && (
+                      <>
+                        {" "}
+                        <Badge tone="required">{NO_TEMPLATE_BADGE}</Badge>
+                      </>
+                    )}
                   </>
                 }
                 sub={`単位 ${o.unit}${o.aStandard ? ` ／ Aの目安 ${o.aStandard}` : ""}`}
@@ -534,6 +545,12 @@ export function SchemeGroupPicker({
                             <>
                               {" "}
                               <Badge tone="required">基準未設定</Badge>
+                            </>
+                          )}
+                          {!askable.has(o.id) && (
+                            <>
+                              {" "}
+                              <Badge tone="required">{NO_TEMPLATE_BADGE}</Badge>
                             </>
                           )}
                         </>

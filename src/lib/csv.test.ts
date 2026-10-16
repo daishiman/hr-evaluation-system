@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { formatPercent, parseCsv, toCsv } from "./csv";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { formatDateTime, formatPercent, parseCsv, toCsv } from "./csv";
 
 /**
  * CSVの読み書きは、壊れても画面上は静かに間違うだけなので、
@@ -58,6 +58,30 @@ describe("formatPercent", () => {
 
   it("未計算はハイフンではなく空にする（表計算で0と間違えないため）", () => {
     expect(formatPercent(null)).toBe("");
+  });
+});
+
+describe("formatDateTime", () => {
+  // サーバー（Workers）は UTC で動く。機械の時間帯で読む誤りを見逃さないよう、日本から遠い時間帯で確かめる
+  const savedTz = process.env.TZ;
+  beforeAll(() => {
+    process.env.TZ = "America/Los_Angeles";
+  });
+  afterAll(() => {
+    if (savedTz === undefined) delete process.env.TZ;
+    else process.env.TZ = savedTz;
+  });
+
+  it("日本時間の「2026-07-24 12:32」の形で書く。朝（UTC ではまだ前の日）も日本時間の日付にする", () => {
+    expect(formatDateTime(new Date("2026-07-24T03:32:00Z"))).toBe("2026-07-24 12:32");
+    expect(formatDateTime(new Date("2026-10-15T23:09:00Z"))).toBe("2026-10-16 08:09");
+    expect(formatDateTime(Date.parse("2026-09-30T15:00:00Z"))).toBe("2026-10-01 00:00");
+  });
+
+  it("値が無い・読めないときは空にする", () => {
+    expect(formatDateTime(null)).toBe("");
+    expect(formatDateTime(undefined)).toBe("");
+    expect(formatDateTime(Number.NaN)).toBe("");
   });
 });
 

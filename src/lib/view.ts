@@ -6,27 +6,33 @@
    既存の呼び出しのために、ここからも同じものを見えるようにしておく。 */
 export { RANK_RATIO } from "@/lib/domain/evaluation-view";
 import { RANK_RATIO as RATIO } from "@/lib/domain/evaluation-view";
+import { formatJstTime, toJstClock } from "@/lib/domain/jst";
 
 export function rankToPercent(rank: string): number {
   return RATIO[rank] ?? 0;
 }
 
+/* 日付と時刻は日本時間（UTC+9）で書く。時間帯の読み替えは domain/jst.ts に1つだけ置き、
+   CSV（csv.ts の formatDateTime）と同じものを使う。 */
+
 export function formatDate(v: string | Date | null | undefined): string {
   if (!v) return "—";
+  // 「2026-09-30」は時刻を持たない暦の日付なので、時間帯を通さずにそのまま読む
+  const ymd = typeof v === "string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim()) : null;
+  if (ymd) return `${Number(ymd[1])}年${Number(ymd[2])}月${Number(ymd[3])}日`;
   const d = typeof v === "string" ? new Date(v) : v;
   if (Number.isNaN(d.getTime())) return String(v);
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  const j = toJstClock(d);
+  return `${j.getUTCFullYear()}年${j.getUTCMonth() + 1}月${j.getUTCDate()}日`;
 }
 
 /**
- * 日付と時刻。届いた順を追う画面（改善要望）で使う。
+ * 日付と時刻。届いた順や提出の時刻を追う画面（改善要望・回答一覧など）で使う。
  * 「今日の何時に届いたか」まで分からないと、同じ日の並びが読めないため。
  */
 export function formatDateTime(v: Date | null | undefined): string {
   if (!v || Number.isNaN(v.getTime())) return "—";
-  const hh = String(v.getHours()).padStart(2, "0");
-  const mm = String(v.getMinutes()).padStart(2, "0");
-  return `${formatDate(v)} ${hh}:${mm}`;
+  return `${formatDate(v)} ${formatJstTime(v)}`;
 }
 
 export function formatPeriod(start?: string | null, end?: string | null): string {
@@ -68,5 +74,5 @@ export const SECTION_HELP: Record<string, string> = {
   training: "受講して報告書まで提出したものに「はい」を選んでください。受講しただけのものは「いいえ」です。",
   test: "テストに合格したものに「はい」を選んでください。受けていない・不合格のものは「いいえ」です。",
   behavior: "この半期のふだんの行動に、もっとも近いものを1つだけ選んでください。",
-  kpi: "半期の実績を数値で入力してください。分からない欄は空のままにしてください。",
+  kpi: "半期の実績を数値で入力してください。入れられる数は、欄ごとの説明に従ってください。",
 };

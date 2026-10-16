@@ -50,14 +50,13 @@ describe("画面の器の作法", () => {
   });
 
   it("一覧の1行は CardRow に集約する（title と sub を画面で組み立て直さない）", () => {
-    const owner = join(SRC, "components", "ui.tsx");
+    // 読むだけの一覧は CardRow（ui.tsx）、並べ替え・直す操作のある編集の一覧は ListRowBody（ListRow.tsx。spec §28-14）
+    const owners = new Set([join(SRC, "components", "ui.tsx"), join(SRC, "components", "ListRow.tsx")]);
     // .row-main（見出し＋補足の入れ物）を自前で書いている画面を検出する。
-    // 入力欄が並ぶ編集画面は行の中身が画面ごとに違うため、下の許可リストで除く。
-    const editors = new Set(
-      ["FormAnswer.tsx", "RevisableRequirementRow.tsx", "PointDesign.tsx", "BehaviorGuidelineEditor.tsx", "BehaviorBandSetEditor.tsx"].map((n) => n),
-    );
+    // 入力欄が並ぶ回答・配点の画面は行の中身が画面ごとに違うため、下の許可リストで除く。
+    const editors = new Set(["FormAnswer.tsx", "PointDesign.tsx"]);
     const offenders = sourceFiles.filter(
-      (p) => p !== owner && !editors.has(p.split("/").pop() ?? "") && readFileSync(p, "utf8").includes('className="row-main"'),
+      (p) => !owners.has(p) && !editors.has(p.split("/").pop() ?? "") && readFileSync(p, "utf8").includes('className="row-main"'),
     );
     expect(offenders.map((p) => p.replace(`${SRC}/`, ""))).toEqual([]);
   });
@@ -468,6 +467,37 @@ describe("画面の器の作法", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("画面下の操作の帯は、状態の文の長さで押す場所を動かさない", () => {
+    // 回答画面で、状態の文が「保存済み 14:42」から長い文に変わった瞬間にボタンが次の行の左端へ折り返し、
+    // 押している途中の指の下から逃げて提出が空振りした（幅1280px、数値欄から離れた直後）。
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const rule = (selector: string) => {
+      const block = css.slice(css.indexOf(`${selector} {`));
+      return block.slice(0, block.indexOf("}"));
+    };
+    // 状態の幅の基準は文の長さ（auto）でなく決まった長さにする。折り返すかどうかを画面の幅だけで決める
+    expect(rule(".action-bar-status")).toMatch(/flex:\s*\d+\s+\d+\s+\d+(\.\d+)?(rem|px)\s*;/);
+    // 両端へ振り分けると、状態が伸びたぶんだけボタンが動く。ボタンは帯の右下にそろえる
+    const inner = rule(".action-bar-inner");
+    expect(inner).not.toContain("space-between");
+    expect(inner).toContain("align-items: flex-end");
+    const actions = rule(".action-bar-actions");
+    expect(actions).toContain("flex: 0 0 auto");
+    expect(actions).toContain("margin-inline-start: auto");
+  });
+
+  it("画面下の操作の帯は、状態の欄が空なら幅を確保しない", () => {
+    // status を渡さない帯で、空の欄が 16rem を取ってボタンの束を次の行へ押し出さないようにする。
+    // 中身があるときの 16rem（上の試験）はそのまま。空のときだけ畳む
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    const at = css.indexOf(".action-bar-status:empty {");
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(css.slice(at, css.indexOf("}", at))).toMatch(/display:\s*none|flex-basis:\s*0/);
+    // :empty が効く前提：部品は status が無くても欄を描き、欄の中に空白を足さない
+    const bar = readFileSync(join(SRC, "components", "layout", "StickyActionBar.tsx"), "utf8");
+    expect(bar).toMatch(/className="action-bar-status"[^>]*>\{status\}<\/div>/);
+  });
+
   it("固定表示の帯には、一度読めば済む注記を載せられない（型で縛る）", () => {
     // 帯に説明文を足していくと厚くなり、肝心の入力欄が画面から押し出される。
     // pinned のときは detail（注記の段落）を渡せない、を型で禁止する。
@@ -531,7 +561,7 @@ describe("画面の器の作法", () => {
     // 「行ったものだけ はい」「受講しただけは いいえ」は、1問ごとに当てはめる物差し。
     // これが画面の外へ出ると、下のほうの設問だけ違う基準で答えてしまう。
     const source = readFileSync(join(SRC, "components", "FormAnswer.tsx"), "utf8");
-    expect(source).toMatch(/<CardHead\s+pinned\s+narrow\s+heading\s+title=\{SECTION_LABEL/);
+    expect(source).toMatch(/<CardHead\s+pinned\s+narrow\s+heading\s+title=\{sectionLabel\(g\.section\)\}/);
     expect(source).toMatch(/sub=\{SECTION_HELP\[g\.section\]\}/);
     // 同じ説明を帯と本文の2箇所に出さない（帯へ移したぶんは節見出しから外す）
     expect(source).not.toContain("<SectionHeading help=");
@@ -580,11 +610,13 @@ describe("画面の器の作法", () => {
     }
   });
 
-  it("設問の組み立ては、編集を開いているカードだけ頭を固定する", () => {
-    // 閉じているカードは2行しかなく、貼り付く前に流れ去る。
+  it("設問の組み立ては、編集を開いている設問だけ頭を固定する", () => {
+    // 閉じている行は2行しかなく、貼り付く前に流れ去る。
     // 全部に帯を付けると、設問の一覧としての読みやすさだけが落ちる。
     const source = readFileSync(join(SRC, "components", "FormBuilder.tsx"), "utf8");
-    expect(source).toMatch(/\{open \? \(\s*<CardHead pinned/);
+    expect(source).toMatch(/\{open \? \(\s*<CardHead\s+pinned/);
+    // 閉じている行はほかの一覧と同じ行の形（spec §28-14）
+    expect(source).toMatch(/\) : \(\s*<ListRowBody/);
   });
 
   it("読むだけの画面（提出済みの回答・一覧）には帯を作らない", () => {

@@ -33,6 +33,12 @@ export interface Column<T> {
  *
  * 表とカードは同じ行を2通りに描く（片方は `display: none`）。JS を待たずに正しい形で
  * 出すためにこうしている。数百行を超える一覧をここに入れるときは、先に件数を絞ること。
+ *
+ * `scroll` を付けると、カードに組み替えず、狭い幅では横に流す（DD-012）。
+ * ○ と — を見比べる表のように、カードに畳むとどの列の印かが読めなくなる表だけに使う。
+ * 列見出しの貼り付き先は枠の上端にし、1列目に最小の幅を付けて押し潰されないようにする。
+ * 枠は relative にする。読み上げ用の文字（.sr-only は absolute）の基準を枠の中に置かないと、
+ * 枠で切り取られず、横に流した先の列の文字が画面の幅を広げてしまう。
  */
 export function DataTable<T>({
   columns,
@@ -42,6 +48,7 @@ export function DataTable<T>({
   rowOff,
   rowData,
   cardsData,
+  scroll,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -57,38 +64,45 @@ export function DataTable<T>({
   rowData?: (row: T) => Record<`data-${string}`, string>;
   /** カードの側（狭い容器で出る方）に付ける data-* 属性 */
   cardsData?: Record<`data-${string}`, string>;
+  /** カードに組み替えず、狭い幅では横に流す */
+  scroll?: boolean;
 }) {
   const titleCol = columns.find((c) => c.role === "title") ?? columns[0];
   const markCols = columns.filter((c) => c.role === "mark");
   const restCols = columns.filter((c) => c !== titleCol && !markCols.includes(c));
 
-  return (
-    <div className="list-host" data-cards={columns.length >= 5 ? "wide" : undefined}>
-      <Card className="table-scroll">
-        <table>
-          {caption && <caption className="sr-only">{caption}</caption>}
-          <thead>
-            <tr>
+  const table = (
+    <Card className={scroll ? "table-scroll relative overflow-x-auto [--table-head-top:0px]" : "table-scroll"}>
+      <table>
+        {caption && <caption className="sr-only">{caption}</caption>}
+        <thead>
+          <tr>
+            {columns.map((c) => (
+              <th key={c.key} className={headClass(c, scroll && c === titleCol)} scope="col">
+                {c.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={rowKey(r)} data-off={rowOff?.(r) ? "true" : undefined} {...rowData?.(r)}>
               {columns.map((c) => (
-                <th key={c.key} className={c.num ? "col-num" : undefined} scope="col">
-                  {c.header}
-                </th>
+                <td key={c.key} className={c.num ? "col-num" : undefined}>
+                  {c.cell(r)}
+                </td>
               ))}
             </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={rowKey(r)} data-off={rowOff?.(r) ? "true" : undefined} {...rowData?.(r)}>
-                {columns.map((c) => (
-                  <td key={c.key} className={c.num ? "col-num" : undefined}>
-                    {c.cell(r)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+          ))}
+        </tbody>
+      </table>
+    </Card>
+  );
+  if (scroll) return table;
+
+  return (
+    <div className="list-host" data-cards={columns.length >= 5 ? "wide" : undefined}>
+      {table}
 
       <div className="card list-cards" {...cardsData}>
         {rows.map((r) => (
@@ -112,4 +126,10 @@ export function DataTable<T>({
       </div>
     </div>
   );
+}
+
+/** 列見出しの class。横に流す表の1列目は、押し潰されないよう最小の幅を付ける */
+function headClass<T>(c: Column<T>, keepWidth: boolean | undefined): string | undefined {
+  const names = [c.num ? "col-num" : "", keepWidth ? "min-w-[8rem]" : ""].filter(Boolean);
+  return names.length > 0 ? names.join(" ") : undefined;
 }

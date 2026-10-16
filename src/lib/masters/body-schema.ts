@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ASKING_LIMIT, ASKING_VALIDATIONS } from "@/lib/domain/kpi-asking";
 
 /**
  * 制度マスタ更新 API の入力スキーマ。
@@ -7,6 +8,27 @@ import { z } from "zod";
 
 /** 並べ替えで送る並び全体（重複や過不足はサーバーが今の並びと照合して 409 にする） */
 const REORDER_IDS = z.array(z.string().min(1)).min(1).max(200);
+
+/**
+ * KPI項目の実績の聞き方（src/lib/domain/kpi-asking.ts・DD-016）。
+ * 設問は並び順に A・B・C… の文字で指し、式もその文字で書く。設問IDへの置き換え・役割・
+ * 新しい設問のIDはサーバーが決める。送られなければ、聞き方には触れない。
+ */
+const KPI_ASKING = z.object({
+  questions: z
+    .array(
+      z.object({
+        /** すでにある設問のID（q5_1 など）。新しく聞くことには付けない */
+        key: z.string().min(1).max(40).optional(),
+        text: z.string().trim().min(1).max(200),
+        unit: z.string().trim().max(10).optional(),
+        validation: z.enum(ASKING_VALIDATIONS),
+      }),
+    )
+    .min(1)
+    .max(ASKING_LIMIT),
+  formula: z.string().trim().min(1).max(300),
+});
 
 export const bodySchema = z.discriminatedUnion("kind", [
   z.object({
@@ -185,7 +207,7 @@ export const bodySchema = z.discriminatedUnion("kind", [
     direction: z.enum(["higher", "lower"]),
     measureType: z.string().min(1).max(40),
     categoryId: z.string().min(1).nullable().optional(),
-    formula: z.string().max(300).nullable().optional(),
+    asking: KPI_ASKING.optional(),
     formulaNote: z.string().max(300).nullable().optional(),
     remarks: z.string().max(300).nullable().optional(),
     isMonetary: z.boolean().optional(),
@@ -204,7 +226,8 @@ export const bodySchema = z.discriminatedUnion("kind", [
     direction: z.enum(["higher", "lower"]).optional(),
     measureType: z.string().min(1).max(40).optional(),
     categoryId: z.string().min(1).nullable().optional(),
-    formula: z.string().max(300).nullable().optional(),
+    /** 式（kpi_items.formula）は、聞くことの並びと組でしか変えられない */
+    asking: KPI_ASKING.optional(),
     formulaNote: z.string().max(300).nullable().optional(),
     remarks: z.string().max(300).nullable().optional(),
     isMonetary: z.boolean().optional(),

@@ -1,7 +1,15 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { REORDER_HINT, ReorderList, reorderHandleLabel } from "@/components/reorder/ReorderList";
+import {
+  REORDER_HINT,
+  REORDER_WIDTHS,
+  ReorderList,
+  reorderHandleLabel,
+  reorderWidthTokens,
+} from "@/components/reorder/ReorderList";
 import {
   EDGE_SCROLL_MAX_PX,
   EDGE_SCROLL_PX,
@@ -99,6 +107,44 @@ describe("ReorderList の読み上げと押せる場所", () => {
     for (const row of rows) expect(order(row)).toEqual([...order(row)].sort((a, b) => a - b));
     // 操作は本文の箱の中に入れない（矢印と右端をそろえるため）
     expect(rows[0]).toMatch(/<div class="reorder-body">設問A<\/div><div class="reorder-actions">/);
+  });
+});
+
+describe("一覧の幅と段組み（data-reorder-w）", () => {
+  // 段組みは size container ではなく、部品が測って書く印で選ぶ（DD-005 の保険）。行が描かれなくなる不具合の根は、
+  // fieldset の直下で子が出入りするのと同じフレームに size container の中身が変わること（DD-017）
+  const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
+  const section = css.slice(css.indexOf("/* 並べ替え（S11"), css.indexOf("/* カードの中の一覧"));
+
+  it("超えた境目だけを、小さい順に空白で区切って書く。境目ちょうどは超えたとみなす", () => {
+    expect(reorderWidthTokens(0, 16)).toBe("");
+    expect(reorderWidthTokens(30 * 16 - 1, 16)).toBe("");
+    expect(reorderWidthTokens(30 * 16, 16)).toBe("30");
+    expect(reorderWidthTokens(37.4 * 16, 16)).toBe("30 36");
+    expect(reorderWidthTokens(61.9 * 16, 16)).toBe("30 36 60");
+    // 文字の大きさを変えた人には rem で測る（幅が同じでも段組みが狭い側へ寄る）
+    expect(reorderWidthTokens(640, 16)).toBe("30 36");
+    expect(reorderWidthTokens(640, 20)).toBe("30");
+  });
+
+  it("CSS の境目は部品の境目と同じ。測ったあとは size container を使わない", () => {
+    for (const rem of REORDER_WIDTHS) {
+      expect(section).toContain(`[data-reorder-w~="${rem}"]`);
+      expect(section).toContain(`@container reorder (min-width: ${rem}rem)`);
+    }
+    const tokens = [...section.matchAll(/data-reorder-w~="(\d+)"/g)].map((m) => Number(m[1]));
+    expect(new Set(tokens)).toEqual(new Set(REORDER_WIDTHS));
+    // container を宣言してよいのは、まだ測っていない一覧（JS が動く前）だけ
+    const containers = section.match(/^[^{}]*\{[^{}]*container:[^{}]*\}/gm) ?? [];
+    expect(containers.map((rule) => rule.trim())).toEqual([".reorder-list:not([data-reorder-w]) { container: reorder / inline-size; }"]);
+    // 測る前の規則は、まだ測っていない一覧にだけ当てる（測ったあとに container の規則が残らない）
+    const queries = section.split("@container reorder").slice(1);
+    for (const query of queries) {
+      const body = query.slice(0, query.indexOf("\n}\n"));
+      for (const selector of body.match(/^\s+[^\s{}][^{}]*\{/gm) ?? []) {
+        if (selector.includes(".reorder-list")) expect(selector).toContain(":not([data-reorder-w])");
+      }
+    }
   });
 });
 

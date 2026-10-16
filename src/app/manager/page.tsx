@@ -1,7 +1,8 @@
 import { ManagerDashboard, type TeamMemberSummary } from "@/app/manager/ManagerDashboard";
 import type { MyActionForm } from "@/app/me/MyDashboard";
 import { EmptyState } from "@/components/ui";
-import { daysUntilDeadline, formatJpDate, jstDateString } from "@/lib/domain/form-deadline";
+import { daysUntilDeadline, formatJpDate } from "@/lib/domain/form-deadline";
+import { jstDateKey } from "@/lib/domain/jst";
 import { listPendingRespondents } from "@/lib/evaluate";
 import { getOpenCycle, listEvaluations, listForms, listMembers } from "@/lib/queries";
 import { listMyForms } from "@/lib/response-access";
@@ -93,7 +94,7 @@ export default async function ManagerHome() {
   const deadline =
     deadlines.find((day) => daysUntilDeadline(day, now) !== null) ?? deadlines.at(-1) ?? openCycle.periodEnd;
   const deadlineDays = daysUntilDeadline(deadline, now);
-  const deadlineLabel = `${formatJpDate(deadline)}${deadline < jstDateString(now) ? "（期限経過）" : ""}`;
+  const deadlineLabel = `${formatJpDate(deadline)}${deadline < jstDateKey(now) ? "（期限経過）" : ""}`;
 
   return (
     <ManagerDashboard

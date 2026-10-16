@@ -930,7 +930,7 @@ D-007 ① に合わせて直した文面のうち、上のとおり承認する�
 - **I7**: 等級の呼び名を作る共通の関数を作り、区分名・行動指針のセット名・昇格の段階名・警告文・アンケートのタイトルの表示をすべてそこから作る。既定の等級名を『等級1』『等級2』『等級3』『等級4-1』『等級4-2』『等級5-1』『等級5-2』にし、既存の会社の等級名と、英語を含む表示名を一律に書き換える移行を入れる。
 - **I9**: ページごとの権限を1つの定義（ページ・操作・役割ごとの可否・説明）にまとめ、『システムを管理する』に権限一覧ページを足し、利用者一覧に開閉できるボタンとモーダルを置く。説明はポインター・フォーカス・タップのどれでも出す。『Claude Code連携の鍵』を『Claude Code連携（システム開発者専用）』に改める。
 - **I10**: 利用者一覧（システム全体管理者）・会社のメンバー一覧（会社の管理者）・担当チームのメンバー一覧（マネージャー）に、今の等級と、確定した最新の評価の KPI評価点と等級要件の達成率を出す。利用者一覧の『評価の中身は表示しない』という決まりを改める。
-- **I11**: 会社への所属を表にし、会社ごとに役割・等級・上司を持たせる。メールアドレスの重複の検査を所属の単位に改め、ヘッダーの会社の切り替えを複数の会社に所属する人にも出す。
+- **I11**: 会社への所属を表にし、会社ごとに役割・等級・上司を持たせる。メールアドレスの重複はシステム全体で拒否したままにし、他社に既にアカウントがある人へ別の会社の所属を足すのは、全体管理者だけの専用操作にする。ヘッダーの会社の切り替えを複数の会社に所属する人にも出し、選んでいる会社が無いときは、有効な所属のうち会社名の順で最初の会社を開く。
 - **I12**: アンケートの一覧と、マネージャーの評価・結果の画面に、提出済み・入力途中・未回答の人の一覧を出す。
 - **I14**: 並べ替えを共通の部品にし、長押しのドラッグ・矢印・キーボードで動かせるようにする。保存には、並び順の全体を送る形を足す。
 
@@ -951,6 +951,12 @@ D-007 ① に合わせて直した文面のうち、上のとおり承認する�
 - **D-007**: 権限の定義（各ページでできる操作と、その説明）をどこに置くか。
   - 採択: route-ledger.json に操作と説明を足す (`opt-route-ledger-extend`)
   - 目的適合: ページの可否・操作・説明が1つの台帳に揃い、表示が判定と食い違わないという G8 を満たせる。
+- **D-008**: 他の会社に既にアカウントがある人を、別の会社にも所属させる操作を、誰が行えるようにするか。
+  - 採択: 全体管理者だけが専用の操作（addMembership）で所属を足す (`opt-super-admin-only`)
+  - 目的適合: G10 の『1つのアカウントのまま複数の会社に所属できる』を、全体管理者の操作で満たす。会社の管理者だけでは足せない。
+- **D-009**: 複数の会社に所属している人が、選んでいる会社が無いとき（cookie が無い・所属していない会社を指している）に、どの会社を開くか。
+  - 採択: 有効な所属のうち会社名の順で最初の会社を開く（同名は会社 id の順） (`opt-company-name-order`)
+  - 目的適合: G10 の『会社ごとの役割・等級・上司で使える』を満たし、切り替えの一覧と同じ順なので、どの会社が開くかを利用者が予想できる。
 
 ## 適用された設計知識
 
@@ -1007,9 +1013,9 @@ businessの重要なruleと用語をmodel/code/会話で一致させ、複雑性
 
 | 対象 | バージョン | 公式発行元 | 出典URL | 取得 | 最新確認 |
 |---|---|---|---|---|---|
-| cloudflare-d1-batch | 2026-06-22 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/d1/worker-api/d1-database/ | 2026-09-30T14:46:29Z | 2026-09-30T14:47:49Z |
-| cloudflare-d1-limits | 2026-04-21 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/d1/platform/limits/ | 2026-09-30T21:05:42Z | 2026-09-30T21:05:42Z |
-| drizzle-orm-d1 | drizzle-orm 0.45.4 | Drizzle Team (orm.drizzle.team) | https://orm.drizzle.team/docs/connect-cloudflare-d1 | 2026-10-12T23:18:53Z | 2026-10-12T23:18:53Z |
-| cloudflare-d1-migrations | 2026-06-08 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/d1/reference/migrations/ | 2026-10-12T22:14:32Z | 2026-10-12T22:15:33Z |
-| better-auth-organization | better-auth 1.7.7 | Better Auth (www.better-auth.com) | https://www.better-auth.com/docs/plugins/organization | 2026-10-12T23:19:45Z | 2026-10-12T23:19:45Z |
-| drizzle-kit-migrations | drizzle-kit 0.31.11 | Drizzle Team (orm.drizzle.team) | https://orm.drizzle.team/docs/migrations | 2026-10-12T23:19:45Z | 2026-10-12T23:19:45Z |
+| cloudflare-d1-batch | 2026-06-22 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/d1/worker-api/d1-database/ | 2026-10-14T21:15:28Z | 2026-10-14T21:26:14Z |
+| cloudflare-d1-limits | 2026-04-21 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/d1/platform/limits/ | 2026-10-14T21:15:28Z | 2026-10-14T21:26:14Z |
+| drizzle-orm-d1 | drizzle-orm 0.45.4 | Drizzle Team (orm.drizzle.team) | https://orm.drizzle.team/docs/connect-cloudflare-d1 | 2026-10-14T21:16:56Z | 2026-10-14T21:20:05Z |
+| cloudflare-d1-migrations | 2026-06-08 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/d1/reference/migrations/ | 2026-10-14T21:15:58Z | 2026-10-14T21:26:14Z |
+| better-auth-organization | better-auth 1.7.8 | Better Auth (www.better-auth.com) | https://www.better-auth.com/docs/plugins/organization | 2026-10-14T21:16:00Z | 2026-10-14T21:20:05Z |
+| drizzle-kit-migrations | drizzle-kit 0.31.11 | Drizzle Team (orm.drizzle.team) | https://orm.drizzle.team/docs/migrations | 2026-10-14T21:16:56Z | 2026-10-14T21:20:05Z |

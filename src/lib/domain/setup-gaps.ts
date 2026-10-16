@@ -10,9 +10,10 @@
  * 区分（pointGroup）の英語名は文に出さず、等級名の呼び名（grade-label.ts）で言う。
  */
 
-import type { FormKpiDiff } from "./form-sync";
+import { comparisonGapOf, REBUILD_LABEL, type ComparisonGap, type ComparisonGapInput } from "./comparison-gap";
+import type { StaleAsking } from "./form-sync";
 import { pointGroupLabel, type GradeLike } from "./grade-label";
-import { schemeStepPath } from "./scheme-steps";
+import { kpiItemPath, schemeStepPath } from "./scheme-steps";
 
 export interface SetupGap {
   /** 何が足りないか */
@@ -111,6 +112,8 @@ export function formPublicationGaps(input: {
   cycleStatus: string;
   questionCount: number;
   formId: string;
+  /** 版の設問が、いまの計算式の変数をそろえていない項目（form-sync.ts の staleAskingItems） */
+  staleAsking: readonly StaleAsking[];
 }): SetupGap[] {
   const gaps = [...input.schemeGaps];
   if (input.cycleStatus !== "planning" && input.cycleStatus !== "open") {
@@ -129,34 +132,41 @@ export function formPublicationGaps(input: {
       linkLabel: "設問を編集する",
     });
   }
-  return gaps;
+  return [...gaps, ...staleAskingGaps(input.staleAsking, input.formId)];
 }
 
 /**
- * 評価セットとアンケートのずれ（form-sync.ts の diffFormKpiItems の結果）。
- * 欠落と余分をそれぞれ1件にする。nameOf は項目名の引き当て。
- * 回答済みのアンケートは書き換えないので、直し方は「作り直す」か「新しい版」のどちらか。
+ * 版の設問が式と合わない項目（DD-016）。KPI項目で直すものを先に、項目ごとに出す。
+ * 作り直せば直るものは、アンケートの画面の1回の操作で済むのでまとめて1件にする。設問の key は人に見せない。
  */
-export function formSyncGaps(diff: FormKpiDiff, nameOf: (id: string) => string, formId: string): SetupGap[] {
-  const names = (ids: readonly string[]) => ids.map((id) => `「${nameOf(id)}」`).join("・");
-  const gaps: SetupGap[] = [];
-  if (diff.missing.length > 0) {
-    gaps.push({
-      what: `${names(diff.missing)}を評価に使うKPIに選んでいますが、このアンケートでは実績を聞いていません。このままでは判定外になり、配点ぶんの点が付きません。`,
-      how: "回答がまだ無い下書きなら、設問を作り直すと揃います。公開後のアンケートは書き換えないため、新しい版を作って公開してください。",
+function staleAskingGaps(items: readonly StaleAsking[], formId: string): SetupGap[] {
+  const atItem = items.filter((item) => !item.rebuildFixes).map((item) => ({
+    what: `「${item.name}」の計算式が、いまの聞き方と合っていません。`,
+    how: "作り直しても点が付きません。KPI項目の画面で聞き方か計算式を直し、そのあと設問を作り直してください。",
+    href: kpiItemPath(item.kpiItemId),
+    linkLabel: `「${item.name}」の聞き方を直す`,
+  }));
+  const rebuildable = items.filter((item) => item.rebuildFixes).map((item) => item.name);
+  if (rebuildable.length === 0) return atItem;
+  return [
+    ...atItem,
+    {
+      what: `「${rebuildable.join("」「")}」の設問が、いまの聞き方と合っていません。`,
+      how: `このまま公開すると、その項目には点が付きません。アンケートの画面で「${REBUILD_LABEL}」を押してください。`,
       href: formPath(formId),
-      linkLabel: "このアンケートを開く",
-    });
-  }
-  if (diff.extra.length > 0) {
-    gaps.push({
-      what: `${names(diff.extra)}を聞いていますが、いまの評価セットでは使いません。`,
-      how: "回答がまだ無い下書きなら、設問を作り直すと外れます。公開後のアンケートは書き換えないため、次の版で外してください。",
-      href: formPath(formId),
-      linkLabel: "このアンケートを開く",
-    });
-  }
-  return gaps;
+      linkLabel: "設問を作り直す",
+    },
+  ];
+}
+
+/**
+ * 評価セットとアンケートの比べ（DD-012 の6）。
+ * 比べる警告は2つのページと直す操作1つの組（ComparisonGap）で返し、SetupGap の形では返さない。
+ * 文を書き起こすと、画面ごとに別の言い方の警告が増えるため。中身は comparisonGapOf を呼ぶだけ。
+ * 呼ぶのは comparison-gap-loader.ts だけで、3画面はその読み出しを通す（画面からは直接呼ばない）。
+ */
+export function formSyncGaps(input: ComparisonGapInput): ComparisonGap | null {
+  return comparisonGapOf(input);
 }
 
 /** 基準を変えたあと集計し直していない評価期間（impact.ts の detectStaleCycles の結果） */

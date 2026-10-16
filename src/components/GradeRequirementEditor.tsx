@@ -2,19 +2,12 @@
 
 import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
-import { Button, Card, CardHead, Disclosure, InlineDetail, ReasonNote } from "@/components/ui";
+import { Button, Card, CardHead, FieldGroup, InlineDetail, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { UsedByDetail } from "@/components/UsedByDetail";
+import { ListAddArea, ListAddRow } from "@/components/ListRow";
+import { BlockedHelp, UsedByDetail, blockedRows } from "@/components/UsedByDetail";
 import { VersionedMasterSections } from "@/components/VersionedMasterSections";
-import {
-  BLOCKED_HELP_LABEL,
-  BLOCKED_KEEP,
-  BLOCKED_WHAT,
-  BLOCKED_WHY,
-  DELETE_LABEL,
-  blockedMark,
-  deleteConfirmText,
-} from "@/lib/domain/master-delete";
+import { DELETE_LABEL, deleteConfirmText } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { ReorderList } from "@/components/reorder/ReorderList";
@@ -66,9 +59,7 @@ export function GradeRequirementEditor({
   /* 使っている場所があるなら消させない。
      行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
      全行で同じになる「なぜ消せないか」は、この部品の一番下に1つだけ置く。 */
-  const usedByOf = (id: string) => usage[id] ?? [];
-  const markOf = (id: string) => blockedMark(usedByOf(id));
-  const anyBlocked = rows.some((r) => usedByOf(r.id).length > 0);
+  const { usedByOf, markOf, anyBlocked } = blockedRows(usage, rows);
   /** 並べ替えの一覧の1行（本文と行の操作）に、どちらにも同じく渡す値 */
   const rowOf = (r: RequirementRow) => ({ id: r.id, text: r.text, usedBy: usedByOf(r.id), editing, busy: saving });
 
@@ -102,14 +93,6 @@ export function GradeRequirementEditor({
           }
         />
 
-        {list.length === 0 && (
-          <div className="card-pad">
-            <p className="footnote m-0">
-              この等級の「{label}」はまだ1項目もありません。0項目のままでも保存できます（そのぶん達成率の分母が小さくなります）。
-            </p>
-          </div>
-        )}
-
         {/* 並べ替えはつまみの長押し・ドラッグか矢印のボタン（S11・DD-005）。置いたら並び全体を1回で保存する */}
         {list.length > 0 && (
         <ReorderList
@@ -136,7 +119,7 @@ export function GradeRequirementEditor({
         />
         )}
 
-        <div className="card-pad">
+        <ListAddArea hasRows={list.length > 0}>
           {draft.open ? (
             <div className="grid gap-2">
               <textarea
@@ -165,19 +148,28 @@ export function GradeRequirementEditor({
               </div>
             </div>
           ) : (
-            <>
+            /* 足すボタンは、どの一覧でも一覧の下の左端に置く。足せない理由と、項目が無いことはその右に添える（spec §28-14） */
+            <ListAddRow
+              empty={
+                list.length === 0 && (
+                  <>この等級の「{label}」はまだ1項目もありません。0項目のままでも保存できます（そのぶん達成率の分母が小さくなります）。</>
+                )
+              }
+              note={
+                rest === 0 && (
+                  <>
+                    「{label}」は{GRADE_REQUIREMENT_MAX}項目までのため、これ以上追加できません。
+                    追加したい場合は、いまある項目を1つ「今後使わない」にしてください。
+                  </>
+                )
+              }
+            >
               <Button variant="secondary" disabled={saving || rest === 0} onClick={() => setDrafts((s) => ({ ...s, [category]: { open: true, text: "" } }))}>
                 ＋ 項目を追加
               </Button>
-              {rest === 0 && (
-                <p className="footnote m-0 mt-2">
-                  「{label}」は{GRADE_REQUIREMENT_MAX}項目までのため、これ以上追加できません。
-                  追加したい場合は、いまある項目を1つ「今後使わない」にしてください。
-                </p>
-              )}
-            </>
+            </ListAddRow>
           )}
-        </div>
+        </ListAddArea>
 
         <div className="card-pad grid gap-2 border-t border-line">
           <VersionedMasterSections
@@ -212,7 +204,7 @@ export function GradeRequirementEditor({
   };
 
   return (
-    <fieldset disabled={saving && !reordering} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
+    <FieldGroup disabled={saving && !reordering} aria-busy={saving} bodyClassName="stack">
       <Card className="card-pad">
         <p className="m-0 text-sub">
           いま編集しているのは <b>{gradeName}</b> の等級要件です。
@@ -280,13 +272,7 @@ export function GradeRequirementEditor({
 
       {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。
           「使用中」の行が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
-      {anyBlocked && (
-        <Disclosure summary={BLOCKED_HELP_LABEL}>
-          <p className="m-0 text-sub">{BLOCKED_WHY}</p>
-          <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
-          <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
-        </Disclosure>
-      )}
-    </fieldset>
+      {anyBlocked && <BlockedHelp />}
+    </FieldGroup>
   );
 }

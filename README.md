@@ -119,6 +119,8 @@ Claude Code の中からは `/improvements`（一覧を見る）と `/improve-re
 
 `kyufu` は会社ごとに `sakura`（さくら福祉会）、`mirai`（みらい支援ネット）に置き換えられます。
 
+`manager@kyufu.hyoka-demo.jp` は、複数の会社に所属する人の見本として、さくら福祉会にも一般として所属しています。会社をまだ選んでいないときは、会社名の順で先の「さくら福祉会」（一般の画面）が開きます。マネージャーの画面を見るときは、サイドバーの「操作する会社」で「給付事業（1社目）」を選んでください。選んだ会社は30日のあいだ覚えています。
+
 ### 制度の設定と半期ごとの評価
 
 会社の管理者は `/admin/setup`（制度設定ガイド）を開いてください。設定と運用の6ステップが依存する順番に並び、現在の登録件数・状態・次の操作を確認できます。昇給・賞与も扱う場合は、`/admin/kgi`（事業所KGIの達成率）と `/admin/raises`（昇給の設定）も確認します。
@@ -155,7 +157,7 @@ Cloudflare へ配る構成をローカルで確認するときは `pnpm run cf:d
 - [システム仕様](./system-spec/index.md) — API・データ・認証の契約
 - [アーキテクチャ](./architecture/index.md) — 構成と設計判断
 - [デプロイ時の注意](./docs/deploy-notes.md) — migration、配布、スモーク確認
-- [30思考法レビュー](./docs/reviews/elegant-review-2026-10-14-refactor.md) — 今回のワークツリーの重複整理・共通化・確認結果（[先行レビュー](./docs/reviews/elegant-review-2026-10-14.md)）
+- [30思考法レビュー](./docs/reviews/elegant-review-2026-10-16-refactor.md) — 今回のワークツリーの重複整理・共通化・確認結果（先行レビュー：[2026-10-14 の共通化](./docs/reviews/elegant-review-2026-10-14-refactor.md)・[2026-10-14](./docs/reviews/elegant-review-2026-10-14.md)）
 - [エージェント向けの規約](./AGENTS.md) — Claude Code・Codex 共通。キットの扱い、配色の優先順位、改善要望の手順
 - 生成物と記録 — `specs/`・`features/`・`tasks/`・`docs/requirements/` は開発の計画づくり（dev-graph・system-dev-planner）が作った文書、`.dev-graph/`・`eval-log/` はその状態と実行の記録（端末ごとに残り、git では共有しない）で、どれも正本ではありません。画面と振る舞いは製品仕様、API・データ・認証の契約はシステム仕様、構成と設計判断はアーキテクチャを正とし、食い違ったら生成物の側を直します。
 

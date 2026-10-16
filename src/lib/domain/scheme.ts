@@ -33,6 +33,29 @@
 
 import { expectedItemCount, pointsForSlot, slotKindOf, type GradePointRule } from "./grade-points";
 
+/**
+ * 設問のひな形が無い項目に付ける札。使うKPIを選ぶの候補（SchemeGroupPicker.tsx）と
+ * 比べる警告の表（ComparisonGapNotice.tsx）で同じ字面にする。どちらもここから読む。
+ * 選ぶ画面はブラウザで動くので、台帳を読む comparison-gap.ts ではなくここに置く
+ */
+export const NO_TEMPLATE_BADGE = "設問なし";
+
+/**
+ * 聞き方を決める場所の案内。リンクを置けない文（選んだ時点の警告・作り直しの返事）で使う。
+ * 画面名は台帳（/admin/scheme）の名前と同じ字面にする（scheme.test.ts で確かめる）。
+ * ここで台帳を読まないのは、NO_TEMPLATE_BADGE と同じく選ぶ画面がブラウザで動くため
+ */
+export const ASKING_PLACE_HINT = "聞き方は、KPI・評価セットの「KPI項目」で決められます。その項目の「内容を直す」を押してください。";
+
+/**
+ * 聞き方（設問のひな形）が決まっていない項目を名指しする1文。選んだ時点の警告（validateScheme）と、
+ * 比べる警告・作り直しの返事（comparison-gap.ts の noTemplateNote）の書き出しを同じ字面にする。
+ * 続く文（決めるまで何をしても設問が出ないことの言い方）は場面ごとに違うので、呼び出し側で足す
+ */
+export function unaskableLead(names: readonly string[]): string {
+  return `${names.map((name) => `「${name}」`).join("・")}は、実績の聞き方がまだ決まっていません。`;
+}
+
 export interface SchemeSelection {
   kpiItemId: string;
   categoryId: string | null;
@@ -41,6 +64,16 @@ export interface SchemeSelection {
   isFixedSlot: boolean;
   /** 20点枠（金銭系） */
   isMajorSlot: boolean;
+}
+
+/**
+ * 選んだ項目の実績の聞き方（設問のひな形）が決まっていないか。無ければアンケートを作っても作り直しても設問が出ない。
+ * 固定枠は等級要件の設問から実績を数えるので除く（理由は validateScheme の注釈）。
+ * 選んだ時点の警告（validateScheme）と比べる警告の札（comparison-gap-loader.ts）は、この1つで線を引く。
+ * isFixedSlot はどちらも評価セットの行の固定枠（scheme_items.is_fixed_slot）で、保存の前に見るか後に見るかだけが違う
+ */
+export function isUnaskable(item: Pick<SchemeSelection, "kpiItemId" | "isFixedSlot">, askableItemIds: ReadonlySet<string>): boolean {
+  return !item.isFixedSlot && !askableItemIds.has(item.kpiItemId);
 }
 
 export interface SchemeValidation {
@@ -63,6 +96,12 @@ export interface ValidateSchemeOptions {
    * 渡さなかった場合は判定しない（呼び出し側がまだ対応していない箇所での誤警告を避ける）。
    */
   ratedItemIds?: Iterable<string>;
+  /**
+   * 実績を聞く設問のひな形（kpi_questions）を持つ項目のID（queries.ts の listAskableKpiItemIds）。
+   * ここに無い項目を選んでも、アンケートを作っても作り直しても設問が出ず、点も付かない。
+   * 渡さなかった場合は判定しない（ratedItemIds と同じ理由）。
+   */
+  askableItemIds?: Iterable<string>;
   /** 指摘に業務の言葉（項目名）を出すための引き当て */
   itemNameOf?: (id: string) => string;
   /**
@@ -133,6 +172,27 @@ export function validateScheme(selections: SchemeSelection[], opts: ValidateSche
           `ただし上位の等級を想定して作られた基準がそのまま使われます。` +
           `${group}には厳しすぎる可能性があります。` +
           `「評価基準」で閾値を確認してください。`,
+      );
+    }
+  }
+
+  /* ひな形の無い項目は、選べても設問が作られない。アンケートの「設問を作り直す」を押しても
+     足りないままなので、作り直しで直ると思わせないよう、選んだ時点で知らせ、聞き方を決める場所を示す
+     （ひな形は KPI項目の画面で聞き方として足せる。DD-016）。
+     ランク基準と同じ理由で errors にはしない（先に評価軸を決める作業順を塞がない）。
+     固定枠は等級要件の設問から実績を数えるので除く（form-build.ts）。等級要件が1件も無い等級では
+     固定枠のひな形（seed.sql の q1_1）に頼る。q1_1 は見本の各会社にあり、新しい会社にもひな形ごと写す
+     （template.ts）。画面から足す項目は固定枠にならない（apply-master-update.ts の isFixedSlot: false）。
+     比べる警告の札（comparison-gap-loader.ts）と同じ線引きにするため、判定は isUnaskable で行う。 */
+  if (opts.askableItemIds !== undefined) {
+    const askable = new Set(opts.askableItemIds);
+    const unaskable = selections.filter((x) => isUnaskable(x, askable));
+    if (unaskable.length > 0) {
+      warnings.push(
+        unaskableLead(unaskable.map((x) => nameOf(x.kpiItemId))) +
+          "このまま保存はできます。" +
+          "決めるまでは、アンケートを作っても作り直しても設問が出ず、点も付きません。" +
+          ASKING_PLACE_HINT,
       );
     }
   }

@@ -4,7 +4,9 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Card, ReasonNote, SectionHeading, SplitRow } from "@/components/ui";
 import { QuestionInput, type AnswerValue } from "@/components/QuestionField";
-import { SECTION_HELP, SECTION_LABEL } from "@/lib/view";
+import { RespondentGuide } from "@/components/RespondentGuide";
+import { SECTION_HELP } from "@/lib/view";
+import { sectionLabel } from "@/lib/question-order";
 import { orderedQuestionSections } from "@/components/question-sections";
 import { parseOptions } from "@/lib/domain/answer-snapshot";
 
@@ -27,6 +29,9 @@ export interface PreviewQuestion {
 const DEFAULT_REASON =
   "この画面は中身を確かめるためのもので、ここからは回答できません。回答は、対象の等級の方が「実績を報告する」から開く回答画面で行います。";
 
+/** 節ごとに添える「送信できない理由」の既定の短い文（見本を出す画面が渡さないとき） */
+const DEFAULT_BLOCKED_LABEL = "確認専用の見本のため";
+
 /**
  * アンケートの中身を「答えずに読む」ための表示（見本）。
  *
@@ -35,13 +40,25 @@ const DEFAULT_REASON =
  *
  * 選択肢は回答画面と同じ部品（QuestionInput）で試しに選べる。以前は押せない札を並べており、
  * 押しても何も起きない理由が分からず「選択肢が押せない」不具合に見えていた。
- * そのため見本であることと回答できない理由を先頭に出す。
- * 回答画面をそのまま出さないのは、入力すると自動保存が走り、確認しただけの人の回答行が
- * できてしまうため。試しに選んだ内容はこの部品の中だけに持ち、保存・提出の処理には繋がない。
- * 文章・数値の設問は欄を作らず、「どう答えることになるか」（単位・入力できる値）を文で見せる。
+ * そのため見本であることと回答できない理由を先頭に出し、節ごとにも短く繰り返す。
+ * 回答画面（FormAnswer）をそのまま出さないのは、ここが入力ではなく読むための画面だから
+ * （設問ごとの答え方を文で見せ、節ごとに送信できない理由と回答者への案内を添える）。
+ * 数を入れてから提出の検査までの流れは、保存しない試しの回答（FormAnswer の trial。/forms/[id]?try=1）で確かめる。
+ * 試しに選んだ内容はこの部品の中だけに持ち、保存・提出の処理には繋がない
+ * （見ただけの人の回答や下書きの行ができると、提出状況や回答一覧に混ざるため）。
+ * 文章・数値の設問は欄を作らず、回答画面でどんな欄が出るか（単位・入力できる値）を文で見せる。
  * 配点や昇格ゲートなど、回答者に見せない内部情報も混ぜない。
  */
-export function FormPreview({ questions, reason = DEFAULT_REASON }: { questions: PreviewQuestion[]; reason?: string }) {
+export function FormPreview({
+  questions,
+  reason = DEFAULT_REASON,
+  blockedLabel = DEFAULT_BLOCKED_LABEL,
+}: {
+  questions: PreviewQuestion[];
+  reason?: string;
+  /** 節ごとの「見本のため送信できません（…）」の括弧の中。/forms/[id] は回答できない理由の短い文を渡す */
+  blockedLabel?: string;
+}) {
   // 試しに選んだ答え。この画面の中だけで持ち、どこへも送らない
   const [tried, setTried] = useState<Record<string, AnswerValue>>({});
   const ordered = orderedQuestionSections(questions);
@@ -69,8 +86,8 @@ export function FormPreview({ questions, reason = DEFAULT_REASON }: { questions:
       </div>
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
-          <SectionHeading help={SECTION_HELP[g.section]}>
-            {SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}
+          <SectionHeading help={sectionNote(blockedLabel, SECTION_HELP[g.section])}>
+            {sectionLabel(g.section)}
           </SectionHeading>
           <Card className="card-pad">
             <div className="space-y-5">
@@ -81,9 +98,10 @@ export function FormPreview({ questions, reason = DEFAULT_REASON }: { questions:
                 // 答え方は行の右端に寄せる。文の長い選択肢だけは幅いっぱいに使うので下へ回す
                 return (
                   <SplitRow key={q.id} aside={shape.aside} below={shape.below}>
+                    {/* 印は回答画面（QuestionField）と同じく「（任意）」だけ。印の無い設問が必須 */}
                     <p id={titleId} className="m-0 text-sub font-bold">
                       {q.title}
-                      <span className="footnote"> {q.required ? "（必須）" : "（任意）"}</span>
+                      {!q.required && <span className="footnote"> （任意）</span>}
                     </p>
                     {q.helpText && <p className="footnote m-0 mt-0.5">{q.helpText}</p>}
                   </SplitRow>
@@ -93,6 +111,28 @@ export function FormPreview({ questions, reason = DEFAULT_REASON }: { questions:
           </Card>
         </section>
       ))}
+    </>
+  );
+}
+
+/**
+ * 見本の節の見出しの直下に添える文。1行目に送信できない理由、2行目に節の説明を回答者への案内として引用する。
+ *
+ * 先頭の注記だけでは、下の節まで送ったときに理由が画面の外へ出る（spec §28-8「見える場所に理由」）。
+ * 画面に貼り付けず、節ごとに流れの中で繰り返す。
+ * 節の説明は回答者への指示（「入力してください」）なので、見本では引用の形にして、
+ * 見ている人への指示と読ませない。文の正本は SECTION_HELP の1つのまま（回答画面と同じ文）。
+ * 引用の形は RespondentGuide の1つで持つ（アンケートの説明文も同じ形で出す）。
+ */
+function sectionNote(blockedLabel: string, guide: string | undefined): ReactNode {
+  return (
+    <>
+      <span className="block">見本のため送信できません（{blockedLabel}）</span>
+      {guide && (
+        <span className="mt-0.5 block">
+          <RespondentGuide>{guide}</RespondentGuide>
+        </span>
+      )}
     </>
   );
 }
@@ -131,7 +171,8 @@ function answerShape(
     return short ? { aside: <>{input}{how}</> } : { aside: how, below: input };
   }
 
-  if (q.questionType === "text") return { aside: note("文章で記入します。") };
+  // 見本には打つ欄が無いので、「入力します」ではなく回答画面で何が出るかを言う
+  if (q.questionType === "text") return { aside: note("回答画面では文章を書く欄が出ます。") };
 
   if (q.questionType === "number") {
     const rule =
@@ -144,7 +185,7 @@ function answerShape(
             : null;
     return {
       aside: note(
-        `数値で入力します${q.unit ? `（単位：${q.unit}）` : ""}` +
+        `回答画面では数値を入れる欄が出ます${q.unit ? `（単位：${q.unit}）` : ""}` +
           (rule ? `。${rule}${q.validationInteger ? "の整数" : "の数"}を入れます` : q.validationInteger ? "。整数だけを入れます" : "") +
           "。",
       ),

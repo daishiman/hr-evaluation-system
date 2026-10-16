@@ -129,7 +129,12 @@ export function QuestionInput({
   }
 
   if ((q.questionType === "single" || q.questionType === "multi") && options.length === 0) {
-    return <p className="footnote m-0 mt-2">選択肢が登録されていません。会社の管理者にご連絡ください。</p>;
+    // 答えられない必須の設問でも「最初の未入力の欄へ移る」の飛び先になるよう、案内の文に f_ の id を持たせる
+    return (
+      <p className="footnote m-0 mt-2" id={`f_${q.id}`} tabIndex={-1}>
+        選択肢が登録されていません。会社の管理者にご連絡ください。
+      </p>
+    );
   }
 
   if (q.questionType === "multi") {

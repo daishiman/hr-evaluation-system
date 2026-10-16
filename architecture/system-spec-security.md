@@ -16,11 +16,11 @@ file_path: "architecture/system-spec-security.md"
 template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
-evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "836939d3915adf506a5a24a96a89825f90471d8c217598cd0521202041682668", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "system-spec/completeness-findings.json"}
-source_lineage: {"imported_at": "2026-10-13T05:04:21Z", "origin_kind": "system-spec-harness", "source_digest": "836939d3915adf506a5a24a96a89825f90471d8c217598cd0521202041682668", "source_path": "system-spec/security.md", "source_plugin": "system-spec-harness", "source_version": "0.1.21"}
-created_at: "2026-10-13T05:05:39.858264Z"
-updated_at: "2026-10-13T05:05:39.858264Z"
+evaluation_status: "stale"
+confirmation_evidence: {"evaluated_digest": "c9654a902609f97d9131f60903dc12343178c810e665501f47c950a4733809fb", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
+source_lineage: {"imported_at": "2026-10-15T00:07:42Z", "origin_kind": "system-spec-harness", "source_digest": "c9654a902609f97d9131f60903dc12343178c810e665501f47c950a4733809fb", "source_path": "system-spec/security.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-15T01:28:34.699201Z"
+updated_at: "2026-10-15T08:18:18.870953Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -44,15 +44,14 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-13T05:05:39.858264Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-15T08:18:18.870953Z", "missing_sections": [], "status": "complete"}
 ---
-
-
-2026-10-14 の現行契約は [DD-009](../docs/product/design-decisions.md) と `system-spec/spec-state.json` の `qa-v27` / `qa-v28` の訂正を優先する。旧 `source_lineage`・`confirmation_evidence` の digest と評価は取り込み時点の記録であり、今回の訂正後に独立評価を再実行した証跡ではない。利用者の委任は `qa-v32-delegated-membership-policy` に逐語で記録し、具体案の選択はエージェントの裁定として区別する。
 
 # Architecture overview
 
 この章は、鮮度の仕組みを入れても守るべきことと、2026-10-12 の追加要件で増える守りを受け持つ。既存の要件の柱は、他タブへの通知に中身を載せないこと、ログイン後の応答を private, no-store にすること、初期パスワードの控えを AES-GCM で暗号化して利用者 ID に結び付けること、別のサイトからの呼び出しを二重に断ることである。追加要件では、等級名の変更の可否をサーバー処理で判定し、等級と点数を見てよい人にだけサーバーで載せ、複数の会社に所属する人の読み書きを選んでいる会社の所属で絞る。選んでいる会社は cookie の値をそのまま信じず、リクエストのたびにサーバーで所属を確かめて決める（D-004）。権限一覧の表示は、実際の判定と同じ定義（route-ledger.json。D-007 ①）から作り、表示と判定の食い違いをテストで落とす。等級名の変更・所属の追加と削除・本番の一律の書き換えは監査に残す。この追加の全文は、D-007 ① に合わせて (6) を直したうえで、利用者が承認した（qa-v28、2026-10-13T03:48:20Z）。上流指針は OWASP ASVS と Secrets Management Cheat Sheet である。根拠: qa-v28, qa-r-security-3, qa-v12, qa-v25／system-spec/security.md
+
+2026-10-14 の追加で、比べる警告のリンク先、ズレを読む処理の範囲、createForms の等級の確かめ方を定めた（G16）。この追加の全文は、利用者が全文のまま承認した（qa-w09、2026-10-14T20:46:24Z）。根拠: qa-w09／system-spec/security.md
 
 ## Context and drivers
 
@@ -64,7 +63,7 @@ implementation_readiness: {"checked_at": "2026-10-13T05:05:39.858264Z", "missing
 
 ## System context and boundaries
 
-守る境界は会社で、他社や担当外の対象は区別せず 404 にする（route-ledger の notFound）。セッションは要求ごとに D1 から読み、cookieCache を入れないので、ロールの変更・会社の利用停止・利用者の無効化は次の要求で効く。他タブへの通知は同じブラウザの同じオリジンにしか届かず、別の利用者の画面へは届かない。外部のエージェント向け API（Bearer 鍵）と端末の承認は、今の Route Handler と認可のまま残す。複数の会社に所属する人は、選んでいる会社を cookie（hr_company。httpOnly・Secure・SameSite=Lax）で持つ。cookie の値と送られた会社の id はそのまま信じず、getViewer がリクエストのたびに cookie が指す会社への所属をサーバーで確かめて決める（D-004）。cookie が無いときや所属していない会社を指すときは、有効な所属の createdAt 昇順（同時刻は id 昇順）の先頭を使い、所属が1つの人は今と同じ動きにする。根拠: qa-v28, qa-r-security-3, qa-f04, qa-u25, qa-v12, qa-v27／system-spec/security.md・system-spec/auth.md
+守る境界は会社で、他社や担当外の対象は区別せず 404 にする（route-ledger の notFound）。セッションは要求ごとに D1 から読み、cookieCache を入れないので、ロールの変更・会社の利用停止・利用者の無効化は次の要求で効く。他タブへの通知は同じブラウザの同じオリジンにしか届かず、別の利用者の画面へは届かない。外部のエージェント向け API（Bearer 鍵）と端末の承認は、今の Route Handler と認可のまま残す。複数の会社に所属する人は、選んでいる会社を cookie（hr_company。httpOnly・Secure・SameSite=Lax）で持つ。cookie の値と送られた会社の id はそのまま信じず、getViewer がリクエストのたびに cookie が指す会社への所属をサーバーで確かめて決める（D-004）。cookie が無いときや所属していない会社を指すときは、有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使い、所属が1つの人は今と同じ動きにする。根拠: qa-v28, qa-r-security-3, qa-f04, qa-u25, qa-v12, qa-v27／system-spec/security.md・system-spec/auth.md
 
 ## Container and component view
 
@@ -86,11 +85,15 @@ security の観点だけを持ち、内容は subtype_sections の security に�
 
 #### Identity and authorization
 
-セッションは要求ごとに D1 から読み、cookieCache を入れないので、利用停止や無効化は次の要求で効く。認可はサーバーが毎回判定し、他社や担当外は区別せず 404 にする。等級名の変更はシステム全体管理者と自社の会社管理者だけに許す。他の役割には画面に変更の欄を出さず、saveMaster の等級の表と行動指針の割り当てから呼ぶ処理でも 403 にし、他社の等級を指す要求はサーバー処理で拒否する。複数の会社に所属する人は選んでいる会社の所属で全ての読み書きを絞る。選んでいる会社は cookie（hr_company。httpOnly・Secure・SameSite=Lax）で持ち、getViewer がリクエストのたびに cookie が指す会社への所属をサーバーで確かめてから、その所属の会社・役割・等級を作る。cookie が無いときや所属していない会社を指すときは、有効な所属の createdAt 昇順（同時刻は id 昇順）の先頭を使う。会社の切り替え（switchCompanyScope）は全役割に開き、送り元のオリジンを確かめる Server Action で受け、所属していない会社は拒否する。システム全体管理者は今どおり全社から選べる。役割の種類は増やさない。既存アカウントに新しい会社の所属を足すのは全体管理者の専用処理だけ。会社管理者の新規登録は既存メールを汎用文面で拒否し、他社の所属先を知らせない。パスワードと控えは変更・発行せず、専用追加は所属・必要な写し・監査を同じ batch で書く（DD-009）。所属の削除はその会社の分だけで、他社の所属が残る人のアカウントとセッションは消さず、最後の所属なら今の利用者の削除と同じに扱う。根拠: qa-v28, qa-r-security-3, qa-u25, qa-v12, qa-v27／system-spec/security.md・system-spec/auth.md
+セッションは要求ごとに D1 から読み、cookieCache を入れないので、利用停止や無効化は次の要求で効く。認可はサーバーが毎回判定し、他社や担当外は区別せず 404 にする。等級名の変更はシステム全体管理者と自社の会社管理者だけに許す。他の役割には画面に変更の欄を出さず、saveMaster の等級の表と行動指針の割り当てから呼ぶ処理でも 403 にし、他社の等級を指す要求はサーバー処理で拒否する。複数の会社に所属する人は選んでいる会社の所属で全ての読み書きを絞る。選んでいる会社は cookie（hr_company。httpOnly・Secure・SameSite=Lax）で持ち、getViewer がリクエストのたびに cookie が指す会社への所属をサーバーで確かめてから、その所属の会社・役割・等級を作る。cookie が無いときや所属していない会社を指すときは、有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使う。会社の切り替え（switchCompanyScope）は全役割に開き、送り元のオリジンを確かめる Server Action で受け、所属していない会社は拒否する。システム全体管理者は今どおり全社から選べる。役割の種類は増やさない。既存アカウントに新しい会社の所属を足すのは全体管理者の専用処理だけ。会社管理者の新規登録は既存メールを汎用文面で拒否し、他社の所属先を知らせない。パスワードと控えは変更・発行せず、専用追加は所属・必要な写し・監査を同じ batch で書く（DD-009）。所属の削除はその会社の分だけで、他社の所属が残る人のアカウントとセッションは消さず、最後の所属なら今の利用者の削除と同じに扱う。根拠: qa-v28, qa-r-security-3, qa-u25, qa-v12, qa-v27／system-spec/security.md・system-spec/auth.md
+
+比べる警告のリンク先は、ルート台帳にあり、見る人の役割で開けるページに限る。createForms は役割の指定と送り元の確認を通し、自社のものでない gradeId が1件でもあれば、何も作らずに拒否する（今は他社の ID を黙って外し、残りだけ作る）。根拠: qa-w09／system-spec/security.md
 
 #### Data and secret protection
 
 控えは平文で保存せず、AES-GCM で暗号化して利用者 ID に結び付け（別の人の行へ写しても開けない）、行に鍵の版を持たせて鍵の入れ替えに備える。鍵はリポジトリにも DB にも置かず、Workers の secret にだけ置く。開けるのはシステム全体管理者と同じ会社の管理者だけで、開くたびにサーバーで認可し、本人がパスワードを変えたら消し、再発行したら置き換え、発行から14日を過ぎたら開けず一覧にも出さず、次の発行の batch で消す（CSV 取込で発行した分も同じ）。ログイン後の応答は private, no-store で共有のキャッシュに載せず、等級と点数は見てよい人への応答にだけ載せる。出典は cloudflare-workers-web-crypto である。根拠: qa-v28, qa-r-security-3／system-spec/security.md
+
+ズレを読む処理は会社の範囲で絞り、他社の名前を含めない。他社の区分を指す URL は今どおり notFound にする。根拠: qa-w09／system-spec/security.md
 
 #### Application and supply-chain controls
 
@@ -104,9 +107,13 @@ security の観点だけを持ち、内容は subtype_sections の security に�
 
 送り元の二重の検査は action-origin.test.ts で固定し、入口を通らない書き込み（server-actions-contract.test.ts）と batch の外で2つ以上の表を書く関数（write-atomicity-contract.test.ts）とあわせて、pnpm test で違反0件を条件にする。O7 は等級名の変更を役割ごとに画面とサーバー処理の両方で拒否する結合テスト、O8 は route-ledger.json の権限の定義を、サイドバー（nav.ts）・ページの入口（requireRole）・サーバー処理の役割の指定（ActionSpec.role）・session.ts の can〜 の判定と突き合わせる契約テスト、O9 は一般の社員への応答に他人の等級・点数が含まれないことのテスト、O10 は2社目への追加と会社の切り替え、所属していない会社を指定した要求（会社の切り替えを含む）の拒否、所属していない会社のデータが読めないことのテストで確かめる。O2 はリリース後の本番で、作成直後の強制再読み込みと生成時刻のヘッダーを確かめ、ゾーンに HTML・/api を保存するキャッシュ規則が無いことを読み取りだけで確かめる（作成は利用者のふだんの操作で行い、エージェントは本番に書き込まない）。根拠: qa-v28, qa-r-security-3, qa-u25, qa-v12, qa-v25, qa-v30, qa-v31／system-spec/security.md・system-spec/backend.md・system-spec/maintenance-ops.md
 
+リンク先が台帳にあり見る人の役割で開けることを契約テストで、他社の等級を渡した createForms が何も作らずに拒否されることをテストで確かめる。根拠: qa-w09, qa-w10／system-spec/security.md・system-spec/maintenance-ops.md
+
 ## Architecture decisions
 
 控えの持ち方は、平文で持たず利用者 ID に結び付けて AES-GCM で暗号化し、本人の変更・再発行・発行から14日のいちばん早い時点で終える案を利用者が選んだ（qa-u24、qa-u25）。別のサイトからの呼び出しは、Next.js の検査と入口の assertSameOrigin の二重の検査を続ける案を選び、serverActions.allowedOrigins は足さない。D-001 の BroadcastChannel は同じオリジンの中だけで動くので CSP を変えない。D-004（opt-membership-cookie）は利用者が選んだ案で、AI の推奨と同じである（qa-v12）。所属を自前の表に持ち、選んでいる会社を cookie（hr_company。httpOnly・Secure・SameSite=Lax）で持つ。cookie の会社への所属の確認を1か所でも漏らすと、所属していない会社のデータが見えるので、確認は getViewer でリクエストのたびに行う。D-007（opt-route-ledger-extend）は利用者が選んだ案で、AI が委任に基づいて選んだ別の案とは違う（qa-v25）。権限の定義を route-ledger.json 1つにまとめ、表示と判定を同じ定義から作る（qa-v27 (4)）。サイドバー・ページの入口の判定・サーバー処理の役割の指定はこの台帳から引き、台帳と突き合わせる契約テストで食い違いを落とす（qa-v30 (2)）。他社にアカウントがある人を足すときに足す側へ所属先を知らせないこと、パスワードを変えないこと、所属の削除の範囲は、この章の要件に書いた。D-007 ① に合わせて (6) を直したうえで、利用者が承認した（qa-v28、2026-10-13T03:48:20Z）。根拠: qa-v28, qa-r-security-3, qa-u24, qa-u25, qa-v12, qa-v25, qa-v27, qa-v30／system-spec/security.md・system-spec/auth.md・system-spec/backend.md
+
+2026-10-14 の会社所属の現在の契約：既存アカウントへ別の会社の所属を足すのは全体管理者だけの専用操作（addMembership）とする（qa-w11、D-008）。選んでいる会社が無いとき（cookie が無い・所属していない会社を指す）は、有効な所属のうち会社名の順で最初の会社を開く（同名は会社 id の順。qa-w12、D-009）。委任（qa-v32）に基づく DD-009 の『最も古い有効な所属』は利用者の選択で取り消し、実装は 2026-10-15 に会社名の順へ直した（src/lib/memberships.ts の activeMembershipsByCompanyName。users の写しの基準は古い順のまま。DD-009 の更新）。どちらの順でも、リクエストのたびに所属をサーバーで確かめることは変わらない。根拠: qa-w11, qa-w12, qa-v27／system-spec/auth.md・system-spec/security.md・docs/product/design-decisions.md
 
 ## Delivery, migration and rollback
 

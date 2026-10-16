@@ -16,11 +16,11 @@ file_path: "specs/system-spec-requirements.md"
 template_id: "specification"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
-evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "ab8facee57d0e3d9fb4b61b116663cc9f29c44bd12c14a7c9419bb9909a27480", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "system-spec/completeness-findings.json"}
-source_lineage: {"imported_at": "2026-10-13T05:04:21Z", "origin_kind": "system-spec-harness", "source_digest": "ab8facee57d0e3d9fb4b61b116663cc9f29c44bd12c14a7c9419bb9909a27480", "source_path": "system-spec/00-requirements-definition.md", "source_plugin": "system-spec-harness", "source_version": "0.1.21"}
-created_at: "2026-10-13T05:05:39.858264Z"
-updated_at: "2026-10-13T05:05:39.858264Z"
+evaluation_status: "stale"
+confirmation_evidence: {"evaluated_digest": "30c51e281046051f9a69fb22c6c5d13772121c0b854f67c3946864cf460106cf", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
+source_lineage: {"imported_at": "2026-10-15T00:07:42Z", "origin_kind": "system-spec-harness", "source_digest": "30c51e281046051f9a69fb22c6c5d13772121c0b854f67c3946864cf460106cf", "source_path": "system-spec/00-requirements-definition.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-15T01:28:34.699201Z"
+updated_at: "2026-10-15T08:18:18.870953Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -44,21 +44,22 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-13T05:05:39.858264Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-15T08:18:18.870953Z", "missing_sections": [], "status": "complete"}
 ---
-
-
-2026-10-14 の現行契約は [DD-009](../docs/product/design-decisions.md) と `system-spec/spec-state.json` の `qa-v27` / `qa-v28` の訂正を優先する。旧 `source_lineage`・`confirmation_evidence` の digest と評価は取り込み時点の記録であり、今回の訂正後に独立評価を再実行した証跡ではない。利用者の委任は `qa-v32-delegated-membership-policy` に逐語で記録し、具体案の選択はエージェントの裁定として区別する。
 
 # 目的と成功状態
 
 利用者が作成・変更・削除した結果を、成功表示の直後・再読み込み・他のタブ・画面復帰のどれでも必ず確かめられ、『本当に保存できたのか』を疑わずに次の作業へ進める状態をシステムとして保証する（U1、G1〜G5）。あわせて、等級の呼び名・役割ごとにできること・各人の等級と確定済みの評価・アンケートの提出状況・設定の不足を、どの画面でも同じ言葉で、見てよい人にだけ示す（G6〜G15）。成功時には、会社追加の直後に会社一覧・件数・会社切替メニューへ新しい会社が出て（連続作成で控えを出したままでも）、強制再読み込み・直接 URL・別タブ・スマホの画面復帰でも古い一覧が残らず、複数の表を書く書き込みが途中で失敗しても一部だけが残らない。さらに、等級名を『等級4-1』の形に変えると行動指針・評価セット・昇格の要件・警告・アンケートのタイトル・ボタンのすべてがその名前で出て、権限一覧のページとモーダル、一覧の等級と点数、2社目への所属、提出状況の一覧、リンク付きの設定不足の表示、『Claude Code連携（システム開発者専用）』への改名、長押しドラッグでの並べ替え、押せる選択肢、右側の余白の解消がそろう（U5）。
 根拠: qa-u01、qa-v01、qa-v03（appr-foundation-008）、qa-u26（appr-foundation-007）（system-spec/00-requirements-definition.md の U1・U3・U5）
 
+2026-10-14 の追加で、ゴールに G16（2つのページの内容を比べて出す警告は、比べている両方のページを階層つきのページ名とリンクで示し、項目ごとにどちらのページにあってどちらに無いかを表で示す。既定ではズレがあることと件数だけを1行で出し、中身は押すと開く。どちらのページから見ても、相手のページへ1回の操作で移れる）を足した。成功基準には『ズレの警告から、比べている両方のページへ、ページ名を見て1回の操作で移れる』『ズレの警告は既定で1行に収まり、押すと直すところが表で出る』を足した。背景は、アンケート一覧の警告がどのページとどのページの内容が食い違っているかを示さず、たどれないという報告（qa-w01）と、警告の文が長く並んで読みにくいので既定では出さずに押すと出す形にするよう求めた追加の指示（qa-w03）である。根拠: qa-w05, qa-w01, qa-w03／system-spec/00-requirements-definition.md
+
 ## スコープ
 
 In: 全ての作成・更新・削除（会社・利用者・メンバー・アンケート・評価セットと期間・制度設定・CSV 取込・改善要望など）の後の表示鮮度を、同じタブ・再読み込み・他のタブ・画面復帰の4経路で保証すること、一つの操作で複数の表を書く書き込みを途中で失敗しても一部だけ残さないこと（batch・補償・やり直し）、鮮度契約の静的検査と E2E と反映されない報告の切り分け手段。2026-10-12 の追加として、等級名の表示の統一と動的な反映（既定の等級名の変更と、既存の会社の等級名と等級名を含む表示名の一律の書き換えを含む）、等級名を変えられる役割の制限、権限一覧のページと利用者一覧の権限一覧モーダル、3つの一覧への今の等級と確定済みの最新評価点の表示、1つのアカウントでの複数の会社への所属と切り替え、アンケートの提出状況の一覧、設定不足の表示の書き方と直す画面へのリンク、『Claude Code連携の鍵』の画面名の変更、全ての並べ替えへの長押しドラッグとキーボード操作、選択肢を押しても選べない不具合、右側の余白が目立つ画面の配置も対象にする。Out: 別の利用者が開いている画面への即時配信（WebSocket 等の push）、オフライン編集と同期、配色・テーマの変更（AGENTS.md と DD-003）、等級名の一律の書き換えを除く本番データの移行・修正、役割の種類の追加（『システム開発者』の役割は作らない）、等級名の変更権限を除く役割ごとの権限の中身の変更。
 根拠: qa-u23、qa-v03（system-spec/00-requirements-definition.md の U7）
+
+2026-10-14 の追加で、対象に『比べる警告（評価項目とアンケートのズレ）の、両方のページ名とリンク・3画面への表示・畳んだ表示・この等級だけ新しい版を作る操作』を足し、対象外に『比べる警告以外の設定不足の一覧（公開前の不足など）の表示の形の変更』を足した。根拠: qa-w05, qa-w02／system-spec/00-requirements-definition.md
 
 ## 用語と主体
 
@@ -75,20 +76,28 @@ In: 全ての作成・更新・削除（会社・利用者・メンバー・ア�
 FR-001: 画面からの書き込みは Server Functions の共通の入口 runAction を通し、成功したときだけ next/cache の refresh で同じ応答に新しい画面を載せる（I1、D-002）。FR-002: 書き込みの成功を BroadcastChannel で同じブラウザの他タブへ知らせ、visibilitychange・online・pageshow（persisted）でも取り直す（I3、D-001）。FR-003: 複数の表を書く書き込みは1回の D1 batch で書き、batch に入りきらない会社追加は withCompensation（書き込みと取り消しの組）、パスワード変更の続きは rollForward（やり直し）で守る（I4、D-003）。FR-004: 等級の呼び名を作る共通の関数を置いて全表示をそこから作り、既定の等級名を『等級1』『等級2』『等級3』『等級4-1』『等級4-2』『等級5-1』『等級5-2』にして既存の会社を一律に書き換える（I7）。FR-005: 等級名を変えられる役割を限り、画面とサーバー処理の両方で判定する（I8）。権限の定義は、ページを開ける役割（accessClass）・ページ名・主な操作・役割ごとの可否・説明を route-ledger.json の各ページに置く（D-007）。サイドバー・ページの入口の判定・サーバー処理の役割の指定・session.ts の can〜 の判定・権限一覧の表示は、この台帳だけを読む。権限一覧はページとモーダルで同じ部品を使い、表・役割のタブ・スマホのカードで見せ、説明はポインター・フォーカス・タップのどれでも出す（I9、D-006）。あわせて、画面名の改名、3つの一覧への等級と点数、所属の表と cookie で選ぶ会社の切り替え（D-004）、提出状況の一覧、設定不足の『何が足りない・どう直す・直す画面へのリンク』、Pointer Events で自作する並べ替えの共通部品と並び順の全体保存（D-005）、選択肢の修正、余白の見直しを入れる（I8〜I16）。
 根拠: qa-r-backend-4、qa-r-frontend-3、qa-r-database-3、qa-v18・qa-v22・qa-v26〜qa-v30、D-004（qa-v12）、D-005（qa-v13）、D-006（qa-v14）、D-007（qa-v25）（system-spec/00-requirements-definition.md の U9）、system-spec/database.md、system-spec/frontend.md、system-spec/ui-ux.md、system-spec/backend.md、system-spec/auth.md、system-spec/security.md、system-spec/infrastructure.md
 
+I17：比べる警告の型に、2つのページ（階層つきのページ名とリンク）と項目ごとの有無を持たせる。ズレの警告をアンケートの一覧・アンケート1本・使うKPIを選ぶの3画面に、既定は1行・押すと表で開く形で出す。公開後のズレには『この等級だけ新しい版の下書きを作る』を添える（G16）。根拠: qa-w05, qa-w02／system-spec/00-requirements-definition.md
+
 ## 非機能要件
 
 性能: 他タブは通知受信またはタブ復帰から1秒以内に最新化し（O3）、通知の取り直しは1.5秒に1回へ間引く。一覧の等級と点数は一覧ぶんをまとめて1回の問い合わせで取り、人数に比例して問い合わせを増やさない。信頼性: 複数の表を書く書き込みの中途状態を0件にし、取り消し・やり直しまで失敗したときは compensation_failed・rollforward_failed を Workers Logs に必ず残す（O5）。アクセシビリティ: 並べ替えはドラッグだけに頼らず、矢印のボタンとキーボードでも同じ操作ができて結果を読み上げる。矢印のボタンは WCAG 2.2 の SC 2.5.7（ドラッグの代わりの操作）として残す。ポインターを載せたときだけ出る情報を作らず、色だけに頼らない表示にし、375・768・1280・1600 の4幅で同じ振る舞いにする。セキュリティと保守性: ログイン後の応答は private, no-store にし、役割による表示の制限は画面で隠すだけでなくサーバーが返すデータの段階で行う。構成（Next.js 16 系・OpenNext Cloudflare・Workers・D1・better-auth）は変えない。並べ替えは Pointer Events で自作して新しい依存を足さず（D-005）、権限の定義は route-ledger.json に足して DB の表を足さない（D-007）。
 根拠: qa-r-frontend-3、qa-r-security-3、qa-v18、qa-v29、qa-v30、D-005（qa-v13）、D-007（qa-v25）（system-spec/00-requirements-definition.md の U4・U8）、system-spec/ui-ux.md、system-spec/infrastructure.md、system-spec/backend.md
+
+2026-10-14 の追加で、制約に『警告のリンク先は、ルート台帳にあり、見ている人の役割で開けるページに限る』『警告を畳むときも、ズレがあることと件数は畳まずに出す（仕様 §22-2・§22-4）』を足した。根拠: qa-w05／system-spec/00-requirements-definition.md
 
 ## UI・状態遷移
 
 書き込みの成功は新しい画面が描き終わってから呼び出し元へ返す（createCommitGate）。成功の言葉と一覧・件数・会社切替メニューが同じ描画でそろい、取り直しの間も画面全体を読み込み中に切り替えない。控えは『仮パスワードの控えを見る』で開閉し、発行の日時と期限を出し、14日を過ぎると一覧の行にボタンを出さず再発行を案内する。並べ替えは、つまみにフォーカスして Space で持ち上げ、↑↓で動かし、Space で置き、Esc で戻す遷移を持つ。動かしている間は落とす位置を示し、タッチでは長押しで持ち上げてスクロールと取り違えない。権限一覧は、広い画面ではページ名を行・4つの役割を列にした1つの表で示し、表の上の役割のタブ（APG の tabs）で1つの役割に絞り、スマホの幅ではページごとのカードに切り替える（D-006）。表とカードは同じデータから描く。説明は、表ではポインター・フォーカス・タップで出し、カードでは常に見せる。権限一覧のモーダルはページと同じ部品を dialog 要素で出し、開いたらフォーカスを中に移し、閉じるボタンと Esc で閉じて元のボタンへ戻す。利用者一覧の『役割ごとにできること』欄の開閉状態は端末ごとに覚え、読めなければ既定の状態で動く。確定した評価が無い人は『確定した評価なし』、見本画面では『見本のため送信できません』と理由を出し、読み取り専用の表示は押せるように見せない。設定不足は件数が多ければ直す画面ごとにまとめて初めの数件を出す。
 根拠: qa-r-uiux-3、qa-r-frontend-3、qa-v18、qa-v22、D-006（qa-v14）（system-spec/00-requirements-definition.md、system-spec/ui-ux.md、system-spec/frontend.md）
 
+比べる警告は、閉じた1行（注意の印・『評価項目とのズレ ◯件（足りない◯・余分◯）』・『直すところを見る』）と、押すとその場で開く中身（『下記の内容を変更・修正してください』・2つのページへのリンク・項目ごとの表・直す操作のボタン1つ）の2つの状態を持つ。開閉の状態は覚えない。根拠: qa-w06, qa-w07／system-spec/ui-ux.md・system-spec/frontend.md
+
 ## ビジネスルールと検証
 
 BR-001: 等級の呼び名はその会社の等級名だけで表し、英語（Beginner・Regular・Chief・AM・Manager）やカタカナの区分名を画面に出さず、pointGroup は結合キーとして値を変えず表示に使わない。BR-002: 等級名を変えられるのはシステム全体管理者と自社の会社の管理者だけで、マネージャー・一般の社員・他社の会社の管理者には変更の欄を出さず、サーバー処理でも 403 にする。BR-003: 一覧の点数は確定済み（finalized）の最新の評価だけを使い、一般の社員への応答には他人の等級と点数を含めない。BR-004: 会社管理者の新規登録では既存メールを汎用文面で拒否し、他社の所属先を知らせない。既存アカウントへの新しい会社所属の追加は全体管理者の専用処理だけが行い、パスワードと資格情報の控えを変更・発行せず、所属・必要な写し・監査を同じ batch で書く（DD-009）。BR-005: 並び順の全体保存で送られた id の集まりが今の集まりと違えば 409 で取り直しを求め、アンケートの選択肢の値の重複は保存時に拒否する。
 根拠: qa-v02、qa-v27、qa-v28、qa-v30（system-spec/00-requirements-definition.md）、system-spec/auth.md、system-spec/security.md、system-spec/backend.md
+
+2026-10-14 の会社所属の現在の契約：既存アカウントへ別の会社の所属を足すのは全体管理者だけの専用操作（addMembership）とする（qa-w11、D-008）。選んでいる会社が無いとき（cookie が無い・所属していない会社を指す）は、有効な所属のうち会社名の順で最初の会社を開く（同名は会社 id の順。qa-w12、D-009）。委任（qa-v32）に基づく DD-009 の『最も古い有効な所属』は利用者の選択で取り消し、実装は 2026-10-15 に会社名の順へ直した（src/lib/memberships.ts の activeMembershipsByCompanyName。users の写しの基準は古い順のまま。DD-009 の更新）。どちらの順でも、リクエストのたびに所属をサーバーで確かめることは変わらない。根拠: qa-w11, qa-w12, qa-v27／system-spec/auth.md・system-spec/security.md・docs/product/design-decisions.md
 
 ## API契約
 
@@ -102,12 +111,14 @@ BR-001: 等級の呼び名はその会社の等級名だけで表し、英語（
 
 ## 認証・認可
 
-ログインは better-auth のメールアドレスとパスワードによるアカウント単位で、本人登録は閉じ、セッションは要求ごとに D1 から読んで cookieCache を入れない。選んでいる会社は、今システム全体管理者だけが使っている cookie（hr_company。httpOnly・Secure・SameSite=Lax）を全員に広げて持つ（D-004）。getViewer はリクエストのたびに cookie が指す会社への有効な所属をサーバーで確かめ、その所属の会社・役割・等級を作る。cookie が無いときや所属していない会社を指すときは、有効な所属の createdAt 昇順（同時刻は id 昇順）の先頭を使い、所属が1つの人は今と同じ動きにする。会社の切り替え（switchCompanyScope）は全ての役割に開き、所属していない会社は拒否する。システム全体管理者は今どおり全社から選べる。役割ごとに開けるページ（accessClass）に加え、ページでできる主な操作・役割ごとの可否・説明も route-ledger.json の各ページに足し、権限の定義をこの台帳1つにまとめる（D-007）。サイドバー・ページの入口の判定・サーバー処理の役割の指定・session.ts の can〜 の判定・権限一覧の表示は、この台帳だけを読む。全ての読み書きを選んでいる会社の所属で絞り、他社や担当外の対象は区別せず 404 にする。詳細は system-spec-auth ノードで扱う。
+ログインは better-auth のメールアドレスとパスワードによるアカウント単位で、本人登録は閉じ、セッションは要求ごとに D1 から読んで cookieCache を入れない。選んでいる会社は、今システム全体管理者だけが使っている cookie（hr_company。httpOnly・Secure・SameSite=Lax）を全員に広げて持つ（D-004）。getViewer はリクエストのたびに cookie が指す会社への有効な所属をサーバーで確かめ、その所属の会社・役割・等級を作る。cookie が無いときや所属していない会社を指すときは、有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使い、所属が1つの人は今と同じ動きにする。会社の切り替え（switchCompanyScope）は全ての役割に開き、所属していない会社は拒否する。システム全体管理者は今どおり全社から選べる。役割ごとに開けるページ（accessClass）に加え、ページでできる主な操作・役割ごとの可否・説明も route-ledger.json の各ページに足し、権限の定義をこの台帳1つにまとめる（D-007）。サイドバー・ページの入口の判定・サーバー処理の役割の指定・session.ts の can〜 の判定・権限一覧の表示は、この台帳だけを読む。全ての読み書きを選んでいる会社の所属で絞り、他社や担当外の対象は区別せず 404 にする。詳細は system-spec-auth ノードで扱う。
 根拠: qa-f03、qa-f04、qa-r-auth-3、qa-v27、qa-v28、D-004（qa-v12）、D-007（qa-v25）（system-spec/auth.md、system-spec/security.md）
+
+比べる警告のリンク先は、見る人の役割で開けるページに限る。この等級だけ新しい版を作る操作は既存の createForms を通り、自社のものでない等級が1件でもあれば何も作らずに拒否する。根拠: qa-w09／system-spec/security.md
 
 ## エラー・例外・回復
 
-認可に失敗した要求では書き込みも画面の作り直しも他タブへの通知も行わず、権限の無い画面は 404 かログイン画面になる。cookie が所属していない会社を指すときは、有効な所属の createdAt 昇順（同時刻は id 昇順）の先頭を使う。所属していない会社への切り替えの要求は拒否する。入口は大きさの超過を 413、等級名の変更の権限違反を 403、並び順の集まりの食い違いと制度マスタの同時保存を 409 で返し、同時保存は自動でやり直さない。1回の batch に入る書き込みは全部書けるか何も書かれないかで、会社追加は途中の失敗で逆順に取り消す。取り消しも失敗すれば compensation_failed を残し、画面に失敗と管理者への連絡を出す。パスワード変更の続きは1回だけやり直し、それでも失敗すれば rollforward_failed を残して変更は済んだことを伝える。どちらも deploy-notes §7 の手順で、本番 DB を手で書き換えずに直す。マイグレーションは失敗しても途中の状態を残さない。
+認可に失敗した要求では書き込みも画面の作り直しも他タブへの通知も行わず、権限の無い画面は 404 かログイン画面になる。cookie が所属していない会社を指すときは、有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使う。所属していない会社への切り替えの要求は拒否する。入口は大きさの超過を 413、等級名の変更の権限違反を 403、並び順の集まりの食い違いと制度マスタの同時保存を 409 で返し、同時保存は自動でやり直さない。1回の batch に入る書き込みは全部書けるか何も書かれないかで、会社追加は途中の失敗で逆順に取り消す。取り消しも失敗すれば compensation_failed を残し、画面に失敗と管理者への連絡を出す。パスワード変更の続きは1回だけやり直し、それでも失敗すれば rollforward_failed を残して変更は済んだことを伝える。どちらも deploy-notes §7 の手順で、本番 DB を手で書き換えずに直す。マイグレーションは失敗しても途中の状態を残さない。
 根拠: qa-r-backend-4、qa-r-auth-3、qa-r-database-3、qa-r-ops-3、qa-v27、qa-v29、qa-v30（system-spec/backend.md、system-spec/auth.md、system-spec/maintenance-ops.md、system-spec/infrastructure.md）
 
 ## イベント・非同期処理
@@ -129,6 +140,8 @@ Worker は成功・失敗どちらの応答にも生成時刻 x-generated-at を
 
 AC-001: 作成系の E2E で成功表示直後の DOM に新しい行と件数が含まれ、強制再読み込み・2タブ（1秒以内）・別の端末・戻る・bfcache からの復元の各経路と 375px・768px の幅でも新しい行が出る（O1〜O3。Playwright の pnpm test:e2e はローカルの preview だけに向ける）。AC-002: server-actions-contract・write-atomicity-contract・action-origin の各検査が違反0件で、会社追加・CSV 取込・評価の集計・パスワード変更の途中失敗の試験で一部だけが残らずログが出る（O4・O5）。AC-003: 等級名を変える結合テストで全表示が新しい名前になって英語の区分名の静的検査が0件、等級名の変更は許可された役割以外で画面とサーバーの両方が拒否する（O6・O7）。AC-004: ルート台帳の権限の定義とサイドバー・ページの判定・サーバー処理の役割の指定が一致することを突き合わせる契約テスト、権限一覧の表とカードが同じ内容を出すこと、評価確定直後の一覧の点数と一般の社員の応答、2社目への所属と所属していない会社の拒否、提出状況の全員表示、設定不足の全件のリンク、並べ替えの3操作の一致と全体保存の 409、選択肢の値の重複拒否、4幅で右側だけが空かないことの撮影を確かめる（O8〜O15）。あわせて pnpm test と pnpm run check:docs が通り、domain のカバレッジ 100% を保つ。
 根拠: qa-r-ops-3、qa-v31、D-006、D-007（system-spec/00-requirements-definition.md の U4、system-spec/maintenance-ops.md）
+
+O16：比べて出す警告の全件に、比べている2つのページの階層つきの名前とリンクを持たせ、既定では1行に畳む。測り方は、比べる警告を作る処理の全件が2つのページを持つことを確かめる契約テスト（欠落 0 件）と、アンケート一覧・アンケート1本・使うKPIを選ぶの3画面で、閉じた状態が1行・開くと2つのリンクと表が出ることを確かめる画面のテストである。根拠: qa-w05, qa-w10／system-spec/00-requirements-definition.md・system-spec/maintenance-ops.md
 
 ## 未決事項
 

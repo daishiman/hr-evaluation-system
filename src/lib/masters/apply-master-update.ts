@@ -15,9 +15,14 @@ import { constitutionEventStatements } from "@/lib/domain/constitution-events";
 import { writeMasterBatch, type MasterStatement } from "./write-batch";
 import { writeGradeAssignmentBatch } from "./grade-assignment-guard";
 import { kpiItemUsage } from "@/lib/master-usage";
+import { planKpiAsking } from "./kpi-asking-update";
 import { KPI_ITEM_LOCKED_NOTE, KPI_ITEM_STRUCTURAL_FIELDS } from "@/lib/domain/master-delete";
 
 type Db = Awaited<ReturnType<typeof getDb>>;
+
+/** 使用中の項目の計算式を変えたときに添える一言 */
+export const KPI_FORMULA_CHANGED_NOTE =
+  "計算式の変更は、まだ確定していない評価の点と、確認中に戻した評価の点にも効きます。確定済みの評価の点は変わりません。";
 
 /**
  * 制度マスタ1件の更新を実行する。
@@ -530,6 +535,10 @@ export async function applyMasterUpdate(args: {
         const siblings = await db.select({ no: s.kpiItems.no }).from(s.kpiItems).where(eq(s.kpiItems.companyId, companyId));
         const nextNo = siblings.reduce((max, i) => Math.max(max, i.no), 0) + 1;
         const id = newId("kpiitm");
+        /* 聞き方（設問のひな形と式）は項目と同じ batch で作る。式は設問IDで書いて kpi_items.formula に置く（DD-016） */
+        const asking = body.asking
+          ? await planKpiAsking({ db, companyId, item: { id, no: nextNo, isFixedSlot: false }, asking: body.asking })
+          : null;
         const values = {
           id,
           companyId,
@@ -539,7 +548,7 @@ export async function applyMasterUpdate(args: {
           measureType: body.measureType.trim(),
           unit: body.unit.trim(),
           direction: body.direction,
-          formula: body.formula?.trim() || null,
+          formula: asking?.formula ?? null,
           formulaNote: body.formulaNote?.trim() || null,
           remarks: body.remarks?.trim() || null,
           // 固定枠（等級要件達成率）は初期データにすでに1件あり、ここからは新規作成できない。
@@ -557,11 +566,20 @@ export async function applyMasterUpdate(args: {
             entityId: id,
             eventType: "created",
             actorId: viewerId,
-            after: values,
+            after: asking ? { ...values, asking: asking.summaryAfter } : values,
           })),
+          /* 設問は項目を参照するので、項目の insert より後に置く */
+          ...(asking?.statements ?? []),
         ]);
+        /* 評価セットの候補は絞っていないので、すぐに選べる（admin/scheme/data.ts の loadKpiChoices）。
+           聞き方を決めずに作った項目はアンケートに設問が出ない。点はランク基準も要る（評価基準の画面） */
         return {
-          message: `「${name}」を追加しました。基準（A〜E）を設定すると評価セットで選べるようになります。`,
+          message: asking
+            ? `「${name}」を追加しました。評価セットで選ぶと、アンケートで${body.asking!.questions.length}つのことを聞きます。` +
+              "点を付けるには、評価基準の画面でランクの基準も決めてください。"
+            : `「${name}」を追加しました。評価セットですぐに選べます。` +
+              "ただし実績の聞き方がまだ決まっていません。選んでもアンケートに設問は出ず、点も付きません。" +
+              "「内容を直す」から聞き方を決められます。",
           id,
         };
       }
@@ -592,13 +610,17 @@ export async function applyMasterUpdate(args: {
         const usedBy = usage[body.id] ?? [];
         const locked = usedBy.length > 0;
 
+        /* 式は聞き方と一緒にだけ変える。設問の文字（A, B…）を設問IDに置き換えた式を、ここで作る（DD-016） */
+        const asking = body.asking ? await planKpiAsking({ db, companyId, item: before, asking: body.asking }) : null;
+
         const candidate: Record<string, unknown> = {
           name: body.name?.trim(),
           unit: body.unit?.trim(),
           direction: body.direction,
           measureType: body.measureType?.trim(),
           categoryId: body.categoryId,
-          formula: body.formula === undefined ? undefined : body.formula?.trim() || null,
+          /* 聞き方は式ごとまるごと届く（文言だけ直しても式が来る）ので、式が同じなら書かない（見た目の変わらない保存で項目を書き換えない） */
+          formula: asking && asking.formula !== before.formula ? asking.formula : undefined,
           formulaNote: body.formulaNote === undefined ? undefined : body.formulaNote?.trim() || null,
           remarks: body.remarks === undefined ? undefined : body.remarks?.trim() || null,
           isMonetary: body.isMonetary,
@@ -618,9 +640,11 @@ export async function applyMasterUpdate(args: {
           patch[key] = value;
         }
 
-        if (Object.keys(patch).length > 0) {
+        const questionStatements = asking?.statements ?? [];
+        if (Object.keys(patch).length > 0 || questionStatements.length > 0) {
+          /* 監査記録を batch の先頭に置く。同じ項目を2人が同時に保存すると、記録の番号の衝突が
+             設問IDの衝突より先に起き、writeMasterBatch が「先に保存された」の 409 に変えて返す */
           await writeMasterBatch(db, [
-            db.update(s.kpiItems).set(patch).where(eq(s.kpiItems.id, body.id)),
             ...(await constitutionEventStatements({
               db,
               companyId,
@@ -628,20 +652,24 @@ export async function applyMasterUpdate(args: {
               entityId: body.id,
               eventType: "updated",
               actorId: viewerId,
-              before,
-              after: { ...before, ...patch },
+              before: asking ? { ...before, asking: asking.summaryBefore } : before,
+              after: asking ? { ...before, ...patch, asking: asking.summaryAfter } : { ...before, ...patch },
             })),
+            ...(Object.keys(patch).length > 0 ? [db.update(s.kpiItems).set(patch).where(eq(s.kpiItems.id, body.id))] : []),
+            ...questionStatements,
           ]);
         }
 
         const name = (patch.name as string | undefined) ?? before.name;
-        if (lockedAttempts.length > 0) {
-          return {
-            message: `「${name}」を保存しました。${KPI_ITEM_LOCKED_NOTE}`,
-            warnings: [KPI_ITEM_LOCKED_NOTE],
-          };
+        const warnings: string[] = [];
+        if (lockedAttempts.length > 0) warnings.push(KPI_ITEM_LOCKED_NOTE);
+        /* 点は回答といまの式から出す（evaluate.ts）。使用中の項目の式を変えると、まだ確定していない評価と、
+           確認中に戻した評価の点が変わる */
+        if (locked && asking && asking.formula !== before.formula) warnings.push(KPI_FORMULA_CHANGED_NOTE);
+        if (warnings.length > 0) {
+          return { message: `「${name}」を保存しました。${warnings.join("")}`, warnings };
         }
-        if (Object.keys(patch).length === 0) {
+        if (Object.keys(patch).length === 0 && questionStatements.length === 0) {
           return { message: "変更はありませんでした。" };
         }
         return { message: `「${name}」を保存しました。` };

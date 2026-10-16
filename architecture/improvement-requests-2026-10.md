@@ -301,7 +301,7 @@ CREATE TABLE IF NOT EXISTS display_name_rewrites (
 
 - User/service identity and authentication: Better Auth のまま。
 - Session/token/MFA/key lifecycle: 変更なし。
-- Authorization/tenant isolation/privilege model: cookie の会社は有効な所属で確かめ、無ければ一番古い有効な所属へ戻す（fail-closed）。全体管理者は停止中の会社を選べない。ページ・サーバー処理・Route Handler・一覧の点数は、どれも台帳の操作 id から最低の役割を引き、未知の id は 403。他社の等級・利用者を指す要求は 404。他社にも所属がある人の資格情報と利用者全体の値は全体管理者だけが変える。書き込みは画面を描いた会社（`__scope`）と照合し、違えば 409。
+- Authorization/tenant isolation/privilege model: cookie の会社は有効な所属で確かめ、無ければ有効な所属のうち会社名の順で最初の会社へ戻す（同名は会社 id の順。fail-closed。当初の「一番古い有効な所属」は 2026-10-15 に DD-009 の更新で変えた）。全体管理者は停止中の会社を選べない。ページ・サーバー処理・Route Handler・一覧の点数は、どれも台帳の操作 id から最低の役割を引き、未知の id は 403。他社の等級・利用者を指す要求は 404。他社にも所属がある人の資格情報と利用者全体の値は全体管理者だけが変える。書き込みは画面を描いた会社（`__scope`）と照合し、違えば 409。
 
 #### Data and application protection
 
@@ -374,7 +374,7 @@ CREATE TABLE IF NOT EXISTS display_name_rewrites (
 
 ### 2. 所属は自前の表、会社は cookie で選び、サーバーで確かめる（D-004）
 
-- **有効な所属**は「`companies.isActive = 1` かつテンプレートではない会社の所属」と定める。`getViewer`（全体管理者以外）は、cookie の会社に有効な所属があればそれを、無ければ有効な所属のうち一番古いものを使う。有効な所属が無ければ null（fail-closed）。
+- **有効な所属**は「`companies.isActive = 1` かつテンプレートではない会社の所属」と定める。`getViewer`（全体管理者以外）は、cookie の会社に有効な所属があればそれを、無ければ有効な所属のうち会社名の順で最初のもの（同名は会社 id の順）を使う。会社の切り替えの一覧も同じ順で、先頭が開く会社になる（2026-10-15 に DD-009 の更新で「一番古いもの」から変えた。`users` の写しの基準は古い順のまま）。有効な所属が無ければ null（fail-closed）。
 - `viewer.companyId`・`role`・`gradeId`・`officeId`・`managerId` は所属から作る。140か所の `viewer.companyId` はそのまま正しくなる。
 - **会社ごとの列**は、所属の表が持つ9つ（`company_id`・`role`・`grade_id`・`office_id`・`manager_id`・`employee_code`・`department`・`hired_at`・`profile_note`）とする。社員番号・部署・入社日・人物メモも会社ごとの値なので、所属の表へ移す（0033 で元の所属へ写す）。`users` に残るのは氏名・メール・利用中か・資格情報だけで、会社ごとの列は元の所属の写し（戻すときのため）として残す。
 - **会社ごとの列を `users` から直接読まない**。読むときは所属を会社の条件付きで結合する（`src/lib/memberships.ts` の `memberColumns`・`joinMembership(companyId)`）。`grades`・`offices` との結合には会社の条件（`grades.companyId = 所属の会社`）を必ず付ける。対象は会社ごとの9列を読む全ての箇所（調査時点で21ファイル・約98か所。`queries.ts` が44か所）。`memberships-contract.test.ts` が、許可リスト（元の所属の写しを書く `memberships.ts` と、全体管理者かを見る `session.ts` の1か所）の外で `users.<会社ごとの列>` を読む箇所が0件であることを確かめる。

@@ -3,12 +3,20 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { runAction } from "@/lib/action";
+import { accountSecurityEventStatements } from "@/lib/account-security-events";
 import { userNameSchema } from "@/lib/user-name-schema";
 import { prepareCredential } from "@/lib/credential-issue";
 import { memoNotice } from "@/lib/credential-vault";
 import { getDb, schema as s } from "@/lib/db";
 import { newId } from "@/lib/id";
-import { hasMembershipElsewhere, insertMembership, membershipIn, reportsIn, writeMembership } from "@/lib/memberships";
+import {
+  hasMembershipElsewhere,
+  insertMembership,
+  membershipIn,
+  reportsIn,
+  writeMembership,
+  type MembershipRole,
+} from "@/lib/memberships";
 import { assertCompanyChosen, atLeast, crossesCompanies, FORBIDDEN_MESSAGE, HttpError, type Role } from "@/lib/session";
 import {
   assertCompanyAssignable,
@@ -59,7 +67,7 @@ export async function createMember(raw: unknown) {
 
     const userId = crypto.randomUUID();
     const credential = await prepareCredential(db, { userId, password: input.password, issuedBy: viewer.id });
-    // 利用者・所属・ログイン用アカウント・控えを1つの batch で書く（どれか1つだけが残らない）。
+    // 利用者・所属・ログイン用アカウント・控え・監査記録を1つの batch で書く（どれか1つだけが残らない）。
     // 会社ごとの値は所属の行に書き、users の写しは所属の文が同じ batch の中で書く
     await db.batch([
       db.insert(s.users).values({
@@ -92,6 +100,13 @@ export async function createMember(raw: unknown) {
         password: credential.hashed,
       }),
       ...credential.memo,
+      ...accountSecurityEventStatements(db, {
+        userId,
+        actorId: viewer.id,
+        source: "members",
+        before: null,
+        after: { superAdmin: false, isActive: true, membership: { companyId, role: input.role } },
+      }),
     ]);
 
     return {
@@ -182,6 +197,16 @@ export async function updateMember(raw: unknown) {
       profileNote: input.profileNote,
     });
 
+    // 監査記録（E7）。会社の管理者が変えられるのは、この会社の所属の役割と、利用者全体の利用状態・パスワード
+    const auditStatements = accountSecurityEventStatements(db, {
+      userId: target.id,
+      actorId: viewer.id,
+      source: "members",
+      before: { superAdmin: false, isActive: target.isActive, membership: { companyId, role: membership.role } },
+      after: { superAdmin: false, isActive: nextIsActive, membership: { companyId, role: nextRole as MembershipRole } },
+      passwordReissued: input.password !== undefined,
+    });
+
     let notice = "";
     if (input.password) {
       const acc = (
@@ -202,19 +227,21 @@ export async function updateMember(raw: unknown) {
             userId: target.id,
             password: credential.hashed,
           });
-      // 利用者・所属・アカウント・控え・ログインの解除を1つの batch で書く
+      // 利用者・所属・アカウント・控え・ログインの解除・監査記録を1つの batch で書く
       await db.batch([
         db.update(s.users).set(patch).where(eq(s.users.id, target.id)),
         ...membershipStatements,
         credentialMutation,
         ...credential.memo,
         db.delete(s.sessions).where(eq(s.sessions.userId, target.id)),
+        ...auditStatements,
       ]);
       notice = memoNotice(credential.stored);
     } else {
       const statements = [
         ...(Object.keys(patch).length > 0 ? [db.update(s.users).set(patch).where(eq(s.users.id, target.id))] : []),
         ...membershipStatements,
+        ...auditStatements,
       ];
       const [first, ...rest] = statements;
       if (first) await db.batch([first, ...rest]);

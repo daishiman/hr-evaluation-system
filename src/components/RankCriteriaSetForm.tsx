@@ -3,7 +3,7 @@
 import { saveMaster } from "@/actions/masters";
 import { useSaveAction } from "@/lib/use-refresh";
 import { useState } from "react";
-import { Button, ReasonNote } from "@/components/ui";
+import { Button, FieldGroup, ReasonNote } from "@/components/ui";
 import { NumberField } from "@/components/NumberField";
 import { checkRankBoundaries, sortByRank, type BoundFix, type RankBoundRow } from "@/lib/domain/rank-bounds";
 import type { Direction } from "@/lib/domain/scoring";
@@ -83,7 +83,7 @@ export function RankCriteriaSetForm({
   const current = new Map(rows.map((r) => [r.id, r.displayLabel]));
 
   return (
-    <fieldset disabled={saving} aria-busy={saving} className="m-0 mt-3 min-w-0 border-0 p-0">
+    <FieldGroup disabled={saving} aria-busy={saving} className="mt-3">
       <div className="stack-tight">
         {values.map((r) => (
           <div key={r.id} className="flex flex-wrap items-center gap-2">
@@ -149,6 +149,6 @@ export function RankCriteriaSetForm({
         </div>
       )}
       <RefreshStatus message={message} refreshing={saving} target="画面" className="m-0 mt-3 text-sub text-brand-deep" />
-    </fieldset>
+    </FieldGroup>
   );
 }

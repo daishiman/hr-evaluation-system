@@ -21,7 +21,7 @@ import { rangeLabel } from "@/lib/domain/scoring";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
 import {
   activeMembershipFor,
-  activeMembershipsOf,
+  activeMembershipsByCompanyName,
   hasMembershipElsewhere,
   isSuperAdmin,
   joinEveryMembership,
@@ -56,7 +56,8 @@ export async function listSwitchableCompanies(viewer: Viewer): Promise<{ id: str
     return (await listCompanies()).filter((c) => c.isActive).map((c) => ({ id: c.id, name: c.name }));
   }
   const db = await getDb();
-  return (await activeMembershipsOf(db, viewer.id)).map((x) => ({ id: x.companyId, name: x.companyName }));
+  // 選んでいる会社が無いときに開く会社と同じ順（会社名の順・D-009）
+  return (await activeMembershipsByCompanyName(db, viewer.id)).map((x) => ({ id: x.companyId, name: x.companyName }));
 }
 
 /**
@@ -157,6 +158,30 @@ export async function listKpiCategories(companyId: string) {
 export async function listKpiItems(companyId: string) {
   const db = await getDb();
   return db.select().from(s.kpiItems).where(eq(s.kpiItems.companyId, companyId)).orderBy(asc(s.kpiItems.no));
+}
+
+/** 実績を聞く設問のひな形（kpi_questions）。KPI項目の画面で、項目ごとの聞き方を見せるのに使う。 */
+export async function listKpiQuestions(companyId: string) {
+  const db = await getDb();
+  return db
+    .select()
+    .from(s.kpiQuestions)
+    .where(eq(s.kpiQuestions.companyId, companyId))
+    .orderBy(asc(s.kpiQuestions.displayOrder));
+}
+
+/**
+ * 実績を聞く設問のひな形（kpi_questions）を持つKPI項目のID。
+ * アンケートの設問はこのひな形からしか作られない（form-build.ts）。画面で足した項目は、KPI項目の画面で聞き方を
+ * 決めるまでひな形が無く（DD-016）、評価セットで選んでも設問が出ず点も付かないので、評価セットの保存と画面の両方がこれで知らせる。
+ */
+export async function listAskableKpiItemIds(companyId: string): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db
+    .selectDistinct({ kpiItemId: s.kpiQuestions.kpiItemId })
+    .from(s.kpiQuestions)
+    .where(eq(s.kpiQuestions.companyId, companyId));
+  return rows.flatMap((r) => (r.kpiItemId ? [r.kpiItemId] : []));
 }
 
 export async function listRankCriteria(companyId: string, kpiItemIds?: string[]) {

@@ -5,7 +5,7 @@ import { batchAll } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
 import { HttpError } from "@/lib/session";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
-import { targetsPointGroup } from "@/lib/domain/grade-points";
+import { questionsForPointGroup } from "@/lib/domain/grade-points";
 import {
   BEHAVIOR_HELP,
   kpiQuestion,
@@ -24,16 +24,6 @@ import {
  * 作成（buildFormDraft）と作り直し（syncFormQuestions）は同じ組み立てを通す。
  * アンケート側で文言を直す運用にすると、どちらが本当の制度か分からなくなる。
  */
-
-export const SECTION_LABEL: Record<string, string> = {
-  support: "支援について",
-  operation: "運営について",
-  training: "受講後の報告書",
-  test: "独学後のテスト",
-  behavior: "行動指針",
-  kpi: "実績の入力",
-  free: "自由記入",
-};
 
 /**
  * 選択肢の値で重なっているもの（重なった値を1回ずつ、最初に重なった順）。前後の空白は同じ値とみなす。
@@ -54,7 +44,7 @@ export function duplicateOptionValues(options: readonly { value: string; label: 
 
 /** 値の重なりを断るときの文。組み立て画面では値が見えないので、直し方は「消して足し直す」で伝える。 */
 export function duplicateOptionMessage(title: string, values: readonly string[]): string {
-  return `「${title}」の選択肢で、内部の値（${values.join("、")}）が重なっています。重なっている選択肢をいったん消し、「選択肢を足す」で足し直してください。`;
+  return `「${title}」の選択肢で、内部の値（${values.join("、")}）が重なっています。重なっている選択肢をいったん消し、「＋ 選択肢を追加」で足し直してください。`;
 }
 
 type Row = typeof s.formQuestions.$inferInsert;
@@ -68,7 +58,7 @@ function questionInsertStatements(db: Db, rows: Row[]): SqliteBatchItem[] {
 
 /**
  * この会社・この等級のアンケートに載せる設問を、いまの制度マスタから組み立てる。
- * 並び順は回答画面の並び（view.ts の SECTION_ORDER）と同じにする。
+ * 並び順は回答画面の節の並び（question-order.ts の SCREEN_SECTIONS。自由記入はここでは作らない）と同じにする。
  */
 export async function buildQuestionRows(opts: {
   companyId: string;
@@ -241,8 +231,7 @@ export async function buildQuestionRows(opts: {
          管理者がこの等級区分で選んだ以上、実績を聞かなければ評価そのものが成立しないため、
          「設問が消える」より「想定外の等級に設問が出る」ほうが害が小さい。 */
       const mine = questions.filter((x) => x.kpiItemId === i.kpiItemId);
-      const forThisGrade = mine.filter((x) => targetsPointGroup(x.targetGrades, grade.pointGroup));
-      for (const q of forThisGrade.length > 0 ? forThisGrade : mine) {
+      for (const q of questionsForPointGroup(mine, grade.pointGroup)) {
         const built = kpiQuestion(q, kpiNames.find((k) => k.id === i.kpiItemId)?.name ?? "");
         push({
           section: "kpi",
@@ -438,7 +427,7 @@ export function assertFormContentEditable(form: { status: string; title: string 
 export async function syncFormQuestions(opts: {
   companyId: string;
   formId: string;
-}): Promise<{ questionCount: number; removed: number }> {
+}): Promise<{ questionCount: number; removed: number; cycleId: string }> {
   const { companyId, formId } = opts;
   const db = await getDb();
 
@@ -493,5 +482,5 @@ export async function syncFormQuestions(opts: {
     ...questionInsertStatements(db, rows),
   ]);
 
-  return { questionCount: rows.length, removed: before.length };
+  return { questionCount: rows.length, removed: before.length, cycleId: form.cycleId };
 }
