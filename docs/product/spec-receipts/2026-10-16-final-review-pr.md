@@ -47,6 +47,21 @@
 
 `system-spec/` の章のうち `00-requirements-definition.md`・`auth.md`・`backend.md`・`database.md`・`frontend.md`・`infrastructure.md`・`maintenance-ops.md`・`security.md`・`ui-ux.md` は、`spec-state.json` の上位概念（U1〜U9）とカテゴリごとの決定から compile する。今回の変更は、どれも上位概念と決定（D-004〜D-009 など）を変えず、その下の機能の不変条件を足すものである。機能の不変条件は、#93・#94 と同じく手で保つ仕様書（`account-and-users.md` など）と `specs/`・`architecture/` に置いた。そのため spec-state の遷移と compile は行わず、dev-graph の取込元の digest（lineage）も変わらない。権限の記録（E7）は、security の章が上流の指針に挙げる OWASP ASVS の監査記録の範囲に入る。
 
+## 再確認（同じ依頼の2回目・PR の先頭 `1c1abeb`）
+
+PR を作ったあとに同じ依頼をもう一度受けたので、PR の先頭で確かめ直した。
+
+| 観点 | 結果 |
+|---|---|
+| 取り込む先の枝 | `origin/main`・`main` は `42b7f6b` のまま、PR の先頭も `1c1abeb` のまま。取り込むコミットは0件、`dev` の枝は無い |
+| 共有の作業ツリーの未コミットの変更（29ファイル） | 別の作業者（Codex）が進めている利用者管理・比べる警告の読み出しの整理・スモークの台本と、2026-10-15 のレビュー文書。この PR には入れない。中の `system-spec/backend.md` は compile する章を直接書き換えているので、その作業を入れるときは elicit と compile の経路に載せ直す必要がある |
+| task 仕様書 / dev-graph の schema | PASS（`sha256:2ce1bb44…`、前回と同じ）/ PASS（23 node） |
+| dev-graph の lineage | 9 node すべて、PR の中身の取込元の digest と一致。検査器は repo の外に置いた graph を受けないので、digest を直接比べた |
+| `pnpm typecheck` / `pnpm test:coverage` / `pnpm run check:docs` | exit 0 / 3,358件 PASS で exit 0（閾値 100% を通過）/ PASS |
+| `git diff --check origin/main` | 1件。`features/comparison-gap-two-page-links.md` の末尾に空行が余分にあった。前回は作業ツリーの差分だけを見ていて気づかなかった。このコミットで消して PASS |
+
+このコミットは末尾の空行1つと受領書だけを変えるので、仕様・設計への影響は無い。
+
 ## 残課題
 
 - 配布：マージのあと、Deploy workflow が移行 0036・0037 を本番に当てる。`hr-c76` は 0037 が当たったら、`hr-nm6` は配布のあとにスモークが14件 OK になったら閉じる。`hr-wcv.13` と `SYS-COMPARISON-GAP-P13` は配布の確かめの記録で閉じる

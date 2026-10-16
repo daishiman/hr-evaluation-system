@@ -107,6 +107,8 @@
 | `pnpm run check:docs` | PASS |
 | E2E | 54 件中 52 件 PASS（A12 の余白2件。下の残課題） |
 
+PR の先頭（`1c1abeb`）で同じゲートを流し直し、どれも同じ結果だった。`git diff --check origin/main` だけが `features/comparison-gap-two-page-links.md` の末尾の余分な空行を1件見つけたので消した。共有の作業ツリーにある別の作業の未コミットの29ファイルは、この PR に入れていない（[受領書](../docs/product/spec-receipts/2026-10-16-final-review-pr.md)の「再確認」）。
+
 ## 残課題
 
 - 配布：最終レビューの PR をマージしたあと、Deploy workflow が移行 0036・0037 を本番に当てる。`hr-c76`・`hr-nm6`・`hr-wcv.13` は配布の確かめのあとに閉じる

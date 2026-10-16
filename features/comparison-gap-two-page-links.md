@@ -104,4 +104,3 @@ implementation_readiness: {"checked_at": "2026-10-15T01:35:55.901986Z", "missing
 - 生成物: P01..P13 の exact 13 executable task specs と 13-node intra-feature DAG
 - 登録先: `register-package.py register` が parent_feature=`feature-comparison-gap-two-page-links` で 13 件を atomic 登録する (expected/applied=13)
 - 完了rollup: exact 13 全 done かつ P07/P10/P11 の evidence が受入を満たす場合だけ done
-
