@@ -7,7 +7,7 @@
  * 決めていることは5つ。
  *  1. 警告は必ず2つのページ（使うKPIを選ぶ・このアンケート）を持つ。名前は台帳の画面名から始まる階層つき
  *  2. 表の行は、足りない項目（選んだ順）のあとに余分な項目（聞いた順）
- *  3. 直す操作は上から順に1つだけ選ぶ（pickFix）。足りないのが設問のひな形の無い項目だけで余分も無いなら、選び直しへ案内する
+ *  3. 直す操作は上から順に1つだけ選ぶ（pickFix）。足りない項目に設問のひな形の無いもの（聞き方が未定）があれば、まずその聞き方を決めさせる
  *  4. リンクと直す操作は、見る人の役割で開ける・できるものだけ。開けない人には名前だけを残す
  *  5. 同じ評価期間・等級の一番新しい版が選んだ項目と一致していれば、古い版には出さない（直し終わっている）
  *
@@ -18,7 +18,8 @@ import type { Role } from "@/lib/roles";
 import { roleCan, roleCanOpen, routeOf } from "@/lib/route-access";
 import { diffFormKpiItems } from "./form-sync";
 import { formRowTitle } from "./grade-label";
-import { schemeStepPath, stepTitle } from "./scheme-steps";
+import { ASKING_PLACE_HINT } from "./scheme";
+import { kpiItemPath, schemeStepPath, stepTitle } from "./scheme-steps";
 
 /** 使うKPIを選ぶの画面（台帳の書き方） */
 export const SELECTION_LEDGER_PATH = "/admin/scheme/[group]";
@@ -43,14 +44,15 @@ export { NO_TEMPLATE_BADGE } from "./scheme";
 
 /**
  * 設問のひな形が無い項目の注記。作り直しの返事（actions/forms.ts）でも同じ文を使う。
- * ひな形は form-build.ts が設問を作る元なので、無い項目はどの版にも設問が出ない
+ * ひな形は form-build.ts が設問を作る元なので、無い項目はどの版にも設問が出ない。
+ * 画面ではひな形を「実績の聞き方」と呼ぶ（KPI項目の画面の欄の名前。DD-016）
  */
 export function noTemplateNote(names: readonly string[]): string {
-  return `${names.map((name) => `「${name}」`).join("・")}には設問のひな形がありません。作り直しても新しい版でも、設問は出ず点も付きません。`;
+  return `${names.map((name) => `「${name}」`).join("・")}は、実績の聞き方がまだ決まっていません。決めるまでは、作り直しても新しい版でも、設問は出ず点も付きません。`;
 }
 
 /** 設問のひな形が無い項目の直し方。リンクを置けない作り直しの返事で使う */
-export const NO_TEMPLATE_HINT = `${stepTitle("select")}で、ひな形のある項目に選び直してください。`;
+export const NO_TEMPLATE_HINT = `${ASKING_PLACE_HINT}決めたあとに、もう一度作り直してください。`;
 
 export type ComparisonPageKey = "selection" | "form";
 
@@ -73,7 +75,7 @@ export interface ComparisonRow {
   inSelection: boolean;
   /** このアンケートで聞いているか */
   inForm: boolean;
-  /** 実績を聞く設問のひな形が無いか。足りない行だけが true になる（作り直しても新しい版でも直らない） */
+  /** 実績を聞く設問のひな形が無いか。足りない行だけが true になる（聞き方を決めるまで、作り直しても新しい版でも直らない） */
   noTemplate: boolean;
 }
 
@@ -82,7 +84,8 @@ export type ComparisonFix =
   | { kind: "newVersion"; cycleId: string; gradeId: string }
   | { kind: "openNewer"; formId: string; href: string; version: number; draft: boolean }
   | { kind: "finishScheme"; href: string; linkLabel: string }
-  | { kind: "reselect"; href: string };
+  /** href は先頭の項目の入力欄を開いた KPI項目の画面。names は聞き方の決まっていない項目（表に出した順） */
+  | { kind: "defineAsking"; href: string; names: readonly string[] };
 
 /** 比べるアンケート（一覧・詳細の読み出しの行の一部） */
 export interface ComparisonForm {
@@ -142,19 +145,22 @@ const FIX_GUARD: Record<ComparisonFix["kind"], (role: Role) => boolean> = {
   rebuild: (role) => roleCan(role, "forms.rebuildQuestions"),
   finishScheme: (role) => roleCanOpen(role, SCHEME_LEDGER_PATH),
   newVersion: (role) => roleCan(role, "forms.create"),
-  reselect: (role) => roleCanOpen(role, SELECTION_LEDGER_PATH),
+  defineAsking: (role) => roleCanOpen(role, SCHEME_LEDGER_PATH),
 };
 
 /** 直す操作を上から順に1つだけ選ぶ（DD-012 の5）。役割での絞り込みは呼び出し側で行う */
 function pickFix(input: ComparisonGapInput, rows: readonly ComparisonRow[]): ComparisonFix | null {
   const { form, newer } = input;
-  // 足りないのが設問のひな形の無い項目だけで余分も無いなら（余分の行は noTemplate が false なので every で外れる）、
-  // アンケート側のどの操作でも直らない。
-  // 作り直しや新しい版を出すと、押しても直らず版だけが増えるので、選び直しへ案内する。
-  // 締め切った期は選び直してもその期のアンケートは変わらず、使うKPIを選ぶの画面では今いるページなので出さない
-  if (rows.every((row) => row.noTemplate)) {
-    if (form.cycleStatus === "closed" || input.current === "selection") return null;
-    return { kind: "reselect", href: schemeStepPath(input.pointGroup, "select") };
+  // 足りない項目に聞き方（設問のひな形）の決まっていないものがあれば、ほかの操作より先にそれを決めさせる（DD-016）。
+  // 聞き方の無い項目は、作り直しても新しい版でも設問が出ない。先に作り直すと足りないままの版ができ、決めたあとにもう一度
+  // 作り直すことになる。先に決めれば、続く1回の作り直し（または新しい版）で余分も足りないも一度に直る。
+  // 選び直しへは案内しない。評価に使う項目そのものを替えさせることになり、直し方として回り道になる。
+  // 締め切った期で決めたあとに直せるのは、この版が回答の無い下書きか、新しい版が下書きのときだけ。それ以外は出さない
+  const noAsking = rows.filter((row) => row.noTemplate);
+  if (noAsking.length > 0) {
+    const rebuildable = isUntouchedDraft(form) || newer?.status === "draft";
+    if (form.cycleStatus === "closed" && !rebuildable) return null;
+    return { kind: "defineAsking", href: kpiItemPath(noAsking[0].itemId), names: noAsking.map((row) => row.name) };
   }
   // 残りの順は DD-012 の5（新しい版→作り直し→締切→準備の残り→新しい版を作る）。
   // 新しい版があれば、まずそれを開かせて版を重ねて作らせない（ここに来るのは、その版もまだ一致していないとき）。
@@ -255,7 +261,7 @@ export function comparisonSummary(gaps: readonly ComparisonGap[]): string {
 /**
  * 作り直しの札。アンケート1本の画面の枠の外のボタンと、一覧の警告の中のボタンで同じ字面にする。
  * 作り直しは KPI だけでなく、等級要件・昇格要件・行動指針の設問も作り直すので、「評価項目に合わせて」とは書かない。
- * 押せばズレが直ると約束する字面にもしない（ひな形の無い項目は作り直しても足りないまま。rebuildWontFixNote）
+ * 押せばズレが直ると約束する字面にもしない（聞き方の決まっていない項目は作り直しても足りないまま。rebuildWontFixNote）
  */
 export const REBUILD_LABEL = "いまの制度の設定から設問を作り直す";
 
@@ -283,7 +289,7 @@ export function rebuildConfirm(formTitle: string, noTemplateNames: readonly stri
  */
 export function rebuildWontFixNote(gap: ComparisonGap | null): string | null {
   if (!gap || gap.extraCount > 0 || !gap.rows.every((row) => row.noTemplate)) return null;
-  const lead = "下のボタンで作り直しても、上のズレは直りません。足りない項目に設問のひな形が無いためです。";
+  const lead = "下のボタンで作り直しても、上のズレは直りません。足りない項目の聞き方がまだ決まっていないためです。";
   return gap.fix ? `${lead}直し方は「${COMPARISON_OPEN_LABEL}」を開いてください。` : lead;
 }
 
@@ -298,8 +304,10 @@ export function fixLabel(fix: ComparisonFix): string {
       return fix.draft ? `第${fix.version}版の下書きを開く` : `第${fix.version}版を開く`;
     case "finishScheme":
       return fix.linkLabel;
-    case "reselect":
-      return `${stepTitle("select")}で選び直す`;
+    case "defineAsking":
+      return fix.names.length === 1
+        ? `「${fix.names[0]}」の聞き方を決める`
+        : `「${fix.names[0]}」ほか${fix.names.length - 1}項目の聞き方を決める`;
   }
 }
 

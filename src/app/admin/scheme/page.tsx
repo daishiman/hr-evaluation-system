@@ -8,8 +8,9 @@ import { loadSchemeSetup } from "./data";
 import { SchemeCommonSettings } from "@/components/SchemeCommonSettings";
 import { KpiCategoryEditor } from "@/components/KpiCategoryEditor";
 import { KpiItemEditor } from "@/components/KpiItemEditor";
-import { listKpiCategories, listKpiItems } from "@/lib/queries";
-import { kpiCategoryUsage, kpiItemUsage } from "@/lib/master-usage";
+import { listKpiCategories, listKpiItems, listKpiQuestions } from "@/lib/queries";
+import { kpiCategoryUsage, kpiItemCollectingForms, kpiItemUsage } from "@/lib/master-usage";
+import { askingView } from "@/lib/domain/kpi-asking";
 import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -23,20 +24,28 @@ export const dynamic = "force-dynamic";
  * 以前はこの1画面で「等級区分の切り替え・配点の確認・項目の選択・基準の編集・KPIの比較」を
  * 同時にやらせていて、何をする画面なのか分からなくなっていた（2026-08-11 の指摘）。
  */
-export default async function AdminSchemePage() {
+export default async function AdminSchemePage({
+  searchParams,
+}: {
+  /** item は入力欄を開いておくKPI項目（scheme-steps.ts の KPI_ITEM_PARAM。比べる警告の「聞き方を決める」から来る） */
+  searchParams: Promise<{ item?: string }>;
+}) {
   const viewer = await requireRoute("/admin/scheme");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
-  const [setup, staleCycles, categories, kpiItems] = await Promise.all([
+  const [setup, staleCycles, categories, kpiItems, kpiQuestions] = await Promise.all([
     loadSchemeSetup(viewer.companyId),
     detectStaleCycles(viewer.companyId),
     listKpiCategories(viewer.companyId),
     listKpiItems(viewer.companyId),
+    listKpiQuestions(viewer.companyId),
   ]);
   const db = await getDb();
-  const [categoryUsage, itemUsage] = await Promise.all([
+  const openItemId = (await searchParams).item ?? null;
+  const [categoryUsage, itemUsage, collecting] = await Promise.all([
     kpiCategoryUsage(db, viewer.companyId),
     kpiItemUsage(db, viewer.companyId),
+    kpiItemCollectingForms(db, viewer.companyId),
   ]);
   const categoryOptions = categories.map((c) => ({ id: c.id, name: c.name }));
   const itemRows = kpiItems.map((i) => ({
@@ -55,6 +64,8 @@ export default async function AdminSchemePage() {
     isProvisional: i.isProvisional,
     isActive: i.isActive,
     isFixedSlot: i.isFixedSlot,
+    asking: askingView(i, kpiQuestions.filter((q) => q.kpiItemId === i.id)),
+    keySetLockedBy: collecting[i.id] ?? null,
   }));
 
   if (!setup.scheme) {
@@ -66,7 +77,7 @@ export default async function AdminSchemePage() {
         <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。">
           KPI項目
         </SectionHeading>
-        <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} />
+        <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} openItemId={openItemId} />
         <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
           KPIのカテゴリ
         </SectionHeading>
@@ -84,7 +95,7 @@ export default async function AdminSchemePage() {
         <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。">
           KPI項目
         </SectionHeading>
-        <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} />
+        <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} openItemId={openItemId} />
         <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
           KPIのカテゴリ
         </SectionHeading>
@@ -215,7 +226,7 @@ export default async function AdminSchemePage() {
       <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。使用中は一部の列だけ直せます。">
         KPI項目
       </SectionHeading>
-      <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} />
+      <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} openItemId={openItemId} />
 
       <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
         KPIのカテゴリ

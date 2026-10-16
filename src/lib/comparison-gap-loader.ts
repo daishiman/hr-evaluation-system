@@ -70,7 +70,7 @@ async function gapsOfCycle(
       fixedSlotItemIds: coverage.fixedSlotItemIds,
       hasRequirementQuestions: coverage.hasRequirementQuestions(formId),
     });
-  // 設問のひな形が無い項目は、作り直しても新しい版でも聞けない。固定枠は等級要件の設問から数えるので除く
+  // 設問のひな形が無い（聞き方が決まっていない）項目は、作り直しても新しい版でも聞けない。固定枠は等級要件の設問から数えるので除く
   // （評価セットの保存時の警告 domain/scheme.ts と同じ線引き）
   const askable = new Set(askableIds);
   const fixedSlot = new Set(coverage.fixedSlotItemIds);

@@ -127,7 +127,7 @@ function PageLink({ page }: { page: ComparisonPage }) {
   );
 }
 
-/** 項目名。設問のひな形が無い項目には、使うKPIを選ぶの候補と同じ札を添える */
+/** 項目名。実績の聞き方（設問のひな形）が決まっていない項目には、使うKPIを選ぶの候補と同じ札を添える */
 function RowName({ row }: { row: ComparisonRow }) {
   if (!row.noTemplate) return row.name;
   return (
@@ -190,7 +190,7 @@ function fixControlOf(fix: NonNullable<ComparisonGap["fix"]>, gap: ComparisonGap
       );
     case "openNewer":
     case "finishScheme":
-    case "reselect":
+    case "defineAsking":
       return (
         <LinkButton href={fix.href} variant="secondary">
           {fixLabel(fix)}

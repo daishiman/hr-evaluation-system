@@ -159,66 +159,70 @@ function tokenize(src: string): Token[] {
 }
 
 /**
- * 再帰下降パーサ + 評価。
+ * 式の組み立て方。読み方（下の再帰下降）は1つで、組み立て方だけを差し替える。
+ * 数として計算する（numericRules）ほか、各変数が式のどこにあるか（placementRules）も同じ読み方で求める。
+ * 読み方を2つ書くと、計算できる式と役割を出せる式がずれていくため。
+ */
+interface FormulaRules<T> {
+  num(v: number): T;
+  variable(name: string): T;
+  add(a: T, b: T): T;
+  sub(a: T, b: T): T;
+  mul(a: T, b: T): T;
+  div(a: T, b: T): T;
+  neg(a: T): T;
+}
+
+/**
+ * 再帰下降パーサ。
  * expr := term (('+'|'-') term)*
  * term := factor (('*'|'/') factor)*
  * factor := number | var | '(' expr ')' | '-' factor
  */
-function evaluate(tokens: Token[], vars: FormulaVars, src: string): number {
+function walk<T>(tokens: Token[], rules: FormulaRules<T>, src: string): T {
   let pos = 0;
   const peek = () => tokens[pos];
 
-  function expr(): number {
+  function expr(): T {
     let left = term();
     for (;;) {
       const tk = peek();
       if (tk?.t === "op" && (tk.v === "+" || tk.v === "-")) {
         pos++;
         const right = term();
-        left = tk.v === "+" ? left + right : left - right;
+        left = tk.v === "+" ? rules.add(left, right) : rules.sub(left, right);
       } else break;
     }
     return left;
   }
 
-  function term(): number {
+  function term(): T {
     let left = factor();
     for (;;) {
       const tk = peek();
       if (tk?.t === "op" && (tk.v === "*" || tk.v === "/")) {
         pos++;
         const right = factor();
-        if (tk.v === "/") {
-          if (right === 0) {
-            throw new FormulaError("分母が0のため計算できません。分母の欄に1以上の数値を入力してください。", "divide-by-zero");
-          }
-          left = left / right;
-        } else {
-          left = left * right;
-        }
+        left = tk.v === "/" ? rules.div(left, right) : rules.mul(left, right);
       } else break;
     }
     return left;
   }
 
-  function factor(): number {
+  function factor(): T {
     const tk = peek();
     if (!tk) throw new FormulaError(`計算式が途中で終わっています: ${src}`, "syntax");
     if (tk.t === "op" && tk.v === "-") {
       pos++;
-      return -factor();
+      return rules.neg(factor());
     }
     if (tk.t === "num") {
       pos++;
-      return tk.v;
+      return rules.num(tk.v);
     }
     if (tk.t === "var") {
       pos++;
-      const v = vars[tk.v];
-      if (v === undefined || v === null || Number.isNaN(v)) {
-        throw new FormulaError(`「${tk.v}」の値が入力されていません。`, "missing-var");
-      }
-      return v;
+      return rules.variable(tk.v);
     }
     if (tk.t === "lp") {
       pos++;
@@ -233,6 +237,71 @@ function evaluate(tokens: Token[], vars: FormulaVars, src: string): number {
   const result = expr();
   if (pos !== tokens.length) throw new FormulaError(`計算式に余分な記述があります: ${src}`, "syntax");
   return result;
+}
+
+function numericRules(vars: FormulaVars): FormulaRules<number> {
+  return {
+    num: (v) => v,
+    variable: (name) => {
+      const v = vars[name];
+      if (v === undefined || v === null || Number.isNaN(v)) {
+        throw new FormulaError(`「${name}」の値が入力されていません。`, "missing-var");
+      }
+      return v;
+    },
+    add: (a, b) => a + b,
+    sub: (a, b) => a - b,
+    mul: (a, b) => a * b,
+    div: (a, b) => {
+      if (b === 0) {
+        throw new FormulaError("分母が0のため計算できません。分母の欄に1以上の数値を入力してください。", "divide-by-zero");
+      }
+      return a / b;
+    },
+    neg: (a) => -a,
+  };
+}
+
+function evaluate(tokens: Token[], vars: FormulaVars, src: string): number {
+  return walk(tokens, numericRules(vars), src);
+}
+
+/** 式の中で、1つの変数が現れた場所。 */
+export interface VariablePlacement {
+  name: string;
+  /** 割り算の右側に奇数回入っている（＝分母にある） */
+  inDenominator: boolean;
+  /** 引き算の右側か、マイナスの付いた側に奇数回入っている */
+  subtracted: boolean;
+}
+
+const placementRules: FormulaRules<VariablePlacement[]> = {
+  num: () => [],
+  variable: (name) => [{ name, inDenominator: false, subtracted: false }],
+  add: (a, b) => [...a, ...b],
+  sub: (a, b) => [...a, ...b.map((p) => ({ ...p, subtracted: !p.subtracted }))],
+  mul: (a, b) => [...a, ...b],
+  div: (a, b) => [...a, ...b.map((p) => ({ ...p, inDenominator: !p.inDenominator }))],
+  neg: (a) => a.map((p) => ({ ...p, subtracted: !p.subtracted })),
+};
+
+/**
+ * 式の中の変数が、それぞれ分子・分母のどちらにあるか。現れた回数だけ返す。
+ * 式として読めなければ FormulaError（syntax・too-complex）を投げる。
+ * 設問の役割（分子・分母）を式から決めるのに使う（src/lib/domain/kpi-asking.ts）。
+ */
+export function variablePlacements(formula: string): VariablePlacement[] {
+  return walk(tokenize(formula), placementRules, formula);
+}
+
+/**
+ * 式を、計算に使う本体と、末尾の人向けの注釈（「※…」や日本語の括弧書き）に分ける。
+ * 本体の字面を書き換えるときに、注釈をそのまま後ろに残すため。
+ */
+export function splitFormulaNote(formula: string): { body: string; note: string } {
+  const trimmed = formula.trim();
+  const body = stripNotes(trimmed);
+  return { body, note: trimmed.slice(body.length) };
 }
 
 /** 計算式に登場する変数名（設問IDなど）を列挙する。フォーム生成で使う。 */

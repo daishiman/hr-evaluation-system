@@ -83,7 +83,7 @@ describe("等級区分がManagerでも、行動指針の帯域を割り当てれ
 });
 
 describe("設問のひな形がある項目だけに、アンケートの設問ができる", () => {
-  /* 評価セットの「設問のひな形がありません」の警告（domain/scheme.ts）は listAskableKpiItemIds で判定する。
+  /* 評価セットの「実績の聞き方がまだ決まっていません」の警告（domain/scheme.ts）は listAskableKpiItemIds で判定する。
      その一覧と、アンケートに実際に設問ができる項目が食い違うと、警告が外れるか、出るべき項目で出ない */
   it("ひな形の無い項目は評価セットで選ばれていても設問ができず、一覧にも入らない", async () => {
     await seedCompany(current);

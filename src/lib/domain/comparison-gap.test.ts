@@ -270,59 +270,73 @@ describe("comparisonGapOf: 直す操作（上から順に1つだけ）", () => {
   });
 });
 
-describe("comparisonGapOf: 設問のひな形が無い項目だけが足りないとき", () => {
-  /** 足りないのは残業率・粗利率で、どちらにもひな形が無い（余分は無い） */
+describe("comparisonGapOf: 実績の聞き方（設問のひな形）が決まっていない項目があるとき", () => {
+  /** 足りないのは残業率・粗利率で、どちらも聞き方が決まっていない（余分は無い） */
   const ONLY_UNASKABLE: Partial<ComparisonGapInput> = { asked: ["kpi_a"], unaskable: ["kpi_b", "kpi_c"] };
-  const RESELECT = { kind: "reselect", href: "/admin/scheme/Regular" };
+  const DEFINE = { kind: "defineAsking", href: "/admin/scheme?item=kpi_b#kpi-item-kpi_b", names: ["残業率", "粗利率"] };
 
-  it("作り直しも新しい版も直らないので、どの状態でも使うKPIを選ぶへ案内する", () => {
+  it("作り直しも新しい版も直らないので、どの状態でも先に、先頭の項目を開いた KPI項目の画面へ案内する", () => {
     for (const [status, responseCount] of [["draft", 0], ["draft", 2], ["published", 0], ["closed", 3]] as const)
       for (const cycleStatus of ["planning", "open"])
         for (const newer of [null, newerForm("frm_2", 2, "draft"), newerForm("frm_3", 3, "published")])
           for (const schemeGap of [null, SCHEME_GAP])
-            for (const current of [null, "form"] as (ComparisonPageKey | null)[]) {
+            for (const current of [null, "form", "selection"] as (ComparisonPageKey | null)[]) {
               const fix = gapOf({ ...ONLY_UNASKABLE, form: form({ status, responseCount, cycleStatus }), newer, schemeGap, current }).fix;
               expect({ status, responseCount, cycleStatus, newer, schemeGap, current, fix }).toEqual({
-                status, responseCount, cycleStatus, newer, schemeGap, current, fix: RESELECT,
+                status, responseCount, cycleStatus, newer, schemeGap, current, fix: DEFINE,
               });
             }
   });
 
-  it("使うKPIを選ぶの画面（今いるページ）と、締め切った評価期間では出さない", () => {
-    expect(gapOf({ ...ONLY_UNASKABLE, current: "selection" }).fix).toBeNull();
-    expect(gapOf({ ...ONLY_UNASKABLE, form: form({ cycleStatus: "closed" }) }).fix).toBeNull();
-    // 締め切った期の下書きを作り直しても、ひな形の無い項目は入らない
-    expect(gapOf({ ...ONLY_UNASKABLE, form: form({ status: "draft", responseCount: 0, cycleStatus: "closed" }) }).fix).toBeNull();
-    // 新しい版があっても開かせない（その版にもひな形の無い項目は入らず、締め切った期では選び直しても変わらない）
-    expect(gapOf({ ...ONLY_UNASKABLE, form: form({ cycleStatus: "closed" }), newer: newerForm("frm_2", 2, "draft") }).fix).toBeNull();
-  });
-
-  it("ひな形のある項目のズレも残っていれば、従来の順で直す操作を選ぶ", () => {
+  it("作り直せば直る行と混ざっていても、先に聞き方を決めさせる（先に作り直すと、決めたあとにもう一度作り直すことになる）", () => {
     const draft = form({ status: "draft", responseCount: 0 });
     // 余分（定着率）がある
-    expect(gapOf({ unaskable: ["kpi_b", "kpi_c"], form: draft }).fix?.kind).toBe("rebuild");
-    expect(gapOf({ unaskable: ["kpi_b", "kpi_c"] }).fix?.kind).toBe("newVersion");
-    // 足りない項目の片方にはひな形がある
-    expect(gapOf({ asked: ["kpi_a"], unaskable: ["kpi_c"], form: draft }).fix?.kind).toBe("rebuild");
-    expect(gapOf({ asked: ["kpi_a"], unaskable: ["kpi_c"], newer: newerForm("frm_2", 2, "draft") }).fix?.kind).toBe("openNewer");
+    expect(gapOf({ unaskable: ["kpi_b", "kpi_c"], form: draft }).fix).toEqual(DEFINE);
+    expect(gapOf({ unaskable: ["kpi_b", "kpi_c"] }).fix).toEqual(DEFINE);
+    // 足りない項目の片方には聞き方がある
+    const one = { kind: "defineAsking", href: "/admin/scheme?item=kpi_c#kpi-item-kpi_c", names: ["粗利率"] };
+    expect(gapOf({ asked: ["kpi_a"], unaskable: ["kpi_c"], form: draft }).fix).toEqual(one);
+    expect(gapOf({ asked: ["kpi_a"], unaskable: ["kpi_c"], newer: newerForm("frm_2", 2, "draft") }).fix).toEqual(one);
+    expect(gapOf({ asked: ["kpi_a"], unaskable: ["kpi_c"], schemeGap: SCHEME_GAP }).fix).toEqual(one);
   });
 
-  it("注記の先頭で、ひな形の無い項目を名指しし、どの操作でも直らないと伝える", () => {
-    const lead = "「残業率」・「粗利率」には設問のひな形がありません。作り直しても新しい版でも、設問は出ず点も付きません。";
+  it("聞き方を決めたあとは（unaskable が空になれば）、従来の順で直す操作を選ぶ", () => {
+    const draft = form({ status: "draft", responseCount: 0 });
+    expect(gapOf({ asked: ["kpi_a"], form: draft }).fix?.kind).toBe("rebuild");
+    expect(gapOf({ asked: ["kpi_a"], newer: newerForm("frm_2", 2, "draft") }).fix?.kind).toBe("openNewer");
+    expect(gapOf({ asked: ["kpi_a"] }).fix?.kind).toBe("newVersion");
+  });
+
+  it("締め切った評価期間では、決めたあとに直せる版（回答の無い下書き・新しい下書きの版）があるときだけ出す", () => {
+    const closed = (over: Partial<ComparisonForm> = {}) => form({ cycleStatus: "closed", ...over });
+    expect(gapOf({ ...ONLY_UNASKABLE, form: closed({ status: "draft", responseCount: 0 }) }).fix).toEqual(DEFINE);
+    expect(gapOf({ ...ONLY_UNASKABLE, form: closed(), newer: newerForm("frm_2", 2, "draft") }).fix).toEqual(DEFINE);
+    // 新しい版を作れず、作り直せる版も無い
+    expect(gapOf({ ...ONLY_UNASKABLE, form: closed() }).fix).toBeNull();
+    expect(gapOf({ ...ONLY_UNASKABLE, form: closed({ status: "draft", responseCount: 2 }) }).fix).toBeNull();
+    expect(gapOf({ ...ONLY_UNASKABLE, form: closed(), newer: newerForm("frm_3", 3, "published") }).fix).toBeNull();
+  });
+
+  it("注記の先頭で、聞き方の決まっていない項目を名指しし、決めるまではどの操作でも直らないと伝える", () => {
+    const lead =
+      "「残業率」・「粗利率」は、実績の聞き方がまだ決まっていません。決めるまでは、作り直しても新しい版でも、設問は出ず点も付きません。";
     expect(noTemplateNote(["残業率", "粗利率"])).toBe(lead);
-    // 下書きで回答0件は、これまで注記が無かったが、ひな形の無い項目があれば出す
+    // 下書きで回答0件は、これまで注記が無かったが、聞き方の決まっていない項目があれば出す
     expect(gapOf({ ...ONLY_UNASKABLE, form: form({ status: "draft", responseCount: 0 }) }).note).toBe(lead);
     expect(gapOf(ONLY_UNASKABLE).note).toBe(`${lead}公開後や回答のあるアンケートは設問を差し替えません`);
     expect(gapOf({ ...ONLY_UNASKABLE, form: form({ cycleStatus: "closed" }) }).note).toBe(`${lead}締め切った評価期間には新しい版を作れません`);
-    // ひな形のある項目のズレと混ざっていても、ひな形の無い項目だけを名指しする
+    // 聞き方のある項目のズレと混ざっていても、聞き方の決まっていない項目だけを名指しする
     expect(gapOf({ unaskable: ["kpi_c"] }).note).toBe(
-      "「粗利率」には設問のひな形がありません。作り直しても新しい版でも、設問は出ず点も付きません。公開後や回答のあるアンケートは設問を差し替えません",
+      "「粗利率」は、実績の聞き方がまだ決まっていません。決めるまでは、作り直しても新しい版でも、設問は出ず点も付きません。公開後や回答のあるアンケートは設問を差し替えません",
     );
   });
 
-  it("札と、リンクを置けない返事のための直し方", () => {
+  it("札と、リンクを置けない返事のための直し方。画面名は台帳の名前と同じ字面", () => {
     expect(NO_TEMPLATE_BADGE).toBe("設問なし");
-    expect(NO_TEMPLATE_HINT).toBe("使うKPIを選ぶで、ひな形のある項目に選び直してください。");
+    expect(NO_TEMPLATE_HINT).toBe(
+      "聞き方は、KPI・評価セットの「KPI項目」で決められます。その項目の「内容を直す」を押してください。決めたあとに、もう一度作り直してください。",
+    );
+    expect(NO_TEMPLATE_HINT).toContain(routeOf("/admin/scheme")!.label);
   });
 });
 
@@ -333,7 +347,7 @@ describe("comparisonGapOf: 見る人の役割", () => {
     { name: "評価セットの残りの手順", over: { schemeGap: SCHEME_GAP } },
     { name: "新しい版を作る", over: {} },
     {
-      name: "使うKPIを選び直す",
+      name: "聞き方を決める",
       over: { selected: ["kpi_a", "kpi_b", "kpi_c", "kpi_d"], asked: ["kpi_a"], unaskable: ["kpi_b", "kpi_c", "kpi_d"] },
     },
   ];
@@ -400,7 +414,9 @@ describe("文言", () => {
     expect(fixLabel({ kind: "openNewer", formId: "frm_2", href: "/admin/forms/frm_2", version: 2, draft: true })).toBe("第2版の下書きを開く");
     expect(fixLabel({ kind: "openNewer", formId: "frm_3", href: "/admin/forms/frm_3", version: 3, draft: false })).toBe("第3版を開く");
     expect(fixLabel({ kind: "finishScheme", ...SCHEME_GAP })).toBe("基準を決める");
-    expect(fixLabel({ kind: "reselect", href: "/admin/scheme/Regular" })).toBe("使うKPIを選ぶで選び直す");
+    const asking = { kind: "defineAsking", href: "/admin/scheme?item=kpi_b#kpi-item-kpi_b" } as const;
+    expect(fixLabel({ ...asking, names: ["残業率"] })).toBe("「残業率」の聞き方を決める");
+    expect(fixLabel({ ...asking, names: ["残業率", "粗利率", "定着率"] })).toBe("「残業率」ほか2項目の聞き方を決める");
   });
 
   it("作り直しと新しい版は確認つき。リンクは確認しない", () => {
@@ -413,12 +429,12 @@ describe("文言", () => {
     );
     expect(fixConfirm({ kind: "openNewer", formId: "frm_2", href: "/admin/forms/frm_2", version: 2, draft: true }, gap)).toBeUndefined();
     expect(fixConfirm({ kind: "finishScheme", ...SCHEME_GAP }, gap)).toBeUndefined();
-    expect(fixConfirm({ kind: "reselect", href: "/admin/scheme/Regular" }, gap)).toBeUndefined();
+    expect(fixConfirm({ kind: "defineAsking", href: "/admin/scheme?item=kpi_b#kpi-item-kpi_b", names: ["残業率"] }, gap)).toBeUndefined();
   });
 
-  it("ひな形の無い項目があれば、作り直しにも新しい版にも、押す前にその項目を名指しする", () => {
+  it("聞き方の決まっていない項目があれば、作り直しにも新しい版にも、押す前にその項目を名指しする", () => {
     const gap = gapOf({ form: form({ title: "春の実績アンケート" }), unaskable: ["kpi_c"] });
-    const note = "「粗利率」には設問のひな形がありません。作り直しても新しい版でも、設問は出ず点も付きません。";
+    const note = "「粗利率」は、実績の聞き方がまだ決まっていません。決めるまでは、作り直しても新しい版でも、設問は出ず点も付きません。";
     expect(fixConfirm({ kind: "rebuild", formId: "frm_1" }, gap)).toBe(
       `「春の実績アンケート」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。${note}まだ公開前で、回答は1件もありません。よろしいですか？`,
     );
@@ -430,7 +446,7 @@ describe("文言", () => {
   it("アンケート1本の画面のボタンの確認は、警告の中の作り直しと同じ文", () => {
     const gap = gapOf({ form: form({ status: "draft", title: "春の実績アンケート" }), unaskable: ["kpi_b", "kpi_c"] });
     expect(rebuildConfirm(gap.formTitle, noTemplateNamesOf(gap))).toBe(fixConfirm({ kind: "rebuild", formId: "frm_1" }, gap));
-    // 警告が無いときは、ひな形の注記を入れない
+    // 警告が無いときは、聞き方の注記を入れない
     expect(noTemplateNamesOf(null)).toEqual([]);
     expect(rebuildConfirm("春の実績アンケート", [])).toBe(
       "「春の実績アンケート」の設問を、いまの等級要件・昇格要件・行動指針・評価セットから作り直します。手で足した設問は消えます。まだ公開前で、回答は1件もありません。よろしいですか？",
@@ -441,9 +457,9 @@ describe("文言", () => {
 describe("rebuildWontFixNote: 作り直しても警告が消えないときの1行", () => {
   const draft = form({ status: "draft", responseCount: 0 });
   const ONLY_UNASKABLE: Partial<ComparisonGapInput> = { asked: ["kpi_a"], unaskable: ["kpi_b", "kpi_c"], form: draft, current: "form" };
-  const LEAD = "下のボタンで作り直しても、上のズレは直りません。足りない項目に設問のひな形が無いためです。";
+  const LEAD = "下のボタンで作り直しても、上のズレは直りません。足りない項目の聞き方がまだ決まっていないためです。";
 
-  it("足りないのがひな形の無い項目だけで余分も無いときだけ出す。直し方があれば警告を開くよう促す", () => {
+  it("足りないのが聞き方の決まっていない項目だけで余分も無いときだけ出す。直し方があれば警告を開くよう促す", () => {
     expect(rebuildWontFixNote(gapOf(ONLY_UNASKABLE))).toBe(`${LEAD}直し方は「直すところを見る」を開いてください。`);
   });
 
@@ -455,7 +471,7 @@ describe("rebuildWontFixNote: 作り直しても警告が消えないときの1�
     expect(rebuildWontFixNote(null)).toBeNull();
     // 余分（定着率）は作り直せば消える
     expect(rebuildWontFixNote(gapOf({ unaskable: ["kpi_b", "kpi_c"], form: draft, current: "form" }))).toBeNull();
-    // 足りない項目の片方にはひな形がある
+    // 足りない項目の片方には聞き方がある
     expect(rebuildWontFixNote(gapOf({ asked: ["kpi_a"], unaskable: ["kpi_c"], form: draft, current: "form" }))).toBeNull();
   });
 });

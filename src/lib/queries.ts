@@ -160,10 +160,20 @@ export async function listKpiItems(companyId: string) {
   return db.select().from(s.kpiItems).where(eq(s.kpiItems.companyId, companyId)).orderBy(asc(s.kpiItems.no));
 }
 
+/** 実績を聞く設問のひな形（kpi_questions）。KPI項目の画面で、項目ごとの聞き方を見せるのに使う。 */
+export async function listKpiQuestions(companyId: string) {
+  const db = await getDb();
+  return db
+    .select()
+    .from(s.kpiQuestions)
+    .where(eq(s.kpiQuestions.companyId, companyId))
+    .orderBy(asc(s.kpiQuestions.displayOrder));
+}
+
 /**
  * 実績を聞く設問のひな形（kpi_questions）を持つKPI項目のID。
- * アンケートの設問はこのひな形からしか作られない（form-build.ts）。画面で足した項目にはひな形が無く、
- * 評価セットで選んでも設問が出ず点も付かないので、評価セットの保存と画面の両方がこれで知らせる。
+ * アンケートの設問はこのひな形からしか作られない（form-build.ts）。画面で足した項目は、KPI項目の画面で聞き方を
+ * 決めるまでひな形が無く（DD-016）、評価セットで選んでも設問が出ず点も付かないので、評価セットの保存と画面の両方がこれで知らせる。
  */
 export async function listAskableKpiItemIds(companyId: string): Promise<string[]> {
   const db = await getDb();

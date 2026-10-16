@@ -62,20 +62,21 @@ function render(askableItemIds: string[]) {
 
 const BADGE = '<span class="badge badge-required">設問なし</span>';
 
-describe("使うKPIを選ぶの候補: 設問のひな形の無い項目", () => {
-  it("ひな形の無い候補にだけ札「設問なし」を付け、選んだ時点で警告する", () => {
+describe("使うKPIを選ぶの候補: 実績の聞き方（設問のひな形）が決まっていない項目", () => {
+  it("聞き方の無い候補にだけ札「設問なし」を付け、選んだ時点で、決める場所を添えて警告する", () => {
     const html = render(["kpi_a"]);
     expect(html.split(BADGE)).toHaveLength(2);
     expect(html).toMatch(new RegExp(`粗利率 <span class="badge badge-done">選択中</span> ${BADGE}`));
-    expect(html).toContain("「粗利率」には、実績を聞く設問のひな形がありません。");
-    // ひな形のある項目と、等級要件の設問から数える固定枠は名指ししない
-    expect(html).not.toContain("「稼働率」には");
-    expect(html).not.toContain("「等級要件達成率」には");
+    expect(html).toContain("「粗利率」は、実績の聞き方がまだ決まっていません。");
+    expect(html).toContain("その項目の「内容を直す」を押してください。");
+    // 聞き方のある項目と、等級要件の設問から数える固定枠は名指ししない
+    expect(html).not.toContain("「稼働率」は");
+    expect(html).not.toContain("「等級要件達成率」は");
   });
 
-  it("どの候補にもひな形があれば、札も警告も出さない", () => {
+  it("どの候補も聞き方が決まっていれば、札も警告も出さない", () => {
     const html = render(["kpi_a", "kpi_b"]);
     expect(html).not.toContain("設問なし");
-    expect(html).not.toContain("設問のひな形がありません");
+    expect(html).not.toContain("実績の聞き方がまだ決まっていません");
   });
 });

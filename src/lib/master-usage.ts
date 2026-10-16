@@ -1,4 +1,4 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { schema as s } from "@/lib/db";
 import type { getDb } from "@/lib/db";
 import { versionFamilyIds, type VersionedMasterRow } from "@/lib/domain/versioned-master";
@@ -176,6 +176,32 @@ export async function kpiItemUsage(db: Db, companyId: string): Promise<UsageMap>
   for (const row of inScheme) add(map, row.key, "評価セット");
   for (const row of inEvaluations) add(map, row.key, EVALUATION_LABEL);
   return map;
+}
+
+/**
+ * 回答を集めた（公開中・締め切り済みの）アンケートで設問に使われている KPI 項目と、その最初のアンケート。
+ *
+ * 点の計算は、回答の設問ID（kpi_question_key）を今の計算式に入れて出す。確定した評価も
+ * 確認中に戻すと今の式で計算し直すので、こうした項目で聞くことを足したり消したりすると、
+ * 回答に無い設問IDを式が求めて計算できなくなる。聞くことの組を変えさせない判定に使う（DD-016）。
+ */
+export async function kpiItemCollectingForms(db: Db, companyId: string): Promise<Record<string, string>> {
+  const rows = await db
+    .select({ key: s.formQuestions.kpiItemId, ...formTitleColumns })
+    .from(s.formQuestions)
+    .innerJoin(s.forms, eq(s.formQuestions.formId, s.forms.id))
+    .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.forms.cycleId))
+    .leftJoin(s.grades, eq(s.grades.id, s.forms.gradeId))
+    .where(
+      and(
+        eq(s.formQuestions.companyId, companyId),
+        isNotNull(s.formQuestions.kpiItemId),
+        inArray(s.forms.status, ["published", "closed"]),
+      ),
+    );
+  const out: Record<string, string> = {};
+  for (const row of rows) if (row.key && !(row.key in out)) out[row.key] = formLabel(row);
+  return out;
 }
 
 /**

@@ -6,11 +6,11 @@ import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1"
 import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
- * 評価セットの保存で、設問のひな形の無い項目を知らせる（spec §1・DD-012 の4）。
+ * 評価セットの保存で、実績の聞き方（設問のひな形）が決まっていない項目を知らせる（spec §1・DD-012 の4・DD-016）。
  *
  * validateScheme は askableItemIds を渡されたときだけ判定する。
  * 保存がひな形の有無を読み忘れると黙って通るので、保存の入口から確かめる。
- * 見本には kpi_questions が1件も無いので、稼働率・残業率がひな形の無い項目になる。
+ * 見本には kpi_questions が1件も無いので、稼働率・残業率が聞き方の決まっていない項目になる。
  */
 
 const mocked = vi.hoisted(() => ({
@@ -53,6 +53,7 @@ const ITEMS = [
   { kpiItemId: IDS.itemLower, categoryId: IDS.category, isFixedSlot: false, isMajorSlot: false },
 ];
 
+const NO_ASKING = "実績の聞き方がまだ決まっていません";
 const save = () => saveScheme({ schemeId: IDS.scheme, pointGroup: "Regular", items: ITEMS });
 const warningsOf = (result: unknown) => (result as { warnings: string[] }).warnings;
 
@@ -85,13 +86,14 @@ afterEach(() => {
   t.close();
 });
 
-describe("評価セットの保存: 設問のひな形の無い項目", () => {
-  it("保存は止めず、ひな形の無い項目だけを名指しして警告する（固定枠は名指ししない）", async () => {
+describe("評価セットの保存: 実績の聞き方が決まっていない項目", () => {
+  it("保存は止めず、聞き方の決まっていない項目だけを名指しし、決める場所を添えて警告する（固定枠は名指ししない）", async () => {
     const result = await save();
 
     expect(result).toMatchObject({ ok: true });
-    const warning = warningsOf(result).find((w) => w.includes("設問のひな形がありません"));
-    expect(warning).toMatch(/^「稼働率」・「残業率」には、実績を聞く設問のひな形がありません。/);
+    const warning = warningsOf(result).find((w) => w.includes(NO_ASKING));
+    expect(warning).toMatch(/^「稼働率」・「残業率」は、実績の聞き方がまだ決まっていません。/);
+    expect(warning).toContain("KPI・評価セットの「KPI項目」で決められます。その項目の「内容を直す」を押してください。");
     expect(warning).not.toContain("等級要件達成率");
     const saved = await t.db
       .select({ kpiItemId: s.schemeItems.kpiItemId })
@@ -100,7 +102,7 @@ describe("評価セットの保存: 設問のひな形の無い項目", () => {
     expect(saved.map((r) => r.kpiItemId).sort()).toEqual([IDS.itemFixed, IDS.itemHigher, IDS.itemLower].sort());
   });
 
-  it("ひな形を足した項目は警告から外れ、残った項目だけを名指しする", async () => {
+  it("聞き方を決めた項目は警告から外れ、残った項目だけを名指しする", async () => {
     await t.db.insert(s.kpiQuestions).values({
       id: "kq_higher",
       companyId: IDS.company,
@@ -110,17 +112,17 @@ describe("評価セットの保存: 設問のひな形の無い項目", () => {
       role: "direct",
     });
 
-    const warning = warningsOf(await save()).find((w) => w.includes("設問のひな形がありません"));
-    expect(warning).toMatch(/^「残業率」には、/);
+    const warning = warningsOf(await save()).find((w) => w.includes(NO_ASKING));
+    expect(warning).toMatch(/^「残業率」は、/);
     expect(warning).not.toContain("稼働率");
   });
 
-  it("どの項目にもひな形があれば、ひな形の警告は出さない", async () => {
+  it("どの項目も聞き方が決まっていれば、聞き方の警告は出さない", async () => {
     await t.db.insert(s.kpiQuestions).values([
       { id: "kq_higher", companyId: IDS.company, kpiItemId: IDS.itemHigher, questionKey: "q_h", text: "稼働時間", role: "direct" },
       { id: "kq_lower", companyId: IDS.company, kpiItemId: IDS.itemLower, questionKey: "q_l", text: "残業時間", role: "direct" },
     ]);
 
-    expect(warningsOf(await save()).some((w) => w.includes("設問のひな形がありません"))).toBe(false);
+    expect(warningsOf(await save()).some((w) => w.includes(NO_ASKING))).toBe(false);
   });
 });

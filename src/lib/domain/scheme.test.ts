@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { validateScheme, type SchemeSelection, type ValidateSchemeOptions } from "./scheme";
+import { routeOf } from "@/lib/route-access";
+import { ASKING_PLACE_HINT, validateScheme, type SchemeSelection, type ValidateSchemeOptions } from "./scheme";
 import { pointsForSlot, type GradePointRule } from "./grade-points";
 
 /**
@@ -229,7 +230,7 @@ describe("validateScheme — ランク基準が未設定の項目", () => {
   });
 });
 
-describe("validateScheme — 設問のひな形が無い項目", () => {
+describe("validateScheme — 実績の聞き方（設問のひな形）が決まっていない項目", () => {
   /* 画面で足したKPI項目には実績を聞く設問のひな形（kpi_questions）が無く、アンケートを作っても
      作り直しても設問が出ない。作り直しで直ると思わせないよう、選んだ時点で知らせる。 */
   const ALL = VALID.Manager.map((x) => x.kpiItemId);
@@ -258,6 +259,12 @@ describe("validateScheme — 設問のひな形が無い項目", () => {
     expect(r.warnings[0]).toContain("「紹介件数」");
     expect(r.warnings[0]).toContain("作り直しても");
     expect(r.warnings[0]).toContain("点も付きません");
+  });
+
+  it("どこで聞き方を決めるかを、台帳と同じ画面名で添える", () => {
+    const r = validateScheme(VALID.Manager, opts("Manager", { askableItemIds: ALL.filter((id) => id !== "k11") }));
+    expect(r.warnings[0].endsWith(ASKING_PLACE_HINT)).toBe(true);
+    expect(ASKING_PLACE_HINT).toContain(`${routeOf("/admin/scheme")!.label}の「KPI項目」`);
   });
 
   it("固定枠は等級要件の設問から数えるので、ひな形が無くても言わない", () => {

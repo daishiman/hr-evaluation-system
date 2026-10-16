@@ -25,6 +25,7 @@ const LIST_EDITORS = [
   "PromotionRequirementEditor.tsx",
   "FormBuilder.tsx",
   "KpiItemEditor.tsx",
+  "KpiAskingFields.tsx",
   "KpiCategoryEditor.tsx",
   "BehaviorGuidelineEditor.tsx",
   "BehaviorBandSetEditor.tsx",
@@ -156,7 +157,7 @@ describe("一覧の行の形（全画面共通）", () => {
   });
 
   it("設問と要件の一覧は、カードの中に行を並べる（reorder-in-card）", () => {
-    for (const name of ["GradeRequirementEditor.tsx", "PromotionRequirementEditor.tsx", "FormBuilder.tsx"]) {
+    for (const name of ["GradeRequirementEditor.tsx", "PromotionRequirementEditor.tsx", "FormBuilder.tsx", "KpiAskingFields.tsx"]) {
       expect({ name, ok: code(name).includes('className="reorder-in-card"') }).toEqual({ name, ok: true });
     }
   });

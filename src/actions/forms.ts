@@ -263,7 +263,8 @@ export async function rebuildFormQuestions(raw: unknown) {
   return runAction({ operation: "forms.rebuildQuestions", input: formRefSchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const { cycleId, ...r } = await syncFormQuestions({ companyId: viewer.companyId, formId: input.formId });
-    // 設問のひな形が無い項目は、作り直しても足りないまま残る。押しても直らなかった理由を返事で伝える
+    // 設問のひな形が無い（聞き方が決まっていない）項目は、作り直しても足りないまま残る。押しても直らなかった理由と、
+    // 聞き方を決める場所を返事で伝える
     // （画面の警告と同じ読み出しを通し、数え方を変えない）
     const gap = await loadFormComparisonGap(viewer.companyId, { id: input.formId, cycleId }, { role: viewer.role, current: "form" });
     const noTemplate = noTemplateNamesOf(gap);

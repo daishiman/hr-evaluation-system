@@ -76,6 +76,17 @@ beforeEach(async () => {
 
 afterEach(() => t.close());
 
+/**
+ * 稼働率・残業率の実績の聞き方（設問のひな形）を決めた状態にする。見本には聞き方が無く、足りない項目に
+ * 聞き方の無いものがあると、直す操作はまず「聞き方を決める」になる（DD-016）。決めたあとの順（DD-012 の5）を見るテストで使う
+ */
+async function defineAskingForBoth() {
+  await t.db.insert(s.kpiQuestions).values([
+    { id: "kq_higher", companyId: IDS.company, kpiItemId: IDS.itemHigher, questionKey: "q_h", text: "稼働時間", role: "direct" },
+    { id: "kq_lower", companyId: IDS.company, kpiItemId: IDS.itemLower, questionKey: "q_l", text: "残業時間", role: "direct" },
+  ]);
+}
+
 function expectNoLeak(value: unknown) {
   const json = JSON.stringify(value);
   for (const leak of LEAKS) expect(json, `他社の「${leak}」が出ている`).not.toContain(leak);
@@ -126,12 +137,14 @@ describe("一覧（評価期間ごと）の読み出し", () => {
   });
 
   it("評価セットの準備が整っていなければ、残っている手順へのリンクを直す操作にする", async () => {
+    await defineAskingForBoth();
     // 見本には配点ルールが無いので、loadSchemeReadiness は「配点ルールがありません」を返す
     const fix = (await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts())).get(IDS.form)!.fix;
     expect(fix).toEqual({ kind: "finishScheme", href: "/admin/scheme", linkLabel: "KPI・評価セットを開く" });
   });
 
   it("同じ評価期間・等級に自社の新しい版があれば、古い版の直す操作はその版を開くリンク", async () => {
+    await defineAskingForBoth();
     await t.db.insert(s.forms).values({
       id: "frm_test_v2", companyId: IDS.company, gradeId: IDS.gradeFrom, cycleId: IDS.cycle,
       title: "", status: "draft", version: 2, publicToken: "tok_test_v2",
@@ -176,6 +189,7 @@ describe("一覧（評価期間ごと）の読み出し", () => {
     });
 
     it("第2版がまだ一致していなければ（等級要件の設問が無く、固定枠が足りない）、第1版は第2版を開かせる", async () => {
+      await defineAskingForBoth();
       await insertV2("draft", false);
       const gaps = await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts());
       expect(gaps.get(IDS.form)!.fix).toEqual({
@@ -207,28 +221,34 @@ describe("アンケート1本の読み出し", () => {
   });
 });
 
-describe("設問のひな形の無い項目（kpi_questions で判定）", () => {
+describe("実績の聞き方（設問のひな形）が決まっていない項目（kpi_questions で判定）", () => {
   const noTemplateOf = (gap: ComparisonGap | undefined) => gap?.rows.map((r) => [r.name, r.noTemplate]);
 
-  it("見本にはひな形が無いので、稼働率・残業率に印を付ける。固定枠（等級要件達成率）には付けない", async () => {
+  it("見本には聞き方が無いので、稼働率・残業率に印を付ける。固定枠（等級要件達成率）には付けない", async () => {
     const gap = (await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts())).get(IDS.form);
     expect(noTemplateOf(gap)).toEqual([["等級要件達成率", false], ["稼働率", true], ["残業率", true]]);
-    // ひな形のある固定枠も足りないので、直す操作は従来どおり
-    expect(gap?.fix?.kind).toBe("finishScheme");
+    // 準備の残り（配点ルールが無い）より先に、聞き方を決めさせる。先頭の項目の入力欄を開いた KPI項目の画面へ
+    expect(gap?.fix).toEqual({
+      kind: "defineAsking",
+      href: "/admin/scheme?item=kpi_higher#kpi-item-kpi_higher",
+      names: ["稼働率", "残業率"],
+    });
   });
 
-  it("自社のひな形があれば印を外す。他社が同じ項目 id にひな形を置いても数えない", async () => {
+  it("自社の聞き方があれば印を外す。他社が同じ項目 id に聞き方を置いても数えない", async () => {
     await t.db.insert(s.kpiQuestions).values([
       { id: "kq_higher", companyId: IDS.company, kpiItemId: IDS.itemHigher, questionKey: "q_h", text: "稼働時間", role: "direct" },
       { id: "kq_b_lower", companyId: COMPANY_B, kpiItemId: IDS.itemLower, questionKey: "q_b", text: "B社の秘密", role: "direct" },
     ]);
     const gap = (await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts())).get(IDS.form);
     expect(noTemplateOf(gap)).toEqual([["等級要件達成率", false], ["稼働率", false], ["残業率", true]]);
+    // 決める操作が指すのは、残った項目
+    expect(gap?.fix).toMatchObject({ kind: "defineAsking", href: "/admin/scheme?item=kpi_lower#kpi-item-kpi_lower", names: ["残業率"] });
     expectNoLeak(gap);
   });
 
-  it("足りないのがひな形の無い項目だけの版は、作り直しではなく使うKPIを選ぶへ戻す", async () => {
-    // 第2版は等級要件だけを聞く（固定枠は足りている）下書き。稼働率・残業率はひな形が無いので作り直しても入らない
+  it("聞き方の無い項目が足りない版は、どの画面でも、作り直しや新しい版より先に聞き方を決めさせる", async () => {
+    // 第2版は等級要件だけを聞く（固定枠は足りている）下書き。稼働率・残業率は聞き方が無いので作り直しても入らない
     await t.db.insert(s.forms).values({
       id: "frm_test_v2", companyId: IDS.company, gradeId: IDS.gradeFrom, cycleId: IDS.cycle,
       title: "", status: "draft", version: 2, publicToken: "tok_test_v2",
@@ -240,16 +260,25 @@ describe("設問のひな形の無い項目（kpi_questions で判定）", () =>
       id: "q_v2_req", companyId: IDS.company, formId: "frm_test_v2", section: "support", questionType: "yes_no",
       title: "等級要件1", displayOrder: 1, gradeRequirementId: "gr_v2",
     });
+    const define = { kind: "defineAsking", href: "/admin/scheme?item=kpi_higher#kpi-item-kpi_higher", names: ["稼働率", "残業率"] };
     const gaps = await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts());
-    expect(gaps.get("frm_test_v2")!.fix).toEqual({ kind: "reselect", href: "/admin/scheme/Regular" });
-    expect(gaps.get("frm_test_v2")!.note).toContain("「稼働率」・「残業率」には設問のひな形がありません。");
-    // 第1版は、まず新しい版を開かせる（直す場所は新しい版の警告が案内する）
-    expect(gaps.get(IDS.form)!.fix?.kind).toBe("openNewer");
-    // アンケート1本の画面でも同じ。使うKPIを選ぶの画面（今いるページ）では出さない
+    expect(gaps.get("frm_test_v2")!.fix).toEqual(define);
+    expect(gaps.get("frm_test_v2")!.note).toContain("「稼働率」・「残業率」は、実績の聞き方がまだ決まっていません。");
+    // 第1版も、新しい版を開かせる前に決めさせる（開いても、決めるまで第2版は直らない）
+    expect(gaps.get(IDS.form)!.fix).toEqual(define);
+    // アンケート1本の画面でも同じ。使うKPIを選ぶの画面の読み出しも同じ値を持つ（決める場所はどちらのページでもない。
+    // ただしその画面の部品は直す操作を描かず、候補の札と選んだ時点の警告で知らせる）
     expect((await loadFormComparisonGap(IDS.company, { id: "frm_test_v2", cycleId: IDS.cycle }, opts("COMPANY_ADMIN", "form")))?.fix)
-      .toEqual({ kind: "reselect", href: "/admin/scheme/Regular" });
+      .toEqual(define);
     const onSelection = await loadGroupComparisonGaps(IDS.company, "Regular", opts("COMPANY_ADMIN", "selection"));
-    expect(onSelection.find((g) => g.formId === "frm_test_v2")?.fix).toBeNull();
+    expect(onSelection.find((g) => g.formId === "frm_test_v2")?.fix).toEqual(define);
+
+    // 決めたあとは、従来の順（新しい版→作り直し）に戻る
+    await defineAskingForBoth();
+    const after = await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts());
+    expect(after.get(IDS.form)!.fix?.kind).toBe("openNewer");
+    expect(after.get("frm_test_v2")!.fix).toEqual({ kind: "rebuild", formId: "frm_test_v2" });
+    expect(after.get("frm_test_v2")!.note).toBeNull();
   });
 });
 

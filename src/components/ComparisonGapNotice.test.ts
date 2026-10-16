@@ -206,11 +206,11 @@ describe("ComparisonGapNotice: 直す操作（1つだけ）", () => {
   });
 });
 
-describe("ComparisonGapNotice: 設問のひな形が無い項目", () => {
-  /** 足りないのは残業率・粗利率で、どちらにもひな形が無い */
+describe("ComparisonGapNotice: 実績の聞き方（設問のひな形）が決まっていない項目", () => {
+  /** 足りないのは残業率・粗利率で、どちらにも聞き方が無い */
   const ONLY_UNASKABLE: Partial<ComparisonGapInput> = { asked: ["kpi_a"], unaskable: ["kpi_b", "kpi_c"] };
 
-  it("表の項目名に「設問なし」の札を付ける（ひな形のある項目と余分な項目には付けない）", () => {
+  it("表の項目名に「設問なし」の札を付ける（聞き方のある項目と余分な項目には付けない）", () => {
     const opened = openedPart(render([gap({ unaskable: ["kpi_c"] })]));
     expect(count(opened, '<span class="badge badge-required">設問なし</span>')).toBe(1);
     expect(opened).toContain('粗利率 <span class="badge badge-required">設問なし</span>');
@@ -218,16 +218,24 @@ describe("ComparisonGapNotice: 設問のひな形が無い項目", () => {
     expect(opened).not.toContain('定着率 <span class="badge');
   });
 
-  it("足りないのがひな形の無い項目だけなら、作り直しではなく使うKPIを選ぶへのリンク", () => {
+  it("聞き方の無い項目が足りなければ、作り直しの代わりに、先頭の項目の聞き方を決めるリンク", () => {
     for (const status of ["draft", "published"] as const) {
       const opened = openedPart(render([gap({ ...ONLY_UNASKABLE, form: form({ status }) })]));
       expect(opened).not.toContain("<button");
       expect(opened).not.toContain("rebuildFormQuestions");
-      // 2つのページのリンクに加えて、直す操作のリンクが1つ
-      expect(count(opened, 'href="/admin/scheme/Regular"')).toBe(2);
-      expect(opened).toContain("使うKPIを選ぶで選び直す");
-      expect(opened).toContain("「残業率」・「粗利率」には設問のひな形がありません。");
+      // 2つのページのリンクに加えて、KPI項目の画面で先頭の項目（残業率）の入力欄を開くリンクが1つ
+      expect(count(opened, 'href="/admin/scheme/Regular"')).toBe(1);
+      expect(opened).toContain('href="/admin/scheme?item=kpi_b#kpi-item-kpi_b"');
+      expect(opened).toContain("「残業率」ほか1項目の聞き方を決める");
+      expect(opened).toContain("「残業率」・「粗利率」は、実績の聞き方がまだ決まっていません。");
     }
+  });
+
+  it("聞き方のある項目も足りなくても、先に聞き方を決めさせる（決めれば作り直し1回で全部直る）", () => {
+    const opened = openedPart(render([gap({ unaskable: ["kpi_c"], form: form({ status: "draft" }) })]));
+    expect(opened).not.toContain("<button");
+    expect(opened).toContain('href="/admin/scheme?item=kpi_c#kpi-item-kpi_c"');
+    expect(opened).toContain("「粗利率」の聞き方を決める");
   });
 
   it("使うKPIを選ぶの画面では、聞いていない項目に（設問なし）を添える", () => {

@@ -40,6 +40,13 @@ import { expectedItemCount, pointsForSlot, slotKindOf, type GradePointRule } fro
  */
 export const NO_TEMPLATE_BADGE = "設問なし";
 
+/**
+ * 聞き方を決める場所の案内。リンクを置けない文（選んだ時点の警告・作り直しの返事）で使う。
+ * 画面名は台帳（/admin/scheme）の名前と同じ字面にする（scheme.test.ts で確かめる）。
+ * ここで台帳を読まないのは、NO_TEMPLATE_BADGE と同じく選ぶ画面がブラウザで動くため
+ */
+export const ASKING_PLACE_HINT = "聞き方は、KPI・評価セットの「KPI項目」で決められます。その項目の「内容を直す」を押してください。";
+
 export interface SchemeSelection {
   kpiItemId: string;
   categoryId: string | null;
@@ -151,7 +158,8 @@ export function validateScheme(selections: SchemeSelection[], opts: ValidateSche
   }
 
   /* ひな形の無い項目は、選べても設問が作られない。アンケートの「設問を作り直す」を押しても
-     足りないままなので、作り直しで直ると思わせないよう、選んだ時点で知らせる。
+     足りないままなので、作り直しで直ると思わせないよう、選んだ時点で知らせ、聞き方を決める場所を示す
+     （ひな形は KPI項目の画面で聞き方として足せる。DD-016）。
      ランク基準と同じ理由で errors にはしない（先に評価軸を決める作業順を塞がない）。
      固定枠は等級要件の設問から実績を数えるので除く（form-build.ts）。等級要件が1件も無い等級では
      固定枠のひな形（seed.sql の q1_1）に頼る。q1_1 は見本の各会社にあり、新しい会社にもひな形ごと写す
@@ -162,11 +170,10 @@ export function validateScheme(selections: SchemeSelection[], opts: ValidateSche
     const unaskable = selections.filter((x) => !x.isFixedSlot && !askable.has(x.kpiItemId));
     if (unaskable.length > 0) {
       warnings.push(
-        `${unaskable.map((x) => `「${nameOf(x.kpiItemId)}」`).join("・")}には、実績を聞く設問のひな形がありません。` +
+        `${unaskable.map((x) => `「${nameOf(x.kpiItemId)}」`).join("・")}は、実績の聞き方がまだ決まっていません。` +
           "このまま保存はできます。" +
-          "アンケートを作っても作り直しても、この項目の設問は出ず、点も付きません。" +
-          "ひな形は画面からは足せません。" +
-          "ひな形のある別の項目を選ぶか、システム管理者にご連絡ください。",
+          "決めるまでは、アンケートを作っても作り直しても設問が出ず、点も付きません。" +
+          ASKING_PLACE_HINT,
       );
     }
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSaveAction } from "@/lib/use-refresh";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Badge, Button, Card, Code, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ListAddRow, ListRowBody } from "@/components/ListRow";
@@ -17,6 +17,17 @@ import {
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
+import {
+  KpiAskingFields,
+  KpiAskingSummary,
+  askingDraftFromView,
+  askingPayload,
+  askingToSend,
+  emptyAsking,
+  type AskingDraft,
+} from "@/components/KpiAskingFields";
+import { ASKING_LETTERS, type AskingView } from "@/lib/domain/kpi-asking";
+import { kpiItemAnchor } from "@/lib/domain/scheme-steps";
 
 export interface KpiItemCategoryOption {
   id: string;
@@ -39,6 +50,10 @@ export interface KpiItemRow {
   isProvisional: boolean;
   isActive: boolean;
   isFixedSlot: boolean;
+  /** 実績の聞き方（設問のひな形と、文字で書いた計算式）。DD-016 */
+  asking: AskingView;
+  /** 回答を集めたアンケートの呼び名。あれば聞くことの組（足す・消す）を変えられない */
+  keySetLockedBy: string | null;
 }
 
 /** 新規作成・編集で送る下書きの形。 */
@@ -48,7 +63,7 @@ interface Draft {
   direction: "higher" | "lower";
   measureType: string;
   categoryId: string;
-  formula: string;
+  asking: AskingDraft;
   formulaNote: string;
   remarks: string;
   isMonetary: boolean;
@@ -62,7 +77,7 @@ const emptyDraft = (): Draft => ({
   direction: "higher",
   measureType: MEASURE_TYPES[0],
   categoryId: "",
-  formula: "",
+  asking: emptyAsking(),
   formulaNote: "",
   remarks: "",
   isMonetary: false,
@@ -74,36 +89,73 @@ const draftFromRow = (row: KpiItemRow): Draft => ({
   direction: row.direction,
   measureType: row.measureType,
   categoryId: row.categoryId ?? "",
-  formula: row.formula ?? "",
+  asking: askingDraftFromView(row.asking),
   formulaNote: row.formulaNote ?? "",
   remarks: row.remarks ?? "",
   isMonetary: row.isMonetary,
 });
 
+/** 一覧の行に出す、聞くことと計算式の要約。 */
+function askingNote(row: KpiItemRow) {
+  const { questions, formula } = row.asking;
+  if (questions.length === 0) {
+    if (row.isFixedSlot) return formula ? <>計算式 <Code>{formula}</Code></> : null;
+    return (
+      <>
+        聞くことがまだありません（アンケートに出ず、点が付きません）
+        {formula && (
+          <>
+            {" "}／ 計算式のメモ <Code>{formula}</Code>
+          </>
+        )}
+      </>
+    );
+  }
+  return (
+    <>
+      聞くこと {questions.map((q, i) => `${ASKING_LETTERS[i] ?? "・"} ${q.text}`).join("　")}
+      {formula && (
+        <>
+          {" "}／ 計算式 <Code>{formula}</Code>
+        </>
+      )}
+    </>
+  );
+}
+
 /**
- * KPI項目そのもの（名前・単位・向き・分類・実績区分・計算式）の追加・編集・削除。
+ * KPI項目そのもの（名前・単位・向き・分類・実績区分・実績の聞き方）の追加・編集・削除。
  *
  * これまでKPI項目は初期データの投入でしか登録できなかった（→ docs/product/backlog.md）。
  * ここではカテゴリと同じ「使ったら消せない」に加えて、**使ったら意味の変わる列は直せない**
  * という制約を持つ。単位・向き（高いほど良い／低いほど良い）・実績区分・分類・金銭系の扱いは、
  * 一度でもアンケート・評価セット・評価の記録に登場すると計算の前提になるため、
- * 使用中は名前・計算式の説明・備考だけを直せる形にしている（サーバー側でも二重に弾く）。
+ * 使用中は名前・実績の聞き方・計算式の補足・備考だけを直せる形にしている（サーバー側でも二重に弾く）。
+ * 実績の聞き方は、回答を集めたアンケートが使っている項目では、聞くことの組（足す・消す）を変えられない（DD-016）。
+ *
+ * 比べる警告の「聞き方を決める」は、この画面へ項目を指して来る（scheme-steps.ts の kpiItemPath）。
+ * 指された項目は入力欄を開いた状態で描き、各行の id で URL の # からその行へ飛ばす。
  */
 export function KpiItemEditor({
   items,
   categories,
   usage,
+  openItemId = null,
 }: {
   items: KpiItemRow[];
   categories: KpiItemCategoryOption[];
   usage: UsageMap;
+  /** 入力欄を開いておく項目。固定枠は直せないので開かない。無い項目を指されたら何も開かない */
+  openItemId?: string | null;
 }) {
   const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [creating, setCreating] = useState<Draft | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<Draft | null>(null);
+  /* 開いておくのは最初に描くときだけ。保存や取り消しで閉じたあとは、URL に残っていても開き直さない */
+  const [opened] = useState(() => items.find((i) => i.id === openItemId && !i.isFixedSlot) ?? null);
+  const [editingId, setEditingId] = useState<string | null>(opened?.id ?? null);
+  const [editDraft, setEditDraft] = useState<Draft | null>(() => (opened ? draftFromRow(opened) : null));
 
   const usedByOf = (id: string) => usage[id] ?? [];
   const anyBlocked = items.some((i) => usedByOf(i.id).length > 0);
@@ -122,6 +174,8 @@ export function KpiItemEditor({
   const create = async () => {
     if (creating === null) return;
     if (creating.name.trim() === "" || creating.unit.trim() === "") return;
+    const asking = askingToSend(creating.asking, null);
+    if (asking.problem) return;
     const result = await send({
       kind: "kpiItemCreate",
       name: creating.name.trim(),
@@ -129,7 +183,7 @@ export function KpiItemEditor({
       direction: creating.direction,
       measureType: creating.measureType,
       categoryId: creating.categoryId || null,
-      formula: creating.formula.trim() || null,
+      ...(asking.send ? { asking: askingPayload(creating.asking) } : {}),
       formulaNote: creating.formulaNote.trim() || null,
       remarks: creating.remarks.trim() || null,
       isMonetary: creating.isMonetary,
@@ -147,14 +201,16 @@ export function KpiItemEditor({
   const saveEdit = async (row: KpiItemRow) => {
     if (editDraft === null) return;
     const locked = usedByOf(row.id).length > 0;
+    const asking = askingToSend(editDraft.asking, row.asking);
+    if (asking.problem) return;
     const payload: Record<string, unknown> = {
       kind: "kpiItemUpdate",
       id: row.id,
       name: editDraft.name.trim(),
-      formula: editDraft.formula.trim() || null,
       formulaNote: editDraft.formulaNote.trim() || null,
       remarks: editDraft.remarks.trim() || null,
     };
+    if (asking.send) payload.asking = askingPayload(editDraft.asking);
     if (!locked) {
       payload.unit = editDraft.unit.trim();
       payload.direction = editDraft.direction;
@@ -195,9 +251,10 @@ export function KpiItemEditor({
               const mark = blockedMark(usedByOf(row.id));
               const locked = usedByOf(row.id).length > 0;
               const isEditing = editingId === row.id;
+              const asking = askingNote(row);
 
               return (
-                <li key={row.id} className="card-row" data-off={row.isActive ? undefined : "true"}>
+                <li key={row.id} id={kpiItemAnchor(row.id)} className="card-row" data-off={row.isActive ? undefined : "true"}>
                   {isEditing ? (
                     <ListRowBody number={`No.${row.no}`} wide>
                       <ItemForm
@@ -205,6 +262,8 @@ export function KpiItemEditor({
                         onChange={setEditDraft}
                         categories={categories}
                         locked={locked}
+                        savedAsking={row.asking}
+                        keySetLockedBy={row.keySetLockedBy}
                         busy={saving}
                         submitLabel="保存する"
                         onSubmit={() => void saveEdit(row)}
@@ -233,10 +292,10 @@ export function KpiItemEditor({
                           <>
                             {row.categoryName ?? "分類未設定"} ／ {row.measureType} ／ 単位 {row.unit} ／{" "}
                             {row.direction === "lower" ? "低いほど良い" : "高いほど良い"}
-                            {row.formula && (
+                            {asking && (
                               <>
                                 <br />
-                                計算式 <Code>{row.formula}</Code>
+                                {asking}
                               </>
                             )}
                           </>
@@ -298,6 +357,8 @@ export function KpiItemEditor({
               onChange={setCreating}
               categories={categories}
               locked={false}
+              savedAsking={null}
+              keySetLockedBy={null}
               busy={saving}
               submitLabel="追加する"
               onSubmit={() => void create()}
@@ -323,6 +384,8 @@ function ItemForm({
   onChange,
   categories,
   locked,
+  savedAsking,
+  keySetLockedBy,
   busy,
   submitLabel,
   onSubmit,
@@ -332,12 +395,17 @@ function ItemForm({
   onChange: (draft: Draft) => void;
   categories: KpiItemCategoryOption[];
   locked: boolean;
+  /** 保存されている聞き方。作るときは null */
+  savedAsking: AskingView | null;
+  keySetLockedBy: string | null;
   busy: boolean;
   submitLabel: string;
   onSubmit: () => void;
   onCancel: () => void;
 }) {
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => onChange({ ...draft, [key]: value });
+  const problemId = useId();
+  const { problem } = askingToSend(draft.asking, savedAsking);
 
   return (
     <div>
@@ -397,11 +465,22 @@ function ItemForm({
             </label>
           </>
         )}
+      </div>
 
-        <label>
-          <span className="block text-note text-ink-muted">計算式（任意）</span>
-          <input value={draft.formula} onChange={(e) => set("formula", e.target.value)} className="input mt-1 w-full" placeholder="例：契約件数 ÷ 商談件数" />
-        </label>
+      {savedAsking?.readonlyReason ? (
+        <KpiAskingSummary view={savedAsking} />
+      ) : (
+        <KpiAskingFields
+          draft={draft.asking}
+          onChange={(asking) => set("asking", asking)}
+          keySetLockedBy={keySetLockedBy}
+          busy={busy}
+          problem={problem}
+          problemId={problemId}
+        />
+      )}
+
+      <div className="field-grid mt-4">
         <label>
           <span className="block text-note text-ink-muted">計算式の補足（任意）</span>
           <input value={draft.formulaNote} onChange={(e) => set("formulaNote", e.target.value)} className="input mt-1 w-full" />
@@ -412,7 +491,12 @@ function ItemForm({
         </label>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant="primary" disabled={busy || draft.name.trim() === "" || (!locked && draft.unit.trim() === "")} onClick={onSubmit}>
+        <Button
+          variant="primary"
+          disabled={busy || draft.name.trim() === "" || (!locked && draft.unit.trim() === "") || problem !== null}
+          aria-describedby={problem ? problemId : undefined}
+          onClick={onSubmit}
+        >
           {submitLabel}
         </Button>
         <Button variant="tertiary" disabled={busy} onClick={onCancel}>
