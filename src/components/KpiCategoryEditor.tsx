@@ -1,17 +1,15 @@
 "use client";
 
-import { useSaveAction } from "@/lib/use-refresh";
+import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
 import { Button, Card, Disclosure, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { ListAddRow, ListRowBody } from "@/components/ListRow";
-import { UsedByDetail } from "@/components/UsedByDetail";
-import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
+import { ListAddArea, ListAddRow, ListRowActions, ListRowBody, ListRowItem, ListRows } from "@/components/ListRow";
+import { UsedByDetail, blockedRows } from "@/components/UsedByDetail";
 import {
   DELETE_LABEL,
   KPI_CATEGORY_BLOCKED_KEEP,
   KPI_CATEGORY_BLOCKED_WHY,
-  blockedMark,
   kpiCategoryDeleteConfirmText,
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
@@ -32,35 +30,17 @@ export interface KpiCategoryRow {
  * 既存7カテゴリはすべて何らかのKPI項目に紐づいているため、常に消せない（＝壊れない）。
  */
 export function KpiCategoryEditor({ categories, usage }: { categories: KpiCategoryRow[]; usage: UsageMap }) {
-  const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const { send, remove, saving, error, message } = useMasterAction("kpiCategory");
   const [newName, setNewName] = useState<string | null>(null);
 
   const create = async () => {
     if (newName === null || newName.trim() === "") return;
-    setError(null);
-    setMessage(null);
-    const result = await save(masterSave({ kind: "kpiCategoryCreate", name: newName.trim() }));
-    if (!result.ok) {
-      // 入力した名前は残す（直してもう一度押せるように）
-      setError(result.message);
-      return;
-    }
-    setMessage(result.message);
-    setNewName(null);
+    const ok = await send({ kind: "kpiCategoryCreate", name: newName.trim() });
+    // 失敗したときは入力した名前を残す（直してもう一度押せるように）
+    if (ok) setNewName(null);
   };
 
-  const remove = async (id: string) => {
-    setError(null);
-    setMessage(null);
-    const result = await save(masterDelete("kpiCategory", id));
-    if (result.ok) setMessage(result.message);
-    else setError(result.message);
-  };
-
-  const usedByOf = (id: string) => usage[id] ?? [];
-  const anyBlocked = categories.some((c) => usedByOf(c.id).length > 0);
+  const { usedByOf, markOf, anyBlocked } = blockedRows(usage, categories);
 
   return (
     <div className="stack">
@@ -70,17 +50,17 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
       {/* 行の形はほかの一覧と同じ（番号 → 本文 → 補足 → 使っている場所、操作は右の列。spec §28-14） */}
       <Card>
         {categories.length > 0 && (
-          <ol className="list-rows" aria-label="KPIカテゴリ">
+          <ListRows label="KPIカテゴリ">
             {categories.map((c, index) => {
-              const mark = blockedMark(usedByOf(c.id));
+              const mark = markOf(c.id);
               return (
-                <li key={c.id} className="card-row">
+                <ListRowItem key={c.id}>
                   <ListRowBody number={index + 1} text={c.name} note={c.description ?? undefined}>
                     {mark !== null && <UsedByDetail mark={mark} usedBy={usedByOf(c.id)} />}
                   </ListRowBody>
                   {/* 使っているカテゴリは消せないので、操作の列を作らない（使っている場所は本文の下に出る） */}
                   {mark === null && (
-                    <div className="row-actions">
+                    <ListRowActions>
                       <ConfirmButton
                         label={DELETE_LABEL}
                         variant="danger-outline"
@@ -89,15 +69,15 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
                         confirm={kpiCategoryDeleteConfirmText(c.name)}
                         onConfirm={() => void remove(c.id)}
                       />
-                    </div>
+                    </ListRowActions>
                   )}
-                </li>
+                </ListRowItem>
               );
             })}
-          </ol>
+          </ListRows>
         )}
         {/* 足すボタンは、どの一覧でも一覧の下の左端に置く。カテゴリが無いことは、その右に書く（spec §28-14） */}
-        <div className={categories.length > 0 ? "card-pad border-t border-line" : "card-pad"}>
+        <ListAddArea hasRows={categories.length > 0}>
           {newName === null ? (
             <ListAddRow empty={categories.length === 0 && "カテゴリはまだありません。"} note="新しいKPIの分類を1つ増やします。">
               <Button variant="secondary" disabled={saving} onClick={() => setNewName("")}>
@@ -125,7 +105,7 @@ export function KpiCategoryEditor({ categories, usage }: { categories: KpiCatego
               </div>
             </>
           )}
-        </div>
+        </ListAddArea>
       </Card>
 
       {anyBlocked && (

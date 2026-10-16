@@ -5,7 +5,6 @@ import {
   COMPARISON_LEAD,
   COMPARISON_OPEN_LABEL,
   FORM_LEDGER_PATH,
-  NO_TEMPLATE_BADGE,
   NO_TEMPLATE_HINT,
   REBUILD_LABEL,
   SELECTION_LEDGER_PATH,
@@ -22,6 +21,7 @@ import {
   type ComparisonGapInput,
   type ComparisonPageKey,
 } from "./comparison-gap";
+import { NO_TEMPLATE_BADGE } from "./scheme";
 
 /*
  * 比べる警告（DD-012・受入 AC1）。

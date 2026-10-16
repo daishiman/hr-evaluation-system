@@ -6,19 +6,14 @@
    既存の呼び出しのために、ここからも同じものを見えるようにしておく。 */
 export { RANK_RATIO } from "@/lib/domain/evaluation-view";
 import { RANK_RATIO as RATIO } from "@/lib/domain/evaluation-view";
+import { formatJstTime, toJstClock } from "@/lib/domain/jst";
 
 export function rankToPercent(rank: string): number {
   return RATIO[rank] ?? 0;
 }
 
-/* 日付と時刻は日本時間（UTC+9。夏時間なし）で書く。サーバー（Workers）は UTC で動くので、
-   機械の時間帯で読む getDate・getHours を使うと、日本時間の0時〜9時の出来事が前の日・9時間前になる。
-   CSV（csv.ts の formatDateTime）と同じく、9時間進めてから getUTC* で読む。 */
-const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
-
-function toJstClock(d: Date): Date {
-  return new Date(d.getTime() + JST_OFFSET_MS);
-}
+/* 日付と時刻は日本時間（UTC+9）で書く。時間帯の読み替えは domain/jst.ts に1つだけ置き、
+   CSV（csv.ts の formatDateTime）と同じものを使う。 */
 
 export function formatDate(v: string | Date | null | undefined): string {
   if (!v) return "—";
@@ -37,10 +32,7 @@ export function formatDate(v: string | Date | null | undefined): string {
  */
 export function formatDateTime(v: Date | null | undefined): string {
   if (!v || Number.isNaN(v.getTime())) return "—";
-  const j = toJstClock(v);
-  const hh = String(j.getUTCHours()).padStart(2, "0");
-  const mm = String(j.getUTCMinutes()).padStart(2, "0");
-  return `${formatDate(v)} ${hh}:${mm}`;
+  return `${formatDate(v)} ${formatJstTime(v)}`;
 }
 
 export function formatPeriod(start?: string | null, end?: string | null): string {

@@ -109,21 +109,23 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
        開いた先に省く理由は無いので、画面側は UsedByDetail で全件を並びにする。
        placesText はサーバーが返す文（deleteBlockedReason）に残っている。 */
     for (const source of [guidelineEditor, gradeEditor, promoEditor, setEditor]) {
-      // ①消せないという事実（行の印）と、②使っている場所（押すと全件が並びで出る）
-      expect(source).toContain("blockedMark");
+      // ①消せないという事実（行の印。blockedRows は中で blockedMark を呼ぶ）と、②使っている場所（押すと全件が並びで出る）
+      expect(source).toMatch(/\bblockedMark\(|\bblockedRows\(/);
       expect(source).toContain("UsedByDetail");
-      // ③消せない理由 ④代わりの手段（カードの下に1か所・押すと出る）
-      expect(source).toContain("BLOCKED_WHY");
-      expect(source).toContain("BLOCKED_WHAT");
-      expect(source).toContain("BLOCKED_KEEP");
-      // 畳んだものを開く場所が必ずある（畳む＝隠すにしない）
-      expect(source).toContain("BLOCKED_HELP_LABEL");
-      expect(source).toContain("Disclosure");
+      // ③消せない理由 ④代わりの手段（カードの下に1か所・押すと出る）は、4つの画面で同じ文なので BlockedHelp に集約した
+      expect(source).toContain("<BlockedHelp");
       expect(source).toContain("DELETE_LABEL");
     }
-    /* 開く場所（InlineDetail）と全件の並びは、4つの画面で1つの部品に集約している。
-       ここが省略に戻ったら気づけるよう、部品そのものを見る。 */
+    /* 開く場所（InlineDetail）と全件の並び、カードの下の理由と代わりの手段は、4つの画面で1つの部品に集約している。
+       ここが省略に戻ったら気づけるよう、部品そのものを見る（描いた中身は UsedByDetail.test.ts で見る）。 */
     const usedByDetail = read("src/components/UsedByDetail.tsx");
+    expect(usedByDetail).toContain("blockedMark");
+    expect(usedByDetail).toContain("BLOCKED_WHY");
+    expect(usedByDetail).toContain("BLOCKED_WHAT");
+    expect(usedByDetail).toContain("BLOCKED_KEEP");
+    // 畳んだものを開く場所が必ずある（畳む＝隠すにしない）
+    expect(usedByDetail).toContain("BLOCKED_HELP_LABEL");
+    expect(usedByDetail).toContain("Disclosure");
     expect(usedByDetail).toContain("InlineDetail");
     expect(usedByDetail).toContain("usedBy.map");
     expect(usedByDetail).not.toContain("placesText");

@@ -561,7 +561,7 @@ describe("画面の器の作法", () => {
     // 「行ったものだけ はい」「受講しただけは いいえ」は、1問ごとに当てはめる物差し。
     // これが画面の外へ出ると、下のほうの設問だけ違う基準で答えてしまう。
     const source = readFileSync(join(SRC, "components", "FormAnswer.tsx"), "utf8");
-    expect(source).toMatch(/<CardHead\s+pinned\s+narrow\s+heading\s+title=\{SECTION_LABEL/);
+    expect(source).toMatch(/<CardHead\s+pinned\s+narrow\s+heading\s+title=\{sectionLabel\(g\.section\)\}/);
     expect(source).toMatch(/sub=\{SECTION_HELP\[g\.section\]\}/);
     // 同じ説明を帯と本文の2箇所に出さない（帯へ移したぶんは節見出しから外す）
     expect(source).not.toContain("<SectionHeading help=");

@@ -22,6 +22,7 @@ import { checkNumberMagnitude, defaultIntegerFlag } from "@/lib/domain/number-in
 import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 import { loadStaleAsking } from "@/lib/stale-asking-loader";
+import { SCREEN_SECTIONS } from "@/lib/question-order";
 
 /**
  * アンケートの作成・公開・締め切り・内容の変更と、設問の保存（会社の管理者のみ）。
@@ -286,7 +287,8 @@ export async function rebuildFormQuestions(raw: unknown) {
 const questionSchema = z.object({
   /** 既存の設問はIDを付けて送る。新規は省略する。 */
   id: z.string().optional(),
-  section: z.enum(["support", "operation", "training", "test", "behavior", "kpi", "free"]),
+  // 受け付ける節は、画面に描く節（SCREEN_SECTIONS）と同じ組。手で写すと、節を足したときに保存だけ断る
+  section: z.enum(SCREEN_SECTIONS),
   questionType: z.enum(["yesno", "single", "multi", "number", "text", "scale"]),
   title: z.string().min(1, "設問文を入力してください").max(300),
   helpText: z.string().max(300).nullable().optional(),

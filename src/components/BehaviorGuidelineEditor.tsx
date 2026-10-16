@@ -2,20 +2,12 @@
 
 import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
-import { Badge, Button, Card, CardHead, Disclosure, FieldGroup, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, FieldGroup, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { ListAddRow, ListRowBody } from "@/components/ListRow";
-import { UsedByDetail } from "@/components/UsedByDetail";
+import { ListAddRow, ListRowActions, ListRowBody, ListRowItem, ListRows } from "@/components/ListRow";
+import { BlockedHelp, UsedByDetail, blockedRows } from "@/components/UsedByDetail";
 import { behaviorBandLabel, type BehaviorBandSetRow } from "@/lib/domain/behavior";
-import {
-  BLOCKED_HELP_LABEL,
-  BLOCKED_KEEP,
-  BLOCKED_WHAT,
-  BLOCKED_WHY,
-  DELETE_LABEL,
-  blockedMark,
-  deleteConfirmText,
-} from "@/lib/domain/master-delete";
+import { DELETE_LABEL, deleteConfirmText } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { useDraftMap } from "@/components/use-draft-map";
@@ -74,8 +66,7 @@ export function BehaviorGuidelineEditor({
 
   /* 観点ごとに残すのは「使用中（◯件）」の一言だけ。どこで使っているかは押したら出す。
      全観点で同じになる「なぜ消せないか」は、この部品の一番下に1つだけ置く。 */
-  const usedByOf = (id: string) => usage[id] ?? [];
-  const anyBlocked = list.some((g) => usedByOf(g.id).length > 0);
+  const { usedByOf, markOf, anyBlocked } = blockedRows(usage, list);
 
   return (
     <FieldGroup disabled={saving} aria-busy={saving} bodyClassName="stack">
@@ -90,7 +81,7 @@ export function BehaviorGuidelineEditor({
       )}
 
       {list.map((g) => {
-        const mark = blockedMark(usedByOf(g.id));
+        const mark = markOf(g.id);
         const renaming = editingName.drafts[g.id] !== undefined;
         return (
         <Card key={g.id} off={!g.isActive}>
@@ -186,7 +177,7 @@ export function BehaviorGuidelineEditor({
           )}
 
           {/* 段階の行は、ほかの一覧と同じ行の形（番号の列に点数、本文、右の列に操作。spec §28-14） */}
-          <ol className="list-rows" aria-label={`「${g.aspectName}」の段階`}>
+          <ListRows label={`「${g.aspectName}」の段階`}>
             {[...g.levels]
               .sort((a, b) => b.score - a.score)
               .map((lv) => {
@@ -198,7 +189,7 @@ export function BehaviorGuidelineEditor({
                   </>
                 );
                 return (
-                  <li key={lv.id} className="card-row">
+                  <ListRowItem key={lv.id}>
                     {draft === undefined ? (
                       <ListRowBody
                         number={score}
@@ -251,7 +242,7 @@ export function BehaviorGuidelineEditor({
                       </ListRowBody>
                     )}
                     {draft === undefined && (
-                      <div className="row-actions">
+                      <ListRowActions>
                         <Button
                           variant="tertiary"
                           disabled={saving}
@@ -259,12 +250,12 @@ export function BehaviorGuidelineEditor({
                         >
                           内容を直す
                         </Button>
-                      </div>
+                      </ListRowActions>
                     )}
-                  </li>
+                  </ListRowItem>
                 );
               })}
-          </ol>
+          </ListRows>
         </Card>
         );
       })}
@@ -309,13 +300,7 @@ export function BehaviorGuidelineEditor({
 
       {/* 全観点で同じ文になる「なぜ消せないか」は、観点の箱から外してここへ1つだけ置く。
           「使用中」の観点が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
-      {anyBlocked && (
-        <Disclosure summary={BLOCKED_HELP_LABEL}>
-          <p className="m-0 text-sub">{BLOCKED_WHY}</p>
-          <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
-          <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
-        </Disclosure>
-      )}
+      {anyBlocked && <BlockedHelp />}
     </FieldGroup>
   );
 }

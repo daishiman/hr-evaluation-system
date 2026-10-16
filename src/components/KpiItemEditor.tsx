@@ -1,18 +1,16 @@
 "use client";
 
-import { useSaveAction } from "@/lib/use-refresh";
+import { useMasterAction } from "@/components/use-master-action";
 import { useId, useState } from "react";
 import { Badge, Button, Card, Code, Disclosure, FieldGroup, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { ListAddRow, ListRowBody } from "@/components/ListRow";
-import { UsedByDetail } from "@/components/UsedByDetail";
-import { masterDelete, masterRequest, masterSave } from "@/components/master-request";
+import { ListAddArea, ListAddRow, ListRowActions, ListRowBody, ListRowItem, ListRows } from "@/components/ListRow";
+import { UsedByDetail, blockedRows } from "@/components/UsedByDetail";
 import {
   DELETE_LABEL,
   KPI_ITEM_BLOCKED_KEEP,
   KPI_ITEM_BLOCKED_WHY,
   KPI_ITEM_LOCKED_NOTE,
-  blockedMark,
   kpiItemDeleteConfirmText,
 } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
@@ -148,35 +146,22 @@ export function KpiItemEditor({
   /** 入力欄を開いておく項目。固定枠は直せないので開かない。無い項目を指されたら何も開かない */
   openItemId?: string | null;
 }) {
-  const { save, saving } = useSaveAction(masterRequest, { resource: "masters" });
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const { send, remove, saving, error, message, clearResult } = useMasterAction("kpiItem");
   const [creating, setCreating] = useState<Draft | null>(null);
   /* 開いておくのは最初に描くときだけ。保存や取り消しで閉じたあとは、URL に残っていても開き直さない */
   const [opened] = useState(() => items.find((i) => i.id === openItemId && !i.isFixedSlot) ?? null);
   const [editingId, setEditingId] = useState<string | null>(opened?.id ?? null);
   const [editDraft, setEditDraft] = useState<Draft | null>(() => (opened ? draftFromRow(opened) : null));
 
-  const usedByOf = (id: string) => usage[id] ?? [];
-  const anyBlocked = items.some((i) => usedByOf(i.id).length > 0);
+  const { usedByOf, markOf, anyBlocked } = blockedRows(usage, items);
 
-  /* 保存の応答に保存後の画面が同梱されるので、別に読み直しを頼まない。
-     失敗したときは入力欄を閉じずに残す（呼び出し側は ok のときだけ閉じる）。 */
-  const send = async (payload: Record<string, unknown>): Promise<{ ok: boolean; message: string }> => {
-    setError(null);
-    setMessage(null);
-    const result = await save(masterSave(payload));
-    if (!result.ok) setError(result.message);
-    else setMessage(result.message);
-    return { ok: result.ok, message: result.message };
-  };
-
+  /* 失敗したときは入力欄を閉じずに残す（send が true を返したときだけ閉じる）。 */
   const create = async () => {
     if (creating === null) return;
     if (creating.name.trim() === "" || creating.unit.trim() === "") return;
     const asking = askingToSend(creating.asking, null);
     if (asking.problem) return;
-    const result = await send({
+    const ok = await send({
       kind: "kpiItemCreate",
       name: creating.name.trim(),
       unit: creating.unit.trim(),
@@ -188,14 +173,13 @@ export function KpiItemEditor({
       remarks: creating.remarks.trim() || null,
       isMonetary: creating.isMonetary,
     });
-    if (result.ok) setCreating(null);
+    if (ok) setCreating(null);
   };
 
   const startEdit = (row: KpiItemRow) => {
     setEditingId(row.id);
     setEditDraft(draftFromRow(row));
-    setError(null);
-    setMessage(null);
+    clearResult();
   };
 
   const saveEdit = async (row: KpiItemRow) => {
@@ -218,8 +202,8 @@ export function KpiItemEditor({
       payload.categoryId = editDraft.categoryId || null;
       payload.isMonetary = editDraft.isMonetary;
     }
-    const result = await send(payload);
-    if (result.ok) {
+    const ok = await send(payload);
+    if (ok) {
       setEditingId(null);
       setEditDraft(null);
     }
@@ -227,14 +211,6 @@ export function KpiItemEditor({
 
   const toggleActive = async (row: KpiItemRow) => {
     await send({ kind: "kpiItemUpdate", id: row.id, isActive: !row.isActive });
-  };
-
-  const remove = async (id: string) => {
-    setError(null);
-    setMessage(null);
-    const result = await save(masterDelete("kpiItem", id));
-    if (result.ok) setMessage(result.message);
-    else setError(result.message);
   };
 
   return (
@@ -246,15 +222,15 @@ export function KpiItemEditor({
           KPI 項目は No. で並ぶので並べ替えは置かない */}
       <Card>
         {items.length > 0 && (
-          <ol className="list-rows" aria-label="KPI項目">
+          <ListRows label="KPI項目">
             {items.map((row) => {
-              const mark = blockedMark(usedByOf(row.id));
+              const mark = markOf(row.id);
               const locked = usedByOf(row.id).length > 0;
               const isEditing = editingId === row.id;
               const asking = askingNote(row);
 
               return (
-                <li key={row.id} id={kpiItemAnchor(row.id)} className="card-row" data-off={row.isActive ? undefined : "true"}>
+                <ListRowItem key={row.id} id={kpiItemAnchor(row.id)} off={!row.isActive}>
                   {isEditing ? (
                     <ListRowBody number={`No.${row.no}`} wide>
                       <ItemForm
@@ -305,7 +281,7 @@ export function KpiItemEditor({
                       </ListRowBody>
                       {/* 固定枠（等級要件達成率）は制度の決まりなので、直す・止める・消すを出さない */}
                       {!row.isFixedSlot && (
-                        <div className="row-actions">
+                        <ListRowActions>
                           <Button variant="tertiary" disabled={saving} onClick={() => startEdit(row)}>
                             内容を直す
                           </Button>
@@ -331,17 +307,17 @@ export function KpiItemEditor({
                               onConfirm={() => void remove(row.id)}
                             />
                           )}
-                        </div>
+                        </ListRowActions>
                       )}
                     </>
                   )}
-                </li>
+                </ListRowItem>
               );
             })}
-          </ol>
+          </ListRows>
         )}
         {/* 足すボタンは、どの一覧でも一覧の下の左端に置く。項目が無いことは、その右に書く（spec §28-14） */}
-        <div className={items.length > 0 ? "card-pad border-t border-line" : "card-pad"}>
+        <ListAddArea hasRows={items.length > 0}>
           {creating === null ? (
             <ListAddRow
               empty={items.length === 0 && "KPI項目はまだありません。"}
@@ -365,7 +341,7 @@ export function KpiItemEditor({
               onCancel={() => setCreating(null)}
             />
           )}
-        </div>
+        </ListAddArea>
       </Card>
 
       {anyBlocked && (

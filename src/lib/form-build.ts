@@ -25,16 +25,6 @@ import {
  * アンケート側で文言を直す運用にすると、どちらが本当の制度か分からなくなる。
  */
 
-export const SECTION_LABEL: Record<string, string> = {
-  support: "支援について",
-  operation: "運営について",
-  training: "受講後の報告書",
-  test: "独学後のテスト",
-  behavior: "行動指針",
-  kpi: "実績の入力",
-  free: "自由記入",
-};
-
 /**
  * 選択肢の値で重なっているもの（重なった値を1回ずつ、最初に重なった順）。前後の空白は同じ値とみなす。
  *

@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { checkSubmission, missingAnswersMessage, normalizeAnswers, type SubmissionQuestion } from "@/lib/submission-check";
+import { isAnswered } from "@/lib/domain/answer-snapshot";
+import {
+  checkSubmission,
+  missingAnswersMessage,
+  missingRequired,
+  normalizeAnswers,
+  type SubmissionQuestion,
+} from "@/lib/submission-check";
+import { stripComments } from "@/test-support/source-code";
 
 const q = (patch: Partial<SubmissionQuestion> & { id: string }): SubmissionQuestion => ({
   section: "free", displayOrder: 0, questionType: "text", title: patch.id, required: false,
@@ -35,6 +43,27 @@ describe("normalizeAnswers（送られた答えを保存する形にそろえる
     expect(text).toMatchObject({ valueNumber: null, valueText: "書いた文", valueJson: null });
     expect(multi).toMatchObject({ valueNumber: null, valueJson: JSON.stringify(["甲", "乙"]) });
     expect(num).toMatchObject({ valueNumber: 3, valueJson: null });
+  });
+});
+
+describe("missingRequired（答えていない必須の設問）", () => {
+  it("必須の設問だけを、画面の上から下の順に返す（保存した順ではない。任意の設問は入れない）", () => {
+    expect(missingRequired(questions, () => false).map((x) => x.id)).toEqual(["count", "rate", "pick"]);
+  });
+
+  it("答えたかどうかは渡された見方で決め、元の配列は並べ替えない", () => {
+    const before = questions.map((x) => x.id);
+    expect(missingRequired(questions, (x) => x.id === "count").map((x) => x.id)).toEqual(["rate", "pick"]);
+    expect(missingRequired(questions, () => true)).toEqual([]);
+    expect(questions.map((x) => x.id)).toEqual(before);
+  });
+
+  it("提出の検査の未入力の断りは、missingRequired が拾った設問から作る（件数も「例：」も同じ）", () => {
+    const sent = normalizeAnswers(questions, [{ questionId: "rate", valueNumber: 40 }, { questionId: "pick", valueChoices: [] }]);
+    const answered = new Set(sent.filter((a) => isAnswered(a.question.questionType, a)).map((a) => a.question.id));
+    const result = checkSubmission(questions, sent);
+    expect(result).toEqual({ ok: false, message: missingAnswersMessage(missingRequired(questions, (x) => answered.has(x.id))) });
+    expect(result.ok ? "" : result.message).toBe("未入力の項目が2件あります（例：件数の設問）。入力してから提出してください。");
   });
 });
 
@@ -90,5 +119,21 @@ describe("提出の検査を1か所で持つ", () => {
     // 未入力の知らせの文も同じ1つから作る（画面と受け口で文が食い違わない）
     expect(answer).toContain("missingAnswersMessage(missing)");
     expect(answer).not.toContain("未入力の項目が${");
+  });
+
+  it("必須の未入力は、回答画面と提出の検査が同じ missingRequired で拾う", () => {
+    // 別々に拾うと、確認の欄の知らせと受け口の断りで件数や「例：」が食い違う。
+    // 回答画面は2つの文が同じになることを当てにして、同じ文を2つ出さないようにしている（submitError !== missingNote）
+    const answer = stripComments(read("src/components/FormAnswer.tsx"));
+    expect(answer).toContain("const missing = missingRequired(questions, ");
+    expect(answer).not.toContain("q.required && !isAnswered(");
+    // 画面の順に並べるのも missingRequired の中だけ（回答画面で自前に並べ直さない）
+    expect(answer).not.toContain("inScreenOrder(");
+    const lib = stripComments(read("src/lib/submission-check.ts"));
+    const check = lib.slice(lib.indexOf("export function checkSubmission"));
+    expect(check).toContain("const missing = missingRequired(questions, ");
+    // 必須かどうかを見る式は missingRequired の1か所だけ。受け口は checkSubmission に任せて自分では見ない
+    expect(lib.match(/\.required\b/g)).toHaveLength(1);
+    expect(stripComments(read("src/actions/responses.ts"))).not.toMatch(/\.required\b/);
   });
 });

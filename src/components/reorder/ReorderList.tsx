@@ -14,8 +14,9 @@ import { HANDLE_ATTR, useLongPressReorder } from "@/components/reorder/useLongPr
  *
  * 行の操作（内容を直す・今後使わない など）は renderActions で渡す。本文の中に置かず行の列として描くので、
  * 操作の右端と矢印の右端が1本にそろう。段組みは一覧の幅で決める（globals.css の並べ替えの節）。
- * 幅はこの部品が測って ol の data-reorder-w に書く。測ったあとは size container を使わない（Chromium の不具合で、
- * 並べ替えを2回続けると行が描かれなくなる。DD-005）。測るまでの間だけ、同じ境目を container query で当てる。
+ * 幅はこの部品が測って ol の data-reorder-w に書く。測ったあとは size container を使わない（DD-005 の保険として残す。
+ * 行が描かれなくなる不具合の根は、fieldset の直下で子が出入りするのと同じフレームに size container の中身が
+ * 変わること。DD-017）。測るまでの間だけ、同じ境目を container query で当てる。
  */
 
 export type ReorderItem = { id: string; label: string };

@@ -66,6 +66,20 @@ export function missingAnswersMessage(missing: readonly { title: string }[]): st
 }
 
 /**
+ * 答えていない必須の設問を、回答画面の上から下の順に返す。
+ *
+ * 回答画面（確認の欄の知らせ・「最初の未入力の欄へ移る」）と、提出の検査（checkSubmission）がこの1つを使う。
+ * 2か所で別に拾うと、画面の知らせと受け口の断りで、件数や「例：」に挙がる設問が食い違う。
+ * 答えたかどうかの見方は呼ぶ側が渡す（画面は入力中の値を、受け口は送られた答えを見る）。
+ */
+export function missingRequired<Q extends { id: string; section: string; displayOrder: number; required: boolean }>(
+  questions: readonly Q[],
+  isAnsweredOf: (question: Q) => boolean,
+): Q[] {
+  return inScreenOrder(questions).filter((q) => q.required && !isAnsweredOf(q));
+}
+
+/**
  * 提出してよいかを見る（下書きには当てない。打っている最中に断ると入力が止まる）。
  *
  * 数値の範囲（0以上・1以上・整数だけ、など）→ 必須の順に見て、最初に見つかった断りを1つ返す。
@@ -100,7 +114,7 @@ export function checkSubmission<Q extends SubmissionQuestion>(
   const answeredIds = new Set(
     answers.filter((a) => isAnswered(a.question.questionType, a)).map((a) => a.question.id),
   );
-  const missing = screen.filter((q) => q.required && !answeredIds.has(q.id));
+  const missing = missingRequired(questions, (q) => answeredIds.has(q.id));
   if (missing.length > 0) return { ok: false, message: missingAnswersMessage(missing) };
   return { ok: true };
 }

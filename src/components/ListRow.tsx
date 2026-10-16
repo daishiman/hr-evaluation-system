@@ -9,7 +9,7 @@ import { SplitRow } from "@/components/ui";
  *
  * 行の操作（内容を直す・今後使わない など）は本文に入れず、行の右端の列に置く。
  *   - 並べ替えのある一覧: ReorderList の renderActions
- *   - 並べ替えの無い一覧: <ol className="list-rows"> の <li className="card-row"> の中の .row-actions
+ *   - 並べ替えの無い一覧: ListRows の ListRowItem の中の ListRowActions（下にある器）
  * どちらも、狭い一覧では本文の下へ行の幅いっぱいに割り付け、広い一覧では本文の右に1段で並べる（globals.css）。
  */
 export function ListRowBody({
@@ -65,6 +65,35 @@ export function ListRowNumber({ wide = false, children }: { wide?: boolean; chil
 }
 
 /**
+ * 並べ替えの無い一覧の器（KPI 項目・KPI カテゴリ・行動指針の段階・基準セット）。行は ListRowItem で包む。
+ * 段組み（操作を本文の下に置くか右に置くか）は globals.css の container query が
+ * class 名（list-rows・card-row・row-actions）で決めるので、並べ替えの無い一覧ではこの3つをここでだけ書く
+ * （並べ替えのある一覧は ReorderList が書く）。
+ * 画面ごとに書くと、1つずれただけでその画面の段組みが外れる。
+ */
+export function ListRows({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
+  return (
+    <ol className={clsx("list-rows", className)} aria-label={label}>
+      {children}
+    </ol>
+  );
+}
+
+/** ListRows の1行。使わない行は off で沈める（.card-row[data-off] の見た目。Card の off と同じ） */
+export function ListRowItem({ id, off = false, children }: { id?: string; off?: boolean; children: ReactNode }) {
+  return (
+    <li id={id} className="card-row" data-off={off ? "true" : undefined}>
+      {children}
+    </li>
+  );
+}
+
+/** ListRowItem の右端の列（行の操作）。直している行には置かない（入力欄を行の幅いっぱいに使う） */
+export function ListRowActions({ children }: { children: ReactNode }) {
+  return <div className="row-actions">{children}</div>;
+}
+
+/**
  * 一覧に1件足すボタンの置き場所。どの画面でも、一覧の下の左端に「＋ ○○を追加」を置く。
  * 置き場所を画面ごとに変えない（右端に置いた画面と左端に置いた画面が混ざると、押す場所を毎回探すことになる）。
  * 注記（押すと何が起きるか・足せない理由）は補足なので、SplitRow で行の右端に寄せる（§28-9。左に積むと右が空く）。
@@ -88,4 +117,12 @@ export function ListAddRow({ children, note, empty }: { children: ReactNode; not
       <div className="flex flex-wrap items-center gap-2">{children}</div>
     </SplitRow>
   );
+}
+
+/**
+ * カードの中の一覧の下で、1件足す場所（ListAddRow か、開いた入力欄）を包む余白。
+ * 一覧に行があるときだけ、一覧とのあいだに区切り線を引く（空の一覧の上に線だけを残さない。spec §28-14）。
+ */
+export function ListAddArea({ hasRows, children }: { hasRows: boolean; children: ReactNode }) {
+  return <div className={hasRows ? "card-pad border-t border-line" : "card-pad"}>{children}</div>;
 }

@@ -15,6 +15,8 @@
  * 行は増えない。保存期間も USAGE_RETENTION_DAYS で切る。
  */
 
+import { jstDateKey } from "./jst";
+
 /* ───────────────────────── 数える単位 ───────────────────────── */
 
 /** 画面1枚ぶんの数。すべて「その日・その画面・その役割」での合計。 */
@@ -115,17 +117,11 @@ export const USAGE_BATCH_MAX_APIS = 40;
 
 /* ───────────────────────── 日付（日本時間で切る） ───────────────────────── */
 
-const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
-
-/**
- * その時刻が日本時間で何日にあたるかを `YYYY-MM-DD` で返す。
- *
+/*
+ * 記録の日付の鍵は jst.ts の jstDateKey で作る（記録・掃除・集計の3か所。lib/usage.ts）。
  * 世界標準時で切ると、日本の朝9時より前の操作が前日に入る。「昨日の朝礼前に
  * 何が起きたか」を読む画面でこれが起きると、日付の並びが業務の感覚と合わなくなる。
  */
-export function usageDateKey(at: Date): string {
-  return new Date(at.getTime() + JST_OFFSET_MS).toISOString().slice(0, 10);
-}
 
 /** `YYYY-MM-DD` を days 日ずらす。 */
 export function shiftDateKey(dateKey: string, days: number): string {
@@ -141,7 +137,7 @@ export function dateKeyRange(endDateKey: string, days: number): string[] {
 
 /** これより古い日付は消してよい、という境目（この日付は残す）。 */
 export function usageRetentionCutoff(today: Date, days: number = USAGE_RETENTION_DAYS): string {
-  return shiftDateKey(usageDateKey(today), -(days - 1));
+  return shiftDateKey(jstDateKey(today), -(days - 1));
 }
 
 /* ───────────────────────── 足し込み ───────────────────────── */

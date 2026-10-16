@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { FormPreview, type PreviewQuestion } from "./FormPreview";
 import { RespondentGuide } from "./RespondentGuide";
 import { toAnswerQuestions } from "./answer-questions";
+import { PREVIEW_MARK_NOTE, PREVIEW_NO_SAVE_NOTE } from "./form-preview-notes";
 import { answerBlockLabel, type AnswerBlock } from "@/lib/domain/form-entry";
 import { SECTION_HELP } from "@/lib/view";
 
@@ -412,5 +413,30 @@ describe("見本の画面からの試しの回答（?try=1）", () => {
     const gate = admin.lastIndexOf("{canEditForm(viewer.role) && (", link);
     expect(gate).toBeGreaterThan(0);
     expect(admin.slice(gate, link)).not.toContain(")}");
+  });
+});
+
+describe("見本の見方の文（2つの画面で同じ文）", () => {
+  const read = (file: string) => readFileSync(path.join(process.cwd(), file), "utf8");
+  const pages = ["src/app/forms/[id]/page.tsx", "src/app/admin/forms/[id]/page.tsx"];
+
+  it("印の読み方と保存されないことは、両方の画面が form-preview-notes の同じ文を出す（画面ごとに書き写さない）", () => {
+    // 写しだと、片方だけ直したときに同じ見本の説明が画面ごとに食い違う
+    for (const file of pages) {
+      const page = read(file);
+      expect(page, file).toContain('from "@/components/form-preview-notes"');
+      expect(page, file).toContain("{PREVIEW_MARK_NOTE}");
+      expect(page, file).toContain("{PREVIEW_NO_SAVE_NOTE}");
+      expect(page, file).not.toContain(PREVIEW_MARK_NOTE);
+      expect(page, file).not.toContain(PREVIEW_NO_SAVE_NOTE);
+    }
+  });
+
+  it("文の中身は、見本が出す印と保存しない作りに合う", () => {
+    // 見本の印は「（任意）」だけ（必須の設問には印を付けない）
+    expect(PREVIEW_MARK_NOTE).toBe("印の無い設問は必須、「（任意）」の設問は空欄でも提出できます。");
+    expect(PREVIEW_NO_SAVE_NOTE).toBe(
+      "文字や数値を打つ欄はなく、選択肢を試しに選んでも保存されません。開いても回答や下書きは作られません。",
+    );
   });
 });

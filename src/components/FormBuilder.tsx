@@ -6,8 +6,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Badge, Button, Card, CardHead, CardRow, FieldGroup, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { NumberField } from "@/components/NumberField";
-import { SECTION_LABEL } from "@/lib/view";
-import { SCREEN_SECTIONS } from "@/lib/question-order";
+import { SCREEN_SECTIONS, sectionLabel } from "@/lib/question-order";
 import {
   createBlankQuestion,
   insertBlankQuestionAfter,
@@ -23,7 +22,7 @@ import { isLinkedQuestion } from "@/lib/domain/form-question-links";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { ReorderList } from "@/components/reorder/ReorderList";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { ListAddRow, ListRowBody, ListRowNumber } from "@/components/ListRow";
+import { ListAddArea, ListAddRow, ListRowBody, ListRowNumber } from "@/components/ListRow";
 
 export type { BuilderQuestion } from "@/components/form-builder-model";
 
@@ -233,7 +232,7 @@ export function FormBuilder({
           const linked = isLinkedQuestion(r);
           const sub = (
             <>
-              {SECTION_LABEL[r.section] ?? r.section} ／ {TYPE_LABEL[r.questionType] ?? r.questionType}
+              {sectionLabel(r.section)} ／ {TYPE_LABEL[r.questionType] ?? r.questionType}
               {r.unit ? ` ／ 単位 ${r.unit}` : ""} ／ {r.required ? "必須" : "任意"}
             </>
           );
@@ -305,7 +304,7 @@ export function FormBuilder({
                   >
                     {SCREEN_SECTIONS.map((sec) => (
                       <option key={sec} value={sec}>
-                        {SECTION_LABEL[sec] ?? sec}
+                        {sectionLabel(sec)}
                       </option>
                     ))}
                   </select>
@@ -470,7 +469,7 @@ export function FormBuilder({
       {/* 足すボタンは、どの一覧でも一覧の下の左端に置く（spec §28-14）。
           設問は答え方で入力欄が変わるので、「＋ 設問を追加」の後ろに答え方を並べ、1回押せば足せるようにする。
           設問が無いことは、別の段にせずその右に書く */}
-      <div className={rows.length > 0 ? "card-pad border-t border-line" : "card-pad"}>
+      <ListAddArea hasRows={rows.length > 0}>
         <ListAddRow
           empty={rows.length === 0 && "設問はまだありません。"}
           note="押した答え方で、一覧の最後に1問足して入力欄を開きます。"
@@ -484,7 +483,7 @@ export function FormBuilder({
             <Button onClick={() => add("free", "text")}>文章で書く</Button>
           </div>
         </ListAddRow>
-      </div>
+      </ListAddArea>
       </Card>
 
       {/* 設問が増えるほど縦に伸びる画面。設問数と保存ボタンは画面下に固定する */}
@@ -521,7 +520,7 @@ function QuestionList({ rows }: { rows: BuilderQuestion[] }) {
               {r.title}
             </>
           }
-          sub={SECTION_LABEL[r.section] ?? r.section}
+          sub={sectionLabel(r.section)}
           /* 答え方と必須かどうかは行の右端へ寄せる。左に詰めると、行の右側がまるごと空く（spec.md §28-9） */
           value={
             <>

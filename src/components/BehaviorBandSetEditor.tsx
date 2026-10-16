@@ -2,21 +2,12 @@
 
 import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
-import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { ListAddRow, ListRowBody } from "@/components/ListRow";
-import { UsedByDetail } from "@/components/UsedByDetail";
+import { ListAddArea, ListAddRow, ListRowActions, ListRowBody, ListRowItem, ListRows } from "@/components/ListRow";
+import { BlockedHelp, UsedByDetail } from "@/components/UsedByDetail";
 import { copiedBandSetName } from "@/lib/domain/behavior";
-import {
-  BAND_SET_ASSIGNED_NEXT,
-  BLOCKED_HELP_LABEL,
-  BLOCKED_KEEP,
-  BLOCKED_WHAT,
-  BLOCKED_WHY,
-  DELETE_LABEL,
-  blockedMark,
-  deleteConfirmText,
-} from "@/lib/domain/master-delete";
+import { BAND_SET_ASSIGNED_NEXT, DELETE_LABEL, blockedMark, deleteConfirmText } from "@/lib/domain/master-delete";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { useDraftMap } from "@/components/use-draft-map";
 
@@ -83,7 +74,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
       </div>
 
       {/* 行の形はほかの一覧と同じ（番号 → 呼び名と札 → 補足 → 使っている場所、操作は右の列。spec §28-14） */}
-      <ol className="list-rows border-t border-line" aria-label="基準セット">
+      <ListRows label="基準セット" className="border-t border-line">
         {sets.map((set, index) => {
           const nameDraft = editingName.drafts[set.id];
           const inUse = set.usedByGradeNames.length > 0;
@@ -96,7 +87,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           const assignedReason = inUse ? BAND_SET_ASSIGNED_NEXT : null;
           const mark = blockedMark(set.usedBy);
           return (
-            <li key={set.id} className="card-row" data-off={set.isActive ? undefined : "true"}>
+            <ListRowItem key={set.id} off={!set.isActive}>
               {nameDraft === undefined ? (
                 <ListRowBody
                   number={index + 1}
@@ -146,7 +137,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                 </ListRowBody>
               )}
               {nameDraft === undefined && (
-                <div className="row-actions">
+                <ListRowActions>
                   <Button variant="tertiary" disabled={saving} onClick={() => editingName.start(set.id, set.name)}>
                     呼び名を直す
                   </Button>
@@ -181,15 +172,16 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       onConfirm={() => void remove(set.id)}
                     />
                   )}
-                </div>
+                </ListRowActions>
               )}
-            </li>
+            </ListRowItem>
           );
         })}
-      </ol>
+      </ListRows>
 
-      {/* 足すボタンは、どの一覧でも一覧の下の左端に置く（spec §28-14） */}
-      <div className="card-pad border-t border-line">
+      {/* 足すボタンは、どの一覧でも一覧の下の左端に置く（spec §28-14）。
+          頭との区切りは上の一覧の線が引くので、基準が0件でも線を2本重ねない */}
+      <ListAddArea hasRows={sets.length > 0}>
         {draft === null ? (
           <ListAddRow note="いまの基準を複製して作れます。空から作ることもできます。">
             <Button variant="secondary" disabled={saving} onClick={openDraft}>
@@ -255,14 +247,10 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
             「使用中」の基準が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
         {sets.some((set) => set.usedBy.length > 0) && (
           <div className="mt-3">
-            <Disclosure summary={BLOCKED_HELP_LABEL}>
-              <p className="m-0 text-sub">{BLOCKED_WHY}</p>
-              <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
-              <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
-            </Disclosure>
+            <BlockedHelp />
           </div>
         )}
-      </div>
+      </ListAddArea>
     </Card>
   );
 }

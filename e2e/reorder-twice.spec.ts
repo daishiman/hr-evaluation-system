@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { improvementFixture } from "./improvement-db-fixture";
 import { switchCompany, waitForHydration } from "./support";
 
-// 並べ替えを2回続けると行が描かれなくなる Chromium の不具合（issues.chromium.org/379030050）の回帰を見る（DD-005）。
+// 並べ替えを2回続けると行が描かれなくなる Chromium の不具合（issues.chromium.org/379030050）の回帰を見る（DD-005。根は DD-017）。
 // 報告のとおり、並べ替えて保存してから、もう一度並べ替えて元に戻す。ドラッグと矢印のボタンの両方で確かめる
 const TEXTS = ["E2E 要件 一", "E2E 要件 二", "E2E 要件 三"];
 const LIST = "支援についての並び";

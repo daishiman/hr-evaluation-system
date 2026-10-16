@@ -340,6 +340,19 @@ describe("指示文の文面", () => {
     expect(formatJst(new Date("2026-08-15T02:34:00Z"))).toBe("2026-08-15 11:34 JST");
   });
 
+  it("日本時間の0時〜9時（UTC ではまだ前の日）も、時間帯の名前（Asia/Tokyo）で読んだ日時と同じ字面にする", () => {
+    const byName = (d: Date) => {
+      const at: Record<string, string> = {};
+      const options = { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false } as const;
+      for (const p of new Intl.DateTimeFormat("ja-JP", options).formatToParts(d)) at[p.type] = p.value;
+      return `${at.year}-${at.month}-${at.day} ${at.hour}:${at.minute} JST`;
+    };
+    expect(formatJst(new Date("2026-08-14T15:05:00Z"))).toBe("2026-08-15 00:05 JST");
+    for (const iso of ["2026-08-14T14:59:00Z", "2026-08-14T15:00:00Z", "2026-08-14T23:59:00Z", "2026-08-15T00:00:00Z", "2026-12-31T15:00:00Z"]) {
+      expect(formatJst(new Date(iso))).toBe(byName(new Date(iso)));
+    }
+  });
+
   it("見出しは「どの画面の何か」だけにし、長い本文は切る", () => {
     expect(buildInstructionTitle(draft)).toBe("[不具合] 評価・結果：保存を押しても、点数が入らないまま前の画面に戻ってしまいます。");
     expect(buildInstructionTitle({ kind: "usability", screenLabel: "社員", body: "あ".repeat(80) })).toBe(

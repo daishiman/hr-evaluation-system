@@ -6,7 +6,8 @@ import { runAction } from "@/lib/action";
 import { getDb, schema as s } from "@/lib/db";
 import { assertCompanyChosen, canManageEmployee, HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
-import { formatJpDate, jstDateString } from "@/lib/domain/form-deadline";
+import { formatJpDate } from "@/lib/domain/form-deadline";
+import { jstDateKey } from "@/lib/domain/jst";
 import { joinMembership } from "@/lib/memberships";
 
 /**
@@ -66,7 +67,7 @@ export async function grantFormExtension(raw: unknown) {
     }
 
     // 過ぎた日付を入れても意味がないので入口で止める（日本時間の今日を基準にする）
-    const today = jstDateString(new Date());
+    const today = jstDateKey(new Date());
     if (input.extendedUntil < today) {
       throw new HttpError(400, "過ぎた日付は指定できません。今日以降の日付を選んでください。");
     }

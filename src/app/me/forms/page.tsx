@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRoute } from "@/lib/session";
 import { listMyForms, type MyFormRow } from "@/lib/response-access";
 import { Badge, Card, CardRow, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
-import { formatPeriod, RESPONSE_STATUS_LABEL } from "@/lib/view";
+import { formatDate, formatPeriod, RESPONSE_STATUS_LABEL } from "@/lib/view";
 import { daysUntilDeadline, formatJpDate } from "@/lib/domain/form-deadline";
 
 export const dynamic = "force-dynamic";
@@ -93,7 +93,7 @@ function FormRow({ row }: { row: MyFormRow }) {
       detail={
         <>
           {row.submittedAt ? (
-            <p className="footnote m-0">提出日 {formatJpDate(jstDay(row.submittedAt))}</p>
+            <p className="footnote m-0">提出日 {formatDate(row.submittedAt)}</p>
           ) : row.deadline.canAnswer && row.deadline.effectiveUntil ? (
             <p className="footnote m-0">
               {formatJpDate(row.deadline.effectiveUntil)}まで
@@ -127,10 +127,4 @@ function FormRow({ row }: { row: MyFormRow }) {
       }
     />
   );
-}
-
-/** 提出日時（UTC保存）を日本時間の日付にして表示する。 */
-function jstDay(d: Date): string {
-  const shifted = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return shifted.toISOString().slice(0, 10);
 }

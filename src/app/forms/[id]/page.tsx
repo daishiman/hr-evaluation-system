@@ -10,6 +10,7 @@ import { FormPreview } from "@/components/FormPreview";
 import { FormAnswer } from "@/components/FormAnswer";
 import { toAnswerQuestions } from "@/components/answer-questions";
 import { RespondentGuide } from "@/components/RespondentGuide";
+import { PREVIEW_MARK_NOTE, PREVIEW_NO_SAVE_NOTE } from "@/components/form-preview-notes";
 import { Badge, Card, InlineDetail, LinkButton, PageTitle, ReasonNote } from "@/components/ui";
 import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
 
@@ -189,11 +190,9 @@ export default async function FormContentDetail({
         <div className="mt-2">
           <InlineDetail summary="この画面の見方">
             <p className="m-0 text-sub">
-              設問文・補足・答え方を、保存されているとおりに表示します。印の無い設問は必須、「（任意）」の設問は空欄でも提出できます。
+              設問文・補足・答え方を、保存されているとおりに表示します。{PREVIEW_MARK_NOTE}
             </p>
-            <p className="m-0 mt-1 text-sub">
-              文字や数値を打つ欄はなく、選択肢を試しに選んでも保存されません。開いても回答や下書きは作られません。
-            </p>
+            <p className="m-0 mt-1 text-sub">{PREVIEW_NO_SAVE_NOTE}</p>
             {canTry && (
               <p className="m-0 mt-1 text-sub">
                 数値の入力から提出の検査までは、上の「試しに回答する」で試せます。回答者と同じ画面で、内容は保存されません。

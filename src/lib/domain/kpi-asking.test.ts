@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   askingPresets,
   askingReadonlyReason,
@@ -17,6 +17,7 @@ import {
   roleLabel,
   type KpiQuestionLike,
 } from "./kpi-asking";
+import * as formulaModule from "./formula";
 import { computeActualValue } from "./formula";
 
 type Row = Record<string, string>;
@@ -103,6 +104,14 @@ describe("文字と設問IDの置き換え", () => {
     expect(keysToLetters("q5_1 ÷ q9_1", keys)).toBe("A ÷ q9_1");
   });
 
+  it("設問の数より後ろの文字と、2文字以上の名前は、設問IDにしない（式の検査が断る）", () => {
+    expect(lettersToKeys("A + C + q9_1", keys)).toBe("q5_1 + C + q9_1");
+  });
+
+  it("閉じていない【は、そこから末尾までを触らずに残す（式の検査が断る）", () => {
+    expect(lettersToKeys("A ÷ 【等級別の B", keys)).toBe("q5_1 ÷ 【等級別の B");
+  });
+
   it("置き換えた式は、そのまま計算できる", () => {
     expect(computeActualValue(lettersToKeys("A ÷ B × 100", keys), { q5_1: 3, q5_2: 4 })).toBe(75);
   });
@@ -148,6 +157,18 @@ describe("checkAskingFormula", () => {
 
   it("等級から決まる値は使える", () => {
     expect(checkAskingFormula("A ÷ 【等級別の半期目標設定上限数】 × 100", 1)).toBeNull();
+  });
+
+  it("式の読み取りが FormulaError 以外で止まったら、断りの文にせず投げ直す", () => {
+    // 文にすると、読む人が直せない内部の止まり方を「式の誤り」として見せてしまう（evaluate.failure-paths.test.ts と同じ通し方）
+    const spy = vi.spyOn(formulaModule, "variablePlacements").mockImplementation(() => {
+      throw new TypeError("説明のつかない止まり方");
+    });
+    try {
+      expect(() => checkAskingFormula("A", 1)).toThrow(TypeError);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
@@ -247,6 +268,13 @@ describe("askingReadonlyReason と askingView", () => {
     expect(view.readonlyReason).toBeNull();
     expect(view.questions[0]).toMatchObject({ validation: "0以上の整数", unit: "" });
     expect(view.formula).toBe("A");
+  });
+
+  it("入力の決まりも式も無い（null）項目は、既定の決まりと空の式で見せる", () => {
+    const view = askingView({ formula: null, isFixedSlot: false }, [{ ...base, validation: null }]);
+    expect(view.readonlyReason).toBeNull();
+    expect(view.questions[0].validation).toBe("0以上の整数");
+    expect(view.formula).toBe("");
   });
 
   it("並びは displayOrder の順で、式の文字もその順", () => {

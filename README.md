@@ -157,7 +157,7 @@ Cloudflare へ配る構成をローカルで確認するときは `pnpm run cf:d
 - [システム仕様](./system-spec/index.md) — API・データ・認証の契約
 - [アーキテクチャ](./architecture/index.md) — 構成と設計判断
 - [デプロイ時の注意](./docs/deploy-notes.md) — migration、配布、スモーク確認
-- [30思考法レビュー](./docs/reviews/elegant-review-2026-10-14-refactor.md) — 今回のワークツリーの重複整理・共通化・確認結果（[先行レビュー](./docs/reviews/elegant-review-2026-10-14.md)）
+- [30思考法レビュー](./docs/reviews/elegant-review-2026-10-16-refactor.md) — 今回のワークツリーの重複整理・共通化・確認結果（先行レビュー：[2026-10-14 の共通化](./docs/reviews/elegant-review-2026-10-14-refactor.md)・[2026-10-14](./docs/reviews/elegant-review-2026-10-14.md)）
 - [エージェント向けの規約](./AGENTS.md) — Claude Code・Codex 共通。キットの扱い、配色の優先順位、改善要望の手順
 - 生成物と記録 — `specs/`・`features/`・`tasks/`・`docs/requirements/` は開発の計画づくり（dev-graph・system-dev-planner）が作った文書、`.dev-graph/`・`eval-log/` はその状態と実行の記録（端末ごとに残り、git では共有しない）で、どれも正本ではありません。画面と振る舞いは製品仕様、API・データ・認証の契約はシステム仕様、構成と設計判断はアーキテクチャを正とし、食い違ったら生成物の側を直します。
 

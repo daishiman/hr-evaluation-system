@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { Button, Card, Code, FieldGroup } from "@/components/ui";
-import { ListAddRow, ListRowBody } from "@/components/ListRow";
+import { ListAddArea, ListAddRow, ListRowBody } from "@/components/ListRow";
 import { ReorderList } from "@/components/reorder/ReorderList";
 import {
   ASKING_LETTERS,
@@ -232,7 +232,7 @@ export function KpiAskingFields({
             }
           />
         )}
-        <div className={questions.length > 0 ? "card-pad border-t border-line" : "card-pad"}>
+        <ListAddArea hasRows={questions.length > 0}>
           <ListAddRow
             empty={questions.length === 0 && "聞くことはまだありません。このままでは、アンケートに出ず、点も付きません。"}
             note={addNote}
@@ -247,7 +247,7 @@ export function KpiAskingFields({
               ＋ 聞くことを追加
             </Button>
           </ListAddRow>
-        </div>
+        </ListAddArea>
       </Card>
 
       {questions.length > 0 && (

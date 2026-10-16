@@ -17,7 +17,8 @@ import { grantFormExtension, revokeFormExtension } from "@/actions/form-extensio
 import { Badge, Card, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, RecordList, SectionHeading, StatGrid } from "@/components/ui";
 import { SubmissionStatusTable } from "@/components/SubmissionStatusTable";
 import { FORM_STATUS_LABEL, formatDateTime } from "@/lib/view";
-import { formatJpDate, judgeFormDeadline, jstDateString } from "@/lib/domain/form-deadline";
+import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
+import { jstDateKey } from "@/lib/domain/jst";
 
 export const dynamic = "force-dynamic";
 
@@ -220,7 +221,7 @@ export default async function AdminFormResponses({
               type: "date",
               required: true,
               help: `もとの締切（${form.closesAt ? formatJpDate(form.closesAt) : "指定なし"}）より後の日付を選んでください。指定した日の終わりまで回答できます。`,
-              defaultValue: jstDateString(new Date()),
+              defaultValue: jstDateKey(new Date()),
             },
             {
               name: "reason",

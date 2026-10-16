@@ -1,4 +1,6 @@
-import { InlineDetail } from "@/components/ui";
+import { Disclosure, InlineDetail } from "@/components/ui";
+import { BLOCKED_HELP_LABEL, BLOCKED_KEEP, BLOCKED_WHAT, BLOCKED_WHY, blockedMark } from "@/lib/domain/master-delete";
+import type { UsageMap } from "@/lib/master-usage";
 
 /**
  * 「使用中（◯件）」を押したときに出す、使っている場所の一覧。
@@ -23,4 +25,33 @@ export function UsedByDetail({ mark, usedBy }: { mark: string; usedBy: readonly 
       </ul>
     </InlineDetail>
   );
+}
+
+/**
+ * 使用中の行を消せない理由と、代わりにできること（spec §22-5）。
+ * どの行でも同じ文なので、行には置かず、一覧の下に1つだけ置く（等級要件・昇格要件・行動指針の観点・基準セット）。
+ * 出すかどうかは呼ぶ側が決める。使用中の行が1つも無い画面には出さない（関わりのない説明を並べない）。
+ * KPI 項目・KPI カテゴリは線引きと文が違う（master-delete.ts の KPI_*）ので、これを使わない。
+ */
+export function BlockedHelp() {
+  return (
+    <Disclosure summary={BLOCKED_HELP_LABEL}>
+      <p className="m-0 text-sub">{BLOCKED_WHY}</p>
+      <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
+      <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
+    </Disclosure>
+  );
+}
+
+/**
+ * 行ごとの使っている場所（usedByOf）と印（markOf）、使用中の行が1つでもあるか（anyBlocked）。
+ * 行の印と、一覧の下の理由を出すかどうかを同じ数え方で決めるため、画面ごとに書き直さない。
+ */
+export function blockedRows(usage: UsageMap, rows: readonly { id: string }[]) {
+  const usedByOf = (id: string) => usage[id] ?? [];
+  return {
+    usedByOf,
+    markOf: (id: string) => blockedMark(usedByOf(id)),
+    anyBlocked: rows.some((r) => usedByOf(r.id).length > 0),
+  };
 }

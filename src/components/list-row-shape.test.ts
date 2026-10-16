@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ListAddRow, ListRowBody, ListRowNumber } from "@/components/ListRow";
+import { ListAddArea, ListAddRow, ListRowActions, ListRowBody, ListRowItem, ListRowNumber, ListRows } from "@/components/ListRow";
 import { stripComments } from "@/test-support/source-code";
 
 /**
@@ -115,9 +115,47 @@ describe("一覧の行の形（全画面共通）", () => {
     const adds = [...source.matchAll(/<ListAddRow\b[\s\S]*?<\/ListAddRow>/g)];
     expect(adds.length).toBeGreaterThan(0);
     for (const [block] of adds) expect(block).toMatch(/＋ [^<\n]+を追加/);
-    const list = source.search(/<ReorderList\b|className="list-rows/);
+    const list = source.search(/<ReorderList\b|<ListRows\b/);
     expect(list).toBeGreaterThanOrEqual(0);
     expect(adds[adds.length - 1].index).toBeGreaterThan(list);
+  });
+
+  it("並べ替えの無い一覧の器は ListRows・ListRowItem・ListRowActions で描き、class は ListRow.tsx でだけ書く", () => {
+    // 行の幅に応じた並べ方（globals.css の @container list-rows）は、この3つの class 名にかかっている
+    const row = createElement(ListRowItem, { children: createElement(ListRowActions, { children: "操作" }) });
+    expect(html(createElement(ListRows, { label: "KPI項目", children: row }))).toBe(
+      '<ol class="list-rows" aria-label="KPI項目"><li class="card-row"><div class="row-actions">操作</div></li></ol>',
+    );
+    // 器に足す class は list-rows の後ろに付く（基準セットはカードの頭との間に線を引く）
+    expect(html(createElement(ListRows, { label: "基準セット", className: "border-t border-line", children: null }))).toBe(
+      '<ol class="list-rows border-t border-line" aria-label="基準セット"></ol>',
+    );
+    // 行へ飛ぶための id と、使わない行の見た目（data-off）は li に付ける。渡さなければ付けない
+    expect(html(createElement(ListRowItem, { id: "kpi-item-a", off: true, children: "行" }))).toBe(
+      '<li id="kpi-item-a" class="card-row" data-off="true">行</li>',
+    );
+    expect(html(createElement(ListRowItem, { off: false, children: "行" }))).toBe('<li class="card-row">行</li>');
+    for (const name of [...LIST_EDITORS, "RevisableRequirementRow.tsx"]) {
+      const source = code(name);
+      const written = ['className="list-rows', 'className="card-row"', 'className="row-actions"'].filter((c) => source.includes(c));
+      expect({ name, written }).toEqual({ name, written: [] });
+    }
+  });
+
+  it("足すボタンの段は ListAddArea で描き、上に一覧があるときだけ区切りの線を引く", () => {
+    const button = createElement("button", null, "＋ 項目を追加");
+    expect(html(createElement(ListAddArea, { hasRows: true, children: button }))).toBe(
+      '<div class="card-pad border-t border-line"><button>＋ 項目を追加</button></div>',
+    );
+    expect(html(createElement(ListAddArea, { hasRows: false, children: button }))).toBe('<div class="card-pad"><button>＋ 項目を追加</button></div>');
+    // 対象は手で並べず LIST_EDITORS から作る（並べると、画面を足したときに漏れる）。
+    // 行動指針の観点だけは足すボタンを一覧と別のカードに置くので、上に区切る一覧が無い
+    for (const name of LIST_EDITORS.filter((n) => n !== "BehaviorGuidelineEditor.tsx")) {
+      const source = code(name);
+      expect({ name, ok: /<ListAddArea hasRows=\{\w+\.length > 0\}>/.test(source) }).toEqual({ name, ok: true });
+      // 三項式でも固定の class でも、足す欄の区切りを画面で手書きしない
+      expect({ name, written: source.includes("card-pad border-t border-line") }).toEqual({ name, written: false });
+    }
   });
 
   it("行の操作は 直す → 今後使わない／もう一度使う → 完全に消す の順に並べる", () => {

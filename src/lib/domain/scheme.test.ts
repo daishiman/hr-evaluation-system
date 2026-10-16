@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { routeOf } from "@/lib/route-access";
-import { ASKING_PLACE_HINT, validateScheme, type SchemeSelection, type ValidateSchemeOptions } from "./scheme";
+import {
+  ASKING_PLACE_HINT,
+  isUnaskable,
+  unaskableLead,
+  validateScheme,
+  type SchemeSelection,
+  type ValidateSchemeOptions,
+} from "./scheme";
 import { pointsForSlot, type GradePointRule } from "./grade-points";
 
 /**
@@ -286,5 +293,38 @@ describe("validateScheme — 実績の聞き方（設問のひな形）が決ま
     expect(unrated).toContain("項目k7");
     for (const id of ["k3", "k5", "k7"]) expect(unaskable).toContain(`項目${id}`);
     expect(unaskable).not.toContain("項目k2");
+  });
+});
+
+describe("isUnaskable・unaskableLead — 聞き方が決まっていない項目の線引きと書き出し", () => {
+  /* 選んだ時点の警告（validateScheme）と比べる警告の札（comparison-gap-loader.ts）は、isUnaskable の1つで線を引く。
+     書き出しの文は、選んだ時点の警告と比べる警告の注記（comparison-gap.ts の noTemplateNote）で同じ字面にする。 */
+  const askable = new Set(["k2"]);
+
+  it("固定枠でなく、ひな形も無い項目だけを聞き方が決まっていないとする", () => {
+    expect(isUnaskable({ kpiItemId: "k3", isFixedSlot: false }, askable)).toBe(true);
+    expect(isUnaskable({ kpiItemId: "k2", isFixedSlot: false }, askable)).toBe(false);
+  });
+
+  it("固定枠は等級要件の設問から数えるので、ひな形が無くても聞き方が決まっていないとしない", () => {
+    expect(isUnaskable({ kpiItemId: "k1", isFixedSlot: true }, askable)).toBe(false);
+    expect(isUnaskable({ kpiItemId: "k1", isFixedSlot: true }, new Set())).toBe(false);
+  });
+
+  it("書き出しは項目名を「」で囲み、2件以上は「・」でつなぐ", () => {
+    expect(unaskableLead(["粗利率"])).toBe("「粗利率」は、実績の聞き方がまだ決まっていません。");
+    expect(unaskableLead(["稼働率", "残業率"])).toBe("「稼働率」・「残業率」は、実績の聞き方がまだ決まっていません。");
+  });
+
+  it("選んだ時点の警告は、選んだ順に名指しする書き出しのあとに、この場面の続く文と決める場所を置く", () => {
+    const r = validateScheme(
+      VALID.Chief,
+      opts("Chief", { askableItemIds: ["k1", "k9", "k2"], itemNameOf: (id) => `項目${id}` }),
+    );
+    expect(r.warnings).toEqual([
+      unaskableLead(["項目k3", "項目k5", "項目k7"]) +
+        "このまま保存はできます。決めるまでは、アンケートを作っても作り直しても設問が出ず、点も付きません。" +
+        ASKING_PLACE_HINT,
+    ]);
   });
 });

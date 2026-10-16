@@ -7,7 +7,6 @@ import { createForms, rebuildFormQuestions } from "@/actions/forms";
 import {
   COMPARISON_LEAD,
   COMPARISON_OPEN_LABEL,
-  NO_TEMPLATE_BADGE,
   comparisonSummary,
   fixConfirm,
   fixLabel,
@@ -15,6 +14,7 @@ import {
   type ComparisonPage,
   type ComparisonRow,
 } from "@/lib/domain/comparison-gap";
+import { NO_TEMPLATE_BADGE } from "@/lib/domain/scheme";
 
 /**
  * 比べる警告（DD-012 の4）。3画面（アンケートの一覧・1本・使うKPIを選ぶ）はこの部品だけで出す。

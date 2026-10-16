@@ -182,6 +182,15 @@ describe("answerLockedReason 回答画面で入力欄を止めるときの文", 
     expect(answerLockedReason({ block, deadline: before, hasResponse: false })).toBe(`${before.message}${before.answerHint}`);
   });
 
+  it("回答画面だけの案内が無い締切（締切後）は、締切の文に null の字面を混ぜない", () => {
+    const past = judgeFormDeadline({ cycleStatus: "open", status: "published", opensAt: "2026-04-01", closesAt: "2026-10-01", now: new Date("2026-10-16T00:00:00Z") });
+    expect(past.state).toBe("past_deadline");
+    expect(past.answerHint).toBeNull();
+    const block = judgeAnswerBlock({ draft: false, viewerGradeId: "grd_b", formGradeId: "grd_b", deadline: past });
+    expect(answerLockedReason({ block, deadline: past, hasResponse: true })).toBe(`${past.message}${kept}`);
+    expect(answerLockedReason({ block, deadline: past, hasResponse: false })).toBe(past.message);
+  });
+
   it("下書きのアンケートで止めるときも、締切の文（message）に回答画面だけの案内を続ける（準備中の文を2か所に持たない）", () => {
     const unpublished = judgeFormDeadline({ cycleStatus: "open", status: "draft", opensAt: "2026-04-01", closesAt: "2026-12-31", now: new Date("2026-10-16T00:00:00Z") });
     expect(unpublished.state).toBe("not_published");

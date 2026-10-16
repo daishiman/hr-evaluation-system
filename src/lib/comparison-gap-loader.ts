@@ -14,6 +14,7 @@ import type { Role } from "@/lib/roles";
 import type { ComparisonGap, ComparisonPageKey } from "@/lib/domain/comparison-gap";
 import { effectiveAskedItems } from "@/lib/domain/form-sync";
 import { pointGroupLabel } from "@/lib/domain/grade-label";
+import { isUnaskable } from "@/lib/domain/scheme";
 import { schemeStepPath } from "@/lib/domain/scheme-steps";
 import { formSyncGaps, type SetupGap } from "@/lib/domain/setup-gaps";
 
@@ -71,10 +72,11 @@ async function gapsOfCycle(
       hasRequirementQuestions: coverage.hasRequirementQuestions(formId),
     });
   // 設問のひな形が無い（聞き方が決まっていない）項目は、作り直しても新しい版でも聞けない。固定枠は等級要件の設問から数えるので除く
-  // （評価セットの保存時の警告 domain/scheme.ts と同じ線引き）
+  // （評価セットの保存時の警告と同じ線引き。判定は domain/scheme.ts の isUnaskable）
   const askable = new Set(askableIds);
   const fixedSlot = new Set(coverage.fixedSlotItemIds);
-  const unaskableOf = (selected: readonly string[]) => selected.filter((id) => !fixedSlot.has(id) && !askable.has(id));
+  const unaskableOf = (selected: readonly string[]) =>
+    selected.filter((kpiItemId) => isUnaskable({ kpiItemId, isFixedSlot: fixedSlot.has(kpiItemId) }, askable));
 
   for (const form of forms) {
     const pointGroup = grades.find((g) => g.id === form.gradeId)?.pointGroup;

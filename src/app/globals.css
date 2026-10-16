@@ -3286,11 +3286,11 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
    「つまみ → 本文 → 行の操作 → 矢印」にする（SC 1.3.2・2.4.3）。行の操作と矢印は、どちらも行の右端にそろえる。
 
    一覧の幅は ReorderList が測り、超えた境目を data-reorder-w に rem で書く（"30 36 60" など）。
-   container query は使わない。Chromium の不具合（issues.chromium.org/379030050）で、並べ替えを2回続けると
-   一覧の中の行が描かれなくなり、再読み込みまで戻らないため（DD-005）。
+   測ったあとは container query を使わない。行が描かれなくなる Chromium の不具合の根は、fieldset の直下で子が
+   出入りするのと同じフレームに size container の中身が変わること（DD-017。FieldGroup が起こせなくした）。
+   この印の方式は DD-005 の保険として残す。
    測るまで（サーバーから届いた HTML を描いてから JS が動くまで）は、同じ境目を container query で当て、
-   読み込みのたびに狭い段組みから広い段組みへ行が跳ねないようにする。測ったら container をやめる
-   （不具合が起きるのは並べ替えを2回続けたときで、そのころには測り終えている）。
+   読み込みのたびに狭い段組みから広い段組みへ行が跳ねないようにする。測ったら container をやめる。
    境目の規則は :where() で包み、詳細度を container query だけで書いていたときと同じにする
    （「行の操作のある行」の規則が、30rem の規則より強い関係を保つ）。
    子の結合子（>）で、設問の中の選択肢の一覧には外側の一覧の幅を当てない。 */
@@ -3497,7 +3497,8 @@ body:has(.reorder-list[data-reorder-phase="dragging"]) .feedback-fab { opacity: 
 /* 並べ替えの無い一覧（KPI 項目・行動指針の段階・基準セット。spec §28-14・DD-014）
    行の形は、並べ替えの一覧の「行の操作のある行」と同じにする（番号・本文・札・補足を左に、行の操作を右端に）。
    狭い一覧では操作を本文の下へ行の幅いっぱいに割り付け、36rem 以上では右へ寄せ、60rem 以上では本文の右に1段で並べる。
-   行は DOM の中で動かないので、段組みは container query で決めてよい（並べ替えの一覧が container query をやめた理由は DD-005）。
+   段組みは container query で決める。fieldset の中に置いても、子の出入りは FieldGroup の div の中で起きるので、
+   行が描かれなくなる不具合の条件に入らない（DD-017。並べ替えの一覧が測る印を使うのは DD-005 の保険）。
    器は <ol class="list-rows">、行は <li class="card-row">。使わない行の見た目（data-off）は .card-row の規則がそのまま効く。 */
 .list-rows {
   list-style: none;

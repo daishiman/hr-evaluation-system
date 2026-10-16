@@ -5,7 +5,8 @@ import type { ReactNode } from "react";
 import { Card, ReasonNote, SectionHeading, SplitRow } from "@/components/ui";
 import { QuestionInput, type AnswerValue } from "@/components/QuestionField";
 import { RespondentGuide } from "@/components/RespondentGuide";
-import { SECTION_HELP, SECTION_LABEL } from "@/lib/view";
+import { SECTION_HELP } from "@/lib/view";
+import { sectionLabel } from "@/lib/question-order";
 import { orderedQuestionSections } from "@/components/question-sections";
 import { parseOptions } from "@/lib/domain/answer-snapshot";
 
@@ -40,8 +41,11 @@ const DEFAULT_BLOCKED_LABEL = "確認専用の見本のため";
  * 選択肢は回答画面と同じ部品（QuestionInput）で試しに選べる。以前は押せない札を並べており、
  * 押しても何も起きない理由が分からず「選択肢が押せない」不具合に見えていた。
  * そのため見本であることと回答できない理由を先頭に出し、節ごとにも短く繰り返す。
- * 回答画面をそのまま出さないのは、入力すると自動保存が走り、確認しただけの人の回答行が
- * できてしまうため。試しに選んだ内容はこの部品の中だけに持ち、保存・提出の処理には繋がない。
+ * 回答画面（FormAnswer）をそのまま出さないのは、ここが入力ではなく読むための画面だから
+ * （設問ごとの答え方を文で見せ、節ごとに送信できない理由と回答者への案内を添える）。
+ * 数を入れてから提出の検査までの流れは、保存しない試しの回答（FormAnswer の trial。/forms/[id]?try=1）で確かめる。
+ * 試しに選んだ内容はこの部品の中だけに持ち、保存・提出の処理には繋がない
+ * （見ただけの人の回答や下書きの行ができると、提出状況や回答一覧に混ざるため）。
  * 文章・数値の設問は欄を作らず、回答画面でどんな欄が出るか（単位・入力できる値）を文で見せる。
  * 配点や昇格ゲートなど、回答者に見せない内部情報も混ぜない。
  */
@@ -83,7 +87,7 @@ export function FormPreview({
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
           <SectionHeading help={sectionNote(blockedLabel, SECTION_HELP[g.section])}>
-            {SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}
+            {sectionLabel(g.section)}
           </SectionHeading>
           <Card className="card-pad">
             <div className="space-y-5">

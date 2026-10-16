@@ -18,7 +18,7 @@ import type { Role } from "@/lib/roles";
 import { roleCan, roleCanOpen, routeOf } from "@/lib/route-access";
 import { diffFormKpiItems } from "./form-sync";
 import { formRowTitle } from "./grade-label";
-import { ASKING_PLACE_HINT } from "./scheme";
+import { ASKING_PLACE_HINT, unaskableLead } from "./scheme";
 import { kpiItemPath, schemeStepPath, stepTitle } from "./scheme-steps";
 
 /** 使うKPIを選ぶの画面（台帳の書き方） */
@@ -39,16 +39,14 @@ export const COMPARISON_OPEN_LABEL = "直すところを見る";
 const PUBLISHED_NOTE = "公開後や回答のあるアンケートは設問を差し替えません";
 const CLOSED_NOTE = "締め切った評価期間には新しい版を作れません";
 
-/** 表の項目名に添える札（使うKPIを選ぶの候補の札と同じ字面。定義は scheme.ts） */
-export { NO_TEMPLATE_BADGE } from "./scheme";
-
 /**
  * 設問のひな形が無い項目の注記。作り直しの返事（actions/forms.ts）でも同じ文を使う。
  * ひな形は form-build.ts が設問を作る元なので、無い項目はどの版にも設問が出ない。
- * 画面ではひな形を「実績の聞き方」と呼ぶ（KPI項目の画面の欄の名前。DD-016）
+ * 画面ではひな形を「実績の聞き方」と呼ぶ（KPI項目の画面の欄の名前。DD-016）。
+ * 書き出しは選んだ時点の警告と同じ unaskableLead（scheme.ts）で、続く文だけをここで足す
  */
 export function noTemplateNote(names: readonly string[]): string {
-  return `${names.map((name) => `「${name}」`).join("・")}は、実績の聞き方がまだ決まっていません。決めるまでは、作り直しても新しい版でも、設問は出ず点も付きません。`;
+  return `${unaskableLead(names)}決めるまでは、作り直しても新しい版でも、設問は出ず点も付きません。`;
 }
 
 /** 設問のひな形が無い項目の直し方。リンクを置けない作り直しの返事で使う */

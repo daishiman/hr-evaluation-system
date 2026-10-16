@@ -111,8 +111,8 @@ describe("ReorderList の読み上げと押せる場所", () => {
 });
 
 describe("一覧の幅と段組み（data-reorder-w）", () => {
-  // 並べ替えを2回続けると行が描かれなくなる Chromium の不具合（issues.chromium.org/379030050）を避けるため、
-  // 段組みは size container ではなく、部品が測って書く印で選ぶ（DD-005）
+  // 段組みは size container ではなく、部品が測って書く印で選ぶ（DD-005 の保険）。行が描かれなくなる不具合の根は、
+  // fieldset の直下で子が出入りするのと同じフレームに size container の中身が変わること（DD-017）
   const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
   const section = css.slice(css.indexOf("/* 並べ替え（S11"), css.indexOf("/* カードの中の一覧"));
 

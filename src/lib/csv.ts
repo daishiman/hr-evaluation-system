@@ -5,6 +5,8 @@
  * 読み取りは、引用符つき（改行・カンマを含む）セルに対応する。
  */
 
+import { formatJstTime, jstDateKey } from "@/lib/domain/jst";
+
 export type CsvCell = string | number | boolean | null | undefined;
 
 function escapeCell(v: CsvCell): string {
@@ -98,10 +100,8 @@ export function formatDateTime(value: Date | number | null | undefined): string 
   if (value === null || value === undefined) return "";
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return "";
-  const p = (n: number) => String(n).padStart(2, "0");
   // 日本時間で表記する（保存はUTCミリ秒）
-  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return `${j.getUTCFullYear()}-${p(j.getUTCMonth() + 1)}-${p(j.getUTCDate())} ${p(j.getUTCHours())}:${p(j.getUTCMinutes())}`;
+  return `${jstDateKey(d)} ${formatJstTime(d)}`;
 }
 
 /** 「100.0%」の形。値が無いときは空欄。 */

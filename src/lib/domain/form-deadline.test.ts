@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { daysUntilDeadline, formatJpDate, judgeFormDeadline, jstDateString } from "./form-deadline";
+import { daysUntilDeadline, formatJpDate, judgeFormDeadline } from "./form-deadline";
 
 /**
  * 締切の判定は「1日ずれる」種類の不具合が起きやすく、しかも
@@ -10,18 +10,6 @@ import { daysUntilDeadline, formatJpDate, judgeFormDeadline, jstDateString } fro
  */
 
 const jst = (iso: string) => new Date(iso); // 例: "2026-09-30T14:59:00Z" は日本時間 9/30 23:59
-
-describe("jstDateString", () => {
-  it("UTCの夜は日本時間では翌日になる", () => {
-    // Workers は UTC で動くため、ここを取り違えると締切日が1日ずれる
-    expect(jstDateString(jst("2026-09-30T15:00:00Z"))).toBe("2026-10-01");
-    expect(jstDateString(jst("2026-09-30T14:59:59Z"))).toBe("2026-09-30");
-  });
-
-  it("UTCの午前0時直後は日本時間では同じ日の午前9時", () => {
-    expect(jstDateString(jst("2026-04-01T00:00:00Z"))).toBe("2026-04-01");
-  });
-});
 
 describe("judgeFormDeadline 回答期間の境界", () => {
   const base = { cycleStatus: "open", status: "published", opensAt: "2026-04-01", closesAt: "2026-09-30" };

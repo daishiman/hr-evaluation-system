@@ -1,6 +1,5 @@
 import { Card, DefList, ReasonNote, SectionHeading } from "@/components/ui";
-import { SECTION_LABEL } from "@/lib/view";
-import { SCREEN_SECTIONS } from "@/lib/question-order";
+import { SCREEN_SECTIONS, sectionLabel } from "@/lib/question-order";
 import { formatAnswer, type AnswerReadRow } from "@/lib/domain/answer-snapshot";
 
 /**
@@ -38,7 +37,7 @@ export function ResponseSnapshot({ rows }: { rows: AnswerReadRow[] }) {
 
       {sections.map((g) => (
         <section key={g.section} className="mb-6">
-          <SectionHeading>{SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}</SectionHeading>
+          <SectionHeading>{sectionLabel(g.section)}</SectionHeading>
           {/* 設問と回答は「ラベルと値の対」なので定義リストで出す（§5-5）。
               右端に寄せると、長い自由記入が細い列に押し込まれて読めなくなる。 */}
           <Card className="card-pad">

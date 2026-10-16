@@ -5,12 +5,13 @@ import { saveResponse } from "@/actions/responses";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, CardHead, FieldGroup, ReasonNote, SectionHeading } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
-import { SECTION_HELP, SECTION_LABEL } from "@/lib/view";
+import { SECTION_HELP } from "@/lib/view";
 import { isAnswered } from "@/lib/domain/answer-snapshot";
+import { formatJstTime } from "@/lib/domain/jst";
 import { QuestionField, type AnswerQuestion, type AnswerValue } from "@/components/QuestionField";
 import { orderedQuestionSections } from "@/components/question-sections";
-import { inScreenOrder } from "@/lib/question-order";
-import { checkSubmission, missingAnswersMessage, normalizeAnswers } from "@/lib/submission-check";
+import { sectionLabel } from "@/lib/question-order";
+import { checkSubmission, missingAnswersMessage, missingRequired, normalizeAnswers } from "@/lib/submission-check";
 export { QuestionField, QuestionInput, type AnswerQuestion, type AnswerValue } from "@/components/QuestionField";
 import { RefreshStatus } from "@/components/RefreshStatus";
 
@@ -109,8 +110,10 @@ export function FormAnswer({
   const ordered = useMemo(() => orderedQuestionSections(questions), [questions]);
   const fieldOrder = useMemo(() => ordered.flatMap((g) => g.rows.map((r) => r.id)), [ordered]);
 
-  // 「答えた」の数え方は設問の形式ごとに変える（自由記述は文字、複数選択は選んだ数）
-  const answeredCount = questions.filter((q) => isAnswered(q.questionType, values[q.id])).length;
+  /* 「答えた」の数え方は設問の形式ごとに変える（自由記述は文字、複数選択は選んだ数）。
+     帯の「入力できた項目」と、確認の欄の未入力の知らせ（missingRequired）が同じ見方を使う */
+  const answeredQuestion = (q: AnswerQuestion) => isAnswered(q.questionType, values[q.id]);
+  const answeredCount = questions.filter(answeredQuestion).length;
 
   const persist = useCallback(
     (status: "draft" | "submitted", nextValues: Record<string, AnswerValue>, nextMemo: string, version = editVersion.current) => {
@@ -243,8 +246,8 @@ export function FormAnswer({
   };
 
   /* 画面の上から下の順に拾う。「例：」には画面で最初に見える未入力の欄を挙げる
-     （受け口の断りの文も同じ順で選ぶ。inScreenOrder） */
-  const missing = inScreenOrder(questions).filter((q) => q.required && !isAnswered(q.questionType, values[q.id]));
+     （受け口の断り（checkSubmission）も同じ missingRequired で拾うので、件数も例も同じになる） */
+  const missing = missingRequired(questions, answeredQuestion);
   const missingNote = missing.length > 0 ? missingAnswersMessage(missing) : null;
 
   /* 最初の、未入力の欄へ移る。選ぶ設問は選択肢のまとまり（role=group）に移る */
@@ -280,7 +283,7 @@ export function FormAnswer({
     : savingDraft
       ? "保存しています…"
       : savedAt
-        ? `保存済み ${savedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`
+        ? `保存済み ${formatJstTime(savedAt)}`
         : draftFailed
           ? "保存できていません"
           : touched
@@ -320,7 +323,7 @@ export function FormAnswer({
               pinned
               narrow
               heading
-              title={SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}
+              title={sectionLabel(g.section)}
               sub={SECTION_HELP[g.section]}
             />
             <div className="space-y-5">
@@ -374,7 +377,8 @@ export function FormAnswer({
                 className="m-0 mt-3 text-sub text-brand-deep"
               />
             )}
-            {/* 未入力で断られたときは、下の知らせと同じ文になるので1つだけ出す */}
+            {/* 未入力で断られたときは、下の知らせと同じ文になるので1つだけ出す
+                （どちらも missingRequired と missingAnswersMessage から作る） */}
             {submitError && submitError !== missingNote && (
               <div className="mt-3">
                 <ReasonNote>{submitError}</ReasonNote>
@@ -450,7 +454,7 @@ function AnswerReadOnly({
     <>
       {ordered.map((g) => (
         <section key={g.section} className="mb-6">
-          <SectionHeading>{SECTION_LABEL[g.section] ?? (g.section === "free" ? "自由記入" : g.section)}</SectionHeading>
+          <SectionHeading>{sectionLabel(g.section)}</SectionHeading>
           <Card>
             {g.rows.map((q) => {
               const v = values[q.id];

@@ -120,4 +120,9 @@ describe("staleAskingItems（版の設問が、いまの計算式の変数をそ
     const formQuestions = [...asked(FIXED.id, "q1_9"), ...asked(LOST.id, "q9_0")];
     expect(staleAskingItems({ ...base, kpiItems, formQuestions, templates: [] })).toEqual([]);
   });
+
+  it("式がまだ無い点の項目は、求める変数が無いので出さない（式の無いことは別の警告が言う）", () => {
+    const kpiItems = [FIXED, { ...RATE, formula: null }];
+    expect(staleAskingItems({ ...base, kpiItems, formQuestions: asked(RATE.id, "q2_1"), templates: [template(RATE.id, "q2_1")] })).toEqual([]);
+  });
 });

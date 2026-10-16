@@ -18,20 +18,10 @@
  *    toISOString().slice(0,10) すると、日本時間の朝9時までは「前日」と判定され、
  *    締切日の朝に回答した人が1日早く締め出される／1日多く回答できてしまう。
  *  - 利用者も期限も日本国内なので、判定は日本時間（UTC+9）の「今日の日付」で行う。
- *    サーバーの時間帯設定に依存しないよう、UTCのミリ秒に +9時間して日付を取り出す。
+ *    サーバーの時間帯設定に依存しないよう、UTCのミリ秒に +9時間して日付を取り出す（jst.ts）。
  */
 
-/** 日本時間の時差（分）。夏時間が無いので固定値でよい。 */
-const JST_OFFSET_MINUTES = 9 * 60;
-
-/** ある瞬間の「日本時間での日付」を YYYY-MM-DD で返す。 */
-export function jstDateString(now: Date): string {
-  const shifted = new Date(now.getTime() + JST_OFFSET_MINUTES * 60_000);
-  const y = shifted.getUTCFullYear();
-  const m = String(shifted.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(shifted.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
+import { jstDateKey } from "./jst";
 
 /** 「2026-09-30」を「2026年9月30日」にする（画面文言用）。読めない値はそのまま返す。 */
 export function formatJpDate(v: string | null | undefined): string {
@@ -111,7 +101,7 @@ function latestExtension(extensions: (string | null | undefined)[] | undefined):
  * 画面（回答フォームを出すか）とAPI（保存を受けるか）で必ず同じものを使う。
  */
 export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
-  const today = jstDateString(input.now);
+  const today = jstDateKey(input.now);
   const extension = latestExtension(input.extensions);
   // 延長は「全体の期限より後ろ」にだけ効く。全体の期限より前の延長日を渡されても期限を縮めない
   const effectiveUntil =
@@ -210,7 +200,7 @@ export function judgeFormDeadline(input: DeadlineInput): DeadlineJudgement {
  */
 export function daysUntilDeadline(effectiveUntil: string | null, now: Date): number | null {
   if (!effectiveUntil) return null;
-  const today = jstDateString(now);
+  const today = jstDateKey(now);
   if (today > effectiveUntil) return null;
   const toUtcDay = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10)));
   return Math.round((toUtcDay(effectiveUntil) - toUtcDay(today)) / 86_400_000);

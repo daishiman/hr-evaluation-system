@@ -498,6 +498,26 @@ describe("FormAnswer の保存の状態と確認の欄", () => {
       expect(hooks.save).not.toHaveBeenCalled();
     });
 
+    it("範囲を外れた数と未入力が同時にあるときは、確認の欄に範囲の断りと未入力の知らせを1回ずつ出す", async () => {
+      // 検査は本物の提出と同じく範囲を先に見るので、断りは範囲の文。未入力は確認の欄の知らせが別に言う
+      const both = { ...trialProps, questions: [question, { ...choice, required: true }, count] };
+      onChangeOf("q5", both)({ valueNumber: 1.5 });
+      press(render(FormAnswer, both), "内容を確認して提出する");
+      await press(render(FormAnswer, both), "試しに提出する");
+      const tree = render(FormAnswer, both);
+      const expected = checkSubmission(both.questions, normalizeAnswers(both.questions, [{ questionId: "q5", valueNumber: 1.5 }]));
+      const range = expected.ok ? "" : expected.message;
+      const missing = "未入力の項目が1件あります（例：選ぶ設問）。入力してから提出してください。";
+      expect(range).toContain("「件数の設問」");
+      expect(notes(confirmCard(tree)).filter((html) => html.includes(range))).toHaveLength(1);
+      expect(notes(confirmCard(tree)).filter((html) => html.includes(missing))).toHaveLength(1);
+      // 確認の欄の外には出さない（同じ文を2か所に出さない）
+      expect(notes(tree)).toHaveLength(2);
+      expect(has(confirmCard(tree), (node) => named("Button")(node) && node.props.children === "最初の未入力の欄へ移る")).toBe(true);
+      expect(passed(tree)).toBe(false);
+      expect(hooks.save).not.toHaveBeenCalled();
+    });
+
     it("通ったら確認の欄の中で知らせ、値を変えるか開き直すまでその知らせを残す", async () => {
       onChangeOf("q5", trialProps)({ valueNumber: 3 });
       let tree: unknown = await tryToSubmit();
@@ -664,5 +684,26 @@ describe("FormBuilder の集計に使う設問（DD-015）", () => {
     const { opened, disabled } = selects(false);
     expect(disabled).toEqual([false, false]);
     expect(renderToStaticMarkup(opened as ReactElement)).not.toContain("点数の計算が読む形");
+  });
+});
+
+describe("FormBuilder の節の名前", () => {
+  // 自由設問（「＋ 聞くことを追加」で足す設問）の節は free。回答画面・見本と同じく「自由記入」と書き、英字のまま出さない
+  const row = { ...createBlankQuestion("free", "text", "unused"), id: "q1", title: "自由の設問" };
+
+  it("編集できるときは、閉じた行の補足・開いた頭・「まとまり」の選び欄のどれも「自由記入」と書く", () => {
+    const props = { formId: "f1", initial: [row], editable: true };
+    const closed = find(render(FormBuilder, props), named("ListRowBody"));
+    expect(renderToStaticMarkup(closed.props.note as ReactElement)).toContain("自由記入 ／ 文章で書く");
+    (find(render(FormBuilder, props), (node) => node.props.children === "内容を直す").props.onClick as () => void)();
+    const opened = render(FormBuilder, props);
+    expect(renderToStaticMarkup(find(opened, named("CardHead")).props.sub as ReactElement)).toContain("自由記入 ／ 文章で書く");
+    expect(find(opened, (node) => node.type === "option" && node.props.value === "free").props.children).toBe("自由記入");
+  });
+
+  it("編集できないときの一覧も、節を「自由記入」と書く", () => {
+    const list = find(render(FormBuilder, { formId: "f1", initial: [row], editable: false }), named("QuestionList"));
+    const rows = (list.type as (props: unknown) => ReactNode)(list.props);
+    expect(find(rows, named("CardRow")).props.sub).toBe("自由記入");
   });
 });

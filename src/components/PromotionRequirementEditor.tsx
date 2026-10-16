@@ -2,20 +2,12 @@
 
 import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
-import { Badge, Button, Card, CardHead, Disclosure, FieldGroup, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, FieldGroup, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { ListAddRow } from "@/components/ListRow";
-import { UsedByDetail } from "@/components/UsedByDetail";
+import { ListAddArea, ListAddRow } from "@/components/ListRow";
+import { BlockedHelp, UsedByDetail, blockedRows } from "@/components/UsedByDetail";
 import { classifyVersionedItems, VersionedMasterSections } from "@/components/VersionedMasterSections";
-import {
-  BLOCKED_HELP_LABEL,
-  BLOCKED_KEEP,
-  BLOCKED_WHAT,
-  BLOCKED_WHY,
-  DELETE_LABEL,
-  blockedMark,
-  deleteConfirmText,
-} from "@/lib/domain/master-delete";
+import { DELETE_LABEL, deleteConfirmText } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { ReorderList } from "@/components/reorder/ReorderList";
@@ -72,9 +64,7 @@ export function PromotionRequirementEditor({
   /* 使っている場所があるなら消させない。
      行に残すのは「使用中（◯件）」の一言だけで、どこで使っているかは押したら出す。
      全行で同じになる「なぜ消せないか」は、この部品の一番下に1つだけ置く。 */
-  const usedByOf = (id: string) => usage[id] ?? [];
-  const markOf = (id: string) => blockedMark(usedByOf(id));
-  const anyBlocked = rows.some((r) => usedByOf(r.id).length > 0);
+  const { usedByOf, markOf, anyBlocked } = blockedRows(usage, rows);
   /** 並べ替えの一覧の1行（本文と行の操作）に、どちらにも同じく渡す値 */
   const rowOf = (r: PromotionRow) => ({ id: r.id, text: r.text, usedBy: usedByOf(r.id), editing, busy: saving });
 
@@ -155,7 +145,7 @@ export function PromotionRequirementEditor({
           />
         )}
 
-        <div className="card-pad">
+        <ListAddArea hasRows={list.length > 0}>
           {draft.open ? (
             <div className="grid gap-2">
               <textarea
@@ -212,7 +202,7 @@ export function PromotionRequirementEditor({
               </Button>
             </ListAddRow>
           )}
-        </div>
+        </ListAddArea>
 
         <div className="card-pad grid gap-2 border-t border-line">
           <VersionedMasterSections
@@ -262,13 +252,7 @@ export function PromotionRequirementEditor({
       {block("test")}
       {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。
           「使用中」の行が1つも無い画面には出さない（関わりのない説明を並べない）。 */}
-      {anyBlocked && (
-        <Disclosure summary={BLOCKED_HELP_LABEL}>
-          <p className="m-0 text-sub">{BLOCKED_WHY}</p>
-          <p className="m-0 mt-1 text-sub">{BLOCKED_KEEP}</p>
-          <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
-        </Disclosure>
-      )}
+      {anyBlocked && <BlockedHelp />}
     </FieldGroup>
   );
 }
