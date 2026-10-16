@@ -3,7 +3,7 @@
 import { useSaveAction } from "@/lib/use-refresh";
 import { saveResponse } from "@/actions/responses";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Card, CardHead, ReasonNote, SectionHeading } from "@/components/ui";
+import { Button, Card, CardHead, FieldGroup, ReasonNote, SectionHeading } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { SECTION_HELP, SECTION_LABEL } from "@/lib/view";
 import { isAnswered } from "@/lib/domain/answer-snapshot";
@@ -163,7 +163,7 @@ export function FormAnswer({
   }
 
   return (
-    <fieldset disabled={saving} aria-busy={saving} className="m-0 min-w-0 border-0 p-0">
+    <FieldGroup disabled={saving} aria-busy={saving}>
       {error && <ReasonNote>{error}</ReasonNote>}
       <RefreshStatus
         message={message}
@@ -283,7 +283,7 @@ export function FormAnswer({
           </Button>
         )}
       </StickyActionBar>
-    </fieldset>
+    </FieldGroup>
   );
 }
 

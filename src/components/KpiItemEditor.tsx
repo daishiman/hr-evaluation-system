@@ -2,7 +2,7 @@
 
 import { useSaveAction } from "@/lib/use-refresh";
 import { useId, useState } from "react";
-import { Badge, Button, Card, Code, Disclosure, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, Code, Disclosure, FieldGroup, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ListAddRow, ListRowBody } from "@/components/ListRow";
 import { UsedByDetail } from "@/components/UsedByDetail";
@@ -238,7 +238,7 @@ export function KpiItemEditor({
   };
 
   return (
-    <fieldset disabled={saving} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
+    <FieldGroup disabled={saving} aria-busy={saving} bodyClassName="stack">
       {error && <ReasonNote>{error}</ReasonNote>}
       <RefreshStatus message={message} refreshing={saving} />
 
@@ -375,7 +375,7 @@ export function KpiItemEditor({
           <p className="m-0 mt-1 text-sub">{KPI_ITEM_LOCKED_NOTE}</p>
         </Disclosure>
       )}
-    </fieldset>
+    </FieldGroup>
   );
 }
 

@@ -3,7 +3,7 @@
 import { useSaveAction } from "@/lib/use-refresh";
 import { saveFormQuestions } from "@/actions/forms";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Badge, Button, Card, CardHead, CardRow, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, CardRow, FieldGroup, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { NumberField } from "@/components/NumberField";
 import { SECTION_LABEL, SECTION_ORDER } from "@/lib/view";
@@ -194,7 +194,7 @@ export function FormBuilder({
   }
 
   return (
-    <fieldset disabled={saving} aria-busy={saving} className="m-0 min-w-0 border-0 p-0">
+    <FieldGroup disabled={saving} aria-busy={saving}>
       {error && <ReasonNote>{error}</ReasonNote>}
       {conflict && (
         <div className="mb-3">
@@ -500,7 +500,7 @@ export function FormBuilder({
           {saving ? "保存しています…" : "設問を保存する"}
         </Button>
       </StickyActionBar>
-    </fieldset>
+    </FieldGroup>
   );
 }
 

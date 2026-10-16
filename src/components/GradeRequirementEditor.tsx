@@ -2,7 +2,7 @@
 
 import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
-import { Button, Card, CardHead, Disclosure, InlineDetail, ReasonNote } from "@/components/ui";
+import { Button, Card, CardHead, Disclosure, FieldGroup, InlineDetail, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ListAddRow } from "@/components/ListRow";
 import { UsedByDetail } from "@/components/UsedByDetail";
@@ -214,7 +214,7 @@ export function GradeRequirementEditor({
   };
 
   return (
-    <fieldset disabled={saving && !reordering} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
+    <FieldGroup disabled={saving && !reordering} aria-busy={saving} bodyClassName="stack">
       <Card className="card-pad">
         <p className="m-0 text-sub">
           いま編集しているのは <b>{gradeName}</b> の等級要件です。
@@ -289,6 +289,6 @@ export function GradeRequirementEditor({
           <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
         </Disclosure>
       )}
-    </fieldset>
+    </FieldGroup>
   );
 }

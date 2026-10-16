@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { saveScheme } from "@/actions/scheme";
-import { Button, Card, ReasonNote } from "@/components/ui";
+import { Button, Card, FieldGroup, ReasonNote } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
 import { useSaveAction } from "@/lib/use-refresh";
 
@@ -41,7 +41,7 @@ export function SchemeCommonSettings({
 
   return (
     <Card className="card-pad">
-      <fieldset disabled={saving} aria-busy={saving} className="m-0 min-w-0 border-0 p-0">
+      <FieldGroup disabled={saving} aria-busy={saving}>
       <label className="flex items-center gap-2 text-sub">
         <input type="checkbox" checked={allA} onChange={(e) => setAllA(e.target.checked)} />
         昇給の条件を「選んだ項目がすべてA」にする
@@ -60,7 +60,7 @@ export function SchemeCommonSettings({
           {saving ? "保存しています…" : changed ? "共通の設定を保存する" : "変更はありません"}
         </Button>
       </div>
-      </fieldset>
+      </FieldGroup>
     </Card>
   );
 }

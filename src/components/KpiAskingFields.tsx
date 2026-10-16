@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { Button, Card, Code } from "@/components/ui";
+import { Button, Card, Code, FieldGroup } from "@/components/ui";
 import { ListAddRow, ListRowBody } from "@/components/ListRow";
 import { ReorderList } from "@/components/reorder/ReorderList";
 import {
@@ -150,8 +150,7 @@ export function KpiAskingFields({
       : "アンケートで答えてもらう数を1つ増やします。文言はそのまま設問になります。";
 
   return (
-    <fieldset className="m-0 mt-4 min-w-0 border-0 p-0">
-      <legend className="p-0 text-sub font-bold">実績の聞き方</legend>
+    <FieldGroup legend="実績の聞き方" className="mt-4">
       <p className="footnote m-0 mt-1">
         アンケートで聞く数を並べ、その答えから実績値を出す計算式を決めます。計算式では、聞くことを左の文字（A・B…）で指します。
       </p>
@@ -281,7 +280,7 @@ export function KpiAskingFields({
           保存の前に：{problem}
         </p>
       )}
-    </fieldset>
+    </FieldGroup>
   );
 }
 

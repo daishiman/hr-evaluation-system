@@ -2,7 +2,7 @@
 
 import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
-import { Badge, Button, Card, CardHead, Disclosure, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, Disclosure, FieldGroup, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ListAddRow } from "@/components/ListRow";
 import { UsedByDetail } from "@/components/UsedByDetail";
@@ -250,7 +250,7 @@ export function PromotionRequirementEditor({
   };
 
   return (
-    <fieldset disabled={saving && !reordering} aria-busy={saving} className="stack m-0 min-w-0 border-0 p-0">
+    <FieldGroup disabled={saving && !reordering} aria-busy={saving} bodyClassName="stack">
       {/* 冒頭の説明は1つの段落にまとめる（短い文を1行ずつ積むと、その行ごとに右側が空く。§28-9） */}
       <p className="footnote m-0">
         いま編集しているのは <b>{gradeName}</b> の昇格要件です{stepLabel && `（${stepLabel}）`}。ここでの変更は次に作るアンケートから反映されます。
@@ -269,6 +269,6 @@ export function PromotionRequirementEditor({
           <p className="m-0 mt-1 text-sub">{BLOCKED_WHAT}</p>
         </Disclosure>
       )}
-    </fieldset>
+    </FieldGroup>
   );
 }

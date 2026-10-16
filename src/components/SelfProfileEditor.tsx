@@ -4,7 +4,7 @@ import { useState } from "react";
 import { updateOwnProfile } from "@/actions/account";
 import { useSaveAction } from "@/lib/use-refresh";
 import { hasIcon, Icon } from "@/components/Icon";
-import { Button, HintToggle, RowAction } from "@/components/ui";
+import { Button, FieldGroup, HintToggle, RowAction } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
 
 /**
@@ -64,7 +64,7 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
   };
 
   return (
-    <fieldset disabled={saving} aria-busy={saving} className="profile-rows m-0 min-w-0 border-0 p-0">
+    <FieldGroup disabled={saving} aria-busy={saving} bodyClassName="profile-rows">
       {rows.map((row) => {
         const isEditing = editing === row.key;
         const hintOpen = openHint === row.key;
@@ -170,6 +170,6 @@ export function SelfProfileEditor({ rows }: { rows: ProfileRow[] }) {
           {error}
         </p>
       )}
-    </fieldset>
+    </FieldGroup>
   );
 }

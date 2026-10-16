@@ -68,6 +68,7 @@
   - ほかの size container（`.split-host`・`.list-host`・`.record-list`）は、サーバーが描く一覧で、画面の中で行を並べ替えないので変えない。
   - 固定した検査: `src/components/reorder/ReorderList.test.ts`（境目の書き方、CSS の境目が部品の境目と同じこと、container を測る前の一覧にだけ置くこと）、`e2e/reorder-twice.spec.ts`（ドラッグと矢印で2回続けて並べ替えても、行が見えたまま）。修正前の規則（一覧を size container にする）を画面に足すと、ドラッグの検査は2回目の保存のあとで行が読み上げの木からも消えて落ちる。矢印のボタンだけでは起きない（2026-10-16 に確かめた）。
   - 見直す条件: Chromium で上の不具合が直り、対応する版がそろったら、コンテナクエリだけの形へ戻すかを比べる。
+- **追記（2026-10-16、同じ日に原因を改めた）**: 本当の引き金は、並べ替えそのものではなく、一覧を包む fieldset（`disabled={saving && !reordering}`）の直下に、保存のたびに RefreshStatus が出入りすることだった（DD-017）。並べ替えは、同じフレームで size container の中身を変える側の条件にあたる。上の「ほかの size container は、画面の中で行を並べ替えないので変えない」は、この見立て違いの上に立っていた。DD-017 で fieldset の中身を包んだあとは、上の古い規則（一覧を常に size container にする）を戻しても行は消えない。ResizeObserver の形は害が無いので残す。
 
 ## DD-006 権限一覧を1つの表に役割のタブを足し、狭い幅ではカードにした（2026-10-13）
 
@@ -281,3 +282,23 @@
 - **規範との関係**: OWASP の Mass Assignment の対策（利用者が書いてよい欄だけを受け、点の元になる値はサーバーが決める）に当たる。画面の部品は `jp-web-design` の「操作できないものは押せない形で見せ、理由を添える」（回答を集めている項目の足すボタン・読むだけの聞き方）と、DD-014 の行の形に従う。配色は DD-003 のまま変えない。
 - **固定した検査**: `src/lib/domain/kpi-asking.test.ts`（文字と key の置き換え・付け替えと「？」・式の検査・役割の決め方と見本の33項目・新しい key・型のボタン・読むだけの条件）、`src/components/KpiAskingFields.test.ts`（送る形・変えたときだけ送る・保存できない理由・欄の描き方）、`src/components/KpiItemEditor.test.ts`（指された行だけを開く）、`src/lib/masters/apply-master-update-kpi-item.integration.test.ts`（作るときと直すときの聞き方・使っている項目の式の一言・回答を集めている項目の組の固定・409 と 400・読むだけ・見た目の変わらない保存で書かない・監査の要約）、`src/lib/form-build.integration.test.ts`（ひな形のある項目だけに設問ができる）、公開の前の検査（8）は `src/lib/domain/form-sync.test.ts`（食い違いの見つけ方・作り直しで直るか・見ない項目・【】の値・版全体の key）・`src/lib/domain/grade-points.test.ts`（`questionsForPointGroup`）・`src/lib/domain/setup-gaps-links.test.ts`（不足の並びとリンク）・`src/lib/domain/setup-readiness.test.ts`・`src/lib/stale-asking.integration.test.ts`（見本のデータの全版で誤検知0・公開の 409・作り直すと公開できる）、比べる警告の側は DD-012 の固定した検査（`comparison-gap.test.ts`・`comparison-gap-links.test.ts`・`ComparisonGapNotice.test.ts`・`scheme-steps.test.ts`）と、選んだ時点の警告と作り直しの返事（`src/lib/domain/scheme.test.ts`・`src/actions/scheme-askable-warning.test.ts`・`src/actions/forms-rebuild-message.test.ts`・`src/components/SchemeGroupPicker.test.ts`）。
 - **見直す条件**: 選ぶ設問や文章の設問を画面で作る要望が出たとき（読むだけの条件と、役割の決め方を広げる）。7つ以上聞く要望が出たとき。回答を集めたあとでも聞くことを変えたい要望が出たとき（そのときは式を版に写し、点を版の式で出す形を検討する。式を版に写せば、8 の検査は版の式で見る形に変わる）。組み立て画面で設問の key を変えられるようにするとき（8 の検査が版全体の key を見ている前提が変わる）。
+
+## DD-017 保存中に止める入力の束（fieldset）は、中身を div 1つで包む部品（FieldGroup）だけで作る（2026-10-16）
+
+- **場面の1文**: 新しい KPI 項目の「実績の聞き方」で「＋ 聞くことを追加」を1回押すと、足した聞くことと追加のボタンが消え、2つ目を足せなかった（再読み込みで戻る）。DD-016 の画面を本物の流れで確かめていて見つけた。
+- **原因**: Chromium の描画の不具合（148・153 で確かめた。155 は未確認）。fieldset の中に size container（`container-type: inline-size`。`.split-host`・`.list-host`・`.record-list`・`.list-rows`・測る前の並べ替えの一覧）があり、同じフレームの中で次の2つが重なると、container の子孫の箱が作られない。
+  - container の中身が変わる（子の削除や文字の変更）。
+  - fieldset の直下に子が足される・消える。
+
+  箱は高さ0になり、読み上げの木からも消え、フォーカスは body へ落ちる。画面の幅を変えても戻らない。アプリを使わない最小の HTML で再現した。div・section・form の下では起きない。fieldset の disabled の切り替えや、子を hidden にするだけでも起きない。fieldset に display（grid・flex・flow-root・contents）・`contain: layout`・`container-type` を当てても防げない。聞き方の欄では、押すと並びの中身が変わり、同じフレームで fieldset の直下に計算式の欄が足される。
+- **選んだ形**: `src/components/ui.tsx` の `FieldGroup`。fieldset の reset（`m-0 min-w-0 border-0 p-0`）と legend（任意）を持ち、中身を必ず div 1つで包む。子の出入りは div の中で起き、fieldset の直下は変わらない。アプリの fieldset 10か所（自分の情報・実績の聞き方・行動指針・評価セットの共通設定・基準セット・昇格要件・等級要件・KPI項目・アンケートの回答・アンケートの組み立て）を置き換えた。並べ方の class（`stack`・`profile-rows`）は中の div へ、外の余白（`mt-4` など）は fieldset に置く。legend は読み上げの名前になるよう fieldset の直下に置く（出入りしないので包まない）。
+- **決め手の軸**: 不具合の引き金を、置き場所ごとの気配りではなく、部品の形で起こせなくすること。保存のたびに出入りする ReasonNote・RefreshStatus を fieldset の直下に置く書き方が多くの画面にあり、次にどこで起きてもおかしくなかった。
+- **却下した候補と理由**:
+  - 聞き方の欄だけを直す（追加の行の size container を外すなど）: ほかの9か所に同じ形が残る。size container は一覧の段組み（DD-014）で使い続ける。
+  - fieldset をやめて div にし、`aria-disabled` を付ける: 保存中に入力をまとめて止める働きを自前で作り直すことになる。fieldset の disabled は、入力・ボタン・選ぶ欄を一度に止める。
+  - fieldset に display や contain を当てる: 試した形はどれも防げなかった。
+  - Chromium で直るのを待つ: 直った版がそろうまでの間、利用者の画面で入力が消える。
+- **DD-005 との関係**: DD-005 の不具合（並べ替えを2回続けると行が消える）も、本当の原因はこれだった。等級要件の一覧は `disabled={saving && !reordering}` の fieldset の中にあり、保存のたびに RefreshStatus が直下に出入りする。直した版に、DD-005 で外した規則（一覧を常に size container にする）を戻しても、ドラッグでも矢印でも2回続けて並べ替えて行は消えない。同じ版で、さらに包みの div を `display: contents` で無効にすると、ドラッグの2回目のあとで3行とも高さ0になり、読み上げの木からも消えた（Chromium 153、2026-10-16）。DD-005 の ResizeObserver の形は、害が無いので残す。
+- **規範との関係**: fieldset と legend で入力のまとまりを伝える形（WCAG 2.2 SC 1.3.1）は変えない。
+- **固定した検査**: `src/components/fieldset-group.test.ts`（生の `<fieldset>` を ui.tsx の外に書かないこと・包みの形）、`e2e/kpi-asking-add.spec.ts`（新しい KPI 項目で聞くことを2回続けて足しても、聞くことと追加のボタンが見えたまま。直す前の版では1回目のあとで落ちる）、`e2e/reorder-twice.spec.ts`（DD-005）。
+- **見直す条件**: Chromium で直ったことを確かめ、対応する版がそろったら、包みを外すかを比べる（包みに害は無いので急がない）。fieldset でない器（dialog など）で同じ形が見つかったら、部品の範囲を広げる。
