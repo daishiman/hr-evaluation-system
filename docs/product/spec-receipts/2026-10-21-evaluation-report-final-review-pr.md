@@ -68,9 +68,13 @@ PRは2つともmainを向けるdraftとする。第2段は先行する第1段の
 |---|---|
 | 第1段 | `b199bc73a8b937b56a047e96ddf6fda905ca02a8`、`devgraph/SYS-EVAL-REPORT-P05` をoriginへpush済み。184ファイルを明示的に選択 |
 | 第2段 | `b71e039442123c03ce79af9fb967168e7173c174`、`devgraph/SYS-EVAL-REPORT-P08` をoriginへpush済み。2つのSQLだけを別の作業ツリーで保存 |
-| draft PR | **未作成**。GitHub CLIはtoken失効。接続済みGitHub連携はrepoのadmin/pushを返すが、`create_pull_request` は403 `Resource not accessible by integration`。ブラウザもログイン画面となり、認証情報は読んだり入力したりしていない。本人の再ログインが必要 |
-| 作成の再開材料 | `eval-log/draft-pr-SYS-EVAL-REPORT-P05.md`・`draft-pr-SYS-EVAL-REPORT-P08.md` に本文を準備。端末のみのファイルで共有しない |
-| Beads | draft未作成・公開未実施として証跡を追記し、タスクを閉じない |
+| draft PR | [第1段 #96](https://github.com/daishiman/hr-evaluation-system/pull/96)・[第2段 #97](https://github.com/daishiman/hr-evaluation-system/pull/97)を作成。両方OPEN・draft、baseはmain。#97の差分が2つのSQLだけであることをAPIとPR差分で確認 |
+| PR本文 | 目的・平易な概要・技術説明・検証・仕様反映・Beads/dev-graph ID・残課題を記載。#97は#96の公開と稼働確認後に進める依存待ち |
+| Beads | PRのURLと認証に関する訂正を追記し、公開未実施のためタスクは閉じない |
+
+### 認証経路に関する訂正
+
+当初の「本人の再ログインが必要」という判定は誤りだった。PATH先頭の `/usr/local/bin/gh` は2.20.0で古い認証を見ていたが、`/opt/homebrew/bin/gh` 2.96.0では `daishiman` としてkeyringで認証済みだった。新しいCLIでリポジトリ・main・既存PRを確認し、PRを作成した。接続済みGitHubアプリの403はその連携固有の作成権限の制限として残る。再ログインを求めたdevice flowは期限切れで終了し、新しい認証情報を読み出したり共有したりしていない。
 
 push時にGitHubが既定ブランチの依存脆弱性14件（critical 1・high 4・moderate 6・low 3）を通知した。今回の依存変更によるものとは判定していない。公開前の確認事項として記録し、依存バージョンはこの作業で変更していない。
 
