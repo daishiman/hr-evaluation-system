@@ -30,6 +30,7 @@ async function expectPrintLayout(page: Page, savePdf: (paper: string, pdf: Buffe
   // 実際の印刷操作が、全図と文字の準備後にだけ起きることを確認する。
   await page.evaluate(() => { window.print = () => { document.documentElement.dataset.printInvoked = "true"; }; });
   // 読込中を再現する。紙用SVGを一時的に外し、準備前に印刷されないことを観測する。
+  await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeEnabled();
   await page.locator(".report-chart-print svg.recharts-surface").first().waitFor({ state: "attached" });
   await page.evaluate(() => {
     const svg = document.querySelector(".report-chart-print svg.recharts-surface")!;
@@ -37,11 +38,21 @@ async function expectPrintLayout(page: Page, savePdf: (paper: string, pdf: Buffe
     svg.remove();
     (window as unknown as { restorePrintChart: () => void }).restorePrintChart = () => parent.appendChild(svg);
   });
-  await page.getByRole("button", { name: "印刷する", exact: true }).click();
   await expect(page.getByRole("button", { name: "印刷の準備中…", exact: true })).toBeDisabled();
+  // 背景準備中でも用紙は選べる。待機が終わっても勝手に印刷しない。
+  await expect(page.getByLabel("用紙", { exact: true })).toBeEnabled();
+  await page.getByLabel("用紙", { exact: true }).selectOption("A3");
+  await page.getByLabel("用紙", { exact: true }).selectOption("A4");
   await expect(page.locator("html")).not.toHaveAttribute("data-print-invoked", "true");
   await page.evaluate(() => (window as unknown as { restorePrintChart: () => void }).restorePrintChart());
-  await expect(page.locator("html")).toHaveAttribute("data-print-invoked", "true");
+  await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeEnabled();
+  await expect(page.locator("html")).not.toHaveAttribute("data-print-invoked", "true");
+  // 準備済みなら明示クリックの同じイベント内で印刷でき、フォントを再待機しない。
+  expect(await page.evaluate(() => {
+    const button = Array.from(document.querySelectorAll("button")).find((item) => item.textContent === "印刷する")!;
+    button.click();
+    return document.documentElement.dataset.printInvoked;
+  })).toBe("true");
   await expect(page.locator(".report-chart-print svg.recharts-surface")).toHaveCount(await page.locator(".report-chart-print").count());
   await page.waitForSelector(".report-page-2");
   // 画面ではコメントを最後に読む。紙では order で1枚目の末尾へ寄せる（HTML の順は変えない）
@@ -106,7 +117,6 @@ test("長い上長コメントは切らず、必要な紙へ続けて印刷す�
     await page.goto(`/reports/${fixture.employee.id}`);
     await page.evaluate(() => { window.print = () => { document.documentElement.dataset.printInvoked = "true"; }; });
     await page.getByLabel("用紙", { exact: true }).selectOption("A3");
-    await page.getByRole("button", { name: "印刷する", exact: true }).click();
     await expect(page.getByRole("alert").filter({ hasText: "内容がA3の1枚を超えています" })).toBeVisible();
     await expect(page.locator("html")).not.toHaveAttribute("data-print-invoked", "true");
     await page.getByRole("button", { name: "A4で全文を印刷する", exact: true }).click();
@@ -118,4 +128,74 @@ test("長い上長コメントは切らず、必要な紙へ続けて印刷す�
     expect(pageCount(pdf)).toBeGreaterThan(2);
     await testInfo.attach("report-long-comment.pdf", { body: pdf, contentType: "application/pdf" });
   } finally { fixture.close(); }
+});
+
+
+test("準備を中止・再試行でき、準備中に次の画面へ進んでも印刷されない", async ({ page, context, baseURL }) => {
+  await signIn(page, { email: "manager@kyufu.hyoka-demo.jp", password: SEED_PASSWORD });
+  await context.addCookies([{ name: "hr_company", value: "cmp_kyufu", url: baseURL! }]);
+  await page.goto("/reports/usr_kyufu_e3");
+  await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeEnabled();
+  await page.evaluate(() => {
+    window.print = () => { document.documentElement.dataset.printInvoked = "true"; };
+    const svg = document.querySelector(".report-chart-print svg.recharts-surface")!;
+    const parent = svg.parentElement!;
+    svg.remove();
+    (window as unknown as { restorePrintChart: () => void }).restorePrintChart = () => parent.appendChild(svg);
+  });
+  await page.getByRole("button", { name: "準備を中止", exact: true }).click();
+  await page.evaluate(() => (window as unknown as { restorePrintChart: () => void }).restorePrintChart());
+  await expect(page.getByRole("status").filter({ hasText: "印刷の準備を中止しました" })).toBeVisible();
+  await expect(page.locator("html")).not.toHaveAttribute("data-print-invoked", "true");
+  await page.getByRole("button", { name: "印刷の準備をやり直す", exact: true }).click();
+  await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeEnabled();
+  await page.evaluate(() => {
+    const svg = document.querySelector(".report-chart-print svg.recharts-surface")!;
+    const parent = svg.parentElement!;
+    svg.remove();
+    (window as unknown as { restorePrintChart: () => void }).restorePrintChart = () => parent.appendChild(svg);
+  });
+  await expect(page.getByRole("button", { name: "印刷の準備中…", exact: true })).toBeDisabled();
+  await page.getByRole("link", { name: "メンバー1人", exact: true }).click();
+  await expect(page).toHaveURL(/\/manager\/members\/usr_kyufu_e3$/);
+  await page.evaluate(async () => {
+    (window as unknown as { restorePrintChart: () => void }).restorePrintChart();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+  await expect(page.locator("html")).not.toHaveAttribute("data-print-invoked", "true");
+});
+
+test("A3の準備結果を再利用し、同じ画面の内容変更時には測り直す", async ({ page, context, baseURL }) => {
+  await signIn(page, { email: "manager@kyufu.hyoka-demo.jp", password: SEED_PASSWORD });
+  await context.addCookies([{ name: "hr_company", value: "cmp_kyufu", url: baseURL! }]);
+  await page.goto("/reports/usr_kyufu_e3");
+  await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeEnabled();
+  await page.evaluate(() => {
+    window.print = () => { document.documentElement.dataset.printInvoked = "true"; };
+    document.documentElement.dataset.layoutChecks = "0";
+    new MutationObserver((records) => {
+      const frames = records.flatMap((record) => Array.from(record.addedNodes)).filter((node) => node instanceof HTMLIFrameElement && node.title === "印刷の紙面確認");
+      if (frames.length) document.documentElement.dataset.layoutChecks = String(Number(document.documentElement.dataset.layoutChecks) + frames.length);
+    }).observe(document.body, { childList: true });
+  });
+  await page.getByLabel("用紙", { exact: true }).selectOption("A3");
+  await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeEnabled();
+  await expect(page.locator("html")).toHaveAttribute("data-layout-checks", "1");
+  await page.getByLabel("用紙", { exact: true }).selectOption("A4");
+  await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeEnabled();
+  await page.getByLabel("用紙", { exact: true }).selectOption("A3");
+  await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeEnabled();
+  await expect(page.locator("html")).toHaveAttribute("data-layout-checks", "1");
+  await page.evaluate(() => {
+    const extra = document.createElement("p");
+    extra.textContent = "担当業務の改善と引き継ぎの手順を整理しました。".repeat(160);
+    document.querySelector(".report-comment")!.appendChild(extra);
+  });
+  await expect(page.getByRole("alert").filter({ hasText: "内容がA3の1枚を超えています" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-layout-checks", "2");
+  await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeDisabled();
+  await expect(page.locator('iframe[title="印刷の紙面確認"]')).toHaveCount(0);
+  await expect(page.locator("html")).not.toHaveAttribute("data-print-invoked", "true");
+  await page.getByRole("button", { name: "A4で全文を印刷する", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-print-invoked", "true");
 });

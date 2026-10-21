@@ -15,7 +15,7 @@ serves_goals: [G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, 
 
 | プラットフォーム | 状態 | 根拠 |
 |---|---|---|
-| Web (web) | 確定 | 確定質疑: qa-y11。裏付け質疑 (`qa_refs`): `qa-r-frontend-3`, `qa-f05`, `qa-f01`, `qa-u01`, `qa-u02`, `qa-d02`, `qa-u05`, `qa-u19`, `qa-u18`, `qa-u22`, `qa-u23`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v14`, `qa-v22`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w07`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x10`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-z04`, `qa-aa01-report-access-print`, `qa-aa03-report-paper-user-revision`, `qa-aa04-report-landscape-onepage-design`, `qa-aa05-report-score-grade-request`, `qa-aa06-report-score-grade-design`, `qa-aa07-report-threshold-marker-audit`, `qa-aa08-report-marker-detail-print-design`, `qa-aa09-report-print-final-alignment` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24 |
+| Web (web) | 確定 | 確定質疑: qa-y11。裏付け質疑 (`qa_refs`): `qa-r-frontend-3`, `qa-f05`, `qa-f01`, `qa-u01`, `qa-u02`, `qa-d02`, `qa-u05`, `qa-u19`, `qa-u18`, `qa-u22`, `qa-u23`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v14`, `qa-v22`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w07`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x10`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-z04`, `qa-aa01-report-access-print`, `qa-aa03-report-paper-user-revision`, `qa-aa04-report-landscape-onepage-design`, `qa-aa05-report-score-grade-request`, `qa-aa06-report-score-grade-design`, `qa-aa07-report-threshold-marker-audit`, `qa-aa08-report-marker-detail-print-design`, `qa-aa09-report-print-final-alignment`, `qa-aa10-report-print-background-preparation` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24 |
 | モバイル (mobile) | 確定 | 確定質疑: qa-y11。裏付け質疑 (`qa_refs`): `qa-r-frontend-3`, `qa-f05`, `qa-f01`, `qa-u01`, `qa-u02`, `qa-d02`, `qa-u05`, `qa-u19`, `qa-u18`, `qa-u22`, `qa-u23`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v14`, `qa-v22`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w07`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x10`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-z04` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24 |
 | タブレット (tablet) | 確定 | 確定質疑: qa-y11。裏付け質疑 (`qa_refs`): `qa-r-frontend-3`, `qa-f05`, `qa-f01`, `qa-u01`, `qa-u02`, `qa-d02`, `qa-u05`, `qa-u19`, `qa-u18`, `qa-u22`, `qa-u23`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v14`, `qa-v22`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w07`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x10`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-z04` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24 |
 | デスクトップ (Windows) (desktop-windows) | 対象外 | 理由: frontend: デスクトップのネイティブアプリは存在せず作る予定も無い（qa-f01。利用者も qa-u08 で対象外と確認）。PC からの利用はブラウザ経由で web 列に含まれ、ルーターのキャッシュとタブ間通知はデスクトップ固有の要件を持たない。 |
@@ -1193,6 +1193,18 @@ qa-aa07 の調査後の黒線の説明と、レポート印刷と既存の評価
 最終の可逆な設計補足。利用者は A3 を既定にするよう指定しておらず、用紙の初期選択は従来どおり A4 縦を維持する。A3 横は選択した場合に標準1枚とし、過長の場合は A4 の全文印刷へ案内する。qa-aa04 の A3 既定化の案は採用しない。URL・日時の抑制は実装された @page margin:0 と本文12mm padding、box-decoration-break:clone（webkit併記）のページごとの反復だけで行い、追加の空 margin box 宣言は実装しない。qa-aa04 の「対応環境では余白ボックスも空にする」の案は採用しない。過去QAの本文は履歴として保持し、現在の規範は本補足と製品仕様 §29・DD-025 による。全ブラウザに対する印刷設定の強制は保証せず、必要時のヘッダーとフッター設定の案内は維持する。評価詳細の黒線は実績値、得点の棒は獲得点として説明を分ける。保存・確定などの操作パネルは紙へ出さず、未確定の評価の詳細印刷は維持する。判定・保存値・認可は変更しない。最終の実PDFの証拠は実装担当が受領書へ追記する。
 
 - (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない) / 出所: 2026-10-21 の qa-aa03・qa-aa05 と実装担当が共有した最終の仕様実装整合方針。利用者の追加回答を装わず、初稿から採用しなかった案と最終の実装を明確化するもの。docs/product/spec-receipts/2026-10-21-report-access-print.md の「最終の実装整合」へ対応。)
+
+#### 裏付け質疑: `qa-aa10-report-print-background-preparation`
+
+**問**
+
+待機中に次の操作へ進めないという追加依頼に対し、レポートの印刷準備をどう軽くするか。
+
+**答**
+
+可逆な差分設計。具体的な待機場面の確認回答は未着であり、直前の印刷文脈からレポート準備と仮定する。画面表示後に紙用の全グラフとフォントを背景で準備し、A3を選んだ場合だけ紙面測定を先に行う。同じ会社・社員・閲覧形・レポート内容の画面内だけで結果を再利用する。準備中も用紙選択と別画面への移動ができ、取消と再試行を提供する。会社・社員・閲覧形・内容の変更および離脱では古い処理と結果を破棄する。準備完了後の利用者の明示クリックでのみ印刷を開き、背景完了から勝手にwindow.printを呼ばない。ブラウザ・OSの印刷ダイアログ自身は背景化しない。図と文字の15秒上限、未準備印刷の抑止、A3過長時のA4全文への回復、紙面と本人向け数値非表示・認可を維持する。新API・永続ジョブ・外部送信・スキーマは追加しない。本番の長い待機は未再現であり、ローカルGET891msを本番実測と扱わない。検証結果は実装担当が受領書へ追記する。
+
+- (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない) / 出所: 2026-10-21 利用者の追加依頼「待機時間がめちゃくちゃ長かったりして、次の流れに全然進めないです。これって何かもっと軽くできたりとか、この辺、次に進めたりするのが、処理は裏で動いていたりとかっていう形で進めないですかね。この待機をずっとひたすら待っておかないと、次に進めないのはめちゃくちゃ億劫です。」。印刷という適用場面は回答済みの事実ではなく、rootが明示した仮定に基づく。製品仕様§29・DD025および既存受領書のP09補足に対応。)
 
 ### モバイル (mobile)
 

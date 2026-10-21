@@ -485,7 +485,8 @@
           "qa-aa06-report-score-grade-design",
           "qa-aa07-report-threshold-marker-audit",
           "qa-aa08-report-marker-detail-print-design",
-          "qa-aa09-report-print-final-alignment"
+          "qa-aa09-report-print-final-alignment",
+          "qa-aa10-report-print-background-preparation"
         ]
       },
       "mobile": {
@@ -1316,7 +1317,8 @@
           "qa-aa06-report-score-grade-design",
           "qa-aa07-report-threshold-marker-audit",
           "qa-aa08-report-marker-detail-print-design",
-          "qa-aa09-report-print-final-alignment"
+          "qa-aa09-report-print-final-alignment",
+          "qa-aa10-report-print-background-preparation"
         ]
       },
       "mobile": {
@@ -1548,7 +1550,8 @@
           "qa-aa06-report-score-grade-design",
           "qa-aa07-report-threshold-marker-audit",
           "qa-aa08-report-marker-detail-print-design",
-          "qa-aa09-report-print-final-alignment"
+          "qa-aa09-report-print-final-alignment",
+          "qa-aa10-report-print-background-preparation"
         ]
       },
       "mobile": {
@@ -4053,6 +4056,13 @@
       "question": "印刷の最終実装に合わせ、用紙の初期選択と URL 抑制の採用形、評価詳細の操作パネルの扱いを明確にする。",
       "answer": "最終の可逆な設計補足。利用者は A3 を既定にするよう指定しておらず、用紙の初期選択は従来どおり A4 縦を維持する。A3 横は選択した場合に標準1枚とし、過長の場合は A4 の全文印刷へ案内する。qa-aa04 の A3 既定化の案は採用しない。URL・日時の抑制は実装された @page margin:0 と本文12mm padding、box-decoration-break:clone（webkit併記）のページごとの反復だけで行い、追加の空 margin box 宣言は実装しない。qa-aa04 の「対応環境では余白ボックスも空にする」の案は採用しない。過去QAの本文は履歴として保持し、現在の規範は本補足と製品仕様 §29・DD-025 による。全ブラウザに対する印刷設定の強制は保証せず、必要時のヘッダーとフッター設定の案内は維持する。評価詳細の黒線は実績値、得点の棒は獲得点として説明を分ける。保存・確定などの操作パネルは紙へ出さず、未確定の評価の詳細印刷は維持する。判定・保存値・認可は変更しない。最終の実PDFの証拠は実装担当が受領書へ追記する。",
       "provenance": "2026-10-21 の qa-aa03・qa-aa05 と実装担当が共有した最終の仕様実装整合方針。利用者の追加回答を装わず、初稿から採用しなかった案と最終の実装を明確化するもの。docs/product/spec-receipts/2026-10-21-report-access-print.md の「最終の実装整合」へ対応。",
+      "basis": "agent-inference"
+    },
+    {
+      "id": "qa-aa10-report-print-background-preparation",
+      "question": "待機中に次の操作へ進めないという追加依頼に対し、レポートの印刷準備をどう軽くするか。",
+      "answer": "可逆な差分設計。具体的な待機場面の確認回答は未着であり、直前の印刷文脈からレポート準備と仮定する。画面表示後に紙用の全グラフとフォントを背景で準備し、A3を選んだ場合だけ紙面測定を先に行う。同じ会社・社員・閲覧形・レポート内容の画面内だけで結果を再利用する。準備中も用紙選択と別画面への移動ができ、取消と再試行を提供する。会社・社員・閲覧形・内容の変更および離脱では古い処理と結果を破棄する。準備完了後の利用者の明示クリックでのみ印刷を開き、背景完了から勝手にwindow.printを呼ばない。ブラウザ・OSの印刷ダイアログ自身は背景化しない。図と文字の15秒上限、未準備印刷の抑止、A3過長時のA4全文への回復、紙面と本人向け数値非表示・認可を維持する。新API・永続ジョブ・外部送信・スキーマは追加しない。本番の長い待機は未再現であり、ローカルGET891msを本番実測と扱わない。検証結果は実装担当が受領書へ追記する。",
+      "provenance": "2026-10-21 利用者の追加依頼「待機時間がめちゃくちゃ長かったりして、次の流れに全然進めないです。これって何かもっと軽くできたりとか、この辺、次に進めたりするのが、処理は裏で動いていたりとかっていう形で進めないですかね。この待機をずっとひたすら待っておかないと、次に進めないのはめちゃくちゃ億劫です。」。印刷という適用場面は回答済みの事実ではなく、rootが明示した仮定に基づく。製品仕様§29・DD025および既存受領書のP09補足に対応。",
       "basis": "agent-inference"
     }
   ],
