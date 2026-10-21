@@ -60,4 +60,18 @@ PRは2つともmainを向けるdraftとする。第2段は先行する第1段の
 
 ## 残課題
 
-公開前の判断待ち SECURITY-013〜015、POLICY-011、OPS-017と保管期限の判断は [現在の残課題](../backlog.md) を正本とする。今回のdraft作成を公開の承認やリスク受容と解釈しない。GitHub CLIの認証は失効していたが、接続済みGitHub連携で対象リポジトリのadmin/push権限を確認できたため、PR操作はそちらを使う。認証情報を読み出したり共有したりしていない。
+公開前の判断待ち SECURITY-013〜015、POLICY-011、OPS-017と保管期限の判断は [現在の残課題](../backlog.md) を正本とする。今回のdraft作成の依頼を公開の承認やリスク受容と解釈しない。
+
+## commit・pushとPR作成の記録
+
+| 対象 | 記録 |
+|---|---|
+| 第1段 | `b199bc73a8b937b56a047e96ddf6fda905ca02a8`、`devgraph/SYS-EVAL-REPORT-P05` をoriginへpush済み。184ファイルを明示的に選択 |
+| 第2段 | `b71e039442123c03ce79af9fb967168e7173c174`、`devgraph/SYS-EVAL-REPORT-P08` をoriginへpush済み。2つのSQLだけを別の作業ツリーで保存 |
+| draft PR | **未作成**。GitHub CLIはtoken失効。接続済みGitHub連携はrepoのadmin/pushを返すが、`create_pull_request` は403 `Resource not accessible by integration`。ブラウザもログイン画面となり、認証情報は読んだり入力したりしていない。本人の再ログインが必要 |
+| 作成の再開材料 | `eval-log/draft-pr-SYS-EVAL-REPORT-P05.md`・`draft-pr-SYS-EVAL-REPORT-P08.md` に本文を準備。端末のみのファイルで共有しない |
+| Beads | draft未作成・公開未実施として証跡を追記し、タスクを閉じない |
+
+push時にGitHubが既定ブランチの依存脆弱性14件（critical 1・high 4・moderate 6・low 3）を通知した。今回の依存変更によるものとは判定していない。公開前の確認事項として記録し、依存バージョンはこの作業で変更していない。
+
+クローズ済みの別タスクの代表例も照合した。`hr-czp.13` はPR #90、`hr-s4s` は #92、`hr-wcv.12` は #93・#94の取り込み・配布の証跡で閉じている。これらを「閉じているから」という理由だけで除外したのではなく、mainに反映済みの同じ変更を再提出しない。今回の `hr-inn.1`〜`.13` は12件in_progress・1件openのままで別に扱う。
