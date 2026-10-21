@@ -40,3 +40,9 @@
 - launch-security差分監査: 新規の未解決CRITICAL/HIGHは0。認証・会社境界・自己承認禁止を維持し、空対象による担当外更新を修正。新外部API・永続保存・権限系を追加せず、SQLは既存Drizzleのparameterized条件。`pnpm audit --prod`は既存lock由来のcritical0/high2/moderate3（better-auth経由のvitest/vite/source-map-js等）。開発サーバー・ソースマップ入力の経路で、生成したWorker handler/middlewareに該当ライブラリ名が含まれないことを確認。依存更新は今回の変更に混ぜず既存の依存監視を継続する。
 - 本番反映: 未実施。既存のv1以降アプリに対するローカルpreviewの改善候補であり、新しい公開版としてのv0/v1タグは付けていない。利用者確認とPR後の公開判断を残す。
 - 4条件の最終判定は[30手法レビュー](../../reviews/elegant-report-access-print-2026-10-21.md)へ接続する。既存の未決POLICY/SECURITY/OPS項目を本変更のPASSで解消と扱わない。
+
+## 提出の記録
+
+- baseは `main`（`4e5986c`）。`origin/main` → ローカルmain → 本ブランチの順に取り込み済み。
+- `devgraph/SYS-EVAL-REPORT-P06`、実装commit `e911dbb` をoriginへpushし、[draft PR #98](https://github.com/daishiman/hr-evaluation-system/pull/98)を作成。対象40ファイルだけを選択し、機密検査・差分検査を通過。元の作業ツリーの無関係差分は含めていない。
+- 主な追跡は Beads `hr-inn.6`、dev-graph `SYS-EVAL-REPORT-P06`。関連 `hr-inn.5`・`.7`・`.9`・`.10` と親 `hr-inn` へ結果とPRを記録する。本変更は本番未反映であり、テスト成功やdraft作成だけでタスクをcloseしない。GitHubのCI結果はPRへ記録する。
