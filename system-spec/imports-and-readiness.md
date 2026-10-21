@@ -15,3 +15,4 @@
 - 評価期間openにはreadyな評価セットと1件以上の公開中アンケートが必要。
 - アンケート公開にはreadyな評価セット、planning/openの評価期間、1問以上の設問が必要。
 - setup、dashboard、管理画面、APIは`setup-readiness.ts` / `scheme-readiness.ts`の同じ結果を使う。
+- 評価期間に使う評価セットは `src/lib/domain/scheme-resolution.ts` の `resolveSchemeForCycle` だけが決める。順は、期間に付いた評価セット → 会社の使用中の評価セット → 無し（先頭の行で代えない）。公開・受付開始の判定と設問の古さの判定は `src/lib/cycle-scheme.ts`（`schemeIdForCycle` / `schemeIdsForCycles`）を通して同じ答えを受け、アンケートの作成（`form-build.ts`）と点数の計算（`evaluate.ts`）も同じ関数を呼ぶ。評価レポートは評価に保存した値を読み、評価セットを選び直さない（[DD-024](../docs/product/design-decisions.md)）。

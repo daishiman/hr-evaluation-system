@@ -109,9 +109,8 @@ export async function saveResponse(raw: unknown) {
     }
 
     const responseId = existing?.id ?? newId("res");
-    // 回答時点の所属事業所を写し取る。
-    // 期中に異動すると、いまの所属で賞与の事業所KGI係数が決まってしまい、
-    // 「実績を出した事業所」と「係数を借りた事業所」がずれるため（CSV取込では以前から写している）。
+    // 回答時点の所属事業所を写し取る。評価レポートの見出しの事業所はこの写しを使う。
+    // 期中に異動しても「実績を出した事業所」のまま残すため（CSV取込でも写している）。
     // 事業所は会社ごとの値なので、いまの会社での所属の値（viewer.officeId）を使う。
     const officeId = existing ? existing.officeId : (viewer.officeId ?? null);
 

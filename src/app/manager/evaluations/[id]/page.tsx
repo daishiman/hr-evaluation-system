@@ -14,6 +14,7 @@ import {
   selectNextActionableEvaluation,
   SELF_EVALUATION_BLOCK_REASON,
 } from "@/lib/domain/evaluation-authority";
+import { shortJudgementReason } from "@/lib/domain/final-decision";
 
 export const dynamic = "force-dynamic";
 
@@ -140,6 +141,25 @@ export default async function ManagerEvaluation({ params }: { params: Promise<{ 
         status={detail.head.status}
         comment={detail.head.evaluatorComment ?? ""}
         employeeName={detail.head.employeeName ?? ""}
+        decisions={{
+          raise: {
+            scoreJudgement: detail.head.raiseEligible,
+            shortReason: shortJudgementReason("raise", detail.head.raiseEligible, detail.head.raiseReason),
+            saved: detail.head.raiseDecision,
+            savedReason: detail.head.raiseDecisionReason,
+          },
+          promotion: {
+            scoreJudgement: detail.head.promotionEligible,
+            shortReason: shortJudgementReason(
+              "promotion",
+              detail.head.promotionEligible,
+              detail.head.promotionBlockedReason,
+            ),
+            saved: detail.head.promotionDecision,
+            savedReason: detail.head.promotionDecisionReason,
+          },
+        }}
+        behaviorAspects={[...new Set(detail.behaviors.map((b) => b.aspectName))]}
         blockedReason={own ? SELF_EVALUATION_BLOCK_REASON : null}
       />
 

@@ -1,10 +1,12 @@
 /**
  * シードデータの組み立て。
  * data/*.json（元スプレッドシートから抽出した制度マスタ）を読み、
- * デモ2社ぶんのマスタ・過去2サイクルの回答と評価結果を組み立てて SQL 文の配列を返す。
+ * デモ3社＋テンプレートのマスタと、締めた3期・受付中の1期の回答と評価結果を組み立てて SQL 文の配列を返す。
+ * 給付事業（kyufu）には、画面で全項目を確かめるための見本（上司の判断の型・アンケートと回答の状態・
+ * 制度の設定とアンケートのずれ）も足す。
  */
 import { readFileSync } from "node:fs";
-import { hashPassword } from "better-auth/crypto";
+import { createHash, scryptSync } from "node:crypto";
 
 const read = (f) => JSON.parse(readFileSync(new URL(`../data/${f}`, import.meta.url), "utf8"));
 
@@ -13,7 +15,25 @@ const kpiRanks = read("kpi-ranks.json");
 const kpiQuestions = read("kpi-questions.json");
 const kpiPoints = read("kpi-points.json");
 const gradesDef = read("grades.json");
-const gradeReqs = read("grade-requirements.json");
+
+/**
+ * 元シートの等級要件のうち、言い換えて入れる文（等級・区分・番号で当てる）。
+ * 等級5-1の運営の4番目は、元シートでは事業所の達成率の仕組みの略語で「〜の達成に向けた改善」と書いていた。
+ * その仕組みは削除した（DD-024）ので、略語のままだと「どこかで達成率を入力するのでは」と読まれる。
+ * 意味は事業所の目標の達成なので、そう書く。当たる行が無ければ組み立てを止める（元データが変わったことに気づくため）。
+ */
+const GRADE_REQ_REWORDING = [
+  { gradeCode: "manager1", category: "operation", seq: 4, text: "事業所の目標達成に向けた改善" },
+];
+const gradeReqs = read("grade-requirements.json").map((r) => {
+  const w = GRADE_REQ_REWORDING.find((x) => x.gradeCode === r.gradeCode && x.category === r.category && x.seq === r.seq);
+  return w ? { ...r, text: w.text } : r;
+});
+for (const w of GRADE_REQ_REWORDING) {
+  if (!gradeReqs.some((r) => r.gradeCode === w.gradeCode && r.category === w.category && r.seq === w.seq)) {
+    throw new Error(`言い換える等級要件（${w.gradeCode}・${w.category}・${w.seq}番目）が元データにありません。`);
+  }
+}
 const promoReqs = read("promotion-requirements.json");
 const behaviors = read("behavior-guidelines.json");
 
@@ -134,6 +154,17 @@ function rng(seed) {
   };
 }
 
+/** 日時の文字列（UTC）をミリ秒にする。日付だけなら UTC の 0 時 */
+const at = (s) => T(new Date(s.length === 10 ? `${s}T00:00:00Z` : s));
+/** 日本時間の今日（YYYY-MM-DD）。受付中のアンケートの締切を、今日より後に保つための基準 */
+const todayInJst = (now = new Date()) => new Date(now.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+/** YYYY-MM-DD に日数を足す */
+const addDays = (ymd, n) => new Date(at(ymd) + n * 86400000).toISOString().slice(0, 10);
+const laterOf = (a, b) => (a >= b ? a : b);
+const earlierOf = (a, b) => (a <= b ? a : b);
+/** 金額の書き方（src/lib/domain/bonus.ts と同じ「3,200」の形） */
+const yenText = (v) => v.toLocaleString("ja-JP");
+
 const insert = (table, rows) => {
   if (!rows.length) return [];
   const cols = Object.keys(rows[0]);
@@ -171,6 +202,8 @@ export const COMPANIES = [
     key: "kyufu",
     name: "給付事業（1社目）",
     isTenantOfRecord: true,
+    /** 受付中の期の見本（アンケートと回答の状態・評価の下書き）と、制度の設定のずれを足す会社 */
+    showcase: true,
     scheme: { sales: 9, occupancy: 10, compliance: 16, safety: 2, hr: 11, quality: 13, growth: 27 },
     schemeName: "2026年度 標準評価セット",
     offices: [{ code: "hq", name: "本部" }, { code: "office1", name: "第1事業所" }, { code: "office2", name: "第2事業所" }],
@@ -212,7 +245,7 @@ const RAISE_POLICY = {
   rounding_unit: 100,
   bonus_yen_per_point: 3200,
   bonus_pool_yen: 930000,
-  note: "元シートでは連続達成の加算は「使わない」設定。賞与は 個人Pt（KPI評価点合計 × 事業所KGI達成係数）× 1点あたり金額 で求める。",
+  note: "元シートでは連続達成の加算は「使わない」設定。賞与は 個人Pt（KPI評価点合計を四捨五入した整数）× 1点あたり金額 で求める。",
 };
 
 const RAISE_PATTERNS = [
@@ -283,33 +316,144 @@ export function chosenItemsFor(co, rule) {
   return rows;
 }
 
+/**
+ * 評価期間。締めた3期と受付中の1期。
+ * decisionsRecorded は、確定のときに上司の判断（昇給・昇格を点数の判定どおりにするか変えるか）を記録した期。
+ * 2025年度 上期は判断を記録する仕組みより前に確定した期として、判断の列を空（記録なし）のままにする。
+ */
 const CYCLES = [
   { key: "2025h1", name: "2025年度 上期", start: "2025-04-01", end: "2025-09-30", status: "closed" },
-  { key: "2025h2", name: "2025年度 下期", start: "2025-10-01", end: "2026-03-31", status: "closed" },
-  { key: "2026h1", name: "2026年度 上期", start: "2026-04-01", end: "2026-09-30", status: "open" },
+  { key: "2025h2", name: "2025年度 下期", start: "2025-10-01", end: "2026-03-31", status: "closed", decisionsRecorded: true },
+  { key: "2026h1", name: "2026年度 上期", start: "2026-04-01", end: "2026-09-30", status: "closed", decisionsRecorded: true },
+  { key: "2026h2", name: "2026年度 下期", start: "2026-10-01", end: "2027-03-31", status: "open" },
 ];
 
+/**
+ * 評価される側の社員。grade はいまの等級。
+ * gradeHistory は、いまと違う等級だった期（期のキー → 等級）。昇格した人の過去の期をこれで表す
+ * （昇格を認めた上司の判断と対で、給付事業だけに使う。ほかの会社では全部の期をいまの等級で作る）。
+ * reportsTo は直属の上司で、既定はマネージャー、"admin" は会社の管理者。
+ * マネージャーに直属の部下と直属でない社員の両方がいる形にして、評価を見られる相手の違いを画面で確かめられるようにしている。
+ */
 const EMPLOYEES = [
-  { key: "e1", name: "田中 陽子", grade: "beginner", dept: "第1事業所", hired: "2025-04-01" },
+  { key: "e1", name: "田中 陽子", grade: "regular", gradeHistory: { "2025h1": "beginner", "2025h2": "beginner" }, dept: "第1事業所", hired: "2025-04-01" },
   { key: "e2", name: "佐藤 健太", grade: "regular", dept: "第1事業所", hired: "2023-04-01" },
   { key: "e3", name: "鈴木 美咲", grade: "regular", dept: "第2事業所", hired: "2023-10-01" },
   { key: "e4", name: "高橋 直樹", grade: "chief", dept: "第1事業所", hired: "2021-04-01" },
   { key: "e5", name: "伊藤 さやか", grade: "chief", dept: "第2事業所", hired: "2021-04-01" },
   { key: "e6", name: "渡辺 拓也", grade: "am1", dept: "第1事業所", hired: "2019-04-01" },
-  { key: "e7", name: "山本 千夏", grade: "am2", dept: "第2事業所", hired: "2018-04-01" },
-  { key: "e8", name: "中村 和彦", grade: "manager1", dept: "本部", hired: "2016-04-01" },
+  { key: "e7", name: "山本 千夏", grade: "am2", dept: "第2事業所", hired: "2018-04-01", reportsTo: "admin" },
+  { key: "e8", name: "中村 和彦", grade: "manager2", gradeHistory: { "2025h1": "manager1", "2025h2": "manager1" }, dept: "本部", hired: "2016-04-01", reportsTo: "admin" },
 ];
+
+/** その期の等級（昇格した人は、昇格より前の期で前の等級になる）。withHistory が偽なら、いまの等級 */
+const gradeIn = (e, cy, withHistory) => (withHistory ? e.gradeHistory?.[cy.key] : undefined) ?? e.grade;
 
 /**
  * デモ用の「実力の目安」。1.0 は全項目Aで昇給要件を満たす人。
  * 昇給・昇格の両方の判定結果が画面で確認できるように、通る人と通らない人を意図的に混ぜている。
  */
 const STRENGTH = {
-  "e2:2025h1": 1, "e5:2025h2": 1, "e7:2025h2": 1,
+  "e2:2025h1": 1, "e5:2025h2": 1, "e7:2025h2": 1, "e8:2025h2": 1, "e4:2026h1": 1,
   e1: 0.35, e2: 0.7, e3: 0.5, e4: 0.8, e5: 0.75, e6: 0.6, e7: 0.85, e8: 0.9,
 };
 
+/**
+ * 全項目Aでも、昇格要件（研修の報告書・テスト）の最初の1つを「いいえ」にする人と期。
+ * 「昇給はできるが昇格はできない」評価を見せるためで、昇格しない人の等級が次の期も変わらないこととも合う。
+ * 乱数の使い方は変えず、答えだけを上書きする。
+ */
+const GATE_MISS = ["e2:2025h1", "e5:2025h2", "e7:2025h2", "e4:2026h1"];
+
+/**
+ * 確定のときに上司が記録した判断の見本（人:期 → 最終的に認めるか）。給付事業だけに入れ、ほかの会社は全員判定どおり。
+ * raise・promotion が点数の判定と同じなら判定どおり（follow）、違えば変える（override）として記録する。
+ * 変えるときは理由が要り、判定と同じなのに理由を書いたときも組み立てを止める（見本の前提が崩れたことに気づくため）。
+ * 書いていない項目と人は判定どおり。理由とコメントは本人にもそのまま見えるので、
+ * 点数・配点・金額の数字を書かず、行動や事実で書く（DD-023。src/lib/domain/final-decision.ts の検査を通る文）。
+ */
+const DECISIONS = {
+  // 昇給は判定どおり、昇格だけ判定を変えて認める（次の期から等級2）
+  "e1:2025h2": {
+    promotion: true,
+    promotionReason: "受け入れ記録を一人で整え、先輩の点検でも直しが出ない状態を続けた。次の等級の業務を任せられると判断した。",
+    comment: "次の期からは新人の記録の点検もお願いします。迷ったときは早めに相談してください。",
+  },
+  // 昇給も昇格も判定どおりに認める（全項目Aで昇格要件もそろい、次の期から等級5-2）
+  "e8:2025h2": { raise: true, promotion: true },
+  // 昇給の判定（見送り）を変えて認める
+  "e3:2026h1": {
+    raise: true,
+    raiseReason: "送迎の時間割を組み直し、利用者の待ち時間が減ったと家族から直接聞いている。記録に表れにくい改善を続けたことを認め、昇給とする。",
+    comment: "送迎の組み直しのような工夫を、次の期は記録にも残していきましょう。",
+  },
+  // 昇給の判定（可）を変えて見送る
+  "e4:2026h1": {
+    raise: false,
+    raiseReason: "記録の締めを期末にまとめて行い、事業所の点検で差し戻しが続いた。日々の記録の習慣が整うまで昇給を見送る。",
+    comment: "日々の記録を当日のうちに締める習慣を、次の期の最初の面談で一緒に決めましょう。",
+  },
+};
+
+/**
+ * 判断の見本1つ（昇給か昇格）を、記録する形（follow・override と理由）にする。
+ * wanted が無いか点数の判定と同じなら判定どおり、違えば変える。
+ * 判定どおりなのに理由がある、変えるのに理由が無いときは組み立てを止める
+ * （乱数や基準が変わって点数の判定が動き、見本の意味が崩れたことに気づくため）。
+ */
+function decideOne(label, judged, wanted, reason) {
+  if (wanted === undefined || wanted === judged) {
+    if (reason) throw new Error(`${label}: 点数の判定どおりなのに、変える理由が書かれています。判定が見本の前提から変わっていないか確かめてください。`);
+    return { kind: "follow", reason: null };
+  }
+  if (!reason) throw new Error(`${label}: 点数の判定を変えるのに、理由がありません。`);
+  return { kind: "override", reason };
+}
+
+/**
+ * 受付中の期（2026年度 下期）に給付事業だけへ足す見本。
+ * アンケートの状態（下書き・公開中・締切済みの旧版・延長あり）、回答の状態（提出済み・入力途中・未回答）、
+ * 評価の下書きを、それぞれ画面で開けるようにする。日付は実際の運用に近い順に並べる。
+ * 書いていない社員は未回答（e1 は回答画面の「未着手」、e6・e7 も未回答）。
+ */
+const SHOWCASE_CYCLE = "2026h2";
+const SHOWCASE_RESPONSES = {
+  // 提出済みで、マネージャーが集計した下書きの評価がある
+  e2: { status: "submitted", on: "2026-10-09", evaluatedOn: "2026-10-15" },
+  // 答えの途中で止めた下書き
+  e3: { status: "draft", on: "2026-10-14" },
+  // 第1版に答えかけたまま、第1版が締め切られた（第2版で答え直す）
+  e4: { status: "draft", on: "2026-10-06", version: 1 },
+  // 第2版に提出済み。まだ集計していない
+  e5: { status: "submitted", on: "2026-10-13", version: 2 },
+  // 提出済みで、管理者が集計した下書きの評価がある
+  e8: { status: "submitted", on: "2026-10-11", evaluatedOn: "2026-10-16" },
+};
+/** 等級3のアンケートは、公開したあとに説明を直して第2版を出した日に第1版を締め切った */
+const SHOWCASE_REVISED_ON = "2026-10-08";
+/** 等級4-2のアンケートは全体の締切を過ぎていて、山本さんだけ延長した */
+const SHOWCASE_AM2_CLOSED_ON = "2026-10-15";
+const SHOWCASE_EXTENSION = {
+  employee: "e7", grantedOn: "2026-10-16", until: "2026-11-30",
+  reason: "家族の通院の付き添いで休みが続いたため、回答の期限を延ばす。",
+};
+/** 等級4-1のアンケートは、評価セットで選んでいる利用者満足度（13）の代わりに改善提案（27）を聞いている */
+const SHOWCASE_ASK_INSTEAD = { grade: "am1", from: 13, to: 27 };
+
 export const DEMO_PASSWORD = "Hyoka2026!demo";
+
+/**
+ * デモの共通パスワードのハッシュ。better-auth（@better-auth/utils/password）と同じ形
+ * （scrypt N=16384・r=16・p=1・64バイト、「塩:鍵」の16進）で作り、ログインの照合をそのまま通す。
+ * 塩はパスワードから決めて固定する。同じ日に2回作っても drizzle/seed.sql が同じになるようにするため。
+ * 公開しているデモのパスワードなので、塩を固定しても失うものは無い
+ * （サンプルデータは passwordHashFor で1人ずつ別の仮パスワードを作る）。
+ */
+export function demoPasswordHash(password = DEMO_PASSWORD) {
+  const salt = createHash("sha256").update(`hyoka-demo-seed:${password}`).digest("hex").slice(0, 32);
+  const key = scryptSync(password.normalize("NFKC"), salt, 64, { N: 16384, r: 16, p: 1, maxmem: 128 * 16384 * 16 * 2 });
+  return `${salt}:${key.toString("hex")}`;
+}
 
 /* ───────────────── 本体 ───────────────── */
 
@@ -323,7 +467,7 @@ export const DEMO_PASSWORD = "Hyoka2026!demo";
  *
  * @param {object} [options]
  * @param {Array}  [options.companies]  作る会社の定義（既定: デモ3社＋テンプレート）
- * @param {Array}  [options.cycles]     作る期の定義（既定: 2025年度上期〜2026年度上期）
+ * @param {Array}  [options.cycles]     作る期の定義（既定: 2025年度上期〜2026年度下期）
  * @param {Array}  [options.employees]  作る一般利用者の定義
  * @param {object} [options.strength]   人ごと・期ごとの「実力の目安」
  * @param {boolean}[options.includeSuperAdmin] 全体管理者を作るか（既定: 作る）
@@ -331,6 +475,11 @@ export const DEMO_PASSWORD = "Hyoka2026!demo";
  * @param {boolean}[options.mustChangePassword] 作った利用者を「仮パスワードのまま」にするか
  * @param {(ctx: {employee: object, cycle: object, allA: boolean}) => (string|null)} [options.evaluatorComment]
  *        上長コメント。null を返すとコメント無しの評価になる。
+ * @param {string} [options.today] 受付中のアンケートの締切を決める基準日（YYYY-MM-DD。既定: 日本時間の今日）。
+ *        同じ日に何回作っても同じ SQL になり、日がたっても公開中のアンケートが締切切れにならない。
+ *
+ * 上司の判断・昇格要件の未達・受付中の期の見本は、既定の社員（employees を渡さない）のときだけ入れる。
+ * そのうち上司の判断の見本・等級の履歴・受付中の期の見本・設定のずれは、給付事業（showcase の会社）だけ。
  */
 export async function buildSeed(options = {}) {
   const companyList = options.companies ?? COMPANIES;
@@ -339,12 +488,17 @@ export async function buildSeed(options = {}) {
   const strengthMap = options.strength ?? STRENGTH;
   const includeSuperAdmin = options.includeSuperAdmin ?? true;
   const mustChangePassword = options.mustChangePassword ? 1 : 0;
+  const today = options.today ?? todayInJst();
+  const useShowcase = options.employees === undefined;
+  const decisionMap = useShowcase ? DECISIONS : {};
+  const gateMiss = new Set(useShowcase ? GATE_MISS : []);
 
   const sql = [];
-  const defaultPw = await hashPassword(DEMO_PASSWORD);
   /* パスワードは利用者ごとに作る。既定はデモ用の共通パスワード、
-     サンプルデータでは「誰も知らない仮パスワード」を1人ずつ作って渡す。 */
-  const pwFor = options.passwordHashFor ?? (async () => defaultPw);
+     サンプルデータでは「誰も知らない仮パスワード」を1人ずつ作って渡す。
+     共通パスワードのハッシュは重い（scrypt）ので、使うときに1回だけ作る。 */
+  let defaultPw = null;
+  const pwFor = options.passwordHashFor ?? (async () => (defaultPw ??= demoPasswordHash()));
   const commentFor =
     options.evaluatorComment ??
     (({ allA }) =>
@@ -387,8 +541,8 @@ export async function buildSeed(options = {}) {
   const raiseExceptions = [];
   const raiseRevisions = [];
   const offices = [];
-  const kgiCoefficients = [];
   const employeeNotes = [];
+  const extensions = [];
 
   // システム全体管理者（会社に属さない）
   if (includeSuperAdmin) {
@@ -408,6 +562,8 @@ export async function buildSeed(options = {}) {
 
   for (const co of companyList) {
     const cid = `cmp_${co.key}`;
+    /** 受付中の期の見本と、制度の設定のずれを足す会社か（既定の社員のときだけ） */
+    const showcase = useShowcase && co.showcase === true;
     companies.push({
       id: cid, name: co.name, slug: co.key, business_type: "給付事業", is_active: 1,
       is_template: co.isTemplate ? 1 : 0,
@@ -439,9 +595,26 @@ export async function buildSeed(options = {}) {
     gradeReqs.forEach((r, i) => {
       gradeRequirements.push({
         id: `greq_${co.key}_${i}`, company_id: cid, grade_id: gid(r.gradeCode), category: r.category,
-        seq: r.seq, text: r.text, is_active: 1, created_at: NOW, updated_at: MASTER_AT,
+        seq: r.seq, text: r.text, is_active: 1, previous_version_id: null, created_at: NOW, updated_at: MASTER_AT,
       });
     });
+    /* 等級要件のずれの見本: 受付中の期のアンケートを公開したあとに、等級5-2の要件を1つ改訂し、1つ足した。
+       改訂は新しい版の行を足して元の行は変えない（src/lib/masters/versioned-requirement-update.ts と同じ形）。
+       アンケートは元の版のまま聞いているので、管理画面にずれの知らせが出る。 */
+    if (showcase) {
+      const revisedFrom = gradeReqs.findIndex((r) => r.gradeCode === "manager2" && r.category === "operation" && r.seq === 5);
+      if (revisedFrom < 0) throw new Error("等級5-2の運営の要件（5番目）が見つかりません。ずれの見本の前提が崩れています。");
+      gradeRequirements.push({
+        id: `greq_${co.key}_${revisedFrom}_v2`, company_id: cid, grade_id: gid("manager2"), category: "operation",
+        seq: 5, text: "中期の事業計画と予算を作成し、期の途中で実績と照らして見直す", is_active: 1,
+        previous_version_id: `greq_${co.key}_${revisedFrom}`, created_at: at("2026-10-10T01:00:00Z"), updated_at: at("2026-10-10T01:00:00Z"),
+      });
+      gradeRequirements.push({
+        id: `greq_${co.key}_add_manager2_6`, company_id: cid, grade_id: gid("manager2"), category: "operation",
+        seq: 6, text: "法人内の他の事業所と連携した人材育成の仕組みづくり", is_active: 1,
+        previous_version_id: null, created_at: at("2026-10-12T01:00:00Z"), updated_at: at("2026-10-12T01:00:00Z"),
+      });
+    }
 
     /* 昇格要件 */
     promoReqs.forEach((r, i) => {
@@ -460,12 +633,15 @@ export async function buildSeed(options = {}) {
       });
     });
 
-    /* 行動指針 */
+    /* 行動指針
+       行動指針のずれの見本: 等級1・等級2向けの「連帯性」を、受付中の期のアンケートを公開したあとに使わなくした。
+       アンケートはまだ聞いているので、管理画面にずれの知らせが出る。 */
     behaviors.forEach((b, i) => {
       const bgId = `bg_${co.key}_${b.band}_${b.aspect}`;
+      const retired = showcase && b.band === "g1_2" && b.aspect === "solidarity";
       behaviorGuidelines.push({
         id: bgId, company_id: cid, band: b.band, aspect: b.aspect, aspect_name: b.aspectName,
-        seq: b.seq, is_active: 1, created_at: NOW, updated_at: NOW,
+        seq: b.seq, is_active: retired ? 0 : 1, created_at: NOW, updated_at: retired ? at("2026-10-12T02:00:00Z") : NOW,
       });
       b.levels.forEach((lv, j) => {
         behaviorLevels.push({
@@ -663,24 +839,14 @@ export async function buildSeed(options = {}) {
       });
     });
 
-    /* 事業所KGI達成係数 */
-    [
-      ["121%以上", 121, null, 1.5], ["111〜120%", 111, 121, 1.2], ["100〜110%", 100, 111, 1.0],
-      ["95〜99%", 95, 100, 0.6], ["90〜94%", 90, 95, 0.4], ["89%以下", null, 90, 0.2],
-    ].forEach((k, i) => {
-      kgiCoefficients.push({
-        id: `kgi_${co.key}_${i}`, company_id: cid, scope: "事業所", label: k[0],
-        lower_bound: k[1], upper_bound: k[2], coefficient: k[3], display_order: i + 1,
-        is_provisional: 1, created_at: NOW, updated_at: MASTER_AT,
-      });
-    });
-
     // テンプレート会社は制度の原本だけを持ち、人・サイクル・回答は持たない
     if (co.isTemplate) continue;
 
     /* 利用者（管理者・マネージャー・評価される側） */
     const adminId = `usr_${co.key}_admin`;
     const managerId = `usr_${co.key}_mgr`;
+    /** 直属の上司。評価の集計・確定と、社員メモを書くのもこの人 */
+    const bossOf = (e) => (e.reportsTo === "admin" ? adminId : managerId);
     users.push({
       id: adminId, name: `${co.name} 管理者`, email: `admin@${co.key}.hyoka-demo.jp`, email_verified: 1, image: null,
       company_id: cid, role: "COMPANY_ADMIN", grade_id: null, office_id: offId("hq"), manager_id: null, employee_code: "ADM-001",
@@ -690,7 +856,7 @@ export async function buildSeed(options = {}) {
     users.push({
       id: managerId, name: `${co.name} マネージャー`, email: `manager@${co.key}.hyoka-demo.jp`, email_verified: 1, image: null,
       company_id: cid, role: "MANAGER", grade_id: gid("manager1"), office_id: offId("hq"), manager_id: adminId, employee_code: "MGR-001",
-      department: "本部", hired_at: "2018-04-01", profile_note: "各事業所の評価状況を確認する立場（変更はできない）。", is_active: 1,
+      department: "本部", hired_at: "2018-04-01", profile_note: "直属の部下の評価を確認し、確定する立場。", is_active: 1,
       must_change_password: mustChangePassword, created_at: NOW, updated_at: NOW,
     });
     for (const uid of [adminId, managerId]) {
@@ -707,7 +873,7 @@ export async function buildSeed(options = {}) {
       empIds.push({ ...e, id: uid });
       users.push({
         id: uid, name: e.name, email: `${e.key}@${co.key}.hyoka-demo.jp`, email_verified: 1, image: null,
-        company_id: cid, role: "EMPLOYEE", grade_id: gid(e.grade), office_id: offId(deptToOffice(e.dept)), manager_id: managerId,
+        company_id: cid, role: "EMPLOYEE", grade_id: gid(e.grade), office_id: offId(deptToOffice(e.dept)), manager_id: bossOf(e),
         employee_code: `EMP-${e.key.slice(1).padStart(3, "0")}`, department: e.dept, hired_at: e.hired,
         profile_note: null, is_active: 1, must_change_password: mustChangePassword, created_at: NOW, updated_at: NOW,
       });
@@ -717,7 +883,7 @@ export async function buildSeed(options = {}) {
         scope: null, password: await pwFor(uid), created_at: NOW, updated_at: NOW,
       });
       employeeNotes.push({
-        id: `en_${uid}`, company_id: cid, employee_id: uid, author_id: managerId, cycle_id: null,
+        id: `en_${uid}`, company_id: cid, employee_id: uid, author_id: bossOf(e), cycle_id: null,
         body: `${e.name}さんは${e.dept}所属。次のサイクルでは記録の期限管理を重点的に見る。`,
         visibility: "manager", created_at: NOW, updated_at: NOW,
       });
@@ -726,6 +892,13 @@ export async function buildSeed(options = {}) {
     /* サイクル・フォーム・回答・評価 */
     cycleList.forEach((cy) => {
       const cycleId = `cyc_${co.key}_${cy.key}`;
+      const isOpen = cy.status === "open";
+      /* 受付中の期のアンケートは期の始まりの少し前に作り、締切は期末か「今日から2週間後」の遅いほうにする。
+         日がたっても公開中のアンケートが締切切れにならないようにするため（同じ日に作れば同じ SQL になる）。 */
+      const formAt = isOpen ? at(addDays(cy.start, -6)) : NOW;
+      const closesAt = isOpen ? laterOf(cy.end, addDays(today, 14)) : cy.end;
+      /** 受付中の期の見本を足す期か */
+      const sc = showcase && cy.key === SHOWCASE_CYCLE;
       cycles.push({
         id: cycleId, company_id: cid, name: cy.name, period_start: cy.start, period_end: cy.end,
         scheme_id: schemeId, status: cy.status, created_at: NOW, updated_at: NOW,
@@ -733,27 +906,21 @@ export async function buildSeed(options = {}) {
 
       gradesDef.forEach((g) => {
         const formId = `frm_${co.key}_${cy.key}_${g.code}`;
-        forms.push({
-          id: formId, company_id: cid, grade_id: gid(g.code), cycle_id: cycleId,
-          // 空の題名は「既定の題名」。画面では formDisplayTitle が評価期間と等級名から作る
-          title: BLANK,
-          description: "半期の実績を入力してください。点数や評価基準はこの画面には表示されません。",
-          version: 1, status: cy.status === "open" ? "published" : "closed",
-          public_token: `${co.key}-${cy.key}-${g.code}`,
-          opens_at: cy.start, closes_at: cy.end, created_at: NOW, updated_at: NOW,
-        });
 
         // その等級の等級区分で評価する項目（等級区分が違えば項目数も配点も違う）
         const chosen = chosenByGroup.get(g.pointGroup);
-        let order = 0;
-        const fq = [];
-        const push = (r) => { fq.push({ id: `fq_${formId}_${fq.length}`, company_id: cid, form_id: formId, display_order: ++order, created_at: NOW, updated_at: NOW, ...r }); };
+        /* KPI項目のずれの見本: 見本の等級4-1だけは、評価セットで選んだ項目の1つを別の項目に替えて聞く。
+           この等級に見本の回答は無いので、評価の集計（選んだ項目で行う）とは食い違わない。 */
+        const swap = sc && g.code === SHOWCASE_ASK_INSTEAD.grade ? SHOWCASE_ASK_INSTEAD : null;
+        const asked = swap ? chosen.map((ci) => (ci.no === swap.from ? { ...ci, no: swap.to } : ci)) : chosen;
 
+        /* 設問の中身。版ごとに id と時刻だけを変えて行にする */
+        const specs = [];
         // 支援・運営（等級要件の○×）
         for (const cat of ["support", "operation"]) {
-          gradeReqs.filter((r) => r.gradeCode === g.code && r.category === cat).forEach((r, i) => {
+          gradeReqs.filter((r) => r.gradeCode === g.code && r.category === cat).forEach((r) => {
             const idx = gradeReqs.findIndex((x) => x === r);
-            push({
+            specs.push({
               section: cat, question_type: "yesno",
               title: r.text, help_text: null, unit: null, required: 1,
               validation_min: null, validation_max: null, options_json: null,
@@ -766,7 +933,7 @@ export async function buildSeed(options = {}) {
         for (const kind of ["report", "test"]) {
           promoReqs.filter((r) => r.gradeCode === g.code && r.kind === kind).forEach((r) => {
             const idx = promoReqs.findIndex((x) => x === r);
-            push({
+            specs.push({
               section: kind === "report" ? "training" : "test", question_type: "yesno",
               title: r.text,
               help_text: kind === "report" ? "受講後の報告書を提出済みの場合は「はい」を選んでください。" : "テストに合格している場合は「はい」を選んでください。",
@@ -779,7 +946,7 @@ export async function buildSeed(options = {}) {
         // 行動指針（等級帯がある等級のみ）
         if (g.band) {
           behaviors.filter((b) => b.band === g.band).forEach((b) => {
-            push({
+            specs.push({
               section: "behavior", question_type: "single",
               title: b.aspectName, help_text: "もっとも近いものを1つ選んでください。",
               unit: null, required: 1, validation_min: null, validation_max: null,
@@ -791,7 +958,7 @@ export async function buildSeed(options = {}) {
           });
         }
         // KPI設問（この等級区分の評価セットに入っていて、この等級区分が対象の設問のみ）
-        chosen.forEach((ci) => {
+        asked.forEach((ci) => {
           const item = kpiMaster.find((m) => Number(m.No) === ci.no);
           /* 「対象等級」欄を見ないと、Beginner のアンケートに Chief 以上限定の設問
              （昇給率・単価率など）が出てしまう。src/lib/form-build.ts と同じ絞り込み。 */
@@ -799,7 +966,7 @@ export async function buildSeed(options = {}) {
             .filter((qq) => Number(qq["項目No"]) === ci.no && targetsPointGroup(qq["対象等級"], g.pointGroup))
             .forEach((qq) => {
             const chk = qq["入力チェック"] ?? "";
-            push({
+            specs.push({
               section: "kpi", question_type: qq["回答形式"]?.includes("プルダウン") ? "single" : "number",
               title: qq["フォーム設問文"],
               help_text: `${item?.["項目名"] ?? ""}の集計に使います。`,
@@ -814,25 +981,77 @@ export async function buildSeed(options = {}) {
             });
           });
         });
-        formQuestions.push(...fq);
+        const questionsOf = (fid, stamp) =>
+          specs.map((r, i) => ({ id: `fq_${fid}_${i}`, company_id: cid, form_id: fid, display_order: i + 1, created_at: stamp, updated_at: stamp, ...r }));
 
-        /* 過去サイクルのみ、回答と評価結果を作る。
-           `withResults: false` を指定した期は、締め済みでも回答・評価を作らない
-           （「締め切ったが誰も出さなかった期」を表せるようにするため）。 */
-        if (cy.status !== "closed" || cy.withResults === false) return;
-        empIds.filter((e) => e.grade === g.code).forEach((e) => {
+        /* アンケート。見本の期では、等級ごとに状態を変えて全部の状態を開けるようにする。
+           等級1は下書き（まだ配っていない）、等級3は説明を直した第2版を出して第1版を締め切った、
+           等級4-2は全体の締切を過ぎていて1人だけ延長した。ほかは公開中。 */
+        const form = {
+          id: formId, company_id: cid, grade_id: gid(g.code), cycle_id: cycleId,
+          // 空の題名は「既定の題名」。画面では formDisplayTitle が評価期間と等級名から作る
+          title: BLANK,
+          description: "半期の実績を入力してください。点数や評価基準はこの画面には表示されません。",
+          version: 1, status: isOpen ? "published" : "closed",
+          public_token: `${co.key}-${cy.key}-${g.code}`,
+          opens_at: cy.start, closes_at: closesAt, created_at: formAt, updated_at: formAt,
+        };
+        const versions = [{ form, questions: questionsOf(formId, formAt) }];
+        if (sc && g.code === "beginner") form.status = "draft";
+        if (sc && g.code === "am2") form.closes_at = earlierOf(SHOWCASE_AM2_CLOSED_ON, addDays(today, -5));
+        if (sc && g.code === "chief") {
+          // 新しい版を公開すると古い版は締め切る（src/actions/forms.ts と同じ。締切の日付は変えない）
+          const revisedAt = at(`${SHOWCASE_REVISED_ON}T01:00:00Z`);
+          form.status = "closed";
+          form.updated_at = revisedAt;
+          const v2Id = `${formId}_v2`;
+          versions.push({
+            form: {
+              ...form, id: v2Id,
+              description: "この半期の実績を、事業所の記録を見ながら入力してください。点数や評価基準はこの画面には表示されません。（説明の言い回しを直した版です）",
+              version: 2, status: "published", public_token: `${co.key}-${cy.key}-${g.code}-v2`,
+              opens_at: SHOWCASE_REVISED_ON, created_at: revisedAt, updated_at: revisedAt,
+            },
+            questions: questionsOf(v2Id, revisedAt),
+          });
+        }
+        for (const v of versions) {
+          forms.push(v.form);
+          formQuestions.push(...v.questions);
+        }
+        if (sc && g.code === "am2") {
+          const x = SHOWCASE_EXTENSION;
+          const target = empIds.find((e) => e.key === x.employee);
+          if (!target || gradeIn(target, cy, showcase) !== g.code) throw new Error(`回答期限の延長の見本（${x.employee}）が等級4-2にいません。`);
+          const grantedAt = at(`${x.grantedOn}T01:00:00Z`);
+          extensions.push({
+            id: `fde_${co.key}_${cy.key}_${x.employee}`, company_id: cid, form_id: formId, employee_id: target.id,
+            // 延長の期限も、日がたって切れないように今日から2週間後より前にしない
+            extended_until: laterOf(x.until, addDays(today, 14)), reason: x.reason,
+            granted_by_id: adminId, revoked_at: null, revoked_by_id: null, created_at: grantedAt, updated_at: grantedAt,
+          });
+        }
+
+        /**
+         * 1人分の回答と、集計した評価（evaluation が null なら回答だけ）を作る。
+         * response.status が draft のときは、答えの途中で止めた回答として先頭の6割だけを残す。
+         */
+        const addResult = ({ e, form: fm, questions: fq, response, evaluation }) => {
+          if (evaluation && asked !== chosen) throw new Error("聞く項目を替えたアンケートの回答からは評価を作りません。");
           const r = rng(`${co.key}-${cy.key}-${e.key}`);
           const respId = `res_${co.key}_${cy.key}_${e.key}`;
           formResponses.push({
-            id: respId, company_id: cid, form_id: formId, cycle_id: cycleId, employee_id: e.id,
-            grade_id: gid(g.code), office_id: offId(deptToOffice(e.dept)), import_source: null, status: "submitted",
-            submitted_at: T(new Date(`${cy.end}T09:00:00Z`)), respondent_note: null,
-            created_at: NOW, updated_at: NOW,
+            id: respId, company_id: cid, form_id: fm.id, cycle_id: cycleId, employee_id: e.id,
+            grade_id: gid(g.code), office_id: offId(deptToOffice(e.dept)), import_source: null, status: response.status,
+            submitted_at: response.submittedAt, respondent_note: null,
+            created_at: response.createdAt, updated_at: response.updatedAt,
           });
 
           const gradeDef = gradesDef.find((x) => x.code === g.code);
           // 本人の実力の目安。1.0 は全項目Aで昇給要件を満たす人（デモで判定の両方を見せるため）
           const strength = strengthMap[`${e.key}:${cy.key}`] ?? strengthMap[e.key] ?? 0.5;
+          // 昇格要件の最初の1つを「いいえ」にするか（GATE_MISS）
+          let missGate = gateMiss.has(`${e.key}:${cy.key}`);
 
           const answersByKey = {};
           const answerRows = [];
@@ -845,7 +1064,8 @@ export async function buildSeed(options = {}) {
           fq.forEach((qrow) => {
             let valNum = null, valText = null;
             if (qrow.question_type === "yesno") {
-              const ok = strength >= 1 ? 1 : r() > 0.15 + 0.4 * (1 - strength) ? 1 : 0;
+              let ok = strength >= 1 ? 1 : r() > 0.15 + 0.4 * (1 - strength) ? 1 : 0;
+              if (qrow.is_gate && missGate) { ok = 0; missGate = false; }
               valNum = ok; valText = ok ? "はい" : "いいえ";
               if (qrow.grade_requirement_id) {
                 reqTotal++; if (ok) reqAchieved++;
@@ -872,9 +1092,10 @@ export async function buildSeed(options = {}) {
               question_title: qrow.title, question_type: qrow.question_type,
               question_section: qrow.section, question_unit: qrow.unit,
               question_options_json: qrow.options_json, question_display_order: qrow.display_order,
-              created_at: NOW, updated_at: NOW, __key: qrow.kpi_question_key,
+              created_at: response.createdAt, updated_at: response.updatedAt, __key: qrow.kpi_question_key,
             });
           });
+          if (missGate) throw new Error(`${e.key}:${cy.key} の昇格要件を「いいえ」にできません（この等級に昇格要件がありません）。`);
 
           /* 集計 */
           const evalId = `ev_${co.key}_${cy.key}_${e.key}`;
@@ -915,10 +1136,14 @@ export async function buildSeed(options = {}) {
             if (row) row.value_number = solved;
           });
 
-          answerRows.forEach((row) => {
+          // 入力途中の回答は、先頭から6割の設問だけに答えた状態にする（残りは未入力）
+          const kept = response.status === "draft" ? answerRows.slice(0, Math.ceil(answerRows.length * 0.6)) : answerRows;
+          kept.forEach((row) => {
             const { __key, ...rest } = row;
             formAnswers.push(rest);
           });
+          if (!evaluation) return;
+          if (response.status !== "submitted") throw new Error("評価は提出済みの回答からだけ作ります。");
 
           // 等級要件達成率＝達成数÷このアンケートで出題した等級要件の項目数。src/lib/domain/scoring.ts と同じ決まり。
           const reqRate = reqTotal <= 0 ? null : Math.round(Math.min(100, (reqAchieved / reqTotal) * 100) * 10) / 10;
@@ -958,7 +1183,7 @@ export async function buildSeed(options = {}) {
               rationale_employee: `実績値 ${actual}${m["実績値の単位"] === "-" ? "" : m["実績値の単位"]} は${rankLevelLabel(hit.rank)}に該当するため、${hit.rank} と判定しました。`,
               calc_note: m["実績値の計算式（設問IDで表記）"],
               is_provisional: /新規（素案）/.test(m["備考"] ?? "") ? 1 : 0,
-              display_order: idx + 1, created_at: NOW,
+              display_order: idx + 1, created_at: evaluation.createdAt,
             });
           });
 
@@ -983,15 +1208,39 @@ export async function buildSeed(options = {}) {
             reasonsEmployee.push("行動指針の評価が、昇格に必要な水準に達していません。");
           }
 
+          /* 賞与（仮）。個人Pt ＝ KPI評価点合計を四捨五入した整数、賞与額 ＝ 個人Pt × 1点あたり金額。
+             式と根拠の文は src/lib/domain/bonus.ts の computeBonus と同じ（集計した時点の値を写して残す）。 */
+          const totalScore = Math.round(total * 10) / 10;
+          const yenPerPoint = RAISE_POLICY.bonus_yen_per_point;
+          const personalPoints = Math.round(totalScore);
+          const bonusYen = yenPerPoint > 0 ? Math.round(personalPoints * yenPerPoint) : null;
+          const pointsText = `個人Pt ＝ KPI評価点合計 ${totalScore}点 ＝ ${personalPoints}Pt。`;
+          const bonusRationale = bonusYen === null
+            ? `${pointsText}1点あたりの金額が設定されていないため、賞与額は出しません。`
+            : `${pointsText}賞与額 ＝ ${personalPoints}Pt × 1点あたり${yenText(yenPerPoint)}円 ＝ ${yenText(bonusYen)}円。`;
+
+          /* 上司の判断。確定のときに記録した期だけ入れ、それより前に確定した期と下書きは空（記録なし）のまま */
+          const finalized = evaluation.status === "finalized";
+          const spec = showcase ? decisionMap[`${e.key}:${cy.key}`] : undefined;
+          const recorded = finalized && cy.decisionsRecorded === true;
+          if (spec && !recorded) throw new Error(`${e.key}:${cy.key} は上司の判断を記録しない評価です（DECISIONS を見直してください）。`);
+          const raiseEligible = allA;
+          const promotionEligible = reasons.length === 0;
+          const label = `${co.key} ${e.name}（${cy.name}）`;
+          const raiseDecision = recorded ? decideOne(`${label}の昇給`, raiseEligible, spec?.raise, spec?.raiseReason) : null;
+          const promotionDecision = recorded ? decideOne(`${label}の昇格`, promotionEligible, spec?.promotion, spec?.promotionReason) : null;
+
           evaluations.push({
             id: evalId, company_id: cid, cycle_id: cycleId, employee_id: e.id, grade_id: gid(g.code),
             response_id: respId, scheme_id: schemeId,
-            office_id: offId(deptToOffice(e.dept)), computed_at: T(new Date(`${cy.end}T12:00:00Z`)),
-            total_score: Math.round(total * 10) / 10, max_score: maxTotal,
+            office_id: offId(deptToOffice(e.dept)), computed_at: evaluation.computedAt,
+            total_score: totalScore, max_score: maxTotal,
             requirement_rate: reqRate,
             requirement_achieved: reqAchieved, requirement_total: reqTotal,
             behavior_total: g.band ? behaviorTotal : null,
-            raise_eligible: allA ? 1 : 0,
+            personal_points: personalPoints, bonus_yen: bonusYen, bonus_rationale: bonusRationale,
+            scoring_mode_snapshot: "ratio",
+            raise_eligible: raiseEligible ? 1 : 0,
             /* 昇給の理由も、評価者向けと本人向けを両方入れておく。
                結論（昇給できる／できない）だけが出て理由が空の評価は、画面で見比べる見本にならない。
                文の形は src/lib/domain/scoring.ts の judgeOverall と同じ。 */
@@ -1001,31 +1250,77 @@ export async function buildSeed(options = {}) {
             raise_reason_employee: allA
               ? "評価対象の項目がすべてAのため、昇給の要件を満たしています。"
               : `${itemRows.filter((x) => x.rank !== "A").map((x) => `${x.item_name}（${x.rank}）`).join("、")} がAに届いていないため、今回の昇給は見送りです。`,
-            promotion_eligible: reasons.length === 0 ? 1 : 0,
+            promotion_eligible: promotionEligible ? 1 : 0,
             promotion_blocked_reason: reasons.length ? reasons.join("") : null,
             promotion_blocked_reason_employee: reasonsEmployee.length ? reasonsEmployee.join("") : null,
             required_kpi_points_snapshot: 100, required_behavior_points_snapshot: g.band ? th : null,
-            evaluator_id: managerId,
-            evaluator_comment: commentFor({ employee: e, cycle: cy, allA }),
-            status: "finalized", finalized_at: T(new Date(`${cy.end}T12:00:00Z`)),
-            created_at: NOW, updated_at: NOW,
+            raise_decision: raiseDecision?.kind ?? null, raise_decision_reason: raiseDecision?.reason ?? null,
+            promotion_decision: promotionDecision?.kind ?? null, promotion_decision_reason: promotionDecision?.reason ?? null,
+            decision_recorded_by: recorded ? evaluation.by : null,
+            decision_recorded_at: recorded ? evaluation.finalizedAt : null,
+            evaluator_id: evaluation.by,
+            evaluator_comment: finalized ? (spec?.comment ?? commentFor({ employee: e, cycle: cy, allA })) : null,
+            status: evaluation.status, finalized_at: evaluation.finalizedAt,
+            created_at: evaluation.createdAt, updated_at: evaluation.updatedAt,
           });
           evaluationItems.push(...itemRows);
           reqRows.forEach((x, i) => evaluationRequirements.push({
             id: `er_${evalId}_${i}`, company_id: cid, evaluation_id: evalId, grade_requirement_id: x.gr,
-            category: x.category, text: x.text, achieved: x.achieved, created_at: NOW,
+            category: x.category, text: x.text, achieved: x.achieved, created_at: evaluation.createdAt,
           }));
           gateRows.forEach((x, i) => evaluationGates.push({
             id: `eg_${evalId}_${i}`, company_id: cid, evaluation_id: evalId, promotion_requirement_id: x.pr,
-            kind: x.kind, text: x.text, achieved: x.achieved, created_at: NOW,
+            kind: x.kind, text: x.text, achieved: x.achieved, created_at: evaluation.createdAt,
           }));
           behRows.forEach((x, i) => {
             const b = behaviors.find((bb) => `bg_${co.key}_${bb.band}_${bb.aspect}` === x.gid);
             evaluationBehaviors.push({
               id: `eb_${evalId}_${i}`, company_id: cid, evaluation_id: evalId, guideline_id: x.gid,
               aspect: b.aspect, aspect_name: b.aspectName, score: x.score,
-              level_label: x.label, comment: null, created_at: NOW,
+              level_label: x.label, comment: null, created_at: evaluation.createdAt,
             });
+          });
+        };
+
+        // この期にこの等級だった人（昇格した人は、昇格より前の期では前の等級のアンケートに答える）
+        const members = empIds.filter((e) => gradeIn(e, cy, showcase) === g.code);
+
+        /* 締めた期は、全員が期末に提出し、直属の上司が確定した。
+           `withResults: false` を指定した期は、締め済みでも回答・評価を作らない
+           （「締め切ったが誰も出さなかった期」を表せるようにするため）。 */
+        if (cy.status === "closed" && cy.withResults !== false) {
+          const submittedAt = at(`${cy.end}T09:00:00Z`);
+          const doneAt = at(`${cy.end}T12:00:00Z`);
+          members.forEach((e) => addResult({
+            e, form, questions: versions[0].questions,
+            response: { status: "submitted", submittedAt, createdAt: NOW, updatedAt: Math.max(NOW, submittedAt) },
+            evaluation: {
+              status: "finalized", by: bossOf(e), computedAt: doneAt, finalizedAt: doneAt,
+              createdAt: NOW, updatedAt: Math.max(NOW, doneAt),
+            },
+          }));
+          return;
+        }
+
+        /* 受付中の見本の期は、SHOWCASE_RESPONSES に書いた人だけが回答している（ほかは未回答）。 */
+        if (!sc) return;
+        members.forEach((e) => {
+          const plan = SHOWCASE_RESPONSES[e.key];
+          if (!plan) return;
+          const v = versions.find((x) => x.form.version === (plan.version ?? versions.length));
+          if (!v) throw new Error(`${e.key} の回答先の版（第${plan.version}版）がありません。`);
+          const answeredAt = at(`${plan.on}T09:00:00Z`);
+          const evaluatedAt = plan.evaluatedOn ? at(`${plan.evaluatedOn}T09:00:00Z`) : null;
+          addResult({
+            e, form: v.form, questions: v.questions,
+            response: {
+              status: plan.status, submittedAt: plan.status === "submitted" ? answeredAt : null,
+              createdAt: answeredAt, updatedAt: answeredAt,
+            },
+            evaluation: evaluatedAt === null ? null : {
+              status: "draft", by: bossOf(e), computedAt: evaluatedAt, finalizedAt: null,
+              createdAt: evaluatedAt, updatedAt: evaluatedAt,
+            },
           });
         });
       });
@@ -1080,6 +1375,7 @@ export async function buildSeed(options = {}) {
     ["scheme_rank_ratios", schemeRankRatios],
     ["evaluation_cycles", cycles],
     ["forms", forms],
+    ["form_deadline_extensions", extensions],
     ["form_questions", formQuestions],
     ["form_responses", formResponses],
     ["form_answers", formAnswers],
@@ -1093,7 +1389,6 @@ export async function buildSeed(options = {}) {
     ["raise_patterns", raisePatterns],
     ["raise_exceptions", raiseExceptions],
     ["raise_revisions", raiseRevisions],
-    ["kgi_coefficients", kgiCoefficients],
     ["employee_notes", employeeNotes],
   ];
   for (const [table, rows] of tableRows) sql.push(...insert(table, rows));
@@ -1114,6 +1409,8 @@ export async function buildSeed(options = {}) {
       サイクル: cycles.length, フォーム: forms.length, フォーム設問: formQuestions.length,
       回答: formResponses.length, 回答明細: formAnswers.length,
       評価結果: evaluations.length, 評価明細: evaluationItems.length,
+      回答期限の延長: extensions.length,
+      上司の判断の記録: evaluations.filter((x) => x.decision_recorded_at !== null).length,
     },
   };
 }
@@ -1219,4 +1516,42 @@ function pickRank(value, crits, direction) {
     return { rank: c["ランク"], crit: c };
   }
   return { rank: "E", crit: sorted[sorted.length - 1] ?? null };
+}
+
+/* ───────────────── 投入の前に消す表 ───────────────── */
+
+/**
+ * seed を流す前に空にする表（子→親の順）。
+ * 投入する表（buildSeed の tableRows）のすべてと、投入はしないが、消した利用者・会社を指したまま残ると
+ * 流し直しを止めたり古い状態を残したりする表（ログインのセッション・取込の履歴・エージェントの鍵とログイン）を並べる。
+ * エージェントの表は利用者と会社を「削除時に何もしない」で指すため、消しておかないと2回目の投入が外部キーで止まる。
+ * schema.ts から外した表（事業所の達成率と達成係数。表そのものは移行 0039 で消す）は含めない。
+ * 0039 の後にもう無い表を消そうとすると、投入全体が止まる。
+ */
+export const SEED_TABLES = [
+  "agent_sessions", "agent_device_grants", "agent_api_keys", "agent_key_settings",
+  "import_batches",
+  "employee_notes",
+  "raise_revisions", "raise_exceptions", "raise_patterns", "raise_policies", "raise_settings",
+  "evaluation_gates", "evaluation_requirements", "evaluation_behaviors", "evaluation_items", "evaluations",
+  "form_answers", "form_responses", "form_questions", "forms", "evaluation_cycles",
+  "form_deadline_extensions",
+  "scheme_rank_ratios", "scheme_items", "evaluation_schemes", "grade_point_rules",
+  "kpi_questions", "kpi_reference_points", "kpi_rank_criteria", "kpi_items", "kpi_categories",
+  "promotion_thresholds", "behavior_levels", "behavior_guidelines", "behavior_band_sets",
+  "promotion_requirements", "grade_requirements",
+  "sessions", "accounts", "verifications", "company_memberships", "users", "grades", "offices", "companies",
+];
+
+/**
+ * drizzle/seed.sql の本文。外部キーの検査を最後にまとめ、SEED_TABLES を空にしてから buildSeed の SQL を流す。
+ * 消してから入れ直すので、何回流しても同じ状態になる。
+ */
+export function seedFileBody(sql) {
+  return [
+    "-- 自動生成: scripts/seed.mjs（手で編集しない）",
+    "PRAGMA defer_foreign_keys = ON;",
+    ...SEED_TABLES.map((t) => `DELETE FROM ${t};`),
+    ...sql,
+  ].join("\n\n");
 }

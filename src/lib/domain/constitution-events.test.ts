@@ -209,4 +209,37 @@ describe("recordConstitutionEvent / replayConstitutionEntity", () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ entityType: "grade", entityId: "g_filter" });
   });
+
+  it("削除した設定の種類（型に無い種類）の過去の行が残っていても、一覧は落ちずにそのまま返す", async () => {
+    /* 事業所の達成係数の仕組みを消したあとも、その種類の行は監査の記録として残る。
+       型からは外したので、ここでは表へ直接入れて、残った行を再現する。 */
+    await testDb.db.insert(s.constitutionEvents).values({
+      id: "cevt_retired",
+      companyId: COMPANY,
+      entityType: "retiredSetting",
+      entityId: "retired_1",
+      eventType: "updated",
+      actorId: "actor_1",
+      beforeJson: JSON.stringify({ coefficient: 1 }),
+      afterJson: JSON.stringify({ coefficient: 1.2 }),
+      seq: 1,
+    });
+    await recordConstitutionEvent({
+      db: testDb.db,
+      companyId: COMPANY,
+      entityType: "grade",
+      entityId: "g_after",
+      eventType: "created",
+      actorId: "actor_1",
+      after: { id: "g_after", name: "等級" },
+    });
+
+    const events = await listConstitutionEvents({ db: testDb.db, companyId: COMPANY });
+
+    expect(events.map((e) => e.entityType).sort()).toEqual(["grade", "retiredSetting"]);
+    expect(events.find((e) => e.entityId === "retired_1")).toMatchObject({
+      eventType: "updated",
+      afterJson: JSON.stringify({ coefficient: 1.2 }),
+    });
+  });
 });

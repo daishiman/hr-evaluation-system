@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { routeOf } from "@/lib/route-access";
 import type { Role } from "@/lib/roles";
 import {
+  COMPARISON_KIND_LABEL,
   COMPARISON_LEAD,
   COMPARISON_OPEN_LABEL,
+  DELETED_ITEM_NAME,
   FORM_LEDGER_PATH,
   NO_TEMPLATE_HINT,
   REBUILD_LABEL,
@@ -30,7 +32,28 @@ import { NO_TEMPLATE_BADGE } from "./scheme";
  */
 
 const NAMES: Record<string, string> = { kpi_a: "稼働率", kpi_b: "残業率", kpi_c: "粗利率", kpi_d: "定着率" };
-const nameOf = (id: string) => NAMES[id] ?? id;
+const nameOf = (id: string): string | undefined => NAMES[id];
+/** 等級要件の系列（起点の id → いまの版の本文） */
+const REQUIREMENTS: Record<string, string> = { gr_1: "支援計画を期限内に作る", gr_2: "記録を当日中に残す", gr_3: "新人に手順を教える" };
+/** 行動指針の観点（id → 呼び名・基準） */
+const GUIDELINES: Record<string, { name: string; band: string }> = {
+  bg_1: { name: "創造性について", band: "g1_2" },
+  bg_2: { name: "専門性について", band: "g1_2" },
+  bg_old: { name: "個性について", band: "g3_4" },
+};
+/** 等級要件・行動指針は、既定ではズレが無い（KPI項目の行だけを見るテストを変えない） */
+const NO_REQUIREMENT_GAP: ComparisonGapInput["requirements"] = {
+  expected: ["gr_1"],
+  asked: ["gr_1"],
+  nameOf: (id) => REQUIREMENTS[id],
+};
+const NO_BEHAVIOR_GAP: ComparisonGapInput["behaviors"] = {
+  expected: ["bg_1"],
+  asked: ["bg_1"],
+  nameOf: (id) => GUIDELINES[id]?.name,
+  bandOf: (id) => GUIDELINES[id]?.band,
+  band: "g1_2",
+};
 
 function form(over: Partial<ComparisonForm> = {}): ComparisonForm {
   return {
@@ -58,6 +81,8 @@ function input(over: Partial<ComparisonGapInput> = {}): ComparisonGapInput {
     asked: ["kpi_d", "kpi_a"],
     unaskable: [],
     nameOf,
+    requirements: NO_REQUIREMENT_GAP,
+    behaviors: NO_BEHAVIOR_GAP,
     newer: null,
     schemeGap: null,
     current: null,
@@ -72,9 +97,18 @@ function gapOf(over: Partial<ComparisonGapInput> = {}): ComparisonGap {
   return gap;
 }
 
-/** より新しい版。asked を省くと、まだ選んだ項目と一致していない版（kpi_a だけを聞いている）にする */
-function newerForm(id: string, version: number, status: string, asked: readonly string[] = ["kpi_a"]): NonNullable<ComparisonGapInput["newer"]> {
-  return { id, version, status, asked };
+/**
+ * より新しい版。asked を省くと、まだ選んだ項目と一致していない版（kpi_a だけを聞いている）にする。
+ * 等級要件と行動指針は、既定ではいまの設定どおりに聞いている
+ */
+function newerForm(
+  id: string,
+  version: number,
+  status: string,
+  asked: readonly string[] = ["kpi_a"],
+  over: Partial<NonNullable<ComparisonGapInput["newer"]>> = {},
+): NonNullable<ComparisonGapInput["newer"]> {
+  return { id, version, status, asked, askedRequirements: ["gr_1"], askedBehaviors: ["bg_1"], ...over };
 }
 
 const SCHEME_GAP = { href: "/admin/scheme/Regular/criteria", linkLabel: "基準を決める" };
@@ -165,9 +199,9 @@ describe("comparisonGapOf: ズレた項目の行", () => {
   it("足りない項目（選んだ順）のあとに、余分な項目（聞いた順）を並べる", () => {
     const gap = gapOf();
     expect(gap.rows).toEqual([
-      { itemId: "kpi_b", name: "残業率", inSelection: true, inForm: false, noTemplate: false },
-      { itemId: "kpi_c", name: "粗利率", inSelection: true, inForm: false, noTemplate: false },
-      { itemId: "kpi_d", name: "定着率", inSelection: false, inForm: true, noTemplate: false },
+      { kind: "kpi", itemId: "kpi_b", name: "残業率", href: "/admin/scheme?item=kpi_b#kpi-item-kpi_b", inSelection: true, inForm: false, noTemplate: false },
+      { kind: "kpi", itemId: "kpi_c", name: "粗利率", href: "/admin/scheme?item=kpi_c#kpi-item-kpi_c", inSelection: true, inForm: false, noTemplate: false },
+      { kind: "kpi", itemId: "kpi_d", name: "定着率", href: "/admin/scheme?item=kpi_d#kpi-item-kpi_d", inSelection: false, inForm: true, noTemplate: false },
     ]);
     expect(gap.missingCount).toBe(2);
     expect(gap.extraCount).toBe(1);
@@ -199,7 +233,7 @@ describe("comparisonGapOf: 一番新しい版が一致していれば、古い�
   /** 選んだ項目（kpi_a・kpi_b・kpi_c）を、並び順だけ変えて聞いている新しい版 */
   const IN_SYNC = ["kpi_c", "kpi_a", "kpi_b"];
 
-  it("新しい版がどの状態でも、一致していれば古い版の警告を作らない（古い版が回答0件の下書きでも）", () => {
+  it("新しい版が一致していれば古い版の警告を作らない（古い版が回答0件の下書きでも）。下書きの新しい版は、公開中の版の警告だけは消さない", () => {
     for (const status of ["draft", "published", "closed"])
       for (const [formStatus, responseCount] of [["draft", 0], ["published", 3], ["closed", 3]] as const)
         for (const cycleStatus of ["planning", "open", "closed"])
@@ -207,14 +241,35 @@ describe("comparisonGapOf: 一番新しい版が一致していれば、古い�
             const gap = comparisonGapOf(
               input({ form: form({ status: formStatus, cycleStatus, responseCount }), newer: newerForm("frm_2", 2, status, IN_SYNC), role }),
             );
-            expect({ status, formStatus, cycleStatus, role, gap }).toEqual({ status, formStatus, cycleStatus, role, gap: null });
+            // 配っているのは公開中の版で、下書きの新しい版はまだ誰も答えていない（公開するまで直っていない）
+            const keeps = status === "draft" && formStatus === "published";
+            expect({ status, formStatus, cycleStatus, role, shown: gap !== null }).toEqual({ status, formStatus, cycleStatus, role, shown: keeps });
           }
   });
 
   it("3つの画面のどれで開いても、出さない", () => {
     for (const current of [null, "form", "selection"] as (ComparisonPageKey | null)[]) {
-      expect(comparisonGapOf(input({ newer: newerForm("frm_2", 2, "draft", IN_SYNC), current }))).toBeNull();
+      expect(comparisonGapOf(input({ newer: newerForm("frm_2", 2, "published", IN_SYNC), current }))).toBeNull();
     }
+  });
+
+  it("一致した下書きの新しい版があるとき、公開中の版はその下書きを開かせ、公開すれば締め切られると添える", () => {
+    const gap = gapOf({ newer: newerForm("frm_2", 2, "draft", IN_SYNC) });
+    expect(gap.fix).toEqual({ kind: "openNewer", formId: "frm_2", href: "/admin/forms/frm_2", version: 2, draft: true });
+    expect(gap.note).toBe(
+      "第2版の下書きは、いまの設定と一致しています。公開すると、この版は自動で締め切られます。公開後や回答のあるアンケートは設問を差し替えません",
+    );
+    // 一致していない下書きには、この1文を添えない
+    expect(gapOf({ newer: newerForm("frm_2", 2, "draft") }).note).toBe("公開後や回答のあるアンケートは設問を差し替えません");
+  });
+
+  it("一致は3種類とも見る。等級要件か行動指針が1つでも違う新しい版では、古い版の警告を消さない", () => {
+    for (const over of [{ askedRequirements: [] }, { askedRequirements: ["gr_1", "gr_9"] }, { askedBehaviors: [] }]) {
+      const gap = gapOf({ newer: newerForm("frm_2", 2, "published", IN_SYNC, over) });
+      expect(gap.fix?.kind).toBe("openNewer");
+    }
+    // 等級要件は系列で比べる。新しい版が同じ系列（起点の id）を聞いていれば一致
+    expect(comparisonGapOf(input({ newer: newerForm("frm_2", 2, "closed", IN_SYNC, { askedRequirements: ["gr_1", "gr_1"] }) }))).toBeNull();
   });
 
   it("新しい版がまだ一致していなければ、古い版に警告を出し、その版を開かせる", () => {
@@ -225,6 +280,94 @@ describe("comparisonGapOf: 一番新しい版が一致していれば、古い�
       // 表の行は、新しい版ではなくこの版と選んだ項目の違い
       expect(gap.rows.map((r) => r.itemId)).toEqual(["kpi_b", "kpi_c", "kpi_d"]);
     }
+  });
+});
+
+describe("comparisonGapOf: 3種類の項目（等級要件・行動指針・KPI項目）", () => {
+  /** 等級要件は gr_2 が足りず gr_3 が余分、行動指針は bg_2 が足りず bg_old が余分、KPI項目は既定のズレ */
+  const THREE: Partial<ComparisonGapInput> = {
+    requirements: { ...NO_REQUIREMENT_GAP, expected: ["gr_1", "gr_2"], asked: ["gr_3", "gr_1"] },
+    behaviors: { ...NO_BEHAVIOR_GAP, expected: ["bg_1", "bg_2"], asked: ["bg_1", "bg_old"] },
+  };
+
+  it("足りない行（等級要件 → 行動指針 → KPI項目）のあとに余分な行（同じ順）。件数は3種類の合計", () => {
+    const gap = gapOf(THREE);
+    expect(gap.rows.map((r) => [r.kind, r.itemId, r.name, r.inSelection, r.inForm])).toEqual([
+      ["requirement", "gr_2", "記録を当日中に残す", true, false],
+      ["behavior", "bg_2", "専門性について", true, false],
+      ["kpi", "kpi_b", "残業率", true, false],
+      ["kpi", "kpi_c", "粗利率", true, false],
+      ["requirement", "gr_3", "新人に手順を教える", false, true],
+      ["behavior", "bg_old", "個性について", false, true],
+      ["kpi", "kpi_d", "定着率", false, true],
+    ]);
+    expect(gap.missingCount).toBe(4);
+    expect(gap.extraCount).toBe(3);
+    expect(comparisonSummary([gap])).toBe("評価項目とのズレ 7件（足りない4・余分3）");
+  });
+
+  it("各行は、その項目を直す画面へのリンクを持ち、行の位置へ飛ぶ錨を付ける", () => {
+    const hrefs = Object.fromEntries(gapOf(THREE).rows.map((r) => [r.itemId, r.href]));
+    expect(hrefs).toEqual({
+      // 足りない等級要件は、等級を開いた画面のその系列の行へ。余分（今後使わない項目）は版の履歴の段にあり、等級の画面まで
+      gr_2: "/admin/masters/requirements?grade=grd_1#grade-requirement-gr_2",
+      gr_3: "/admin/masters/requirements?grade=grd_1",
+      // 行動指針は、その観点の基準で開く（余分な観点が別の基準でも、そのカードへ飛べる）
+      bg_2: "/admin/behavior?grade=grd_1&band=g1_2#behavior-guideline-bg_2",
+      bg_old: "/admin/behavior?grade=grd_1&band=g3_4#behavior-guideline-bg_old",
+      kpi_b: "/admin/scheme?item=kpi_b#kpi-item-kpi_b",
+      kpi_c: "/admin/scheme?item=kpi_c#kpi-item-kpi_c",
+      kpi_d: "/admin/scheme?item=kpi_d#kpi-item-kpi_d",
+    });
+  });
+
+  it("マスタから消えた項目は「消された項目」と出し、一覧の画面まで（行が無いので錨を付けない）", () => {
+    const gap = gapOf({
+      selected: ["kpi_a"],
+      asked: ["kpi_a", "kpi_gone"],
+      requirements: { ...NO_REQUIREMENT_GAP, asked: ["gr_1", "gr_gone"] },
+      behaviors: { ...NO_BEHAVIOR_GAP, asked: ["bg_1", "bg_gone"] },
+    });
+    expect(gap.rows.map((r) => [r.kind, r.name, r.href])).toEqual([
+      ["requirement", "消された項目", "/admin/masters/requirements?grade=grd_1"],
+      ["behavior", "消された項目", "/admin/behavior?grade=grd_1&band=g1_2"],
+      ["kpi", "消された項目", "/admin/scheme"],
+    ]);
+    // 等級に基準が無ければ、行動指針の画面の既定の基準で開く
+    const noBand = gapOf({ behaviors: { ...NO_BEHAVIOR_GAP, asked: ["bg_1", "bg_gone"], band: null } });
+    expect(noBand.rows.find((r) => r.kind === "behavior")?.href).toBe("/admin/behavior?grade=grd_1");
+  });
+
+  it("開けない役割には、どの種類の行にもリンクを出さない（名前は残す）", () => {
+    for (const role of ["MANAGER", "EMPLOYEE"] as Role[]) {
+      const gap = gapOf({ ...THREE, role });
+      expect(gap.rows.map((r) => r.href)).toEqual(gap.rows.map(() => null));
+      expect(gap.rows.every((r) => r.name !== "")).toBe(true);
+    }
+    for (const role of ["COMPANY_ADMIN", "SUPER_ADMIN"] as Role[]) {
+      expect(gapOf({ ...THREE, role }).rows.every((r) => r.href !== null)).toBe(true);
+    }
+  });
+
+  it("行のリンクは台帳にある画面", () => {
+    for (const row of gapOf(THREE).rows) expect(routeOf(row.href!.split(/[?#]/)[0]), row.href!).not.toBeNull();
+  });
+
+  it("聞き方（設問のひな形）の印は KPI項目の行だけ。等級要件・行動指針の行には付けない", () => {
+    const gap = gapOf({ ...THREE, unaskable: ["gr_2", "bg_2", "kpi_b"] });
+    expect(gap.rows.filter((r) => r.noTemplate).map((r) => r.itemId)).toEqual(["kpi_b"]);
+  });
+
+  it("等級要件か行動指針だけが違っても警告を作り、作り直しで直る（聞き方を決める必要は無い）", () => {
+    const draft = form({ status: "draft", responseCount: 0 });
+    const onlyRequirement = gapOf({ form: draft, selected: ["kpi_a"], asked: ["kpi_a"], requirements: THREE.requirements });
+    expect(onlyRequirement.rows.map((r) => r.kind)).toEqual(["requirement", "requirement"]);
+    expect(onlyRequirement.fix).toEqual({ kind: "rebuild", formId: "frm_1" });
+    const onlyBehavior = gapOf({ selected: ["kpi_a"], asked: ["kpi_a"], behaviors: THREE.behaviors });
+    expect(onlyBehavior.rows.map((r) => r.kind)).toEqual(["behavior", "behavior"]);
+    expect(onlyBehavior.fix?.kind).toBe("newVersion");
+    // 3種類とも一致していれば作らない
+    expect(comparisonGapOf(input({ selected: ["kpi_a"], asked: ["kpi_a"] }))).toBeNull();
   });
 });
 
@@ -405,6 +548,11 @@ describe("文言", () => {
   it("開く札と、開いた中の1行目", () => {
     expect(COMPARISON_OPEN_LABEL).toBe("直すところを見る");
     expect(COMPARISON_LEAD).toBe("下記の内容を変更・修正してください");
+  });
+
+  it("種類の札は、マスタの画面の名前に合わせる。消えた項目は id ではなく決まった名前", () => {
+    expect(COMPARISON_KIND_LABEL).toEqual({ requirement: "等級要件", behavior: "行動指針", kpi: "KPI項目" });
+    expect(DELETED_ITEM_NAME).toBe("消された項目");
   });
 
   it("直す操作の札", () => {

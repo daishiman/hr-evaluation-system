@@ -10,6 +10,11 @@ type Db = Awaited<ReturnType<typeof getDb>>;
  * 等級要件・昇格要件は previous_version_id の版チェーンを持つが、
  * entityId には系譜の起点ID（lineageRootId）を使い、チェーン全体を1つの実体として追う。
  * membership は制度マスタではないが、会社の所属を足す・外す記録を同じ表に残す（S7）。
+ *
+ * 事業所の達成係数（削除済みの設定。2026-10-19 に仕組みごと消した）の種類は、ここから外した。
+ * これから書くことは無いが、過去に書いた行は監査の記録として constitution_events に残す。
+ * 読み出し（listConstitutionEvents）は entity_type を文字列のまま返すので、
+ * この型に無い種類の行が混ざっていても落ちない（constitution-events.test.ts で確かめる）。
  */
 export type ConstitutionEntityType =
   | "grade"
@@ -23,7 +28,6 @@ export type ConstitutionEntityType =
   | "raisePolicy"
   | "office"
   | "kpiRankCriteria"
-  | "kgiCoefficient"
   | "kpiCategory"
   | "kpiItem"
   | "membership";

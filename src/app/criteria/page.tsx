@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { redirect } from "next/navigation";
 import { canSeeCriteria, homePathFor, requireRoute } from "@/lib/session";
 import {
+  getActiveScheme,
   listBehaviorGuidelines,
   listGradeRequirements,
   listGrades,
@@ -26,7 +27,6 @@ import {
   SectionHeading,
 } from "@/components/ui";
 import {
-  getActiveScheme,
   listGradePointRules,
   listQuestionsFor,
   listRankCriteriaFor,
@@ -392,7 +392,7 @@ export default async function CriteriaPage({
                         {p.kind === "report" ? "受講して報告書を提出" : "独学してテストに合格"}
                         {step ? ` ／ ${step}` : ""}
                       </span>
-                      {p.isGate ? <Badge tone="alert">必須（未提出だと昇格不可）</Badge> : <Badge tone="done">任意</Badge>}
+                      {p.isGate ? <Badge tone="alert">必須（未提出だと昇格の判定は否）</Badge> : <Badge tone="done">任意</Badge>}
                     </div>
                   }
                 />

@@ -28,6 +28,19 @@ vi.mock("@/actions/forms", () => ({
 }));
 
 const NAMES: Record<string, string> = { kpi_a: "稼働率", kpi_b: "残業率", kpi_c: "粗利率", kpi_d: "定着率" };
+const REQUIREMENTS: Record<string, string> = { gr_1: "支援計画を期限内に作る", gr_2: "記録を当日中に残す" };
+const GUIDELINES: Record<string, { name: string; band: string }> = {
+  bg_1: { name: "創造性について", band: "g1_2" },
+  bg_2: { name: "専門性について", band: "g1_2" },
+};
+
+/** 等級要件と行動指針は、既定ではいまの設定どおりに聞いている（ズレは KPI項目だけ） */
+const IN_SYNC: Pick<ComparisonGapInput, "requirements" | "behaviors"> = {
+  requirements: { expected: ["gr_1"], asked: ["gr_1"], nameOf: (id) => REQUIREMENTS[id] },
+  behaviors: {
+    expected: ["bg_1"], asked: ["bg_1"], nameOf: (id) => GUIDELINES[id]?.name, bandOf: (id) => GUIDELINES[id]?.band, band: "g1_2",
+  },
+};
 
 function form(over: Partial<ComparisonForm> = {}): ComparisonForm {
   return {
@@ -40,8 +53,8 @@ function form(over: Partial<ComparisonForm> = {}): ComparisonForm {
 function gap(over: Partial<ComparisonGapInput> = {}): ComparisonGap {
   const g = comparisonGapOf({
     form: form(), pointGroup: "Regular", groupLabel: "等級２：Regular",
-    selected: ["kpi_a", "kpi_b", "kpi_c"], asked: ["kpi_d", "kpi_a"], unaskable: [], nameOf: (id) => NAMES[id] ?? id,
-    newer: null, schemeGap: null, current: null, role: "COMPANY_ADMIN", ...over,
+    selected: ["kpi_a", "kpi_b", "kpi_c"], asked: ["kpi_d", "kpi_a"], unaskable: [], nameOf: (id) => NAMES[id],
+    ...IN_SYNC, newer: null, schemeGap: null, current: null, role: "COMPANY_ADMIN", ...over,
   });
   if (!g) throw new Error("ズレがあるのに null が返った");
   return g;
@@ -113,10 +126,10 @@ describe("ComparisonGapNotice: アンケートの一覧・1本で開いた中（
     expect(html.indexOf("（このページ）")).toBeGreaterThan(html.indexOf('href="/admin/forms/frm_1"'));
   });
 
-  it("表は項目・使うKPIを選ぶ・このアンケートの3列で、見出しに scope を付ける（AC6）", () => {
+  it("表は種類・項目・いまの設定・このアンケートの4列で、見出しに scope を付ける（AC6）", () => {
     const opened = openedPart(render([gap()]));
-    expect(count(opened, 'scope="col"')).toBe(3);
-    for (const header of ["項目", "使うKPIを選ぶ", "このアンケート"]) expect(opened).toContain(`>${header}</th>`);
+    expect(count(opened, 'scope="col"')).toBe(4);
+    for (const header of ["種類", "項目", "いまの設定", "このアンケート"]) expect(opened).toContain(`>${header}</th>`);
     for (const name of ["残業率", "粗利率", "定着率"]) expect(opened).toContain(name);
     expect(opened).not.toContain("稼働率");
   });
@@ -177,7 +190,8 @@ describe("ComparisonGapNotice: 直す操作（1つだけ）", () => {
 
   it("より新しい版があれば、ボタンの代わりにその版を開くリンク", () => {
     // 新しい版もまだ一致していない（一致していれば古い版には警告を出さない。DD-012 の5）
-    const opened = openedPart(render([gap({ newer: { id: "frm_2", version: 2, status: "draft", asked: ["kpi_a"] } })]));
+    const newer = { id: "frm_2", version: 2, status: "draft", asked: ["kpi_a"], askedRequirements: ["gr_1"], askedBehaviors: ["bg_1"] };
+    const opened = openedPart(render([gap({ newer })]));
     expect(opened).not.toContain("<button");
     expect(opened).toContain('href="/admin/forms/frm_2"');
     expect(opened).toContain("第2版の下書きを開く");
@@ -193,7 +207,8 @@ describe("ComparisonGapNotice: 直す操作（1つだけ）", () => {
   it("締め切った評価期間では操作を出さず、理由を1行出す", () => {
     const opened = openedPart(render([gap({ form: form({ cycleStatus: "closed" }) })]));
     expect(opened).not.toContain("<button");
-    expect(count(opened, "<a ")).toBe(2);
+    // 見比べる2つのページと、表の3行の項目名だけ（直す操作のリンクは無い）
+    expect(count(opened, "<a ")).toBe(5);
     expect(opened).toContain("締め切った評価期間には新しい版を作れません");
   });
 
@@ -206,6 +221,44 @@ describe("ComparisonGapNotice: 直す操作（1つだけ）", () => {
   });
 });
 
+describe("ComparisonGapNotice: 3種類の行（等級要件・行動指針・KPI項目）", () => {
+  /** 等級要件が1件足りず（gr_2）、行動指針が1件余分（bg_2）、KPI項目は足りない2・余分1 */
+  const THREE_KINDS: Partial<ComparisonGapInput> = {
+    requirements: { ...IN_SYNC.requirements, expected: ["gr_1", "gr_2"] },
+    behaviors: { ...IN_SYNC.behaviors, asked: ["bg_1", "bg_2"] },
+  };
+
+  it("種類の列に札を出し、項目名から直す画面のその行へ飛ぶ", () => {
+    const opened = openedPart(render([gap(THREE_KINDS)]));
+    expect(closedPart(render([gap(THREE_KINDS)]))).toContain("評価項目とのズレ 5件（足りない3・余分2）");
+    for (const label of ["等級要件", "行動指針", "KPI項目"]) expect(opened).toContain(`>${label}</td>`);
+    expect(opened).toContain('<a class="text-brand-deep" href="/admin/masters/requirements?grade=grd_1#grade-requirement-gr_2">記録を当日中に残す</a>');
+    expect(opened).toContain('<a class="text-brand-deep" href="/admin/behavior?grade=grd_1&amp;band=g1_2#behavior-guideline-bg_2">専門性について</a>');
+    expect(opened).toContain('<a class="text-brand-deep" href="/admin/scheme?item=kpi_b#kpi-item-kpi_b">残業率</a>');
+    // 足りない行を先に、余分な行をあとに並べる
+    const order = ["記録を当日中に残す", "残業率", "粗利率", "専門性について", "定着率"].map((name) => opened.indexOf(`>${name}</a>`));
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it("マスタから消えた項目は「消された項目」と出す", () => {
+    const opened = openedPart(render([gap({ asked: ["kpi_a", "kpi_gone"], selected: ["kpi_a"] })]));
+    expect(opened).toContain(">消された項目</a>");
+    expect(opened).not.toContain("kpi_gone");
+  });
+
+  it("開けない役割には、項目名もリンクにしない", () => {
+    const opened = openedPart(render([gap({ ...THREE_KINDS, role: "MANAGER" })]));
+    expect(opened).not.toContain("<a ");
+    expect(opened).toContain("記録を当日中に残す");
+  });
+
+  it("使うKPIを選ぶの画面では、KPI項目でない行の名前に種類を添える", () => {
+    const opened = openedPart(render([gap({ ...THREE_KINDS, current: "selection" })]));
+    expect(opened).toContain("記録を当日中に残す（等級要件）・残業率・粗利率");
+    expect(opened).toContain("専門性について（行動指針）・定着率");
+  });
+});
+
 describe("ComparisonGapNotice: 実績の聞き方（設問のひな形）が決まっていない項目", () => {
   /** 足りないのは残業率・粗利率で、どちらにも聞き方が無い */
   const ONLY_UNASKABLE: Partial<ComparisonGapInput> = { asked: ["kpi_a"], unaskable: ["kpi_b", "kpi_c"] };
@@ -213,9 +266,10 @@ describe("ComparisonGapNotice: 実績の聞き方（設問のひな形）が決�
   it("表の項目名に「設問なし」の札を付ける（聞き方のある項目と余分な項目には付けない）", () => {
     const opened = openedPart(render([gap({ unaskable: ["kpi_c"] })]));
     expect(count(opened, '<span class="badge badge-required">設問なし</span>')).toBe(1);
-    expect(opened).toContain('粗利率 <span class="badge badge-required">設問なし</span>');
-    expect(opened).not.toContain('残業率 <span class="badge');
-    expect(opened).not.toContain('定着率 <span class="badge');
+    // 札は項目名のリンクの外に置く（札まで押せる範囲にしない）
+    expect(opened).toContain('粗利率</a> <span class="badge badge-required">設問なし</span>');
+    expect(opened).not.toContain('残業率</a> <span class="badge');
+    expect(opened).not.toContain('定着率</a> <span class="badge');
   });
 
   it("聞き方の無い項目が足りなければ、作り直しの代わりに、先頭の項目の聞き方を決めるリンク", () => {

@@ -1,21 +1,26 @@
 /**
  * 比べる警告（DD-012）。
  *
- * 「使うKPIを選ぶ」で選んだ項目と、配ってあるアンケートが実績を聞いている項目を比べ、
- * 違いがあれば、どの2つのページを見比べればよいかと、直す操作1つを組で返す。
+ * いまの制度の設定と、配ってあるアンケートが聞いている項目を比べ、違いがあれば、
+ * どの2つのページを見比べればよいかと、直す操作1つを組で返す。
+ * 比べるのは3種類。等級要件（版の系列で比べる）・行動指針・KPI項目（「使うKPIを選ぶ」で選んだ項目）。
+ * 等級要件と行動指針の「聞くはずの項目」は comparison-items.ts が form-build.ts と同じ選び方で作る。
  *
  * 決めていることは5つ。
  *  1. 警告は必ず2つのページ（使うKPIを選ぶ・このアンケート）を持つ。名前は台帳の画面名から始まる階層つき
- *  2. 表の行は、足りない項目（選んだ順）のあとに余分な項目（聞いた順）
+ *  2. 表の行は、足りない項目のあとに余分な項目。どちらも等級要件 → 行動指針 → KPI項目の順で、種類の中は選んだ順（余分は聞いた順）。
+ *     各行は種類と、その項目を直す画面へのリンク（行の位置へ飛ぶ錨付き）を持つ。マスタから消えた項目は「消された項目」と出す
  *  3. 直す操作は上から順に1つだけ選ぶ（pickFix）。足りない項目に設問のひな形の無いもの（聞き方が未定）があれば、まずその聞き方を決めさせる
  *  4. リンクと直す操作は、見る人の役割で開ける・できるものだけ。開けない人には名前だけを残す
- *  5. 同じ評価期間・等級の一番新しい版が選んだ項目と一致していれば、古い版には出さない（直し終わっている）
+ *  5. 同じ評価期間・等級の一番新しい版が3種類とも一致していれば、古い版には出さない（直し終わっている）。
+ *     ただし新しい版が下書きのうちは、公開中の版には出し続ける（配っているのは公開中の版で、まだ直っていない）
  *
  * 項目の差（diffFormKpiItems）を使ってよいのはこのファイルだけ。画面は ComparisonGapNotice を通す。
  */
 
 import type { Role } from "@/lib/roles";
 import { roleCan, roleCanOpen, routeOf } from "@/lib/route-access";
+import { BEHAVIOR_LEDGER_PATH, REQUIREMENTS_LEDGER_PATH, behaviorGuidelinesPath, gradeRequirementsPath } from "./comparison-items";
 import { diffFormKpiItems } from "./form-sync";
 import { formRowTitle } from "./grade-label";
 import { ASKING_PLACE_HINT, unaskableLead } from "./scheme";
@@ -66,15 +71,42 @@ export interface ComparisonPage {
   current: boolean;
 }
 
+/** 比べる項目の種類 */
+export type ComparisonItemKind = "requirement" | "behavior" | "kpi";
+
+/** 表の種類の列の札（マスタの画面の名前に合わせる） */
+export const COMPARISON_KIND_LABEL: Record<ComparisonItemKind, string> = {
+  requirement: "等級要件",
+  behavior: "行動指針",
+  kpi: "KPI項目",
+};
+
+/** マスタから消えた項目の名前。設問は消した項目の id を持ったまま残るので、id を名前の代わりに見せない */
+export const DELETED_ITEM_NAME = "消された項目";
+
 export interface ComparisonRow {
+  kind: ComparisonItemKind;
+  /** 項目の id。等級要件は系列の起点の id（本文を直した新版も同じ項目） */
   itemId: string;
   name: string;
-  /** 使うKPIを選ぶで選んでいるか */
+  /** その項目を直す画面。行の位置へ飛ぶ錨が付く（飛ぶ先の行が無いときは画面まで）。開けない役割には null */
+  href: string | null;
+  /** いまの制度で聞くはずか（KPI項目は、使うKPIを選ぶで選んでいるか） */
   inSelection: boolean;
   /** このアンケートで聞いているか */
   inForm: boolean;
-  /** 実績を聞く設問のひな形が無いか。足りない行だけが true になる（聞き方を決めるまで、作り直しても新しい版でも直らない） */
+  /** 実績を聞く設問のひな形が無いか。KPI項目の足りない行だけが true になる（聞き方を決めるまで、作り直しても新しい版でも直らない） */
   noTemplate: boolean;
+}
+
+/** 等級要件・行動指針の比べる材料（comparison-items.ts で作る） */
+export interface ComparisonItems {
+  /** いまの制度で、この等級のアンケートが聞くはずの項目（form-build.ts が設問を作るのと同じ選び方） */
+  expected: readonly string[];
+  /** このアンケートが聞いている項目 */
+  asked: readonly string[];
+  /** 項目の名前。マスタから消えた項目は undefined */
+  nameOf: (id: string) => string | undefined;
 }
 
 export type ComparisonFix =
@@ -110,9 +142,24 @@ export interface ComparisonGapInput {
   asked: readonly string[];
   /** 選んだ項目のうち、実績を聞く設問のひな形が無いもの（固定枠を除く。queries.ts の listAskableKpiItemIds で判定） */
   unaskable: readonly string[];
-  nameOf: (id: string) => string;
-  /** 同じ評価期間・等級で、版がより大きいアンケートの最大のもの。asked はその版が実績を聞いている項目（数え方は asked と同じ） */
-  newer: { id: string; version: number; status: string; asked: readonly string[] } | null;
+  /** KPI項目の名前。マスタから消えた項目は undefined */
+  nameOf: (id: string) => string | undefined;
+  /** 等級要件。id は系列の起点（lineageRootId）で数える */
+  requirements: ComparisonItems;
+  /** 行動指針。bandOf はその観点の基準（行動指針の画面の band）、band はこの等級の基準 */
+  behaviors: ComparisonItems & { bandOf: (id: string) => string | undefined; band: string | null };
+  /**
+   * 同じ評価期間・等級で、版がより大きいアンケートの最大のもの。
+   * asked・askedRequirements・askedBehaviors はその版が聞いている項目（数え方は、この版の asked・requirements・behaviors と同じ）
+   */
+  newer: {
+    id: string;
+    version: number;
+    status: string;
+    asked: readonly string[];
+    askedRequirements: readonly string[];
+    askedBehaviors: readonly string[];
+  } | null;
   /** 評価セットの準備が残っていれば、その手順へのリンク */
   schemeGap: { href: string; linkLabel: string } | null;
   current: ComparisonPageKey | null;
@@ -180,10 +227,19 @@ function stateNoteOf(input: ComparisonGapInput): string | null {
   return PUBLISHED_NOTE;
 }
 
+/** 一致している新しい版が、まだ下書きのとき（公開中のこの版に警告を出し続ける理由）の1文 */
+function newerDraftReadyNote(version: number): string {
+  return `第${version}版の下書きは、いまの設定と一致しています。公開すると、この版は自動で締め切られます。`;
+}
+
 /** 注記。設問のひな形が無い項目があれば先に置く（直す操作を押しても残る理由なので） */
 function noteOf(input: ComparisonGapInput, rows: readonly ComparisonRow[]): string | null {
   const noTemplate = rows.filter((row) => row.noTemplate).map((row) => row.name);
-  const notes = [noTemplate.length > 0 ? noTemplateNote(noTemplate) : null, stateNoteOf(input)].filter((x) => x !== null);
+  const notes = [
+    noTemplate.length > 0 ? noTemplateNote(noTemplate) : null,
+    input.newer && newerInSync(input) ? newerDraftReadyNote(input.newer.version) : null,
+    stateNoteOf(input),
+  ].filter((x) => x !== null);
   return notes.length > 0 ? notes.join("") : null;
 }
 
@@ -193,30 +249,82 @@ function inSync(selected: readonly string[], asked: readonly string[]): boolean 
   return diff.missing.length === 0 && diff.extra.length === 0;
 }
 
+/** 新しい版が3種類とも、いまの設定と一致しているか */
+function newerInSync(input: ComparisonGapInput): boolean {
+  const { newer } = input;
+  return (
+    newer !== null &&
+    inSync(input.selected, newer.asked) &&
+    inSync(input.requirements.expected, newer.askedRequirements) &&
+    inSync(input.behaviors.expected, newer.askedBehaviors)
+  );
+}
+
+/** 行の項目を直す画面。開けない役割には null */
+function itemHrefOf(input: ComparisonGapInput, kind: ComparisonItemKind, itemId: string, missing: boolean): string | null {
+  const { form, role } = input;
+  switch (kind) {
+    case "requirement":
+      // 足りない系列は、いま使っている項目の一覧に行がある。余分な系列（今後使わないにした項目）は版の履歴の段にあり
+      // 行の錨を持たないので、等級を開いた画面までにする
+      return roleCanOpen(role, REQUIREMENTS_LEDGER_PATH) ? gradeRequirementsPath(form.gradeId, missing ? itemId : undefined) : null;
+    case "behavior": {
+      // 行動指針の画面は、使わない観点のカードも出す。その観点の基準で開けば、余分な行も位置へ飛べる
+      const band = input.behaviors.bandOf(itemId);
+      if (!roleCanOpen(role, BEHAVIOR_LEDGER_PATH)) return null;
+      return band ? behaviorGuidelinesPath(form.gradeId, band, itemId) : behaviorGuidelinesPath(form.gradeId, input.behaviors.band);
+    }
+    case "kpi":
+      // 消された項目は KPI項目の一覧に行が無いので、一覧の画面までにする
+      if (!roleCanOpen(role, SCHEME_LEDGER_PATH)) return null;
+      return input.nameOf(itemId) === undefined ? SCHEME_LEDGER_PATH : kpiItemPath(itemId);
+  }
+}
+
+/** 種類ごとの、足りない行と余分な行 */
+function rowsOfKind(
+  input: ComparisonGapInput,
+  kind: ComparisonItemKind,
+  expected: readonly string[],
+  asked: readonly string[],
+  nameOf: (id: string) => string | undefined,
+): { missing: ComparisonRow[]; extra: ComparisonRow[] } {
+  const diff = diffFormKpiItems(expected, asked);
+  const unaskable = new Set(kind === "kpi" ? input.unaskable : []);
+  const row = (itemId: string, missing: boolean): ComparisonRow => ({
+    kind,
+    itemId,
+    name: nameOf(itemId) ?? DELETED_ITEM_NAME,
+    href: itemHrefOf(input, kind, itemId, missing),
+    inSelection: missing,
+    inForm: !missing,
+    noTemplate: missing && unaskable.has(itemId),
+  });
+  return { missing: diff.missing.map((id) => row(id, true)), extra: diff.extra.map((id) => row(id, false)) };
+}
+
 /**
- * 選んだ項目と聞いている項目に違いがあれば警告を作る。並び順の違いだけなら null。
+ * いまの設定と聞いている項目に違いがあれば警告を作る。並び順の違いだけなら null。
  * 一番新しい版が一致していれば、この版に違いがあっても null（決めていることの5）
  */
 export function comparisonGapOf(input: ComparisonGapInput): ComparisonGap | null {
   const { form, role } = input;
-  const diff = diffFormKpiItems(input.selected, input.asked);
-  const unaskable = new Set(input.unaskable);
-  const rows: ComparisonRow[] = [
-    ...diff.missing.map((itemId) => ({
-      itemId,
-      name: input.nameOf(itemId),
-      inSelection: true,
-      inForm: false,
-      noTemplate: unaskable.has(itemId),
-    })),
-    ...diff.extra.map((itemId) => ({ itemId, name: input.nameOf(itemId), inSelection: false, inForm: true, noTemplate: false })),
+  const kinds = [
+    rowsOfKind(input, "requirement", input.requirements.expected, input.requirements.asked, input.requirements.nameOf),
+    rowsOfKind(input, "behavior", input.behaviors.expected, input.behaviors.asked, input.behaviors.nameOf),
+    rowsOfKind(input, "kpi", input.selected, input.asked, input.nameOf),
   ];
+  const missing = kinds.flatMap((k) => k.missing);
+  const extra = kinds.flatMap((k) => k.extra);
+  const rows: ComparisonRow[] = [...missing, ...extra];
   if (rows.length === 0) return null;
   // 直した結果は新しい版に出ることがある（公開済み・締め切り済みの版は変えられない）。DD-012 の5。
   // 古い版は直す対象ではない。下書きでも、pickFix はまず新しい版を開かせ、古い版を作り直させない。
   // だから新しい版が一致していれば、古い版の警告は直し終えたのに直っていないように見せるだけになる。
+  // ただし新しい版が下書きのうちは、配っているのは公開中のこの版で、回答はまだ古い設問で集まる。
+  // ここで消すと「直し終えた」と読めてしまうので、公開中の版には出し続け、下書きを開かせる（注記で一致していることを添える）。
   // 一致していない新しい版があるときは、従来どおり警告を出してその版を開かせる（pickFix の openNewer）
-  if (input.newer && inSync(input.selected, input.newer.asked)) return null;
+  if (newerInSync(input) && !(input.newer!.status === "draft" && form.status === "published")) return null;
 
   const formTitle = formRowTitle(form);
   const selection: ComparisonPage = {
@@ -242,8 +350,8 @@ export function comparisonGapOf(input: ComparisonGapInput): ComparisonGap | null
     current: input.current,
     pages: [selection, formPage],
     rows,
-    missingCount: diff.missing.length,
-    extraCount: diff.extra.length,
+    missingCount: missing.length,
+    extraCount: extra.length,
     fix: picked && FIX_GUARD[picked.kind](role) ? picked : null,
     note: noteOf(input, rows),
   };

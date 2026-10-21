@@ -168,6 +168,9 @@ describe("formSyncGaps（評価セットとアンケートの比べ）", () => {
     asked,
     unaskable: [],
     nameOf,
+    // ここでは KPI項目だけを比べる。等級要件・行動指針は聞くはずの項目が無い
+    requirements: { expected: [], asked: [], nameOf: () => undefined },
+    behaviors: { expected: [], asked: [], nameOf: () => undefined, bandOf: () => undefined, band: null },
     newer: null,
     schemeGap: null,
     current: null,

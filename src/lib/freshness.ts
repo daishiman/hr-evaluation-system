@@ -35,7 +35,6 @@ export type FreshnessResource =
   | "form-extensions"
   | "forms"
   | "improvements"
-  | "kgi-results"
   | "masters"
   | "members"
   | "notes"

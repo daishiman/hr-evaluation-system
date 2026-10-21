@@ -41,7 +41,9 @@ pnpm run preview
 - ログインし、ロール別ホームを表示できる。
 - フォームの作成、回答、評価確定まで進められる。
 - 評価集計で `evaluations` に行が作られる。計算不能な設問が一つあっても、人単位で黙って欠落しない。
-- `/admin/kgi` で達成率を入力し、未入力時の個人 Pt・賞与額は `null` として扱われる。未入力を `0` や「0円」と表示しない。
+- 評価の確定で、個人 Pt（KPI評価点の合計を整数に丸めた値）と賞与（仮）（個人 Pt × 昇給の設定の1点あたりの金額）が出る。1点あたりの金額が未設定か0以下なら、賞与額は `null` として扱われる。未設定を `0` や「0円」と表示しない（[製品仕様 §29-1](./product/spec.md#29-1-事業所の達成率の削除と賞与仮の出し方受入-1)）。
+- 評価が確定した社員の評価レポート（`/reports/<社員の利用者 id>`）を、本人・上長・会社の管理者で開ける。印刷のプレビューで A4 縦の2枚に収まり、メニューと印刷のボタンが紙に出ない（[製品仕様 §29-2](./product/spec.md#29-2-評価レポート受入-34)）。
+- 上長が評価を確定するとき、昇給と昇格のそれぞれに「点数の判定どおりにする」か「変える」を選ぶ。「変える」で理由が空白なら断られる（[製品仕様 §29-3](./product/spec.md#29-3-昇給昇格への上司の判断受入-10)）。
 - 対象変更に応じてアカウント設定、会社管理、マスタ版履歴を確認する。
 - 同じ画面を2つのタブで開き、片方で保存すると、もう片方へ戻ったときに同じ内容が出る。
 
@@ -218,7 +220,7 @@ pnpm test:e2e
 
 ## 8. 失敗時
 
-自動ロールバックは行いません。migration適用後にDeployだけが失敗した場合は、まず同じDeploy workflowを再実行します。適用済みmigrationは再適用されず、未適用0件の確認後に配布から再開します。旧 isolate、認証・設定不備を切り分けてから `wrangler rollback` を選び、DBを戻す必要がある場合はArtifactのバックアップとmigrationの互換性を確認してください。
+自動ロールバックは行いません。migration適用後にDeployだけが失敗した場合は、まず同じDeploy workflowを再実行します。適用済みmigrationは再適用されず、未適用0件の確認後に配布から再開します。旧 isolate、認証・設定不備を切り分けてから `wrangler rollback` を選び、DBを戻す必要がある場合はArtifactのバックアップとmigrationの互換性を確認してください。移行 0039（KGI の表と列の削除）を当てた後は、`wrangler rollback` で KGI を消す前の版（0038 を出した PR より前）に戻しません。戻し方は §14 にあります。
 
 ## 9. 2026-10 の改善要望の配布（移行 0033・0034・0035）
 
@@ -373,3 +375,70 @@ LIMIT 50;
 - 0031 の表は、古いコードが読み書きしないので残したままで構いません。消すときは `DROP TABLE initial_credential_memos;` を流します。控えは開けなくなるので、要る人だけ初期パスワードを再発行します。
 - 0032 の一意索引は、古いコードでも残したままで構いません。古いコードで同じ項目を同時に保存すると、後のほうが重なりの代わりに失敗します。元の索引に戻すときは `DROP INDEX uq_ce_entity_seq;` のあと、`CREATE INDEX idx_ce_entity ON constitution_events (company_id, entity_type, entity_id, seq);` を流します。振り直した番号は元に戻せませんが、並び順は変わっていません。
 - DB そのものを書き出しの時点へ戻すのは、上の保管の期限の内だけです。戻すとその後の保存がすべて消えるので、別に承認を取ってから行います。
+
+## 14. 評価レポートと上司の判断の配布（移行 0038・0039）
+
+事業所KGIの削除・評価レポート・昇給と昇格への上司の判断（[製品仕様 §29](./product/spec.md#29-評価レポートと上司の判断事業所の達成率の削除2026-10-20-追加)）は、**2回の公開に分けて**出します。決めたことは [DD-020](./product/design-decisions.md)（公開の単位）と [DD-024](./product/design-decisions.md) の1（移行の番号）です。どちらも main へのマージで Deploy workflow が流すので、手で `db:migrate:remote` や `deploy:worker` を流しません。
+
+| 公開 | 入るもの | 移行 | 中身 | 2回流したとき |
+|---|---|---|---|---|
+| 1回目（P05 の PR のマージ） | KGI を読まない新しいコード・評価レポート・上司の判断 | 0038 | 評価に上司の判断の6列（`raise_decision`・`raise_decision_reason`・`promotion_decision`・`promotion_decision_reason`・`decision_recorded_by`・`decision_recorded_at`）と索引 `idx_eval_company_employee_status` を足す。列はすべて NULL 可で、既存の行は「記録なし」になる | Deploy workflow は適用済みのファイルを流さない。手で2回流すと、列がもうあるので止まる（SQLite の `ADD COLUMN` に `IF NOT EXISTS` が無い） |
+| 2回目（P08 の別の PR のマージ） | 移行だけ | 0039 | KGI の3つの表（`office_kgi_revisions`・`office_kgi_results`・`kgi_coefficients`）を消し、評価の2列（`kgi_coefficient`・`office_achievement_rate`）を消す。賞与の個人Pt・賞与額・根拠の文は残す | 表は `IF EXISTS` で変化0。手で2回流すと、列がもう無いので止まる |
+
+**0039 を 0038 と同じ Deploy に入れません。** Deploy workflow は移行を Worker の配布より先に当てます。同じ Deploy に入れると、KGI の表と列を名前で読む古い Worker が動いている間に表と列が消え、画面が `no such column` で落ちます。1回目の Worker が本番で動き、KGI を読んでいないことを確かめてから、2回目の PR をマージします。
+
+- この作業ツリーでは、0038 と 0039 を同じ変更に入れて試しています。PR を作るときは、`drizzle/migrations/0039_drop_office_kgi.sql` と `drizzle/rollback/0039_drop_office_kgi_rollback.sql` の2つを P05 の PR から外して P08 の PR に移します。`wrangler d1 migrations apply` は `drizzle/migrations/` のファイルだけを見て、`meta/_journal.json` は 0015 までしか持たないので、ほかに移すものはありません。
+- seed の試験（`scripts/seed-idempotent.test.mjs`）は移しません。0039 のファイルが無ければ「0039 で消した表を含まない」を飛ばし、消す表が schema.ts と DB にあることで確かめるので、P05 の PR の上でも `pnpm test` が通ります。
+- コードの側では、1回目で `src/db/schema.ts` から KGI の定義を外します。DB の表と列は、2回目まで残ります（DD-020 の3）。
+
+### 書き出しの保管
+
+未適用の移行があると、Deploy workflow は本番 D1 の全体を書き出し、Artifact `d1-backup-<実行の id>` に14日置きます。2回目の書き出しは、消した KGI の値を戻せる唯一の元です。
+
+- Public のリポジトリで、この Artifact を誰が落とせるか・どこに置くかは、[バックログ](./product/backlog.md) の SECURITY-014 で利用者が決めます。P05 のマージの前に決めます。
+- KGI の値を14日より長く保管するかは、P08 のマージの前に利用者が決めます（DD-020 の9）。長く置かないなら、期限の後は値を戻せません。
+
+### 確かめる要点（読み取りだけ）
+
+本番で流すときは `pnpm exec wrangler d1 execute hr-evaluation-db --remote --command "<SQL>"` を使います（`SELECT` と `PRAGMA` だけ）。手元の token が本番 D1 を読めない間（[バックログ](./product/backlog.md) の OPS-017）は流せません。結果は P13 が下の配布の記録に書きます。
+
+1回目の後:
+
+- `PRAGMA table_info(evaluations);` に 0038 の6列がある。KGI の2列もまだある。
+- 評価レポート（`/reports/<社員の利用者 id>`）を、本人・上長・会社の管理者で開ける。印刷のプレビューが A4 縦の2枚になる。
+- 2回目の PR をマージする前に、1回目の Worker が配られていること（Deploy workflow の2回のスモークが success）を確かめる。
+- 消した KGI の仕組みで出した根拠の文が残る評価の件数を、状態ごとに数える（文は写さない）。確定済みの件数は、評価の詳細にその文がそのまま出る件数で、[バックログ](./product/backlog.md) の POLICY-011 の判断に使う。P08 のマージの前に数える。
+
+  ```sql
+  SELECT status, COUNT(*) AS n, SUM(personal_points IS NULL) AS no_points FROM evaluations WHERE bonus_rationale LIKE '%KGI%' GROUP BY status;
+  ```
+
+2回目の後:
+
+- `SELECT name FROM sqlite_master WHERE name IN ('office_kgi_revisions', 'office_kgi_results', 'kgi_coefficients');` が0行。
+- `PRAGMA table_info(evaluations);` に `kgi_coefficient`・`office_achievement_rate` が無く、0038 の6列がある。
+- `wrangler d1 migrations list` の未適用が0件（Deploy workflow が確かめて、記録に残す）。
+
+保存済みの上司の文のうち、本人に見せない語に引っかかる件数（[DD-023](./product/design-decisions.md) の4。件数だけを数え、文は写さない）:
+
+```bash
+pnpm exec wrangler d1 execute hr-evaluation-db --remote --json --command "SELECT evaluator_comment AS t FROM evaluations UNION ALL SELECT raise_decision_reason FROM evaluations UNION ALL SELECT promotion_decision_reason FROM evaluations;" \
+  | node --input-type=module -e 'const { containsCriteriaLeak } = await import("./src/lib/domain/evaluation-view.ts"); const { readFileSync } = await import("node:fs"); const rows = JSON.parse(readFileSync(0, "utf8"))[0].results; console.log(JSON.stringify({ checked: rows.filter((r) => r.t).length, flagged: rows.filter((r) => containsCriteriaLeak(r.t)).length }))'
+```
+
+- リポジトリの直下で流します。node 22 は `.ts` を直接読めるので、検査の語は保存のときと同じ `CRITERIA_LEAK_PATTERNS` を使います。出るのは件数の2つだけです。
+- 0038 の前は理由の2列が無いので、1回目の後に流します。
+
+### 戻すとき
+
+自動では戻しません（§8）。どちらも本番の DB への書き込みなので、利用者の承認を得てから流します。
+
+- **1回目を戻す**: コードだけを戻すときは、`drizzle/rollback/0038_evaluation_decisions_rollback.sql` を流しません。足した列はすべて NULL 可なので、前のコードも動きます。列まで消すときだけ流し、先に `SELECT COUNT(*) FROM evaluations WHERE raise_decision IS NOT NULL OR promotion_decision IS NOT NULL;` で、消える判断の件数を確かめます。
+- **2回目を戻す**: DB だけを戻します。`drizzle/rollback/0039_drop_office_kgi_rollback.sql` で3つの表と2列の形を作り直し、値は2回目の書き出しから3つの表と2列だけを取り出して入れ直します。書き出し全体を流し込みません（2回目の後の保存が消えるため。前例は §9 の 0034 の戻し方）。P08 のマージから14日の内は、承認があればすぐ戻します。
+- **2回目の後は、P05 を revert しません。** `wrangler rollback` でも P05 より前の版に戻しません。前の版は消えた KGI の表と列を読むので、画面が落ちます。直すときは、前に進める PR で直します（DD-020 の9）。
+- 2つの戻す SQL が表の形を移行の前に戻すこと（0039 を先に、0038 を後に戻す順も含む）と、上の件数の SELECT がそのまま流せることは、`src/db/migration-rollback-0038-0039.test.ts` が `pnpm test` で確かめます。値の入れ直しは確かめていないので、流すときは入れ直した後の件数を書き出しの件数と比べます。
+
+配布の記録（P13 が書く）:
+
+- 1回目: Deploy workflow の実行（id・時刻）、マージの sha、Artifact `d1-backup-<id>` と保管の期限、確かめる要点の結果（根拠の文が残る評価の状態ごとの件数を含む）。
+- 2回目: 同じ項目と、上の件数（`checked`・`flagged`）。

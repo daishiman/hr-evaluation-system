@@ -2,7 +2,7 @@
 graph_node_id: "arch-system-spec-ui-ux"
 artifact_kind: "architecture"
 artifact_subtypes: ["frontend"]
-title: "UI-UX：利用者に見える鮮度と追加要件の画面設計"
+title: "UI-UX：利用者に見える鮮度、追加要件の画面設計、評価レポートと上司の判断"
 project_id: "hr-evaluation-system"
 domain: "ui-ux"
 status: "done"
@@ -17,10 +17,10 @@ template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
 evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "172728490ebcb88c362731efc4fb9bdf26617b99456aee47b073a8c7f81a3fc2", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
-source_lineage: {"imported_at": "2026-10-15T00:07:42Z", "origin_kind": "system-spec-harness", "source_digest": "172728490ebcb88c362731efc4fb9bdf26617b99456aee47b073a8c7f81a3fc2", "source_path": "system-spec/ui-ux.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
-created_at: "2026-10-15T01:28:34.699201Z"
-updated_at: "2026-10-15T01:28:34.699201Z"
+confirmation_evidence: {"evaluated_digest": "42fe01db6968f9ee1d1d13663e2f59c98412062c23ea7f3223d3f8ef2d6db5eb", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-2026-10-20-z.json"}
+source_lineage: {"imported_at": "2026-10-19T22:19:04Z", "origin_kind": "system-spec-harness", "source_digest": "42fe01db6968f9ee1d1d13663e2f59c98412062c23ea7f3223d3f8ef2d6db5eb", "source_path": "system-spec/ui-ux.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-19T23:20:31.845015Z"
+updated_at: "2026-10-19T23:20:31.845015Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -33,9 +33,9 @@ architecture_refs: []
 parent_feature: null
 feature_package_id: null
 phase_ref: null
-classification_confidence: 0.95
-classification_reason: "system-spec-harness が確定した章 system-spec/ui-ux.md の取り込み"
-classification_candidates: [{"artifact_kind": "architecture", "candidate_path": "architecture/system-spec-ui-ux.md", "confidence": 0.95}]
+classification_confidence: 0.92
+classification_reason: "確定した技術章（system-spec の章）で、構成・境界・横断契約・決定を記す architecture の取込。"
+classification_candidates: [{"artifact_kind": "architecture", "candidate_path": "architecture/system-spec-ui-ux.md", "confidence": 0.92}, {"artifact_kind": "specification", "candidate_path": "specs/system-spec-ui-ux.md", "confidence": 0.4}]
 tracker_binding: "none"
 beads_linkage: null
 github_publication: {"labels": [], "milestone": null, "mode": "local_only", "project_aliases": []}
@@ -44,7 +44,7 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-15T01:28:34.699201Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-19T23:20:31.845015Z", "missing_sections": [], "status": "complete"}
 ---
 
 # Architecture overview
@@ -53,11 +53,17 @@ implementation_readiness: {"checked_at": "2026-10-15T01:28:34.699201Z", "missing
 
 2026-10-14 の追加では、2つのページを比べて出す警告（評価項目とアンケートのズレ）に、比べている両方のページの階層つきの名前とリンクを持たせ、既定は1行に畳み、押すとその場で直すところを表で開く形にする（G16・I17）。この追加の全文は、利用者が全文のまま承認した（qa-w06、2026-10-14T20:46:24Z）。根拠: qa-w06, qa-w01, qa-w03／system-spec/ui-ux.md
 
+2026-10-19〜20 の追加: サイドバーの『事業所KGIの達成率』と KGI の画面（/admin/kgi）を消し（開くと 404）、個人別の評価レポート（①見出し・②評価に値するか・③点数・④レーダー図・⑤その等級の推移・⑥等級ごとの点数・⑦過去の実績）を足す。マネージャーは直属の部下の評価の中身とレポートへ移れ、アンケートは状態ごとに出す操作を決め、ズレの警告は行ごとに直す画面へのリンクを持つ。評価の確定の前に『上司の判断』の欄を置き、結論と印を全ての表示先で同じ形に出す。印刷は A4 縦2枚組にする。
+根拠: qa-y10、qa-y09（system-spec/ui-ux.md、system-spec/00-requirements-definition.md）
+
 ## Context and drivers
 
 出発点は、会社や利用者を追加しても一覧に出ず、再読み込みしても出ないという報告で、新規作成の全機能に共通する問題として扱った（qa-u01）。連続作成の画面では、利用者が選んだとおり一覧の反映を最優先にし、控えはサーバーに保存して一覧の行から開き直せるようにした（qa-u19）。2026-10-12 の依頼（qa-v01）、利用者の決定（qa-v02）、上位概念 G6〜G15 の全文承認（qa-v03）が追加の駆動要因である。並べ替えは、利用者が Pointer Events で自作する案を選んだ（D-005、qa-v13）。権限一覧は、利用者が一覧表・項目ごとの詳細・スマホのカードの組み合わせを求めた（D-006、qa-v14）。この章の全文は、2026-10-13T00:03:46Z に利用者が全文のまま承認した（qa-v18）。上流指針は Apple HIG で、取り直しても入力中のフォームの内容とスクロール位置を失わないこと、画面全体を読み込み中の表示に切り替えないことを導く。追加要件では、可否を色だけでなく記号と言葉で示すこと、説明をポインター・フォーカス・タップのどれでも出すことも導く。根拠: qa-v18, qa-r-uiux-3, qa-u01, qa-u19, qa-v13, qa-v14／system-spec/ui-ux.md
 
 2026-10-14 の依頼（qa-w01）は、アンケート一覧の警告がどのページとどのページの内容が食い違っているかを示さず、たどれないという報告である。利用者は、出す画面（一覧・1本・使うKPIを選ぶ）、ページ名の形（階層つき）、公開後の直し方（この等級だけ新しい版）、当てる範囲（比べる警告すべて）を選んだ（qa-w02）。同じ日の追加の指示（qa-w03）は、警告の文が長く並んで読みにくいので、既定では出さずに押すと出す形にし、直すところを箇条書きか表で示すことを求めた。根拠: qa-w06, qa-w01, qa-w02, qa-w03／system-spec/ui-ux.md
+
+2026-10-19〜20 の追加: 2026-10-19 の依頼（KGI の削除・図とグラフのあるレポート・直属の部下の閲覧・アンケートの全機能の監査・整合）と、作業中に届いた A4 の印刷の依頼（qa-x08・qa-y08）、2026-10-20 の上司の判断の依頼で、画面の構成が変わった。優先する品質は、一目で分かる図と表（G18）、役割ごとの見え方（G19）、状態に合った操作だけを出すこと（G21）、判断と理由の見せ方（G24）である。
+根拠: qa-x01、qa-x08、qa-y01、qa-y08、qa-y10（system-spec/ui-ux.md、system-spec/00-requirements-definition.md）
 
 ## Goals and non-goals
 
@@ -65,9 +71,15 @@ implementation_readiness: {"checked_at": "2026-10-15T01:28:34.699201Z", "missing
 
 2026-10-14 の追加でゴールに G16 を足した。比べる警告以外の設定不足の一覧（公開前の不足など）の表示の形は変えない。根拠: qa-w06, qa-w05／system-spec/ui-ux.md・system-spec/00-requirements-definition.md
 
+2026-10-19〜20 の追加: Goals: レポートを4つの幅で同じ順に並べ、A4 縦2枚に刷れる。本人向けは点数の数値と比べる値を出さない。判断を選ばずには確定できない。Non-goals: レポートをサーバーでファイルにすること、上司の判断で等級を自動で変えること、配色の移行（平賀配色へ移さない）。
+根拠: qa-y10、qa-y07（system-spec/ui-ux.md、system-spec/00-requirements-definition.md の U7）
+
 ## System context and boundaries
 
 利用者は、システム全体管理者・会社の管理者・マネージャー・一般の社員の4役割で、スマホ（375px）・タブレット（768px）・PC のブラウザから使う。デスクトップのネイティブアプリは対象外である（appr-platform-001）。この章が決めるのは見え方・文言・操作の順序で、表示を許すかどうかはサーバーが返すデータの段階で決まり、画面はそれを出すだけにする（一般の社員は等級と点数の一覧を開けず、値も見えない）。同じ利用者の他タブは同じブラウザの中で取り直し、別の利用者の画面へは届けない。根拠: qa-v18, qa-r-uiux-3, qa-f01／system-spec/ui-ux.md
+
+2026-10-19〜20 の追加: レポートの入口は、管理者は利用者一覧と社員の一覧、マネージャーは担当チームのメンバー一覧と評価の画面、本人は『評価・結果を確認する』である。部下でない人の行は出さない。確定した評価が1件も無ければ、その旨と評価の画面へのリンクを出す。
+根拠: qa-y10（system-spec/ui-ux.md）
 
 ## Container and component view
 
@@ -75,11 +87,17 @@ implementation_readiness: {"checked_at": "2026-10-15T01:28:34.699201Z", "missing
 
 評価項目とアンケートのズレの警告は、アンケートの一覧（/admin/forms）・アンケート1本（/admin/forms/[id]）・使うKPIを選ぶ（/admin/scheme/[group]）の3画面に出す。既定は1行（注意の印・『評価項目とのズレ ◯件（足りない◯・余分◯）』・『直すところを見る』）で、押すとその場で開く。アンケート側の2画面で開いた中は、上から ①『下記の内容を変更・修正してください』 ②比べている2つのページへのリンク2行（階層つきのページ名がそのままリンク。いま開いているページには『（このページ）』を添える） ③表（列：項目・使うKPIを選ぶ・このアンケート。値は ○ と —） ④ボタン1つ（下書きで回答0件なら『設問を作り直す』、それ以外は『この等級だけ新しい版の下書きを作る』。同じ評価期間・等級にこれより新しい下書きがあれば、ボタンの代わりにその下書きへのリンク） ⑤注記1行（公開後か回答ありのときだけ）の順に並べる。使うKPIを選ぶの画面で開いた中は、ズレているアンケートごとに1行の表（列：アンケート（リンク）・聞いていない項目・余分に聞いている項目）にする。根拠: qa-w06, qa-w04／system-spec/ui-ux.md
 
+2026-10-19〜20 の追加: レポートは上から ①見出し（名前・今の等級・元にした評価期間・作った時刻）②評価に値するか（昇給と昇格のそれぞれで点数の判定・上司の判断・結論）③点数 ④レーダー図（KPI 項目が軸。前の期を重ね、軸が3未満なら棒グラフ）⑤その等級の推移と同じ等級の平均と幅 ⑥等級ごとの点数 ⑦過去の実績を並べ、末尾に『上長からのコメント』を載せる。評価の詳細の評価者向けには、確定のボタンの前に昇給と昇格それぞれの『点数の判定どおりにする／変える』と、変えるときの結論と理由の入力欄を置く。
+根拠: qa-y10（system-spec/ui-ux.md）
+
 ## Cross-cutting contracts
 
 等級の呼び名は、どの画面でもその会社の等級名だけで表し（既定は『等級1』『等級2』『等級3』『等級4-1』『等級4-2』『等級5-1』『等級5-2』）、英語の区分名（Beginner・Regular・Chief・AM・Manager）とカタカナの区分名を出さない。等級名を変えると、等級の一覧・行動指針の向け先・評価セットの区分・昇格の条件と要件・評価の基準・警告文・アンケートのタイトル・ボタン・説明文の全てに、次に表示した画面から反映する。設定不足は1件ごとに『何が足りないか』『どう直すか』『直す画面へのリンク（文字は画面名）』の3つで出し、多いときは直す画面ごとにまとめて初めの数件だけ見せ、制度設定ガイド・会社の管理者のホーム・評価期間・アンケート・KGI・システムのホームの全てを同じ形にする。権限一覧の説明は1〜2文で、表ではポインターを載せる・フォーカスする・タップするのどれでも出し、カードでは常に見える形で出す。ポインターを載せたときだけ出る情報は作らない。鮮度の面では、取り直しの間も今の表示を保って差し替え、入力中の内容とスクロール位置を失わない。根拠: qa-v18, qa-r-uiux-3, qa-v14／system-spec/ui-ux.md
 
 2つのページを比べて出す警告は、どれも比べている両方のページを階層つきのページ名とリンクで示し、項目ごとの有無を表で示す。今後足す比べる警告にも同じ形を当てる（qa-w02 の『比べる警告すべて』）。根拠: qa-w06, qa-w02／system-spec/ui-ux.md
+
+2026-10-19〜20 の追加: 図には同じ内容の表か文を添え、色だけで区別しない。本人向けは②に本人向けの理由、③④を判定（A〜E）で描いて点数の数値を出さず、⑤⑥の比べる値を出さない。上司が変えたときは『上司の判断』の印を付け、点数の判定と理由を並べて見せ、判断の記録が無い古い確定は『上司の判断の記録なし（この仕組みより前に確定）』と出す。理由の入力欄の上に『この文は本人にもそのまま見えます。性格ではなく、行動や事実で書いてください』と出す。設定不足の表示をそろえる画面の並びから KGI を外す（KGI の画面を無くすため）。
+根拠: qa-y10（system-spec/ui-ux.md）
 
 ## Subtype architecture
 
@@ -97,17 +115,26 @@ frontend の観点のうち、利用者に見える振る舞いと情報の優�
 
 比べる警告から、どちらのページを見ていても、相手のページへ階層つきのページ名のリンクを1回押すだけで移れる。いま開いているページには『（このページ）』を添える。根拠: qa-w06／system-spec/ui-ux.md
 
+2026-10-19〜20 の追加: /admin/kgi とサイドバーの『事業所KGIの達成率』を消す。個人別の評価レポートの画面を足し、管理者・マネージャー・本人の入口から開く。マネージャーの担当チームの一覧と評価の画面から直属の部下の評価の中身とレポートへ移れる。古い版の配布 URL には、同じ評価期間・等級の公開中の新しい版への案内を出す。
+根拠: qa-y10（system-spec/ui-ux.md）
+
 #### Component and design-system boundaries
 
 権限一覧は、表・役割のタブ・スマホのカード・説明を1つの部品にし、ページとモーダルで同じものを出す（D-006）。可否は記号と言葉を併用して色だけに頼らない。説明は1〜2文で、表ではポインター・フォーカス・タップのどれでも出し、カードでは常に見える形で出す。モーダルは閉じるボタンと Esc で閉じ、開いたらフォーカスを中へ移し、閉じたら元のボタンへ戻す。並べ替えの対象は、今、矢印のボタンで並べ替える等級要件・昇格の条件と要件・アンケートの設問と、新しく並べ替えを足す設問の選択肢である。つまみを押したまま（マウスは押し続け、タッチは長押し）上下に動かし、動かしている間は落とす位置を示し、矢印のボタン（先頭へ・1つ上へ・1つ下へ・末尾へ）もドラッグの代わりの単一ポインターの操作として残す。キーボードではつまみにフォーカスして Space で持ち上げ、↑↓で動かし、Space で置き、Esc で戻し、何番目になったかを読み上げる。タッチの長押しはふつうのスクロールと取り違えない（D-005）。読み取り専用の表示は押せるように見せず、下に固定したバーが選択肢に重ならないようにし、配色・明るさのテーマの契約は変えない。出典は WCAG 2.2 の解説（w3c-wcag22-dragging-movements、w3c-wcag22-content-on-hover-focus、w3c-wcag22-reflow）と APG（w3c-apg-tabs、w3c-apg-tooltip、w3c-apg-dialog-modal）である。根拠: qa-v18, qa-v13, qa-v14／system-spec/ui-ux.md
 
 比べる警告は、窓（モーダル）を使わずにその場で開く。開いた中に説明の段落は置かず、『下記の内容を変更・修正してください』の1行・リンク2行・表・ボタン1つ・注記1行だけにする。表の値は ○ と — で、4つの幅で同じ振る舞いにし、狭い幅では表を横に流せる枠に入れる。根拠: qa-w06, qa-w04／system-spec/ui-ux.md
 
+2026-10-19〜20 の追加: レポートの図（レーダー図・折れ線・棒）に同じ内容の表か文を添え、色だけで区別しない。結論と『上司の判断』の印は共通の表示（DecisionBadge）で出す。ズレの警告の表に『種類』の列と行ごとの直す画面へのリンクを足す。
+根拠: qa-y10、qa-y11（system-spec/ui-ux.md、system-spec/frontend.md）
+
 #### State and data flow
 
 利用者が失いたくない状態は入力中のフォームの内容とスクロール位置で、他タブの通知や画面復帰で取り直しても残す。『役割ごとにできること』の欄の開閉はその端末で覚える。権限一覧の表とカードは同じデータから描くので、幅を変えても出る内容は変わらない。控えは閉じた後も一覧の行の『仮パスワードの控えを見る』から開き直せ、控えを画面の上に出し続けない。見本の画面では選択肢を試しに選べるが保存はせず、『見本のため送信できません』とその理由（対象の等級が違う など）を見える場所に出す。根拠: qa-v18, qa-r-uiux-3, qa-v14／system-spec/ui-ux.md
 
 比べる警告の件数の行は閉じていても出し、開閉の状態は覚えない。根拠: qa-w06, qa-w07／system-spec/ui-ux.md・system-spec/frontend.md
+
+2026-10-19〜20 の追加: 判断の欄は、昇給と昇格のそれぞれで未選択→判定どおり／変える→（変えるなら）結論と理由の入力、と進み、両方が揃うまで確定のボタンは押せない。
+根拠: qa-y10（system-spec/ui-ux.md）
 
 #### Backend integration
 
@@ -123,19 +150,31 @@ frontend の観点のうち、利用者に見える振る舞いと情報の優�
 
 比べる警告は、3画面で閉じた状態が1行、開くと2つのリンクと表が出ることを画面のテストで確かめる（O16）。根拠: qa-w06, qa-w10／system-spec/ui-ux.md・system-spec/maintenance-ops.md
 
+2026-10-19〜20 の追加: 4つの幅（375・768・1280・1600）と A4 縦の印刷で図と表が途中で切れないこと、本人向けに点数の数値が出ないこと、PDF が2ページで2枚目が⑤から始まることを確かめる。
+根拠: qa-y10、qa-y16（system-spec/ui-ux.md、system-spec/maintenance-ops.md）
+
 ## Architecture decisions
 
 D-001（opt-broadcast）により、他タブへは BroadcastChannel で知らせ、visibilitychange と pageshow（persisted）でも取り直すので、利用者はタブを戻すだけで最新の一覧を見られる。D-002（opt-server-functions）により書き込みを Server Functions へ移し、成功の応答で表示中の画面を作り直す（後に next/cache の refresh にそろえた）ので、成功の知らせと一覧が同じ描画で出る。控えは成功の知らせの後ろに畳み『仮パスワードの控えを見る』で開き、開いた控えには発行の日時と開ける期限（発行から14日）を出し、期限を過ぎた控えは一覧の行にボタンを出さず再発行を案内する。D-005（opt-pointer-hook）は利用者が選んだ案で、AI の推奨と同じである（qa-v13）。ドラッグに加え、矢印のボタンをドラッグの代わりの操作（WCAG 2.2 の SC 2.5.7）として残し、キーボードでも同じことができる。D-006（opt-combined）は、利用者が自由記述で①②③の組み合わせを求めたので足した案で、AI の推奨（opt-single-table）とは別の案である（qa-v14）。D-007（opt-route-ledger-extend）は利用者が選んだ案で、AI が委任に基づいて選んだ別の案とは違う（qa-v25）。権限一覧の可否・操作・説明は、実際の判定と同じ定義（route-ledger.json）から出す。表の行と列の組み方、開閉の状態を端末ごとに覚えること、モーダルのフォーカスの扱い、直す画面ごとのまとめ方、キーボードの割り当て、余白を埋める手段の候補は、この章の全文に書いて示し、利用者が全文のまま承認した（qa-v18、2026-10-13T00:03:46Z）。根拠: qa-v18, qa-r-uiux-3, qa-u19, qa-v13, qa-v14, qa-v25／system-spec/ui-ux.md
 
 比べる警告の見せ方は、追加の指示（qa-w03）の委任を受けて、エージェントがその場で開く形（§22-4 の InlineDetail）を選び、モーダル（DetailDialogButton）は使わないとした（qa-w04）。件数の行を畳まずに出せること、開いたままリンクと表を並べて見比べられること、閉じる操作が要らないことが理由である。この選択を含む章の全文を、利用者が全文のまま承認した（qa-w06）。公開後のズレの直し方は、利用者が選んだ『この等級だけ新しい版』とする（qa-w02）。根拠: qa-w06, qa-w04, qa-w02, qa-w03／system-spec/ui-ux.md
 
+2026-10-19〜20 の追加: 印刷は1人分を A4 縦2枚に分け、1枚目に①②③④と上長からのコメント、2枚目に⑤⑥⑦（全期）を載せ、2枚目の頭に名前と評価期間を1行で刷る（qa-y09 で利用者が2枚組を選んだ）。長い理由やコメントは切り詰めずに続ける。判断の欄は初めはどちらも選ばれていない形にし、両方を選び変えるときの理由を書くまで確定のボタンを押せず、押せない理由を1行で出す。アンケートの操作は、下書き＝内容を確認・編集と公開、公開中＝回答一覧・締め切る・延長・催促、締切済み＝回答一覧と新しい版の案内とする。
+根拠: qa-y09、qa-y10（system-spec/ui-ux.md、system-spec/00-requirements-definition.md）
+
 ## Delivery, migration and rollback
 
 鮮度の仕組みは Server Functions への移行を終えており、書き込みの二つの経路の混在は残っていない（D-002 の 2026-10-01 追記）。等級名は、既定を『等級1』〜『等級5-2』にし、既存の会社の等級名と英語を含む表示名を一律に書き換える移行を入れる（I7）。受入では、既定の等級名と移行後の本番の等級名が『等級N』『等級N-M』の形であることを確かめる（O6）。余白の見直しは画面ごとの配置（幅に応じた2列の段組み、補足の情報を右の列に置く、などから選ぶ）で行い、全画面共通の本文の最大幅と配色・テーマには手を入れない。根拠: qa-v18／system-spec/ui-ux.md
+
+2026-10-19〜20 の追加: KGI の画面とメニューは1回目の Deploy で消える。判断の欄と結論の表示は、判断の列のマイグレーションと同じ Deploy で出し、古い確定は『記録なし』の表示になる。
+根拠: qa-y10、qa-y15（system-spec/ui-ux.md、system-spec/database.md）
 
 ## Risks and verification
 
 危険は、英語の区分名が一部の画面に残ること、表示と実際の権限の判定が食い違うこと、権限一覧の表とカードの片方だけを直して内容がずれること、タッチの長押しがふつうのスクロールと取り違えられること、見本の画面で押しても何も起きないと誤解されることである。表とカードは同じデータから描き、タッチとスクロールの区別はテストを厚くする（D-005・D-006）。O1 は作成系 E2E で成功表示直後の DOM に新しい行と件数があることを、O3 は2タブ E2E で1秒以内の最新化を確かめる。O6 は等級名を変える結合テストと英語の区分名の静的検査（0件）、O8 はルート台帳の権限の定義とサイドバー・ページの判定・サーバー処理の役割の指定が一致することの検査と、権限一覧の表とカードが同じ内容を出す検査、O9 は確定直後の点数と一般の社員への応答の検査、O11〜O14 は提出状況のテスト・設定不足の契約テスト・並べ替えの3操作の一致・選択肢の挙動のテストで確かめる。O15 は 375・768・1280・1600 の4幅で対象画面を撮影して目で確かめ、鮮度の通し試験も 375px・768px で回す。根拠: qa-v18, qa-r-uiux-3, qa-v13, qa-v14, qa-v31／system-spec/ui-ux.md・system-spec/maintenance-ops.md
 
 比べる警告の危険は、リンクの片側が欠けること、見る人の役割で開けないページへのリンクを出すこと、畳んだ表示でズレそのものを見落とすことである。全件が2つのページを持つ契約テスト、リンク先が台帳にあり役割で開けることの契約テスト、件数の行を畳まないことの画面のテストで確かめる（O16）。根拠: qa-w06, qa-w09, qa-w10／system-spec/ui-ux.md・system-spec/security.md・system-spec/maintenance-ops.md
+
+2026-10-19〜20 の追加: リスクは、本人向けに点数が漏れること、印刷で図と表が途中で切れること、結論の文言が画面ごとにずれることである。4つの幅と A4 縦の印刷（PDF・2ページ・2枚目が⑤から）で図と表が切れずナビと操作のボタンが出ないことを画面のテストで確かめ、マネージャーが『変える』で見送って確定した結論・印・理由が本人の結果とレポートに出る E2E を置く。
+根拠: qa-y10、qa-y16（system-spec/ui-ux.md、system-spec/maintenance-ops.md）
 

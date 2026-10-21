@@ -173,7 +173,7 @@ implementation_readiness: {"status": "complete", "missing_sections": [], "checke
 #### 認証・認可
 
 - Authentication: better-auth のセッション Cookie。`runAction` の先頭の `apiViewer` が確かめる。
-- Required scopes/roles: アクションごとに最小の役割を宣言する。全体管理者 12本（会社2・会社切替1・利用者管理2・Claude Code 連携の鍵と端末5・改善要望の引き渡しと破棄2）、会社管理者 16本（期間2・アンケート4・制度3・制度の全体設定1・メンバー2・CSV 取り込み2・KGI 実績1・改善要望の状態1）、評価者 5本（評価2・回答期限の延長2・メモ1）、社員 4本（パスワード1・本人の登録内容1・回答1・改善要望の送信1）。上位の役割は下位の入口も使える。
+- Required scopes/roles: アクションごとに最小の役割を宣言する。全体管理者 12本（会社2・会社切替1・利用者管理2・Claude Code 連携の鍵と端末5・改善要望の引き渡しと破棄2）、会社管理者 15本（期間2・アンケート4・制度3・制度の全体設定1・メンバー2・CSV 取り込み2・改善要望の状態1。事業所 KGI 実績の1本は 2026-10-19 に仕組みごと削除した、DD-024）、評価者 5本（評価2・回答期限の延長2・メモ1）、社員 4本（パスワード1・本人の登録内容1・回答1・改善要望の送信1）。上位の役割は下位の入口も使える。
 - Resource ownership check: 会社の境界は、利用者の所属会社（全体管理者は切替中の会社）で絞る。他社の行は見つからない扱い（404）。本人の登録内容は本人の行だけ。
 
 #### Request
@@ -416,7 +416,7 @@ HTTP の列は入口の中の区分で、画面へは HTTP 200 の `{ ok: false,
 #### 識別と目的
 
 - Operation ID: 画面からの書き込みに使っていた Route Handler 22本。
-- Method/Path と置き換え先: `account/company-scope`（`switchCompanyScope`）、`account/password`（`changeOwnPassword`）、`account/profile`（`updateOwnProfile`）、`agent-keys`（`createAgentKey`・`revokeAgentKey`・`setAgentEnvKey`）、`agent-keys/approve`（`checkDeviceCode`・`approveDevice`・`revokeAgentSession`）、`companies`（`createCompany`・`updateCompany`）、`cycles`（`createCycle`・`updateCycleStatus`）、`evaluations/[id]`（`updateEvaluation`）、`evaluations/build`（`buildEvaluations`）、`forms/[id]/extensions`（`grantFormExtension`・`revokeFormExtension`）、`forms/[id]/questions`（`rebuildFormQuestions`・`saveFormQuestions`）、`forms`（`createForms`・`updateForm`）、`import/members`（`previewMembersImport`・`importMembers`）、`import/responses`（`previewResponsesImport`・`importResponses`）、`kgi-results`（`saveKgiResult`）、`masters/profile-policy`（`saveProfilePolicy`）、`masters`（`saveMaster`・`deleteMasterItem`）、`members`（`createMember`・`updateMember`）、`notes`（`createNote`）、`responses/[formId]`（`saveResponse`）、`scheme`（`saveScheme`）、`system/users`（`updateSystemUser`・`createSystemUser`）。いずれも `/api/` の下。
+- Method/Path と置き換え先: `account/company-scope`（`switchCompanyScope`）、`account/password`（`changeOwnPassword`）、`account/profile`（`updateOwnProfile`）、`agent-keys`（`createAgentKey`・`revokeAgentKey`・`setAgentEnvKey`）、`agent-keys/approve`（`checkDeviceCode`・`approveDevice`・`revokeAgentSession`）、`companies`（`createCompany`・`updateCompany`）、`cycles`（`createCycle`・`updateCycleStatus`）、`evaluations/[id]`（`updateEvaluation`）、`evaluations/build`（`buildEvaluations`）、`forms/[id]/extensions`（`grantFormExtension`・`revokeFormExtension`）、`forms/[id]/questions`（`rebuildFormQuestions`・`saveFormQuestions`）、`forms`（`createForms`・`updateForm`）、`import/members`（`previewMembersImport`・`importMembers`）、`import/responses`（`previewResponsesImport`・`importResponses`）、`kgi-results`（`saveKgiResult`。置き換え先も 2026-10-19 に仕組みごと削除した、DD-024）、`masters/profile-policy`（`saveProfilePolicy`）、`masters`（`saveMaster`・`deleteMasterItem`）、`members`（`createMember`・`updateMember`）、`notes`（`createNote`）、`responses/[formId]`（`saveResponse`）、`scheme`（`saveScheme`）、`system/users`（`updateSystemUser`・`createSystemUser`）。いずれも `/api/` の下。
 - Purpose: 描き直しを画面ごとに呼ぶ作りをなくし、書き込みの入口を `runAction` の1つにするため（D-002）。
 - Version/Lifecycle: 2026-10-01 に廃止。ファイルは git から外し、リポジトリの外の退避先に置いた（リポジトリには残さない）。互換の期間は設けない（外から呼ぶ利用者がいない画面専用の口だったため）。
 

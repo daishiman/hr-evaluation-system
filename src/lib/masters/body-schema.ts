@@ -190,11 +190,6 @@ export const bodySchema = z.discriminatedUnion("kind", [
       .max(10),
   }),
   z.object({
-    kind: z.literal("kgi"),
-    id: z.string().min(1),
-    coefficient: z.number().min(0).max(5),
-  }),
-  z.object({
     /** KPIカテゴリの追加。呼び名だけを受け取る（分類コードはサーバー側で自動採番する）。 */
     kind: z.literal("kpiCategoryCreate"),
     name: z.string().min(1).max(60),

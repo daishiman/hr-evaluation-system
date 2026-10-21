@@ -332,7 +332,7 @@ flowchart LR
         ▼
 [サーバーアクション]（src/actions/*.ts、"use server"）
   companies / members / system-users / account / masters / scheme / forms / form-extensions /
-  cycles / evaluations / responses / notes / kgi-results / member-import / response-import /
+  cycles / evaluations / responses / notes / member-import / response-import /
   agent-keys / improvements / company-scope / credential-memos
         │
         ▼
@@ -408,7 +408,7 @@ flowchart LR
 - (c) の続き（「仮パスワードのまま」の印と控えを消す）は1回の batch で、何度流しても同じ結果になる。だから人の手での直し方は「本人がもう一度パスワードを変える」で済み、本番DBを手で書き換えない（[デプロイ時の注意 §7](../docs/deploy-notes.md)）。
 - 別々の `await` で2つの表を書いていた4か所を (a) へ移した。Claude Code からの改善要望の書き込み（`improvement-agent-write.ts`）、端末の承認の引き換え（`agent-device.ts`。条件付きの更新で、同時に2回引き換えても1回だけ通る）、利用状況の記録と古い記録の掃除（`usage.ts`）。
 - 新しく別々の `await` で2つの表を書く関数を足すと、`write-atomicity-contract.test.ts` が落ちる。関数をまたぐ形はこの検査では見えないので、レビューで確かめる。
-  「同じ関数で batch を2回呼ぶ形」も検査に足すことを検討したが、見送った。今ある該当箇所はどれも、どちらか一方しか通らない分岐か、意図した後片付けで、検査を足しても誤検知しか出ないため。事業所 KGI の達成率と評価の賞与欄を2回の batch に分けていた形は、1回の batch にまとめた（`kgi-results.integration.test.ts`）。
+  「同じ関数で batch を2回呼ぶ形」も検査に足すことを検討したが、見送った。今ある該当箇所はどれも、どちらか一方しか通らない分岐か、意図した後片付けで、検査を足しても誤検知しか出ないため。事業所 KGI の達成率と評価の賞与欄を2回の batch に分けていた形は、以前1回の batch にまとめた。その後、事業所 KGI の仕組み（達成率の入力・達成係数）は 2026-10-19 に削除した（DD-024）ので、この書き込みはもう無い。
 
 ### 6. 同時保存は断る。やり直さない
 
@@ -501,7 +501,6 @@ flowchart LR
 | `e2e/data-freshness-component-types.spec.ts`（同上） | 下書きの自動保存は、保存が済んだ瞬間も打っている途中の値を消さず、再読み込み・画面の行き来のあとも保存した値が出る。まとめ処理は、結果の知らせと同じ描画のうちに一覧と件数が新しくなり、表示中を全て処理して0件になっても結果が消えない |
 | `src/lib/compensation.test.ts` / `src/actions/companies.integration.test.ts` | 会社の追加が最後の段で失敗しても、会社・制度・管理者・控えが1行も残らない。続きのやり直しは1回だけで、2回目の失敗を記録する |
 | `src/app/api/agent/device/route.integration.test.ts` | 端末の承認の引き換えは、同時に2回送っても1回だけ通り、通行証は1本だけ |
-| `src/actions/kgi-results.integration.test.ts` | 事業所 KGI の達成率・変更履歴・確認中の評価の賞与欄を1回の batch で書く。途中で失敗したら、どれも残さず前の値のまま |
 | `src/actions/import-preview.integration.test.ts` | 社員一覧・回答一覧の取り込みの確認（`runRead`）は、作成・更新できる内容でもどの表にも書かない |
 | `src/lib/masters/master-concurrent-save.integration.test.ts` / `src/db/constitution-events-seq-migration.test.ts` | 同時保存で後のほうが本体ごと断られ（409）、監査記録の番号が重ならない |
 | `src/lib/credential-vault.test.ts` / `src/actions/credential-memo-lifecycle.integration.test.ts` | 控えを開ける人と、消えるとき。14日を過ぎた控えは一覧に出ず、開けず（410）、次の発行で消える。本人がパスワードを変えると印と控えが消え、続きが2回とも失敗しても「変更済み」と伝える |

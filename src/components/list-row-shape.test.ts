@@ -196,8 +196,23 @@ describe("一覧の行の形（全画面共通）", () => {
 
   it("設問と要件の一覧は、カードの中に行を並べる（reorder-in-card）", () => {
     for (const name of ["GradeRequirementEditor.tsx", "PromotionRequirementEditor.tsx", "FormBuilder.tsx", "KpiAskingFields.tsx"]) {
-      expect({ name, ok: code(name).includes('className="reorder-in-card"') }).toEqual({ name, ok: true });
+      expect({ name, ok: /className="reorder-in-card(?: [\w-]+)*"/.test(code(name)) }).toEqual({ name, ok: true });
     }
+  });
+
+  it("アンケートの設問だけ、広い一覧で操作を右の列に縦に積む（reorder-stack-actions。§28-9）", () => {
+    expect(code("FormBuilder.tsx")).toContain('className="reorder-in-card reorder-stack-actions"');
+    for (const name of ["GradeRequirementEditor.tsx", "PromotionRequirementEditor.tsx", "KpiAskingFields.tsx"]) {
+      expect({ name, found: code(name).includes("reorder-stack-actions") }).toEqual({ name, found: false });
+    }
+    const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
+    const measured = ':where(.reorder-list.reorder-stack-actions[data-reorder-w~="60"] > .reorder-row) > .reorder-actions {';
+    const fallback = ":where(.reorder-list.reorder-stack-actions:not([data-reorder-w]) > .reorder-row) > .reorder-actions {";
+    expect(css).toContain(measured);
+    // 測る前の規則は 60rem の @container の中に置く
+    const at = css.indexOf(fallback);
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(css.lastIndexOf("@container reorder (min-width: 60rem)", at)).toBeGreaterThan(css.indexOf(measured));
   });
 
   it("reorder-inline の1段の並びは、幅を測った後と測る前の両方に書く", () => {

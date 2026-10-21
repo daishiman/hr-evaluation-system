@@ -102,6 +102,7 @@ export function ConfirmButton({
   busy,
   busyLabel = "実行しています…",
   onConfirm,
+  describedBy,
   children,
 }: {
   label: string;
@@ -112,6 +113,8 @@ export function ConfirmButton({
   busy?: boolean;
   busyLabel?: string;
   onConfirm: () => void;
+  /** 押せない理由など、ボタンの説明になる要素の id（aria-describedby） */
+  describedBy?: string;
   /** 確認を出していないときにボタンの横に並べるもの。 */
   children?: ReactNode;
 }) {
@@ -127,7 +130,13 @@ export function ConfirmButton({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button type="button" variant={variant} disabled={disabled || busy} onClick={() => setAsking(true)}>
+      <Button
+        type="button"
+        variant={variant}
+        disabled={disabled || busy}
+        aria-describedby={describedBy}
+        onClick={() => setAsking(true)}
+      >
         {busy ? busyLabel : label}
       </Button>
       {children}

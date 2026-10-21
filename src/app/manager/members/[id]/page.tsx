@@ -3,7 +3,8 @@ import { canViewEmployee, ROLE_LABEL, type Role, requireRoute } from "@/lib/sess
 import { getMember, listEvaluations, listNotes } from "@/lib/queries";
 import { gradeLabel } from "@/lib/domain/grade-label";
 import { DEPARTMENT_UNSET_LABEL } from "@/lib/domain/people-list";
-import { Badge, Card, DefList, PageTitle, RecordList, SectionHeading } from "@/components/ui";
+import { readableNoteVisibilities } from "@/lib/domain/evaluation-authority";
+import { Badge, Card, DefList, LinkButton, PageTitle, RecordList, SectionHeading } from "@/components/ui";
 import { EvaluationTrend, type TrendItem } from "@/components/EvaluationTrend";
 import { NoteForm } from "@/components/NoteForm";
 import { formatDate, formatPeriod } from "@/lib/view";
@@ -25,8 +26,11 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
 
   const [evals, notes] = await Promise.all([
     listEvaluations(viewer.companyId, viewer.role, { employeeId: id }),
-    listNotes(viewer.companyId, id),
+    // 「管理者のみ」のメモは、会社の管理者以上にだけ返る（絞るのは listNotes の側）
+    listNotes(viewer.companyId, id, viewer.role),
   ]);
+  // メモの入力欄で選べる公開範囲。読める段階と同じ（マネージャーには「管理者のみ」を出さない）
+  const noteVisibilities = readableNoteVisibilities(viewer.role);
   /* 推移・内訳・一覧を1つの節にまとめて渡す。等級はここで決めた「その期の等級」
      （evaluations.gradeId）を使う。いまの等級（users.gradeId）で塗ると、
      昇格前の評価まで新しい等級のものとして表示されてしまう。 */
@@ -59,6 +63,7 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
       <PageTitle
         title={`${member.name} さん`}
         lede={`${gradeLabel({ name: member.gradeName })} ／ ${member.department ?? DEPARTMENT_UNSET_LABEL} ／ ${ROLE_LABEL[member.role as Role] ?? member.role}`}
+        actions={<LinkButton href={`/reports/${id}`}>評価レポートを見る</LinkButton>}
       />
 
       <SectionHeading>基本情報</SectionHeading>
@@ -88,7 +93,7 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
       />
 
       <SectionHeading aside={<span className="footnote">本人には表示されません</span>}>評価メモ</SectionHeading>
-      <NoteForm employeeId={member.id} />
+      <NoteForm employeeId={member.id} visibilities={noteVisibilities} />
       {notes.length === 0 ? (
         <p className="footnote mt-2">メモはまだありません。面談で気づいたことを残しておくと、次の評価のときに役立ちます。</p>
       ) : (

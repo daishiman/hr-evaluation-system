@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { judgeRank, matchesCriterion, type Direction, type Rank, type RankCriterion } from "./scoring";
-import { checkRangeCoverage } from "./kgi";
+import { checkRankBoundaries } from "./rank-bounds";
 import { checkGradePointRule, expectedItemCount } from "./grade-points";
 /* 初期データが「制度の数値をどこから作っているか」まで含めて突き合わせるため、
    シードの組み立て部品をそのまま読み込む。SQLの文字列ではなく元の値で確かめる。 */
@@ -104,15 +104,14 @@ describe("33項目すべてで、A〜Eが数直線を過不足なく覆ってい
     const rows = ALL.filter((r) => r.no === no);
     const name = rows[0].name;
     it(`No.${no} ${name}`, () => {
-      /* 逆転指標は「下限超・上限以下」なので、覆いの検査では
-         下限と上限の開閉が通常項目と逆になる。数直線を覆えているかどうかは
-         開閉に関係なく「隣の区間と端が一致しているか」で判定できるため、
-         checkRangeCoverage をそのまま使える。 */
-      const problems = checkRangeCoverage(
-        rows.map((r) => ({ label: `${r.rank} ${r.label}`, lowerBound: r.lower, upperBound: r.upper })),
-        "実績値",
+      /* 逆転指標は「下限超・上限以下」なので、繋ぎ目に来る欄が通常項目と逆になる。
+         画面と保存の受け口が使う検査（rank-bounds.ts）に向きごと渡し、
+         同じ物差しで正本を確かめる。 */
+      const result = checkRankBoundaries(
+        rows.map((r) => ({ rank: r.rank, lowerBound: r.lower, upperBound: r.upper })),
+        rows[0].direction,
       );
-      expect(problems.map((p) => p.message)).toEqual([]);
+      expect(result.ok ? [] : result.issues.map((i) => i.message)).toEqual([]);
     });
   }
 });

@@ -14,6 +14,7 @@ import {
   SectionHeading,
 } from "@/components/ui";
 import { gradeLabel } from "@/lib/domain/grade-label";
+import { conclusionText, DECISION_SUBJECTS, finalDecisionOf, type DecisionKind } from "@/lib/domain/final-decision";
 
 export interface MyActionForm {
   formId: string;
@@ -34,6 +35,8 @@ export interface MyResultSummary {
   requirementTotal: number | null;
   raiseEligible: boolean;
   promotionEligible: boolean;
+  raiseDecision: DecisionKind | null;
+  promotionDecision: DecisionKind | null;
 }
 
 /**
@@ -109,11 +112,18 @@ export function FormActionList({ forms }: { forms: MyActionForm[] }) {
   );
 }
 
+/** 昇給・昇格の最終の結論。上司が変えたときは「（上司の判断）」の語で示す（色だけで区別しない。DD-024） */
 function ResultBadges({ result }: { result: MyResultSummary }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {result.raiseEligible ? <Badge tone="active">昇給の要件を満たす</Badge> : <Badge tone="done">評価確定</Badge>}
-      {result.promotionEligible && <Badge tone="active">昇格の要件を満たす</Badge>}
+      {DECISION_SUBJECTS.map((subject) => {
+        const fd = finalDecisionOf(subject, result);
+        return (
+          <Badge key={subject} tone={fd.approved ? "active" : "done"}>
+            {conclusionText(subject, fd)}
+          </Badge>
+        );
+      })}
     </div>
   );
 }

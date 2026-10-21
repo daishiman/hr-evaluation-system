@@ -8,7 +8,6 @@ import { batchAll } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
 import { assertCompanyChosen, HttpError } from "@/lib/session";
 import {
-  assertFormContentEditable,
   buildFormDrafts,
   duplicateOptionMessage,
   duplicateOptionValues,
@@ -20,8 +19,10 @@ import { NO_TEMPLATE_HINT, noTemplateNamesOf, noTemplateNote } from "@/lib/domai
 import { checkQuestionLinks } from "@/lib/domain/form-question-links";
 import { checkNumberMagnitude, defaultIntegerFlag } from "@/lib/domain/number-input";
 import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
+import { contentEditRefusal, formTransitions, operationRefusal, statusChangeRefusal } from "@/lib/domain/form-transitions";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 import { loadStaleAsking } from "@/lib/stale-asking-loader";
+import { schemeIdForCycle } from "@/lib/cycle-scheme";
 import { SCREEN_SECTIONS } from "@/lib/question-order";
 
 /**
@@ -50,7 +51,8 @@ export async function createForms(raw: unknown) {
         .where(and(eq(s.evaluationCycles.id, input.cycleId), eq(s.evaluationCycles.companyId, companyId))).limit(1)
     )[0];
     if (!cycle) throw new HttpError(404, "評価期間が見つかりませんでした。");
-    const schemeReadiness = await loadSchemeReadiness(companyId, cycle.schemeId);
+    // 下書きを作る form-build と同じ評価セットで、足りないものを確かめる（DD-024）
+    const schemeReadiness = await loadSchemeReadiness(companyId, await schemeIdForCycle(companyId, cycle));
     if (!schemeReadiness.schemeReady) throw new HttpError(409, schemeReadiness.schemeMessage);
 
     const grades = await db.select().from(s.grades).where(eq(s.grades.companyId, companyId));
@@ -118,14 +120,29 @@ export async function updateForm(raw: unknown) {
     )[0];
     if (!form) throw new HttpError(404, "アンケートが見つかりませんでした。");
 
-    // 公開した版は、回答が0件でもすでに読まれている可能性がある。
-    // 同じ版を下書きに戻して文面を変えると「何を配った版か」が残らないため、
-    // 内容を変える場合は既存の版作成フローで新しい下書きを作る。
-    if (input.status === "draft" && form.status !== "draft") {
-      throw new HttpError(
-        400,
-        "公開済みのアンケートは下書きに戻せません。内容を変えるときは、新しい版を作って公開してください。",
-      );
+    /*
+     * 状態の変更と回答期間の変更を許すかは、画面のボタンと同じ規則で決める（form-transitions.ts）。
+     * 流れは 下書き → 公開中 → 締め切り済み の一方向で、締め切ったものを公開中に戻すことも、
+     * 下書きを締め切ることもしない。公開した版は回答が0件でもすでに読まれている可能性があるため、
+     * 下書きにも戻さない（内容を変えるときは新しい版を作る）。
+     */
+    const [answered, cycles] = await Promise.all([
+      db.select({ id: s.formResponses.id }).from(s.formResponses)
+        .where(and(eq(s.formResponses.companyId, companyId), eq(s.formResponses.formId, form.id))).limit(1),
+      db.select().from(s.evaluationCycles)
+        .where(and(eq(s.evaluationCycles.id, form.cycleId), eq(s.evaluationCycles.companyId, companyId))).limit(1),
+    ]);
+    const cycleRow = cycles[0];
+    if (!cycleRow) throw new HttpError(404, "評価期間が見つかりませんでした。");
+    const deadline = { closesAt: form.closesAt, now: new Date(), cycleStatus: cycleRow.status };
+    const allowed = formTransitions(form.status, deadline, answered.length > 0);
+    if (input.status) {
+      const refusal = statusChangeRefusal(form.status, input.status, allowed);
+      if (refusal) throw new HttpError(400, refusal);
+    }
+    if (input.opensAt !== undefined || input.closesAt !== undefined) {
+      const refusal = operationRefusal("editPeriod", form.status, deadline, answered.length > 0);
+      if (refusal) throw new HttpError(400, refusal);
     }
 
     /*
@@ -137,18 +154,8 @@ export async function updateForm(raw: unknown) {
      */
     const editingText = input.title !== undefined || input.description !== undefined;
     if (editingText) {
-      assertFormContentEditable(form);
-      const answered = await db
-        .select({ id: s.formResponses.id })
-        .from(s.formResponses)
-        .where(eq(s.formResponses.formId, form.id))
-        .limit(1);
-      if (answered.length > 0) {
-        throw new HttpError(
-          400,
-          "このアンケートにはすでに回答があるため、タイトルと説明文を変更できません。内容を変えるときは新しい版を作ってください。",
-        );
-      }
+      const refusal = contentEditRefusal("text", form, allowed);
+      if (refusal) throw new HttpError(400, refusal);
     }
 
     /* 回答期間は、回答があっても直せるようにしておく。
@@ -164,15 +171,12 @@ export async function updateForm(raw: unknown) {
     let supersededNote = "";
     let closing: { id: string }[] = [];
     if (input.status === "published") {
-      const [qs, cycle] = await Promise.all([
-        db.select({ id: s.formQuestions.id }).from(s.formQuestions).where(eq(s.formQuestions.formId, form.id)),
-        db.select().from(s.evaluationCycles).where(and(eq(s.evaluationCycles.id, form.cycleId), eq(s.evaluationCycles.companyId, companyId))).limit(1),
-      ]);
-      const cycleRow = cycle[0];
-      if (!cycleRow) throw new HttpError(404, "評価期間が見つかりませんでした。");
+      const qs = await db.select({ id: s.formQuestions.id }).from(s.formQuestions).where(eq(s.formQuestions.formId, form.id));
+      // 公開の判定も、アンケートの作成・点数の計算と同じ評価セットで行う（DD-024）
+      const schemeId = await schemeIdForCycle(companyId, cycleRow);
       const [schemeReadiness, staleAsking] = await Promise.all([
-        loadSchemeReadiness(companyId, cycleRow.schemeId),
-        loadStaleAsking(companyId, cycleRow.schemeId, [form]),
+        loadSchemeReadiness(companyId, schemeId),
+        loadStaleAsking(companyId, schemeId, [form]),
       ]);
       const readiness = formPublicationReadiness({
         schemeGaps: schemeReadiness.schemeGaps,
@@ -186,7 +190,14 @@ export async function updateForm(raw: unknown) {
       const siblings = await db
         .select()
         .from(s.forms)
-        .where(and(eq(s.forms.cycleId, form.cycleId), eq(s.forms.gradeId, form.gradeId), eq(s.forms.status, "published")));
+        .where(
+          and(
+            eq(s.forms.companyId, companyId),
+            eq(s.forms.cycleId, form.cycleId),
+            eq(s.forms.gradeId, form.gradeId),
+            eq(s.forms.status, "published"),
+          ),
+        );
       closing = siblings.filter((x) => x.id !== form.id);
 
       /*
@@ -201,6 +212,7 @@ export async function updateForm(raw: unknown) {
           .from(s.formResponses)
           .where(
             and(
+              eq(s.formResponses.companyId, companyId),
               inArray(
                 s.formResponses.formId,
                 closing.map((x) => x.id),
@@ -223,19 +235,23 @@ export async function updateForm(raw: unknown) {
         ...(input.opensAt !== undefined ? { opensAt: input.opensAt } : {}),
         ...(input.closesAt !== undefined ? { closesAt: input.closesAt } : {}),
       })
-      .where(eq(s.forms.id, form.id));
+      .where(and(eq(s.forms.id, form.id), eq(s.forms.companyId, companyId)));
 
     if (closing.length > 0) {
       /* 古い版の締め切りと、この版の公開は1つの batch で書く。
          片方だけが通ると、公開中が2つに割れる（または1つも無くなる）ため。 */
+      // 締めるのは自社の行だけ（読み出しも会社で絞っているが、書き込みでも会社を外さない）
       await db.batch([
         db
           .update(s.forms)
           .set({ status: "closed" })
           .where(
-            inArray(
-              s.forms.id,
-              closing.map((x) => x.id),
+            and(
+              eq(s.forms.companyId, companyId),
+              inArray(
+                s.forms.id,
+                closing.map((x) => x.id),
+              ),
             ),
           ),
         saveThis,
@@ -331,19 +347,17 @@ export async function saveFormQuestions(raw: unknown) {
         .limit(1)
     )[0];
     if (!form) throw new HttpError(404, "アンケートが見つかりませんでした。");
-    assertFormContentEditable(form);
 
-    const responses = await db
-      .select({ id: s.formResponses.id })
-      .from(s.formResponses)
-      .where(eq(s.formResponses.formId, form.id))
-      .limit(1);
-    if (responses.length > 0) {
-      throw new HttpError(
-        400,
-        "このアンケートにはすでに回答があるため、設問を変更できません。内容を変えるときは新しい版を作ってください。",
-      );
-    }
+    const [responses, cycles] = await Promise.all([
+      db.select({ id: s.formResponses.id }).from(s.formResponses)
+        .where(and(eq(s.formResponses.companyId, companyId), eq(s.formResponses.formId, form.id))).limit(1),
+      db.select({ status: s.evaluationCycles.status }).from(s.evaluationCycles)
+        .where(and(eq(s.evaluationCycles.id, form.cycleId), eq(s.evaluationCycles.companyId, companyId))).limit(1),
+    ]);
+    if (!cycles[0]) throw new HttpError(404, "評価期間が見つかりませんでした。");
+    const allowed = formTransitions(form.status, { closesAt: form.closesAt, now: new Date(), cycleStatus: cycles[0].status }, responses.length > 0);
+    const refusal = contentEditRefusal("questions", form, allowed);
+    if (refusal) throw new HttpError(400, refusal);
 
     const q = input.questions;
     if (q.length === 0) throw new HttpError(400, "設問が1問もありません。1問以上にしてください。");

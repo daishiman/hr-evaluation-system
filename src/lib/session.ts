@@ -6,6 +6,8 @@ import { getDb, schema } from "@/lib/db";
 import {
   canActOnEmployeeEvaluation,
   canReadEmployee as canReadEmployeeByRole,
+  evaluationViewOf,
+  type EvaluationView,
 } from "@/lib/domain/evaluation-authority";
 import { activeCompanyCondition, activeMembershipFor, membershipIn } from "@/lib/memberships";
 import { atLeast, ROLES, type Role } from "@/lib/roles";
@@ -268,6 +270,15 @@ async function targetInCompany(v: Viewer, employeeId: string) {
 export async function canViewEmployee(v: Viewer, employeeId: string): Promise<boolean> {
   const target = await targetInCompany(v, employeeId);
   return target ? canReadEmployeeByRole(v.id, v.role, target) : false;
+}
+
+/**
+ * 指定した利用者の評価レポートを、どの形で見てよいか（reviewer＝点数まで／self＝本人向け）。見られなければ null。
+ * 他社・存在しない人も null にして、画面では区別せず 404 にする。
+ */
+export async function canViewEvaluationOf(v: Viewer, employeeId: string): Promise<EvaluationView | null> {
+  const target = await targetInCompany(v, employeeId);
+  return target ? evaluationViewOf(v.id, v.role, target) : null;
 }
 
 /** 指定した利用者の評価・メモ・期限へ手を入れてよいか。 */

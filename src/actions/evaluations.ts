@@ -6,6 +6,7 @@ import { runAction } from "@/lib/action";
 import { getDb, schema as s } from "@/lib/db";
 import { assertCompanyChosen, canManageEmployee, HttpError } from "@/lib/session";
 import { isOwnEvaluation, SELF_EVALUATION_BLOCK_REASON } from "@/lib/domain/evaluation-authority";
+import { commentProblem, DECISION_KINDS, validateDecisionInput } from "@/lib/domain/final-decision";
 import { buildEvaluationsForCycle } from "@/lib/evaluate";
 import { summarizeBuildResults } from "@/lib/domain/build-summary";
 import { joinMembership } from "@/lib/memberships";
@@ -25,6 +26,13 @@ const updateSchema = z.object({
   /** finalize = 確定して本人に公開 / reopen = 確認中に戻す / comment = コメントのみ保存 */
   action: z.enum(["finalize", "reopen", "comment"]),
   comment: z.string().max(2000).nullish(),
+  /* 昇給と昇格への上司の判断（DD-024）。確定（finalize）のときだけ読む。
+     中身の検査（選んだか・理由・長さ・本人に見せられない語）は validateDecisionInput に任せ、
+     画面の「押せない理由」と同じ文で 400 を返す。ここで長さを切ると、画面と違う文になる。 */
+  raiseDecision: z.enum(DECISION_KINDS).nullish(),
+  raiseDecisionReason: z.string().nullish(),
+  promotionDecision: z.enum(DECISION_KINDS).nullish(),
+  promotionDecisionReason: z.string().nullish(),
 });
 
 /**
@@ -33,6 +41,8 @@ const updateSchema = z.object({
  * 取り消しのきかない操作にはしていない。
  *
  * どの分岐も評価の1行だけを書き換える（1文）ので、batch にまとめるものはない。
+ * 上司の判断は確定と同じ1文で書く。別々に書くと、確定だけ通って判断の無い確定が残りうる。
+ * 確定を戻しても判断は消さない（もう一度確定するときの入力の初期値になる。qa-y12 (19)）。
  */
 export async function updateEvaluation(raw: unknown) {
   return runAction({ operation: "evaluations.update", input: updateSchema }, raw, async ({ viewer, input }) => {
@@ -56,20 +66,32 @@ export async function updateEvaluation(raw: unknown) {
       throw new HttpError(403, "この方の評価を変更する権限がありません。直属メンバーの評価を選んでください。");
     }
 
+    /* 上長からのコメントは本人にもそのまま見える。本人向けの網に触れる語があれば保存せず、
+       語を名指しして書き直してもらう（DD-023。表示のときに黙って差し替えない）。 */
+    const evaluatorComment = input.action === "finalize" ? input.comment ?? row.evaluatorComment : input.comment ?? null;
+    const commentIssue = input.action === "reopen" ? null : commentProblem(evaluatorComment);
+    if (commentIssue) throw new HttpError(400, commentIssue);
+
     if (input.action === "comment") {
-      await db.update(s.evaluations).set({ evaluatorComment: input.comment ?? null }).where(eq(s.evaluations.id, id));
+      await db.update(s.evaluations).set({ evaluatorComment }).where(eq(s.evaluations.id, id));
       return { message: "コメントを保存しました。" };
     }
 
     if (input.action === "finalize") {
       if (row.status === "finalized") return { message: "すでに確定済みです。" };
+      const decision = validateDecisionInput(input);
+      if (!decision.ok) throw new HttpError(400, decision.problems.join("\n"));
+      const now = new Date();
       await db
         .update(s.evaluations)
         .set({
           status: "finalized",
-          finalizedAt: new Date(),
+          finalizedAt: now,
           evaluatorId: viewer.id,
-          evaluatorComment: input.comment ?? row.evaluatorComment,
+          evaluatorComment,
+          ...decision.value,
+          decisionRecordedBy: viewer.id,
+          decisionRecordedAt: now,
         })
         .where(eq(s.evaluations.id, id));
       return { message: "確定しました。本人の画面に結果が表示されます。" };

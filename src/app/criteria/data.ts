@@ -171,16 +171,6 @@ export async function listRankCriteriaFor(companyId: string, kpiItemIds: string[
 
 /* ───────────────── 評価セット（いま採用している項目） ───────────────── */
 
-export async function getActiveScheme(companyId: string) {
-  const db = await getDb();
-  const r = await db
-    .select()
-    .from(s.evaluationSchemes)
-    .where(and(eq(s.evaluationSchemes.companyId, companyId), eq(s.evaluationSchemes.status, "active")))
-    .limit(1);
-  return r[0] ?? null;
-}
-
 /** 評価セットで実際に選ばれている項目。等級区分ごとに選び直せるので point_group も返す。 */
 export async function listSchemeItemsAllGroups(companyId: string, schemeId: string) {
   const db = await getDb();

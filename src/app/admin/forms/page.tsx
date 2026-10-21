@@ -14,7 +14,9 @@ import { FORM_STATUS_LABEL, formatPeriod } from "@/lib/view";
 import { formPublicationReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 import { loadStaleAsking } from "@/lib/stale-asking-loader";
+import { schemeIdForCycle } from "@/lib/cycle-scheme";
 import { listFormSubmissionCounts } from "@/lib/submission-queries";
+import { NEW_VERSION_LABEL, formTransitions } from "@/lib/domain/form-transitions";
 
 export const dynamic = "force-dynamic";
 
@@ -46,15 +48,19 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
      ドメインを書き込むと必ずどこかで間違ったURLを配ることになる）。 */
   const origin = await appOrigin();
   const selected = cycles.find((c) => c.id === sp.cycle) ?? cycles.find((c) => c.status === "open") ?? cycles[0];
+  // 公開の判定に使う評価セット。アンケートの作成・点数の計算と同じ選び方（DD-024）
+  const schemeId = await schemeIdForCycle(companyId, selected);
   const [forms, grades, comparisonGaps, schemeReadiness, submissionCounts] = await Promise.all([
     listForms(companyId, selected.id),
     listGrades(companyId),
     loadCycleComparisonGaps(companyId, selected.id, { role: viewer.role, current: null }),
-    loadSchemeReadiness(companyId, selected.schemeId),
+    loadSchemeReadiness(companyId, schemeId),
     listFormSubmissionCounts(companyId, selected.id),
   ]);
   // 公開ボタンを出すかは、公開の処理（updateForm）と同じ読み出しで決める。見るのは下書きだけ
-  const staleAsking = await loadStaleAsking(companyId, selected.schemeId, forms.filter((f) => f.status === "draft"));
+  const staleAsking = await loadStaleAsking(companyId, schemeId, forms.filter((f) => f.status === "draft"));
+  // 締切を過ぎたかの判定の基準時刻（カードごとに読み直さない）
+  const now = new Date();
 
   return (
     <>
@@ -123,6 +129,16 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
             });
             const comparisonGap = comparisonGaps.get(f.id);
             const submission = submissionCounts.get(f.id);
+            /* 出すボタンは、API（updateForm・延長）と同じ規則で決める（form-transitions.ts）。
+               締め切り済みに「公開中に戻す」は無く、もう一度集めるときは新しい版を作る。 */
+            const responseCount = Number(f.responseCount ?? 0);
+            const allowed = formTransitions(
+              f.status,
+              { closesAt: f.closesAt, now, cycleStatus: selected.status },
+              responseCount > 0,
+            );
+            // 新しい版は、その等級でいちばん後の版からだけ作る（古い版のカードにも出すと、同じ等級に下書きが重なる）
+            const isLatest = !forms.some((o) => o.gradeId === f.gradeId && o.version > f.version);
             return (
             <Card key={f.id} className="card-pad" off={f.status === "closed"}>
               {/* 左に「どのアンケートか」（題名・対象・件数・配布URL）、右にそのアンケートへの操作。
@@ -138,7 +154,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                         内容を確認・編集
                       </LinkButton>
                     </div>
-                    {f.status === "draft" && publication.ready && (
+                    {allowed.publish && publication.ready && (
                       <div className="mt-3">
                         <ActionButton
                           action={updateForm}
@@ -149,7 +165,7 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                         />
                       </div>
                     )}
-                    {f.status === "published" && (
+                    {allowed.close && (
                       <div className="mt-3">
                         <ActionButton
                           action={updateForm}
@@ -157,7 +173,19 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                           input={{ formId: f.id, status: "closed" }}
                           label="締め切る"
                           variant="secondary"
-                          confirm={`「${formRowTitle(f)}」を締め切ります。以後は回答できません。提出済みの回答は残ります。よろしいですか？`}
+                          confirm={`「${formRowTitle(f)}」を締め切ります。以後は回答できず、公開中にも戻せません。もう一度集めるときは新しい版を作ります。提出済みの回答は残ります。間に合わない方がいるときは、締め切らずに回答一覧から本人ごとに期限を延ばせます。よろしいですか？`}
+                        />
+                      </div>
+                    )}
+                    {allowed.newVersion && isLatest && (
+                      <div className="mt-3">
+                        <ActionButton
+                          action={createForms}
+                          resource="forms"
+                          input={{ cycleId: selected.id, gradeIds: [f.gradeId] }}
+                          label={NEW_VERSION_LABEL}
+                          variant="secondary"
+                          confirm={`${f.gradeName ?? "この等級"}のアンケートの新しい版を下書きで作ります。設問は、いまの等級要件・昇格要件・行動指針・評価セットから作ります。第${f.version}版と集まった回答はそのまま残ります。新しい版を公開すると、公開中の前の版は自動で締め切られます。よろしいですか？`}
                         />
                       </div>
                     )}
@@ -189,12 +217,12 @@ export default async function AdminForms({ searchParams }: { searchParams: Promi
                     </>
                   )}
                 </p>
-                {f.status === "published" && (
+                {allowed.share && (
                   <p className="footnote m-0 mt-1">
                     <CopyUrl url={formUrl(origin, f.publicToken)} />
                   </p>
                 )}
-                {Number(f.responseCount ?? 0) > 0 && f.status !== "closed" && (
+                {responseCount > 0 && f.status !== "closed" && (
                   <p className="footnote m-0 mt-2">
                     すでに回答があるため、設問は変更できません。内容を変えるときは新しい版を作ってください（{FORM_STATUS_LABEL[f.status]}）。
                   </p>

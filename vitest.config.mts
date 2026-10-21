@@ -20,8 +20,8 @@ const CALC_FILES = [
   "src/lib/domain/formula.ts",
   // ランク判定・点数化・総合判定（昇給・昇格）
   "src/lib/domain/scoring.ts",
-  // 事業所KGIの達成係数・個人Pt・賞与額
-  "src/lib/domain/kgi.ts",
+  // 個人Pt・賞与額（仮）
+  "src/lib/domain/bonus.ts",
   // 等級区分ごとの配点の型（合計100点）
   "src/lib/domain/grade-points.ts",
   // KPIの設定内容（選ぶ項目・配点・固定枠）の検査
@@ -40,6 +40,10 @@ const CALC_FILES = [
   "src/lib/domain/evaluation-authority.ts",
   // 集計結果の件数のまとめ
   "src/lib/domain/build-summary.ts",
+  // 昇給・昇格の最終の結論（点数の判定と上司の判断）と、確定のときの判断の検査
+  "src/lib/domain/final-decision.ts",
+  // アンケートの状態ごとに許す操作（公開・締め切り・延長・催促）
+  "src/lib/domain/form-transitions.ts",
 ] as const;
 
 const FULL = { lines: 100, functions: 100, statements: 100, branches: 100 };
@@ -54,7 +58,7 @@ export default defineConfig({
       reporter: ["text", "json-summary", "json"],
       reportsDirectory: "coverage",
       /**
-       * 評価（点数・ランク・係数・昇格昇給・集計）に関わるファイルだけを網羅率の対象にする。
+       * 評価（点数・ランク・賞与・昇格昇給・集計）に関わるファイルだけを網羅率の対象にする。
        * 画面の部品まで混ぜると数字が薄まり、「評価のどこが守られているか」が読めなくなる。
        */
       include: ["src/lib/domain/**/*.ts", "src/lib/evaluate.ts", "src/lib/impact.ts"],

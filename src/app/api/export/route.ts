@@ -19,6 +19,8 @@ const querySchema = z.object({
  * これまでスプレッドシートで見ていた表のCSV書き出し。
  *
  * 回答・社員情報は会社の管理者以上、評価結果・KPI明細はマネージャー以上が使える。
+ * 評価結果・KPI明細に載る人は、評価の画面と同じ範囲（会社の管理者以上は全員、マネージャーは直属の部下だけ）。
+ * 入口の権限だけでは行の範囲が決まらないので、viewer を書き出しの関数へ渡して絞る（src/lib/export.ts）。
  */
 export async function GET(req: Request) {
   try {
@@ -45,9 +47,10 @@ export async function GET(req: Request) {
     }
 
     if (!q.cycleId) throw new HttpError(400, "書き出す評価期間を指定してください。");
+    // 期の名前もここで読み、ファイル名に使う（書き出しの関数では読み直さない。載る行が0件でも名前が入る）
     const cycle = (
       await db
-        .select({ id: s.evaluationCycles.id })
+        .select({ id: s.evaluationCycles.id, name: s.evaluationCycles.name })
         .from(s.evaluationCycles)
         .where(and(eq(s.evaluationCycles.companyId, companyId), eq(s.evaluationCycles.id, q.cycleId)))
         .limit(1)
@@ -56,8 +59,8 @@ export async function GET(req: Request) {
 
     const file =
       q.type === "results"
-        ? await buildResultsCsv(companyId, cycle.id, url.origin)
-        : await buildKpiDetailCsv(companyId, cycle.id);
+        ? await buildResultsCsv(companyId, cycle, url.origin, viewer)
+        : await buildKpiDetailCsv(companyId, cycle, viewer);
     return csvResponse(file.filename, file.csv);
   } catch (e) {
     return jsonError(e);

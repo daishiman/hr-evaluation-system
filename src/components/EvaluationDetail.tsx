@@ -2,6 +2,8 @@ import { getEvaluationDetail, listEvaluations } from "@/lib/queries";
 import { Badge, Bar, Card, CardRow, Code, DefList, Disclosure, InlineDetail, LinkButton, Num, PageTitle, ProvisionalMark, RankMark, ReasonNote, SectionHeading } from "@/components/ui";
 import { EightAxisRadar } from "@/components/LazyCharts";
 import { PrintButton } from "@/components/PrintButton";
+import { DecisionDetails } from "@/components/DecisionBadge";
+import { conclusionText, finalDecisionOf } from "@/lib/domain/final-decision";
 import { formatDate, formatPeriod } from "@/lib/view";
 import { buildRadarValues, buildThresholdScale, parseReasonText, RANK_LEGEND } from "@/lib/domain/evaluation-view";
 import type { Role } from "@/lib/session";
@@ -35,6 +37,9 @@ export async function EvaluationDetail({
   }
 
   const { head, items, behaviors, requirements, gates, rankCriteria, showsCriteria } = detail;
+  const finalized = head.status === "finalized";
+  const raiseDecision = finalDecisionOf("raise", head);
+  const promotionDecision = finalDecisionOf("promotion", head);
 
   // 前回の評価（同じ人の1つ前のサイクル）をレーダーの比較に使う
   const history = (await listEvaluations(companyId, role, { employeeId: head.employeeId })).filter(
@@ -98,25 +103,32 @@ export async function EvaluationDetail({
                 このときの回答を見る
               </LinkButton>
             )}
+            {/* 確定した評価からレポートを作るので、確定前は出さない（DD-024） */}
+            {finalized && (
+              <LinkButton href={`/reports/${head.employeeId}`} variant="tertiary" className="no-print">
+                評価レポートを見る
+              </LinkButton>
+            )}
             <PrintButton />
           </>
         }
       />
 
-      {/* 視覚的主役: 結論を1つだけ大きく出す */}
+      {/* 視覚的主役: 結論を1つだけ大きく出す。
+          結論は点数の判定と上司の判断から final-decision.ts で出し、ここで書き直さない（DD-024） */}
       <Card className="hero-tint">
         <div className="hero-number">
-          <p className="m-0 text-note text-ink-muted">この期の判定</p>
+          <p className="m-0 text-note text-ink-muted">この期の結論</p>
           <p className="num-display m-0 text-hero-sp leading-tight text-accent">
-            {head.raiseEligible ? "昇給の要件を満たしています" : "昇給は見送りです"}
+            {conclusionText("raise", raiseDecision)}
           </p>
-          <p className="m-0 mt-2 text-sub">
-            {head.promotionEligible ? (
-              <>昇格の要件も満たしています。</>
-            ) : (
-              <>昇格の要件は満たしていません。</>
-            )}
-          </p>
+          <div className="text-sub">
+            <DecisionDetails fd={raiseDecision} reason={head.raiseDecisionReason} finalized={finalized} />
+          </div>
+          <p className="m-0 mt-2 text-sub font-semibold">{conclusionText("promotion", promotionDecision)}</p>
+          <div className="text-sub">
+            <DecisionDetails fd={promotionDecision} reason={head.promotionDecisionReason} finalized={finalized} />
+          </div>
           {showsCriteria && (
             <p className="m-0 mt-3 text-sub text-ink-muted">
               KPI評価点 <Num value={head.totalScore} unit="点" /> / <Num value={head.maxScore} unit="点" />
@@ -133,7 +145,7 @@ export async function EvaluationDetail({
       {head.raiseReason && (
         <div className="mt-4">
           <ReasonNote>
-            <ReasonBlocks label="この判定になった理由" text={head.raiseReason} />
+            <ReasonBlocks label="点数の判定の理由" text={head.raiseReason} />
           </ReasonNote>
         </div>
       )}
@@ -347,7 +359,7 @@ export async function EvaluationDetail({
         </div>
       </Card>
 
-      {/* 賞与（仮）。一般の方には出さない（個人Ptから KPI評価点合計 が逆算できるため、
+      {/* 賞与（仮）。一般の方には出さない（個人Pt は KPI評価点合計 そのものなので、
           queries.getEvaluationDetail で null にして返している）。 */}
       {showsCriteria && (
         <>
@@ -356,45 +368,30 @@ export async function EvaluationDetail({
           </SectionHeading>
           <Card className="card-pad">
             {head.personalPoints === null ? (
-              <ReasonNote
-                action={
-                  <LinkButton href="/admin/kgi" variant="secondary" className="no-print">
-                    達成率を登録する
-                  </LinkButton>
-                }
-              >
-                {head.bonusRationale ??
-                  "事業所KGIの達成率が未登録です。個人Ptと賞与額を算出できません（0円ではありません）。"}
+              <ReasonNote>
+                {head.bonusRationale ?? "個人Ptと賞与額はまだ出ていません（0円ではありません）。評価を集計し直すと出ます。"}
               </ReasonNote>
             ) : (
               <>
                 <div className="hero-number">
-                  <p className="m-0 text-note text-ink-muted">個人Pt</p>
+                  <p className="m-0 text-note text-ink-muted">個人Pt（KPI評価点の合計を整数に四捨五入）</p>
                   <p className="num-display m-0 text-num-l leading-tight">
                     <Num value={head.personalPoints} unit="Pt" display />
                   </p>
-                  {head.bonusYen !== null && (
+                  {/* 賞与額が 0 や未設定（null）のときは出さない。0円と出すと「賞与なしと判定された」と読めるため。 */}
+                  {head.bonusYen !== null && head.bonusYen > 0 && (
                     <p className="m-0 mt-2 text-sub">
                       賞与額（仮） <Num value={head.bonusYen} unit="円" />
                     </p>
                   )}
                 </div>
-                <DefList
-                  rows={[
-                    {
-                      label: "事業所KGI達成率",
-                      value: <Num value={head.officeAchievementRate} unit="%" />,
-                    },
-                    { label: "達成係数", value: <Num value={head.kgiCoefficient} /> },
-                  ]}
-                />
                 {head.bonusRationale && (
                   <p className="m-0 mt-2 text-note leading-relaxed text-ink-muted">{head.bonusRationale}</p>
                 )}
                 <p className="footnote m-0 mt-2">
                   {head.status === "finalized"
-                    ? "この評価は確定済みのため、あとから達成率や係数を変えてもこの金額は動きません。"
-                    : "確定前のため、達成率を変えると計算し直されます。"}
+                    ? "この評価は確定済みのため、あとから1点あたりの金額を変えてもこの金額は動きません。"
+                    : "確定前のため、集計し直すと、そのときの1点あたりの金額で計算し直されます。"}
                   金額は配点が未確定のうちは仮の値です。
                 </p>
               </>

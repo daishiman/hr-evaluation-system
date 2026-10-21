@@ -2,13 +2,17 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { minRoleFor } from "@/lib/route-access";
+import { atLeast, ROLES } from "@/lib/roles";
 import {
   canActOnEmployeeEvaluation,
   canReadEmployee,
   canReadResponseBody,
   canReadSelfResult,
   canReviewEmployeeEvaluation,
+  evaluationViewOf,
   isOwnEvaluation,
+  NOTE_VISIBILITIES,
+  readableNoteVisibilities,
   selectNextActionableEvaluation,
   SELF_EVALUATION_BLOCK_REASON,
 } from "./evaluation-authority";
@@ -52,6 +56,24 @@ describe("対象者ごとの権限契約", () => {
     expect(canReviewEmployeeEvaluation("member-a", "EMPLOYEE", directReport)).toBe(false);
   });
 
+  it("会社の管理者は評価者向け画面で自分の評価も開ける（いまの挙動。扱いは SECURITY-013 で決める）", () => {
+    // SECURITY-013 で決まったら期待値を反転する（DD-021 の固定する検査）
+    const ownAsAdmin = { employeeId: "admin", managerId: "director" };
+    expect(canReviewEmployeeEvaluation("admin", "COMPANY_ADMIN", ownAsAdmin)).toBe(true);
+    expect(canActOnEmployeeEvaluation("admin", "COMPANY_ADMIN", ownAsAdmin)).toBe(false);
+  });
+
+  it("評価レポートは本人なら役割にかかわらず本人向け、他の人には評価者向け画面と同じ範囲だけ（DD-024）", () => {
+    const ownAsAdmin = { employeeId: "admin", managerId: "director" };
+    expect(evaluationViewOf("admin", "COMPANY_ADMIN", ownAsAdmin)).toBe("self");
+    expect(evaluationViewOf("manager-a", "MANAGER", { employeeId: "manager-a", managerId: null })).toBe("self");
+    expect(evaluationViewOf("member-a", "EMPLOYEE", directReport)).toBe("self");
+    expect(evaluationViewOf("manager-a", "MANAGER", directReport)).toBe("reviewer");
+    expect(evaluationViewOf("admin", "COMPANY_ADMIN", outsideReport)).toBe("reviewer");
+    expect(evaluationViewOf("manager-a", "MANAGER", outsideReport)).toBeNull();
+    expect(evaluationViewOf("member-a", "EMPLOYEE", outsideReport)).toBeNull();
+  });
+
   it("下書き回答の本文は本人だけ、提出済み回答は本人・直属上長・管理者だけが読める", () => {
     expect(canReadResponseBody("member-a", "EMPLOYEE", directReport, "draft")).toBe(true);
     expect(canReadResponseBody("manager-a", "MANAGER", directReport, "draft")).toBe(false);
@@ -65,6 +87,50 @@ describe("対象者ごとの権限契約", () => {
     expect(canReadSelfResult("member-a", directReport.employeeId, "finalized")).toBe(true);
     expect(canReadSelfResult("member-a", directReport.employeeId, "draft")).toBe(false);
     expect(canReadSelfResult("member-b", directReport.employeeId, "finalized")).toBe(false);
+  });
+});
+
+describe("評価メモの公開範囲（readableNoteVisibilities）", () => {
+  it("取る値は manager と admin の2つ（保存の検査も同じ値の組から引く）", () => {
+    expect([...NOTE_VISIBILITIES]).toEqual(["manager", "admin"]);
+    expect(read("src/actions/notes.ts")).toContain("z.enum(NOTE_VISIBILITIES)");
+  });
+
+  it("会社の管理者以上は「管理者のみ」を含めてすべて読める", () => {
+    expect(readableNoteVisibilities("COMPANY_ADMIN")).toEqual(["manager", "admin"]);
+    expect(readableNoteVisibilities("SUPER_ADMIN")).toEqual(["manager", "admin"]);
+  });
+
+  it("マネージャーは「管理者のみ」を読めない", () => {
+    expect(readableNoteVisibilities("MANAGER")).toEqual(["manager"]);
+  });
+
+  it("一般（本人）には、どの公開範囲のメモも見せない", () => {
+    expect(readableNoteVisibilities("EMPLOYEE")).toEqual([]);
+  });
+
+  it("公開範囲は最低の役割として働く（上の役割は、下の役割が読める段階をすべて読める）", () => {
+    for (const higher of ROLES) {
+      for (const lower of ROLES.filter((role) => atLeast(higher, role))) {
+        expect(readableNoteVisibilities(higher)).toEqual(expect.arrayContaining(readableNoteVisibilities(lower)));
+      }
+    }
+  });
+
+  it("読み出し（listNotes）は役割を位置引数の必須で受け、メンバー詳細は見る人の役割を渡す", () => {
+    expect(read("src/lib/queries.ts")).toContain(
+      "export async function listNotes(companyId: string, employeeId: string, viewerRole: Viewer[\"role\"])",
+    );
+    expect(read("src/app/manager/members/[id]/page.tsx")).toContain("listNotes(viewer.companyId, id, viewer.role)");
+  });
+
+  it("書ける段階は読める段階と同じ。入力欄の選択肢と保存の検査は、どちらも readableNoteVisibilities から引く", () => {
+    const page = read("src/app/manager/members/[id]/page.tsx");
+    expect(page).toContain("const noteVisibilities = readableNoteVisibilities(viewer.role);");
+    expect(page).toContain("<NoteForm employeeId={member.id} visibilities={noteVisibilities} />");
+    expect(read("src/actions/notes.ts")).toContain("readableNoteVisibilities(viewer.role).includes(input.visibility)");
+    // 入力欄の側で役割を見て別の判定を書かない
+    expect(read("src/components/NoteForm.tsx")).not.toMatch(/MANAGER|COMPANY_ADMIN|SUPER_ADMIN/);
   });
 });
 

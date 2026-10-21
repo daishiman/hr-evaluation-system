@@ -5,12 +5,26 @@ import { createNote } from "@/actions/notes";
 import { useState } from "react";
 import { Button, Card, ReasonNote } from "@/components/ui";
 import { RefreshStatus } from "@/components/RefreshStatus";
+import type { NoteVisibility } from "@/lib/domain/evaluation-authority";
 
-/** 評価メモの記入。⌘/Ctrl+Enter でも送信できるが、主経路は見えるボタン。 */
-export function NoteForm({ employeeId }: { employeeId: string }) {
+/**
+ * 評価メモの記入。⌘/Ctrl+Enter でも送信できるが、主経路は見えるボタン。
+ *
+ * visibilities は見る人が選べる公開範囲（readableNoteVisibilities(viewer.role) を呼び出し側で渡す）。
+ * 書ける段階は読める段階と同じなので、「管理者だけが読めるようにする」は admin を読める人にだけ出す。
+ * 保存のときもサーバーが同じ関数で確かめる（src/actions/notes.ts）。
+ */
+export function NoteForm({
+  employeeId,
+  visibilities,
+}: {
+  employeeId: string;
+  visibilities: readonly NoteVisibility[];
+}) {
   const { save, saving } = useSaveAction(createNote, { resource: "notes" });
   const [body, setBody] = useState("");
-  const [visibility, setVisibility] = useState<"manager" | "admin">("manager");
+  const [visibility, setVisibility] = useState<NoteVisibility>("manager");
+  const canChooseAdminOnly = visibilities.includes("admin");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -57,15 +71,17 @@ export function NoteForm({ employeeId }: { employeeId: string }) {
         <Button variant="primary" onClick={() => void submit()} disabled={saving || !body.trim()}>
           {saving ? "保存しています…" : "メモを残す"}
         </Button>
-        <label className="flex items-center gap-2 text-note">
-          <input
-            type="checkbox"
-            checked={visibility === "admin"}
-            disabled={saving}
-            onChange={(e) => setVisibility(e.target.checked ? "admin" : "manager")}
-          />
-          管理者だけが読めるようにする
-        </label>
+        {canChooseAdminOnly && (
+          <label className="flex items-center gap-2 text-note">
+            <input
+              type="checkbox"
+              checked={visibility === "admin"}
+              disabled={saving}
+              onChange={(e) => setVisibility(e.target.checked ? "admin" : "manager")}
+            />
+            管理者だけが読めるようにする
+          </label>
+        )}
         <span className="footnote">{modLabel} でも保存できます</span>
       </div>
     </Card>
