@@ -136,6 +136,9 @@ export interface ReportDecision {
 
 export interface ReportRadarAxis {
   item: string;
+  /** 評価者向けだけが持つ獲得点と配点。本人向けには鍵ごと付けない */
+  points?: number | null;
+  maxPoints?: number | null;
   /** 0〜100。判定外は null（0点と混ぜない） */
   value: number | null;
   rank: string | null;
@@ -168,12 +171,14 @@ interface ReportPeriod {
 }
 
 export interface ReviewerTrendPoint extends ReportPeriod {
+  gradeName: string | null;
   /** KPI評価点の合計 ÷ 満点（%） */
   value: number | null;
   peer: ReportPeerStat | null;
 }
 
 export interface SelfTrendPoint extends ReportPeriod {
+  gradeName: string | null;
   /** 等級要件の達成率（%） */
   value: number | null;
 }
@@ -235,7 +240,6 @@ export interface ReportBody {
   header: ReportHeader;
   decisions: ReportDecision[];
   radar: ReportRadar;
-  trendGradeName: string | null;
   comment: string | null;
 }
 
@@ -373,9 +377,15 @@ function buildRadar(
   const current = buildRadarValues(items, isReviewer);
   const previous = new Map(buildRadarValues(previousItems ?? [], isReviewer).map((v) => [v.item, v]));
   return {
-    axes: current.map((v) => {
+    axes: current.map((v, index) => {
       const p = previous.get(v.item);
-      return { ...v, previousValue: p?.value ?? null, previousRank: p?.rank ?? null };
+      const source = items[index];
+      return {
+        ...v,
+        ...(isReviewer ? { points: source.points, maxPoints: source.maxPoints } : {}),
+        previousValue: p?.value ?? null,
+        previousRank: p?.rank ?? null,
+      };
     }),
     asBars: current.length < REPORT_RADAR_MIN_AXES,
     previousCycleName: previousItems ? previousCycleName : null,
@@ -411,7 +421,6 @@ export function buildEvaluationReport(input: ReportInput): EvaluationReport {
 
   const previous = finalized.at(-2) ?? null;
   const isReviewer = input.view === "reviewer";
-  const inTrendGrade = finalized.filter((e) => e.gradeId === latest.gradeId && e.gradeName === latest.gradeName);
   const body: ReportBody = {
     header: {
       employeeName: input.employeeName,
@@ -424,7 +433,6 @@ export function buildEvaluationReport(input: ReportInput): EvaluationReport {
     },
     decisions: buildDecisions(latest, input.latest, input.recorderNames),
     radar: buildRadar(input.latest.items, input.previousItems, previous?.cycleName ?? null, isReviewer),
-    trendGradeName: latest.gradeName,
     comment: latest.evaluatorComment?.trim() ? latest.evaluatorComment : null,
   };
 
@@ -447,7 +455,7 @@ export function buildEvaluationReport(input: ReportInput): EvaluationReport {
         requirementTotal: latest.requirementTotal,
         behaviors: input.latest.behaviors.map((b) => ({ aspectName: b.aspectName, levelLabel: b.levelLabel })),
       },
-      trend: inTrendGrade.map((e) => ({ ...periodOf(e), value: e.requirementRate })),
+      trend: finalized.map((e) => ({ ...periodOf(e), gradeName: e.gradeName, value: e.requirementRate })),
       grades: groupByGrade(finalized).map((g) => ({
         gradeName: g.gradeName,
         periods: g.rows.length,
@@ -498,8 +506,9 @@ export function buildEvaluationReport(input: ReportInput): EvaluationReport {
         levelLabel: b.levelLabel,
       })),
     },
-    trend: inTrendGrade.map((e) => ({
+    trend: finalized.map((e) => ({
       ...periodOf(e),
+      gradeName: e.gradeName,
       value: scoreRatio(e.totalScore, e.maxScore),
       peer: peerStat(peersOf(e.gradeId, e.cycleId)),
     })),

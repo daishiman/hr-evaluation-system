@@ -49,7 +49,7 @@ test("上長はメンバーのページから評価レポートを開け、ど�
   }
   // 2枚目（⑤〜⑦）は推移・等級ごとの点数・過去の実績の順に並ぶ
   await expect(main.locator(".report-page-2").getByRole("heading", { level: 2 })).toHaveText([
-    "その等級の推移",
+    "等級と達成率の推移",
     "等級ごとの点数",
     "過去の実績",
   ]);
@@ -84,7 +84,7 @@ test("本人は自分の結果から評価レポートを開け、点数の数�
   await expect(main.locator(".report-decision-label")).toHaveText(["昇給", "昇格"]);
   // 本人の2枚目は、点数の代わりに等級要件の達成率で並ぶ
   await expect(main.locator(".report-page-2").getByRole("heading", { level: 2 })).toHaveText([
-    "その等級の推移",
+    "等級と達成率の推移",
     "等級ごとの達成率",
     "過去の実績",
   ]);

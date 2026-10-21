@@ -316,9 +316,9 @@ describe("評価者向けのレポート", () => {
   it("④ レーダー図は獲得点÷配点で、前の期の同じ項目を重ねる", () => {
     expect(asReviewer(reviewerInput()).radar).toEqual({
       axes: [
-        { item: "売上", value: 100, rank: "A", unrated: false, previousValue: 80, previousRank: "B" },
-        { item: "提案数", value: 60, rank: "C", unrated: false, previousValue: null, previousRank: null },
-        { item: "後輩の育成", value: null, rank: null, unrated: true, previousValue: null, previousRank: null },
+        { item: "売上", points: 30, maxPoints: 30, value: 100, rank: "A", unrated: false, previousValue: 80, previousRank: "B" },
+        { item: "提案数", points: 12, maxPoints: 20, value: 60, rank: "C", unrated: false, previousValue: null, previousRank: null },
+        { item: "後輩の育成", points: null, maxPoints: 30, value: null, rank: null, unrated: true, previousValue: null, previousRank: null },
       ],
       asBars: false,
       previousCycleName: "2025年度下期",
@@ -348,15 +348,16 @@ describe("評価者向けのレポート", () => {
     }
   });
 
-  it("⑤ 推移は今の等級の期だけを並べ、同じ等級・同じ期の平均は3人以上のときだけ添える", () => {
+  it("⑤ 等級をまたぐ全確定期を古い順に並べ、各期の等級・期の平均を3人以上のときだけ添える", () => {
     const r = asReviewer(reviewerInput());
-    expect(r.trendGradeName).toBe("等級2");
     expect(r.trend).toEqual([
-      { cycleName: "2025年度下期", periodStart: "2025-10-01", periodEnd: "2026-03-31", value: 75, peer: null },
+      { cycleName: "2025年度上期", periodStart: "2025-04-01", periodEnd: "2025-09-30", gradeName: "等級1", value: 50, peer: { average: 45, min: 40, max: 50, people: 3 } },
+      { cycleName: "2025年度下期", periodStart: "2025-10-01", periodEnd: "2026-03-31", gradeName: "等級2", value: 75, peer: null },
       {
         cycleName: "2026年度上期",
         periodStart: "2026-04-01",
         periodEnd: "2026-09-30",
+        gradeName: "等級2",
         value: 80,
         peer: { average: 80, min: 70, max: 90, people: 3 },
       },
@@ -390,7 +391,7 @@ describe("評価者向けのレポート", () => {
       { gradeName: "—", periods: 1, average: null, peer: null },
       { gradeName: "旧等級", periods: 1, average: 75, peer: null },
     ]);
-    expect(r.trend.map((t) => t.peer)).toEqual([null]);
+    expect(r.trend.map((t) => t.peer)).toEqual([null, null, null]);
   });
 
   it("⑦ 履歴は古い順に、結論を上司の判断込みで並べる", () => {
@@ -410,7 +411,7 @@ describe("評価者向けのレポート", () => {
 });
 
 describe("本人向けのレポート", () => {
-  const SCORE_KEYS = ["kpiTotal", "kpiMax", "kpiRatio", "behaviorTotal", "score", "peer", "scores", "average"];
+  const SCORE_KEYS = ["kpiTotal", "kpiMax", "kpiRatio", "behaviorTotal", "score", "peer", "scores", "average", "points", "maxPoints"];
 
   it("点数と比べる値の鍵を持たない（値を空けるのではなく、型ごと無い）", () => {
     const r = asSelf(selfInput());
@@ -457,9 +458,10 @@ describe("本人向けのレポート", () => {
 
   it("⑤⑥⑦ 推移・等級ごと・履歴は等級要件の達成率で描く", () => {
     const r: SelfReport = asSelf(selfInput());
-    expect(r.trend.map((t) => [t.cycleName, t.value])).toEqual([
-      ["2025年度下期", 75],
-      ["2026年度上期", 75],
+    expect(r.trend.map((t) => [t.cycleName, t.gradeName, t.value])).toEqual([
+      ["2025年度上期", "等級1", 50],
+      ["2025年度下期", "等級2", 75],
+      ["2026年度上期", "等級2", 75],
     ]);
     expect(r.grades).toEqual([
       { gradeName: "等級1", periods: 1, averageRequirementRate: 50 },

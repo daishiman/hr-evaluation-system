@@ -48,9 +48,9 @@ function decision(subject: ReportDecision["subject"], overrides: Partial<ReportD
 function radar(overrides: Partial<ReportRadar> = {}): ReportRadar {
   return {
     axes: [
-      { item: "稼働率", value: 90, rank: "A", unrated: false, previousValue: 80, previousRank: "B" },
-      { item: "残業率", value: 60, rank: "C", unrated: false, previousValue: 60, previousRank: "C" },
-      { item: "提案件数", value: null, rank: null, unrated: true, previousValue: null, previousRank: null },
+      { item: "稼働率", value: 90, rank: "A", unrated: false, previousValue: 80, previousRank: "B", points: 27, maxPoints: 30 },
+      { item: "残業率", value: 60, rank: "C", unrated: false, previousValue: 60, previousRank: "C", points: 12, maxPoints: 20 },
+      { item: "提案件数", value: null, rank: null, unrated: true, previousValue: null, previousRank: null, points: null, maxPoints: 10 },
     ],
     asBars: false,
     previousCycleName: "2025下期",
@@ -75,7 +75,6 @@ function reviewer(overrides: Partial<ReviewerReport> = {}): ReviewerReport {
     header: HEADER,
     decisions: [decision("raise"), decision("promotion")],
     radar: radar(),
-    trendGradeName: "Regular",
     comment: "次の期は提案件数を伸ばしましょう。",
     scores: {
       kpiTotal: 42,
@@ -88,11 +87,12 @@ function reviewer(overrides: Partial<ReviewerReport> = {}): ReviewerReport {
       behaviors: [{ aspectName: "誠実さ", score: 4, levelLabel: "できている" }],
     },
     trend: [
-      { cycleName: "2025下期", periodStart: "2025-10-01", periodEnd: "2026-03-31", value: 65, peer: null },
+      { cycleName: "2025下期", periodStart: "2025-10-01", periodEnd: "2026-03-31", gradeName: "Junior", value: 65, peer: null },
       {
         cycleName: "2026上期",
         periodStart: "2026-04-01",
         periodEnd: "2026-09-30",
+        gradeName: "Regular",
         value: 70,
         peer: { average: 62, min: 40, max: 85, people: 4 },
       },
@@ -124,8 +124,7 @@ function self(overrides: Partial<SelfReport> = {}): SelfReport {
     kind: "self",
     header: HEADER,
     decisions: [decision("raise", SELF_REASON), decision("promotion", SELF_REASON)],
-    radar: radar({ basis: "rank" }),
-    trendGradeName: "Regular",
+    radar: radar({ basis: "rank", axes: radar().axes.map(({ points: _p, maxPoints: _m, ...axis }) => axis) }),
     comment: null,
     judgements: {
       kpiRanks: [{ item: "稼働率", rank: "A" }],
@@ -138,7 +137,7 @@ function self(overrides: Partial<SelfReport> = {}): SelfReport {
       requirementTotal: 5,
       behaviors: [{ aspectName: "誠実さ", levelLabel: "できている" }],
     },
-    trend: [{ cycleName: "2026上期", periodStart: "2026-04-01", periodEnd: "2026-09-30", value: 80 }],
+    trend: [{ cycleName: "2026上期", periodStart: "2026-04-01", periodEnd: "2026-09-30", gradeName: "Regular", value: 80 }],
     grades: [{ gradeName: "Regular", periods: 1, averageRequirementRate: 80 }],
     history: [
       {
@@ -185,18 +184,27 @@ describe("ReportTemplate: 確定した評価が無いとき", () => {
 describe("ReportTemplate: 評価者向け", () => {
   const html = render(reviewer());
 
-  it("①〜④を1枚目、⑤〜⑦を2枚目に、コメントを末尾に置く", () => {
+  it("今回とコメントを一つの面に、推移と履歴をもう一つの面に置く", () => {
     const page1 = html.indexOf("report-page-1");
     const page2 = html.indexOf("report-page-2");
     const comment = html.indexOf("report-comment");
     expect(page1).toBeGreaterThan(-1);
     expect(page2).toBeGreaterThan(page1);
-    expect(comment).toBeGreaterThan(page2);
+    expect(comment).toBeGreaterThan(page1);
+    expect(comment).toBeLessThan(page2);
     // 2枚目の頭は、2枚目だけを見てもだれのどの期か分かるようにする
     expect(html).toContain("見本 太郎・2026上期（評価レポートの続き）");
-    for (const heading of ["昇給・昇格の判断", "点数", "KPIの項目ごとの達成度", "その等級の推移", "等級ごとの点数", "過去の実績", "上長からのコメント"]) {
+    for (const heading of ["昇給・昇格の判断", "点数", "KPIの項目ごとの達成度", "等級と達成率の推移", "等級ごとの点数", "過去の実績", "上長からのコメント"]) {
       expect(html).toContain(heading);
     }
+  });
+
+  it("KPIの項目表で獲得点・配点と判定を対応させ、推移には変更前後の等級を出す", () => {
+    expect(html).toContain("得点／配点");
+    expect(html).toContain("27");
+    expect(html).toContain("Junior");
+    expect(html).toContain("Regular");
+    expect(html).toContain("期ごとの等級・KPIの達成率と、当時の同じ等級の平均と幅");
   });
 
   it("点数・同じ等級の平均と幅・コメントを出す", () => {
@@ -218,15 +226,15 @@ describe("ReportTemplate: 評価者向け", () => {
         .find((section) => section.includes(`>${heading}</h2>`))
         ?.match(/<ul class="report-legend">([\s\S]*?)<\/ul>/)?.[1];
 
-    expect(legend("その等級の推移")).toBeDefined();
+    expect(legend("等級と達成率の推移")).toBeDefined();
     expect(legend("等級ごとの点数")).toBeDefined();
     if (withPeer === "trend") {
-      expect(legend("その等級の推移")).toContain("同じ等級の平均");
-      expect(legend("その等級の推移")).toContain("同じ等級の幅");
+      expect(legend("等級と達成率の推移")).toContain("同じ等級の平均");
+      expect(legend("等級と達成率の推移")).toContain("同じ等級の幅");
       expect(legend("等級ごとの点数")).not.toContain("同じ等級の平均");
     } else {
-      expect(legend("その等級の推移")).not.toContain("同じ等級の平均");
-      expect(legend("その等級の推移")).not.toContain("同じ等級の幅");
+      expect(legend("等級と達成率の推移")).not.toContain("同じ等級の平均");
+      expect(legend("等級と達成率の推移")).not.toContain("同じ等級の幅");
       expect(legend("等級ごとの点数")).toContain("同じ等級の平均");
     }
   });
@@ -256,7 +264,7 @@ describe("ReportTemplate: 評価者向け", () => {
   it("図は画面用と印刷用を1つずつ描き、読み上げは図の説明から読む", () => {
     expect(charts(html)).toEqual([
       "radar:fluid",
-      "radar:380",
+      "radar:340",
       "trend:fluid",
       "trend:300",
       "grade-bars:fluid",
@@ -265,7 +273,7 @@ describe("ReportTemplate: 評価者向け", () => {
     expect(html).toContain('aria-label="KPIの項目ごとの達成度のレーダー図。3項目。値は隣の表と同じです。"');
     // 印刷用は二重に読まれないよう読み上げから外す。枠は紙の大きさで先に取る（図が届く前に刷られても紙面が伸びない）
     expect(html.match(/class="report-chart-print" style="[^"]*" aria-hidden="true"/g)).toHaveLength(3);
-    expect(html).toContain('class="report-chart-print" style="width:calc(380px * var(--report-print-scale, 1));height:calc(190px * var(--report-print-scale, 1))"');
+    expect(html).toContain('class="report-chart-print" style="width:calc(340px * var(--report-print-scale, 1));height:calc(190px * var(--report-print-scale, 1))"');
     expect(html.split('class="report-chart-print" style="width:calc(300px * var(--report-print-scale, 1));height:calc(200px * var(--report-print-scale, 1))"')).toHaveLength(3);
   });
 
@@ -290,7 +298,7 @@ describe("ReportTemplate: 本人向け", () => {
 
   it("点数の数値と、同じ等級の平均と幅を出さない", () => {
     expect(html).toContain("点数は上長と管理者だけが見られます。");
-    for (const hidden of ["KPI評価点", "行動指針の合計", "同じ等級の平均", "同じ等級の幅", "KPIの達成率"]) {
+    for (const hidden of ["KPI評価点", "行動指針の合計", "同じ等級の平均", "同じ等級の幅", "KPIの達成率", "得点／配点"]) {
       expect(html).not.toContain(hidden);
     }
     expect(html).not.toContain(">点数<");
@@ -298,7 +306,7 @@ describe("ReportTemplate: 本人向け", () => {
 
   it("⑤⑥は等級要件の達成率で描き、判定の内訳を件数で出す", () => {
     expect(html).toContain("等級ごとの達成率");
-    expect(html).toContain("その等級の期ごとの等級要件の達成率");
+    expect(html).toContain("期ごとの等級と等級要件の達成率");
     expect(html).toContain("A 1件・C 1件");
     expect(html).toContain("5件のうち4件");
   });

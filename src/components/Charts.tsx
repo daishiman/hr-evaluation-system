@@ -388,6 +388,7 @@ export function ReportRadarChart({
 
 export interface ReportTrendDatum {
   cycle: string;
+  gradeName: string | null;
   value: number | null;
   /** 同じ等級の平均。出せない期（3人未満・本人向け）は null */
   average: number | null;
@@ -395,9 +396,9 @@ export interface ReportTrendDatum {
   range: [number, number] | null;
 }
 
-/* 期の名前は「2025年度」と「上期」の2段に分けて描く。
-   1行のままだと、印刷の幅（300px）に3期並べただけで隣の名前と字がつながる */
-function CycleTick({ x, y, payload }: { x?: number | string; y?: number | string; payload?: { value?: unknown } }) {
+/* 期の名前は「2025年度」と「上期」の2段に分け、その下に当時の等級を描く。
+   等級は分類名として添え、点数と同じ数値軸には載せない。 */
+function CycleTick({ x, y, payload, gradeName }: { x?: number | string; y?: number | string; payload?: { value?: unknown }; gradeName?: string | null }) {
   const [head, ...rest] = shortenTick(String(payload?.value ?? "")).split(" ");
   return (
     <text x={x} y={y} textAnchor="middle" fontSize={CHART_FS_TICK} fill={CHART_COLORS.inkMuted}>
@@ -407,11 +408,12 @@ function CycleTick({ x, y, payload }: { x?: number | string; y?: number | string
           {rest.join(" ")}
         </tspan>
       )}
+      {gradeName !== undefined && <tspan x={x} dy="1.2em">{shortenTick(gradeName ?? "—")}</tspan>}
     </text>
   );
 }
 
-/** ⑤ その等級にいた期の推移。本人を実線と点、同じ等級の平均を破線、幅を薄い帯で描く */
+/** ⑤ 全確定期の等級と達成率の推移。本人を実線と点、同じ等級の平均を破線、幅を薄い帯で描く */
 export function ReportTrendChart({
   data,
   width,
@@ -424,14 +426,19 @@ export function ReportTrendChart({
   const { brand, brandSoft, line, inkMuted } = CHART_COLORS;
   const { tickInterval } = chartDensity(data.length);
   const hasPeer = data.some((d) => d.average !== null);
+  // tickのindexは間引き後の順番なので使わない。期間名が重複しても、元の期の等級へ対応させる。
+  const chartData = data.map((point, pointIndex) => ({ ...point, pointIndex }));
   return (
     <ReportChartBox width={width} height={height}>
-      <ComposedChart data={data} margin={{ top: 12, right: 20, bottom: 4, left: -8 }}>
+      <ComposedChart data={chartData} margin={{ top: 12, right: 20, bottom: 4, left: -8 }}>
         <CartesianGrid stroke={line} vertical={false} />
         <XAxis
-          dataKey="cycle"
-          tick={CycleTick}
-          height={40}
+          dataKey="pointIndex"
+          tick={(props) => {
+            const point = data[Number(props.payload?.value)];
+            return <CycleTick {...props} payload={{ value: point?.cycle }} gradeName={point?.gradeName ?? null} />;
+          }}
+          height={56}
           tickLine={false}
           axisLine={{ stroke: line }}
           interval={tickInterval}

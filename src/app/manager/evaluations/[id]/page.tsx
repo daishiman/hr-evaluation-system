@@ -135,6 +135,7 @@ export default async function ManagerEvaluation({ params }: { params: Promise<{ 
         afterConclusion={recomputePanel}
       />
 
+      <div className="no-print">
       <SectionHeading>確認と確定</SectionHeading>
       <EvaluatorPanel
         evaluationId={id}
@@ -170,6 +171,7 @@ export default async function ManagerEvaluation({ params }: { params: Promise<{ 
           </Link>
         </p>
       )}
+      </div>
     </>
   );
 }

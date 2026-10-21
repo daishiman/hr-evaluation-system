@@ -3014,7 +3014,11 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
    図と表は、入れ物が広いときだけ左右に並べ、狭いときは図 → 表の順に積む。
    紙での並べ替え（コメントを1枚目へ寄せる）は、下の印刷用の指定の中だけで行う。
    ============================================================ */
-.report { container: report / inline-size; }
+.report { container: report / inline-size; display: flex; flex-direction: column; }
+.report-current { display: contents; }
+.report-page-1 { order: 0; }
+.report-page-2 { order: 1; }
+.report-comment { order: 2; }
 .report-head .def-list { font-size: var(--text-note); }
 .report-decisions {
   display: grid;
@@ -3082,16 +3086,16 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
    ============================================================ */
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
-  @page report-a4 { size: A4 portrait; margin: 12mm; }
-  @page report-a3 { size: A3 portrait; margin: 16mm; }
-  .report { page: report-a4; }
-  html[data-report-paper="A3"] .report {
-    page: report-a3;
-    --report-print-scale: 1.3;
-    --text-note: var(--text-body);
-  }
-  html[data-report-paper="A3"] .report-head .def-list > div {
-    grid-template-columns: 8.5rem minmax(0, 1fr);
+  /* 本文の内側で余白を作り、ブラウザの自動URL・日時のためのpage marginを残さない。 */
+  @page report-a4 { size: A4 portrait; margin: 0; }
+  @page report-a3 { size: A3 landscape; margin: 0; }
+  @page evaluation-detail { size: A4 portrait; margin: 0; }
+  .evaluation-detail {
+    page: evaluation-detail;
+    width: 210mm;
+    padding: 12mm;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
 
   /* 画面がダークでも、紙ではライトの意味トークンへ戻す。
@@ -3200,11 +3204,16 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
      HTML の順（①〜⑦ → コメント）は画面と同じにし、order でコメントを1枚目の末尾へ寄せる。
      長い理由やコメントは切らずに載せる（はみ出した分は次の紙へ送られる）。 */
   .report {
-    display: flex;
-    flex-direction: column;
+    display: block;
+    page: report-a4;
+    width: 210mm;
+    padding: 12mm;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
     font-size: var(--text-note);
     line-height: 1.35;
   }
+  .report-current { display: block; }
   .report-page-1 { order: 0; }
   .report-comment { order: 1; }
   .report-page-2 { order: 2; break-before: page; }
@@ -3284,6 +3293,17 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   /* 長文のコメントは次の紙へ続け、枠ごとの押し出しや切り捨てを避ける。 */
   .report-comment,
   .report-comment .card { break-inside: auto; }
+
+  /* A3はA4相当の2面を横へ並べ、本文も図も縮小しない。 */
+  html[data-report-paper="A3"] .report {
+    display: grid;
+    page: report-a3;
+    width: 420mm;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8mm;
+    align-items: start;
+  }
+  html[data-report-paper="A3"] .report-page-2 { break-before: auto; }
 }
 
 /* ============================================================

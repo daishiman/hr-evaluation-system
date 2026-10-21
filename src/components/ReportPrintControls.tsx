@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui";
+import { fitsOnA3 } from "@/lib/report-print-layout";
 
 /** 空の図を印刷しない。遅延読込した紙用の SVG とフォントがそろってから印刷する。 */
 async function prepareReportForPrint(): Promise<void> {
@@ -31,20 +32,28 @@ async function prepareReportForPrint(): Promise<void> {
 export function ReportPrintControls() {
   const [paper, setPaper] = useState("A4");
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<"preparation" | "overflow" | null>(null);
   useEffect(() => {
     document.documentElement.dataset.reportPaper = paper;
     return () => { delete document.documentElement.dataset.reportPaper; };
   }, [paper]);
 
-  async function print() {
+  async function print(asPaper = paper) {
     setPending(true);
-    setError(false);
+    setError(null);
     try {
+      // A4への回復操作でも、この印刷から選択した用紙を使う。
+      document.documentElement.dataset.reportPaper = asPaper;
+      setPaper(asPaper);
       await prepareReportForPrint();
+      const report = document.querySelector(".report");
+      if (asPaper === "A3" && report && !(await fitsOnA3(report))) {
+        setError("overflow");
+        return;
+      }
       window.print();
     } catch {
-      setError(true);
+      setError("preparation");
     } finally {
       setPending(false);
     }
@@ -56,16 +65,21 @@ export function ReportPrintControls() {
         <div className="flex items-center gap-2 text-sub">
           <label htmlFor="report-paper">用紙</label>
           <select id="report-paper" className="input" value={paper} disabled={pending} onChange={(event) => setPaper(event.target.value)}>
-            <option value="A4">A4 縦</option>
-            <option value="A3">A3 縦（大きく印刷）</option>
+            <option value="A4">A4 縦（区切りで改ページ）</option>
+            <option value="A3">A3 横（1枚にまとめる）</option>
           </select>
         </div>
-        <Button type="button" variant="tertiary" disabled={pending} onClick={print}>
+        <Button type="button" variant="tertiary" disabled={pending} onClick={() => print()}>
           {pending ? "印刷の準備中…" : error ? "もう一度印刷する" : "印刷する"}
         </Button>
       </div>
       {pending && <p className="footnote m-0 mt-2" role="status">グラフと文字を準備しています。</p>}
-      {error && <p className="footnote m-0 mt-2" role="alert">グラフか文字の準備が間に合いませんでした。もう一度印刷するか、画面を読み直してください。</p>}
+      {error === "preparation" && <p className="footnote m-0 mt-2" role="alert">グラフか文字の準備が間に合いませんでした。もう一度印刷するか、画面を読み直してください。</p>}
+      {error === "overflow" && <div role="alert" className="mt-2">
+        <p className="footnote m-0">内容がA3の1枚を超えています。A4なら全文を印刷できます。</p>
+        <Button type="button" variant="tertiary" disabled={pending} onClick={() => print("A4")}>A4で全文を印刷する</Button>
+      </div>}
+      <p className="footnote m-0 mt-2">URLや日時が出る場合は、印刷設定の「ヘッダーとフッター」をオフにします。</p>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { signIn } from "./support";
 import { improvementFixture } from "./improvement-db-fixture";
 
 /*
- * 評価レポートの印刷（DD-024）。A4/A3 縦の標準2枚組で、1枚目は①〜④とコメント、2枚目は⑤〜⑦。
+ * 評価レポートの印刷（DD-024）。A4は今回と履歴で改ページ、A3横は両面を左右に並べて標準1枚。
  * 紙には画面の骨格（メニュー・ヘッダー・印刷ボタン）を刷らず、図は紙用の形に差し替える。
  * PDF を作れるのは Chromium だけなので、page.pdf で紙の枚数を数える。
  */
@@ -66,17 +66,21 @@ async function expectPrintLayout(page: Page, savePdf: (paper: string, pdf: Buffe
   await page.emulateMedia({ media: "screen" });
   await page.getByLabel("用紙", { exact: true }).selectOption("A3");
   await expect(page.locator("html")).toHaveAttribute("data-report-paper", "A3");
+  await page.evaluate(() => { delete document.documentElement.dataset.printInvoked; });
+  await page.getByRole("button", { name: "印刷する", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-print-invoked", "true");
   await page.emulateMedia({ media: "print" });
+  await expect(page.locator(".report-page-2")).toHaveCSS("break-before", "auto");
   const a3 = await printPdf(page);
-  expect(pageCount(a3), "標準の内容は A3 縦2枚").toBe(2);
+  expect(pageCount(a3), "標準の内容は A3 横1枚").toBe(1);
   await savePdf("A3", a3);
 }
 
 function printPdf(page: Page) {
-  return page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true });
+  return page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true, displayHeaderFooter: true });
 }
 
-test("上長が刷る評価レポートは A4/A3 の標準2枚で、図の準備を待つ", async ({ page, context, baseURL }, testInfo) => {
+test("上長が刷る評価レポートは A4の区切りとA3横1枚で、図の準備を待つ", async ({ page, context, baseURL }, testInfo) => {
   await signIn(page, { email: "manager@kyufu.hyoka-demo.jp", password: SEED_PASSWORD });
   // 上長は さくら にも所属し、既定は さくら になる。kyufu のメンバーを読むので会社を選んでおく
   await context.addCookies([{ name: "hr_company", value: "cmp_kyufu", url: baseURL! }]);
@@ -85,7 +89,7 @@ test("上長が刷る評価レポートは A4/A3 の標準2枚で、図の準備
   await expectPrintLayout(page, async (paper, pdf) => { await testInfo.attach(`report-${paper}.pdf`, { body: pdf, contentType: "application/pdf" }); });
 });
 
-test("本人が刷る評価レポートも A4/A3 の標準2枚に収まる", async ({ page }, testInfo) => {
+test("本人が刷る評価レポートも A4の区切りとA3横1枚に収まる", async ({ page }, testInfo) => {
   await signIn(page, { email: "e1@kyufu.hyoka-demo.jp", password: SEED_PASSWORD });
   await page.goto("/reports/usr_kyufu_e1");
   await expect(page.locator(".report")).toHaveAttribute("data-view", "self");
@@ -100,8 +104,13 @@ test("長い上長コメントは切らず、必要な紙へ続けて印刷す�
     fixture.db.prepare("UPDATE evaluations SET status = 'finalized', evaluator_comment = ?, finalized_at = ? WHERE id = ?").run(comment, Date.now(), fixture.evaluationId);
     await signIn(page, fixture.manager.account);
     await page.goto(`/reports/${fixture.employee.id}`);
-    await page.evaluate(() => { window.print = () => {}; });
+    await page.evaluate(() => { window.print = () => { document.documentElement.dataset.printInvoked = "true"; }; });
+    await page.getByLabel("用紙", { exact: true }).selectOption("A3");
     await page.getByRole("button", { name: "印刷する", exact: true }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "内容がA3の1枚を超えています" })).toBeVisible();
+    await expect(page.locator("html")).not.toHaveAttribute("data-print-invoked", "true");
+    await page.getByRole("button", { name: "A4で全文を印刷する", exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-print-invoked", "true");
     await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeEnabled();
     await expect(page.locator(".report-comment")).toContainText("末尾の確認文です。");
     await page.emulateMedia({ media: "print" });
