@@ -417,6 +417,61 @@
         "conditionRef": "src/lib/domain/evaluation-authority.ts#canActOnEmployeeEvaluation"
       }
     },
+    "evaluationReportSubject": {
+      "states": {
+        "self": {
+          "expectedByRole": {
+            "SUPER_ADMIN": "200",
+            "COMPANY_ADMIN": "200",
+            "MANAGER": "200",
+            "EMPLOYEE": "200"
+          }
+        },
+        "directReport": {
+          "expectedByRole": {
+            "SUPER_ADMIN": "200",
+            "COMPANY_ADMIN": "200",
+            "MANAGER": "200",
+            "EMPLOYEE": "notFound"
+          }
+        },
+        "otherEmployee": {
+          "expectedByRole": {
+            "SUPER_ADMIN": "200",
+            "COMPANY_ADMIN": "200",
+            "MANAGER": "notFound",
+            "EMPLOYEE": "notFound"
+          }
+        },
+        "missingOrWrongCompany": {
+          "expectedByRole": {
+            "SUPER_ADMIN": "notFound",
+            "COMPANY_ADMIN": "notFound",
+            "MANAGER": "notFound",
+            "EMPLOYEE": "notFound"
+          }
+        },
+        "anonymous": {
+          "expectedByRole": {
+            "SUPER_ADMIN": "redirect",
+            "COMPANY_ADMIN": "redirect",
+            "MANAGER": "redirect",
+            "EMPLOYEE": "redirect"
+          }
+        }
+      },
+      "access": {
+        "minRole": "EMPLOYEE",
+        "byRole": {
+          "SUPER_ADMIN": "full",
+          "COMPANY_ADMIN": "full",
+          "MANAGER": "conditional",
+          "EMPLOYEE": "conditional"
+        },
+        "condition": "本人は自分のレポートを点数の数値なしで読む。マネージャーはそれに加えて直属の部下のレポートを点数まで読む",
+        "conditionRef": "src/lib/domain/evaluation-authority.ts#evaluationViewOf"
+      }
+    },
     "companyAdminStatic": {
       "states": {
         "signedIn": {
@@ -1030,7 +1085,7 @@
             "actions": [
               "actions/notes.ts#createNote"
             ],
-            "description": "メンバーについての面談などのメモを残す。"
+            "description": "メンバーについての面談などのメモを残す。公開範囲は、自分が読める段階から選ぶ。"
           }
         ]
       }
@@ -1052,9 +1107,21 @@
             "actions": [
               "actions/evaluations.ts#updateEvaluation"
             ],
-            "description": "評価の点とコメントを保存し、確定または差し戻しをする。"
+            "description": "評価の点とコメントを保存し、確定または差し戻しをする。昇給と昇格の判断（判定どおりか変えるかと、その理由）もここで記録する。"
           }
         ]
+      }
+    },
+    {
+      "path": "/reports/[id]",
+      "label": "評価レポート",
+      "accessClass": "evaluationReportSubject",
+      "widthPolicy": "all",
+      "purpose": "1人の評価の結果を、図とグラフ入りのA4縦2枚のレポートで読み、印刷する",
+      "subject": "本人は自分、マネージャーは直属の部下、管理者は自社の社員",
+      "permissions": {
+        "summary": "1人の評価レポートを読み、印刷する。本人向けは点数の数値を出さない。",
+        "operations": []
       }
     },
     {
@@ -1098,7 +1165,7 @@
             "actions": [
               "actions/masters.ts#saveMaster"
             ],
-            "description": "等級名・等級要件・昇格の条件・行動指針・KGI・昇給など、制度の設定を保存する。"
+            "description": "等級名・等級要件・昇格の条件・行動指針・昇給など、制度の設定を保存する。"
           },
           {
             "id": "masters.deleteItem",
@@ -1466,28 +1533,6 @@
               "actions/memberships.ts#removeMembership"
             ],
             "description": "他の会社にも所属している社員を、この会社の所属から外す。部下が残っているときは外せない。"
-          }
-        ]
-      }
-    },
-    {
-      "path": "/admin/kgi",
-      "label": "事業所KGIの達成率",
-      "accessClass": "companyAdminStatic",
-      "widthPolicy": "all",
-      "purpose": "事業所KGI達成率と係数を設定する",
-      "subject": "操作対象会社",
-      "permissions": {
-        "summary": "事業所KGIの達成率と係数を設定する。",
-        "operations": [
-          {
-            "id": "kgi.saveResult",
-            "label": "KGIの達成率を保存する",
-            "minRole": "COMPANY_ADMIN",
-            "actions": [
-              "actions/kgi-results.ts#saveKgiResult"
-            ],
-            "description": "評価期間ごとの事業所KGIの達成率を保存する。"
           }
         ]
       }

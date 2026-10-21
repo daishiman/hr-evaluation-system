@@ -859,16 +859,12 @@ export const evaluations = sqliteTable(
     behaviorTotal: real("behavior_total"),
 
     /* ── 賞与の集計（元シート「配点」の集計欄）──
-       個人Pt ＝ KPI評価点合計 × 事業所KGI達成係数 ／ 賞与額 ＝ 個人Pt × 1点あたり金額。
+       個人Pt ＝ KPI評価点の合計（四捨五入） ／ 賞与額 ＝ 個人Pt × 1点あたり金額（src/lib/domain/bonus.ts）。
        配点が未確定のため、画面には必ず「仮」バッジを付けて出す。
-       確定時の係数と方式もここに残し、あとで係数表や方式を変えても過去の評価が動かないようにする。 */
-    /** 判定に使った事業所KGIの達成率（%） */
-    officeAchievementRate: real("office_achievement_rate"),
-    /** 引き当てた達成係数のスナップショット */
-    kgiCoefficient: real("kgi_coefficient"),
+       確定時の値と方式もここに残し、あとで1点あたりの金額や方式を変えても過去の評価が動かないようにする。 */
     personalPoints: real("personal_points"),
     bonusYen: integer("bonus_yen"),
-    /** 「なぜこの係数・この金額か」を日本語で保存 */
+    /** 「なぜこの金額か」を日本語で保存 */
     bonusRationale: text("bonus_rationale"),
     /** 判定当時のランク→点数の換算方式（ratio | absolute） */
     scoringModeSnapshot: text("scoring_mode_snapshot"),
@@ -895,6 +891,20 @@ export const evaluations = sqliteTable(
     requiredKpiPointsSnapshot: real("required_kpi_points_snapshot"),
     requiredBehaviorPointsSnapshot: real("required_behavior_points_snapshot"),
 
+    /* ── 昇給と昇格への上司の判断（0038・DD-024）──
+       点数の判定（raiseEligible・promotionEligible）は変えずに残し、上司の判断を別に持つ。
+       最終の可否は保存せず、表示のたびに finalDecision（src/lib/domain/final-decision.ts）で出す。
+       NULL は「記録なし」（この仕組みより前に確定した評価）。 */
+    /** follow（判定どおり） | override（変える） */
+    raiseDecision: text("raise_decision", { enum: ["follow", "override"] }),
+    /** 上司の理由。本人にも同じ文で見せる（DD-023。保存のときに基準の漏れを検査する） */
+    raiseDecisionReason: text("raise_decision_reason"),
+    promotionDecision: text("promotion_decision", { enum: ["follow", "override"] }),
+    promotionDecisionReason: text("promotion_decision_reason"),
+    /** 最後に記録した人と時刻（前の判断の履歴は残さない） */
+    decisionRecordedBy: text("decision_recorded_by").references(() => users.id),
+    decisionRecordedAt: integer("decision_recorded_at", { mode: "timestamp_ms" }),
+
     evaluatorId: text("evaluator_id").references(() => users.id),
     evaluatorComment: text("evaluator_comment"),
     /** draft | finalized */
@@ -907,6 +917,7 @@ export const evaluations = sqliteTable(
     uniqueIndex("uq_eval_cycle_employee").on(t.cycleId, t.employeeId),
     index("idx_eval_company").on(t.companyId),
     index("idx_eval_employee").on(t.employeeId),
+    index("idx_eval_company_employee_status").on(t.companyId, t.employeeId, t.status),
   ],
 );
 
@@ -1010,7 +1021,7 @@ export const evaluationGates = sqliteTable(
   (t) => [index("idx_eg_eval").on(t.evaluationId)],
 );
 
-/* ───────────────────────── 昇給・KGI設定 ───────────────────────── */
+/* ───────────────────────── 昇給の設定 ───────────────────────── */
 
 /** 昇給ルールの本体（会社に1件）。判定単位・反映時期・端数処理などをここで持つ。 */
 export const raisePolicies = sqliteTable(
@@ -1123,79 +1134,6 @@ export const raiseSettings = sqliteTable(
   (t) => [uniqueIndex("uq_raise_company_grade").on(t.companyId, t.gradeId)],
 );
 
-/** 事業所KGI達成係数（賞与の個人Pt算出に使う） */
-export const kgiCoefficients = sqliteTable(
-  "kgi_coefficients",
-  {
-    id: id(),
-    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
-    scope: text("scope").notNull().default("事業所"),
-    label: text("label").notNull(),
-    lowerBound: real("lower_bound"),
-    upperBound: real("upper_bound"),
-    coefficient: real("coefficient").notNull(),
-    displayOrder: integer("display_order").notNull().default(0),
-    isProvisional: integer("is_provisional", { mode: "boolean" }).notNull().default(true),
-    createdAt: createdAt(),
-    updatedAt: updatedAt(),
-  },
-  (t) => [index("idx_kgi_company").on(t.companyId)],
-);
-
-/**
- * 事業所KGIの達成率（事業所 × 評価サイクル）。
- *
- * 賞与の個人Pt（＝KPI評価点合計 × 達成係数）を出すために要る実績値。
- * アンケート73問の中にこれを聞く設問は無く、元スプレッドシートでも
- * 別表から手で持ってきていた値のため、管理画面から人が登録する。
- *
- * 登録されていない事業所・サイクルは「行が無い」状態にする。
- * 0% の行を作って埋めない——0%は「KGIをまったく達成できなかった」という
- * 別の意味を持ってしまい、賞与額が最小係数で算出されてしまうため。
- */
-export const officeKgiResults = sqliteTable(
-  "office_kgi_results",
-  {
-    id: id(),
-    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
-    officeId: text("office_id").notNull().references(() => offices.id, { onDelete: "cascade" }),
-    cycleId: text("cycle_id").notNull().references(() => evaluationCycles.id, { onDelete: "cascade" }),
-    /** 達成率（%）。111.5 のような小数も入る */
-    achievementRate: real("achievement_rate").notNull(),
-    /** 何を根拠にこの数字にしたか（別表の出典など） */
-    note: text("note"),
-    recordedById: text("recorded_by_id").references(() => users.id),
-    createdAt: createdAt(),
-    updatedAt: updatedAt(),
-  },
-  (t) => [
-    uniqueIndex("uq_okr_office_cycle").on(t.officeId, t.cycleId),
-    index("idx_okr_company").on(t.companyId),
-    index("idx_okr_cycle").on(t.cycleId),
-  ],
-);
-
-/**
- * 達成率の変更履歴。値を変えたら必ず1行残す（昇給額の raise_revisions と同じ作法）。
- * 賞与額の根拠になる数字なので、「誰がいつ何％から何％に変えたか」を後から説明できるようにする。
- */
-export const officeKgiRevisions = sqliteTable(
-  "office_kgi_revisions",
-  {
-    id: id(),
-    companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
-    officeId: text("office_id").notNull().references(() => offices.id, { onDelete: "cascade" }),
-    cycleId: text("cycle_id").notNull().references(() => evaluationCycles.id, { onDelete: "cascade" }),
-    /** 変更前の達成率。初回登録では null */
-    beforeRate: real("before_rate"),
-    afterRate: real("after_rate").notNull(),
-    reason: text("reason"),
-    revisedById: text("revised_by_id").references(() => users.id),
-    createdAt: createdAt(),
-  },
-  (t) => [index("idx_okrev_company").on(t.companyId), index("idx_okrev_cycle").on(t.cycleId)],
-);
-
 /* ───────────────────────── 人物メモ ───────────────────────── */
 
 /** 上長・マネージャー・管理者が残す人物ごとの評価メモ（本人には見せない） */
@@ -1241,7 +1179,7 @@ export const profileFieldPolicies = sqliteTable(
 
 /* ─────────────────────── 制度マスタ 変更監査ジャーナル ───────────────────────
  *
- * 等級・等級要件・昇格要件・行動指針・KPIマスタ・昇給ルール・KGI係数など、
+ * 等級・等級要件・昇格要件・行動指針・KPIマスタ・昇給ルールなど、
  * 「制度マスタ」に対する変更はすべてここに不変の行として積む。
  *
  * 各テーブル（grades / grade_requirements / kpi_rank_criteria …）が現在状態の正本である。
@@ -1259,7 +1197,7 @@ export const constitutionEvents = sqliteTable(
     companyId: text("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
     /** grade | gradeRequirement | promotionRequirement | behaviorBandSet | behaviorGuideline |
      *  behaviorLevel | promotionThreshold | raiseSetting | raisePolicy | office |
-     *  kpiRankCriteria | kgiCoefficient など。対象テーブルと1対1で対応する。 */
+     *  kpiRankCriteria など。対象テーブルと1対1で対応する。 */
     entityType: text("entity_type").notNull(),
     entityId: text("entity_id").notNull(),
     /** created | updated | activated | deactivated | revised | restored | reordered | deleted */

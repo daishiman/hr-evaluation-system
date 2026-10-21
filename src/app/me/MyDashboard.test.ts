@@ -31,6 +31,8 @@ describe("MyDashboard", () => {
             requirementTotal: 5,
             raiseEligible: true,
             promotionEligible: false,
+            raiseDecision: null,
+            promotionDecision: null,
           },
         ],
         gradeAssigned: true,
@@ -46,6 +48,35 @@ describe("MyDashboard", () => {
     expect(html).not.toContain("昇格に必要な点数：");
   });
 
+  it("結論のバッジは上司の判断を反映し、変えたときは「上司の判断」の語で示す（DD-024・qa-y10 (21)）", () => {
+    const html = renderToStaticMarkup(
+      createElement(MyDashboard, {
+        viewerName: "佐藤",
+        cycleName: "2026上期",
+        actionableForms: [],
+        latestSubmittedForm: null,
+        results: [
+          {
+            id: "evaluation-1",
+            cycleName: "2025下期",
+            gradeName: "等級2",
+            requirementRate: 80,
+            requirementAchieved: 4,
+            requirementTotal: 5,
+            raiseEligible: true,
+            promotionEligible: false,
+            raiseDecision: "override",
+            promotionDecision: "follow",
+          },
+        ],
+        gradeAssigned: true,
+      }),
+    );
+    expect(html).toContain("昇給：見送り（上司の判断）");
+    expect(html).toContain("昇格：見送り");
+    expect(html).not.toContain("昇格：見送り（上司の判断）");
+  });
+
   it("最新の評価は、広い画面で「どの評価か」と「達成率・結果への入口」を左右に並べる（S13・A12）", () => {
     const base = {
       id: "evaluation-1",
@@ -55,6 +86,8 @@ describe("MyDashboard", () => {
       requirementTotal: 5,
       raiseEligible: false,
       promotionEligible: false,
+      raiseDecision: null,
+      promotionDecision: null,
     };
     const render = (requirementRate: number | null) =>
       renderToStaticMarkup(
@@ -73,7 +106,7 @@ describe("MyDashboard", () => {
     expect(html).toContain("md:grid-cols-2");
     expect(html).not.toContain("md:grid-cols-[minmax(0,1fr)_auto]");
     // 読む順は「どの評価か（バッジまで）→ 達成率 → 達成した項目数 → 結果への入口」
-    const order = ["2025下期", "評価確定", "等級要件の達成率（%） 100中 80", "項目を達成", "結果と理由を見る"].map((s) =>
+    const order = ["2025下期", "昇格：見送り", "等級要件の達成率（%） 100中 80", "項目を達成", "結果と理由を見る"].map((s) =>
       html.indexOf(s),
     );
     expect(order.every((at) => at >= 0)).toBe(true);

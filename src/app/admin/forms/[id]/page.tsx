@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { canEditForm, requireRoute } from "@/lib/session";
 import { getDb, schema as s } from "@/lib/db";
 import { getForm, listFormQuestions, listKpiItems } from "@/lib/queries";
@@ -11,12 +11,14 @@ import { RespondentGuide } from "@/components/RespondentGuide";
 import { PREVIEW_MARK_NOTE, PREVIEW_NO_SAVE_NOTE } from "@/components/form-preview-notes";
 import { ActionButton } from "@/components/ActionButton";
 import { RecordForm } from "@/components/RecordForm";
-import { rebuildFormQuestions, updateForm } from "@/actions/forms";
+import { createForms, rebuildFormQuestions, updateForm } from "@/actions/forms";
+import { NEW_VERSION_LABEL, formTransitions, operationRefusal } from "@/lib/domain/form-transitions";
 import { Badge, Card, Disclosure, InlineDetail, LinkButton, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
 import { ComparisonGapNotice } from "@/components/ComparisonGapNotice";
 import { loadFormComparisonGap } from "@/lib/comparison-gap-loader";
 import { REBUILD_LABEL, noTemplateNamesOf, rebuildConfirm, rebuildWontFixNote } from "@/lib/domain/comparison-gap";
 import { FORM_STATUS_LABEL } from "@/lib/view";
+import { formatJpDate } from "@/lib/domain/form-deadline";
 
 export const dynamic = "force-dynamic";
 
@@ -44,10 +46,40 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
   ]);
 
   const db = await getDb();
-  const responses = await db
-    .select({ id: s.formResponses.id })
-    .from(s.formResponses)
-    .where(and(eq(s.formResponses.companyId, companyId), eq(s.formResponses.formId, form.id)));
+  const [responses, laterVersions] = await Promise.all([
+    db
+      .select({ id: s.formResponses.id })
+      .from(s.formResponses)
+      .where(and(eq(s.formResponses.companyId, companyId), eq(s.formResponses.formId, form.id))),
+    // 同じ評価期間・等級で、この版より後の版（版の番号は会社ごとに振る）
+    db
+      .select({ id: s.forms.id, version: s.forms.version, status: s.forms.status })
+      .from(s.forms)
+      .where(
+        and(
+          eq(s.forms.companyId, companyId),
+          eq(s.forms.cycleId, form.cycleId),
+          eq(s.forms.gradeId, form.gradeId),
+          gt(s.forms.version, form.version),
+        ),
+      )
+      .orderBy(desc(s.forms.version)),
+  ]);
+  /* 出すボタンと欄は、API と同じ規則で決める（form-transitions.ts）。
+     締め切り済みは「新しい版を作る」だけ。回答期間の欄も出さず、理由を1行で出す。 */
+  const deadline = { closesAt: form.closesAt, now: new Date(), cycleStatus: form.cycleStatus };
+  const allowed = formTransitions(form.status, deadline, responses.length > 0);
+  const periodRefusal = operationRefusal("editPeriod", form.status, deadline, responses.length > 0);
+  /* 後の版があれば、新しい版はそちらから作る（一覧と同じ。古い版からも作れると、同じ等級に下書きが重なる）。
+     後の版に下書きがあれば、それを先に指す（直すのはその下書き） */
+  const laterPointer = laterVersions.find((v) => v.status === "draft") ?? laterVersions[0] ?? null;
+  const canCreateVersion = allowed.newVersion && !laterPointer;
+  // 内容を変えられない版で案内する道。押せるボタンがこの画面に無いとき（評価期間の終了など）は、ボタンの名前を出さない
+  const newVersionHint = canCreateVersion
+    ? `内容を変えるときは、上の「${NEW_VERSION_LABEL}」で新しい版を作ってください。`
+    : laterPointer
+      ? `内容を変えるときは、上のリンクから第${laterPointer.version}版を開いてください。`
+      : "";
 
   const rows: BuilderQuestion[] = questions.map((q) => ({
     id: q.id,
@@ -79,7 +111,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
   }));
 
   // 公開後は回答0件でもすでに読まれている可能性があるため、同じ版の内容は変えない。
-  const editable = form.status === "draft" && responses.length === 0;
+  const editable = allowed.editContent;
   const rebuildNote = rebuildWontFixNote(comparisonGap);
   const previewQuestions = questions.map((q) => ({
     id: q.id,
@@ -154,7 +186,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
             <ComparisonGapNotice gaps={[comparisonGap]} />
           </div>
         )}
-        {editable && form.status === "draft" && (
+        {editable && (
           // ボタンの札も長いので、上の札と同じく、この枠の中だけ折り返しを許す。
           // ボタンは警告の有無にかかわらず出す。作り直しは等級要件・昇格要件・行動指針の変更を写す操作でもあるため。
           // 押しても警告が消えないときは、押す前にその理由を1行で伝える（読み上げでもボタンより先に届く）
@@ -167,6 +199,28 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
               label={REBUILD_LABEL}
               variant="secondary"
               confirm={rebuildConfirm(displayTitle, noTemplateNamesOf(comparisonGap))}
+            />
+          </div>
+        )}
+        {/* 後の版があれば、そちらを開く道を出す（いま配っているのはどれかを、この版を開いた人にも伝える） */}
+        {laterPointer && (
+          <p className="m-0 mt-3 text-sub">
+            この等級には後の版（第{laterPointer.version}版・{FORM_STATUS_LABEL[laterPointer.status] ?? laterPointer.status}）があります。{" "}
+            <Link href={`/admin/forms/${laterPointer.id}`} className="text-brand-deep">
+              第{laterPointer.version}版を開く
+            </Link>
+          </p>
+        )}
+        {canCreateVersion && (
+          // 締め切ったあとに回答を集め直す道。版は会社ごとに次の番号で作る（form-build.ts）
+          <div className="mt-3 grid justify-items-start gap-2 text-pretty [word-break:auto-phrase] [&_.btn]:whitespace-normal!">
+            <ActionButton
+              action={createForms}
+              resource="forms"
+              input={{ cycleId: form.cycleId, gradeIds: [form.gradeId] }}
+              label={NEW_VERSION_LABEL}
+              variant="secondary"
+              confirm={`${displayTitle}の新しい版を下書きで作ります。設問は、いまの等級要件・昇格要件・行動指針・評価セットから作ります。この版（第${form.version}版）と集まった回答はそのまま残ります。新しい版を公開すると、公開中の前の版は自動で締め切られます。`}
             />
           </div>
         )}
@@ -224,8 +278,10 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
           <ReasonNote>
             {responses.length > 0
               ? `このアンケートにはすでに${responses.length}件の回答があるため、タイトルと説明文は変更できません。回答した方が読んだ文面をあとから変えると、何に対する回答か分からなくなるためです。`
-              : "公開済みのアンケートは、タイトルと説明文を変更できません。回答が0件でも、すでに読まれている可能性があるためです。"}
-            内容を変えるときは、アンケート一覧から新しい版を作ってください。
+              : form.status === "closed"
+                ? "締め切ったアンケートは、タイトルと説明文を変更できません。当時の記録として残すためです。"
+                : "公開済みのアンケートは、タイトルと説明文を変更できません。回答が0件でも、すでに読まれている可能性があるためです。"}
+            {newVersionHint}
           </ReasonNote>
           <Card className="card-pad mt-2">
             <p className="m-0 text-sub font-bold">{displayTitle}</p>
@@ -235,20 +291,31 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
       )}
 
       <SectionHeading>回答期間</SectionHeading>
-      <p className="footnote mb-2">
-        締切日を過ぎると回答できなくなります（締切日は当日いっぱいまで回答できます）。回答があっても、この期間はあとから直せます。個別に期限を延ばしたいときは「回答一覧を見る」から設定してください。
-      </p>
-      <RecordForm
-        action={updateForm}
-        resource="forms"
-        fixed={{ formId: form.id }}
-        submitLabel="回答期間を保存する"
-        inline
-        fields={[
-          { name: "opensAt", label: "受付の開始日", type: "date", defaultValue: form.opensAt ?? "" },
-          { name: "closesAt", label: "締切日", type: "date", defaultValue: form.closesAt ?? "" },
-        ]}
-      />
+      {periodRefusal ? (
+        /* 締め切り済みは期間を直しても回答を受け付けない。欄を出して保存時に断ると徒労になるので、期間と理由だけ出す */
+        <p className="footnote mb-2">
+          {form.opensAt ? formatJpDate(form.opensAt) : "指定なし"} 〜 {form.closesAt ? formatJpDate(form.closesAt) : "指定なし"}。
+          {periodRefusal}
+        </p>
+      ) : (
+        <>
+          <p className="footnote mb-2">
+            締切日を過ぎると回答できなくなります（締切日は当日いっぱいまで回答できます）。回答があっても、この期間はあとから直せます。
+            {allowed.extend ? "個別に期限を延ばしたいときは「回答一覧を見る」から設定してください。" : ""}
+          </p>
+          <RecordForm
+            action={updateForm}
+            resource="forms"
+            fixed={{ formId: form.id }}
+            submitLabel="回答期間を保存する"
+            inline
+            fields={[
+              { name: "opensAt", label: "受付の開始日", type: "date", defaultValue: form.opensAt ?? "" },
+              { name: "closesAt", label: "締切日", type: "date", defaultValue: form.closesAt ?? "" },
+            ]}
+          />
+        </>
+      )}
 
       {/* 並べ替えの案内は、設問を変えられるとき（下書き）だけ出す。変えられない版でも出すと、
           つまみが無いのに「並べ替えられます」と読めてしまう（理由は FormBuilder が lockReason で出す） */}
@@ -265,8 +332,10 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
           editable
             ? undefined
             : responses.length > 0
-              ? `このアンケートにはすでに${responses.length}件の回答があるため、設問を変更できません。内容を変えるときは、アンケート一覧から新しい版を作ってください。`
-              : "公開済みのアンケートは、設問を変更できません。回答が0件でも、すでに読まれている可能性があるためです。内容を変えるときは、アンケート一覧から新しい版を作ってください。"
+              ? `このアンケートにはすでに${responses.length}件の回答があるため、設問を変更できません。${newVersionHint}`
+              : form.status === "closed"
+                ? `締め切ったアンケートは、設問を変更できません。当時の記録として残すためです。${newVersionHint}`
+                : `公開済みのアンケートは、設問を変更できません。回答が0件でも、すでに読まれている可能性があるためです。${newVersionHint}`
         }
       />
     </>

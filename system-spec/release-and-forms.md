@@ -18,6 +18,7 @@
    - `check:bundle-size`
    - 本番 D1 のmigration自動適用後、`migrations list` が「未適用0件」
 4. D1 list の判定は `scripts/verify-d1-migrations-list.mjs` が行う。未知出力・認証失敗・矛盾出力はclearとみなさず、適用・配布を止める。
+5. Deploy workflow は `main` への push（PR のマージ）で動き、そのまま本番に配る。計画や task の「公開」「Deploy」は `main` へのマージとして書く（[DD-020](../docs/product/design-decisions.md)）。
 
 ## 2. マイグレーションの不変条件
 
@@ -27,6 +28,7 @@
 4. 順序は「検査・ビルド → バックアップ → migration → parity確認 → deploy」で固定する。
 5. 手動Migrate workflowは復旧・先行適用用とし、常に`main`をcheckoutして`APPLY`確認を要求する。
 6. Deployと手動Migrateは同じconcurrency groupを使い、本番D1変更と配布を同時実行しない。
+7. 列やテーブルを消すときは、`src/db/schema.ts` から外す公開と、drop の migration の公開を分ける。先に schema から外したコードを出し、drop の migration は後のマージで出す。migration はコードより先に当たる（4）ので、同時に出すと、Worker が差し替わるまで古いコードが消えた列を名前で読む（[DD-020](../docs/product/design-decisions.md)）。
 
 ## 3. 複数等級フォーム作成
 
@@ -63,3 +65,22 @@
 1. 下書きの設問の保存では、集計との紐づけ（等級要件・昇格要件・行動指針・KPI 項目と設問の key）と昇格の必須要件の印を、保存済みの同じ設問（同じ版・同じ id）の値と同じものだけ受ける。新しい設問とこの版に無い id の設問には紐づけを許さない。違えば保存全体を断り、読み込み直しを促す（`checkQuestionLinks`、[DD-015](../docs/product/design-decisions.md)）。
 2. 紐づけのある設問は、まとまりと答え方も保存済みの値から変えさせない。組み立て画面でも2つの選択欄を押せなくし、理由を添える。
 3. 公開の前に、下書きの設問がいまの KPI の計算式の変数をそろえているかを見て、そろっていなければ公開を 409 で止める（`staleAskingItems`、[DD-016](../docs/product/design-decisions.md)）。
+
+## 8. アンケートの状態の変更
+
+1. どの状態でどの操作を許すかは `src/lib/domain/form-transitions.ts` の `formTransitions` の1つで決める。画面（一覧と1本の画面のボタン・回答一覧の催促と延長）と API（`updateForm`・本人ごとの延長 `form-extensions`）が同じ答えを使う（[DD-024](../docs/product/design-decisions.md)）。
+2. 状態は 下書き → 公開中 → 締め切り済み の一方向だけに進む。戻す向きと飛ばす向きは無い。締め切ったあとに集め直すときは新しい版を作る。締切日を過ぎても受け付けたい人がいるときは、締め切らずに本人ごとに期限を延ばす。
+3. 許す操作は次のとおり。
+
+   | 状態 | 許す操作 |
+   |---|---|
+   | 下書き（回答なし） | 公開・回答期間・内容 |
+   | 下書き（回答あり） | 公開・回答期間・新しい版 |
+   | 公開中（締切前） | 締切・延長・催促・配布URL・回答期間・新しい版 |
+   | 公開中（締切後） | 催促を除く、締切前と同じ操作 |
+   | 締め切り済み | 新しい版 |
+
+4. 評価期間が締め切られていれば、延長・催促・新しい版はどの状態でも許さない。知らない状態の値はすべての操作を許さない（fail-closed）。
+5. API が断る文は `statusChangeRefusal` / `operationRefusal` が返し、画面にある操作だけを案内する。画面は、許さない操作のボタンを出さず、代わりに同じ1行を出す。
+6. 状態を変える前の回答の有無と版の照合は、`forms.company_id` / `form_responses.company_id` を条件に入れて読む。他社の同じ id の行を数えない。
+7. 検査: `src/lib/domain/form-transitions.test.ts`（全状態×全操作）・`src/actions/forms-transitions.integration.test.ts`（API が画面と同じ答えで断る）・`e2e/forms-audit.spec.ts`。

@@ -293,6 +293,15 @@ describe("画面の器の作法", () => {
     expect(css).toContain(".row-main { flex: 1 1 16rem; min-width: 0; }");
   });
 
+  it("上端にそろえる行（alignTop）は、レイヤーの外の上下中央に負けない", () => {
+    /* items-start は @layer utilities に入り、レイヤーの外の .card-row { align-items: center } に負ける。
+       組み合わせの規則が無いと、alignTop を付けても上下中央のままになる（実際にそうなっていた）。 */
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    expect(css).toContain(".card-row.items-start { align-items: flex-start; }");
+    const ui = readFileSync(join(SRC, "components", "ui.tsx"), "utf8");
+    expect(ui).toContain('clsx("card-row", alignTop && "items-start", className)');
+  });
+
   it("文字の大きさは globals.css の @theme だけで決める（px を直接書かない）", () => {
     // 「全体的に文字が小さい」と言われたとき、px が画面に散っていると
     // 200箇所以上を1つずつ直すことになり、必ず取りこぼす（実際にそうなっていた）。

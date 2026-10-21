@@ -47,7 +47,7 @@ const STATIC_ROUTES = [
   "/", "/login", "/account", "/account/password", "/criteria", "/forms",
   "/me", "/me/forms", "/me/results",
   "/manager", "/manager/cycles", "/manager/members",
-  "/admin", "/admin/behavior", "/admin/cycles", "/admin/forms", "/admin/kgi",
+  "/admin", "/admin/behavior", "/admin/cycles", "/admin/forms",
   "/admin/improvements",
   "/admin/masters", "/admin/masters/promotion", "/admin/masters/requirements",
   "/admin/members", "/admin/members/policy", "/admin/raises", "/admin/scheme", "/admin/setup",
@@ -68,6 +68,7 @@ const DYNAMIC_PATTERNS = [
   /^\/me\/forms\/[^/]+$/,
   /^\/me\/responses\/[^/]+$/,
   /^\/me\/results\/[^/]+$/,
+  /^\/reports\/[^/]+$/,
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

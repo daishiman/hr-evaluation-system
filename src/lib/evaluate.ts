@@ -18,7 +18,8 @@ import {
   type ScoredItem,
   type ScoringMode,
 } from "@/lib/domain/scoring";
-import { computeBonus, type KgiCoefficientRow } from "@/lib/domain/kgi";
+import { computeBonus } from "@/lib/domain/bonus";
+import { resolveSchemeForCycle } from "@/lib/domain/scheme-resolution";
 import { FINALIZED_SKIP_MESSAGE } from "@/lib/domain/build-summary";
 import { pointGroupLabel } from "@/lib/domain/grade-label";
 import { newId } from "@/lib/id";
@@ -67,13 +68,12 @@ export async function buildEvaluationsForCycle(
   )[0];
   if (!cycle) return [];
 
-  // 使う評価セット（8項目と配点）。サイクルに紐づくものを優先し、なければ有効なもの。
+  // 使う評価セット（8項目と配点）。選び方はアンケートの作成・ズレの比較・レポートと同じ1か所（DD-024）。
   const schemes = await db.select().from(s.evaluationSchemes).where(eq(s.evaluationSchemes.companyId, companyId));
-  const scheme =
-    schemes.find((x) => x.id === cycle.schemeId) ?? schemes.find((x) => x.status === "active") ?? schemes[0];
+  const scheme = resolveSchemeForCycle(cycle, schemes);
   if (!scheme) return [];
 
-  const [allSchemeItems, ratios, kpiItems, criteria, grades, thresholds, responses, kgiRows, raisePolicy, officeKgiRows] =
+  const [allSchemeItems, ratios, kpiItems, criteria, grades, thresholds, responses, raisePolicy] =
     await Promise.all([
     /* 評価セットは等級区分ごとに項目も配点も違う。人ごとに読みに行くとN+1になるため、
        全等級区分ぶんをここでまとめて読み、ループの中でその人の等級区分で絞る。 */
@@ -94,14 +94,8 @@ export async function buildEvaluationsForCycle(
           eq(s.formResponses.status, "submitted"),
         ),
       ),
-    // 事業所KGI達成係数（個人Pt・賞与額の算出に使う）
-    db.select().from(s.kgiCoefficients).where(eq(s.kgiCoefficients.companyId, companyId)),
+    // 賞与（仮）の1点あたりの金額
     db.select().from(s.raisePolicies).where(eq(s.raisePolicies.companyId, companyId)).limit(1),
-    // このサイクルの事業所KGI達成率（/admin/kgi で登録する実績値）
-    db
-      .select()
-      .from(s.officeKgiResults)
-      .where(and(eq(s.officeKgiResults.companyId, companyId), eq(s.officeKgiResults.cycleId, cycleId))),
   ]);
 
   const authoritativeResponses = resolveAuthoritativeResponses(
@@ -131,13 +125,6 @@ export async function buildEvaluationsForCycle(
      新しく作る評価は必ず ratio で計算し、使った方式を scoring_mode_snapshot に写す。 */
   const scoringMode: ScoringMode = "ratio";
 
-  const kgiCoefficients: KgiCoefficientRow[] = kgiRows.map((k) => ({
-    label: k.label,
-    lowerBound: k.lowerBound,
-    upperBound: k.upperBound,
-    coefficient: k.coefficient,
-    displayOrder: k.displayOrder,
-  }));
   const yenPerPoint = raisePolicy[0]?.bonusYenPerPoint ?? 0;
 
   const out: BuildResult[] = [];
@@ -377,19 +364,9 @@ export async function buildEvaluationsForCycle(
         });
       });
 
-      /* ── 賞与（仮）: 個人Pt ＝ KPI評価点合計 × 事業所KGI達成係数 ──
-         事業所KGIの達成率は、いまのアンケート73問の中に聞く設問が無い。
-         元スプレッドシートでも別表から手で持ってきていた値のため、
-         事業所ごと・サイクルごとに管理画面（/admin/kgi）から登録する。
-
-         どの事業所の達成率を当てるかは、回答時点の所属を優先する（期中の異動があるため）。
-         アンケートに設問キー office_kgi_rate を足した会社は、そちらの回答を優先する
-         （事業所ではなく個人単位で達成率を持ちたい会社への逃げ道として残す）。
-         どちらも無ければ達成率は null のままにして、賞与額を0円と書かない
-         （0円と表示すると「賞与なしと判定された」に化けるため）。 */
+      /* 評価したときの事業所。回答時点の所属を優先する（期中の異動があるため）。
+         レポートの見出し（評価したときの事業所）に使う。 */
       const officeId = res.officeId ?? user.officeId ?? null;
-      const officeKgiRate =
-        vars["office_kgi_rate"] ?? (officeId ? (officeKgiRows.find((k) => k.officeId === officeId)?.achievementRate ?? null) : null);
 
       /* ── 総合判定 ── */
       const th = thresholds.find((t) => t.fromGradeId === grade.id) ?? null;
@@ -402,15 +379,11 @@ export async function buildEvaluationsForCycle(
         gates: gateRows.map((g) => ({ text: g.text, achieved: g.achieved })),
       });
 
-      const bonus = {
-        rate: officeKgiRate,
-        result: computeBonus({
-          kpiTotalScore: overall.totalScore,
-          officeAchievementRate: officeKgiRate,
-          coefficients: kgiCoefficients,
-          yenPerPoint,
-        }),
-      };
+      /* ── 賞与（仮）: 個人Pt ＝ KPI評価点合計（整数に四捨五入）、賞与額 ＝ 個人Pt × 1点あたりの金額 ──
+         1点あたりの金額が無ければ賞与額は null のままにして、0円と書かない
+         （0円と表示すると「賞与なしと判定された」に化けるため）。
+         確定済みの評価は上で据え置いているので、保存済みの個人Pt・賞与額・根拠の文は変わらない。 */
+      const bonus = computeBonus({ kpiTotalScore: overall.totalScore, yenPerPoint });
 
       /* ── 保存（同じ評価期間・同じ人の未確定分は作り直す） ── */
       const evaluationRow: typeof s.evaluations.$inferInsert = {
@@ -421,7 +394,7 @@ export async function buildEvaluationsForCycle(
         gradeId: grade.id,
         responseId: res.id,
         schemeId: scheme.id,
-        // どの事業所の評価かを写し取る。事業所KGIの達成率を当てる先を後から辿れるようにするため。
+        // どの事業所の評価かを写し取る。レポートの見出し（評価したときの事業所）に使う。
         officeId,
         totalScore: overall.totalScore,
         maxScore: overall.maxScore,
@@ -429,12 +402,10 @@ export async function buildEvaluationsForCycle(
         requirementAchieved: reqAchieved,
         requirementTotal: reqTotal,
         behaviorTotal: hasBehavior ? behaviorTotal : null,
-        // 賞与（仮）。事業所KGIの達成率が未入力なら null のまま残し、0円とは書かない。
-        officeAchievementRate: bonus.rate,
-        kgiCoefficient: bonus.result.coefficient,
-        personalPoints: bonus.result.personalPoints,
-        bonusYen: bonus.result.bonusYen,
-        bonusRationale: bonus.result.rationale,
+        // 賞与（仮）。1点あたりの金額が未設定なら賞与額は null のまま残し、0円とは書かない。
+        personalPoints: bonus.personalPoints,
+        bonusYen: bonus.bonusYen,
+        bonusRationale: bonus.rationale,
         // 実際に使った方式を写す（会社の設定ではなく、この評価を計算した方式）
         scoringModeSnapshot: scoringMode,
         raiseEligible: overall.raiseEligible,

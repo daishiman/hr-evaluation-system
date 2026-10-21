@@ -462,54 +462,33 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
     }
   });
 
-  describe("賞与（事業所KGI達成係数）", () => {
-    it("達成率100%なら係数1.0。個人Ptと賞与額が保存される", async () => {
-      await seedCompany(current, { officeKgiRate: 100, yenPerPoint: 3200 });
+  describe("賞与（仮）: 個人Pt ＝ KPI評価点合計、賞与額 ＝ 個人Pt × 1点あたりの金額", () => {
+    it("全項目Aの100点なら 個人Pt 100・賞与額 320,000円。根拠の文も保存される", async () => {
+      await seedCompany(current, { yenPerPoint: 3200 });
       seedMemberships(current);
       await seedResponse(current, standardQuestions());
       await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
       const { ev } = await readEvaluation();
-      expect(ev.officeAchievementRate).toBe(100);
-      expect(ev.kgiCoefficient).toBe(1);
       expect(ev.personalPoints).toBe(100);
       expect(ev.bonusYen).toBe(320000);
+      expect(ev.bonusRationale).toBe(
+        "個人Pt ＝ KPI評価点合計 100点 ＝ 100Pt。賞与額 ＝ 100Pt × 1点あたり3,200円 ＝ 320,000円。",
+      );
     });
 
-    it("達成率が未登録なら、0円ではなく空のまま残る", async () => {
-      await seedCompany(current, { officeKgiRate: null });
+    it("KPI評価点合計の端数は、個人Ptで整数に四捨五入する（89.4点 → 89Pt）", async () => {
+      // 稼働率 95%（B=0.8 × 53点 → 42.4点）／残業率 4%（A=27点）／等級要件100%（A=20点）
+      await seedCompany(current, { weights: [20, 53, 27], yenPerPoint: 1000 });
       seedMemberships(current);
-      await seedResponse(current, standardQuestions());
+      await seedResponse(current, standardQuestions({ q2_1: 95 }));
       await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
       const { ev } = await readEvaluation();
-      expect(ev.officeAchievementRate).toBeNull();
-      expect(ev.kgiCoefficient).toBeNull();
-      expect(ev.bonusYen).toBeNull();
-      expect(ev.bonusRationale).toContain("未入力");
+      expect(ev.totalScore).toBe(89.4);
+      expect(ev.personalPoints).toBe(89);
+      expect(ev.bonusYen).toBe(89000);
     });
 
-    it("係数の境界（99.9 / 100 / 100.1）で引き当てが切り替わる", async () => {
-      for (const [rate, coefficient] of [
-        [99.9, 0.6],
-        [100, 1],
-        [100.1, 1],
-      ] as [number, number][]) {
-        const t = createTestDatabase();
-        (globalThis as { __testDb?: unknown }).__testDb = t.db;
-        const prev = current;
-        current = t;
-        await seedCompany(current, { officeKgiRate: rate });
-        seedMemberships(current);
-        await seedResponse(current, standardQuestions());
-        await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
-        const { ev } = await readEvaluation();
-        expect(ev.kgiCoefficient, `達成率 ${rate}%`).toBe(coefficient);
-        t.close();
-        current = prev;
-        (globalThis as { __testDb?: unknown }).__testDb = current.db;
-      }
-    });
-
-    it("事業所が分からない回答には、どの達成率も当てない", async () => {
+    it("事業所が分からない回答でも、賞与は KPI評価点合計だけで出す（事業所に左右されない）", async () => {
       await seedCompany(current);
       seedMemberships(current);
       await current.db.update(s.users).set({ officeId: null }).where(eq(s.users.id, IDS.employee));
@@ -522,28 +501,50 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
       await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
       const { ev } = await readEvaluation();
       expect(ev.officeId).toBeNull();
-      expect(ev.officeAchievementRate).toBeNull();
+      expect(ev.personalPoints).toBe(100);
+      expect(ev.bonusYen).toBe(320000);
     });
 
-    it("アンケートに office_kgi_rate の設問があれば、そちらの回答を優先する", async () => {
-      await seedCompany(current, { officeKgiRate: 100 });
+    it("確定済みの評価は、1点あたりの金額を変えて作り直しても個人Pt・賞与額・根拠の文が変わらない", async () => {
+      await seedCompany(current, { yenPerPoint: 3200 });
       seedMemberships(current);
-      await seedResponse(current, [
-        ...standardQuestions(),
-        {
-          id: "fq_kgi",
-          section: "kpi",
-          questionType: "number",
-          title: "事業所KGI達成率",
-          displayOrder: 8,
-          kpiQuestionKey: "office_kgi_rate",
-          answer: 125,
-        },
-      ]);
+      await seedResponse(current, standardQuestions());
       await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
+      const before = (await readEvaluation()).ev;
+      await current.db.update(s.evaluations).set({ status: "finalized" }).where(eq(s.evaluations.id, before.id));
+      await current.db.update(s.raisePolicies).set({ bonusYenPerPoint: 5000 });
+
+      const out = await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
+      expect(out[0].ok).toBe(false);
+      const after = (await readEvaluation()).ev;
+      expect(after.personalPoints).toBe(before.personalPoints);
+      expect(after.bonusYen).toBe(320000);
+      expect(after.bonusRationale).toBe(before.bonusRationale);
+    });
+  });
+
+  describe("評価セットの選び方（resolveSchemeForCycle と同じ）", () => {
+    it("期間に評価セットが付いていなければ、使用中の評価セットで計算する", async () => {
+      await seedCompany(current);
+      seedMemberships(current);
+      await seedResponse(current, standardQuestions());
+      await current.db.update(s.evaluationCycles).set({ schemeId: null });
+
+      const out = await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
+      expect(out[0].ok).toBe(true);
       const { ev } = await readEvaluation();
-      expect(ev.officeAchievementRate).toBe(125);
-      expect(ev.kgiCoefficient).toBe(1.5);
+      expect(ev.schemeId).toBe(IDS.scheme);
+    });
+
+    it("期間に付いておらず使用中のものも無ければ、先頭の評価セットへ落とさず何もしない", async () => {
+      await seedCompany(current);
+      seedMemberships(current);
+      await seedResponse(current, standardQuestions());
+      await current.db.update(s.evaluationCycles).set({ schemeId: null });
+      await current.db.update(s.evaluationSchemes).set({ status: "draft" });
+
+      expect(await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator)).toEqual([]);
+      expect(await current.db.select().from(s.evaluations)).toHaveLength(0);
     });
   });
 
@@ -768,38 +769,19 @@ describe("設定に抜けがある・条件が変わる場合", () => {
 
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
     const { ev } = await readEvaluation();
-    expect(ev.kgiCoefficient).toBe(1);
     expect(ev.personalPoints).toBe(100);
     expect(ev.bonusYen).toBeNull();
+    expect(ev.bonusRationale).toContain("1点あたりの金額が設定されていない");
   });
 
-  it("回答に所属が入っていなければ、その人のいまの所属で達成率を引く", async () => {
+  it("回答に所属が入っていなければ、その人のいまの所属を評価の事業所として写す", async () => {
     await seedCompany(current);
     seedMemberships(current);
     await seedResponse(current, standardQuestions(), { officeId: null });
 
     await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
     const { ev } = await readEvaluation();
-    expect(ev.officeAchievementRate).toBe(100);
-    expect(ev.kgiCoefficient).toBe(1);
-  });
-
-  it("回答にも本人にも所属が無ければ、達成率は空のまま（0%にしない）", async () => {
-    await seedCompany(current);
-    seedMemberships(current);
-    await current.db.update(s.users).set({ officeId: null }).where(eq(s.users.id, IDS.employee));
-    // 事業所は所属の値が正本（users の同じ列は元の所属の写し）
-    await current.db
-      .update(s.companyMemberships)
-      .set({ officeId: null })
-      .where(eq(s.companyMemberships.userId, IDS.employee));
-    await seedResponse(current, standardQuestions(), { officeId: null });
-
-    await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator);
-    const { ev } = await readEvaluation();
-    expect(ev.officeAchievementRate).toBeNull();
-    expect(ev.kgiCoefficient).toBeNull();
-    expect(ev.bonusYen).toBeNull();
+    expect(ev.officeId).toBe(IDS.office);
   });
 
   it("分類が未設定の項目は「等級要件（固定枠）」として保存する（空欄にしない）", async () => {

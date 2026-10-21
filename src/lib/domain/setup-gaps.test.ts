@@ -74,6 +74,9 @@ describe("formSyncGaps の片側だけの違い", () => {
     asked,
     unaskable: [],
     nameOf,
+    // ここでは KPI項目の片側だけを見る。等級要件・行動指針は聞くはずの項目が無い
+    requirements: { expected: [], asked: [], nameOf: () => undefined },
+    behaviors: { expected: [], asked: [], nameOf: () => undefined, bandOf: () => undefined, band: null },
     newer: null,
     schemeGap: null,
     current: null,

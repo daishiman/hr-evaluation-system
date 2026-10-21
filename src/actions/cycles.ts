@@ -9,6 +9,7 @@ import { newId } from "@/lib/id";
 import { canTransitionCycleStatus } from "@/lib/domain/cycle-lifecycle";
 import { cycleOpenReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
+import { schemeIdForCycle } from "@/lib/cycle-scheme";
 
 /**
  * 評価期間（半期）の作成と、受付の開始・締め切り（会社の管理者以上）。
@@ -86,9 +87,10 @@ export async function updateCycleStatus(raw: unknown) {
     // 同じ会社で受付中にできる評価期間は1つだけ。回答先と管理画面の「現在」が分裂するのを防ぐ。
     if (input.status === "open") {
       const [schemeReadiness, publishedForms] = await Promise.all([
-        loadSchemeReadiness(companyId, cycle.schemeId),
+        // 評価セットは、アンケートの作成・点数の計算と同じ選び方で決める（DD-024。期間に付いた評価セット → 使用中）
+        schemeIdForCycle(companyId, cycle).then((schemeId) => loadSchemeReadiness(companyId, schemeId)),
         db.select({ id: s.forms.id }).from(s.forms)
-          .where(and(eq(s.forms.cycleId, cycle.id), eq(s.forms.status, "published"))),
+          .where(and(eq(s.forms.companyId, companyId), eq(s.forms.cycleId, cycle.id), eq(s.forms.status, "published"))),
       ]);
       const readiness = cycleOpenReadiness({
         schemeGaps: schemeReadiness.schemeGaps,
@@ -115,17 +117,18 @@ export async function updateCycleStatus(raw: unknown) {
     }
 
     // 締め切ったらアンケートも閉じる（回答画面に「締め切りました」と出る）
+    const thisCycle = and(eq(s.evaluationCycles.id, cycle.id), eq(s.evaluationCycles.companyId, companyId));
     if (input.status === "closed") {
       // 期間だけ終了・アンケートだけ公開中という中間状態を残さない。
       await db.batch([
-        db.update(s.evaluationCycles).set({ status: input.status }).where(eq(s.evaluationCycles.id, cycle.id)),
+        db.update(s.evaluationCycles).set({ status: input.status }).where(thisCycle),
         db
           .update(s.forms)
           .set({ status: "closed" })
-          .where(and(eq(s.forms.cycleId, cycle.id), eq(s.forms.status, "published"))),
+          .where(and(eq(s.forms.companyId, companyId), eq(s.forms.cycleId, cycle.id), eq(s.forms.status, "published"))),
       ]);
     } else {
-      await db.update(s.evaluationCycles).set({ status: input.status }).where(eq(s.evaluationCycles.id, cycle.id));
+      await db.update(s.evaluationCycles).set({ status: input.status }).where(thisCycle);
     }
 
     const message =

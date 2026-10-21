@@ -1,7 +1,13 @@
 "use client";
 
+import { cloneElement, type ReactElement } from "react";
+import { RADAR_HEIGHT, REPORT_CHART_HEIGHT, REPORT_RADAR_HEIGHT, TREND_HEIGHT } from "./chart-dimensions";
 import {
+  Area,
+  Bar,
+  BarChart,
   CartesianGrid,
+  ComposedChart,
   Legend,
   Line,
   LineChart,
@@ -115,7 +121,7 @@ export function EightAxisRadar({
   }
 
   return (
-    <div style={{ width: "100%", height: 340 }}>
+    <div style={{ width: "100%", height: RADAR_HEIGHT }}>
       <ResponsiveContainer>
         <RadarChart data={merged} outerRadius="72%">
           <PolarGrid stroke={line} />
@@ -167,12 +173,6 @@ export interface TrendPoint {
   cycle: string;
   [key: string]: string | number | null;
 }
-
-/* 推移1枚ぶんの高さ。読み込み中の場所取り（LazyCharts.tsx の Placeholder）と
-   対で保つ。片方だけ動かすと、グラフが出た瞬間に下の内容が飛び跳ねる。
-   ここから値を輸出して共有はできない（このファイルは描画ライブラリごと
-   遅れて読み込む決まりで、定数1つのために先に読み込ませては本末転倒になる）。 */
-const TREND_HEIGHT = 220;
 
 /* 横軸の見出し。評価期間の名前は「2025年度 下期（サンプル）」のように長くなりがちで、
    そのまま出すと隣とぶつかり、両端は画面の外にはみ出して読めなくなる。
@@ -290,5 +290,226 @@ export function TrendChart({
         </LineChart>
       </ResponsiveContainer>
     </div>
+  );
+}
+
+/* ───────────── 評価レポートの図（DD-024） ─────────────
+   画面では入れ物の幅に合わせ、印刷では決まった大きさ（width と height）で描く。
+   印刷の幅で入れ物の幅を測り直す仕組みに頼ると、紙の幅に合う前の大きさで刷られる。
+   凡例と値は図の外（ReportTemplate の文と表）に置き、図の中にはツールチップも凡例も持たない。
+   本人・前の期・同じ等級の平均は、色だけでなく線の形（実線・破線）と点の有無で見分けられるようにする。
+   描き直しのアニメーションは付けない（印刷の途中の形で刷られないように）。 */
+
+/** width を渡せば決まった大きさで、渡さなければ入れ物の幅に合わせて描く */
+function ReportChartBox({
+  width,
+  height,
+  children,
+}: {
+  width?: number;
+  height: number;
+  children: ReactElement<{ width?: number; height?: number }>;
+}) {
+  if (width) return <div style={{ width, height }}>{cloneElement(children, { width, height })}</div>;
+  return (
+    <div style={{ width: "100%", height }}>
+      <ResponsiveContainer>{children}</ResponsiveContainer>
+    </div>
+  );
+}
+
+export interface ReportRadarDatum {
+  item: string;
+  /** 0〜100。判定外は null */
+  value: number | null;
+  previous: number | null;
+  unrated: boolean;
+}
+
+/** ④ KPI の項目ごとの形。前の期を破線で重ねる（軸が3未満のときは呼ばない） */
+export function ReportRadarChart({
+  data,
+  showPrevious,
+  width,
+  height = REPORT_RADAR_HEIGHT,
+}: {
+  data: ReportRadarDatum[];
+  showPrevious: boolean;
+  width?: number;
+  height?: number;
+}) {
+  const { brand, brandSoft, line, inkMuted } = CHART_COLORS;
+  const unratedNames = new Set(data.filter((d) => d.unrated).map((d) => d.item));
+  return (
+    <ReportChartBox width={width} height={height}>
+      <RadarChart data={data} outerRadius="70%">
+        <PolarGrid stroke={line} />
+        <PolarAngleAxis
+          dataKey="item"
+          tick={{ fontSize: CHART_FS_TICK, fill: inkMuted }}
+          tickFormatter={(v: string) => `${shortenTick(v)}${unratedNames.has(v) ? "※" : ""}`}
+        />
+        {/* 目盛りの数字は描かず、輪だけを残す。値は隣の表に出ていて、数字を置くと真上の軸の名前と重なる。
+            本人向けは判定（A〜E）から作った形なので、0〜100 の数字はかえって点数に見える。
+            印刷用の低い図は半径が短いので、輪を 50・100 の2本にする */}
+        <PolarRadiusAxis
+          domain={[0, 100]}
+          angle={90}
+          tick={false}
+          axisLine={false}
+          tickCount={height < REPORT_RADAR_HEIGHT ? 3 : 6}
+        />
+        {showPrevious && (
+          <Radar
+            dataKey="previous"
+            stroke={brandSoft}
+            strokeWidth={2}
+            strokeDasharray="6 4"
+            fill="none"
+            connectNulls={false}
+            isAnimationActive={false}
+          />
+        )}
+        <Radar
+          dataKey="value"
+          stroke={brand}
+          strokeWidth={2}
+          fill={brand}
+          fillOpacity={0.25}
+          dot={{ r: 3, fill: brand }}
+          /* 判定外を線でつながない。つなぐと0点として面積に混ざってしまう */
+          connectNulls={false}
+          isAnimationActive={false}
+        />
+      </RadarChart>
+    </ReportChartBox>
+  );
+}
+
+export interface ReportTrendDatum {
+  cycle: string;
+  value: number | null;
+  /** 同じ等級の平均。出せない期（3人未満・本人向け）は null */
+  average: number | null;
+  /** 同じ等級の幅（最小〜最大）。出せない期は null */
+  range: [number, number] | null;
+}
+
+/* 期の名前は「2025年度」と「上期」の2段に分けて描く。
+   1行のままだと、印刷の幅（300px）に3期並べただけで隣の名前と字がつながる */
+function CycleTick({ x, y, payload }: { x?: number | string; y?: number | string; payload?: { value?: unknown } }) {
+  const [head, ...rest] = shortenTick(String(payload?.value ?? "")).split(" ");
+  return (
+    <text x={x} y={y} textAnchor="middle" fontSize={CHART_FS_TICK} fill={CHART_COLORS.inkMuted}>
+      <tspan x={x} dy="0.9em">{head}</tspan>
+      {rest.length > 0 && (
+        <tspan x={x} dy="1.2em">
+          {rest.join(" ")}
+        </tspan>
+      )}
+    </text>
+  );
+}
+
+/** ⑤ その等級にいた期の推移。本人を実線と点、同じ等級の平均を破線、幅を薄い帯で描く */
+export function ReportTrendChart({
+  data,
+  width,
+  height = REPORT_CHART_HEIGHT,
+}: {
+  data: ReportTrendDatum[];
+  width?: number;
+  height?: number;
+}) {
+  const { brand, brandSoft, line, inkMuted } = CHART_COLORS;
+  const { tickInterval } = chartDensity(data.length);
+  const hasPeer = data.some((d) => d.average !== null);
+  return (
+    <ReportChartBox width={width} height={height}>
+      <ComposedChart data={data} margin={{ top: 12, right: 20, bottom: 4, left: -8 }}>
+        <CartesianGrid stroke={line} vertical={false} />
+        <XAxis
+          dataKey="cycle"
+          tick={CycleTick}
+          height={40}
+          tickLine={false}
+          axisLine={{ stroke: line }}
+          interval={tickInterval}
+          /* 端の期の名前が図の外へはみ出して切れないよう、最初と最後の点を内側へ寄せる */
+          padding={{ left: 28, right: 28 }}
+        />
+        <YAxis domain={[0, 100]} tick={{ fontSize: CHART_FS_TICK, fill: inkMuted }} tickLine={false} axisLine={false} />
+        {hasPeer && (
+          <Area dataKey="range" stroke="none" fill={brandSoft} fillOpacity={0.2} isAnimationActive={false} />
+        )}
+        {hasPeer && (
+          <Line
+            dataKey="average"
+            stroke={inkMuted}
+            strokeWidth={2}
+            strokeDasharray="6 4"
+            dot={false}
+            connectNulls={false}
+            isAnimationActive={false}
+          />
+        )}
+        <Line
+          dataKey="value"
+          stroke={brand}
+          strokeWidth={2}
+          dot={{ r: 4, fill: brand }}
+          connectNulls={false}
+          isAnimationActive={false}
+        />
+      </ComposedChart>
+    </ReportChartBox>
+  );
+}
+
+export interface ReportGradeDatum {
+  grade: string;
+  value: number | null;
+  /** 同じ等級の平均。出せない等級（3人未満・本人向け）は null */
+  average: number | null;
+}
+
+/** ⑥ 等級ごとの値。本人を塗った棒、同じ等級の平均を破線の枠だけの棒で描く */
+export function ReportGradeBars({
+  data,
+  width,
+  height = REPORT_CHART_HEIGHT,
+}: {
+  data: ReportGradeDatum[];
+  width?: number;
+  height?: number;
+}) {
+  const { brand, line, inkMuted, surface } = CHART_COLORS;
+  const hasPeer = data.some((d) => d.average !== null);
+  return (
+    <ReportChartBox width={width} height={height}>
+      <BarChart data={data} margin={{ top: 12, right: 20, bottom: 4, left: -8 }} barGap={4}>
+        <CartesianGrid stroke={line} vertical={false} />
+        <XAxis
+          dataKey="grade"
+          tick={{ fontSize: CHART_FS_TICK, fill: inkMuted }}
+          tickLine={false}
+          axisLine={{ stroke: line }}
+          tickFormatter={shortenTick}
+        />
+        <YAxis domain={[0, 100]} tick={{ fontSize: CHART_FS_TICK, fill: inkMuted }} tickLine={false} axisLine={false} />
+        <Bar dataKey="value" fill={brand} maxBarSize={48} isAnimationActive={false} />
+        {hasPeer && (
+          <Bar
+            dataKey="average"
+            fill={surface}
+            stroke={inkMuted}
+            strokeWidth={2}
+            strokeDasharray="4 3"
+            maxBarSize={48}
+            isAnimationActive={false}
+          />
+        )}
+      </BarChart>
+    </ReportChartBox>
   );
 }

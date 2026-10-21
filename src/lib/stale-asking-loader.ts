@@ -8,8 +8,8 @@ import { staleAskingItems, type StaleAsking } from "@/lib/domain/form-sync";
  * アンケートの一覧（公開ボタンを出すか）と公開の処理（actions/forms.ts の 409）は、ここだけを使う。
  * 片方だけ読み方が変わると、一覧では押せるのに公開で断る（またはその逆）ことになるため。判定は form-sync.ts。
  *
- * 評価セットは公開の判定（loadSchemeReadiness）と同じく評価期間に結び付いたものを使う。
- * 結び付いていなければ評価セットの不足として公開が止まるので、ここでは何も返さない。
+ * 評価セットは、公開の判定（loadSchemeReadiness）と同じく schemeIdForCycle で決めたものを受け取る（DD-024）。
+ * 決まらなければ評価セットの不足として公開が止まるので、ここでは何も返さない。
  * 読み出しはすべて会社で絞る。
  */
 export async function loadStaleAsking(

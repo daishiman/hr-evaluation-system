@@ -88,12 +88,12 @@ describe("画面を探す", () => {
   // 打った語で始まる画面を先に出さないと、探しているものが下に埋まる。
   it("分類名でしか当たらない画面は後ろへ回す", () => {
     const withGroupOnly: ScreenHit[] = [
-      { href: "/admin/kgi", label: "事業所KGIの達成率", group: "評価を順番に進める" },
+      { href: "/admin/forms", label: "アンケートの作成", group: "評価を順番に進める" },
       ...screens,
     ];
     const hits = rankScreens(withGroupOnly, "評価").map((s) => s.label);
     expect(hits.slice(0, 2)).toEqual(["評価期間", "評価の基準"]);
-    expect(hits.at(-1)).toBe("事業所KGIの達成率");
+    expect(hits.at(-1)).toBe("アンケートの作成");
   });
 
   it("出す数に上限がある（窓に入らない数を並べない）", () => {

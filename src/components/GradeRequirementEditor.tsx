@@ -13,6 +13,8 @@ import { RefreshStatus } from "@/components/RefreshStatus";
 import { ReorderList } from "@/components/reorder/ReorderList";
 import { RevisableRequirementBody, revisableRequirementActions } from "@/components/RevisableRequirementRow";
 import { useDraftMap } from "@/components/use-draft-map";
+import { gradeRequirementAnchor } from "@/lib/domain/comparison-items";
+import { lineageRootId } from "@/lib/domain/versioned-master";
 import {
   CATEGORY_LABEL,
   GRADE_REQUIREMENT_MAX,
@@ -102,12 +104,16 @@ export function GradeRequirementEditor({
           busy={saving}
           onCommit={(ids) => sendOrder({ kind: "gradeRequirementOrder", ids })}
           renderItem={(r, i) => (
-            <RevisableRequirementBody
-              {...rowOf(r)}
-              index={i}
-              groupLabel={label}
-              onSave={(text) => send({ kind: "gradeRequirementRevise", id: r.id, text })}
-            />
+            // 比べる警告の行（comparison-items.ts の gradeRequirementsPath）は、URL の # でこの行へ飛んで来る。
+            // id は系列の起点で付ける（本文を直して新版になっても、警告のリンクの # が変わらない）
+            <div id={gradeRequirementAnchor(lineageRootId(rows, r.id))}>
+              <RevisableRequirementBody
+                {...rowOf(r)}
+                index={i}
+                groupLabel={label}
+                onSave={(text) => send({ kind: "gradeRequirementRevise", id: r.id, text })}
+              />
+            </div>
           )}
           renderActions={(r) =>
             revisableRequirementActions({

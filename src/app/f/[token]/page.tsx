@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { getViewer, homePathFor } from "@/lib/session";
 import { getDb, schema as s } from "@/lib/db";
 import { AppShell } from "@/components/AppShell";
@@ -91,12 +92,46 @@ export default async function PublicForm({ params }: { params: Promise<{ token: 
       judgement.state === "before_open" ||
       judgement.state === "not_published" ||
       (judgement.state === "cycle_not_open" && cycle?.status !== "closed");
+    /* 古い版のURL（新しい版を公開すると古い版は締め切られる）を踏んだ人には、いま配っている版への道を1文で出す。
+       締め切りの案内（上長へ連絡）は、回答できる版があるときには行き止まりになるので出さない。
+       同じ会社・評価期間・等級で、この版より後の公開中の版だけを指す（下書きはまだ配っていない） */
+    const newer =
+      form.status === "published"
+        ? null
+        : ((
+            await db
+              .select({ publicToken: s.forms.publicToken })
+              .from(s.forms)
+              .where(
+                and(
+                  eq(s.forms.companyId, form.companyId),
+                  eq(s.forms.cycleId, form.cycleId),
+                  eq(s.forms.gradeId, form.gradeId),
+                  eq(s.forms.status, "published"),
+                  gt(s.forms.version, form.version),
+                ),
+              )
+              .orderBy(desc(s.forms.version))
+              .limit(1)
+          )[0] ?? null);
     return (
       <AppShell viewer={viewer}>
         <PageTitle title={title} />
         <ReasonNote action={<LinkButton href="/me/forms">自分のアンケートを見る</LinkButton>}>
-          {judgement.message}
-          {upcoming && "受付が始まると「実績を報告する」の一覧にも並びます。"}
+          {newer ? (
+            <>
+              このアンケートは新しい版に切り替わったため、
+              <Link href={`/f/${newer.publicToken}`} className="text-brand-deep">
+                新しい版のアンケート
+              </Link>
+              から回答してください。
+            </>
+          ) : (
+            <>
+              {judgement.message}
+              {upcoming && "受付が始まると「実績を報告する」の一覧にも並びます。"}
+            </>
+          )}
         </ReasonNote>
       </AppShell>
     );

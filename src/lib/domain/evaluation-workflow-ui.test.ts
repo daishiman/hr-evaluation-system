@@ -8,7 +8,7 @@ describe("評価確認画面の読む順番", () => {
   const page = read("app/manager/evaluations/[id]/page.tsx");
 
   it("結論と例外を見てから、点数・項目の根拠へ進む", () => {
-    const conclusion = detail.indexOf("この期の判定");
+    const conclusion = detail.indexOf("この期の結論");
     const exception = detail.indexOf("{afterConclusion}");
     const evidence = detail.indexOf("評価の全体像");
     expect(conclusion).toBeGreaterThanOrEqual(0);

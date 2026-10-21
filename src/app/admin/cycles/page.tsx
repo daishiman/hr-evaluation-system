@@ -10,6 +10,7 @@ import { listUnfinalizedNamesInCycle } from "@/lib/stalled";
 import { cycleCloseConfirmText } from "@/lib/domain/stalled-evaluations";
 import { cycleOpenReadiness } from "@/lib/domain/setup-readiness";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
+import { schemeIdsForCycles } from "@/lib/cycle-scheme";
 import { jstDateKey } from "@/lib/domain/jst";
 import { createCycle, updateCycleStatus } from "@/actions/cycles";
 
@@ -44,9 +45,11 @@ export default async function AdminCycles() {
 
   // 入力例の年。サーバーは UTC で動くので、日本時間の元日0時〜9時も今年になるよう日本時間の今日から取る
   const thisYear = jstDateKey(new Date()).slice(0, 4);
+  // 受付を始められるかの判定は、アンケートの作成・点数の計算と同じ評価セットで行う（DD-024）
+  const schemeIds = await schemeIdsForCycles(companyId, cycles);
   const schemeReadinessByCycle = new Map(
     await Promise.all(
-      cycles.map(async (cycle) => [cycle.id, await loadSchemeReadiness(companyId, cycle.schemeId)] as const),
+      cycles.map(async (cycle) => [cycle.id, await loadSchemeReadiness(companyId, schemeIds.get(cycle.id) ?? null)] as const),
     ),
   );
 

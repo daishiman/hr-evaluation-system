@@ -1,6 +1,6 @@
 # 現在の残課題
 
-最終更新: 2026-10-15
+最終更新: 2026-10-21
 
 この文書は、未解決事項だけを扱う current SSOT です。完了した内容と判断の経緯は [統合台帳の履歴](./backlog-history-2026-08-13.md) と [回ごとの記録](./backlog-session-notes.md) に保存します。
 
@@ -19,12 +19,12 @@
 | POLICY-002 | decision | 昇格に必要な KPI 点は全区間 100 点の仮値 | 制度責任者が条件を承認 | 区間別の確定値を保存 | [製品仕様](./spec.md) / [旧台帳 A2](./backlog-history-2026-08-13.md) |
 | POLICY-003 | decision | A〜E の換算比率と半期の分布基準が仮値 | 初回半期データのレビュー | 分布を確認し制度値を承認または修正 | [旧台帳 A4・C4](./backlog-history-2026-08-13.md) |
 | POLICY-004 | decision | 等級別昇給額・賞与配分は仮値 | 制度責任者が金額を承認 | `/admin/raises` で確定し計算結果を再確認 | [旧台帳 A5・C2](./backlog-history-2026-08-13.md) |
-| POLICY-005 | decision | 事業所 KGI 達成係数は仮値 | 制度責任者が係数を承認 | `/admin/kgi` で確定値を保存 | [旧台帳 A6](./backlog-history-2026-08-13.md) |
 | POLICY-006 | decision | 「新規（素案）」由来の KPI 項目が仮置き | 制度責任者が各項目を査定 | 項目を承認・修正し仮表示を外す | [旧台帳 A7](./backlog-history-2026-08-13.md) |
 | POLICY-007 | decision | 等級別の半期目標上限 `targetCap` が仮値 | 運用責任者が上限を承認 | 等級マスタで確定値を保存 | [旧台帳 A9](./backlog-history-2026-08-13.md) |
 | POLICY-008 | decision | AM I・II に行動指針を出す現行方針が暫定 | 元資料の不一致を制度責任者が裁定 | `/admin/behavior` の会社別設定を確定 | [旧台帳 A10](./backlog-history-2026-08-13.md) |
 | POLICY-009 | observe | KPI ランクは A〜E の 5 段固定 | 5 段以外を必要とする会社が現れる | 配点・集計を含めた可変段数の仕様を決める | [回ごとの記録 G2](./backlog-session-notes.md) |
 | POLICY-010 | decision | 等級別に異なる KPI ランク基準を持つか未決定 | 制度責任者が必要性を判断 | データモデル・画面・計算影響を仕様化 | [旧台帳 UX83](./backlog-history-2026-08-13.md) |
+| POLICY-011 | decision | 事業所の達成率の仕組みを消す前に確定した評価は、個人Pt・賞与額・根拠の文を作り直さない（範囲の外）。そのため評価の詳細の「個人Pt と 賞与額（仮）」（評価者向けだけ）に、確定したときの根拠の文がそのまま出る。文は消した仕組みの名前と係数を書いたもので、個人Pt も係数を掛けた値なので、見出しの「KPI評価点の合計を整数に四捨五入」と合わない。本人の画面・レポート・CSV には賞与の値を出さない（2026-10-21 の P10 の最終レビューで起票） | 評価レポートの P08 のマージの前。0039 で係数の列が消えると、古い計算の評価を見分ける手がかりが根拠の文と確定の時刻だけになる | 担当は利用者。そのまま出す、古い計算で確定した評価には見出しの代わりに「以前の計算で確定した値です」と添える、根拠の文を隠す、のどれにするかを決める。件数は [デプロイ時の注意](../deploy-notes.md) §14 の読み取りで数える（OPS-017 が通った後） | [製品仕様 §29-1](./spec.md) / [評価の詳細](../../src/components/EvaluationDetail.tsx) |
 
 ## 機能
 
@@ -106,7 +106,9 @@
 | SECURITY-009 | ready | CSP は nonce 方式ではない | inline script をさらに制限 | Next.js・OpenNext の制約を確認して nonce 化 | [旧台帳 UX99](./backlog-history-2026-08-13.md) |
 | SECURITY-011 | observe | ローカルpreviewではBetter Authがclient IPを解決できず、共有bucketへfallbackする警告が出る | productionログでも同じ警告を1件以上観測 | Cloudflareの信頼済みIP header/proxy設定をBetter Auth公式契約で検証し、認証方式を変えず最小設定する | [リリース判定](./T4-release-readiness.md) / [認証設定](../../src/lib/auth.ts) |
 | SECURITY-012 | observe | 通信の中身は鍵の名前で伏せるため、氏名・評価コメント以外の無害な値まで `***` になり、原因の特定に届かないことがある | 指示文を読んでも原因が分からず、開発ツールでの再取得を繰り返す事例が出る | 伏せた件数を数え、過剰な鍵名を実データで見直す。緩める場合は評価データ本文を除外できる形だけを採る | [伏せ方の正本](../../src/lib/domain/improvement-instruction.ts) / [仕様 §26-7](./spec.md) |
-| SECURITY-013 | decision | マネージャーが自分の個人詳細URLを開く場合の、確認中評価・評価メモの公開範囲を明確にしていない | 本人情報の閲覧と評価者向け情報の閲覧を区別する仕様を確認 | `/me/results` の公開条件を個人詳細にも適用するか、本人向け非公開メモを除外するか決め、共通認可と回帰検査へ反映 | [個人詳細](../../src/app/manager/members/[id]/page.tsx) / [閲覧の契約](../../src/lib/domain/evaluation-authority.ts) / [今回のレビュー](../reviews/elegant-review-2026-09-29.md) |
+| SECURITY-013 | decision | マネージャー・会社の管理者・全体管理者が、自分についての評価者向けの情報（確定前の評価の点数・状態・コメント、自分についてのメモ。管理者は CSV の自分の行と、評価者向け画面での自分の確定前の評価も）を見られる。評価レポートは本人を先に見るので、自分のレポートは本人向けの形になり、ここには当たらない（[DD-024](./design-decisions.md) の4）。メモの見出しの注記「本人には表示されません」とも食い違う。役割ごとの中身は [DD-021](./design-decisions.md) の範囲の外（2026-09-29 のレビューで起票。2026-10-20 の計画レビューで CSV・レポート・評価の推移まで確認） | 本人情報の閲覧と評価者向け情報の閲覧を区別する仕様を確認 | 担当は利用者。`/me/results` の公開条件を個人詳細・評価の詳細・CSV にも適用するか、本人向け非公開メモを除外するか決め、共通認可と回帰検査へ反映（`src/lib/domain/evaluation-authority.test.ts` の期待値を反転する。評価の詳細を `canViewEvaluationOf` に寄せるかもここで決める。DD-024 の5） | [個人詳細](../../src/app/manager/members/[id]/page.tsx) / [閲覧の契約](../../src/lib/domain/evaluation-authority.ts) / [2026-09-29 のレビュー](../reviews/elegant-review-2026-09-29.md) |
+| SECURITY-014 | decision | Deploy workflow は、未適用の migration があると本番 D1 の全体を書き出し（`wrangler d1 export --remote`）、Actions の Artifact に14日置く。リポジトリは Public で、GitHub の文書は Artifact を落とすのに要るのをリポジトリの読み取り権限としている。2026-10-20 の時点で書き出しが2つ残っている（期限 2026-10-28・2026-10-30）。評価レポートの P05・P08 のマージで2つ増え、[DD-020](./design-decisions.md) の9は0039 を戻す元にしている（2026-10-20 の計画レビューで起票） | 今ある2つは期限の前。置き場所は評価レポートの P05 のマージの前 | 担当は利用者。Public のリポジトリで誰が Artifact を落とせるかを確かめ、書き出しを暗号化する・private の保管先に置く・要る表に絞る、のどれにするかを決める。今ある2つを消すかを決める（消すのは外部への変更で、利用者の確認を得てから） | [Deploy workflow](../../.github/workflows/deploy.yml) / [計画レビューの受領書](./spec-receipts/2026-10-20-evaluation-report-plan-review.md) §9 |
+| SECURITY-015 | decision | 評価レポートの評価者向けの形は、同じ等級の平均と幅（最小・最大）を、重ならない社員が3人以上のときに出す。ちょうど3人のとき、平均と最小・最大とレポートの本人の値がそろうと、残る2人の値を割り出せる（3つの値のうち本人・最小・最大で2つか3つが決まり、残りの1つは平均×3から引いて出る。⑤その等級の推移は同じ期なので1人1行）。同じ等級の点数は同じ会社の確定した評価から読み、マネージャーの見る範囲（直属の部下）では絞らないので、部下でない人の点数に届く。数え方は [DD-024](./design-decisions.md) の4。承認済みの要件 qa-x06 の (5)（同じ等級の平均と幅を出す）に触れるので、実装では変えていない（2026-10-21 の P03 の設計レビューで起票） | 評価レポートを main へ出す前 | 担当は利用者。幅を出す下限を上げる（例：5人以上）、幅を出さず平均だけにする、マネージャーには見る範囲の中だけで数える、のどれにするかを決める。決めたら `REPORT_PEER_MIN` と `src/lib/domain/report.test.ts` の期待値、DD-024 の4、system-spec の qa を合わせて直す | [レポートの数え方](../../src/lib/domain/report.ts) / [P03 の設計レビューの受領書](./spec-receipts/2026-10-20-evaluation-report-design-review.md) |
 | RELIABILITY-002 | observe | 安全側の代替表示が発生しても運用で気づきにくい | 発生率を観測可能にする | 構造化ログ・通知閾値を追加 | [回ごとの記録 Q4](./backlog-session-notes.md) |
 | RELIABILITY-004 | ready | 昇格制約の翻訳ロジックが画面に近い | 次の条件追加前 | ドメイン関数へ移し境界値テストを追加 | [回ごとの記録 U3](./backlog-session-notes.md) |
 | RELIABILITY-005 | observe | 通信の記録は `fetch` だけで、XMLHttpRequest・WebSocket・画像やスクリプトの読込失敗は残らない | それらの経路で起きた不具合が、記録票を見ても原因に届かない事例が出る | 失敗した通信の取りこぼしを実測し、必要なら `XMLHttpRequest` と `PerformanceObserver` の resource 監視を足す | [収集の実装](../../src/lib/client-diagnostics.ts) / [仕様 §26-7](./spec.md) |
@@ -127,8 +129,10 @@
 | OPS-012 | decision | キットに同梱の、特定顧客（平賀）名を冠した配色の資料と他顧客向けの配色案が、公開リポジトリの管理対象に入っている。リポジトリ側で消すと配置の検査が落ちる | 配布元が配色の既定を見直したとき（提案 U9） | 配布元の対応を待つか、キット更新時に除く手順を足すかを本人が決める | [導入レビュー](../reviews/aidd-kit-1.11-2026-09-29.md) / [規約](../../AGENTS.md) |
 | OPS-013 | decision | キットの更新を「丸ごと置き換えて sync」で続けるか、改善要望を backlog にも載せるかが決まっていない | 次のキット更新の前 | 追従の単位（毎版・節目の版）と、改善要望の正本（一覧だけか backlog にも写すか）を決める | [受け入れ確認](../../AGENTS.md) / [改善要望の手順](../../.claude/commands/improve-request.md) |
 | OPS-014 | ready | デモ会社の受付中の評価期間（2026年度 上期）は締切が 2026-09-30 の固定日付で、seed を入れ直しても回答の締切を過ぎた状態から始まる | 画面を手で試す人が、回答の画面で「締切を過ぎています」に当たる | 期間の開始・終了を、seed を流した日からの相対日付で作る。それまでは、アンケートの回答状況の画面（`/admin/forms/[id]/responses`）の「回答期限の延長」で本人ごとに開ける | [デモの評価期間](../../scripts/seed-data.mjs) |
-| OPS-015 | blocked | DD-009 の訂正を `system-spec/` の3章（要件定義・auth・security）に描いたため、dev-graph の3 node（`spec-system-spec-requirements`・`arch-system-spec-auth`・`arch-system-spec-security`）の取込元の digest が古い。dev-graph の writer に既存の node を取り込み直す操作が無い | dev-graph の writer に取り込み直しの操作が入ったとき | `run-dev-graph-system-spec` を R0 からやり直して3 node を取り込み直す。digest を手で書き換えない | [最終レビューの受領書](./spec-receipts/2026-10-14-improvement-requests-final-review.md) |
+| OPS-015 | blocked | 承認済みの訂正と評価レポートの仕様を compile したため、dev-graph の取込元の digest が9 node（要件定義と8技術章）で古い。dev-graph の writer に既存の node を取り込み直す操作が無い | dev-graph の writer に取り込み直しの操作が入ったとき | `run-dev-graph-system-spec` を R0 からやり直して9 node を取り込み直す。digest を手で書き換えない | [今回の仕様反映・最終レビュー受領書](./spec-receipts/2026-10-21-evaluation-report-final-review-pr.md) / [初回の受領書](./spec-receipts/2026-10-14-improvement-requests-final-review.md) |
 | OPS-016 | ready | 通し試験が作る会社がローカルDBに蓄積し、同じ試験の前提が実行回数で変わる。過去の試験会社が多数あるコピーで `/system/users` の余白検査は41%となり、既存40%基準を超えた | 同じローカルDBで通し試験を繰り返す前 | 試験ごとの会社の片付けか、毎回同じ見本データで始める隔離DBの起動手順を整える。多数会社の表示は別の固定fixtureで検証し、余白の基準は緩めない | [共通化レビュー](../reviews/elegant-review-2026-10-14-refactor.md) / [試験用の会社](../../e2e/support.ts) |
+| OPS-017 | blocked | 手元の wrangler から本番 D1 を読み取れない（2026-10-20 の `wrangler d1 execute --remote` が 7403 で止まった）。評価レポートの P08 は、2回目の Deploy（0039）の前に本番 DB の数を読み、P13 は読み取りの結果を記録する。メモの公開範囲の直しの本番の件数も数えられていない | 利用者が token の権限（D1 の読み取り）を直したとき | 担当は利用者。手元の token に D1 の読み取りを足すか、CI の token で `SELECT`・`PRAGMA` だけを流す読み取り専用の workflow を足す。P08 に入る前に通す | [計画レビューの受領書](./spec-receipts/2026-10-20-evaluation-report-plan-review.md) §2・§6 / [DD-020](./design-decisions.md) |
+| OPS-018 | observe | 評価レポートの計画（dev-graph と system-dev-planner）で、harness の課題が7件見つかった（作り直した package を登録し直す経路が無い、取り込み済みの node を更新できない、task の「Feature:」の行のパスを確かめない、planner が `deploy.yml` と人の章を読まない、など）。直すのはこのリポジトリの外の harness で、ここでは記録だけ | 次の機能を dev-graph で計画するとき | 受領書 §8 の7件が harness で直ったかを確かめる。直っていなければ、同じ読み替えを受領書で行う | [計画レビューの受領書](./spec-receipts/2026-10-20-evaluation-report-plan-review.md) §8 |
 | PERFORMANCE-001 | observe | 一覧は数百件超でページングが必要 | 対象データが数百件に達する | cursor または keyset 方式を導入 | [旧台帳 D1](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-002 | observe | マスタ参照は都度 D1 を読む | 読取負荷・待ち時間が問題化 | キャッシュ範囲と無効化を設計 | [旧台帳 D11](./backlog-history-2026-08-13.md) |
 | PERFORMANCE-003 | ready | 本番端末・回線で Core Web Vitals を計測していない | 次の性能確認 | 主要画面を実測し基準超過だけ改善 | [旧台帳 UX101](./backlog-history-2026-08-13.md) |

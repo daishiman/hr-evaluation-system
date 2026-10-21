@@ -173,7 +173,7 @@
      - 評価セットの準備が整っていなければ（`createForms` が 409 になる）、残っている手順へのリンク（`loadSchemeReadiness` の最初の不足の `href` と `linkLabel`）。
      - それ以外は『この等級だけ新しい版の下書きを作る』（`createForms` に `gradeIds` を1件。確認つき）。
      - どれも、見る人の役割でその操作ができなければ出さない（台帳の `forms.rebuildQuestions`・`forms.create` と、開くページ）。
-     - 警告を出さない場合（2026-10-16 追加）：同じ評価期間・等級の一番新しい版が、使うKPIを選ぶと並び順を除いて一致していれば、古い版には警告そのものを出さない（`comparisonGapOf` が `null`）。新しい版があるとき、古い版は直す対象ではない（公開済み・締め切り済みの版は変えられず、下書きでも上の順でまず新しい版を開かせ、古い版を作り直させない）。古い版に出し続けると、直し終えたのに直っていないように見えた（利用者の指摘）。新しい版の聞いている項目は、比べる版と同じ数え方（`effectiveAskedItems`。固定枠は等級要件の設問があれば聞いている）で数える。片方だけ固定枠を足すと一致を取り違える。新しい版がまだ一致していなければ、従来どおり古い版にも警告を出し、上の順で直す操作を置く（多くはその版を開くリンク。足りない項目に聞き方の無いものがあれば、先に聞き方を決めるリンク）。
+     - 警告を出さない場合（2026-10-16 追加）：同じ評価期間・等級の一番新しい版が、使うKPIを選ぶと並び順を除いて一致していれば、古い版には警告そのものを出さない（`comparisonGapOf` が `null`）。新しい版があるとき、古い版は直す対象ではない（公開済み・締め切り済みの版は変えられず、下書きでも上の順でまず新しい版を開かせ、古い版を作り直させない）。古い版に出し続けると、直し終えたのに直っていないように見えた（利用者の指摘）。新しい版の聞いている項目は、比べる版と同じ数え方（`effectiveAskedItems`。固定枠は等級要件の設問があれば聞いている）で数える。片方だけ固定枠を足すと一致を取り違える。新しい版がまだ一致していなければ、従来どおり古い版にも警告を出し、上の順で直す操作を置く（多くはその版を開くリンク。足りない項目に聞き方の無いものがあれば、先に聞き方を決めるリンク）。2026-10-20 に DD-022 で一部を改めた（新しい版が下書きの間は、一致していても古い版に警告を出す。却下した候補の「一致した新しい版が下書きのままのとき」（2026-10-16）も、この範囲で改めた）。
   6. 照合：字面ではなく作りで閉じる。項目の差（`diffFormKpiItems`・`FormKpiDiff`）を使ってよいのは `comparison-gap.ts` だけにし、3画面が `ComparisonGapNotice` を使い、差を自分で作っていないことを静的なテストで確かめる。字面の検査も残す。`src/app`・`src/components`・`src/lib`・`src/actions` の、テストを除くファイルの文字列リテラルと JSX の地の文（`ui-rules.test.ts` の `splitSource` と同じ数え方。注釈は数えない）に、『食い違』『ズレ』『ずれ』を置いてよいのは `comparison-gap.ts` と `ComparisonGapNotice.tsx` だけ（『いずれ』の中の『ずれ』は比べる話ではないので数えない。`comparison-gap-source.test.ts` の `(?<!い)ずれ`）。2つのページの比べでない2件は、理由つきで許す（`src/app/admin/scheme/page.tsx` の配点の決まりの警告、`src/lib/domain/improvement-instruction.ts` の作業の規約の文）。`formSyncGaps` は `ComparisonGap` を返す入口に変え、中で `comparisonGapOf` を呼ぶだけにした（`SetupGap` の形の比べる警告は残さない）。本番で `comparisonGapOf` を呼ぶのはこの入口だけで、読み出し（`comparison-gap-loader.ts`）がこれを通し、3画面は読み出しだけを使う。画面から呼ばれていなかった `describeFormKpiDiff` と、それだけが使っていた `isFormInSync` は P08 で消した。
   7. gradeIds の検査：`createForms` は、自社の等級に無い id が1件でもあれば 400（`HttpError`）で断り、何も作らない（今までは黙って外していた）。画面へは、ほかの失敗と同じく理由の文（「この会社に無い等級が含まれています。」）を返す（`ActionFail` は状態コードを持たない）。使用を止めた自社の等級（`isActive` が偽）は、今どおり名指しすれば通す（狭めるのは他社の id だけ。`gradeIds` を省いたときに使用中の等級だけを作る振る舞いも変えない）。
 - **決め手の軸**: どちらのページからも1回で相手のページへ移れること。今後足す比べる警告にも、型で2つのページを強制できること。既定で目に入る量を1行に抑えること（§22-2）。
@@ -388,3 +388,157 @@
 - **併せて直した記述**: spec の画面一覧の 2-4（`/forms/[id]`）と 20（`/admin/forms/[id]`）に試しの回答の入口を足した。spec §6 の、見出しの帯を固定する画面と操作の帯を出す画面に `/forms/[id]?try=1` を足した。spec §28-16 の「ここでは決めていない」を、決めた先（§28-17）に改めた。
 - **固定した検査**: `src/lib/submission-check.test.ts`（範囲 → 必須の順・画面の上からの例・何も選んでいない複数選択は未回答・保存の受け口と試しの回答が同じ検査と同じ未入力の文を使う・回答画面と提出の検査が同じ `missingRequired` で未入力を拾い、必須かどうかを見る式は1か所）、`src/components/form-freshness-regression.test.ts` の「管理者の試しの回答（trial）」（入力しても下書きを送らない・帯と本文の頭の文・空のまま試すと本物と同じ未入力の文が1回だけ・範囲を外れた数の文が `checkSubmission` と同じ・通ったときの文が答えを変えると消える・どの操作でも保存を呼ばない・範囲を外れた数と未入力が同時にあるとき、確認の欄に範囲の断りと未入力の知らせを1回ずつ出す）、`src/components/FormPreview.test.ts` の「見本の画面からの試しの回答（?try=1）」（試しの分岐は `canEditForm` の人だけ・分岐の外に入力欄を出さない・設問を回答画面と同じ `toAnswerQuestions` で渡す・入口のリンクを設定できる人にだけ出す）と「見本の見方の文（2つの画面で同じ文）」（2つの画面が `src/components/form-preview-notes.ts` の同じ文を出す）。
 - **見直す条件**: 回答画面に、保存の受け口を通らない検査（画面だけの断り）を足すとき（試しの回答にも同じ断りが出るかを確かめる）。上長や社員にも試しの回答を開かせたいという要望が出たとき（いまは設定できる人だけ）。
+
+## DD-020 公開の単位を main へのマージにそろえ、列を schema から外す公開と drop の公開を分けた（2026-10-20）
+
+- **場面の1文**: 評価レポートと上司の判断の計画（13 task）は、P13 が別の worktree から手で2回 deploy し、ほかの task は本番に触れない前提で書かれていた（[計画レビューの受領書](./spec-receipts/2026-10-20-evaluation-report-plan-review.md) §2）。実際は、Deploy workflow が `main` への push で動き（`.github/workflows/deploy.yml:13-17`。paths の絞りは無い）、マージのたびに本番に出る。workflow は migration をコードより先に当てる（[release-and-forms §2-4](../../system-spec/release-and-forms.md)）。drizzle の `select().from(s.evaluations)` は全列を名前で指定する（`src/lib/evaluate.ts:156-157`）。計画のとおり P08 で 0039（KGI の表と列の drop）と schema.ts の変更を一緒に出すと、Worker が差し替わるまで、評価の作成（`buildEvaluationsForCycle`）が「no such column」で落ちる。CI に、schema と DB の列を照らし合わせる検査は無い。
+- **選んだ形**:
+  1. 公開は `main` へのマージ。計画の「公開」「Deploy」は `main` へのマージとして読む。どの task の PR も、マージで本番に出る。
+  2. migration を伴う公開は2回。1回目は P05 の PR のマージで、0038（上司の判断の6列を NULL 可で足す）を当てる。2回目は P08 の PR のマージで、0039（KGI の3つの表と評価の2列を消す）を当てる。どちらも未適用の migration があるので、Deploy workflow が本番 D1 の全体を書き出して Artifact（`d1-backup-<実行 id>`。実行 id は `github.run_id`。保管14日）に残してから当てる（`deploy.yml:139-160`）。リポジトリは Public で、この書き出しをどこに置くかは [バックログ](./backlog.md) の SECURITY-014 で、P05 のマージの前に利用者が決める。ほかの task のマージは、migration なしで出る。
+  3. 列と表は2段で外す。evaluations の KGI の2列（`officeAchievementRate`・`kgiCoefficient`。`src/db/schema.ts:866・868`）と、KGI の3つの表（`kgiCoefficients`・`officeKgiResults`・`officeKgiRevisions`）の定義は、1回目（P05）で schema.ts から外す。DB の表と列は 0039 まで残る。2回目で消すとき、本番で動いているコードは、もうその表と列を名前で指定していない。P08 が担うのは 0039 と戻す SQL（`drizzle/rollback/`）と、その中身と戻し方を書く [デプロイ時の注意](../deploy-notes.md) の節だけで、コードは変えない（9）。
+  4. KGI の参照を探す静的検査（O17）が走査するのは src・docs・route-ledger・nav で（`system-spec/00-requirements-definition.md:75`、P04:103）、`drizzle/` と `scripts/` は見ない。drizzle の側の除外は要らない。`drizzle/` の KGI の参照のうち、migrations の SQL と 0039、`meta/` の snapshot と `_journal.json`、`drizzle/rollback/0039_*`（表を作り直すので KGI の名前を必ず含む）は履歴として残す。schema.ts は src にあり、1回目で KGI の定義を外すので数える。制度マスタの記録の種類の型（`src/lib/domain/constitution-events.ts:26` の `"kgiCoefficient"`）と、その表の注釈（`src/db/schema.ts:1262`）も src にあるので数え、P05 で外す。この種類を書くのは KGI 係数の保存（`src/lib/masters/apply-master-update.ts:468`）だけで、P05 で消える。`constitution_events` に残っているその種類の行は、監査の記録なので 0039 でも消さない（読む関数 `listConstitutionEvents`・`replayConstitutionEntity` を呼ぶ画面は、今は無い）。文書の側の除外は、P02:137 の4つ（spec-receipts・backlog-history・elegant-review・DD の履歴）に `docs/deploy-notes.md` を足した5つで、P02 が一覧を確定する。deploy-notes には、P08 が 0039 の節、P12 が手順、P13 が配布の記録を書き、どれも KGI の表の名前を含む。除外しないと、O17 の検査が P08 の PR で落ち、Deploy も migration の前の検査（`deploy.yml:99-100`）で止まる。初期データの `drizzle/seed.sql` は生成物で、走査の外でも P05 で作り直す。`scripts/seed.mjs` の TABLES（26行）と `scripts/seed-data.mjs` から KGI を外し、`node scripts/seed.mjs --generate-only` で書き出してコミットする。残すと、0039 の後に、seed.sql を移行済みの表へ入れる3つのテスト（`src/db/seed-memberships.test.ts`・`src/db/seed-display-names.test.ts`・`src/lib/stale-asking.integration.test.ts`）が、消えた表で落ちる。
+  5. migration の番号は 0038・0039（今の最新は 0037）。P02 は衝突だけを確かめる。P08 に入るときにも、`drizzle/` の最新が 0038 のままかを確かめ直す（P05 と P08 の間に別の migration が入ったら、0039 を繰り上げる）。
+  6. P05 をマージする前に、P05 の PR の上で、P06 の自動テスト（`pnpm test`・typecheck・`test:coverage`・`test:e2e`）と `pnpm cf:dry-run`・`pnpm check:bundle-size` を通す。P04 のテストは P05 のブランチの最初のコミットに入れ、P06 の直しも P05 のブランチにコミットする。P04 と P06 の PR は作らない。どちらも完了の方針（linked_pr_merged_all）に P05 の PR を紐付け、それまで Beads は in_progress のまま、コメントで状態を残す。
+  7. P13 は手で deploy せず、`db:migrate:remote`・`db:backup` も手で流さない。P13 の役は記録で、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact の id と、本番 DB の読み取り（読むだけ）の結果を [デプロイ時の注意](../deploy-notes.md) に書く。P07 が1回目の確かめ（本番に KGI の画面と操作が無いこと。maintenance-ops の (9)）を、配った sha の静的検査と台帳で示すのも同じ理由で、本番の画面を開くと P07 の範囲（preview での確かめ）を越え、本番のデータに触れる。(9) の写し（`system-spec/maintenance-ops.md:943・1083・1177` の qa の答え）も同じに読む。
+  8. 基準 sha は `dbe633361a7638c36360cde905a5b5c17822073d`（#95）。P09 のテーマの契約の差分は、この sha から読む（`git diff --stat dbe6333 main -- …`）。`main` は P05・P08 のマージで進むので、`main` との差分では、この機能でテーマの契約が変わったかを見られない。P09 で印刷を直したら、P10 が A4 縦の印刷をもう一度確かめる（P10 の突き合わせには、印刷を確かめ直す記述が無い）。
+  9. 2回目を戻すときは DB だけを戻す。P08 はコードを変えないので、コードの revert は戻し方にならない（0039 のファイルは残り、適用済みなので再適用されない）。戻し方（`drizzle/rollback/0039_*` と、Artifact の書き出しからの復元）は P08 の PR で [デプロイ時の注意](../deploy-notes.md) に書き、マージの前にそろえる。戻す範囲は、KGI の3つの表と評価の2列だけで、書き出しから表と列を取り出して入れ直す。書き出しの全体を流し込まない（0039 の後に書かれた評価やメモまで、書き出しの時点に戻るため。前例は 0034 の戻し方、[デプロイ時の注意](../deploy-notes.md) §9）。戻すのは利用者の承認を得てからで（外部への変更）、P08 のマージから14日の間は、P13 の claim を待たず、承認があればその時の作業者がすぐ戻す（P13 は P12 の後に始まる。P13:110）。Artifact の保管14日は P08 のマージで動いた Deploy から数える。14日を過ぎると、KGI の値は戻せない。それより長く手元に置くか（Artifact を落として保管するなど）は、P08 のマージの前に利用者が決める。書き出しの置き場所を SECURITY-014 で変えたら、戻す元もそれに合わせる。P08 のマージの後は P05 を revert しない（schema.ts に KGI の定義が戻り、消えた列を名前で指定する）。Deploy の失敗のときに案内される `wrangler rollback`（`deploy.yml:210-218`）でも、P05 より前の Worker の版に戻さない（同じ理由）。この注意は、P08 が deploy-notes の 0039 の節にも書く。直すときは前に進める PR で直す。
+- **決め手の軸**: 本番で、コードが無い列を名前で指定する時間を作らないこと。今の Deploy workflow の順序（検査 → 書き出し → migration → 確認 → 配布）に乗り、本番への手の操作を足さないこと。`main` に、実装より先に赤のテストだけを入れないこと。
+- **却下した候補と理由**:
+  - 計画のとおり、schema.ts の KGI の定義を P08 まで残し、0039 と同じ PR で外す（P02:94・P05:79・P08:72）: migration がコードより先に当たるので、Worker が差し替わるまで、古いコードが消えた列を名前で読み、評価の作成が落ちる。
+  - 計画のとおり、P13 が別の worktree から手で2回 deploy する（P13:72-73・138）: P05 と P08 の PR は、マージした時点で Deploy workflow が本番に出す。手の deploy はその後追いになる。配布はクリーン checkout から行う決まり（[release-and-forms §1-2](../../system-spec/release-and-forms.md)）にも合わない。
+  - 新しい画面を P07 の受け入れまで閉じて出す: 閉じても、P05 のマージで KGI の削除と 0038 は本番に出るので、公開の順序の問題は残る。このアプリに画面を閉じる仕組み（旗）は無く、足すと台帳・権限の検査・テストが増え、P07 の後に外す作業も要る。
+  - 統合ブランチに P05〜P09 を集めて `main` へ1回でマージする、または workflow_dispatch で出す時を選ぶ: 1回にまとめると、0038・0039 と新しいコードが同じ Deploy に入る。migration が先に当たるので、上の「no such column」が戻る。workflow_dispatch は `main` を配り直す入口で（`deploy.yml:16-17`。`main` 以外は 35-39 で止まる）、`main` への push で動く Deploy を止められない。1 task 1 branch で default branch へ収束する計画の決め（各 task の branch_policy。P01:68 など）とも合わない。
+  - 読み替えを今 spec-state に反映して compile する: compile すると9 node の lineage がまた合わなくなる。実装で決まることを P12 で反映するときに、もう一度 compile と取り込み直しが要る。P12 で、実装の結果と一緒に1回で反映する（受領書 §7）。
+- **規範との関係**: [デプロイ時の注意 §1](../deploy-notes.md) の順序（migration と後方互換なコードを `main` へ入れ、Deploy workflow が書き出し・適用・確認をしてから配る）に従う。§1 は列を足す場合だけを書いているので、列と表を消す場合を release-and-forms §2-7 に足した。
+- **併せて直した記述**: `system-spec/release-and-forms.md` の §1-5（`main` へのマージが本番公開であること）と §2-7（schema から外す公開と drop の公開を分ける）。task 仕様書は生成物なので書き換えず、受領書 §2 で読み替えた。
+- **見直す条件**: Deploy workflow の起動条件が変わったとき（paths の絞りや手の承認を足すなど）。CI に、schema と DB の列を照らし合わせる検査を足したとき。
+
+## DD-021 評価を見る権限の入口は、上司側の判定と確定後の本人の判定を組んで作り、CSV とメモには使わない（2026-10-20）
+
+- **場面の1文**: 評価レポートと上司の判断の要件は、レポートと評価の中身を開ける人を `canViewEvaluationOf` の1か所で決め、メモの読み出しと CSV の書き出しにも使うと書く（`architecture/system-spec-auth.md:55・118`、P02:96・103、P05:74・97・104）。範囲は auth の (11)（`system-spec/auth.md:999`）が「本人・直属の上司・管理者。前に決めた範囲と同じで、新しい範囲は作らない。本人が見られるのは確定した後だけ」と決めている。計画レビューの最初の案「会社が同じ ∧ (`canReadEmployee` ∨ (本人 ∧ `canReadSelfResult`))」は、`canReadEmployee` が本人を常に通す（`src/lib/domain/evaluation-authority.ts:53`）ので、本人が確定前の自分の評価を見られる範囲になっていた。今、評価の詳細を開けるのは、管理者と直属の上司（`canReviewEmployeeEvaluation`。`src/app/manager/evaluations/[id]/page.tsx:31`）と、確定した後の本人（`canReadSelfResult`。`src/app/me/results/[id]/page.tsx:17`）である（[計画レビューの受領書](./spec-receipts/2026-10-20-evaluation-report-plan-review.md)）。
+- **選んだ形**:
+  1. `canViewEvaluationOf`（見る人・対象の人・評価の状態）は「会社が同じ ∧ (`canReviewEmployeeEvaluation` ∨ `canReadSelfResult`)」。今の評価の詳細の閉じ方と同じ範囲で、新しい範囲は作らない。2026-10-20 に DD-024 で改めた（引数は見る人と対象の人の2つで、本人を先に見て `"self"`／`"reviewer"`／`null` を返す。確定した後だけの条件は、確定した評価だけを読むレポートの読み込みへ移した）。
+  2. 置き場所は2つに分ける。役割と本人の判定（純粋な関数）は `src/lib/domain/evaluation-authority.ts` に置く。会社の境界を問い合わせで閉じる入口は `src/lib/session.ts` に、`canViewEmployee`・`canManageEmployee` と同じ形で置く。`architecture/system-spec-auth.md:87` の「session.ts」と P02:110 の「evaluation-authority.ts」は、この2つを指す。
+  3. 使うのは、レポートの画面と評価の詳細の読み出し。2026-10-20 に DD-024 で改めた（使うのはレポートの画面だけ。評価の詳細の2画面は今の判定のままにし、SECURITY-013 を決めるときに寄せる）。
+  4. CSV の書き出しとメモは `canViewEvaluationOf` を使わない。CSV は上司側の判定 `canReviewEmployeeEvaluation` だけを使う（本人の枝を持たない。受領書 §6 で直した `src/lib/export.ts` の `inReviewScope`）。メモは今の判定のまま変えない。書くのは `readableNoteVisibilities` で公開範囲を、`canManageEmployee`（本人を除く）で対象の人を確かめ（`src/actions/notes.ts:31・34`）、読むのは個人詳細の入口 `canViewEmployee`（`src/app/manager/members/[id]/page.tsx:22`）を通った人に、`listNotes` が公開範囲で絞って出す（`src/lib/queries.ts:647`。[製品仕様](./spec.md) §3 の11）。社員は個人詳細を開けないので、社員本人にメモは出ない。
+  5. 既存の関数は消さない。`canReadEmployee` は、本人を含めて開ける画面（個人詳細の入口 `canViewEmployee`、回答本文 `canReadResponseBody`）の判定として残す。
+  6. qa-y13 の答えの (6)（`system-spec/auth.md:62`。「CSV の書き出し・メモの読み出しがこれを使う」）は、4のとおりに改める。理由は2つある。1つは、auth の (11) と qa-y13 の答えの (8) が、新しい見える範囲を作らないと決めていること（本人の枝を CSV とメモに持ち込むと、確定した後の本人が、自分の CSV の行と自分についてのメモを取れる）。もう1つは、メモの公開範囲を、公開範囲ごとにその段階以上の人が全員見られる形にすると、利用者が 2026-10-20 に決めたこと（[製品仕様](./spec.md) §3 の11）。spec-state への反映は P12 で行う（受領書 §7）。qa-y16 の答えの (7)・(11)（`system-spec/maintenance-ops.md:1368`。見える範囲を「使う側の全てがその関数だけを使う」契約テストで守る）も、使う側をレポートの画面と評価の詳細の2つと読む。CSV とメモがこの関数を使わないことも、同じ契約テストで確かめる。
+- **決め手の軸**: 範囲を広げないこと（auth の (11) の「今と同じ」）。確定した後の本人の枝を、CSV とメモへ広げないこと。判定の組み合わせを1か所に書き、画面ごとに組み立て直さないこと。
+- **却下した候補と理由**:
+  - 会社が同じ ∧ (`canReadEmployee` ∨ (本人 ∧ `canReadSelfResult`))（計画レビューの最初の案）: `canReadEmployee` が本人を常に通すので後ろの枝が効かず、本人が確定前の自分の評価を見られる。
+  - `canReadEmployee` を改名して `canViewEvaluationOf` に寄せる: 個人詳細の入口と回答本文では、本人を通すのが正しい。寄せると、そちらの範囲が変わる。
+  - メモと CSV にも `canViewEvaluationOf` を使う（要件の文のとおり）: 確定した後、社員本人が自分についてのメモと、自分の行の CSV を取れるようになる。
+- **範囲の外**: 自分を評価する側にも立つ人が、自分についての評価者向けの情報を見られる件。[バックログ](./backlog.md) の SECURITY-013（decision）の中身はここに書く。
+  - 全体管理者・会社の管理者：自分の確定前の評価の詳細、自分についてのメモ、評価結果と KPI 明細の CSV の自分の行、`canViewEvaluationOf` の上司側の枝を通るレポート。`canReviewEmployeeEvaluation` が本人かどうかを見ないため。
+  - マネージャー：自分の個人詳細の URL を開くと、評価の推移に出る点数・状態・評価者のコメント（確定前を含む。`listEvaluations` は状態で絞らない。`src/lib/queries.ts:681`、表示は `src/app/manager/members/[id]/page.tsx:56-57`）と、自分についてのメモ。`canViewEmployee` が本人を通すため。評価の詳細・CSV・レポートは、自分の上司ではないので開けない。
+  - どちらも、個人詳細のメモの注記「本人には表示されません」（今の `src/app/manager/members/[id]/page.tsx:94`）と食い違う。
+  - P05 で足す上司の判断（0038 の6列）は、確定前の評価の詳細と同じ範囲で見せる。見える人を増やさないので、qa-y13 の答えの (8)（新しい見える範囲を作らない）には当たらない。O19 の測り方への反映は P12 で行う（受領書 §7）。
+  - この DD は今の振る舞いを変えない。決めるなら P02 の前に決める（P02 の DD とテストの期待値が変わる）。
+- **固定する検査**: 組（全体管理者・会社の管理者・直属の上司・間接の上司・本人の確定前と確定後・他の社員・他社の人）ごとの判定の単体テスト。会社の管理者が自分の確定前の評価を見る組も入れ、期待値は今の振る舞い（見える）にする。SECURITY-013 を決めたら、この期待値を反転する。テストファイル名は P02 の DD で決める。2026-10-20 に DD-024 で決めた（`src/lib/domain/evaluation-authority.test.ts`。範囲の外の「上司側の枝を通るレポート」は、本人を先に見るので起きない）。
+- **見直す条件**: SECURITY-013 を決めるとき（本人の枝と上司側の枝が重なる人の扱い）。
+
+## DD-022 新しい版が下書きの間は、古い版の比べる警告を消さないように、DD-012 を改めた（2026-10-20）
+
+- **場面の1文**: DD-012 の5（警告を出さない場合。2026-10-16 追加）は、同じ評価期間・等級の一番新しい版が一致していれば、その版の状態を問わず、古い版に警告を出さない。評価レポートと上司の判断の要件（G22・I23・O22、backend の (15)）は、公開中の版の警告を新しい下書きで消さないことを求める。新しい版が下書きの間、回答は古い版（公開中）に集まり続け、その版の設問は選んだ項目とずれたままである（[計画レビューの受領書](./spec-receipts/2026-10-20-evaluation-report-plan-review.md)）。
+- **選んだ形**:
+  1. 改める範囲は「同じ評価期間・等級の新しい版が下書きの間」に限る。この間は、新しい版が一致していても、古い版に警告を出す。
+  2. 新しい版が公開されたら、古い版には警告を出さない（DD-012 の5のまま）。公開のときに、同じ評価期間・等級の公開中の版は締め切られ（基準 sha の `src/actions/forms.ts:185-190`）、回答は新しい版に集まる。
+  3. DD-012 の本文に、この DD で一部を改めた旨の注を足した。
+- **決め手の軸**: 回答を集めている版の食い違いを隠さないこと（G22）。締め切った古い版に、警告を出し続けないこと（DD-012 の5の理由）。
+- **却下した候補と理由**:
+  - DD-012 の5のまま、新しい版が一致すれば、下書きでも古い版の警告を消す: 下書きは回答を集めておらず、公開されるまで回答はずれた古い版に集まる。確定した要件（G22・I23・O22）と食い違う。
+  - 新しい版が公開された後も、古い版に警告を出し続ける: 公開で古い版は締め切られ、直す対象ではなくなる。直し終えたのに直っていないように見える、という DD-012 の5の指摘に戻る。
+- **DD-012 との関係**: DD-012 の5の「警告を出さない場合」と、却下した候補の「一致した新しい版が下書きのままのとき、古い版に1行を残す」（2026-10-16）を、新しい版が下書きの間に限って改めた。新しい版が公開された後の扱いは変えない。
+- **範囲の外**: この場合に、古い版の警告に置く直す操作。DD-012 の5の順は、一致した新しい版を想定していない。P02 の DD で決める。2026-10-20 に DD-024 の10で決めた（「第N版の下書きを開く」と、公開すれば古い版が締め切られる旨の注記）。
+- **固定する検査**: O22 の測り方（公開中の版の警告が新しい下書きで消えない）。テストファイル名は P02 の DD で決める。2026-10-20 に DD-024 で決めた（`src/lib/domain/comparison-gap.test.ts` ほか、DD-024 の固定する検査の O22）。
+- **見直す条件**: 古い版を公開中のまま、新しい版を公開できるようにするとき（いまは公開で古い版を締め切る）。
+
+## DD-023 本人に見せる上司の文は、保存のときに検査し、引っかかった語を名指しで返す（2026-10-20）
+
+- **場面の1文**: 上司が書く昇給・昇格の理由（I25）は、本人にも同じ文で見せる（G24 の「同じ形で示す」）。本人向けの文は、点数・配点・必要点数につながる表現を出さない（G19。網は `src/lib/domain/evaluation-view.ts:35-40` の `CRITERIA_LEAK_PATTERNS`）。今は、判定側が作った本人向けの文を表示のときに網にかけ、触れたら共通の言い換え文に差し替えている（`pickEmployeeText`。53行）。上司の自由文に同じ差し替えを当てると、本人に届く文が、上司の書いた文と変わる。上司コメント（`evaluatorComment`）は、今は検査せずに本人の画面にもそのまま出している（`src/components/EvaluationDetail.tsx:467-471`）（[計画レビューの受領書](./spec-receipts/2026-10-20-evaluation-report-plan-review.md)）。
+- **選んだ形**:
+  1. 上司が書く昇給・昇格の理由は、本人にも同じ文で見せる。本人向けの言い換えを別に持たない。
+  2. 保存のとき（`updateEvaluation` の判断の検査。backend の (17)）に、本人向けの網を当てる。引っかかったら保存せず、引っかかった語を名指しして返し、上司に書き直してもらう。本人には、書いたとおりの文が届く。
+  3. 上司コメント（保存は `src/actions/evaluations.ts:60・72`）にも、保存のときに同じ検査をかける。保存済みのコメントを、表示のときに差し替えることはしない。
+  4. 保存済みの理由とコメントのうち網に引っかかる件数は、P13 の本番の読み取りで数えて記録する（件数だけ。文は写さない）。実装は P05。
+- **決め手の軸**: 本人と上司が同じ文を見ること（G24）。本人に基準を漏らさないこと。直すのは書いた上司で、黙って差し替えないこと。
+- **却下した候補と理由**:
+  - 表示のときに共通の文へ差し替える（`pickEmployeeText` と同じ形）: 上司が書いた文が本人に届かず、上司は差し替わったことを知らない。本人と上司で見ている文が変わり、G24 の「同じ形」に合わない。判定側の文が網に触れて共通の文に化けていた前例がある（`evaluation-view.ts:33-34` の注釈。残課題 L1）。
+  - 検査しない: 上司の自由文に点数や必要点数が入ると、そのまま本人に届く。本人向けには点数の数値を出さない（G19）。
+- **規範との関係**: 規範に定めが無い。保存の検査は、表示の網と同じ `CRITERIA_LEAK_PATTERNS` を使い、網は緩めない（`evaluation-view.ts:30`）。
+- **範囲の外**: 判定側が作る本人向けの文（`raiseReasonEmployee`・`promotionBlockedReasonEmployee`）を、表示のときに差し替える今の仕組み（`employeeRaiseReason`・`employeePromotionBlockedReason`）は変えない。
+- **見直す条件**: 網を変えるとき（保存の検査にも同じ変更が効くかを確かめる）。上司の文を、本人向けと上司向けに分けて書く要望が出たとき。
+
+## DD-024 評価レポート・上司の判断・事業所KGIの削除の作り方を決め、DD-021・DD-022 が残した点を決めた（2026-10-20）
+
+- **場面の1文**: 評価レポートと上司の判断の機能（G17〜G24・I18〜I25。task は SYS-EVAL-REPORT-P01〜P13）は、P02 で、関数の境界・データの形・URL・migration の順序・依存関係の図・テストファイル名・静的検査の除外を、実装の前に固定する（P02 の Acceptance）。DD-021 は見える範囲の入口の形を、DD-022 は古い版の警告に置く直す操作を、どちらもテストファイル名とともに「P02 の DD で決める」と残していた。実装を進めるうちに、DD-021 の選んだ形1・3は、そのままでは今の振る舞いを変えると分かった（下の4・5）。
+- **選んだ形**:
+  1. **事業所KGIは仕組みごと消す**。KGI の入力画面（`/admin/kgi`）・保存（`kgi-results`）・係数の計算（`domain/kgi.ts`・`kgi-apply.ts`）・賞与への掛け算を消す。賞与（仮）は `src/lib/domain/bonus.ts` の `computeBonus` だけが出す。個人Pt は KPI評価点合計を丸めた値、賞与額は 個人Pt × 1点あたりの金額（`bonus_yen_per_point`）で、1点あたりの金額が 0 以下なら出さない（null）。表と列は DD-020 のとおり2回で外す。1回目（P05 のマージ）は `drizzle/migrations/0038_evaluation_decisions.sql`（上司の判断の6列と索引を足す）を当て、schema.ts から KGI の定義を外す。2回目（P08 の別の PR のマージ）は `0039_drop_office_kgi.sql`（KGI の3つの表と評価の2列を消す）を当てる。戻す SQL は `drizzle/rollback/0038_evaluation_decisions_rollback.sql`・`0039_drop_office_kgi_rollback.sql`。番号は今の最新 0037 の次で、衝突は無い（P08 に入るときに確かめ直す。DD-020 の5）。
+  2. **レポートの URL は `/reports/[id]`**。id は社員の利用者 id。経路台帳（`system-spec/route-ledger.json`）の行は、accessClass `evaluationReportSubject`・widthPolicy `all`・operations なし、purpose「1人の評価の結果を、図とグラフ入りのA4縦2枚のレポートで読み、印刷する」。`src/app/reports/layout.tsx` が `requireRoute("/reports/[id]")` と画面の骨格（AppShell）を付ける。開けない人には 404 を返し、他社の人・存在しない人と区別しない。入口は「評価レポートを見る」のリンクで、本人は `/me/results`（`/reports/${viewer.id}`）、上長と管理者は個人詳細（`/manager/members/[id]`）に置く。
+  3. **関数の置き場所と入出力**は次の表のとおり。
+
+     | 関数 | 置き場所 | 入力 → 出力 |
+     |---|---|---|
+     | `buildEvaluationReport` | `src/lib/domain/report.ts` | 確定した評価の行・評価の項目・同じ等級の点数 → `EvaluationReport`（`empty`／`reviewer`／`self`）。純粋な関数 |
+     | `loadEvaluationReport` | `src/lib/report-data.ts` | `{companyId, employeeId, view, viewerRole, now}` → `EvaluationReport`。確定した評価だけを読み、`buildEvaluationReport` に渡す |
+     | `ReportTemplate` | `src/components/ReportTemplate.tsx` | `{report, emptyHref, emptyLabel}` → A4 縦2枚の画面と紙 |
+     | `canViewEvaluationOf`／`evaluationViewOf` | `src/lib/session.ts`／`src/lib/domain/evaluation-authority.ts` | 見る人・対象の人 → `"self"`／`"reviewer"`／`null` |
+     | `finalDecision`／`finalDecisionOf`／`decisionCsvCells` | `src/lib/domain/final-decision.ts` | 点数の判定・上司の判断 → `{approved, scoreJudgement, decision, overridden, unrecorded}`、CSV の4つの値 |
+     | `validateDecisionInput` | `src/lib/domain/final-decision.ts` | 確定のときの上司の判断の入力 → 保存する6列、または断る1行（選んだか・変える理由・2000字・本人に見せられない語。DD-023） |
+     | `updateEvaluation`（確定） | `src/actions/evaluations.ts` | 上司の判断を記録する唯一の入口。自分自身の評価は 403（`SELF_EVALUATION_BLOCK_REASON`）、部下でない人の評価も 403（`canManageEmployee`）で、どちらも `validateDecisionInput` の前に断る |
+     | `resolveSchemeForCycle`／`schemeIdForCycle`・`schemeIdsForCycles` | `src/lib/domain/scheme-resolution.ts`／`src/lib/cycle-scheme.ts` | 評価期間・会社の評価セット → 使う評価セット（無ければ null） |
+     | `formTransitions`／`statusChangeRefusal`・`operationRefusal` | `src/lib/domain/form-transitions.ts` | 状態・締切・回答の有無 → 許す操作、断る1行 |
+     | `computeBonus` | `src/lib/domain/bonus.ts` | KPI評価点合計・1点あたりの金額 → 個人Pt・賞与額 |
+
+  4. **`canViewEvaluationOf` は2つの引数で、見せる形を返す**（DD-021 の選んだ形1を改める）。`canViewEvaluationOf(見る人, 対象の人)` は、会社の境界を問い合わせで閉じてから `evaluationViewOf` を呼ぶ。`evaluationViewOf` は本人を先に見て、本人なら役割にかかわらず `"self"`、そうでなければ `canReviewEmployeeEvaluation` が通す人（会社の管理者以上と直属の上長）に `"reviewer"`、ほかは `null` を返す。「確定した後だけ」の条件は判定から外し、`loadEvaluationReport` に移した（確定した評価だけを読み、無ければ `empty`）。評価の状態を判定に渡すと、期をまたぐレポートで「どの評価の状態か」が決まらないため。`self` は確定した評価だけから作り、社員として読み、点数の数値の鍵（`kpiTotal`・`scores`・同じ等級の平均と幅など）を持たない。同じ等級の平均と幅は、`reviewer` でも、重ならない社員が3人以上（`REPORT_PEER_MIN`）のときだけ出す。数え方は次のとおり（`report.ts` の `peerStat`・`peersOf`、`report-data.ts` の `loadPeers`）。同じ会社の確定した評価だけを読み、マネージャーの見る範囲では絞らない。レポートの本人も数に入る。⑤その等級の推移は同じ等級・同じ期で、⑥等級ごとの点数は同じ等級の全期を通して数える。平均と幅は人ではなく評価の行で取る（同じ人の2期は2行）。3人の数は重ならない社員で数える。等級の分からない評価どうしは比べない。
+  5. **`canViewEvaluationOf` を呼ぶのはレポートの画面だけ**（DD-021 の選んだ形3を改める）。評価の詳細の2画面（`/manager/evaluations/[id]`・`/me/results/[id]`）は今の判定のまま。評価の詳細を寄せると、本人を先に見るので、会社の管理者が評価者向け画面で自分の確定前の評価を開ける今の振る舞い（SECURITY-013 の中身）が、黙って変わる。SECURITY-013 を決めるときに寄せる。CSV とメモは DD-021 の4のまま、この関数を使わない。
+  6. **A4 縦の2枚組**。1枚目は ①見出し・②評価に値するか（上司の判断を重ねた結論）・③点数（本人向けは判定）・④KPIの項目ごとの達成度と、上長からのコメント。2枚目は頭に「{氏名}・{期}（評価レポートの2枚目）」を刷り、⑤その等級の推移・⑥等級ごとの点数（本人向けは等級ごとの達成率）・⑦過去の実績を載せる。コメントは HTML では2枚目の後ろに置き（画面では最後に読む）、印刷のときだけ `order`（1枚目 0・コメント 1・2枚目 2）で1枚目の末尾へ寄せる。長い理由とコメントは切り詰めず、はみ出した分は次の紙へ送る。画面用と印刷用の図を分け、印刷用は紙の寸法の枠（`.report-chart-print`）に入れる。図の部品が遅れて読み込まれても、紙の上の大きさが決まっているので、3枚目にあふれない。2枚目の前（`.report-page-2`）で改ページし、2枚目の頭に、誰のどの期のレポートかを刷る。画面の骨格・見出し・印刷ボタンは刷らない。保存した写しは持たず、開くたびに確定した評価から作り直す。
+  7. **評価セットの選び方は `resolveSchemeForCycle` の1つ**。順は、期間に付いた評価セット → 会社の使用中の評価セット → 無し（先頭の行で代えない）。依存は下の図のとおりで、契約テスト `src/lib/scheme-resolution.contract.test.ts` の一覧（RESOLVERS と READINESS_CALLERS）と同じにする。同じテストが図の矢印を読み、一覧と食い違えば落ちるので、図を変えるときは一覧も変える。ノードの名前に書くファイルは `src/` か `src/lib/` からのパスにする（テストがその名前でファイルを探す）。期間に別の評価セットを付けたとき、アンケートの作成・点数の計算・ずれの比較・レポートが同じ評価セットの項目になることも、同じテストが本物の表で確かめる。レポートは評価に保存した値を読み、評価セットを選び直さない（P02 の Acceptance の「レポート」は、点数の計算が保存した値を通して使う）。
+
+     ```mermaid
+     flowchart LR
+       R["resolveSchemeForCycle<br/>domain/scheme-resolution.ts"]
+       CS["cycle-scheme.ts<br/>schemeIdForCycle / schemeIdsForCycles"]
+       FB["form-build.ts<br/>アンケートの作成"]
+       EV["evaluate.ts<br/>点数の計算"]
+       Q["queries.ts<br/>listFormKpiCoverage"]
+       REP["report-data.ts<br/>評価レポート"]
+       DB[("evaluations<br/>保存した点数と判定")]
+       R --> CS
+       R --> FB
+       R --> EV
+       R --> Q
+       CS --> GAP["comparison-gap-loader.ts<br/>ずれの比較"]
+       CS --> RD["actions/cycles.ts・actions/forms.ts<br/>受付開始・公開の判定"]
+       CS --> ADM["app/admin/cycles/page.tsx・app/admin/forms/page.tsx<br/>評価期間とアンケートの一覧"]
+       EV --> DB
+       DB --> REP
+     ```
+
+  8. **最終の可否は `finalDecision` の1つで出す**。上司の判断が override なら点数の判定の逆、follow なら判定のまま、記録なしなら判定のまま（`unrecorded` の印を付ける）。点数の判定は書き換えず、最終の可否は列に保存しない。評価の詳細・レポート・CSV・本人の結果・評価期間の一覧（`app/manager/cycles/page.tsx` の `DecisionBadge`）のどれも、この関数を通した値だけを出す（`src/lib/final-decision.contract.test.ts`）。記録できるのは、確定の操作（3の表の `updateEvaluation`）を通せる人だけで、自分自身の評価と部下でない人の評価は 403 で断る。
+  9. **CSV は先頭の23列をそのまま**にし、「昇格可否」を上司の判断を合わせた最終の結論にする。末尾に7列「昇給」「昇給の点数の判定」「昇給の上司の判断」「昇給の判断の理由」「昇格の点数の判定」「昇格の上司の判断」「昇格の判断の理由」を足す（`src/lib/export.ts` の `RESULT_HEADERS`）。値は `decisionCsvCells` だけで作り、判断の理由は override のときだけ出す。
+  10. **DD-022 の直す操作**。新しい版が下書きで、いまの設定と一致しているとき、古い版の警告には「第N版の下書きを開く」を置き、注記「第N版の下書きは、いまの設定と一致しています。公開すると、この版は自動で締め切られます。」を添える（`src/lib/domain/comparison-gap.ts`）。下書きを直す必要は無く、公開すれば古い版が締め切られて警告が消えることを伝える。
+  11. **アンケートの状態の変更は `formTransitions` の1つ**で決め、画面のボタンと API が同じ答えを使う。状態の表は [release-and-forms §8](../../system-spec/release-and-forms.md)。
+  12. **KGI の静的検査（O17）の文書の除外は5つ**で確定する。spec-receipts・backlog-history・elegant-review・判断の記録（この文書）・[デプロイ時の注意](../deploy-notes.md)。除外が実在するファイルを指すことも検査する（消えた除外で検査が緩まない）。`system-spec/`・`architecture/`・`specs/` は spec-state から作る生成物と取り込みの写しで、走査の外に置く。
+  13. **テストファイル名**は下の「固定する検査」のとおり。
+- **決め手の軸**: 見える範囲を今より広げも狭めもしないこと（auth の (11)）。規則を1か所に書き、契約テストで呼ぶ側を固定すること。本番で、コードが無い列を名前で指定する時間を作らないこと（DD-020）。
+- **却下した候補と理由**:
+  - `canViewEvaluationOf` に評価の状態を渡す（DD-021 の選んだ形1のまま）: レポートは複数の期の評価を並べるので、どの評価の状態で判定するかが決まらない。確定した評価だけを読む側で絞れば、判定と中身が食い違わない。
+  - 評価の詳細の2画面も `canViewEvaluationOf` に寄せる（DD-021 の選んだ形3のまま）: 上の5のとおり、SECURITY-013 を決める前に今の振る舞いが変わる。
+  - 本人より上司側の判定を先に見る: 会社の管理者と上長が自分のレポートを開くと、点数の数値と同じ等級の平均まで入った評価者向けの形になる。自分の評価者向けの情報を、レポートという新しい入口で広げることになる。
+  - 印刷を、画面の図をそのまま縮めて刷る: 図の部品が描き終わる前に印刷の寸法が決まり、紙の上で図が伸びて4枚になった。
+  - レポートを開いたときに評価セットを選び直す: 点数を出したときと違う評価セットで項目を並べるおそれがある。保存した点数と判定を読めば、計算のときと同じものが出る。
+- **DD-021・DD-022 との関係**: DD-021 の選んだ形1（判定の引数と組み方）と3（使う場所）を、上の4・5のとおり改めた。範囲の外に書いた「`canViewEvaluationOf` の上司側の枝を通るレポート」は、本人を先に見るので起きない。DD-021 の固定する検査は、会社の管理者が自分の確定前の評価を評価者向け画面で開ける組を含めて、`src/lib/domain/evaluation-authority.test.ts` に置いた。DD-022 の範囲の外（直す操作）は上の10で決めた。DD-021・DD-022 の本文に注を足した。
+- **規範との関係**: 配色とテーマは決めない（DD-003）。テーマの契約のファイル（`theme-contract.test.ts`・`palette-contract.test.ts`・`scripts/aidd-kit-boundary.test.mjs`・`globals.css` 冒頭の宣言）は、基準 sha `dbe6333` から変えない。レポートと見本に実データを入れない（[README](../../README.md)「本番運用とデータの注意」）。
+- **範囲の外**: feature の scope_out の9件（`features/feature-evaluation-report-and-raise-judgment.context.json`）。KGI に代わる仕組み、サーバーで PDF を作ること（ブラウザの印刷で紙や PDF にする）、間接の部下へのマネージャーの閲覧、本番 DB へのテストデータの投入、確定済みの評価の個人Pt・賞与額・根拠の文の作り直し、上司の判断で等級を自動で変えること、上司の判断を賞与（仮）に効かせること、上書きした前の判断の履歴、配色とテーマの変更。SECURITY-013（自分を評価する側にも立つ人の扱い）・SECURITY-014（D1 の書き出しの置き場所）・OPS-017（本番の読み取りと配布の記録）・SECURITY-015（同じ等級の幅から人の値が割り出せる件）・POLICY-011（消す前に確定した評価の詳細に、そのときの根拠の文がそのまま出る件。P10 の最終レビューで足した）は [バックログ](./backlog.md) に残す。
+- **固定する検査**:
+  - O17（KGI の削除）: `src/lib/kgi-removal.static.test.ts`・`src/lib/domain/bonus.test.ts`。本番 DB の読み取りは P13。
+  - O18（レポートと印刷）: `src/lib/domain/report.test.ts`・`src/components/ReportTemplate.test.ts`・`e2e/evaluation-report.spec.ts`（375／768／1280／1600 の4つの幅と、④のレーダー図、2枚目の見出しと図）・`e2e/report-print.spec.ts`（A4 縦2枚、上長と本人）。
+  - O19（見える範囲）: `src/lib/report-visibility.contract.test.ts`・`src/lib/domain/evaluation-authority.test.ts`・`src/app/api/export/route.integration.test.ts`・`src/actions/notes.integration.test.ts`・`src/lib/notes-visibility.integration.test.ts`・`src/components/NoteForm.test.ts`・`e2e/report-visibility.spec.ts`。
+  - O20（テストデータ）: `scripts/seed-idempotent.test.mjs`（上司の判断の5つの型・受付中の期・ずれの3種類・本番向けの引数を断る）・`scripts/seed-target.test.mjs`・`e2e/seed-coverage.spec.ts`（入れた後の画面に、アンケートの4つの状態とずれの3種類が出る。レポートの図は `e2e/evaluation-report.spec.ts`）。
+  - O21（アンケートの状態）: `src/lib/domain/form-transitions.test.ts`・`src/actions/forms-transitions.integration.test.ts`・`e2e/forms-audit.spec.ts`。
+  - O22（古い版の警告）: `src/lib/domain/comparison-items.test.ts`・`src/lib/domain/comparison-gap.test.ts`・`src/lib/comparison-gap-links.test.ts`・`src/components/ComparisonGapNotice.test.ts`・`e2e/forms-audit.spec.ts`。
+  - O23（評価セットの選び方）: `src/lib/scheme-resolution.contract.test.ts`。
+  - O24（上司の判断）: `src/actions/raise-decision.integration.test.ts`・`src/lib/domain/final-decision.test.ts`・`src/lib/final-decision.contract.test.ts`・`src/app/api/export/route.integration.test.ts`・`e2e/raise-decision.spec.ts`。
+  - 戻す SQL（DD-020 の9）: `src/db/migration-rollback-0038-0039.test.ts`（その移行の前まで流した DB と、流してから戻した DB の表の形を比べる。0039 の部分は 0039 のファイルが入った後だけ動く）。P10 の最終レビューで足した。
+- **見直す条件**: SECURITY-013 を決めるとき（評価の詳細を `canViewEvaluationOf` に寄せるかと、`evaluation-authority.test.ts` の期待値の反転）。SECURITY-015 を決めるとき（同じ等級がちょうど3人のとき、平均と幅から残りの人の値が割り出せる。4の `REPORT_PEER_MIN` と数え方）。レポートを保存して配る要望が出たとき（今は写しを持たない）。評価セットを選ぶ場所を足すとき（図と契約テストの一覧を一緒に変える）。

@@ -8,10 +8,20 @@
  * 自社の警告に混ぜず、他社の大きい版を「より新しい版」と取り違えない。
  */
 
-import { listAskableKpiItemIds, listCycles, listFormKpiCoverage, listForms, listGrades } from "@/lib/queries";
+import {
+  listAskableKpiItemIds,
+  listBehaviorGuidelines,
+  listCycles,
+  listFormKpiCoverage,
+  listForms,
+  listGradeRequirements,
+  listGrades,
+} from "@/lib/queries";
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
+import { schemeIdForCycle } from "@/lib/cycle-scheme";
 import type { Role } from "@/lib/roles";
 import type { ComparisonGap, ComparisonPageKey } from "@/lib/domain/comparison-gap";
+import { guidelineCatalog, requirementSeries } from "@/lib/domain/comparison-items";
 import { effectiveAskedItems } from "@/lib/domain/form-sync";
 import { pointGroupLabel } from "@/lib/domain/grade-label";
 import { isUnaskable } from "@/lib/domain/scheme";
@@ -54,16 +64,24 @@ async function gapsOfCycle(
   opts: ComparisonLoadOptions,
   keep: (form: FormRow, pointGroup: string) => boolean = () => true,
 ): Promise<Map<string, ComparisonGap>> {
-  const [forms, grades, coverage, readiness, askableIds] = await Promise.all([
+  const [forms, grades, coverage, readiness, askableIds, requirementRows, guidelineRows] = await Promise.all([
     listForms(companyId, cycle.id),
     listGrades(companyId),
-    listFormKpiCoverage(companyId, cycle.id),
-    loadSchemeReadiness(companyId, cycle.schemeId),
+    // 比べる評価セットは、アンケートの作成・点数の計算と同じ選び方（DD-024。期間に付いた評価セット → 使用中）
+    listFormKpiCoverage(companyId, cycle),
+    schemeIdForCycle(companyId, cycle).then((schemeId) => loadSchemeReadiness(companyId, schemeId)),
     listAskableKpiItemIds(companyId),
+    listGradeRequirements(companyId),
+    listBehaviorGuidelines(companyId),
   ]);
   const gaps = new Map<string, ComparisonGap>();
-  // 有効な評価セットが無ければ比べる相手が無い（無いことを警告にしない）
+  // 評価セットが無ければ比べる相手が無い（無いことを警告にしない）
   if (!coverage) return gaps;
+  // 等級要件・行動指針は、いまのマスタで作り直したら聞くはずの項目と比べる（form-build.ts と同じ選び方）
+  const series = requirementSeries(requirementRows);
+  const catalog = guidelineCatalog(guidelineRows);
+  const askedRequirementsOf = (formId: string) => series.rootsOf(coverage.askedRequirementsByForm.get(formId) ?? []);
+  const askedBehaviorsOf = (formId: string) => coverage.askedBehaviorsByForm.get(formId) ?? [];
 
   // 聞いている項目の数え方は、比べる版と新しい版で同じにする（片方だけ固定枠を足すと、一致を取り違える）
   const askedOf = (formId: string) =>
@@ -79,7 +97,9 @@ async function gapsOfCycle(
     selected.filter((kpiItemId) => isUnaskable({ kpiItemId, isFixedSlot: fixedSlot.has(kpiItemId) }, askable));
 
   for (const form of forms) {
-    const pointGroup = grades.find((g) => g.id === form.gradeId)?.pointGroup;
+    const grade = grades.find((g) => g.id === form.gradeId);
+    const pointGroup = grade?.pointGroup;
+    const band = grade?.behaviorBand ?? null;
     const selected = pointGroup ? coverage.selectedByGroup.get(pointGroup) : undefined;
     // 使うKPIをまだ選んでいない区分は、比べる相手が無い
     if (!pointGroup || !selected || !keep(form, pointGroup)) continue;
@@ -103,7 +123,26 @@ async function gapsOfCycle(
       asked: askedOf(form.id),
       unaskable: unaskableOf(selected),
       nameOf: coverage.nameOf,
-      newer: newer && { id: newer.id, version: newer.version, status: newer.status, asked: askedOf(newer.id) },
+      requirements: {
+        expected: series.expectedOf(form.gradeId),
+        asked: askedRequirementsOf(form.id),
+        nameOf: series.nameOf,
+      },
+      behaviors: {
+        expected: catalog.expectedOf(band),
+        asked: askedBehaviorsOf(form.id),
+        nameOf: catalog.nameOf,
+        bandOf: catalog.bandOf,
+        band,
+      },
+      newer: newer && {
+        id: newer.id,
+        version: newer.version,
+        status: newer.status,
+        asked: askedOf(newer.id),
+        askedRequirements: askedRequirementsOf(newer.id),
+        askedBehaviors: askedBehaviorsOf(newer.id),
+      },
       schemeGap: schemeGapOf(readiness.schemeGaps, pointGroup),
       current: opts.current,
       role: opts.role,

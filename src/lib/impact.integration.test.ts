@@ -31,7 +31,6 @@ const WATCHED_TABLES = [
   "scheme_rank_ratios",
   "promotion_thresholds",
   "kpi_items",
-  "kgi_coefficients",
 ];
 
 /** 下ごしらえで入った行の更新時刻をそろえ、「いつ変えたか」を試験の側で決められるようにする。 */

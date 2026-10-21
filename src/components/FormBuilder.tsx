@@ -216,7 +216,8 @@ export function FormBuilder({
       <ReorderList
         items={rows.map((r) => ({ id: r.clientKey, label: r.title || "（設問文が未入力です）" }))}
         label="設問の並び"
-        className="reorder-in-card"
+        // 閉じた設問は本文が3行あるので、広い一覧では操作を右の列に縦に積む（globals.css の reorder-stack-actions。§28-9）
+        className="reorder-in-card reorder-stack-actions"
         busy={saving}
         onCommit={reorderQuestions}
         renderItem={(item, position) => {

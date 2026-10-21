@@ -211,11 +211,6 @@ export async function copyCompanyMasters(
   );
   counts["昇給額"] = settings.length;
 
-  /* 事業所KGI達成係数 */
-  const kgi = await db.select().from(s.kgiCoefficients).where(byCompany(s.kgiCoefficients));
-  await copyRows(kgi, "kgi", toCompanyId, () => ({}), (v) => db.insert(s.kgiCoefficients).values(v as never));
-  counts["KGI係数"] = kgi.length;
-
   return counts;
 }
 
@@ -231,7 +226,6 @@ export async function copyCompanyMasters(
  */
 export async function deleteCompanyMasters(db: DB, companyId: string): Promise<void> {
   const tables = [
-    s.kgiCoefficients,
     s.raiseSettings,
     s.raiseExceptions,
     s.raisePatterns,

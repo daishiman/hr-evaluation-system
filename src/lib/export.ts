@@ -1,13 +1,16 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDb, schema as s } from "@/lib/db";
 import { formatDateTime, formatPercent, toCsv } from "@/lib/csv";
+import { canReviewEmployeeEvaluation } from "@/lib/domain/evaluation-authority";
+import { decisionCsvCells, finalDecisionOf } from "@/lib/domain/final-decision";
 import { joinMembership } from "@/lib/memberships";
+import type { Viewer } from "@/lib/session";
 
 /**
  * これまでスプレッドシートで見ていた3種類の表を、そのままの列でCSVに書き出す。
  *
  *  1. 回答一覧   … アンケート1本ぶんの回答（設問文がそのまま列になる）
- *  2. 評価結果   … 1人1行の判定結果（23列）
+ *  2. 評価結果   … 1人1行の判定結果（現行の23列＋上司の判断の7列）
  *  3. KPI明細   … 1人×1項目で1行の点数根拠（16列）
  *
  * 列の並びと見出しは現行のスプレッドシートに合わせてある。
@@ -21,6 +24,30 @@ import { joinMembership } from "@/lib/memberships";
 const mem = s.companyMemberships;
 
 export type CsvFile = { filename: string; csv: string };
+
+/** 評価結果・KPI明細を書き出す人。行の範囲を決めるのに使う */
+export type ExportViewer = Pick<Viewer, "id" | "role">;
+
+/**
+ * 書き出す評価期間。呼び出し側（/api/export）が会社で絞って読んだものを渡す。
+ * ファイル名の期の名前はここから取る。行から取ると、載る行が0件のとき「評価結果_.csv」になる
+ * （マネージャーは直属の部下の分だけなので、0件は珍しくない）。
+ */
+export type ExportCycle = { id: string; name: string };
+
+/**
+ * 評価結果・KPI明細に、その人の行を載せてよいか。
+ *
+ * マネージャーの評価の画面（/manager/evaluations/[id]。/manager/cycles の一覧も同じ直属の範囲）と
+ * 同じ canReviewEmployeeEvaluation で決め、画面と CSV で見える人をそろえる。
+ * 会社の管理者以上は会社の全員、マネージャーは直属の部下だけ。マネージャー自身の評価は載せない
+ * （本人の結果は /me/results から確定済みだけを読む。CSV に載せると確認中の自分の評価まで出る）。
+ * 会社の管理者以上は本人を除かないので、自分の行も載る（扱いは SECURITY-013 で決める）。
+ * 以前は会社の全員分を返しており、マネージャーが担当外の人の評価結果を書き出せた。
+ */
+function inReviewScope(viewer: ExportViewer, row: { employeeId: string; managerId: string | null }): boolean {
+  return canReviewEmployeeEvaluation(viewer.id, viewer.role, { employeeId: row.employeeId, managerId: row.managerId });
+}
 
 /* ───────────────── 1. 回答一覧 ───────────────── */
 
@@ -97,22 +124,40 @@ export async function buildResponsesCsv(companyId: string, formId: string): Prom
   return { filename: `回答一覧_${form.cycleName ?? ""}_${form.gradeName ?? ""}.csv`, csv: toCsv(headers, rows) };
 }
 
-/* ───────────────── 2. 評価結果（23列） ───────────────── */
+/* ───────────────── 2. 評価結果（23列＋7列） ───────────────── */
 
+/**
+ * 先頭の23列は現行のスプレッドシートの並びのまま（位置で読んでいる表を壊さない）。
+ * 「昇格可否」は上司の判断を合わせた最終の結論にし、昇給の結論と、点数の判定・上司の判断・判断の理由を
+ * 末尾に足す（backend の (20)・DD-024）。値は finalDecision を通した decisionCsvCells だけで作る。
+ */
 const RESULT_HEADERS = [
   "回答ID", "回答日時", "氏名", "ユーザーキー", "等級", "評価対象半期",
   "等級要件達成数", "目標上限数", "等級要件達成率",
   "行動指針得点", "行動指針基準点", "行動指針判定",
   "昇格要件達成数", "昇格要件総数", "昇格要件実施状況（項目別）", "昇格要件判定", "昇格可否",
   "KPI合計点", "評価可能配点", "KPI達成率", "KPI評価内訳・点数根拠", "HTML評価票URL", "内部JSON",
+  "昇給", "昇給の点数の判定", "昇給の上司の判断", "昇給の判断の理由",
+  "昇格の点数の判定", "昇格の上司の判断", "昇格の判断の理由",
 ];
 
-export async function buildResultsCsv(companyId: string, cycleId: string, origin: string): Promise<CsvFile> {
+/**
+ * viewer は位置引数の必須にする（省略できると、渡し忘れたときに会社の全員分が出る。listEvaluations と同じ）。
+ */
+export async function buildResultsCsv(
+  companyId: string,
+  cycle: ExportCycle,
+  origin: string,
+  viewer: ExportViewer,
+): Promise<CsvFile> {
   const db = await getDb();
 
-  const evals = await db
+  const all = await db
     .select({
       id: s.evaluations.id,
+      employeeId: s.evaluations.employeeId,
+      // 直属の上長かどうかは、この会社の所属で決める（canViewEmployee と同じ）
+      managerId: mem.managerId,
       responseId: s.evaluations.responseId,
       computedAt: s.evaluations.computedAt,
       finalizedAt: s.evaluations.finalizedAt,
@@ -133,6 +178,11 @@ export async function buildResultsCsv(companyId: string, cycleId: string, origin
       promotionEligible: s.evaluations.promotionEligible,
       promotionBlockedReason: s.evaluations.promotionBlockedReason,
       raiseEligible: s.evaluations.raiseEligible,
+      raiseReason: s.evaluations.raiseReason,
+      raiseDecision: s.evaluations.raiseDecision,
+      raiseDecisionReason: s.evaluations.raiseDecisionReason,
+      promotionDecision: s.evaluations.promotionDecision,
+      promotionDecisionReason: s.evaluations.promotionDecisionReason,
       status: s.evaluations.status,
     })
     .from(s.evaluations)
@@ -140,8 +190,10 @@ export async function buildResultsCsv(companyId: string, cycleId: string, origin
     .leftJoin(mem, joinMembership(s.evaluations.companyId))
     .leftJoin(s.grades, eq(s.grades.id, s.evaluations.gradeId))
     .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.evaluations.cycleId))
-    .where(and(eq(s.evaluations.companyId, companyId), eq(s.evaluations.cycleId, cycleId)))
+    .where(and(eq(s.evaluations.companyId, companyId), eq(s.evaluations.cycleId, cycle.id)))
     .orderBy(asc(s.grades.displayOrder), asc(s.users.name));
+  // 範囲の外の人の評価は、項目・昇格要件を読む前に落とす
+  const evals = all.filter((e) => inReviewScope(viewer, e));
 
   const evalIds = evals.map((e) => e.id);
   const items = evalIds.length
@@ -171,6 +223,16 @@ export async function buildResultsCsv(companyId: string, cycleId: string, origin
         : e.behaviorTotal >= e.requiredBehavior
           ? "基準達成"
           : "基準未達";
+    const finalized = e.status === "finalized";
+    const [raise, raiseScore, raiseKind, raiseDecisionReason] = decisionCsvCells(finalDecisionOf("raise", e), {
+      finalized,
+      scoreReason: e.raiseReason,
+      decisionReason: e.raiseDecisionReason,
+    });
+    const [promotion, promotionScore, promotionKind, promotionDecisionReason] = decisionCsvCells(
+      finalDecisionOf("promotion", e),
+      { finalized, scoreReason: e.promotionBlockedReason, decisionReason: e.promotionDecisionReason },
+    );
     return [
       e.responseId ?? e.id,
       formatDateTime(e.finalizedAt ?? e.computedAt),
@@ -188,7 +250,7 @@ export async function buildResultsCsv(companyId: string, cycleId: string, origin
       gs.length,
       gs.map((g) => `${g.text}｜${g.achieved ? "実施済み（○）" : "未実施（×）"}`).join("\n"),
       gs.length === 0 ? "対象なし" : gateDone === gs.length ? "すべて達成" : "未達あり",
-      e.promotionEligible ? "昇格可" : `昇格不可${e.promotionBlockedReason ? `（${e.promotionBlockedReason}）` : ""}`,
+      promotion,
       e.totalScore,
       e.maxScore,
       formatPercent(e.maxScore ? (e.totalScore / e.maxScore) * 100 : null),
@@ -201,11 +263,17 @@ export async function buildResultsCsv(companyId: string, cycleId: string, origin
         requiredKpiPoints: e.requiredKpi,
         items: its.map((i) => ({ name: i.itemName, rank: i.rank, points: i.points, max: i.maxPoints, value: i.actualValue })),
       }),
+      raise,
+      raiseScore,
+      raiseKind,
+      raiseDecisionReason,
+      promotionScore,
+      promotionKind,
+      promotionDecisionReason,
     ];
   });
 
-  const cycleName = evals[0]?.cycleName ?? "";
-  return { filename: `評価結果_${cycleName}.csv`, csv: toCsv(RESULT_HEADERS, rows) };
+  return { filename: `評価結果_${cycle.name}.csv`, csv: toCsv(RESULT_HEADERS, rows) };
 }
 
 /* ───────────────── 3. KPI明細（16列） ───────────────── */
@@ -216,12 +284,15 @@ const KPI_HEADERS = [
   "点数根拠（適用基準）", "計算根拠", "注記",
 ];
 
-export async function buildKpiDetailCsv(companyId: string, cycleId: string): Promise<CsvFile> {
+/** viewer は位置引数の必須（buildResultsCsv と同じ理由・同じ範囲）。 */
+export async function buildKpiDetailCsv(companyId: string, cycle: ExportCycle, viewer: ExportViewer): Promise<CsvFile> {
   const db = await getDb();
 
-  const rows = await db
+  const all = await db
     .select({
       evaluationId: s.evaluations.id,
+      employeeId: s.evaluations.employeeId,
+      managerId: mem.managerId,
       responseId: s.evaluations.responseId,
       finalizedAt: s.evaluations.finalizedAt,
       computedAt: s.evaluations.computedAt,
@@ -245,10 +316,12 @@ export async function buildKpiDetailCsv(companyId: string, cycleId: string): Pro
     .from(s.evaluationItems)
     .innerJoin(s.evaluations, eq(s.evaluations.id, s.evaluationItems.evaluationId))
     .leftJoin(s.users, eq(s.users.id, s.evaluations.employeeId))
+    .leftJoin(mem, joinMembership(s.evaluations.companyId))
     .leftJoin(s.grades, eq(s.grades.id, s.evaluations.gradeId))
     .leftJoin(s.evaluationCycles, eq(s.evaluationCycles.id, s.evaluations.cycleId))
-    .where(and(eq(s.evaluationItems.companyId, companyId), eq(s.evaluations.cycleId, cycleId)))
+    .where(and(eq(s.evaluationItems.companyId, companyId), eq(s.evaluations.cycleId, cycle.id)))
     .orderBy(asc(s.grades.displayOrder), asc(s.users.name), asc(s.evaluationItems.displayOrder));
+  const rows = all.filter((r) => inReviewScope(viewer, r));
 
   const body = rows.map((r) => [
     r.responseId ?? r.evaluationId,
@@ -269,8 +342,7 @@ export async function buildKpiDetailCsv(companyId: string, cycleId: string): Pro
     r.calcNote ?? "",
   ]);
 
-  const cycleName = rows[0]?.cycleName ?? "";
-  return { filename: `KPI明細_${cycleName}.csv`, csv: toCsv(KPI_HEADERS, body) };
+  return { filename: `KPI明細_${cycle.name}.csv`, csv: toCsv(KPI_HEADERS, body) };
 }
 
 /* ───────────────── 4. 社員一覧（取り込みと同じ列） ───────────────── */

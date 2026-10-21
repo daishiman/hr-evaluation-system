@@ -7,6 +7,7 @@ import { getDb, schema as s } from "@/lib/db";
 import { assertCompanyChosen, canManageEmployee, HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
 import { formatJpDate } from "@/lib/domain/form-deadline";
+import { operationRefusal } from "@/lib/domain/form-transitions";
 import { jstDateKey } from "@/lib/domain/jst";
 import { joinMembership } from "@/lib/memberships";
 
@@ -36,21 +37,32 @@ export async function grantFormExtension(raw: unknown) {
 
     const form = (
       await db
-        .select({ id: s.forms.id, status: s.forms.status, closesAt: s.forms.closesAt, title: s.forms.title })
+        .select({
+          id: s.forms.id,
+          status: s.forms.status,
+          closesAt: s.forms.closesAt,
+          title: s.forms.title,
+          cycleStatus: s.evaluationCycles.status,
+        })
         .from(s.forms)
+        .innerJoin(
+          s.evaluationCycles,
+          and(eq(s.evaluationCycles.id, s.forms.cycleId), eq(s.evaluationCycles.companyId, companyId)),
+        )
         .where(and(eq(s.forms.id, input.formId), eq(s.forms.companyId, companyId)))
         .limit(1)
     )[0];
     if (!form) throw new HttpError(404, "アンケートが見つかりませんでした。");
-    if (form.status === "draft") {
-      throw new HttpError(400, "このアンケートはまだ公開されていません。公開してから期限を延ばしてください。");
-    }
-    if (form.status === "closed") {
-      throw new HttpError(
-        400,
-        "このアンケートは締め切り済みです。個別に期限を延ばす前に、アンケートを公開中に戻してください。",
-      );
-    }
+    /* 延ばせるかは、回答一覧の画面で延長の欄を出すかと同じ規則で決める（form-transitions.ts）。
+       下書きはまだ配っておらず、締め切ったものはもう受け付けない（公開中に戻す操作は無い）。
+       延長は回答の有無に依らないので、回答の有無は数えない。 */
+    const refusal = operationRefusal(
+      "extend",
+      form.status,
+      { closesAt: form.closesAt, now: new Date(), cycleStatus: form.cycleStatus },
+      false,
+    );
+    if (refusal) throw new HttpError(400, refusal);
 
     // その会社に所属している人だけ（会社は所属の表で見る）
     const employee = (
