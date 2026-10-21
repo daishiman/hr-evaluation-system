@@ -193,8 +193,8 @@ describe("ReportTemplate: 評価者向け", () => {
     expect(page2).toBeGreaterThan(page1);
     expect(comment).toBeGreaterThan(page2);
     // 2枚目の頭は、2枚目だけを見てもだれのどの期か分かるようにする
-    expect(html).toContain("見本 太郎・2026上期（評価レポートの2枚目）");
-    for (const heading of ["評価に値するか", "点数", "KPIの項目ごとの達成度", "その等級の推移", "等級ごとの点数", "過去の実績", "上長からのコメント"]) {
+    expect(html).toContain("見本 太郎・2026上期（評価レポートの続き）");
+    for (const heading of ["昇給・昇格の判断", "点数", "KPIの項目ごとの達成度", "その等級の推移", "等級ごとの点数", "過去の実績", "上長からのコメント"]) {
       expect(html).toContain(heading);
     }
   });
@@ -265,8 +265,8 @@ describe("ReportTemplate: 評価者向け", () => {
     expect(html).toContain('aria-label="KPIの項目ごとの達成度のレーダー図。3項目。値は隣の表と同じです。"');
     // 印刷用は二重に読まれないよう読み上げから外す。枠は紙の大きさで先に取る（図が届く前に刷られても紙面が伸びない）
     expect(html.match(/class="report-chart-print" style="[^"]*" aria-hidden="true"/g)).toHaveLength(3);
-    expect(html).toContain('class="report-chart-print" style="width:380px;height:190px"');
-    expect(html.match(/class="report-chart-print" style="width:300px;height:200px"/g)).toHaveLength(2);
+    expect(html).toContain('class="report-chart-print" style="width:calc(380px * var(--report-print-scale, 1));height:calc(190px * var(--report-print-scale, 1))"');
+    expect(html.split('class="report-chart-print" style="width:calc(300px * var(--report-print-scale, 1));height:calc(200px * var(--report-print-scale, 1))"')).toHaveLength(3);
   });
 
   it("判定していない項目は（※）を付け、0点ではないと断る", () => {

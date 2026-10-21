@@ -106,7 +106,7 @@ export async function EvaluationDetail({
             {/* 確定した評価からレポートを作るので、確定前は出さない（DD-024） */}
             {finalized && (
               <LinkButton href={`/reports/${head.employeeId}`} variant="tertiary" className="no-print">
-                評価レポートを見る
+                最新の確定済みレポートを見る
               </LinkButton>
             )}
             <PrintButton />

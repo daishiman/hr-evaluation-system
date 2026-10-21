@@ -385,6 +385,19 @@ describe("評価の集計（保管場所まで通して確かめる）", () => {
     expect(out).toEqual([]);
   });
 
+  it("対象者が空配列なら、提出済みの回答があっても評価を作らない", async () => {
+    await seedCompany(current);
+    seedMemberships(current);
+    await seedResponse(current, standardQuestions());
+
+    const out = await buildEvaluationsForCycle(IDS.company, IDS.cycle, IDS.evaluator, {
+      employeeIds: [],
+    });
+
+    expect(out).toEqual([]);
+    expect(await current.db.select().from(s.evaluations)).toEqual([]);
+  });
+
   it("サイクルが無い・評価セットが無いときは何もしない", async () => {
     await seedCompany(current);
     seedMemberships(current);

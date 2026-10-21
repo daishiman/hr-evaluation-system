@@ -63,7 +63,7 @@ export default async function MemberDetail({ params }: { params: Promise<{ id: s
       <PageTitle
         title={`${member.name} さん`}
         lede={`${gradeLabel({ name: member.gradeName })} ／ ${member.department ?? DEPARTMENT_UNSET_LABEL} ／ ${ROLE_LABEL[member.role as Role] ?? member.role}`}
-        actions={<LinkButton href={`/reports/${id}`}>評価レポートを見る</LinkButton>}
+        actions={<LinkButton href={`/reports/${id}`}>最新の確定済みレポートを見る</LinkButton>}
       />
 
       <SectionHeading>基本情報</SectionHeading>

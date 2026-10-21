@@ -1,5 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { signIn } from "./support";
+import { signIn, switchCompany } from "./support";
 
 /*
  * 誰のレポートを、どの形で開けるか（DD-024・canViewEvaluationOf）。
@@ -51,4 +51,19 @@ test("会社の管理者は、上長がマネージャーでない人も評価�
   await open(page, "e7");
   await expect(page.locator(".report")).toHaveAttribute("data-view", "reviewer");
   await expect(page.locator("main")).toContainText("KPI評価点");
+});
+
+
+test("システム管理者は選んだ会社の全員を読み、会社を切り替えると前の会社の URL は開けない", async ({ page, context, baseURL }) => {
+  await signIn(page, { email: "super@hyoka-demo.jp", password: SEED_PASSWORD });
+  await useKyufu(context, baseURL!);
+  await page.goto("/admin/members/usr_kyufu_e7");
+  await page.getByRole("link", { name: "最新の確定済みレポートを見る", exact: true }).click();
+  await expect(page.locator(".report")).toHaveAttribute("data-view", "reviewer");
+  await page.goto("/admin/members");
+  await switchCompany(page, "さくら福祉会");
+  await page.goto("/reports/usr_sakura_e1");
+  await expect(page.locator(".report")).toHaveAttribute("data-view", "reviewer");
+  expect((await open(page, "e7"))?.status()).toBe(404);
+  await expect(page.locator(".report")).toHaveCount(0);
 });

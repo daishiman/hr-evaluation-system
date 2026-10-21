@@ -67,7 +67,7 @@ export function ReportTemplate({
       <div className="report-page-2">
         {/* 2枚目の頭。紙だけに刷り、どの人のどの期のレポートかを2枚目だけでも分かるようにする */}
         <p className="report-print-head m-0">
-          {report.header.employeeName}・{report.header.baseCycleName}（評価レポートの2枚目）
+          {report.header.employeeName}・{report.header.baseCycleName}（評価レポートの続き）
         </p>
         {report.kind === "reviewer" ? <ReviewerHistorySections report={report} /> : <SelfHistorySections report={report} />}
       </div>
@@ -121,7 +121,7 @@ function ReportHead({ report }: { report: ReportBody }) {
 function Decisions({ decisions }: { decisions: ReportDecision[] }) {
   return (
     <section>
-      <SectionHeading help="点数の判定に、上司の判断を重ねた結論です。">評価に値するか</SectionHeading>
+      <SectionHeading help="点数の判定に、上司の判断を重ねた結論です。">昇給・昇格の判断</SectionHeading>
       <div className="report-decisions">
         {decisions.map((d) => (
           <Card key={d.subject} className="card-pad">
@@ -637,7 +637,7 @@ function ReportFigure({
     <figure className="report-figure m-0" role="img" aria-label={label}>
       <div className="report-chart-screen">{screen}</div>
       {/* 図は遅れて読み込むので、届く前に刷られても紙面が伸びないよう、枠を紙の大きさで先に取る */}
-      <div className="report-chart-print" style={printSize} aria-hidden="true">
+      <div className="report-chart-print" style={{ width: `calc(${printSize.width}px * var(--report-print-scale, 1))`, height: `calc(${printSize.height}px * var(--report-print-scale, 1))` }} aria-hidden="true">
         {print}
       </div>
     </figure>

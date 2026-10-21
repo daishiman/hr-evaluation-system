@@ -124,9 +124,9 @@ const buildSchema = z.object({
  * 画面（/manager/cycles、/manager/evaluations/[id]）と同じ範囲にそろえている。
  * 会社の境界は viewer.companyId で閉じる（サイクルIDを他社のものにしても届かない）。
  *
- * 自分自身の評価も集計の対象に含める。集計は提出済みの回答と会社のマスタから
- * 機械的に決まるもので、本人の裁量が入らないため。裁量が入る「確定して本人に公開する」
- * だけは、自分自身の分を塞いである（src/lib/domain/evaluation-authority.ts）。
+ * 管理者は自社分、マネージャーは直属メンバーだけを集計する。集計は提出済みの回答と
+ * 会社のマスタから機械的に決まるが、裁量が入る「確定して本人に公開する」は、
+ * どの役割でも自分自身の分を塞いである（src/lib/domain/evaluation-authority.ts）。
  */
 export async function buildEvaluations(raw: unknown) {
   return runAction({ operation: "evaluations.build", input: buildSchema }, raw, async ({ viewer, input }) => {

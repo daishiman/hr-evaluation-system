@@ -38,13 +38,13 @@ test("上長はメンバーのページから評価レポートを開け、ど�
   await page.goto("/manager/members");
   await switchCompany(page, KYUFU);
   await page.goto("/manager/members/usr_kyufu_e1");
-  await page.getByRole("link", { name: "評価レポートを見る", exact: true }).click();
+  await page.getByRole("link", { name: "最新の確定済みレポートを見る", exact: true }).click();
   await expect(page).toHaveURL(/\/reports\/usr_kyufu_e1$/);
 
   const main = page.locator("main");
   await expect(page.getByRole("heading", { level: 1, name: "評価レポート" })).toBeVisible();
   await expect(page.locator(".report")).toHaveAttribute("data-view", "reviewer");
-  for (const heading of ["評価に値するか", "点数", "KPIの項目ごとの達成度", "上長からのコメント"]) {
+  for (const heading of ["昇給・昇格の判断", "点数", "KPIの項目ごとの達成度", "上長からのコメント"]) {
     await expect(main.getByRole("heading", { name: heading, exact: true })).toBeVisible();
   }
   // 2枚目（⑤〜⑦）は推移・等級ごとの点数・過去の実績の順に並ぶ
@@ -79,7 +79,7 @@ test("本人は自分の結果から評価レポートを開け、点数の数�
 
   const main = page.locator("main");
   await expect(page.locator(".report")).toHaveAttribute("data-view", "self");
-  await expect(main.getByRole("heading", { name: "評価に値するか", exact: true })).toBeVisible();
+  await expect(main.getByRole("heading", { name: "昇給・昇格の判断", exact: true })).toBeVisible();
   await expect(main.getByRole("heading", { name: "判定", exact: true })).toBeVisible();
   await expect(main.locator(".report-decision-label")).toHaveText(["昇給", "昇格"]);
   // 本人の2枚目は、点数の代わりに等級要件の達成率で並ぶ

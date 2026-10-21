@@ -101,9 +101,11 @@ export async function buildEvaluationsForCycle(
   const authoritativeResponses = resolveAuthoritativeResponses(
     responses.map(({ response, formVersion }) => ({ ...response, formVersion })),
   );
-  const targets = opts?.employeeIds?.length
-    ? authoritativeResponses.filter((r) => opts.employeeIds!.includes(r.employeeId))
-    : authoritativeResponses;
+  // 未指定だけが全員。空配列（直属メンバーが0人など）は対象者なしとして扱う。
+  const employeeIds = opts?.employeeIds;
+  const targets = employeeIds === undefined
+    ? authoritativeResponses
+    : authoritativeResponses.filter((r) => employeeIds.includes(r.employeeId));
   if (targets.length === 0) return [];
 
   const [users, categories, behaviorGuidelines] = await Promise.all([

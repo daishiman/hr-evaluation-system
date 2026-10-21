@@ -140,7 +140,7 @@ export function EvaluatorPanel({
       <label className="m-0 block text-sub font-bold" htmlFor="ev_comment">
         本人に伝えるコメント
       </label>
-      <p className="footnote m-0 mb-2">確定すると、この文章が本人の結果画面に表示されます。</p>
+      <p className="footnote m-0 mb-2">確定すると、この文章が本人の結果画面に表示されます。コメントの保存だけでは昇給・昇格の結論は変わりません。下の「上司の判断」で選んで確定してください。</p>
       <textarea
         id="ev_comment"
         className="input min-h-[88px] w-full"

@@ -477,7 +477,8 @@
           "qa-y07",
           "qa-y08",
           "qa-y09",
-          "qa-z03"
+          "qa-z03",
+          "qa-aa01-report-access-print"
         ]
       },
       "mobile": {
@@ -698,7 +699,9 @@
           "qa-y14",
           "qa-w12",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-aa01-report-access-print",
+          "qa-aa02-empty-evaluation-scope"
         ]
       },
       "mobile": {
@@ -1048,7 +1051,9 @@
           "qa-y07",
           "qa-y12",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-aa01-report-access-print",
+          "qa-aa02-empty-evaluation-scope"
         ]
       },
       "mobile": {
@@ -1282,7 +1287,8 @@
           "qa-y08",
           "qa-y09",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-aa01-report-access-print"
         ]
       },
       "mobile": {
@@ -3950,6 +3956,20 @@
       "required_info_items": [
         "product-goal"
       ]
+    },
+    {
+      "id": "qa-aa01-report-access-print",
+      "question": "印刷すると、うまいことバランスが取れていないような形になるので、印刷形式で何か変換できるようなA4とかA3とかで表記できるような形って可能ですか？",
+      "answer": "2026-10-21 追加改善の設計補足（利用者の回答ではなく、依頼に対する実装担当の設計）。既存の A4 縦2枚を既定にし、レポート専用の A3 縦を加える。標準は2枚、長い理由・コメント・実績は追加ページを許し全文を残す。全ての紙用グラフとフォントを待って印刷し、15秒以内に揃わなければ印刷を開かず理由と再試行を示す。A3 はベクター図を紙面に合わせて拡大する。社員詳細へ直リンクを加え、レポートが最新の確定評価であることを明示する。回答からは回答IDに対応した閲覧可能な評価へ接続する。コメントのみの保存は判断や設定を変えず、昇給・昇格の結論は従来の上司の判断と理由の確定で変える。全体管理者は既存の会社切替で選択会社の全メンバーを閲覧できる。権限・数値非表示・確定条件・計算・スキーマは変更しない。詳細は docs/product/spec.md §29、DD-025、specs/report-access-print.md。従来の A4 の要件は既定として維持し、A3 と準備待ちを今回の補足として適用する。preview 実測と本番反映は受領書の追記待ち。",
+      "provenance": "利用者の今回の改善依頼の印刷に関する一文を question に抜粋。answer は追加質問の回答を装わず、親担当が選んだ可逆な設計を記録したもの。仕様初稿と実装差分を先に作る依頼に従う。受領書: docs/product/spec-receipts/2026-10-21-report-access-print.md。",
+      "basis": "agent-inference"
+    },
+    {
+      "id": "qa-aa02-empty-evaluation-scope",
+      "question": "既存の直属メンバーだけを集計する境界で、対象者が0人のときに他の人の評価を作成・変更しないか。",
+      "answer": "実DB回帰テストで、employeeIds が [] の場合に全員を対象としていた不具合を確認した。未指定は全員、空配列は対象なしに修正した。修正前に追加2テストが失敗し、修正後は関連5スイート129件が成功した。直属メンバー0人の manager が他の人の確認中の評価と全内訳を変更しないことを Server Action から確認した。既存仕様への整合で、権限・データ構造への追加影響はない。",
+      "provenance": "src/lib/evaluate.ts、src/lib/evaluate.integration.test.ts、src/actions/evaluation-flow.integration.test.ts の実装と、今回の実行ログによる観測。型生成不足による全体型検査の未完は親担当へ別報告し、テスト成功と混同しない。",
+      "basis": "observed-fact"
     }
   ],
   "approval_log": [
@@ -7636,7 +7656,7 @@
     }
   },
   "hearing_progress": {
-    "loop_count": 1,
+    "loop_count": 2,
     "next_question": null,
     "complete": true
   },
