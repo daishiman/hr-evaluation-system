@@ -293,6 +293,24 @@ describe("buildThresholdScale", () => {
     }
   });
 
+  it.each([
+    [0, "below"], [65.5, null], [70, null], [100, null], [104.5, null], [999, "above"], [null, null],
+  ] as const)("実績 %s の表示範囲外を区別する", (actual, clamped) => {
+    expect(buildThresholdScale(criteria, actual)!.markerClamped).toBe(clamped);
+  });
+
+  it("低い実績ほど良い基準でも位置は数値順で、保存ランクの着色は省ける", () => {
+    const lower = [
+      { rank: "A", displayLabel: "10以下", lowerBound: null, upperBound: 10 },
+      { rank: "E", displayLabel: "10超", lowerBound: 10, upperBound: null },
+    ];
+    const scale = buildThresholdScale(lower, 8)!;
+    expect(scale.segments.map((segment) => segment.rank)).toEqual(["A", "E"]);
+    expect(scale.segments.some((segment) => segment.hit)).toBe(false);
+    expect(scale.markerLeft).toBeLessThan(50);
+    expect(scale.markerClamped).toBe("below");
+  });
+
   it("実績値が無ければ印を置かない", () => {
     expect(buildThresholdScale(criteria, null)!.markerLeft).toBeNull();
   });

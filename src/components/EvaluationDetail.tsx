@@ -76,7 +76,7 @@ export async function EvaluationDetail({
   const operationReqs = requirements.filter((r) => r.category === "operation");
 
   return (
-    <>
+    <div className="evaluation-detail">
       {/* 縦に長い画面。誰の・どの期の・確定済みかどうかを帯に固定して見えたままにする */}
       <PageTitle
         sticky
@@ -106,10 +106,10 @@ export async function EvaluationDetail({
             {/* 確定した評価からレポートを作るので、確定前は出さない（DD-024） */}
             {finalized && (
               <LinkButton href={`/reports/${head.employeeId}`} variant="tertiary" className="no-print">
-                評価レポートを見る
+                最新のレポートを確認・印刷する
               </LinkButton>
             )}
-            <PrintButton />
+            <PrintButton label="評価の詳細を印刷する" />
           </>
         }
       />
@@ -157,7 +157,7 @@ export async function EvaluationDetail({
         </div>
       )}
 
-      {afterConclusion}
+      {afterConclusion && <div className="no-print">{afterConclusion}</div>}
 
       <SectionHeading
         aside={<span className="footnote">{items.length}項目の達成度（外側ほど良い）</span>}
@@ -290,6 +290,8 @@ export async function EvaluationDetail({
       {/* 全項目に同じ文が付いていた注記。行から外して一覧の下に1か所だけ置く */}
       {showsCriteria && (
         <div className="mt-2">
+          <p className="footnote m-0">黒線＝実績値の位置（得点ではありません）。</p>
+          <p className="footnote m-0">帯は現在の基準、判定は集計時の記録です。</p>
           <InlineDetail summary="判定範囲の帯について">
             <p className="m-0">帯は、現在の基準表のA〜Eです。</p>
             <p className="m-0 mt-1">確定時の基準は、各項目の「判定範囲」が正です。</p>
@@ -485,7 +487,7 @@ export async function EvaluationDetail({
           ]}
         />
       </Card>
-    </>
+    </div>
   );
 }
 
@@ -530,6 +532,7 @@ function ScoreBar({ points, maxPoints }: { points: number | null; maxPoints: num
   const pct = Math.min(100, Math.max(0, (points / maxPoints) * 100));
   return (
     <div className="mt-2">
+      <p className="m-0 text-note text-ink-muted">得点の割合</p>
       <div
         className="bar-track"
         role="img"
@@ -562,12 +565,16 @@ function ThresholdBand({
   unit: string | null;
   snapshotLabel: string | null;
 }) {
-  const scale = buildThresholdScale(criteria, actualValue, rank);
+  // 現在の帯を、保存済みのランクで着色しない。基準改定後の判定と位置を混同させない。
+  const scale = buildThresholdScale(criteria, actualValue);
   if (!scale) return null;
+  const edge = scale.markerClamped === "below" ? "表示範囲の左端以下" : scale.markerClamped === "above" ? "表示範囲の右端以上" : null;
+  const markerLabel = `実績値 ${actualValue ?? "未入力"}${unit ?? ""}${edge ? `（${edge}）` : ""}`;
 
   return (
     <div className="mt-2">
-      <div className="relative h-6 w-full" role="img" aria-label={`判定範囲。実績値 ${actualValue ?? "未入力"}`}>
+      <p className="m-0 text-note text-ink-muted">実績の位置（現在の基準）</p>
+      <div className="relative h-6 w-full" role="img" aria-label={`現在の判定範囲。${markerLabel}`}>
         {scale.segments.map((sg) => (
           <div
             key={sg.rank}
@@ -588,6 +595,8 @@ function ThresholdBand({
         {scale.markerLeft !== null && (
           <div
             className="absolute top-0 h-6 w-0.5"
+            title={markerLabel}
+            aria-hidden="true"
             style={{ left: `${scale.markerLeft}%`, background: "var(--ink)" }}
           />
         )}
@@ -595,8 +604,9 @@ function ThresholdBand({
       {/* 「帯は現在の基準表のA〜E」は全項目で同じ文になるので、行から外して
           一覧の下に1か所だけ置いた（項目数ぶん繰り返すと一覧が文字で埋まる）。 */}
       <p className="m-0 mt-1 text-note text-ink-muted">
-        判定範囲 {snapshotLabel ?? "—"}
+        集計時の判定 {snapshotLabel ?? "—"}
         {rank ? `（ランク${rank}）` : "（判定外）"} ／ 実績値 <Num value={actualValue} unit={unit ?? undefined} />
+        {edge && <span className="block">黒線は{edge}です。</span>}
       </p>
     </div>
   );

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PrintButton } from "@/components/PrintButton";
+import { ReportPrintControls } from "@/components/ReportPrintControls";
 import { ReportTemplate } from "@/components/ReportTemplate";
 import { PageTitle } from "@/components/ui";
 import { loadEvaluationReport } from "@/lib/report-data";
@@ -39,9 +39,9 @@ export default async function EvaluationReportPage({ params }: { params: Promise
       <div className="no-print">
         <PageTitle
           title="評価レポート"
-          lede="確定した評価をもとに、開くたびに作り直します。"
+          lede="最新の確定した評価と、これまでの推移を確認できます。"
           breadcrumb={[back]}
-          actions={report.kind === "empty" ? undefined : <PrintButton label="印刷する" />}
+          actions={report.kind === "empty" ? undefined : <ReportPrintControls />}
         />
       </div>
       <ReportTemplate report={report} emptyHref={back.href} emptyLabel={`${back.label}へ戻る`} />

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 import { schema as s } from "@/lib/db";
-import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
+import { IDS, seedCompany, seedMemberships, seedResponse } from "@/test-support/evaluation-fixture";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
 
 const mocked = vi.hoisted(() => ({ getDb: vi.fn() }));
@@ -41,6 +42,17 @@ describe("評価1件の読み取り", () => {
     expect((await listEvaluations(IDS.company, "MANAGER", opts)).map((r) => r.id)).toEqual([EVALUATION_ID]);
     expect(await listEvaluations(IDS.company, "MANAGER", { ...opts, employeeId: IDS.evaluator })).toEqual([]);
     expect(await listEvaluations(IDS.company, "MANAGER", { ...opts, cycleId: "missing" })).toEqual([]);
+    expect(await listEvaluations("other_company", "MANAGER", opts)).toEqual([]);
+  });
+
+  it("回答からの評価リンクは、同じ会社・同じ人・同じ回答の評価だけに絞る", async () => {
+    await seedResponse(t, [{ id: "q_link", section: "kpi", questionType: "number", title: "実績", displayOrder: 1, answer: 1 }]);
+    await t.db.update(s.evaluations).set({ responseId: "res_1" }).where(eq(s.evaluations.id, EVALUATION_ID));
+    const opts = { employeeId: IDS.employee, responseId: "res_1" };
+    expect((await listEvaluations(IDS.company, "MANAGER", opts)).map((r) => r.id)).toEqual([EVALUATION_ID]);
+    expect(await listEvaluations(IDS.company, "MANAGER", { ...opts, responseId: "missing" })).toEqual([]);
+    expect(await listEvaluations(IDS.company, "MANAGER", { ...opts, responseId: "" })).toEqual([]);
+    expect(await listEvaluations(IDS.company, "MANAGER", { ...opts, employeeId: IDS.evaluator })).toEqual([]);
     expect(await listEvaluations("other_company", "MANAGER", opts)).toEqual([]);
   });
 

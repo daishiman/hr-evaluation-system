@@ -1,8 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 import { signIn } from "./support";
+import { improvementFixture } from "./improvement-db-fixture";
 
 /*
- * 評価レポートの印刷（DD-024）。A4 縦の2枚組で、1枚目は①〜④とコメント、2枚目は⑤〜⑦。
+ * 評価レポートの印刷（DD-024）。A4は今回と履歴で改ページ、A3横は両面を左右に並べて標準1枚。
  * 紙には画面の骨格（メニュー・ヘッダー・印刷ボタン）を刷らず、図は紙用の形に差し替える。
  * PDF を作れるのは Chromium だけなので、page.pdf で紙の枚数を数える。
  */
@@ -25,7 +26,23 @@ async function commentAbovePage2(page: Page): Promise<boolean> {
   return comment!.y < page2!.y;
 }
 
-async function expectPrintLayout(page: Page) {
+async function expectPrintLayout(page: Page, savePdf: (paper: string, pdf: Buffer) => Promise<void>) {
+  // 実際の印刷操作が、全図と文字の準備後にだけ起きることを確認する。
+  await page.evaluate(() => { window.print = () => { document.documentElement.dataset.printInvoked = "true"; }; });
+  // 読込中を再現する。紙用SVGを一時的に外し、準備前に印刷されないことを観測する。
+  await page.locator(".report-chart-print svg.recharts-surface").first().waitFor({ state: "attached" });
+  await page.evaluate(() => {
+    const svg = document.querySelector(".report-chart-print svg.recharts-surface")!;
+    const parent = svg.parentElement!;
+    svg.remove();
+    (window as unknown as { restorePrintChart: () => void }).restorePrintChart = () => parent.appendChild(svg);
+  });
+  await page.getByRole("button", { name: "印刷する", exact: true }).click();
+  await expect(page.getByRole("button", { name: "印刷の準備中…", exact: true })).toBeDisabled();
+  await expect(page.locator("html")).not.toHaveAttribute("data-print-invoked", "true");
+  await page.evaluate(() => (window as unknown as { restorePrintChart: () => void }).restorePrintChart());
+  await expect(page.locator("html")).toHaveAttribute("data-print-invoked", "true");
+  await expect(page.locator(".report-chart-print svg.recharts-surface")).toHaveCount(await page.locator(".report-chart-print").count());
   await page.waitForSelector(".report-page-2");
   // 画面ではコメントを最後に読む。紙では order で1枚目の末尾へ寄せる（HTML の順は変えない）
   expect(await commentAbovePage2(page), "画面ではコメントが⑦の後ろにある").toBe(false);
@@ -43,30 +60,62 @@ async function expectPrintLayout(page: Page) {
   // ⑤〜⑦は必ず新しい紙から始める。これと「全部で2枚」がそろえば、1枚目は①〜④とコメントで収まり、2枚目は⑤から始まる
   await expect(page.locator(".report-page-2")).toHaveCSS("break-before", "page");
 
-  // 図は遅れて読み込む。届く前に刷っても、枠が紙の大きさを先に取るので紙面は伸びない
-  expect(pageCount(await printPdf(page)), "図が届く前でも A4 の2枚に収まる").toBe(2);
-
-  const boxes = page.locator(".report-chart-print");
-  await expect(page.locator(".report-chart-print .recharts-wrapper")).toHaveCount(await boxes.count());
-  expect(pageCount(await printPdf(page)), "図を描き終えて A4 の2枚に収まる").toBe(2);
+  const a4 = await printPdf(page);
+  expect(pageCount(a4), "標準の内容は A4 縦2枚").toBe(2);
+  await savePdf("A4", a4);
+  await page.emulateMedia({ media: "screen" });
+  await page.getByLabel("用紙", { exact: true }).selectOption("A3");
+  await expect(page.locator("html")).toHaveAttribute("data-report-paper", "A3");
+  await page.evaluate(() => { delete document.documentElement.dataset.printInvoked; });
+  await page.getByRole("button", { name: "印刷する", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-print-invoked", "true");
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator(".report-page-2")).toHaveCSS("break-before", "auto");
+  const a3 = await printPdf(page);
+  expect(pageCount(a3), "標準の内容は A3 横1枚").toBe(1);
+  await savePdf("A3", a3);
 }
 
 function printPdf(page: Page) {
-  return page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true });
+  return page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true, displayHeaderFooter: true });
 }
 
-test("上長が刷る評価レポートは A4 の2枚で、画面の骨格を刷らない", async ({ page, context, baseURL }) => {
+test("上長が刷る評価レポートは A4の区切りとA3横1枚で、図の準備を待つ", async ({ page, context, baseURL }, testInfo) => {
   await signIn(page, { email: "manager@kyufu.hyoka-demo.jp", password: SEED_PASSWORD });
   // 上長は さくら にも所属し、既定は さくら になる。kyufu のメンバーを読むので会社を選んでおく
   await context.addCookies([{ name: "hr_company", value: "cmp_kyufu", url: baseURL! }]);
   await page.goto("/reports/usr_kyufu_e3");
   await expect(page.locator(".report")).toHaveAttribute("data-view", "reviewer");
-  await expectPrintLayout(page);
+  await expectPrintLayout(page, async (paper, pdf) => { await testInfo.attach(`report-${paper}.pdf`, { body: pdf, contentType: "application/pdf" }); });
 });
 
-test("本人が刷る評価レポートも A4 の2枚に収まる", async ({ page }) => {
+test("本人が刷る評価レポートも A4の区切りとA3横1枚に収まる", async ({ page }, testInfo) => {
   await signIn(page, { email: "e1@kyufu.hyoka-demo.jp", password: SEED_PASSWORD });
   await page.goto("/reports/usr_kyufu_e1");
   await expect(page.locator(".report")).toHaveAttribute("data-view", "self");
-  await expectPrintLayout(page);
+  await expectPrintLayout(page, async (paper, pdf) => { await testInfo.attach(`report-${paper}.pdf`, { body: pdf, contentType: "application/pdf" }); });
+});
+
+
+test("長い上長コメントは切らず、必要な紙へ続けて印刷する", async ({ page }, testInfo) => {
+  const fixture = improvementFixture();
+  try {
+    const comment = "担当業務の改善を続け、引き継ぎの手順を整理しました。".repeat(70) + "末尾の確認文です。";
+    fixture.db.prepare("UPDATE evaluations SET status = 'finalized', evaluator_comment = ?, finalized_at = ? WHERE id = ?").run(comment, Date.now(), fixture.evaluationId);
+    await signIn(page, fixture.manager.account);
+    await page.goto(`/reports/${fixture.employee.id}`);
+    await page.evaluate(() => { window.print = () => { document.documentElement.dataset.printInvoked = "true"; }; });
+    await page.getByLabel("用紙", { exact: true }).selectOption("A3");
+    await page.getByRole("button", { name: "印刷する", exact: true }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "内容がA3の1枚を超えています" })).toBeVisible();
+    await expect(page.locator("html")).not.toHaveAttribute("data-print-invoked", "true");
+    await page.getByRole("button", { name: "A4で全文を印刷する", exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-print-invoked", "true");
+    await expect(page.getByRole("button", { name: "印刷する", exact: true })).toBeEnabled();
+    await expect(page.locator(".report-comment")).toContainText("末尾の確認文です。");
+    await page.emulateMedia({ media: "print" });
+    const pdf = await printPdf(page);
+    expect(pageCount(pdf)).toBeGreaterThan(2);
+    await testInfo.attach("report-long-comment.pdf", { body: pdf, contentType: "application/pdf" });
+  } finally { fixture.close(); }
 });

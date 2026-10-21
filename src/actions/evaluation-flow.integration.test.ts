@@ -284,3 +284,37 @@ describe("他社の期間・評価には届かない", () => {
     expect(mocked.refresh).not.toHaveBeenCalled();
   });
 });
+
+describe("集計対象はこの会社での直属メンバーに限る", () => {
+  it("直属メンバーが0人の上長は、他の人の確認中の評価と内訳を変更しない", async () => {
+    await saveResponse({ formId: IDS.form, status: "submitted", answers: FULL_ANSWERS });
+    mocked.viewer = MANAGER;
+    await buildEvaluations({ cycleId: IDS.cycle });
+    const before = {
+      evaluations: await t.db.select().from(s.evaluations),
+      items: await t.db.select().from(s.evaluationItems),
+      requirements: await t.db.select().from(s.evaluationRequirements),
+      gates: await t.db.select().from(s.evaluationGates),
+      behaviors: await t.db.select().from(s.evaluationBehaviors),
+    };
+    expect(before.evaluations).toHaveLength(1);
+    expect(before.evaluations[0].status).toBe("draft");
+
+    // users に以前の上長が残っていても、現在の所属では直属の人が0人。
+    await t.db
+      .update(s.companyMemberships)
+      .set({ managerId: null })
+      .where(eq(s.companyMemberships.userId, IDS.employee));
+
+    const result = await buildEvaluations({ cycleId: IDS.cycle });
+
+    expect(result).toMatchObject({ ok: true, results: [] });
+    expect({
+      evaluations: await t.db.select().from(s.evaluations),
+      items: await t.db.select().from(s.evaluationItems),
+      requirements: await t.db.select().from(s.evaluationRequirements),
+      gates: await t.db.select().from(s.evaluationGates),
+      behaviors: await t.db.select().from(s.evaluationBehaviors),
+    }).toEqual(before);
+  });
+});

@@ -599,13 +599,14 @@ export async function listNotes(companyId: string, employeeId: string, viewerRol
 export async function listEvaluations(
   companyId: string,
   viewerRole: Viewer["role"],
-  opts?: { employeeId?: string; cycleId?: string; evaluationId?: string },
+  opts?: { employeeId?: string; cycleId?: string; evaluationId?: string; responseId?: string },
 ) {
   const db = await getDb();
   const conds = [eq(s.evaluations.companyId, companyId)];
   if (opts?.employeeId) conds.push(eq(s.evaluations.employeeId, opts.employeeId));
   if (opts?.cycleId) conds.push(eq(s.evaluations.cycleId, opts.cycleId));
   if (opts?.evaluationId !== undefined) conds.push(eq(s.evaluations.id, opts.evaluationId));
+  if (opts?.responseId !== undefined) conds.push(eq(s.evaluations.responseId, opts.responseId));
 
   const rows = await db
     .select({

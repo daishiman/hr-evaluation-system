@@ -336,6 +336,8 @@ export interface ThresholdScale {
   segments: ThresholdSegment[];
   /** 実績値の位置（%）。値が無い・目盛りが作れないときは null */
   markerLeft: number | null;
+  /** 開いた端を描くための表示範囲を越えた場合。実績の数値自体は変えない。 */
+  markerClamped: "below" | "above" | null;
 }
 
 /**
@@ -383,5 +385,6 @@ export function buildThresholdScale(
 
   const markerLeft =
     actualValue === null ? null : Math.min(100, Math.max(0, pos(actualValue)));
-  return { segments, markerLeft };
+  const markerClamped = actualValue === null ? null : actualValue < min ? "below" : actualValue > max ? "above" : null;
+  return { segments, markerLeft, markerClamped };
 }

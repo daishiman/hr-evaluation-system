@@ -13,13 +13,15 @@ let fixture: ReturnType<typeof improvementFixture>;
 test.beforeEach(() => { fixture = improvementFixture(); });
 test.afterEach(() => fixture?.close());
 
-const REASON = "期の後半に、担当顧客の引き継ぎを期限までに終えられなかった。";
+const REASON = "担当顧客の引き継ぎと業務改善への貢献を認め、昇給とします。";
 
 function decisionGroup(page: Page, subject: "昇給" | "昇格") {
   return page.getByRole("group", { name: subject, exact: true });
 }
 
 test("昇給を変える理由に点数の語があると確定できず、直すと確定してレポートに理由が出る", async ({ page }) => {
+  fixture.db.prepare("UPDATE evaluations SET total_score = 25, raise_eligible = 0 WHERE id = ?").run(fixture.evaluationId);
+  const employeeBefore = fixture.db.prepare("SELECT grade_id FROM company_memberships WHERE company_id = ? AND user_id = ?").get(fixture.company.id, fixture.employee.id);
   await signIn(page, fixture.manager.account);
   await page.goto(`/manager/evaluations/${fixture.evaluationId}`);
   await waitForHydration(page, "main button");
@@ -45,6 +47,9 @@ test("昇給を変える理由に点数の語があると確定できず、直�
 
   await page.goto(`/reports/${fixture.employee.id}`);
   const raiseCard = page.locator(".report-decisions > *").filter({ hasText: "昇給" }).first();
-  await expect(raiseCard).toContainText("上司の判断");
+  await expect(raiseCard).toContainText("点数の判定では否");
+  await expect(raiseCard).toContainText("昇給：あり（上司の判断）");
+  expect(fixture.db.prepare("SELECT total_score, raise_eligible FROM evaluations WHERE id = ?").get(fixture.evaluationId)).toMatchObject({ total_score: 25, raise_eligible: 0 });
+  expect(fixture.db.prepare("SELECT grade_id FROM company_memberships WHERE company_id = ? AND user_id = ?").get(fixture.company.id, fixture.employee.id)).toEqual(employeeBefore);
   await expect(raiseCard).toContainText(`理由：${REASON}`);
 });

@@ -27,10 +27,10 @@ import type {
  * 中身は buildEvaluationReport が作り、ここは並べるだけにする（計算も出し分けもしない）。
  * 本人向け（self）の形には点数のキーがそもそも無いので、ここで隠す処理は持たない。
  *
- * 並びは ①見出し ②評価に値するか ③点数 ④レーダー図 ⑤その等級の推移 ⑥等級ごとの点数
+ * 並びは ①見出し ②昇給・昇格の判断 ③点数 ④レーダー図 ⑤等級と達成率の推移 ⑥等級ごとの点数
  * ⑦過去の実績、末尾に上長からのコメント。4つの幅で同じ順に出す。
- * 印刷では1枚目に①〜④とコメント、2枚目に⑤〜⑦を載せる。HTML の順はそのままにし、
- * コメントを1枚目へ寄せるのは globals.css の @media print の中だけで行う。
+ * 紙は①〜④とコメント、⑤〜⑦の2面。A4は面の区切りで改ページ、A3は左右へ並べる。
+ * 画面のコメントはCSSで最後へ置き、印刷では今回の評価の後ろへ寄せる。
  *
  * 図は1つのデータを2通りに描く。画面用は入れ物の幅に合わせ、印刷用は決まった大きさにする
  * （片方は CSS で隠す）。図の中身は隣の表と同じで、読み上げは表から読む。
@@ -57,21 +57,13 @@ export function ReportTemplate({
 
   return (
     <div className="report" data-view={report.kind}>
+      <div className="report-current">
       <div className="report-page-1">
         <ReportHead report={report} />
         <Decisions decisions={report.decisions} />
         {report.kind === "reviewer" ? <ReviewerScoreSection report={report} /> : <SelfScoreSection report={report} />}
         <RadarSection radar={report.radar} baseCycleName={report.header.baseCycleName} />
       </div>
-
-      <div className="report-page-2">
-        {/* 2枚目の頭。紙だけに刷り、どの人のどの期のレポートかを2枚目だけでも分かるようにする */}
-        <p className="report-print-head m-0">
-          {report.header.employeeName}・{report.header.baseCycleName}（評価レポートの2枚目）
-        </p>
-        {report.kind === "reviewer" ? <ReviewerHistorySections report={report} /> : <SelfHistorySections report={report} />}
-      </div>
-
       <section className="report-comment">
         <SectionHeading>上長からのコメント</SectionHeading>
         <Card className="card-pad">
@@ -82,6 +74,15 @@ export function ReportTemplate({
           )}
         </Card>
       </section>
+      </div>
+
+      <div className="report-page-2">
+        {/* 2枚目の頭。紙だけに刷り、どの人のどの期のレポートかを2枚目だけでも分かるようにする */}
+        <p className="report-print-head m-0">
+          {report.header.employeeName}・{report.header.baseCycleName}（評価レポートの続き）
+        </p>
+        {report.kind === "reviewer" ? <ReviewerHistorySections report={report} /> : <SelfHistorySections report={report} />}
+      </div>
     </div>
   );
 }
@@ -121,7 +122,7 @@ function ReportHead({ report }: { report: ReportBody }) {
 function Decisions({ decisions }: { decisions: ReportDecision[] }) {
   return (
     <section>
-      <SectionHeading help="点数の判定に、上司の判断を重ねた結論です。">評価に値するか</SectionHeading>
+      <SectionHeading help="点数の判定に、上司の判断を重ねた結論です。">昇給・昇格の判断</SectionHeading>
       <div className="report-decisions">
         {decisions.map((d) => (
           <Card key={d.subject} className="card-pad">
@@ -280,11 +281,16 @@ function RadarSection({ radar, baseCycleName }: { radar: ReportRadar; baseCycleN
   const unrated = radar.axes.filter((a) => a.unrated);
   const data = radar.axes.map((a) => ({ item: a.item, value: a.value, previous: a.previousValue, unrated: a.unrated }));
   const columns: Column<ReportRadarAxis>[] = [
-    { key: "item", header: "項目", cell: (a) => (a.unrated ? `${a.item}（※）` : a.item), role: "title" },
+    { key: "item", header: "項目・判定", cell: (a) => <>{a.unrated ? `${a.item}（※）` : a.item}{byRatio && <span className="block"><RankMark rank={a.rank} /></span>}</>, role: "title" },
     byRatio
       ? { key: "now", header: "今回", cell: (a) => <Num value={a.value} unit="%" />, num: true }
       : { key: "now", header: "今回", cell: (a) => <RankMark rank={a.rank} /> },
   ];
+  if (byRatio) {
+    columns.splice(1, 0,
+      { key: "points", header: "得点／配点", cell: (a) => <><Num value={a.unrated ? null : (a.points ?? null)} /> / <Num value={a.maxPoints ?? null} unit="点" /></>, num: true },
+    );
+  }
   if (showPrevious) {
     columns.push(
       byRatio
@@ -362,12 +368,14 @@ function ReviewerHistorySections({ report }: { report: ReviewerReport }) {
   const hasGradePeer = report.grades.some((g) => g.peer !== null);
   const trendData = report.trend.map((t) => ({
     cycle: t.cycleName,
+    gradeName: t.gradeName,
     value: t.value,
     average: t.peer?.average ?? null,
     range: t.peer ? ([t.peer.min, t.peer.max] as [number, number]) : null,
   }));
   const trendColumns: Column<ReviewerTrendPoint>[] = [
     { key: "cycle", header: "評価期間", cell: (t) => t.cycleName, role: "title" },
+    { key: "grade", header: "等級", cell: (t) => t.gradeName ?? "—" },
     { key: "value", header: "本人", cell: (t) => <Num value={t.value} unit="%" />, num: true },
     { key: "avg", header: "同じ等級の平均", cell: (t) => <Num value={t.peer?.average ?? null} unit="%" />, num: true },
     { key: "range", header: "幅", cell: (t) => <PeerRange peer={t.peer} /> },
@@ -401,8 +409,8 @@ function ReviewerHistorySections({ report }: { report: ReviewerReport }) {
   return (
     <>
       <section>
-        <SectionHeading help={`${report.trendGradeName ?? "同じ等級"}だった期の、KPIの達成率です。`}>
-          その等級の推移
+        <SectionHeading help="期ごとの等級とKPI達成率です。等級で評価基準が異なります。">
+          等級と達成率の推移
         </SectionHeading>
         <ReportPair
           chart={
@@ -439,7 +447,7 @@ function ReviewerHistorySections({ report }: { report: ReviewerReport }) {
               columns={trendColumns}
               rows={report.trend}
               rowKey={(t) => `${t.cycleName}-${t.periodStart ?? ""}`}
-              caption="その等級の期ごとのKPIの達成率と、同じ等級の平均と幅"
+              caption="期ごとの等級・KPIの達成率と、当時の同じ等級の平均と幅"
               scroll
             />
           }
@@ -504,9 +512,10 @@ function ReviewerHistorySections({ report }: { report: ReviewerReport }) {
  * 同じ等級の人の値は本人には出さない（読みもしない）。
  */
 function SelfHistorySections({ report }: { report: SelfReport }) {
-  const trendData = report.trend.map((t) => ({ cycle: t.cycleName, value: t.value, average: null, range: null }));
+  const trendData = report.trend.map((t) => ({ cycle: t.cycleName, gradeName: t.gradeName, value: t.value, average: null, range: null }));
   const trendColumns: Column<SelfTrendPoint>[] = [
     { key: "cycle", header: "評価期間", cell: (t) => t.cycleName, role: "title" },
+    { key: "grade", header: "等級", cell: (t) => t.gradeName ?? "—" },
     { key: "value", header: "等級要件の達成率", cell: (t) => <Num value={t.value} unit="%" />, num: true },
   ];
   const gradeData = report.grades.map((g) => ({ grade: g.gradeName, value: g.averageRequirementRate, average: null }));
@@ -526,8 +535,8 @@ function SelfHistorySections({ report }: { report: SelfReport }) {
   return (
     <>
       <section>
-        <SectionHeading help={`${report.trendGradeName ?? "同じ等級"}だった期の、等級要件の達成率です。`}>
-          その等級の推移
+        <SectionHeading help="期ごとの等級と等級要件の達成率です。等級で評価基準が異なります。">
+          等級と達成率の推移
         </SectionHeading>
         <ReportPair
           chart={
@@ -551,7 +560,7 @@ function SelfHistorySections({ report }: { report: SelfReport }) {
               columns={trendColumns}
               rows={report.trend}
               rowKey={(t) => `${t.cycleName}-${t.periodStart ?? ""}`}
-              caption="その等級の期ごとの等級要件の達成率"
+              caption="期ごとの等級と等級要件の達成率"
               scroll
             />
           }
@@ -619,7 +628,7 @@ function ReportPair({ chart, table }: { chart: ReactNode; table: ReactNode }) {
    表が切れずに入る幅にする。高さは2枚に収まるように決めた。
    レーダー図は隣の表が3列と細いので、軸の名前と凡例2つが1行に入る幅まで広げ、低くする */
 const PRINT_CHART = { width: 300, height: 200 };
-const PRINT_RADAR = { width: 380, height: 190 };
+const PRINT_RADAR = { width: 340, height: 190 };
 
 /** 1つのデータを、画面用（幅に合わせる）と印刷用（決まった大きさ）の2通りに描く */
 function ReportFigure({
@@ -637,7 +646,7 @@ function ReportFigure({
     <figure className="report-figure m-0" role="img" aria-label={label}>
       <div className="report-chart-screen">{screen}</div>
       {/* 図は遅れて読み込むので、届く前に刷られても紙面が伸びないよう、枠を紙の大きさで先に取る */}
-      <div className="report-chart-print" style={printSize} aria-hidden="true">
+      <div className="report-chart-print" style={{ width: `calc(${printSize.width}px * var(--report-print-scale, 1))`, height: `calc(${printSize.height}px * var(--report-print-scale, 1))` }} aria-hidden="true">
         {print}
       </div>
     </figure>
@@ -655,7 +664,7 @@ function PeerRange({ peer }: { peer: ReportPeerStat | null }) {
 }
 
 function PeerNote() {
-  return <p className="footnote m-0 mt-2">同じ等級の平均と幅は、3人以上いる期だけ出します。</p>;
+  return <p className="footnote m-0 mt-2">3人以上の期だけ平均・幅を表示します。</p>;
 }
 
 /** 上司の判断を記録した人と日時。記録の無い評価（この仕組みより前に確定）は — だけにする */

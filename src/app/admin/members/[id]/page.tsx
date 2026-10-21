@@ -57,9 +57,14 @@ export default async function AdminMemberDetail({ params }: { params: Promise<{ 
         title={`${member.name} さん`}
         lede={`${ROLE_LABEL[member.role as Role] ?? member.role} ／ ${member.email}`}
         actions={
-          <LinkButton href={`/manager/members/${member.id}`} variant="secondary">
-            評価の履歴を見る
-          </LinkButton>
+          <>
+            <LinkButton href={`/reports/${member.id}`}>
+              最新の確定済みレポートを見る
+            </LinkButton>
+            <LinkButton href={`/manager/members/${member.id}`} variant="secondary">
+              評価の履歴を見る
+            </LinkButton>
+          </>
         }
       />
 
