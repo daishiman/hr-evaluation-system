@@ -19,30 +19,12 @@ try {
 }
 
 const generateOnly = process.argv.includes("--generate-only");
-const { buildSeed, DEMO_PASSWORD } = await import("./seed-data.mjs");
-
-const TABLES = [
-  "import_batches",
-  "employee_notes", "kgi_coefficients",
-  "raise_revisions", "raise_exceptions", "raise_patterns", "raise_policies", "raise_settings",
-  "evaluation_gates", "evaluation_requirements", "evaluation_behaviors", "evaluation_items", "evaluations",
-  "form_answers", "form_responses", "form_questions", "forms", "evaluation_cycles",
-  "form_deadline_extensions",
-  "scheme_rank_ratios", "scheme_items", "evaluation_schemes", "grade_point_rules",
-  "kpi_questions", "kpi_reference_points", "kpi_rank_criteria", "kpi_items", "kpi_categories",
-  "promotion_thresholds", "behavior_levels", "behavior_guidelines", "behavior_band_sets",
-  "promotion_requirements", "grade_requirements",
-  "sessions", "accounts", "verifications", "company_memberships", "users", "grades", "offices", "companies",
-];
+const { buildSeed, DEMO_PASSWORD, seedFileBody } = await import("./seed-data.mjs");
 
 const { sql, counts } = await buildSeed();
 
-const body = [
-  "-- 自動生成: scripts/seed.mjs（手で編集しない）",
-  "PRAGMA defer_foreign_keys = ON;",
-  ...TABLES.map((t) => `DELETE FROM ${t};`),
-  ...sql,
-].join("\n\n");
+// 消す表の一覧と本文の組み立ては seed-data.mjs に置く（冪等の試験が同じ本文を流して確かめるため）
+const body = seedFileBody(sql);
 
 mkdirSync(new URL("../drizzle/", import.meta.url), { recursive: true });
 const out = new URL("../drizzle/seed.sql", import.meta.url);

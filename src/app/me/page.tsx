@@ -50,6 +50,8 @@ export default async function MyHome() {
         requirementTotal: evaluation.requirementTotal,
         raiseEligible: evaluation.raiseEligible,
         promotionEligible: evaluation.promotionEligible,
+        raiseDecision: evaluation.raiseDecision,
+        promotionDecision: evaluation.promotionDecision,
       }))}
       gradeAssigned={Boolean(viewer.gradeId)}
     />

@@ -5,6 +5,7 @@ import { listCycleSubmissionRows } from "@/lib/submission-queries";
 import { SUBMISSION_STATE_LABEL, countSubmissions, parseSubmissionFilter } from "@/lib/domain/submission-status";
 import { detectStaleCycles } from "@/lib/impact";
 import { ActionButton } from "@/components/ActionButton";
+import { DecisionBadge } from "@/components/DecisionBadge";
 import { SubmissionStatusTable } from "@/components/SubmissionStatusTable";
 import {
   Badge,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui";
 import { CYCLE_STATUS_LABEL, formatPeriod } from "@/lib/view";
 import { buildEvaluations } from "@/actions/evaluations";
+import type { DecisionKind } from "@/lib/domain/final-decision";
 
 export const dynamic = "force-dynamic";
 
@@ -243,12 +245,17 @@ function EvaluationRow({
     id: string;
     employeeName: string | null;
     gradeName: string | null;
-    raiseEligible: boolean | null;
-    promotionEligible: boolean | null;
+    raiseEligible: boolean;
+    promotionEligible: boolean;
+    raiseDecision: DecisionKind | null;
+    raiseDecisionReason: string | null;
+    promotionDecision: DecisionKind | null;
+    promotionDecisionReason: string | null;
     totalScore: number | null;
     status: string;
   };
 }) {
+  const finalized = e.status === "finalized";
   return (
     <CardRow
       title={
@@ -257,18 +264,38 @@ function EvaluationRow({
         </Link>
       }
       sub={
-        <>
-          {e.gradeName} ／ {e.raiseEligible ? "昇給の要件を満たしています" : "昇給は見送り"}
-          {e.promotionEligible ? " ／ 昇格の要件も満たしています" : ""}
-        </>
+        // 等級と2つの結論は横に並べ、狭いときだけ折り返す（縦に積むと左の列だけが伸び、右が空く。A12）
+        <span className="flex flex-wrap gap-x-4 gap-y-1">
+          {e.gradeName && <span>{e.gradeName}</span>}
+          {/* 結論は final-decision.ts だけで出す（DD-024）。一覧では理由を畳み、詳細で読む */}
+          <DecisionBadge
+            subject="raise"
+            scoreJudgement={e.raiseEligible}
+            decision={e.raiseDecision}
+            reason={e.raiseDecisionReason}
+            finalized={finalized}
+            compact
+          />
+          <DecisionBadge
+            subject="promotion"
+            scoreJudgement={e.promotionEligible}
+            decision={e.promotionDecision}
+            reason={e.promotionDecisionReason}
+            finalized={finalized}
+            compact
+          />
+        </span>
       }
+      // 状態の札は点数の下に積む。点数と札を横に並べた1段では、名前と結論の2行のうち真ん中しか覆えず、上下の右が空く（A12）
       value={
         <>
           <Num value={e.totalScore} display />
           <span className="unit">点</span>
+          <span className="mt-1 block">
+            {finalized ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
+          </span>
         </>
       }
-      marks={e.status === "finalized" ? <Badge tone="done">確定済み</Badge> : <Badge tone="active">確認中</Badge>}
     />
   );
 }

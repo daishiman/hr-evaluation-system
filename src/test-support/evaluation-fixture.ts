@@ -53,8 +53,6 @@ export interface SeedOptions {
   raiseRequiresAllA?: boolean;
   requiredKpiPoints?: number;
   requiredBehaviorPoints?: number;
-  /** 事業所KGI達成率（%）。null なら登録しない */
-  officeKgiRate?: number | null;
   /** 個人Pt 1点あたりの金額 */
   yenPerPoint?: number;
 }
@@ -65,7 +63,6 @@ export async function seedCompany(t: TestDatabase, opts: SeedOptions = {}) {
     raiseRequiresAllA = true,
     requiredKpiPoints = 80,
     requiredBehaviorPoints = 3,
-    officeKgiRate = 100,
     yenPerPoint = 3200,
   } = opts;
   const db = t.db;
@@ -276,38 +273,9 @@ export async function seedCompany(t: TestDatabase, opts: SeedOptions = {}) {
     seq: 1,
   });
 
-  await db.insert(s.kgiCoefficients).values(
-    [
-      ["121%以上", 121, null, 1.5, 1],
-      ["111%以上121%未満", 111, 121, 1.2, 2],
-      ["100%以上111%未満", 100, 111, 1.0, 3],
-      ["95%以上100%未満", 95, 100, 0.6, 4],
-      ["90%以上95%未満", 90, 95, 0.4, 5],
-      ["90%未満", null, 90, 0.2, 6],
-    ].map(([label, lo, hi, co, order], i) => ({
-      id: `kgi_${i}`,
-      companyId: IDS.company,
-      label: label as string,
-      lowerBound: lo as number | null,
-      upperBound: hi as number | null,
-      coefficient: co as number,
-      displayOrder: order as number,
-    })),
-  );
-
   await db
     .insert(s.raisePolicies)
     .values({ id: "rp_1", companyId: IDS.company, bonusYenPerPoint: yenPerPoint });
-
-  if (officeKgiRate !== null) {
-    await db.insert(s.officeKgiResults).values({
-      id: "okr_1",
-      companyId: IDS.company,
-      officeId: IDS.office,
-      cycleId: IDS.cycle,
-      achievementRate: officeKgiRate,
-    });
-  }
 }
 
 /**

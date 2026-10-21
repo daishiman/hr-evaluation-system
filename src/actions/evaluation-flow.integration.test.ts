@@ -157,7 +157,14 @@ describe("本人の提出 → 上長の集計 → 確定（代表経路）", () 
     expect(evaluation.status).not.toBe("finalized");
     expect(mocked.refresh).toHaveBeenCalledTimes(3);
 
-    const finalized = await updateEvaluation({ evaluationId: evaluation.id, action: "finalize", comment: "よくできました" });
+    const finalized = await updateEvaluation({
+      evaluationId: evaluation.id,
+      action: "finalize",
+      comment: "よくできました",
+      // 確定には昇給と昇格への上司の判断が要る（DD-024。中身の検査は raise-decision.integration.test.ts）
+      raiseDecision: "follow",
+      promotionDecision: "follow",
+    });
     expect(finalized).toEqual({ ok: true, message: "確定しました。本人の画面に結果が表示されます。" });
     expect(await evaluationOf(IDS.employee)).toMatchObject({
       status: "finalized",

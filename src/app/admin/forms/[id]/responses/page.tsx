@@ -18,6 +18,7 @@ import { Badge, Card, DownloadButton, EmptyState, Num, PageTitle, ReasonNote, Re
 import { SubmissionStatusTable } from "@/components/SubmissionStatusTable";
 import { FORM_STATUS_LABEL, formatDateTime } from "@/lib/view";
 import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
+import { operationRefusal } from "@/lib/domain/form-transitions";
 import { jstDateKey } from "@/lib/domain/jst";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +73,12 @@ export default async function AdminFormResponses({
      いても、それまでに提出済みだった回答は formResponses に残ったまま。 */
   const { rows: active, counts } = submission;
   const missing = active.filter((r) => r.state === "none");
+  /* 催促の文面と延長の欄を出すかは、延長の API（grantFormExtension）と同じ規則で決める（form-transitions.ts）。
+     下書き・締め切り済み・評価期間の終了では出さず、代わりに理由を1行で出す（締め切ったものを延長の欄で開け直せるように見せない）。 */
+  const deadline = { closesAt: form.closesAt, now: new Date(), cycleStatus: form.cycleStatus };
+  const answered = counts.submitted + counts.draft > 0;
+  const remindRefusal = operationRefusal("remind", form.status, deadline, answered);
+  const extendRefusal = operationRefusal("extend", form.status, deadline, answered);
 
   return (
     <>
@@ -122,14 +129,18 @@ export default async function AdminFormResponses({
             {missing.length}人がまだ回答していません（{missing.slice(0, 5).map((r) => r.name).join("、")}
             {missing.length > 5 ? " ほか" : ""}）。
           </ReasonNote>
-          <div className="mt-2">
-            <CopyReminder
-              names={missing.map((r) => r.name)}
-              url={formUrl(origin, form.publicToken)}
-              deadline={form.closesAt}
-              lead={<CopyUrl url={formUrl(origin, form.publicToken)} label="回答画面のURL" />}
-            />
-          </div>
+          {remindRefusal ? (
+            <p className="footnote mt-2">{remindRefusal}</p>
+          ) : (
+            <div className="mt-2">
+              <CopyReminder
+                names={missing.map((r) => r.name)}
+                url={formUrl(origin, form.publicToken)}
+                deadline={form.closesAt}
+                lead={<CopyUrl url={formUrl(origin, form.publicToken)} label="回答画面のURL" />}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -198,7 +209,11 @@ export default async function AdminFormResponses({
         締切を過ぎると回答できなくなります。休職・出張などで間に合わなかった方には、ここでその方だけ期限を延ばせます。延ばした期限は本人の回答画面にも表示されます。
       </p>
 
-      {active.length > 0 && (
+      {extendRefusal && (
+        <p className="footnote mb-2">{extendRefusal}</p>
+      )}
+
+      {!extendRefusal && active.length > 0 && (
         <RecordForm
           action={grantFormExtension}
           resource="form-extensions"

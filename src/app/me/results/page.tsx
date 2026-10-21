@@ -1,10 +1,17 @@
 import { canSeeCriteria, requireRoute } from "@/lib/session";
 import { listEvaluations } from "@/lib/queries";
-import { EmptyState, PageTitle } from "@/components/ui";
+import { EmptyState, LinkButton, PageTitle } from "@/components/ui";
 import { EvaluationTrend, type TrendItem } from "@/components/EvaluationTrend";
 import { MyPendingResultsNotice } from "@/components/MyPendingResultsNotice";
 import { listMyPendingCycles } from "@/lib/stalled";
 import { formatPeriod } from "@/lib/view";
+import {
+  conclusionValue,
+  DECISION_SUBJECT_LABEL,
+  DECISION_SUBJECTS,
+  finalDecisionOf,
+  scoreJudgementText,
+} from "@/lib/domain/final-decision";
 
 export const dynamic = "force-dynamic";
 
@@ -53,13 +60,28 @@ export default async function MyResults() {
         text: `${e.requirementAchieved ?? "—"} / ${e.requirementTotal ?? "—"} 項目`,
       },
       ...(canSeePoints ? [{ label: "行動指針の点数", value: e.behaviorTotal ?? null, unit: "点" }] : []),
-      { label: "昇給の要件", text: e.raiseEligible ? "満たしています" : "継続" },
+      // 結論は final-decision.ts だけで出す（DD-024）。上司が変えたときは「（上司の判断）」と点数の判定を添える
+      ...DECISION_SUBJECTS.map((subject) => {
+        const fd = finalDecisionOf(subject, e);
+        return {
+          label: DECISION_SUBJECT_LABEL[subject],
+          text: fd.overridden
+            ? `${conclusionValue(fd)}／${scoreJudgementText(fd.scoreJudgement)}`
+            : conclusionValue(fd),
+        };
+      }),
     ],
   }));
 
   return (
     <>
-      <PageTitle title="評価の結果を見る" lede="半期ごとの評価をすべて残しています。過去と比べて変化を確認できます。" />
+      <PageTitle
+        title="評価の結果を見る"
+        lede="半期ごとの評価をすべて残しています。過去と比べて変化を確認できます。"
+        actions={
+          all.length > 0 ? <LinkButton href={`/reports/${viewer.id}`}>評価レポートを見る</LinkButton> : undefined
+        }
+      />
 
       <MyPendingResultsNotice cycles={pending} />
 

@@ -4,8 +4,10 @@ import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
 import { batchAll } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
 import { HttpError } from "@/lib/session";
+import { contentEditRefusal, formTransitions } from "@/lib/domain/form-transitions";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
 import { questionsForPointGroup } from "@/lib/domain/grade-points";
+import { resolveSchemeForCycle } from "@/lib/domain/scheme-resolution";
 import {
   BEHAVIOR_HELP,
   kpiQuestion,
@@ -173,23 +175,13 @@ export async function buildQuestionRows(opts: {
     }
   }
 
-  // 評価セットに入っている項目に紐づく設問だけを載せる
-  const scheme = (
-    await db
-      .select()
-      .from(s.evaluationSchemes)
-      .where(and(eq(s.evaluationSchemes.companyId, companyId), eq(s.evaluationSchemes.id, cycle.schemeId ?? "")))
-      .limit(1)
-  )[0];
-  const activeScheme =
-    scheme ??
-    (
-      await db
-        .select()
-        .from(s.evaluationSchemes)
-        .where(and(eq(s.evaluationSchemes.companyId, companyId), eq(s.evaluationSchemes.status, "active")))
-        .limit(1)
-    )[0];
+  // 評価セットに入っている項目に紐づく設問だけを載せる。
+  // どの評価セットを使うかは、点数の計算・ズレの比較と同じ1か所で決める（DD-024。会社の評価セットだけを渡す）
+  const schemes = await db
+    .select({ id: s.evaluationSchemes.id, status: s.evaluationSchemes.status })
+    .from(s.evaluationSchemes)
+    .where(eq(s.evaluationSchemes.companyId, companyId));
+  const activeScheme = resolveSchemeForCycle(cycle, schemes);
 
   if (activeScheme) {
     /* この等級の等級区分ぶんだけを載せる。
@@ -328,7 +320,7 @@ async function prepareFormDraft(db: Db, opts: FormDraftInput): Promise<PreparedF
   const siblings = await db
     .select({ version: s.forms.version })
     .from(s.forms)
-    .where(and(eq(s.forms.cycleId, cycleId), eq(s.forms.gradeId, gradeId)));
+    .where(and(eq(s.forms.companyId, companyId), eq(s.forms.cycleId, cycleId), eq(s.forms.gradeId, gradeId)));
   const version = siblings.reduce((max, f) => Math.max(max, f.version), 0) + 1;
 
   const formId = newId("frm");
@@ -395,29 +387,6 @@ export async function buildFormDraft(opts: FormDraftInput): Promise<FormDraftRes
 }
 
 /**
- * タイトル・説明・設問など、回答内容の意味を変える編集ができる状態か。
- *
- * 回答0件でも、公開中ならすでに誰かが設問を読んでいる可能性がある。
- * 公開済み・締め切り済みの版はそのまま残し、変更時は新しい下書き版を作る。
- * UI・PUT・同期処理で同じ規則を使えるよう、DBを読まない判定として公開する。
- */
-export function assertFormContentEditable(form: { status: string; title: string }): void {
-  if (form.status === "draft") return;
-  const state =
-    form.status === "published"
-      ? "公開中"
-      : form.status === "closed"
-        ? "締め切り済み"
-        : `現在の状態（${form.status}）`;
-  // 題名が空（既定の題名）のときは「「」は」にせず、このアンケートと呼ぶ
-  const subject = form.title.trim() ? `「${form.title.trim()}」` : "このアンケート";
-  throw new HttpError(
-    400,
-    `${subject}は${state}のため、内容を変更できません。いまの評価項目で聞き直すときは、アンケート一覧から新しい版を作ってください。`,
-  );
-}
-
-/**
  * 既にあるアンケートの設問を、いまの制度マスタ・評価セットで作り直す。
  *
  * 下書きかつ回答0件の場合だけ、その版の設問を制度の側に揃え直せる。
@@ -440,19 +409,16 @@ export async function syncFormQuestions(opts: {
   )[0];
   if (!form) throw new HttpError(404, "アンケートが見つかりませんでした。");
 
-  assertFormContentEditable(form);
-
-  const answered = await db
-    .select({ id: s.formResponses.id })
-    .from(s.formResponses)
-    .where(eq(s.formResponses.formId, form.id))
-    .limit(1);
-  if (answered.length > 0) {
-    throw new HttpError(
-      400,
-      "このアンケートにはすでに回答があるため、設問を作り直せません。いまの評価項目に合わせるときは、新しい版を作って公開してください。",
-    );
-  }
+  const [answered, cycles] = await Promise.all([
+    db.select({ id: s.formResponses.id }).from(s.formResponses)
+      .where(and(eq(s.formResponses.companyId, companyId), eq(s.formResponses.formId, form.id))).limit(1),
+    db.select({ status: s.evaluationCycles.status }).from(s.evaluationCycles)
+      .where(and(eq(s.evaluationCycles.id, form.cycleId), eq(s.evaluationCycles.companyId, companyId))).limit(1),
+  ]);
+  if (!cycles[0]) throw new HttpError(404, "評価期間が見つかりませんでした。");
+  const allowed = formTransitions(form.status, { closesAt: form.closesAt, now: new Date(), cycleStatus: cycles[0].status }, answered.length > 0);
+  const refusal = contentEditRefusal("rebuild", form, allowed);
+  if (refusal) throw new HttpError(400, refusal);
 
   const rows = await buildQuestionRows({
     companyId,

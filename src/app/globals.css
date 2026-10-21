@@ -1641,6 +1641,10 @@ tr[data-off="true"] > td {
   flex-wrap: wrap;
 }
 .card-row:last-child { border-bottom: none; }
+/* 補足が数行になる行（CardRow の alignTop・className="card-row items-start"）は上端にそろえる。
+   Tailwind の items-start は @layer utilities に入り、レイヤーの外にある上の align-items: center に
+   詳細度にかかわらず負けるので、組み合わせの規則をここに置く。 */
+.card-row.items-start { align-items: flex-start; }
 /* 本文は最低でもこの幅を要求する。min-width: 0 は長い語を折り返すために必要だが、
    これだけだと隣に幅の広い箱が来たとき 0 まで潰れる。 */
 .row-main { flex: 1 1 16rem; min-width: 0; }
@@ -1689,7 +1693,7 @@ tr[data-off="true"] > td {
 }
 .def-list > div:last-child { border-bottom: none; }
 /* ラベルの幅は 9rem（144px）。文字を 12px → 14px にしたとき 8rem では
-   「事業所KGI達成率」のような8〜9字のラベルが2行に折れたため、同じ字数が
+   「等級要件の達成率」のような8〜9字のラベルが2行に折れたため、同じ字数が
    1行に収まる幅へ広げた。文字の段を動かすときはこの幅も対で見直す。 */
 .def-list dt { flex: 0 0 9rem; color: var(--ink-muted); font-size: var(--text-note); }
 .def-list dd { flex: 1 1 12rem; margin: 0; min-width: 0; }
@@ -3005,6 +3009,73 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 .input-code { font-family: var(--font-mono); letter-spacing: .06em; }
 
 /* ============================================================
+   評価レポート（/reports/[id]。実装は src/components/ReportTemplate.tsx）
+   画面では ①〜⑦ と上長からのコメントを上から順に流す。順は4つの幅で同じ。
+   図と表は、入れ物が広いときだけ左右に並べ、狭いときは図 → 表の順に積む。
+   紙での並べ替え（コメントを1枚目へ寄せる）は、下の印刷用の指定の中だけで行う。
+   ============================================================ */
+.report { container: report / inline-size; }
+.report-head .def-list { font-size: var(--text-note); }
+.report-decisions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-block);
+}
+.report-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-block);
+  align-items: start;
+}
+.report-pair-chart,
+.report-pair-table { min-width: 0; }
+@container report (min-width: 40rem) {
+  .report-decisions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container report (min-width: 52rem) {
+  .report-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+
+/* 図の凡例。図の中ではなく HTML で書き、線の見本を CSS で描く（図の線と同じ色・同じ破線にする） */
+.report-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-block);
+  margin: 0 0 var(--space-tight);
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-note);
+  color: var(--ink-muted);
+}
+.report-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.report-swatch {
+  display: inline-block;
+  flex: none;
+  width: 1.75rem;
+  height: .75rem;
+}
+.report-swatch[data-shape="solid"],
+.report-swatch[data-shape="dashed"],
+.report-swatch[data-shape="dashed-soft"] { height: 0; }
+.report-swatch[data-shape="solid"] { border-top: 2px solid var(--brand); }
+.report-swatch[data-shape="dashed"] { border-top: 2px dashed var(--ink-muted); }
+.report-swatch[data-shape="dashed-soft"] { border-top: 2px dashed var(--chart-line-soft); }
+.report-swatch[data-shape="area"] {
+  background: color-mix(in srgb, var(--brand) 25%, transparent);
+  border: 2px solid var(--brand);
+}
+.report-swatch[data-shape="band"] { background: color-mix(in srgb, var(--chart-line-soft) 20%, transparent); }
+.report-swatch[data-shape="bar"] { background: var(--brand); }
+.report-swatch[data-shape="bar-dashed"] {
+  background: var(--surface);
+  border: 2px dashed var(--ink-muted);
+}
+
+/* 図は画面用（幅に合わせる）と印刷用（決まった大きさ）の2通りを描き、片方だけを出す */
+.report-chart-print,
+.report-print-head { display: none; }
+
+/* ============================================================
    印刷（A4縦）
    評価票をそのまま紙に出せるようにする。移行元（GAS）の
    「A4 HTML評価票」と同じ用途。画面の飾りと操作は落とす。
@@ -3111,6 +3182,91 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
 
   /* 色の付いた数字・バッジは、色が出ない環境でも読めるように濃さを上げる */
   .hero-number .num-display { color: var(--ink) !important; }
+
+  /* ---- 評価レポート：A4縦の2枚組（docs/product/spec.md・DD-024） ----
+     1枚目に ①見出し ②評価に値するか ③点数 ④レーダー図 と上長からのコメント、
+     2枚目に ⑤その等級の推移 ⑥等級ごとの点数 ⑦過去の実績 を載せる。
+     HTML の順（①〜⑦ → コメント）は画面と同じにし、order でコメントを1枚目の末尾へ寄せる。
+     長い理由やコメントは切らずに載せる（はみ出した分は次の紙へ送られる）。 */
+  .report {
+    display: flex;
+    flex-direction: column;
+    font-size: var(--text-note);
+    line-height: 1.35;
+  }
+  .report-page-1 { order: 0; }
+  .report-comment { order: 1; }
+  .report-page-2 { order: 2; break-before: page; }
+  /* 見出しの説明は見出しの右に並べ、紙の上で1行を浮かせる */
+  .report .section-head { display: inline-flex; margin: 6px var(--space-block) 2px 0; }
+  .report .section-head + .footnote { display: inline; }
+  .report-page-2 > .report-print-head + section .section-head { margin-top: 0; }
+  .report .footnote { font-size: var(--text-note); }
+  .report .card-pad { padding: 8px 12px; }
+  .report .mt-2,
+  .report .mt-3 { margin-top: 6px; }
+  /* ① 「評価レポート」と氏名は1行に並べる */
+  .report-kicker,
+  .report-name { display: inline; }
+  .report-kicker { margin-right: var(--space-block); }
+
+  /* 定義リストは、紙ではラベルの列を一番長いラベルの幅にそろえ、値と常に横に並べる。
+     画面の 9rem のままだと狭い欄で値が下へ回り、② のカードの高さが倍になる */
+  .report .def-list {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: 12px;
+  }
+  .report .def-list > div {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    gap: 0 12px;
+    padding: 2px 0;
+  }
+  .report .def-list dt { max-width: 9rem; }
+
+  /* ① 見出しは4項目を2列で並べ、縦を詰める。左の列は評価期間の日付が1行に入る広さにする */
+  .report-head .def-list {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    column-gap: var(--space-block);
+  }
+  .report-head .def-list > div {
+    grid-column: auto;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    border-bottom: none;
+  }
+
+  /* ② 昇給と昇格は左右に並べる。結論の1行が「昇給：」で始まるので、上の小さな名前は紙では省く */
+  .report-decisions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-tight); }
+  .report-decision-label { display: none; }
+
+  /* 図と表は紙でも左右に並べる。図は印刷用の決まった大きさのほうを出す。
+     図の欄は図の幅で止め（長い凡例は折り返す）、残りを表に渡す */
+  .report-pair { grid-template-columns: min-content minmax(0, 1fr); gap: var(--space-tight); }
+  .report .report-legend { gap: 2px 12px; margin-bottom: 4px; }
+  .report-chart-screen { display: none; }
+  /* 枠の大きさは ReportTemplate.tsx が紙の図の大きさで決める。読み込み中の仮の枠（画面の高さ）ははみ出させない */
+  .report-chart-print { display: block; overflow: hidden; }
+  .report-print-head {
+    display: block;
+    margin: 0 0 var(--space-tight);
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+    font-size: var(--text-note);
+    color: var(--ink-muted);
+  }
+  .report .stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-tight); }
+
+  /* 表は横に流せないので、余白を詰めて紙の幅に収める。
+     列見出しは折り返してよい。値は和文の途中で割らない（「等級2」が2行に割れないように） */
+  .report table { font-size: var(--text-note); }
+  .report th,
+  .report td { padding: 3px 6px; }
+  .report thead th { white-space: normal; min-width: 0; }
+  .report td { word-break: keep-all; }
+  .report section,
+  .report-pair { break-inside: avoid; }
 }
 
 /* ============================================================
@@ -3406,6 +3562,20 @@ details.inline-detail .inline-detail-body > :last-child { margin-bottom: 0; }
   }
   :where(.reorder-list.reorder-inline:not([data-reorder-w]) > .reorder-row) > .reorder-actions > *,
   :where(.reorder-list.reorder-inline:not([data-reorder-w]) > .reorder-row) > .reorder-actions > * > .btn { flex: 0 0 auto; }
+}
+/* 操作を縦に積む一覧（アンケートの設問）。閉じた設問の本文は3行（設問文・まとまりと答え方・集計との紐づけ）ある。
+   60rem 以上で操作を横に並べると、右の列は1行目だけで、2行目から下の右側が空く（§28-9。下書きのアンケートで 48%）。
+   操作を右の列に縦に積んで行の高さを覆い、列が細くなったぶん本文を広げる。
+   1段の段組み（つまみ → 本文 → 操作 → 矢印）と、60rem 未満の段組みは変えない */
+:where(.reorder-list.reorder-stack-actions[data-reorder-w~="60"] > .reorder-row) > .reorder-actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+@container reorder (min-width: 60rem) {
+  :where(.reorder-list.reorder-stack-actions:not([data-reorder-w]) > .reorder-row) > .reorder-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 /* カードの中の一覧（等級要件・昇格の条件）。行の区切りと余白は、カードの行（.card-row）にそろえる */
 .reorder-list.reorder-in-card { gap: 0; }

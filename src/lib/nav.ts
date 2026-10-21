@@ -78,7 +78,7 @@ const COMPANY_GROUPS: GroupDef[] = [
   },
   {
     title: "運用を補う",
-    items: [item("/admin/kgi", "achievement"), item("/admin/raises", "raise")],
+    items: [item("/admin/raises", "raise")],
   },
   {
     title: "人を管理する",

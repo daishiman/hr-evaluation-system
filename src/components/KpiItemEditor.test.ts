@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { KpiItemEditor, type KpiItemRow } from "@/components/KpiItemEditor";
+import { KpiItemEditor, kpiItemIdFromHash, openableItem, type KpiItemRow } from "@/components/KpiItemEditor";
 
 /* 比べる警告の「聞き方を決める」から来たとき（kpiItemPath。DD-012・DD-016）の描き方を確かめる。
    保存の入口はサーバーの処理を読み込むので、描くのに要らない部分だけ差し替える */
@@ -82,5 +82,25 @@ describe("項目を指して開く（聞き方を決める から来たとき）
       expect(html).not.toContain("保存する");
       expect(html).not.toContain('value="等級要件達成率"');
     }
+  });
+});
+
+/* 画面を開いたまま別の項目を指されたとき（?item= が変わる・# だけが変わる）も、同じ線引きで開く。
+   描き直しの state の動きはブラウザの試験（e2e/forms-audit.spec.ts）で見て、ここでは開く項目の決め方を見る */
+describe("開いたまま別の項目を指されたとき", () => {
+  it("開けるのは固定枠でない、ある項目だけ", () => {
+    expect(openableItem(ITEMS, "kpi_b")?.name).toBe("残業率");
+    expect(openableItem(ITEMS, "kpi_fixed")).toBeNull();
+    expect(openableItem(ITEMS, "kpi_missing")).toBeNull();
+    expect(openableItem(ITEMS, null)).toBeNull();
+  });
+
+  it("# から項目を読む。kpiItemPath の書き方の # だけを拾い、ほかの # や壊れた値は何も指さない", () => {
+    expect(kpiItemIdFromHash("#kpi-item-kpi_b")).toBe("kpi_b");
+    expect(kpiItemIdFromHash("#kpi-item-kpi%20b")).toBe("kpi b");
+    expect(kpiItemIdFromHash("#kpi-item-")).toBeNull();
+    expect(kpiItemIdFromHash("#grade-requirement-gr_1")).toBeNull();
+    expect(kpiItemIdFromHash("")).toBeNull();
+    expect(kpiItemIdFromHash("#kpi-item-%E0%A4%A")).toBeNull();
   });
 });

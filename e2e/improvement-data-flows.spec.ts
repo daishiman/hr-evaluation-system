@@ -50,6 +50,10 @@ test("評価を確定すると3一覧へ最新点数が出て、一般社員の�
     await signIn(manager, fixture.manager.account);
     await manager.goto(`/manager/evaluations/${fixture.evaluationId}`);
     await waitForHydration(manager, "main button");
+    // 確定の前に、昇給と昇格それぞれへ上司の判断を選ぶ（DD-024）
+    for (const subject of ["昇給", "昇格"]) {
+      await manager.getByRole("group", { name: subject, exact: true }).getByRole("button", { name: /^点数の判定どおりにする/ }).click();
+    }
     await confirm(manager, "確定して本人に公開する");
     await expect.poll(() => fixture.db.prepare("SELECT status FROM evaluations WHERE id=?").get(fixture.evaluationId)).toMatchObject({ status: "finalized" });
     await manager.goto("/manager/members");

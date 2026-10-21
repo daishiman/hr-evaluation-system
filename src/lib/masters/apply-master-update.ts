@@ -3,7 +3,6 @@ import { schema as s } from "@/lib/db";
 import type { getDb } from "@/lib/db";
 import { HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
-import { checkKgiCoverage } from "@/lib/domain/kgi";
 import { rangeLabel, type Direction } from "@/lib/domain/scoring";
 import { checkBounds, checkNumberMagnitude } from "@/lib/domain/number-input";
 import { checkRankBoundaries } from "@/lib/domain/rank-bounds";
@@ -449,44 +448,6 @@ export async function applyMasterUpdate(args: {
           message:
             "ランクA〜Eの基準を保存しました。次に集計する評価から反映されます（確定済みの評価は当時の基準のまま残ります）。",
         };
-      }
-      case "kgi": {
-        const before = (
-          await db.select().from(s.kgiCoefficients)
-            .where(and(eq(s.kgiCoefficients.id, body.id), eq(s.kgiCoefficients.companyId, companyId))).limit(1)
-        )[0];
-        await ensure(before ? [before] : [], "達成係数");
-        const kgiPatch = {
-          coefficient: body.coefficient,
-          isProvisional: false,
-        };
-        await writeMasterBatch(db, [
-          db.update(s.kgiCoefficients).set(kgiPatch).where(eq(s.kgiCoefficients.id, body.id)),
-          ...(await constitutionEventStatements({
-            db,
-            companyId,
-            entityType: "kgiCoefficient",
-            entityId: body.id,
-            eventType: "updated",
-            actorId: viewerId,
-            before,
-            after: { ...before, ...kgiPatch },
-          })),
-        ]);
-
-        // 達成係数の表も、達成率の数直線を覆えているかを同じ物差しで見る
-        const rows = await db.select().from(s.kgiCoefficients).where(eq(s.kgiCoefficients.companyId, companyId));
-        const kgiProblems = checkKgiCoverage(rows.sort((a, b) => a.displayOrder - b.displayOrder));
-        if (kgiProblems.length > 0) {
-          return {
-            message:
-              "達成係数を保存しました。ただし次の問題があります。" +
-              kgiProblems.map((p) => p.message).join(" ") +
-              " このままだと、係数が決まらない達成率が出ます。",
-            warnings: kgiProblems.map((p) => p.message),
-          };
-        }
-        return { message: "達成係数を保存しました。" };
       }
       case "kpiCategoryCreate": {
         const name = body.name.trim();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMasterAction } from "@/components/use-master-action";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Badge, Button, Card, Code, Disclosure, FieldGroup, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ListAddArea, ListAddRow, ListRowActions, ListRowBody, ListRowItem, ListRows } from "@/components/ListRow";
@@ -121,6 +121,22 @@ function askingNote(row: KpiItemRow) {
   );
 }
 
+/** 指されて入力欄を開ける項目。固定枠は直せないので開かない。無い項目を指されたら null */
+export function openableItem<T extends { id: string; isFixedSlot: boolean }>(items: readonly T[], id: string | null): T | null {
+  return id === null ? null : (items.find((i) => i.id === id && !i.isFixedSlot) ?? null);
+}
+
+/** URL の # が指す項目の id（#kpi-item-<id>。kpiItemPath の書き方）。ほかの # なら null */
+export function kpiItemIdFromHash(hash: string): string | null {
+  const prefix = `#${encodeURIComponent(kpiItemAnchor(""))}`;
+  if (!hash.startsWith(prefix) || hash.length === prefix.length) return null;
+  try {
+    return decodeURIComponent(hash.slice(prefix.length));
+  } catch {
+    return null; // 壊れた % の並びは、どの項目も指していない
+  }
+}
+
 /**
  * KPI項目そのもの（名前・単位・向き・分類・実績区分・実績の聞き方）の追加・編集・削除。
  *
@@ -148,10 +164,33 @@ export function KpiItemEditor({
 }) {
   const { send, remove, saving, error, message, clearResult } = useMasterAction("kpiItem");
   const [creating, setCreating] = useState<Draft | null>(null);
-  /* 開いておくのは最初に描くときだけ。保存や取り消しで閉じたあとは、URL に残っていても開き直さない */
-  const [opened] = useState(() => items.find((i) => i.id === openItemId && !i.isFixedSlot) ?? null);
+  /* 開いておくのは、指された項目が変わったときだけ（最初に描くときを含む）。
+     保存や取り消しで閉じたあとは、URL に残っていても開き直さない */
+  const [opened] = useState(() => openableItem(items, openItemId));
   const [editingId, setEditingId] = useState<string | null>(opened?.id ?? null);
   const [editDraft, setEditDraft] = useState<Draft | null>(() => (opened ? draftFromRow(opened) : null));
+  const openRow = (row: KpiItemRow) => {
+    setEditingId(row.id);
+    setEditDraft(draftFromRow(row));
+  };
+
+  /* 画面を開いたまま別の項目を指されたとき（比べる警告の別の行・聞き方を決める）。
+     ?item= が変わると、サーバーが描き直して openItemId だけが変わり、この部品は作り直されない */
+  const [pointedId, setPointedId] = useState(openItemId);
+  if (pointedId !== openItemId) {
+    setPointedId(openItemId);
+    const row = openableItem(items, openItemId);
+    if (row) openRow(row);
+  }
+  /* # だけが変わったとき（同じ画面の中の #kpi-item-<id> へのリンク・戻る／進む）。?item= は変わらないので、ここで拾う */
+  useEffect(() => {
+    const onHash = () => {
+      const row = openableItem(items, kpiItemIdFromHash(window.location.hash));
+      if (row) openRow(row);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [items]);
 
   const { usedByOf, markOf, anyBlocked } = blockedRows(usage, items);
 
@@ -177,8 +216,7 @@ export function KpiItemEditor({
   };
 
   const startEdit = (row: KpiItemRow) => {
-    setEditingId(row.id);
-    setEditDraft(draftFromRow(row));
+    openRow(row);
     clearResult();
   };
 

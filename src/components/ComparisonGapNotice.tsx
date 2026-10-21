@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import { Badge, InlineDetail, LinkButton } from "@/components/ui";
 import { createForms, rebuildFormQuestions } from "@/actions/forms";
 import {
+  COMPARISON_KIND_LABEL,
   COMPARISON_LEAD,
   COMPARISON_OPEN_LABEL,
   comparisonSummary,
@@ -21,6 +22,7 @@ import { NO_TEMPLATE_BADGE } from "@/lib/domain/scheme";
  *
  * 閉じた状態は注意の枠の1つの段で、件数の文と『直すところを見る』の札だけを置く。
  * 開くと、1行目・見比べる2つのページ・○ と — の表・直す操作1つの順に並べる。説明の段落は置かない。
+ * 表の行は等級要件・行動指針・KPI項目の3種類。種類の列を置き、項目名からその項目を直す画面のその行へ飛べるようにする。
  * 使うKPIを選ぶの画面では、このページのリンク1行と、アンケートごとに1行の表にする。
  * 直す操作はアンケート側で行うので、この画面にはボタンを置かない。
  */
@@ -62,16 +64,18 @@ function FormBody({ gap }: { gap: ComparisonGap }) {
           </li>
         ))}
       </ul>
+      {/* 等級要件・行動指針には選ぶ画面が無く、いまのマスタと比べる。だから見出しは「使うKPIを選ぶ」ではなく「いまの設定」 */}
       <DataTable<ComparisonRow>
         scroll
-        caption="使うKPIを選ぶとこのアンケートの項目の比べ"
+        caption="いまの設定とこのアンケートの項目の比べ"
         columns={[
+          { key: "kind", header: "種類", cell: (row) => COMPARISON_KIND_LABEL[row.kind] },
           { key: "name", header: "項目", cell: (row) => <RowName row={row} />, role: "title" },
-          { key: "selection", header: "使うKPIを選ぶ", cell: (row) => <Mark on={row.inSelection} /> },
+          { key: "selection", header: "いまの設定", cell: (row) => <Mark on={row.inSelection} /> },
           { key: "form", header: "このアンケート", cell: (row) => <Mark on={row.inForm} /> },
         ]}
         rows={[...gap.rows]}
-        rowKey={(row) => row.itemId}
+        rowKey={(row) => `${row.kind}:${row.itemId}`}
       />
       <FixControl gap={gap} />
       {gap.note && <p className="m-0">{gap.note}</p>}
@@ -79,10 +83,16 @@ function FormBody({ gap }: { gap: ComparisonGap }) {
   );
 }
 
-/** 使うKPIを選ぶ：このページのリンク1行と、アンケートごとに1行の表 */
+/**
+ * 使うKPIを選ぶ：このページのリンク1行と、アンケートごとに1行の表。
+ * KPI項目でない行（等級要件・行動指針）は、この画面では選び直せないので、名前に種類を添えて見分けられるようにする
+ */
 function SelectionBody({ gaps }: { gaps: readonly ComparisonGap[] }) {
-  const names = (rows: readonly ComparisonRow[]) =>
-    rows.map((row) => (row.noTemplate ? `${row.name}（${NO_TEMPLATE_BADGE}）` : row.name)).join("・");
+  const nameOf = (row: ComparisonRow) => {
+    if (row.kind !== "kpi") return `${row.name}（${COMPARISON_KIND_LABEL[row.kind]}）`;
+    return row.noTemplate ? `${row.name}（${NO_TEMPLATE_BADGE}）` : row.name;
+  };
+  const names = (rows: readonly ComparisonRow[]) => rows.map(nameOf).join("・");
   return (
     <div className="mt-2 grid gap-2">
       <p className="m-0">
@@ -127,12 +137,22 @@ function PageLink({ page }: { page: ComparisonPage }) {
   );
 }
 
-/** 項目名。実績の聞き方（設問のひな形）が決まっていない項目には、使うKPIを選ぶの候補と同じ札を添える */
+/**
+ * 項目名。直す画面のその行へのリンクにする（開けない役割には名前だけ）。
+ * 実績の聞き方（設問のひな形）が決まっていない項目には、使うKPIを選ぶの候補と同じ札を添える
+ */
 function RowName({ row }: { row: ComparisonRow }) {
-  if (!row.noTemplate) return row.name;
+  const name = row.href ? (
+    <Link href={row.href} className="text-brand-deep">
+      {row.name}
+    </Link>
+  ) : (
+    row.name
+  );
+  if (!row.noTemplate) return name;
   return (
     <>
-      {row.name} <Badge tone="required">{NO_TEMPLATE_BADGE}</Badge>
+      {name} <Badge tone="required">{NO_TEMPLATE_BADGE}</Badge>
     </>
   );
 }

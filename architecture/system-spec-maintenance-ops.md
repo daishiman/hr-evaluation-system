@@ -2,7 +2,7 @@
 graph_node_id: "arch-system-spec-maintenance-ops"
 artifact_kind: "architecture"
 artifact_subtypes: ["infrastructure"]
-title: "保守運用の検査・文書・本番手順"
+title: "保守運用の検査・文書・本番手順（KGI の削除・評価レポート・上司の判断）"
 project_id: "hr-evaluation-system"
 domain: "maintenance-ops"
 status: "done"
@@ -17,10 +17,10 @@ template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
 evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "22ced72298540282563480432d02501ae0cf636217797dd91f909df18ae73782", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
-source_lineage: {"imported_at": "2026-10-15T00:07:42Z", "origin_kind": "system-spec-harness", "source_digest": "22ced72298540282563480432d02501ae0cf636217797dd91f909df18ae73782", "source_path": "system-spec/maintenance-ops.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
-created_at: "2026-10-15T01:28:34.699201Z"
-updated_at: "2026-10-15T01:28:34.699201Z"
+confirmation_evidence: {"evaluated_digest": "2d192d4ec620485fae3608131be4cf171cbe7850a4250dd5518bbcc423266172", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-2026-10-20-z.json"}
+source_lineage: {"imported_at": "2026-10-19T22:19:04Z", "origin_kind": "system-spec-harness", "source_digest": "2d192d4ec620485fae3608131be4cf171cbe7850a4250dd5518bbcc423266172", "source_path": "system-spec/maintenance-ops.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-19T23:20:31.845015Z"
+updated_at: "2026-10-19T23:20:31.845015Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -33,9 +33,9 @@ architecture_refs: []
 parent_feature: null
 feature_package_id: null
 phase_ref: null
-classification_confidence: 0.95
-classification_reason: "system-spec-harness が確定した章 system-spec/maintenance-ops.md の取り込み"
-classification_candidates: [{"artifact_kind": "architecture", "candidate_path": "architecture/system-spec-maintenance-ops.md", "confidence": 0.95}]
+classification_confidence: 0.92
+classification_reason: "確定した技術章（system-spec の章）で、構成・境界・横断契約・決定を記す architecture の取込。"
+classification_candidates: [{"artifact_kind": "architecture", "candidate_path": "architecture/system-spec-maintenance-ops.md", "confidence": 0.92}, {"artifact_kind": "specification", "candidate_path": "specs/system-spec-maintenance-ops.md", "confidence": 0.4}]
 tracker_binding: "none"
 beads_linkage: null
 github_publication: {"labels": [], "milestone": null, "mode": "local_only", "project_aliases": []}
@@ -44,7 +44,7 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-15T01:28:34.699201Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-19T23:20:31.845015Z", "missing_sections": [], "status": "complete"}
 ---
 
 # Architecture overview
@@ -53,13 +53,22 @@ implementation_readiness: {"checked_at": "2026-10-15T01:28:34.699201Z", "missing
 
 2026-10-14 の追加で、比べる警告のテスト6種と、文書への反映・受領書の置き場所を定めた（O16）。この追加の全文は、利用者が全文のまま承認した（qa-w10、2026-10-14T20:46:24Z）。根拠: qa-w10／system-spec/maintenance-ops.md
 
+2026-10-19〜20 の追加: KGI のテスト・文書・台帳の行・ナビの記述を消して参照が残らないことを検査で確かめ、レポート・見える範囲・評価セットの決め方・アンケートの状態の規則・ズレの3種類・上司の判断のテストと E2E を足す。アンケート・昇給の設定・評価セット・評価期間・評価・レポートのつながりを docs/product に図で残し、契約テストの一覧と対応させる。A4 の印刷は Playwright で PDF を作って確かめる。
+根拠: qa-y16（system-spec/maintenance-ops.md）
+
 ## Context and drivers
 
 もともとの検証は pnpm test（vitest）・check:docs・check:bundle-size に限られ、ブラウザを自動操作する E2E は無かった。本番の調べ方は、Workers Logs と読み取り専用の D1 照会だけだった（qa-f09）。強制再読み込みでも出なかった報告（qa-u03）を推測で閉じないため、観測の順序を手順として持つ必要があった（qa-f08）。追加要件は、文書・画面名・権限・文字列に広く触れる。権限の定義はルート台帳に足すので（D-007 ①）、台帳の説明書きと検査も変わる。そのため、文字列を固定したテストや文書が新しい形とぶつかる。本番の等級名の書き換えは、戻せる証跡を要する。品質の優先は、規則を検査で落とすこと（G4）、本番を手で書き換えないこと、文書と実装を食い違わせないことである。制約は四つある。本番 DB は読み取り専用。外部への変更は preview → CONFIRM → authorize → execute のガードを通す。PR は実装後に利用者の確認を取ってから作る。公開リポジトリのため、文書や見本に実データを入れない。根拠: qa-v31、qa-r-ops-3、qa-f09、qa-f08、D-007、constraints、system-spec/maintenance-ops.md。
 
+2026-10-19〜20 の追加: 2026-10-19 の依頼（KGI の削除・評価レポート・見える範囲・テストデータ・アンケートの全機能の監査・依存関係の整理）と qa-x08・qa-y08 の A4 の印刷、2026-10-20 の上司の判断で、検査・文書・本番の手順を足す必要が生じた。
+根拠: qa-x01、qa-x08、qa-y01、qa-y08、qa-y16（system-spec/maintenance-ops.md、system-spec/00-requirements-definition.md）
+
 ## Goals and non-goals
 
 ゴールは maintenance-ops 章の serves_goals の G2・G4（鮮度の保証と適用漏れの検出）と、G6〜G15 を検査と文書で裏付けることである。受入は O2・O4・O6〜O15 の測り方（静的検査で0件、役割ごとの結合テスト、375・768・1280・1600 の4つの幅での撮影など）を、pnpm test・pnpm test:e2e・pnpm run check:docs と本番の読み取り確認に割り付けて判定する。domain のカバレッジ 100% を保つ。非ゴールは、エージェントによる本番への書き込み、本番データの移行・修正（等級名と等級名を含む表示名の一律の書き換えを除く）、役割の種類の追加（『システム開発者』の役割は作らず、画面名だけを変える）である。根拠: qa-v31 (3)(4)、qa-r-ops-3、scope.out、system-spec/maintenance-ops.md（To-Be / Delta）。
+
+2026-10-19〜20 の追加: Goals: KGI の参照0件、O17〜O24 の測り方をテストと E2E で満たす、依存関係の図とテストの一覧を一致させる。Non-goals: 本番へのテストデータの投入。
+根拠: qa-y16（system-spec/maintenance-ops.md）
 
 ## System context and boundaries
 
@@ -69,9 +78,15 @@ implementation_readiness: {"checked_at": "2026-10-15T01:28:34.699201Z", "missing
 
 検査の層は四つある。pnpm test（vitest。3つの契約試験、ルート台帳の route-ledger.test.mjs（件数と新しい欄の検査）、nav.test.ts、ui-rules.test.ts、agent-keys.test.ts、improvement-ux-contracts.test.ts など。追加の11項目の検査もここに足す）。pnpm test:e2e（Playwright。6つの経路と控えの畳み方、375px・768px）。pnpm run check:docs（文書のずれ・リンク切れ）。check:bundle-size。どれも違反0件でなければ失敗にする。文書の層は、deploy-notes（§6 secret の置き方、§7 反映されない報告の切り分けと失敗記録からの直し方）、ルート台帳（46 → 47 画面。全ページに主な操作・役割ごとの可否・説明の欄を持ち、権限の定義をまとめる唯一の台帳。D-007 ①）、決まりの文書（docs/product/spec.md・system-spec/account-and-users.md・routes-and-access.md・master-settings.md）、反映の受領書 docs/product/spec-receipts/ である。観測の層は、応答の生成時刻ヘッダー x-generated-at、Workers Logs、ゾーンのキャッシュ規則の読み取り確認、本番 DB の読み取り専用の照会である。根拠: qa-r-ops-3 (1)〜(4)、qa-v31 (1)(2)(3)、D-007、qa-f09、system-spec/maintenance-ops.md。
 
+2026-10-19〜20 の追加: 単体テスト：レポートの作成（同じ入力で同じ出力・軸の数・3人未満で平均を出さない・本人向けに点数が無い）、見える範囲（役割と直属の部下の組ごと）、評価セットの決め方が4つの処理で同じ、アンケートの状態の規則と会社の条件、ズレの3種類と行ごとのリンク、finalDecision の5通り、確定の入力の検査、確定を戻しても判断が残ること、CSV の列、全ての表示先が finalDecision を使うことの契約テスト。E2E：レポート（管理者・マネージャー・本人）、配布 URL（ログイン前・等級違い・締切後・古い版）、回答・回答一覧・締め切る・延長、ズレの『直すところを見る』の各リンク、マネージャーが『変える』で見送って確定し本人の結果とレポートに結論・印・同じ理由が出て点数の数値が出ないこと。
+根拠: qa-y16（system-spec/maintenance-ops.md）
+
 ## Cross-cutting contracts
 
 アクセスは、本番 DB と Cloudflare の設定を読み取りだけで調べ、変更は外部変更ガードを通し、PR は実装後に利用者の確認を取ってから作る形にそろえる。誤りと回復は、compensation_failed と rollforward_failed を Workers Logs で見つけ、本番 DB を手で書き換えずに直すことで揃える（rollforward_failed は、本人にもう一度パスワードを変えてもらうと続きがやり直される）。監査は、本番の一律の書き換えの前に対象の会社数・等級数・英語入りの表示名の数を数えて書き換え前の値を記録し、後に読み取りで確かめることで残す。権限の定義はルート台帳1つに置き、台帳とサイドバー・ページの判定・サーバー処理の役割の指定の一致を pnpm test の検査で守る（D-007 ①）。命名の互換は、画面名の改名を対象のすべてで同時に改めることで保つ。対象は、ルート台帳・サイドバー（nav.ts）・画面名の定数（src/lib/domain/agent-keys.ts の AGENT_KEY_PAGE_LABEL）・README・system-spec/improvement-requests.md・docs/deploy-notes.md・specs/data-freshness.md・テスト（agent-keys.test.ts・improvement-ux-contracts.test.ts）である。漏れは check:docs で落とし、役割の種類は増やさない。公開リポジトリのため、文書・テスト・見本に実データや秘密の値を入れない。根拠: qa-r-ops-3 (3)、qa-v31 (1)(3)(4)、D-007、constraints、system-spec/maintenance-ops.md。
+
+2026-10-19〜20 の追加: docs/product/spec.md と system-spec の文書から KGI の章を外して賞与（仮）の式を改め、昇給・昇格の判定の節に上司の判断と最終の可否の決め方を足す。依存関係の図に上司の判断を加える。
+根拠: qa-y16（system-spec/maintenance-ops.md）
 
 ## Subtype architecture
 
@@ -91,6 +106,9 @@ Infrastructure: 本ノードの subtype_sections.infrastructure（architecture-i
 
 検査は、package の scripts（pnpm test・pnpm test:e2e・pnpm run check:docs・check:bundle-size）とテストのファイルとしてリポジトリに置く。Deploy workflow は、同じ checkout でこれらを通してから配る。ルート台帳に権限一覧のページと、全ページの主な操作・役割ごとの可否・説明の欄を足すときは（D-007 ①）、台帳の説明書き（$schemaNote の『44個』）を直し、route-ledger.test.mjs の件数（46 → 47）と新しい欄の検査・nav.test.ts・check:docs を合わせる。画面名の改名は、ルート台帳・nav.ts・画面名の定数（AGENT_KEY_PAGE_LABEL）・README・文書・テストで合わせる。決まりの文書を改めたら、反映の受領書を docs/product/spec-receipts/ に残す。PR は実装後に利用者の確認を取ってから作り、本番への変更（Deploy・secret の設定）は外部変更ガードを通す。根拠: qa-v31 (1)(2)、D-007、qa-r-ops-3 (1)(4)、constraints、system-spec/maintenance-ops.md。
 
+2026-10-19〜20 の追加: KGI の削除の2回の Deploy は外部変更ガードを通し、2回目の前に本番 DB を読み取りで数える。
+根拠: qa-y16（system-spec/maintenance-ops.md）
+
 #### Secrets and access
 
 運用の人とエージェントは本番 DB を読み取りだけで調べ、本番に書き込まない。本番への秘密の設定（CREDENTIAL_ENC_KEY の wrangler secret put）や Deploy は、外部への変更として確認を取ってから行い、手順は deploy-notes §6 に置く。改名する『Claude Code連携（システム開発者専用）』の画面は名前だけを変え、役割の種類は増やさない。公開リポジトリのため、手順・ログの例・テストの見本に秘密の値や実データを入れない。根拠: qa-r-ops-3 (3)、qa-r-infrastructure-3 (5)、qa-v31 (1)、constraints、system-spec/maintenance-ops.md。
@@ -99,15 +117,24 @@ Infrastructure: 本ノードの subtype_sections.infrastructure（architecture-i
 
 SLO の数値は置かない。鮮度の信頼性は、O2（再読み込みで反映率 100%）と O4（入口を通らない経路0件）を検査で保つ。障害の切り分けは、deploy-notes §7 の順（生成時刻ヘッダー → Workers Logs → ゾーンのキャッシュ規則）に読み取りだけで進め、推測で閉じない。compensation_failed は Workers Logs から見つけ、本番 DB を手で書き換えずに直す。rollforward_failed は、本人にもう一度パスワードを変えてもらうと続きがやり直される。本番の等級名の書き換えは、前の値の記録と後の読み取りでの確認を持ち、崩れたら戻す手順で戻す。根拠: qa-r-ops-3 (3)、qa-v31 (4)、qa-v29 (2)、system-spec/maintenance-ops.md、system-spec/infrastructure.md。
 
+2026-10-19〜20 の追加: 1回目の後に KGI の画面が開けないことを確かめ、2回目の前の数えた値と Deploy の自動バックアップで戻せるようにする。
+根拠: qa-y16、qa-x15（system-spec/maintenance-ops.md、system-spec/infrastructure.md）
+
 #### Infrastructure verification
 
 毎回の検査は、pnpm test（3つの契約試験、追加の11項目の検査、ルート台帳の件数と新しい欄の検査を含み、違反0件でなければ失敗）、pnpm run check:docs、domain のカバレッジ 100%、6つの経路の E2E（375px・768px を含む）である。Deploy は、同じ checkout でこれらを通してから配る。リリースの前後の確認として、本番の書き換えの前に、対象の会社数・等級数・英語入りの表示名の数を読み取りで数える。Deploy の後は、英語の区分名が残っていないことと、作成直後の強制再読み込みで新しい行が出て生成時刻ヘッダーが作成より後であることを確かめる。独自ドメインへ移すときは、ゾーンに HTML・/api を保存する規則が無いことを読み取りで確かめる。根拠: qa-v31 (1)(3)(4)、qa-r-ops-3、O2、system-spec/maintenance-ops.md。
 
 比べる警告のテストを足す：全件が2つのページを持つ／『食い違』『ズレ』を含む警告が ComparisonGap 以外から作られていない／リンク先が台帳にあり、見る人の役割で開ける／3画面で閉じた1行と開いた表が出る／新しい版はその等級の版だけが増える／他社の等級は拒否される。setup-gaps・SetupGapList・一覧のテストの固定文字列を新しい形に合わせ、domain のカバレッジ 100% を保つ。根拠: qa-w10／system-spec/maintenance-ops.md
 
+2026-10-19〜20 の追加: KGI の参照0件の静的検査、O17〜O24 の単体テスト・契約テスト・E2E、A4 の PDF の E2E（2ページ・2枚目が⑤から）を置く。
+根拠: qa-y16（system-spec/maintenance-ops.md）
+
 ## Architecture decisions
 
 本章に効く確定意思決定は D-002・D-004・D-005・D-006・D-007 である。D-002（opt-server-functions）で画面からの書き込みを1つの入口に集めたので、入口を通らない経路を静的検査で0件に保つ運用が成り立つ（二つの経路の混在は移行で解消済み）。D-004（opt-membership-cookie）・D-005（opt-pointer-hook）・D-006（opt-combined）・D-007（opt-route-ledger-extend）は利用者が選んだ。D-007 は、委任を受けて AI が選んだ案とは別の案を、利用者が3案の比較を見たうえで明示して選んだ（qa-v25、2026-10-13T03:40:15Z）。本章は、D-004 を所属していない会社のデータが読めない検査で、D-005 を並べ替えの部品のテストと静的検査（O13）で、D-006 を権限一覧の表とカードが同じ内容を出す検査で守る。D-007 は、ルート台帳の全てのページに主な操作・役割ごとの可否・説明の欄を足し、台帳の権限の定義とサイドバー・ページの判定・サーバー処理の役割の指定が一致する検査で守る。代わりに、説明の文言の直しも仕様の台帳の変更として扱う。運用の型は、Clean Code の『一つの規則は一か所に書き、検査で守る』と、Google SRE の『推測より観測』である。規則を検査と記録に持たせ、切り分けを生成時刻ヘッダー → Workers Logs → ゾーンのキャッシュ規則の順に、読み取りだけで進める。足す検査（11 項目）と、本番の書き換えの前後に読み取りで数えることは、qa-v31 の文面にある。本章の要件は、2026-10-13T00:03:46Z に全文で承認された文面のうち、D-007 にかかわる本章の項目 (1)・(3) だけを①に直し、旧と新を逐語で示して承認を取り直したものである（qa-v31、2026-10-13T03:48:20Z）。前後の読み取りは、手間と引き換えに書き換えの範囲と結果を証跡に残す。E2E の相手をローカルの preview に限ることで、本番への誤操作を避ける。代わりに、本番での確認はリリース後の利用者の操作と読み取りに頼る。根拠: D-002、D-004、D-005、D-006、D-007、qa-v25、qa-v31、qa-r-ops-3、system-spec/maintenance-ops.md（本章に効く確定意思決定・上流指針・適用された設計知識）。
+
+2026-10-19〜20 の追加: A4 の印刷は Playwright で A4 の PDF を作り、ナビと操作のボタンが無いこと・図と表が途中で切れないこと・本人向けに点数が無いこと・ページ数が2で2枚目が⑤から始まることを確かめる（qa-y09 の2枚組）。
+根拠: qa-y16、qa-y09（system-spec/maintenance-ops.md、system-spec/00-requirements-definition.md）
 
 ## Delivery, migration and rollback
 
@@ -115,7 +142,13 @@ SLO の数値は置かない。鮮度の信頼性は、O2（再読み込みで�
 
 比べる警告の変更は docs/product/spec.md §22 と system-spec の文書に反映し、受領書を docs/product/spec-receipts/ に残す。根拠: qa-w10／system-spec/maintenance-ops.md
 
+2026-10-19〜20 の追加: 1回目の Deploy の後に KGI の画面が開けないことを確かめる。2回目の前に本番 DB を読み取りで数えてから、外部変更ガードを通して Deploy する。テストデータは本番に入れない。
+根拠: qa-y16（system-spec/maintenance-ops.md）
+
 ## Risks and verification
 
 前提として、本章の要件は利用者の承認を得た文面である（qa-v31、2026-10-13T03:48:20Z）。2026-10-13T00:03:46Z に全文で承認された文面のうち、D-007 にかかわる本章の項目 (1)・(3) だけを①に直し、旧と新を逐語で示して承認を取り直した。危険は三つある。文字列を固定したテスト（setup-readiness・scheme-steps・form-sync・StaleCyclesNotice・nav・ui-rules・improvement-ux-contracts・versioned-master-editors）や決まりの文書が、古い文面のまま残ること。改名の取り残し。本番の書き換えの証跡の欠け。これらは、文面の更新・check:docs・前後の読み取りで抑える。また、ルート台帳の権限の定義と、サイドバー・ページの判定・サーバー処理の役割の指定のどれかが食い違うと、権限一覧の表示と実際の判定がずれる。台帳と各判定の一致の検査で落とす。台帳の件数（47）と新しい欄は、route-ledger.test.mjs で確かめる。足す検査は次の11項目である。表示の英語・カタカナの等級区分名0件。等級名を変えられる役割の限定。ルート台帳の権限の定義とサイドバー・ページの判定・サーバー処理の役割の指定の一致。権限一覧の表とカードが同じ内容を出すこと。一般の社員の応答に他人の等級と点数が無いこと。所属していない会社のデータが読めないこと。提出状況の数と一覧の一致。設定不足の各件に直す画面のリンクがあること。並べ替えの全体の保存と 409。選択肢の値が重ならないこと。4 幅で右側だけが空く画面が無いこと。既存の3つの契約試験と6つの経路の E2E、domain のカバレッジ 100% も保ち、pnpm test と check:docs を通す。根拠: qa-v31 (1)(3)、qa-v25、D-007、qa-r-ops-3 (1)(2)、system-spec/maintenance-ops.md（受入条件）。
+
+2026-10-19〜20 の追加: リスクは、KGI の参照が文書や台帳に残ること、テストと依存関係の図がずれること、印刷の体裁が画面の変更で崩れることである。pnpm test・check:docs・E2E（A4 の PDF を含む）で落とす。
+根拠: qa-y16（system-spec/maintenance-ops.md）
 

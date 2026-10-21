@@ -7,6 +7,7 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { ListAddRow, ListRowActions, ListRowBody, ListRowItem, ListRows } from "@/components/ListRow";
 import { BlockedHelp, UsedByDetail, blockedRows } from "@/components/UsedByDetail";
 import { behaviorBandLabel, type BehaviorBandSetRow } from "@/lib/domain/behavior";
+import { behaviorGuidelineAnchor } from "@/lib/domain/comparison-items";
 import { DELETE_LABEL, deleteConfirmText } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
@@ -84,7 +85,10 @@ export function BehaviorGuidelineEditor({
         const mark = markOf(g.id);
         const renaming = editingName.drafts[g.id] !== undefined;
         return (
-        <Card key={g.id} off={!g.isActive}>
+        // 比べる警告の行（comparison-items.ts の behaviorGuidelinesPath）は、URL の # でこの観点のカードへ飛んで来る。
+        // 使わない観点も同じ id を持つ（余分に聞いている行の飛ぶ先）
+        <div key={g.id} id={behaviorGuidelineAnchor(g.id)}>
+        <Card off={!g.isActive}>
           {/* 5段階ぶんの文章を続けて書くので、頭は固定表示にする。
               いま何の観点の文章を書いているかが見えないまま下まで進んでしまう。
               操作の並びは、ほかの一覧の行と同じ（直す → 今後使わない／もう一度使う → 完全に消す。spec §28-14） */}
@@ -257,6 +261,7 @@ export function BehaviorGuidelineEditor({
               })}
           </ListRows>
         </Card>
+        </div>
         );
       })}
 

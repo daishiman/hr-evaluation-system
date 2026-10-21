@@ -12,7 +12,6 @@ beads: `hr-hco` / `hr-2qk` / `hr-0p4`
   /admin/masters/promotion       … 昇格
   /admin/behavior                … 行動指針
   /admin/scheme                  … KPI・評価セット・ランク基準
-  /admin/kgi                     … 達成率・達成係数
   /admin/raises                  … 昇給
   StaleCyclesNotice              … 再集計通知（共通）
         │
@@ -26,7 +25,7 @@ beads: `hr-hco` / `hr-2qk` / `hr-0p4`
         │
         ▼
 [ドメイン]
-  behavior.ts / scoring.rangeLabel / kgi.kgiRangeLabel
+  behavior.ts / scoring.rangeLabel / rank-bounds.checkRankBoundaries
   versioned-master.ts（等級要件・昇格要件の現行版と系譜）
   impact.detectStaleCycles（フォームへ写す定義は監視外）
   initial-password.ts（CSV新規発行）
@@ -35,7 +34,7 @@ beads: `hr-hco` / `hr-2qk` / `hr-0p4`
 [データ]
   grades / grade_requirements / promotion_* /
   behavior_guidelines / behavior_levels /
-  kpi_rank_criteria / kgi_coefficients / raise_*
+  kpi_rank_criteria / raise_*
   grade_requirements / promotion_requirements
     previous_version_id（意味変更の一本道）
   form_questions（要件・行動指針の作成時写し）
@@ -50,7 +49,11 @@ beads: `hr-hco` / `hr-2qk` / `hr-0p4`
 ### 2. 表示ラベルは境界から導く
 
 人が自由に書くと「書いてある範囲」と「判定される範囲」が食い違う。  
-`rangeLabel` / `kgiRangeLabel` を正本にし、API は label 入力を受け取らない。
+`rangeLabel` を正本にし、API は label 入力を受け取らない。
+
+事業所KGI（`/admin/kgi` の達成率・達成係数、`kgi_coefficients` ほか2表、`kgiRangeLabel`）は
+2026-10-19 に仕組みごと削除した（DD-024）。賞与（仮）は KPI評価点合計 × 1点あたりの金額だけで出す（`src/lib/domain/bonus.ts`）。
+監査ジャーナルに残った達成係数の変更の行は、記録として消さない。
 
 ### 3. 行動指針は公開時スナップショット
 

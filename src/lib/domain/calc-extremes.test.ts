@@ -23,7 +23,7 @@ import {
   type RankRatio,
   type ScoredItem,
 } from "./scoring";
-import { computeBonus, matchKgiCoefficient, type KgiCoefficientRow } from "./kgi";
+import { computeBonus } from "./bonus";
 import { parseChoiceValidation } from "./form-question-text";
 import { buildThresholdScale } from "./evaluation-view";
 
@@ -369,50 +369,29 @@ describe("観点5: 割合の出し方の端", () => {
   });
 });
 
-describe("観点5: 達成係数と賞与の端", () => {
-  const rows: KgiCoefficientRow[] = [
-    { label: "120%以上", lowerBound: 120, upperBound: null, coefficient: 1.5, displayOrder: 1 },
-    { label: "100%以上120%未満", lowerBound: 100, upperBound: 120, coefficient: 1.2, displayOrder: 2 },
-    { label: "80%以上100%未満", lowerBound: 80, upperBound: 100, coefficient: 1.0, displayOrder: 3 },
-    { label: "80%未満", lowerBound: null, upperBound: 80, coefficient: 0.6, displayOrder: 4 },
-  ];
-
-  it.each([
-    [79.9, 0.6],
-    [80, 1.0],
-    [99.9, 1.0],
-    [100, 1.2],
-    [119.9, 1.2],
-    [120, 1.5],
-    [1000, 1.5],
-    [0, 0.6],
-  ])("達成率 %s%% の係数は %s", (rate, coefficient) => {
-    expect(matchKgiCoefficient(rate as number, rows)?.coefficient).toBe(coefficient);
-  });
-
-  it("達成率が未入力なら、0円ではなく「出せない」", () => {
-    const r = computeBonus({ kpiTotalScore: 80, officeAchievementRate: null, coefficients: rows, yenPerPoint: 3200 });
+describe("観点5: 賞与の端", () => {
+  it("KPI合計が未集計なら、0円ではなく「出せない」", () => {
+    const r = computeBonus({ kpiTotalScore: null, yenPerPoint: 3200 });
     expect(r.bonusYen).toBeNull();
     expect(r.personalPoints).toBeNull();
   });
 
-  it("係数の表に穴があって当たらないときも、0円ではなく「出せない」", () => {
-    const holed: KgiCoefficientRow[] = [{ label: "100%以上", lowerBound: 100, upperBound: null, coefficient: 1.2, displayOrder: 1 }];
-    const r = computeBonus({ kpiTotalScore: 80, officeAchievementRate: 50, coefficients: holed, yenPerPoint: 3200 });
-    expect(r.coefficient).toBeNull();
-    expect(r.rationale).toContain("抜けがある");
-  });
-
   it("1点あたりの金額が0なら、金額は出さない（0円と書かない）", () => {
-    const r = computeBonus({ kpiTotalScore: 80, officeAchievementRate: 100, coefficients: rows, yenPerPoint: 0 });
-    expect(r.personalPoints).toBe(96);
+    const r = computeBonus({ kpiTotalScore: 80, yenPerPoint: 0 });
+    expect(r.personalPoints).toBe(80);
     expect(r.bonusYen).toBeNull();
   });
 
   it("KPI合計が0点なら、個人Ptも0で金額も0円（未入力とは区別する）", () => {
-    const r = computeBonus({ kpiTotalScore: 0, officeAchievementRate: 100, coefficients: rows, yenPerPoint: 3200 });
+    const r = computeBonus({ kpiTotalScore: 0, yenPerPoint: 3200 });
     expect(r.personalPoints).toBe(0);
     expect(r.bonusYen).toBe(0);
+  });
+
+  it("満点（100点）でも桁があふれない", () => {
+    const r = computeBonus({ kpiTotalScore: 100, yenPerPoint: 3200 });
+    expect(r.personalPoints).toBe(100);
+    expect(r.bonusYen).toBe(320000);
   });
 });
 

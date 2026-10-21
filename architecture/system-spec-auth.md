@@ -2,7 +2,7 @@
 graph_node_id: "arch-system-spec-auth"
 artifact_kind: "architecture"
 artifact_subtypes: ["security"]
-title: "認証と認可：セッションの鮮度、会社への所属、権限の1つの定義"
+title: "認証と認可：セッションの鮮度、会社への所属、権限の1つの定義、評価の見える範囲"
 project_id: "hr-evaluation-system"
 domain: "auth"
 status: "done"
@@ -16,11 +16,11 @@ file_path: "architecture/system-spec-auth.md"
 template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
-evaluation_status: "stale"
-confirmation_evidence: {"evaluated_digest": "1a4419354b7c05cb76dc0c4125a6cac687c0ce27fa88bfc53fceaab6bf741442", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
-source_lineage: {"imported_at": "2026-10-15T00:07:42Z", "origin_kind": "system-spec-harness", "source_digest": "1a4419354b7c05cb76dc0c4125a6cac687c0ce27fa88bfc53fceaab6bf741442", "source_path": "system-spec/auth.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
-created_at: "2026-10-15T01:28:34.699201Z"
-updated_at: "2026-10-15T08:18:18.870953Z"
+evaluation_status: "pass"
+confirmation_evidence: {"evaluated_digest": "01985cb39a4502caf3d4c284019f3f5db6e752a6754be1a76cba9168143c3318", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-2026-10-20-z.json"}
+source_lineage: {"imported_at": "2026-10-19T22:19:04Z", "origin_kind": "system-spec-harness", "source_digest": "01985cb39a4502caf3d4c284019f3f5db6e752a6754be1a76cba9168143c3318", "source_path": "system-spec/auth.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-19T23:20:31.845015Z"
+updated_at: "2026-10-19T23:20:31.845015Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -33,9 +33,9 @@ architecture_refs: []
 parent_feature: null
 feature_package_id: null
 phase_ref: null
-classification_confidence: 0.95
-classification_reason: "system-spec-harness が確定した章 system-spec/auth.md の取り込み"
-classification_candidates: [{"artifact_kind": "architecture", "candidate_path": "architecture/system-spec-auth.md", "confidence": 0.95}]
+classification_confidence: 0.92
+classification_reason: "確定した技術章（system-spec の章）で、構成・境界・横断契約・決定を記す architecture の取込。"
+classification_candidates: [{"artifact_kind": "architecture", "candidate_path": "architecture/system-spec-auth.md", "confidence": 0.92}, {"artifact_kind": "specification", "candidate_path": "specs/system-spec-auth.md", "confidence": 0.4}]
 tracker_binding: "none"
 beads_linkage: null
 github_publication: {"labels": [], "milestone": null, "mode": "local_only", "project_aliases": []}
@@ -44,7 +44,7 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-15T08:18:18.870953Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-19T23:20:31.845015Z", "missing_sections": [], "status": "complete"}
 ---
 
 # Architecture overview
@@ -52,30 +52,48 @@ implementation_readiness: {"checked_at": "2026-10-15T08:18:18.870953Z", "missing
 better-auth のメールアドレスとパスワードによるログイン（本人登録は閉じる）で、セッションは要求ごとに D1 から読んで cookieCache を入れず、ロールの変更や会社の利用停止を次の要求から効かせる。画面からの書き込みと控えの読み出しは、Server Functions の共通の入口 runAction・runRead が送り元のサイト・セッション・役割の順に確かめてから本体を呼ぶ。認可に失敗したら、書き込みも画面の作り直しも他タブへの通知も行わない。2026-10-12 の追加で、1つのアカウントが複数の会社に所属できるようにする。選んでいる会社は cookie（hr_company。httpOnly・Secure・SameSite=Lax）を全員に広げて持ち、getViewer はリクエストのたびに cookie が指す会社への有効な所属を確かめてから会社・役割・等級を作る（D-004）。役割ごとに開けるページ（accessClass）に加え、ページでできる主な操作・役割ごとの可否・説明も route-ledger.json の各ページに足し、権限の定義をこの台帳1つにまとめる（D-007）。サイドバー・ページの入口の判定・サーバー処理の役割の指定・session.ts の can〜 の判定・権限一覧の表示は、この台帳だけを読む。
 根拠: qa-v27、qa-r-auth-3、qa-f03、D-004、D-007（system-spec/auth.md）
 
+2026-10-19〜20 の追加: 評価の中身とレポートを開ける人を canViewEvaluationOf の1つの関数で決める（全体管理者は全社、会社の管理者は自社の全員、マネージャーは直属の部下と自分、一般の社員は自分だけで、間接の部下は含めない）。レポートの画面・評価の詳細・CSV の書き出し・メモの読み出しがこれを使う。上司の判断を記録できる人は評価を確定できる人（canActOnEmployeeEvaluation）と同じにし、新しい役割や見える範囲は作らない。
+根拠: qa-y13、qa-y07（system-spec/auth.md）
+
 ## Context and drivers
 
 書き込み結果がすぐ見えない問題を Server Functions への移行で解く際、Server Function は外から直接呼べる公開の入口になるため、入口での検査と認可の鮮度を保つ必要がある。2026-10-12 の依頼で、複数の会社に所属するマネージャーを2社目に登録できないこと、等級名を編集できる人を限る必要、役割ごとにできることを確かめる手段が無いことが示された。優先する品質は、権限の取り消しがすぐ効くこと（G2）、共通の入口の適用漏れが検査で落ちること（G4）、等級名の変更権限の制限（G7）、表示と判定の一致（G8）、所属による会社の境界（G10）である。制約として better-auth と構成を変えず、役割の種類（SUPER_ADMIN・COMPANY_ADMIN・MANAGER・EMPLOYEE）を増やさない。
 根拠: qa-r-auth-3、qa-v01、qa-v27、qa-f03（system-spec/auth.md、system-spec/00-requirements-definition.md）
+
+2026-10-19〜20 の追加: 2026-10-19 の依頼（直属の部下の結果を見られる人の設定・個人別の評価レポート・KGI の削除）と 2026-10-20 の依頼（昇給と昇格に上司の判断を含める）で、評価の中身を見られる人の判定が画面ごとに分かれていることと、判断を記録する人を決める必要が示された。優先する品質は、見てよい人にだけ見せること（G19）と、判断と理由を本人・直属の上司・管理者に同じ形で示すこと（G24）である。
+根拠: qa-x01、qa-x03、qa-y01〜qa-y05、qa-y13（system-spec/auth.md、system-spec/00-requirements-definition.md）
 
 ## Goals and non-goals
 
 Goals: 認可に失敗した要求では何も書かず、作り直さず、通知しない。ロールの変更や利用停止を次の要求で効かせる。等級名の変更を、システム全体管理者と自社の会社の管理者に画面とサーバー処理の両方で限る。route-ledger.json の権限の定義から一覧を描き、判定とのずれを0件にする。同じメールアドレスの人が1つのアカウントのまま会社ごとの役割・等級・上司で使え、所属していない会社は拒否する。Non-goals: cookieCache は入れない（入れる場合は鮮度の契約を見直す）。役割の種類を増やさない（『システム開発者』の役割は作らず、画面名を『Claude Code連携（システム開発者専用）』に変えるだけ）。等級名の変更権限を除く役割ごとの権限の中身を変えない。権限の定義を画面から編集できるようにはしない。外部のエージェント向け API（Bearer 鍵）と端末の承認の認可方式を変えない。
 根拠: qa-r-auth-3、qa-v03、qa-v27、qa-v28、D-007（system-spec/auth.md、system-spec/00-requirements-definition.md の U7）、system-spec/security.md
 
+2026-10-19〜20 の追加: Goals: 見える範囲を1つの関数で判定し、レポート・評価の詳細・CSV・メモで同じ結果にする。判断を記録できる人を、評価を確定できる人と同じにする。判断と理由は本人には確定した後だけ見せる。Non-goals: 間接の部下（部下の部下）の閲覧、新しい役割や見える範囲の追加、上司の判断で等級を自動で変えること。
+根拠: qa-y13、qa-y07（system-spec/auth.md、system-spec/00-requirements-definition.md の U7）
+
 ## System context and boundaries
 
 利用者は4つの役割のブラウザ（PC・スマホ・タブレット）で、外部の主体は Bearer 鍵で API を呼ぶエージェントと端末の承認である。信頼の境界は、Server Functions の入口（runAction・runRead）、外部向けの Route Handler（Bearer 鍵）、D1 に持つ better-auth のセッションで、一つの入口に二つの認可方式を混ぜない。データの境界は選んでいる会社の所属である。選んでいる会社の cookie は利用者が書き換えられる入力として扱い、そのまま信じず、リクエストのたびにサーバーで所属を確かめて決める（D-004）。会社の切り替えは、送り元のオリジンを確かめる Server Action で受ける。他タブへの通知は同じブラウザの同じオリジンにしか届かず、受け取ったタブはその時点のセッションで認可を受け直すので、通知が認可の代わりになる経路は無い。
 根拠: qa-r-auth-3、qa-v27、qa-v28、D-004（system-spec/auth.md、system-spec/security.md）
+
+2026-10-19〜20 の追加: 個人別の評価レポートの入口は、管理者（利用者一覧と社員の一覧）・マネージャー（担当チームのメンバー一覧と評価の画面）・本人（『評価・結果を確認する』）の3つで、どの入口でもサーバーが canViewEvaluationOf で範囲を確かめてからデータを作る。印刷はブラウザで画面の内容だけを刷るので、印刷のための別の入口は無い。
+根拠: qa-y13、qa-y10、qa-z02（system-spec/auth.md、system-spec/ui-ux.md、system-spec/security.md）
 
 ## Container and component view
 
 better-auth（メールとパスワード、セッションの有効期間7日・更新間隔1日、cookieCache なし）がセッションとアカウントを D1 に持つ。getViewer は cookie が指す会社への有効な所属を確かめてから会社・役割・等級を作り、cookie が無いときや所属していない会社を指すときは、有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使う（D-004）。requireRole がページの入口で、apiViewer と ActionSpec.role が Server Functions の入口で役割を判定する。権限の定義として、ページを開ける役割（accessClass）・ページ名・主な操作・役割ごとの可否・説明を route-ledger.json の各ページに置く（D-007）。サイドバー（nav.ts。今も台帳を読んでいる）・requireRole・ActionSpec.role・session.ts の canEdit〜 などの判定をこの台帳から引き、台帳と突き合わせる契約テストで食い違いを落とす。権限一覧のページとモーダルの表とカードも、この台帳から描く。会社の切り替えの処理（switchCompanyScope）は全ての役割に開いて所属を確かめ、所属していない会社を拒否する。会社の切り替えの部品（CompanyScopeSwitcher）は、所属が2社以上の人にも出す。等級名を変える処理（saveMaster の等級の表と BehaviorBandAssignmentEditor から呼ぶ処理）が役割と会社を判定する。
 根拠: qa-f03、qa-r-auth-3、qa-v27、qa-v30、D-004、D-007（system-spec/auth.md、system-spec/backend.md）
 
+2026-10-19〜20 の追加: canViewEvaluationOf（見る人・対象の人・会社）を session.ts の判定の並びに置き、確定と判断の記録を許す canActOnEmployeeEvaluation（全体管理者・会社の管理者・直属の上司のマネージャー。自分自身の評価は不可）と並べる。route-ledger.json にレポートのページと操作を足し、KGI のページと操作を消し、評価の確定の操作の説明に『昇給と昇格の判断を記録する』を足す。権限一覧はこの台帳から描くので、表示も同時に変わる。
+根拠: qa-y13（system-spec/auth.md）
+
 ## Cross-cutting contracts
 
 識別とアクセス: 入口は送り元の検査（Next.js の Origin と Host の一致と assertSameOrigin の二重）、セッション、役割の順に確かめる。他社や担当外の対象は区別せず 404、等級名の変更の権限違反は 403 にする。エラーと回復性: 認可の失敗では書き込み・作り直し・通知のどれも動かず、会社の利用停止や利用者の無効化は次の要求で拒否される。可観測性と監査: 等級名の変更・所属の追加と削除・本番の一律の書き換えを監査に残し、控えを開いた記録は値を含めず Workers Logs に残す。設定と秘密: セッションは要求ごとに D1 から読み、控えの鍵は Workers の secret（CREDENTIAL_ENC_KEY）だけに置く。選んでいる会社の cookie（hr_company）は httpOnly・Secure・SameSite=Lax で持つ。互換性: 所属が1つの人は今と同じ動きにし、システム全体管理者の全社からの会社の切り替えは残す。
 根拠: qa-r-auth-3、qa-r-security-3、qa-f04、qa-v27、qa-v28（system-spec/auth.md、system-spec/security.md）
+
+2026-10-19〜20 の追加: 範囲の外の人のレポートの URL と評価の中身は、他社や担当外と同じく区別せず 404 にする。判断と理由は、評価の中身を見られる人（本人・直属の上司・管理者）にだけ返し、本人には確定した後だけ返す。
+根拠: qa-y13、qa-z02（system-spec/auth.md、system-spec/security.md）
 
 ## Subtype architecture
 
@@ -89,10 +107,16 @@ Security: architecture-security.md を合成し、subtype_sections の security 
 守る資産は、セッションとアカウント、会社ごとの制度設定（等級名を含む）、各人の等級と確定済みの評価点、初期パスワードの控え、誰がどの会社に所属しているかという所属の情報である。主体は4つの役割の利用者と外部のエージェントで、悪用の例は、Server Function を外から直接呼ぶ・別のサイトから呼ばせる、選んでいる会社の cookie を書き換えて所属していない会社を読み書きする、マネージャーや他社の管理者が等級名を変える、一般の社員が他人の等級と点数を得る、他社に既にいる人を足すときにその人の所属を知る、である。信頼の境界は入口（runAction・runRead）・外部向けの Route Handler・セッションで、他タブへの通知は中身を持たず認可の代わりにならない。
 根拠: qa-r-auth-3、qa-r-security-3、qa-v27、qa-v28、D-004（system-spec/auth.md、system-spec/security.md）
 
+2026-10-19〜20 の追加: 守る資産に、個人別の評価レポート・評価の中身（項目ごとの判定と根拠）・上司の判断と理由を足す。悪用の例に、マネージャーが部下でない人のレポートの URL を開く・CSV で会社の全員分を得る、本人が点数の数値や他の人との比較の値を得る、自分自身の評価に判断を記録する、を足す。
+根拠: qa-y13、qa-z02（system-spec/auth.md、system-spec/security.md）
+
 #### Identity and authorization
 
 認証は better-auth のメールアドレスとパスワード（本人登録なし、セッション7日・更新1日、cookieCache なし）である。アカウントは1つで所属は複数持てるが、ログインとセッションはアカウントの単位のまま1つにし、会社ごとに資格情報を分けない。認可は入口で送り元・セッション・役割の順に確かめ、認可に失敗したら何もしない既定拒否で、権限の無い画面は 404 かログイン画面になる。テナントの境界は選んでいる会社の所属である。getViewer がリクエストのたびに cookie が指す会社への所属を確かめ、所属が無ければ有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使う。会社の切り替えはセッションを作り直さず cookie だけを変え、所属していない会社への切り替えは拒否する（システム全体管理者は全社から選べる）。全ての読み書きをその所属で絞る（D-004）。等級名の変更はシステム全体管理者と自社の会社の管理者だけで、他社の等級を指す要求は拒否する。開けるページ（accessClass）とできる操作・役割ごとの可否・説明は route-ledger.json の各ページから引き、サイドバー・ページの入口・サーバー処理の役割の指定・session.ts の can〜 の判定・権限一覧がこの台帳だけを読む（D-007）。権限の定義を画面から編集できるようにはしない。
 根拠: qa-f03、qa-r-auth-3、qa-v27、qa-v28、D-004、D-007（system-spec/auth.md、system-spec/security.md）
+
+2026-10-19〜20 の追加: 評価の中身とレポートの認可は canViewEvaluationOf の1か所で決め、レポートの画面・評価の詳細・CSV の書き出し・メモの読み出しが同じ判定を使う。上司の判断の記録は canActOnEmployeeEvaluation（確定と同じ）で認可し、自分自身の評価は拒否する。
+根拠: qa-y13（system-spec/auth.md）
 
 #### Data and secret protection
 
@@ -114,6 +138,9 @@ Server Functions の入口は送り元の検査と認可の後に大きさの上
 server-actions-contract.test.ts（入口を通らない書き込みを0件に保つ）と action-origin.test.ts（送り元の二重の検査）を pnpm test で回す。追加の検査として、等級名を変えられる役割が限られていること、ルート台帳の権限の定義とサイドバー・ページの判定・サーバー処理の役割の指定が一致すること（台帳と突き合わせる契約テスト）、権限一覧の表とカードが同じ内容を出すこと、一般の社員の応答に他人の等級と点数が無いこと、所属していない会社のデータが読めず指定した要求が拒否されることを確かめる。役割ごとの結合テストで、マネージャー・一般の社員・他社の会社の管理者による等級名の変更が画面とサーバー処理の両方で拒否されることを確かめる。
 根拠: qa-r-ops-3、qa-v28、qa-v31、D-007、O7・O8・O10（system-spec/maintenance-ops.md、system-spec/auth.md）、system-spec/security.md
 
+2026-10-19〜20 の追加: 役割（全体管理者・会社の管理者・マネージャー・一般の社員）と直属の部下の組ごとに、レポート・評価の中身・CSV・メモが見える・404 になることを結合テストと E2E で確かめる。判断の記録を自分自身・部下でない人に拒否することをサーバー処理のテストで確かめる。
+根拠: qa-y13、qa-y16（system-spec/auth.md、system-spec/maintenance-ops.md）
+
 ## Architecture decisions
 
 D-002（採択 opt-server-functions）: 画面からの書き込みを Server Functions へすべて移し、成功したら同じ応答で画面を作り直す。代替の『Route Handler のまま画面側で router.refresh を呼ぶ』は変更が小さいが、利用者は Next.js が勧める即時更新の経路を選んだ。移行中に認可が抜ける危険は、入口（runAction・runRead）に検査の順序を固定して抑えた。セッション: cookieCache を入れると、ロールの変更や会社の利用停止が最大でキャッシュの期間だけ遅れて反映されるため、要求ごとに D1 から読む形を保つ。D-004（採択 opt-membership-cookie）: 利用者が選んだ（qa-v12）。今システム全体管理者だけが使う hr_company の cookie と会社の切り替えの部品を全員に広げ、所属は自前の表に持つ。代替の better-auth の organization plugin は既存の companies 表と二重になり、等級・上司を member の表の外に持ち、版上げへの追随が要る。URL に会社を入れる案は46画面のルートとリンクを全て移す。この案の危険は、cookie の会社への所属の確認を1か所でも漏らすと所属していない会社のデータが見えることで、getViewer がリクエストのたびに確かめる形で抑える。D-007（採択 opt-route-ledger-extend）: 利用者が①（route-ledger.json に操作と説明を足す）を名指しで選んだ（qa-v25、2026-10-13T03:40:15Z）。委任に基づいて AI が選んだ別の案とは違う案である。3案は権限の定義の正本の置き場所の択一で、全てに持つと正本が複数になる。①は、開けるページ（accessClass）に加え、主な操作・役割ごとの可否・説明も route-ledger.json の各ページに置き、権限の定義を台帳1つにまとめる。サイドバーと判定が同じ台帳を読むので、表示と判定のずれを既存の route-ledger のテストで見つけられる。DB の表で編集する②は、表と実際の判定のずれに気づけない（比べたときの不利な点）。①の不利な点は、説明を直すたびに仕様文書の変更になることである。役割の種類は増やさない。利用者は、D-007 ① に合わせて (4) を直した本章の文面を、旧と新を逐語で示されたうえで承認した（qa-v27、2026-10-13T03:48:20Z）。
@@ -121,13 +148,22 @@ D-002（採択 opt-server-functions）: 画面からの書き込みを Server Fu
 
 2026-10-14 の会社所属の現在の契約：既存アカウントへ別の会社の所属を足すのは全体管理者だけの専用操作（addMembership）とする（qa-w11、D-008）。選んでいる会社が無いとき（cookie が無い・所属していない会社を指す）は、有効な所属のうち会社名の順で最初の会社を開く（同名は会社 id の順。qa-w12、D-009）。委任（qa-v32）に基づく DD-009 の『最も古い有効な所属』は利用者の選択で取り消し、実装は 2026-10-15 に会社名の順へ直した（src/lib/memberships.ts の activeMembershipsByCompanyName。users の写しの基準は古い順のまま。DD-009 の更新）。どちらの順でも、リクエストのたびに所属をサーバーで確かめることは変わらない。根拠: qa-w11, qa-w12, qa-v27／system-spec/auth.md・system-spec/security.md・docs/product/design-decisions.md
 
+2026-10-19〜20 の追加: 見える範囲は所属の上司（直属）だけで決め、組織の階層をたどらない（間接の部下を含めない。qa-x03 で本人も見られる形を利用者が選んだ）。判断を記録する権限を新しく作らず、確定の権限に重ねる（役割の種類を増やさない制約 U8 に沿う）。
+根拠: qa-x03、qa-y05、qa-y13（system-spec/auth.md、system-spec/00-requirements-definition.md）
+
 ## Delivery, migration and rollback
 
 Server Functions への移行は今回すべて終えており、画面からしか呼ばれなくなった Route Handler は消して書き込みの経路を二重にしていない。所属の導入は、所属の表の追加と既存の利用者全員への所属の作成をマイグレーションで行う。getViewer を cookie で選んでいる会社への所属から作る形へ移し、users.company_id を読む約33か所と viewer.companyId を読む約140か所を所属の値へそろえる（D-004）。ルート台帳には権限一覧のページを足し（46画面から47画面）、全てのページに主な操作・役割ごとの可否・説明の欄を足す（D-007）。そのときは route-ledger.test.mjs・nav.test.ts・check:docs を合わせ、『Claude Code連携の鍵』の名前をルート台帳・README・docs・テストで改める。リリースは外部変更ガードを通した Deploy で行い、PR は実装後に利用者の確認を取ってから作る。
 根拠: D-002、D-004、qa-r-backend-4、qa-v26、qa-v30、qa-v31（system-spec/auth.md、system-spec/backend.md、system-spec/maintenance-ops.md）、system-spec/database.md
 
+2026-10-19〜20 の追加: 台帳の更新（レポートのページの追加・KGI の行の削除・確定の操作の説明）は、route-ledger.test.mjs・nav.test.ts・check:docs と同じ変更で合わせる。KGI のページは1回目の Deploy で台帳とナビから消え、開くと 404 になる。
+根拠: qa-y13、qa-y16（system-spec/auth.md、system-spec/maintenance-ops.md）
+
 ## Risks and verification
 
 リスクは、Server Function が外から直接呼べるため、入口を通らない書き込みが残ると認可が抜けることである。cookie の会社への所属の確認を1か所でも漏らすと、所属していない会社のデータが見える（D-004）。所属の値へのそろえ漏れでも、会社の境界が崩れる。サイドバー・ページの入口・サーバー処理の役割の指定・session.ts の判定のどれかが route-ledger.json の権限の定義と食い違うと、権限一覧の表示と実際の判定がずれる（D-007）。説明の小さな直しのたびに仕様の台帳が変わり、仕様の変更の記録が文言の直しで埋まるおそれもある。検査として、server-actions-contract.test.ts が入口を通らない書き込みを、action-origin.test.ts が送り元の二重の検査を固定し、pnpm test で違反0件を求める。追加分は、マネージャー・一般の社員・他社の会社の管理者による等級名の変更が画面とサーバー処理の両方で拒否されることを確かめる。ルート台帳の権限の定義とサイドバー・ページの判定・サーバー処理の役割の指定が一致することを突き合わせる契約テストと、権限一覧の表とカードが同じ内容を出すことも確かめる。会社を切り替えると役割・等級・上司で画面と権限が変わり、所属していない会社が拒否されることを結合テストで確かめる。
 根拠: qa-r-auth-3、qa-r-ops-3、qa-v31、D-004、D-007、O7・O8・O10（system-spec/auth.md、system-spec/maintenance-ops.md）
+
+2026-10-19〜20 の追加: リスクは、画面ごとに見える範囲を書き直して判定がずれること、マネージャーが CSV で部下でない人の行を得ること、判断の記録が画面で隠すだけになることである。検査として、役割と直属の部下の組ごとに見える・404 を確かめる結合テストと E2E（O19）、判断の記録を自分自身・部下でない人に拒否するサーバー処理のテスト（O24）を置く。
+根拠: qa-y13、qa-y16（system-spec/auth.md、system-spec/maintenance-ops.md）
 
