@@ -79,3 +79,19 @@ PRは2つともmainを向けるdraftとする。第2段は先行する第1段の
 push時にGitHubが既定ブランチの依存脆弱性14件（critical 1・high 4・moderate 6・low 3）を通知した。今回の依存変更によるものとは判定していない。公開前の確認事項として記録し、依存バージョンはこの作業で変更していない。
 
 クローズ済みの別タスクの代表例も照合した。`hr-czp.13` はPR #90、`hr-s4s` は #92、`hr-wcv.12` は #93・#94の取り込み・配布の証跡で閉じている。これらを「閉じているから」という理由だけで除外したのではなく、mainに反映済みの同じ変更を再提出しない。今回の `hr-inn.1`〜`.13` は12件in_progress・1件openのままで別に扱う。
+
+## PR #97のCI修正（2026-10-21追記）
+
+この節は上記のPR作成時点からの更新記録。#96は `b2122a0a03965e2ba44d878faa76d578a287943c` としてmainへマージ済み。利用者から先行反映済みとの連絡を受けた。
+
+- 原因: [失敗したCI](https://github.com/daishiman/hr-evaluation-system/actions/runs/39560115570) は、#96を含まない旧コードと0039の組み合わせだった。旧fixtureが削除済みの `kgi_coefficients` へ書き込み、`no such table` で失敗した。
+- 対応: `origin/main` → ローカルmain → `devgraph/SYS-EVAL-REPORT-P08` の順に取り込んだ（merge `7fc0182`）。先行コードと0039の依存を満たす。テスト・網羅率の基準・SQLの内容は変更していない。
+- 仕様反映の受領: 追加の業務仕様・設計への影響なし。DD-020・DD-024で定義済みの公開順にブランチを更新した対応であり、データの削除範囲・復元範囲・権限・計算・公開条件は変わらない。`system-spec/`・`specs/`・`architecture/` の既存反映をmainから受領し、生成文書の再生成は不要と判断した。`features/`・`tasks/` からは既存の索引で本受領書へ辿れる。
+- 対象: Beads `hr-inn.8`、dev-graph `SYS-EVAL-REPORT-P08`。本番への0039適用・本番確認はこのCI修正では行わず、P13の完了とは扱わない。
+
+### CI修正後の再検証
+
+- #97専用の作業ツリーで `pnpm install --frozen-lockfile`、`check:docs`、キット配置検査、`cf-typegen`、`typecheck`、`test:coverage --maxWorkers=4` がすべてPASS。225ファイル・3,616件PASS、既存の1件skip。網羅率は文・分岐・関数・行すべて100%。0039が揃ったため、先行PRでskipだった4件も実行した。
+- exact-13構造ゲートは計画メタデータを保持する元の作業ツリーで再実行しPASS（violations 0）。task本文に今回の差分はない。
+- `git diff --check`、対象ファイルの機密検査を確認。追加の実装変更はなく、mainに対する差分は0039の2つのSQLとこの受領書だけ。
+- #96のGitHub CIは成功を確認。Deploy run `39562261411` はこの記録時点では実行中であり、本番稼働の独自確認とは区別する。0039の配布時は既存の配布手順に従う。
