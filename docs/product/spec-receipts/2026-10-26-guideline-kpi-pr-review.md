@@ -67,11 +67,18 @@ BeadsはP01〜P12と親を `in_progress` として検証と受領書を記録し
 
 - 実装コミット: `ec4ad014937ffe386547520c17e17d1f93b1c82c`。新規feature文書の末尾の空行は追加コミット `40580bbcd59453e3d6c266a2bd9572df26f8a5bc` で整えた。最終の `git diff --check origin/main...HEAD` は成功した。
 - `origin/devgraph/feature-guideline-kpi-ux-and-two-way-sync` へpush済み。
-- **draft PRは未作成**。ghは認証失効、GitHub連携のcreate_pull_requestは403（Resource not accessible by integration）、Chromeは未ログインで、作成を完了できなかった。ブラウザでもbase main・2 commits・174 changed files・Able to mergeを確認した。
-- [PR本文](../../reviews/2026-10-26-guideline-kpi-pr-body.md) を保存した。CLIの再認証後、次のコマンドで同じ内容のdraft PRを作れる。
+- 初回はdraft PRを作成できなかった。旧ghは認証失効、GitHub連携のcreate_pull_requestは403（Resource not accessible by integration）、Chromeは未ログインだった。ブラウザでもbase main・2 commits・174 changed files・Able to mergeを確認した。
+- [PR本文](../../reviews/2026-10-26-guideline-kpi-pr-body.md) を保存した。作成時のコマンド（再実行してPRを重複作成しないこと）は次のとおり。
 
 ```bash
 gh pr create --repo daishiman/hr-evaluation-system --draft --base main --head devgraph/feature-guideline-kpi-ux-and-two-way-sync --title 'feat: 行動指針とKPI設定を整理しアンケートと連動させる' --body-file docs/reviews/2026-10-26-guideline-kpi-pr-body.md
 ```
 
-PR番号が無いためdev-graphへのPRリンクは未登録。作成後にP01〜P12へ紐付け、P13を完了にせずマージ後の本番作業へ引き継ぐ。
+### 継続作業の提出結果
+
+- **[draft PR #100](https://github.com/daishiman/hr-evaluation-system/pull/100) を作成済み**。baseは `main`、headは `devgraph/feature-guideline-kpi-ux-and-two-way-sync`。OPEN・draftをAPIで確認した。
+- 認証失敗の原因はPATHで `/usr/local/bin/gh`（2.20.0、2022年版）が優先されていたこと。`/opt/homebrew/bin/gh`（2.96.0）はkeyringの保存済み認証で利用でき、再ログインは不要だった。認証設定とPATHは変更していない。
+- mainとリモート作業ブランチを再確認し、起点とpush済みSHAが変わっていないことを確認した。実装は変更せず、既存の検証結果を引き継いだ。文書driftとPR差分の空白検査は再確認した。
+- 完了管理consumerの `_linkage_decision` はPR本文のmarkerが `[node_id]` と完全一致することを求める。12行のmarkerでは紐付けが成立しないため、正規consumerに合わせ主担当 `dev-graph:SYS-GUIDE-KPI-P12` の1行に整理し、関連する全タスクIDは本文に残した。
+- P01〜P12と親のBeadsにPRを記録する。draftのためclosedにはしない。P01〜P11の完了は統合PRのマージだけで自動投影されると保証せず、マージ後に各受領証跡と正規consumerの条件を確認する。P13の本番作業は未実施。
+- 正規consumerの `reconcile-github-lifecycle.py --mode check --graph-node-id SYS-GUIDE-KPI-P12 --pr 100` で `marker_verified=true`・`eligible=true` を確認した。完了判定はdraft/未マージなので `pending`。graphとtask本文へ完了状態は書き込まない。

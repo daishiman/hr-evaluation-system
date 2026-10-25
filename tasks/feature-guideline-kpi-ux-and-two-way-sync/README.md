@@ -21,3 +21,8 @@
 ユーザーの2026-10-26の依頼により、現在の未コミット成果物は `devgraph/feature-guideline-kpi-ux-and-two-way-sync` にまとめ、main向けのdraft PRでレビューする。計画の「段階ごとに先行PRがマージ済み」という前提は、この統合PRがマージされた後の条件として読む。P13を先行実行しない。今回の明示的なPR作成依頼を実行の承認として扱う。
 
 BeadsのP01〜P12と親はレビュー中として `in_progress` を維持し、マージ後の完了収束はdev-graphの `linked_pr_merged_all` に従う。P13は本番適用待ちとして `open` を維持する。
+
+
+## 統合PRの追跡
+
+[draft PR #100](https://github.com/daishiman/hr-evaluation-system/pull/100) はmain向けに作成済み。正規consumerはPR本文に1つの厳密なノード指定を求めるので、主担当markerは `dev-graph:SYS-GUIDE-KPI-P12` とする。P01〜P11は関連タスクとして本文とBeadsにPRを記録し、この統合PRのマージだけで自動完了すると扱わない。P13も未実施のまま残す。完了投影は各タスクの証跡とconsumerの条件をマージ後に確認する。

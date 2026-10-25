@@ -54,18 +54,9 @@
 
 **dev-graph node ID**: `feature-guideline-kpi-ux-and-two-way-sync`、`SYS-GUIDE-KPI-P01`〜`SYS-GUIDE-KPI-P13`。
 
-dev-graph:SYS-GUIDE-KPI-P01
-dev-graph:SYS-GUIDE-KPI-P02
-dev-graph:SYS-GUIDE-KPI-P03
-dev-graph:SYS-GUIDE-KPI-P04
-dev-graph:SYS-GUIDE-KPI-P05
-dev-graph:SYS-GUIDE-KPI-P06
-dev-graph:SYS-GUIDE-KPI-P07
-dev-graph:SYS-GUIDE-KPI-P08
-dev-graph:SYS-GUIDE-KPI-P09
-dev-graph:SYS-GUIDE-KPI-P10
-dev-graph:SYS-GUIDE-KPI-P11
 dev-graph:SYS-GUIDE-KPI-P12
+
+統合PRの主担当はP12。P01〜P11もこのPRに含む関連タスクです。完了管理のconsumerは1つの厳密なノード指定だけを受けるため、他のタスクをこのPRのマージだけで自動完了したことにはしません。各タスクの受領書とBeadsにこのPRを記録し、マージ後の完了投影は正規フローで別途確認します。
 
 P13はこのPRのマージだけで完了しません。
 
