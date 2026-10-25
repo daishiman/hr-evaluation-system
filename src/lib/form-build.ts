@@ -5,6 +5,7 @@ import { batchAll } from "@/lib/db-batch";
 import { newId } from "@/lib/id";
 import { HttpError } from "@/lib/session";
 import { contentEditRefusal, formTransitions } from "@/lib/domain/form-transitions";
+import { questionsKeptOnRebuild } from "@/lib/domain/form-sync";
 import { currentVersionRows } from "@/lib/domain/versioned-master";
 import { questionsForPointGroup } from "@/lib/domain/grade-points";
 import { resolveSchemeForCycle } from "@/lib/domain/scheme-resolution";
@@ -22,9 +23,8 @@ import {
  * 設問文の作り方（聞き方・説明文・はい／いいえの意味）は
  * src/lib/domain/form-question-text.ts が1箇所で決める。
  *
- * 「制度が正・アンケートは写し」という向きを崩さないため、
- * 作成（buildFormDraft）と作り直し（syncFormQuestions）は同じ組み立てを通す。
- * アンケート側で文言を直す運用にすると、どちらが本当の制度か分からなくなる。
+ * 制度設定を正本とし、作成（buildFormDraft）と作り直し（syncFormQuestions）は同じ組み立てを通す。
+ * アンケート側の設問編集も、紐づく制度設定へ反映してから、ほかの下書きを追従させる（form-to-settings.ts）。
  */
 
 /**
@@ -50,12 +50,113 @@ export function duplicateOptionMessage(title: string, values: readonly string[])
 }
 
 type Row = typeof s.formQuestions.$inferInsert;
-type Db = Awaited<ReturnType<typeof getDb>>;
+export type Db = Awaited<ReturnType<typeof getDb>>;
 type SqliteBatchItem = BatchItem<"sqlite">;
 
 /** D1の1query上限内に分けた、設問INSERT statementを作る。実行自体は呼び出し側のbatchで原子的に行う。 */
-function questionInsertStatements(db: Db, rows: Row[]): SqliteBatchItem[] {
+export function questionInsertStatements(db: Db, rows: Row[]): SqliteBatchItem[] {
   return chunkRowsForD1(rows).map((chunk) => db.insert(s.formQuestions).values(chunk));
+}
+
+/** 設定の行から作る設問の中身。id・会社・アンケート・並びは置く側が決める */
+export type QuestionRowBody = Omit<Row, "id" | "companyId" | "formId" | "displayOrder">;
+
+/*
+ * 設定の行1つを設問にする組み立て。アンケートを作る（buildQuestionRows）ときと、
+ * 組み立て画面で設定の行を選んで足す（DD-028 の1）ときで、同じ文と同じ紐づけになるように1か所にする。
+ */
+
+/** 等級要件（支援・運営）の設問 */
+export function requirementQuestionRow(r: { id: string; text: string }, cat: "support" | "operation"): QuestionRowBody {
+  const q = requirementQuestion(cat, r.text);
+  return {
+    section: cat,
+    questionType: q.questionType,
+    title: q.title,
+    helpText: q.helpText,
+    optionsJson: q.options ? JSON.stringify(q.options) : null,
+    required: true,
+    gradeRequirementId: r.id,
+    isGate: false,
+  };
+}
+
+/** 昇格要件（受講後の報告書・独学後のテスト）の設問。必須の印は設定のまま写す */
+export function promotionQuestionRow(r: { id: string; text: string; kind: "report" | "test"; isGate: boolean }): QuestionRowBody {
+  const q = promotionQuestion(r.kind, r.text);
+  return {
+    section: r.kind === "report" ? "training" : "test",
+    questionType: q.questionType,
+    title: q.title,
+    helpText: q.helpText,
+    optionsJson: q.options ? JSON.stringify(q.options) : null,
+    required: true,
+    promotionRequirementId: r.id,
+    isGate: r.isGate,
+  };
+}
+
+/** 行動指針の設問。選択肢は5段階を点の高い順に並べる */
+export function behaviorQuestionRow(
+  g: { id: string; aspectName: string },
+  levels: readonly { score: number; label: string; text: string }[],
+): QuestionRowBody {
+  const lv = [...levels].sort((a, b) => b.score - a.score);
+  return {
+    section: "behavior",
+    questionType: "single",
+    title: g.aspectName,
+    helpText: BEHAVIOR_HELP,
+    required: true,
+    optionsJson: JSON.stringify(lv.map((l) => ({ value: String(l.score), label: `【${l.label}】${l.text}`, score: l.score }))),
+    behaviorGuidelineId: g.id,
+    isGate: false,
+  };
+}
+
+type KpiQuestionSource = {
+  questionKey: string;
+  text: string;
+  inputType: string;
+  unit: string | null;
+  validation: string | null;
+  required: boolean;
+  targetGrades: string | null;
+};
+
+/**
+ * KPI 項目1つぶんの設問（聞くことごとに1問）。
+ *
+ * 設問は原則この等級区分向けのものだけを出す。
+ * Beginner のアンケートに Chief 以上限定の設問（q4_1 昇給率など）が出るのを防ぐため。
+ * ただし1件も残らない場合は、対象等級の指定を無視して全部出す。
+ * 管理者がこの等級区分で選んだ以上、実績を聞かなければ評価そのものが成立しないため、
+ * 「設問が消える」より「想定外の等級に設問が出る」ほうが害が小さい。
+ */
+export function kpiQuestionRows(
+  kpiItemId: string,
+  questions: readonly KpiQuestionSource[],
+  pointGroup: string,
+  itemName: string,
+): QuestionRowBody[] {
+  return questionsForPointGroup(questions, pointGroup).map((q) => {
+    const built = kpiQuestion(q, itemName);
+    return {
+      section: "kpi",
+      questionType: built.questionType,
+      title: built.title,
+      helpText: built.helpText,
+      unit: built.unit,
+      required: q.required,
+      validationMin: built.validationMin,
+      validationMax: built.validationMax,
+      validationInteger: built.validationInteger,
+      optionsJson: built.options ? JSON.stringify(built.options) : null,
+      kpiItemId,
+      kpiQuestionKey: q.questionKey,
+      isGate: false,
+    };
+  });
 }
 
 /**
@@ -92,7 +193,7 @@ export async function buildQuestionRows(opts: {
   if (!cycle) throw new HttpError(404, "評価期間が見つかりませんでした。");
 
   const rows: Row[] = [];
-  const push = (r: Omit<Row, "id" | "companyId" | "formId" | "displayOrder">) => {
+  const push = (r: QuestionRowBody) => {
     rows.push({ id: newId("fq"), companyId, formId, displayOrder: rows.length + 1, ...r });
   };
 
@@ -103,17 +204,7 @@ export async function buildQuestionRows(opts: {
     .orderBy(asc(s.gradeRequirements.seq));
   for (const cat of ["support", "operation"] as const) {
     for (const r of currentVersionRows(gradeReqs).filter((x) => x.category === cat && x.isActive)) {
-      const q = requirementQuestion(cat, r.text);
-      push({
-        section: cat,
-        questionType: q.questionType,
-        title: q.title,
-        helpText: q.helpText,
-        optionsJson: q.options ? JSON.stringify(q.options) : null,
-        required: true,
-        gradeRequirementId: r.id,
-        isGate: false,
-      });
+      push(requirementQuestionRow(r, cat));
     }
   }
   const requirementCount = rows.length;
@@ -125,17 +216,7 @@ export async function buildQuestionRows(opts: {
     .orderBy(asc(s.promotionRequirements.seq));
   for (const kind of ["report", "test"] as const) {
     for (const r of currentVersionRows(promoReqs).filter((x) => x.kind === kind && x.isActive)) {
-      const q = promotionQuestion(kind, r.text);
-      push({
-        section: kind === "report" ? "training" : "test",
-        questionType: q.questionType,
-        title: q.title,
-        helpText: q.helpText,
-        optionsJson: q.options ? JSON.stringify(q.options) : null,
-        required: true,
-        promotionRequirementId: r.id,
-        isGate: r.isGate,
-      });
+      push(promotionQuestionRow({ ...r, kind }));
     }
   }
 
@@ -159,19 +240,7 @@ export async function buildQuestionRows(opts: {
           .orderBy(asc(s.behaviorLevels.score))
       : [];
     for (const g of guidelines) {
-      const lv = levels.filter((l) => l.guidelineId === g.id).sort((a, b) => b.score - a.score);
-      push({
-        section: "behavior",
-        questionType: "single",
-        title: g.aspectName,
-        helpText: BEHAVIOR_HELP,
-        required: true,
-        optionsJson: JSON.stringify(
-          lv.map((l) => ({ value: String(l.score), label: `【${l.label}】${l.text}`, score: l.score })),
-        ),
-        behaviorGuidelineId: g.id,
-        isGate: false,
-      });
+      push(behaviorQuestionRow(g, levels.filter((l) => l.guidelineId === g.id)));
     }
   }
 
@@ -217,30 +286,9 @@ export async function buildQuestionRows(opts: {
          そこだけが実績を出す手がかりになるので残す。 */
       if (i.isFixedSlot && requirementCount > 0) continue;
 
-      /* 設問は原則この等級区分向けのものだけを出す。
-         Beginner のアンケートに Chief 以上限定の設問（q4_1 昇給率など）が出るのを防ぐため。
-         ただし1件も残らない場合は、対象等級の指定を無視して全部出す。
-         管理者がこの等級区分で選んだ以上、実績を聞かなければ評価そのものが成立しないため、
-         「設問が消える」より「想定外の等級に設問が出る」ほうが害が小さい。 */
       const mine = questions.filter((x) => x.kpiItemId === i.kpiItemId);
-      for (const q of questionsForPointGroup(mine, grade.pointGroup)) {
-        const built = kpiQuestion(q, kpiNames.find((k) => k.id === i.kpiItemId)?.name ?? "");
-        push({
-          section: "kpi",
-          questionType: built.questionType,
-          title: built.title,
-          helpText: built.helpText,
-          unit: built.unit,
-          required: q.required,
-          validationMin: built.validationMin,
-          validationMax: built.validationMax,
-          validationInteger: built.validationInteger,
-          optionsJson: built.options ? JSON.stringify(built.options) : null,
-          kpiItemId: i.kpiItemId,
-          kpiQuestionKey: q.questionKey,
-          isGate: false,
-        });
-      }
+      const itemName = kpiNames.find((k) => k.id === i.kpiItemId)?.name ?? "";
+      for (const r of kpiQuestionRows(i.kpiItemId, mine, grade.pointGroup, itemName)) push(r);
     }
   }
 
@@ -264,7 +312,7 @@ export interface FormDraftResult {
   version: number;
 }
 
-interface PreparedFormDraft {
+export interface PreparedFormDraft {
   result: FormDraftResult;
   statements: [SqliteBatchItem, ...SqliteBatchItem[]];
 }
@@ -295,7 +343,8 @@ export function isFormVersionConflict(error: unknown): boolean {
   );
 }
 
-async function prepareFormDraft(db: Db, opts: FormDraftInput): Promise<PreparedFormDraft> {
+/** 下書き1本ぶんの書込みを、書かずに組み立てる。設定の保存に追従して次の版を作るときも、同じ組み立てを通す（DD-028 の4） */
+export async function prepareFormDraft(db: Db, opts: FormDraftInput): Promise<PreparedFormDraft> {
   const { companyId, cycleId, gradeId } = opts;
 
   const cycle = (
@@ -392,13 +441,16 @@ export async function buildFormDraft(opts: FormDraftInput): Promise<FormDraftRes
  * 下書きかつ回答0件の場合だけ、その版の設問を制度の側に揃え直せる。
  * 公開後は未回答でも閲覧済みの可能性があり、締め切り後は記録なので、
  * どちらも既存版を保ち、新しい版を作る運用にする。
+ * 設定とつながらない設問（人が組み立て画面で足した設問）は、同じ id のまま後ろに残す（DD-028 の4）。
  */
 export async function syncFormQuestions(opts: {
   companyId: string;
   formId: string;
+  /** 設定の保存に続けて作り直すとき、同じリクエストのDB clientを共有する。 */
+  db?: Db;
 }): Promise<{ questionCount: number; removed: number; cycleId: string }> {
   const { companyId, formId } = opts;
-  const db = await getDb();
+  const db = opts.db ?? (await getDb());
 
   const form = (
     await db
@@ -425,6 +477,7 @@ export async function syncFormQuestions(opts: {
     cycleId: form.cycleId,
     gradeId: form.gradeId,
     formId: form.id,
+    db,
   });
   if (rows.length === 0) {
     throw new HttpError(
@@ -433,10 +486,8 @@ export async function syncFormQuestions(opts: {
     );
   }
 
-  const before = await db
-    .select({ id: s.formQuestions.id })
-    .from(s.formQuestions)
-    .where(eq(s.formQuestions.formId, form.id));
+  const before = await db.select().from(s.formQuestions).where(eq(s.formQuestions.formId, form.id));
+  const kept = questionsKeptOnRebuild(before, rows.length + 1);
 
   /*
    * DELETEと、D1のbound parameter上限内に分けた全INSERTを1つのbatchにする。
@@ -445,8 +496,8 @@ export async function syncFormQuestions(opts: {
    */
   await batchAll(db, [
     db.delete(s.formQuestions).where(eq(s.formQuestions.formId, form.id)),
-    ...questionInsertStatements(db, rows),
+    ...questionInsertStatements(db, [...rows, ...kept]),
   ]);
 
-  return { questionCount: rows.length, removed: before.length, cycleId: form.cycleId };
+  return { questionCount: rows.length + kept.length, removed: before.length - kept.length, cycleId: form.cycleId };
 }

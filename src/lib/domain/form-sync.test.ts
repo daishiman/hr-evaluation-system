@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { diffFormKpiItems, effectiveAskedItems, staleAskingItems } from "./form-sync";
+import {
+  diffFormKpiItems,
+  effectiveAskedItems,
+  linkedQuestionsMatch,
+  questionsKeptOnRebuild,
+  staleAskingItems,
+  type LinkedQuestionContent,
+  type RebuildQuestion,
+} from "./form-sync";
 
 /**
  * 評価セットとアンケートのズレ検出。
@@ -124,5 +132,102 @@ describe("staleAskingItems（版の設問が、いまの計算式の変数をそ
   it("式がまだ無い点の項目は、求める変数が無いので出さない（式の無いことは別の警告が言う）", () => {
     const kpiItems = [FIXED, { ...RATE, formula: null }];
     expect(staleAskingItems({ ...base, kpiItems, formQuestions: asked(RATE.id, "q2_1"), templates: [template(RATE.id, "q2_1")] })).toEqual([]);
+  });
+});
+
+describe("questionsKeptOnRebuild（設定の保存で下書きを作り直すとき、残す設問。DD-028 の4）", () => {
+  const unlinked: Omit<RebuildQuestion, "id" | "displayOrder"> = {
+    kpiItemId: null,
+    behaviorGuidelineId: null,
+    gradeRequirementId: null,
+    promotionRequirementId: null,
+    isGate: false,
+  };
+  const question = (id: string, displayOrder: number, link: Partial<typeof unlinked> = {}) => ({ id, displayOrder, ...unlinked, ...link });
+
+  it("設定とつながらない設問（手で足した設問）は、同じ id のまま作り直した設問の後ろに元の並びで残る", () => {
+    const kept = questionsKeptOnRebuild([question("free_b", 9), question("kpi", 0, { kpiItemId: "k9" }), question("free_a", 3)], 5);
+    expect(kept).toEqual([question("free_a", 5), question("free_b", 9)]);
+  });
+
+  it("作り直した設問より後ろの番号は元のまま残し、重なる番号だけ次の空きへ送る", () => {
+    const kept = questionsKeptOnRebuild([question("free_c", 999), question("free_a", 6), question("free_b", 6)], 6);
+    expect(kept.map((q) => [q.id, q.displayOrder])).toEqual([
+      ["free_a", 6],
+      ["free_b", 7],
+      ["free_c", 999],
+    ]);
+  });
+
+  it("設定とつながった設問は残さない（いまの設定から作り直す）", () => {
+    const kept = questionsKeptOnRebuild(
+      [
+        question("kpi", 0, { kpiItemId: "k9" }),
+        question("behavior", 1, { behaviorGuidelineId: "g1" }),
+        question("grade", 2, { gradeRequirementId: "r1" }),
+        question("promotion", 3, { promotionRequirementId: "p1" }),
+      ],
+      4,
+    );
+    expect(kept).toEqual([]);
+  });
+
+  it("入口の問い（isGate）は、紐づけが無くても作り直しの側が作るので残さない", () => {
+    expect(questionsKeptOnRebuild([question("gate", 0, { isGate: true })], 1)).toEqual([]);
+  });
+
+  it("残す設問が無ければ空を返す", () => {
+    expect(questionsKeptOnRebuild([], 3)).toEqual([]);
+  });
+});
+
+describe("linkedQuestionsMatch（設定から作った設問が、いまの設定から作り直した設問と同じか。DD-028 の4）", () => {
+  const behavior = { section: "behavior", questionType: "single", title: "挑戦する姿勢", optionsJson: '[{"value":"3"}]', behaviorGuidelineId: "g1" };
+  const kpi = { section: "kpi", questionType: "number", title: "売上", unit: "円", kpiItemId: "k9", kpiQuestionKey: "q9_1" };
+  // DB から読んだ行は、欠けた値が既定（必須・整数でない・入口の問いでない）と null で埋まっている
+  const stored = (id: string, displayOrder: number, q: LinkedQuestionContent) => ({
+    ...q,
+    id,
+    displayOrder,
+    helpText: q.helpText ?? null,
+    unit: q.unit ?? null,
+    required: q.required ?? true,
+    validationMin: q.validationMin ?? null,
+    validationMax: q.validationMax ?? null,
+    validationInteger: q.validationInteger ?? false,
+    optionsJson: q.optionsJson ?? null,
+    gradeRequirementId: q.gradeRequirementId ?? null,
+    promotionRequirementId: q.promotionRequirementId ?? null,
+    behaviorGuidelineId: q.behaviorGuidelineId ?? null,
+    kpiItemId: q.kpiItemId ?? null,
+    kpiQuestionKey: q.kpiQuestionKey ?? null,
+    isGate: q.isGate ?? false,
+  });
+  const free = stored("free", 9, { section: "free", questionType: "text", title: "ひとこと" });
+
+  it("中身が同じなら、並び・id・欠けた値の書き方が違っても同じとみなす", () => {
+    expect(linkedQuestionsMatch([stored("b", 5, kpi), stored("a", 1, behavior)], [behavior, kpi])).toBe(true);
+  });
+
+  it("手で足した設問は比べない（作り直しても残るため）", () => {
+    expect(linkedQuestionsMatch([stored("a", 0, behavior), free], [behavior])).toBe(true);
+  });
+
+  it("呼び名が変われば違う", () => {
+    expect(linkedQuestionsMatch([stored("a", 0, behavior)], [{ ...behavior, title: "さらに新しい工夫" }])).toBe(false);
+  });
+
+  it("設定の行が増えたか減ったら違う", () => {
+    expect(linkedQuestionsMatch([stored("a", 0, behavior)], [behavior, kpi])).toBe(false);
+    expect(linkedQuestionsMatch([stored("a", 0, behavior), stored("b", 1, kpi)], [behavior])).toBe(false);
+  });
+
+  it("同じ中身の設問が2問あれば2問として数える", () => {
+    expect(linkedQuestionsMatch([stored("a", 0, kpi), stored("b", 1, kpi)], [kpi])).toBe(false);
+  });
+
+  it("必須・整数・入口の問いの既定と違う値は違いとして出す", () => {
+    expect(linkedQuestionsMatch([stored("b", 0, kpi)], [{ ...kpi, required: false }])).toBe(false);
+    expect(linkedQuestionsMatch([stored("b", 0, kpi)], [{ ...kpi, validationInteger: true }])).toBe(false);
   });
 });

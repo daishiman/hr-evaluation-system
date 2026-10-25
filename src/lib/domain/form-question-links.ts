@@ -5,7 +5,11 @@
  * 設問を作り直すときにサーバーが制度の設定から書く値で、組み立て画面は引き継ぐだけで作らない。
  * 点数の計算（evaluate.ts）はこの値をそのまま読むので、保存の要求に入っていた値を信じると、
  * 自由設問が昇格の必須要件になったり、別の会社の要件の id が入ったりする。
- * そこで、保存済みの同じ設問（同じ id）の値と同じものだけを受け付け、新しい設問には紐づけを許さない。
+ * そこで、保存済みの同じ設問（同じ id）の値と同じものだけを受け付ける。
+ *
+ * 新しい設問（id の無いもの）に許す紐づけは、設定の行を1つ選ぶことだけにする（DD-028 の1）。
+ * 選んだ行の確かめ（自社か・この等級のものか）と設問の文は、サーバーが設定から作る。
+ * KPI の聞くことの key と昇格の必須要件の印は、設定から決まる値なので受け取らない。
  *
  * 紐づけのある設問は、まとまりと答え方も変えさせない。
  * 点数の計算は答え方で値の読み方を決め（はい/いいえ・数値・選択肢の点数）、
@@ -27,8 +31,11 @@ export type SubmittedQuestion = {
   [K in keyof QuestionLinks]?: QuestionLinks[K] | null;
 } & { id?: string; title: string; section: string; questionType: string };
 
-/** keep: 送られた id で保存する ／ fresh: この版に無い id なので新しい id を振る */
-export type QuestionIdPlan = "keep" | "fresh";
+/**
+ * keep: 送られた id で保存する ／ fresh: この版に無い id なので新しい id を振る ／
+ * add: 設定の行を1つ選んで足した設問。設問は設定から作り直す
+ */
+export type QuestionIdPlan = "keep" | "fresh" | "add";
 
 export type QuestionLinkCheck = { ok: true; ids: QuestionIdPlan[] } | { ok: false; message: string };
 
@@ -60,6 +67,11 @@ function sameLinks(a: QuestionLinks, b: QuestionLinks): boolean {
   return (Object.keys(a) as (keyof QuestionLinks)[]).every((k) => a[k] === b[k]);
 }
 
+/** 設定の行を指す紐づけの数（KPI の聞くことの key と昇格の必須要件の印は数えない） */
+function settingRowCount(l: QuestionLinks): number {
+  return [l.gradeRequirementId, l.promotionRequirementId, l.behaviorGuidelineId, l.kpiItemId].filter((v) => v !== null).length;
+}
+
 /**
  * 送られた設問の並びを、保存済みの設問（この版のもの）と突き合わせる。
  * 通れば、設問ごとに id をそのまま使うか新しく振るかを返す。
@@ -79,6 +91,19 @@ export function checkQuestionLinks(
     }
     const prev = q.id === undefined ? undefined : byId.get(q.id);
     if (!prev) {
+      if (q.id === undefined && isLinkedQuestion(q)) {
+        const l = linksOf(q);
+        if (settingRowCount(l) === 1 && !l.isGate && l.kpiQuestionKey === null) {
+          ids.push("add");
+          continue;
+        }
+        if (settingRowCount(l) >= 1) {
+          return {
+            ok: false,
+            message: `「${q.title}」に付けられる紐づけは、設定の項目1つだけです。KPI は項目だけを選んでください。`,
+          };
+        }
+      }
       if (isLinkedQuestion(q)) {
         return {
           ok: false,

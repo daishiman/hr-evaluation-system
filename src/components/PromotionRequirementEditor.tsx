@@ -2,7 +2,8 @@
 
 import { useMasterAction } from "@/components/use-master-action";
 import { useState } from "react";
-import { Badge, Button, Card, CardHead, FieldGroup, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, FieldGroup, InlineDetail, ReasonNote } from "@/components/ui";
+import { SettingsFollowScope } from "@/components/SettingsFollowScope";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ListAddArea, ListAddRow } from "@/components/ListRow";
 import { BlockedHelp, UsedByDetail, blockedRows } from "@/components/UsedByDetail";
@@ -243,9 +244,11 @@ export function PromotionRequirementEditor({
     <FieldGroup disabled={saving && !reordering} aria-busy={saving} bodyClassName="stack">
       {/* 冒頭の説明は1つの段落にまとめる（短い文を1行ずつ積むと、その行ごとに右側が空く。§28-9） */}
       <p className="footnote m-0">
-        いま編集しているのは <b>{gradeName}</b> の昇格要件です{stepLabel && `（${stepLabel}）`}。ここでの変更は次に作るアンケートから反映されます。
-        すでに作成・公開したアンケートと確定済みの評価は変わりません。内容を直すと、新版を作ります。
+        いま編集しているのは <b>{gradeName}</b> の昇格要件です{stepLabel && `（${stepLabel}）`}。内容を直すと、新版を作ります。
       </p>
+      <InlineDetail summary="変更が反映される範囲">
+        <SettingsFollowScope kinds={["promotionRequirementRevise"]} />
+      </InlineDetail>
       {error && <div role="alert"><ReasonNote>{error}</ReasonNote></div>}
       <RefreshStatus message={message} refreshing={saving} />
       {block("report")}

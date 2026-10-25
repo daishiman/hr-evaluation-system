@@ -199,9 +199,9 @@ describe("comparisonGapOf: ズレた項目の行", () => {
   it("足りない項目（選んだ順）のあとに、余分な項目（聞いた順）を並べる", () => {
     const gap = gapOf();
     expect(gap.rows).toEqual([
-      { kind: "kpi", itemId: "kpi_b", name: "残業率", href: "/admin/scheme?item=kpi_b#kpi-item-kpi_b", inSelection: true, inForm: false, noTemplate: false },
-      { kind: "kpi", itemId: "kpi_c", name: "粗利率", href: "/admin/scheme?item=kpi_c#kpi-item-kpi_c", inSelection: true, inForm: false, noTemplate: false },
-      { kind: "kpi", itemId: "kpi_d", name: "定着率", href: "/admin/scheme?item=kpi_d#kpi-item-kpi_d", inSelection: false, inForm: true, noTemplate: false },
+      { kind: "kpi", itemId: "kpi_b", name: "残業率", href: "/admin/scheme/items?item=kpi_b#kpi-item-kpi_b", inSelection: true, inForm: false, noTemplate: false },
+      { kind: "kpi", itemId: "kpi_c", name: "粗利率", href: "/admin/scheme/items?item=kpi_c#kpi-item-kpi_c", inSelection: true, inForm: false, noTemplate: false },
+      { kind: "kpi", itemId: "kpi_d", name: "定着率", href: "/admin/scheme/items?item=kpi_d#kpi-item-kpi_d", inSelection: false, inForm: true, noTemplate: false },
     ]);
     expect(gap.missingCount).toBe(2);
     expect(gap.extraCount).toBe(1);
@@ -315,9 +315,9 @@ describe("comparisonGapOf: 3種類の項目（等級要件・行動指針・KPI�
       // 行動指針は、その観点の基準で開く（余分な観点が別の基準でも、そのカードへ飛べる）
       bg_2: "/admin/behavior?grade=grd_1&band=g1_2#behavior-guideline-bg_2",
       bg_old: "/admin/behavior?grade=grd_1&band=g3_4#behavior-guideline-bg_old",
-      kpi_b: "/admin/scheme?item=kpi_b#kpi-item-kpi_b",
-      kpi_c: "/admin/scheme?item=kpi_c#kpi-item-kpi_c",
-      kpi_d: "/admin/scheme?item=kpi_d#kpi-item-kpi_d",
+      kpi_b: "/admin/scheme/items?item=kpi_b#kpi-item-kpi_b",
+      kpi_c: "/admin/scheme/items?item=kpi_c#kpi-item-kpi_c",
+      kpi_d: "/admin/scheme/items?item=kpi_d#kpi-item-kpi_d",
     });
   });
 
@@ -416,7 +416,7 @@ describe("comparisonGapOf: 直す操作（上から順に1つだけ）", () => {
 describe("comparisonGapOf: 実績の聞き方（設問のひな形）が決まっていない項目があるとき", () => {
   /** 足りないのは残業率・粗利率で、どちらも聞き方が決まっていない（余分は無い） */
   const ONLY_UNASKABLE: Partial<ComparisonGapInput> = { asked: ["kpi_a"], unaskable: ["kpi_b", "kpi_c"] };
-  const DEFINE = { kind: "defineAsking", href: "/admin/scheme?item=kpi_b#kpi-item-kpi_b", names: ["残業率", "粗利率"] };
+  const DEFINE = { kind: "defineAsking", href: "/admin/scheme/items?item=kpi_b#kpi-item-kpi_b", names: ["残業率", "粗利率"] };
 
   it("作り直しも新しい版も直らないので、どの状態でも先に、先頭の項目を開いた KPI項目の画面へ案内する", () => {
     for (const [status, responseCount] of [["draft", 0], ["draft", 2], ["published", 0], ["closed", 3]] as const)
@@ -437,7 +437,7 @@ describe("comparisonGapOf: 実績の聞き方（設問のひな形）が決ま�
     expect(gapOf({ unaskable: ["kpi_b", "kpi_c"], form: draft }).fix).toEqual(DEFINE);
     expect(gapOf({ unaskable: ["kpi_b", "kpi_c"] }).fix).toEqual(DEFINE);
     // 足りない項目の片方には聞き方がある
-    const one = { kind: "defineAsking", href: "/admin/scheme?item=kpi_c#kpi-item-kpi_c", names: ["粗利率"] };
+    const one = { kind: "defineAsking", href: "/admin/scheme/items?item=kpi_c#kpi-item-kpi_c", names: ["粗利率"] };
     expect(gapOf({ asked: ["kpi_a"], unaskable: ["kpi_c"], form: draft }).fix).toEqual(one);
     expect(gapOf({ asked: ["kpi_a"], unaskable: ["kpi_c"], newer: newerForm("frm_2", 2, "draft") }).fix).toEqual(one);
     expect(gapOf({ asked: ["kpi_a"], unaskable: ["kpi_c"], schemeGap: SCHEME_GAP }).fix).toEqual(one);
@@ -562,7 +562,7 @@ describe("文言", () => {
     expect(fixLabel({ kind: "openNewer", formId: "frm_2", href: "/admin/forms/frm_2", version: 2, draft: true })).toBe("第2版の下書きを開く");
     expect(fixLabel({ kind: "openNewer", formId: "frm_3", href: "/admin/forms/frm_3", version: 3, draft: false })).toBe("第3版を開く");
     expect(fixLabel({ kind: "finishScheme", ...SCHEME_GAP })).toBe("基準を決める");
-    const asking = { kind: "defineAsking", href: "/admin/scheme?item=kpi_b#kpi-item-kpi_b" } as const;
+    const asking = { kind: "defineAsking", href: "/admin/scheme/items?item=kpi_b#kpi-item-kpi_b" } as const;
     expect(fixLabel({ ...asking, names: ["残業率"] })).toBe("「残業率」の聞き方を決める");
     expect(fixLabel({ ...asking, names: ["残業率", "粗利率", "定着率"] })).toBe("「残業率」ほか2項目の聞き方を決める");
   });
@@ -577,7 +577,7 @@ describe("文言", () => {
     );
     expect(fixConfirm({ kind: "openNewer", formId: "frm_2", href: "/admin/forms/frm_2", version: 2, draft: true }, gap)).toBeUndefined();
     expect(fixConfirm({ kind: "finishScheme", ...SCHEME_GAP }, gap)).toBeUndefined();
-    expect(fixConfirm({ kind: "defineAsking", href: "/admin/scheme?item=kpi_b#kpi-item-kpi_b", names: ["残業率"] }, gap)).toBeUndefined();
+    expect(fixConfirm({ kind: "defineAsking", href: "/admin/scheme/items?item=kpi_b#kpi-item-kpi_b", names: ["残業率"] }, gap)).toBeUndefined();
   });
 
   it("聞き方の決まっていない項目があれば、作り直しにも新しい版にも、押す前にその項目を名指しする", () => {

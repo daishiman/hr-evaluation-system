@@ -8,11 +8,36 @@
 
 1. migration と、その追加列がなくても動く後方互換なコードを `main` へ入れる。
 2. 自動の [Deploy workflow](../.github/workflows/deploy.yml) が文書・型・テスト・ビルド・容量の各ゲートを通す。
-3. 未適用 migration があれば、本番DBのバックアップを取得して14日間Artifactに保管する。バックアップできなければ停止する。
+3. 未適用 migration があれば、本番DBのバックアップを取得し、age の公開鍵で暗号化してから14日間Artifactに保管する（下の「書き出しの暗号化」）。受け手の公開鍵が無いとき、バックアップか暗号化ができないときは停止する。
 4. migrationを自動適用し、同じ本番DBを再照会して未適用0件を確認してから配布する。
 5. 自動スモークを確認し、必要な認証付き操作を人が確認する。ログインしたあとの画面が新しい表を読めるかは、§3 の「移行のあとに、ログインしたスモークを流す」で確かめる。
 
 migration がない変更はバックアップと適用をスキップしてそのまま配布します。通常運用で手動操作は不要です。[Migration workflow](../.github/workflows/migrate.yml) は、Deployのmigration適用後に別工程で失敗した場合の復旧確認や、後方互換なmigrationだけを先行適用したい場合に使います。DeployとMigrateは同じconcurrency groupで直列化し、未適用状態が判定不能ならfail-closedで停止します。
+
+### 書き出しの暗号化
+
+このリポジトリは Public で、Actions の Artifact は GitHub にログインした誰もが落とせます。だから本番 D1 の書き出しを平文で Artifact に置きません。Deploy workflow と Migrate workflow は、書き出しを [age](https://age-encryption.org) の公開鍵で暗号化した `backup.sql.age` だけを置き、平文の `backup.sql` はランナーの中で消します。決めたことは [DD-031](./product/design-decisions.md) です。
+
+- CI が持つのは公開鍵だけです。リポジトリの Variables の `D1_BACKUP_AGE_RECIPIENT` に置きます。開く鍵（秘密鍵）は、CI にも Secrets にもリポジトリにも置きません。
+- `D1_BACKUP_AGE_RECIPIENT` が無いとき、または age の公開鍵（`age1` で始まる62文字）でない値があるときは、書き出す前に止まります。移行も配布もしないので、本番は何も変わりません。形の違う値は、貼り間違えた秘密鍵かもしれないので、ログに出しません。
+- 移行の無い Deploy は書き出さないので、変数が無くても今までどおり配ります。
+- 暗号化と検査は [`.github/scripts/encrypt-d1-backup.sh`](../.github/scripts/encrypt-d1-backup.sh) が行います。暗号化した先頭の行が `age-encryption.org/v1` でなければ、何も保管せずに止まります。workflow の順と台本の振る舞いは `scripts/deploy-workflow-contract.test.mjs` が `pnpm test` で確かめます。
+
+鍵の用意（利用者が1回だけ行う）:
+
+1. 手元に age を入れます: `brew install age`
+2. 鍵を作ります: `age-keygen -o <リポジトリの外の安全な場所>/d1-backup.key`。表示される `Public key: age1...` が公開鍵です。鍵のファイルはリポジトリの中に置かず、コミットしません。
+3. 鍵をなくすと書き出しを開けなくなるので、別の場所（別の端末やパスワード管理の保管庫）でもう1本作ることを勧めます。
+4. 公開鍵だけを変数に置きます: `gh variable set D1_BACKUP_AGE_RECIPIENT --body "age1... age1..."`（空白か改行で区切って複数を書けます）。`AGE-SECRET-KEY-1` で始まる行（秘密鍵）は置きません。
+5. 置いた後に確かめます: `D1_BACKUP_AGE_RECIPIENT="$(gh variable get D1_BACKUP_AGE_RECIPIENT)" bash .github/scripts/encrypt-d1-backup.sh check` が「受け手の公開鍵: N 本」を出します。
+
+書き出しを開く（戻すとき）:
+
+1. `gh run download <実行の id> -n d1-backup-<実行の id> -D <リポジトリの外の場所>`
+2. `age -d -i <鍵の場所>/d1-backup.key -o <リポジトリの外の場所>/backup.sql <リポジトリの外の場所>/backup.sql.age`
+3. 要る表と列だけを取り出して使います。全体は流し込みません（その後の保存が消えるため。§9・§14・§15 の戻し方）。使い終わったら平文の `backup.sql` を消します。
+
+DB の全体をある時点へ戻すときは、書き出しの代わりに D1 の Time Travel（`pnpm exec wrangler d1 time-travel restore hr-evaluation-db --timestamp <時刻>`。戻せるのは無料の枠で7日、有料で30日の内）も使えます。戻した時点の後の保存はすべて消えるので、別に承認を取ってから行います。
 
 ## 2. ローカルで Workers 相当を確認する
 
@@ -220,7 +245,7 @@ pnpm test:e2e
 
 ## 8. 失敗時
 
-自動ロールバックは行いません。migration適用後にDeployだけが失敗した場合は、まず同じDeploy workflowを再実行します。適用済みmigrationは再適用されず、未適用0件の確認後に配布から再開します。旧 isolate、認証・設定不備を切り分けてから `wrangler rollback` を選び、DBを戻す必要がある場合はArtifactのバックアップとmigrationの互換性を確認してください。移行 0039（KGI の表と列の削除）を当てた後は、`wrangler rollback` で KGI を消す前の版（0038 を出した PR より前）に戻しません。戻し方は §14 にあります。
+自動ロールバックは行いません。migration適用後にDeployだけが失敗した場合は、まず同じDeploy workflowを再実行します。適用済みmigrationは再適用されず、未適用0件の確認後に配布から再開します。旧 isolate、認証・設定不備を切り分けてから `wrangler rollback` を選び、DBを戻す必要がある場合はArtifactのバックアップとmigrationの互換性を確認してください。バックアップは暗号化してあるので、§1 の「書き出しの暗号化」の手順で開きます。移行 0039（KGI の表と列の削除）を当てた後は、`wrangler rollback` で KGI を消す前の版（0038 を出した PR より前）に戻しません。戻し方は §14 にあります。
 
 ## 9. 2026-10 の改善要望の配布（移行 0033・0034・0035）
 
@@ -236,6 +261,7 @@ pnpm test:e2e
 
 - Deploy workflow の実行 `38509015552`（2026-10-14 03:58〜04:04 UTC、PR #93 の `03787cb`）。本番 D1 の書き出し → 保管 → 0033・0034・0035 の適用 → 未適用0件 → 配布 → 2回のスモークが、すべて success。
 - 書き出しは Artifact `d1-backup-38509015552` に保管した。保管の期限は 2026-10-28 04:01 UTC。0034・0035 を書き出しから戻す手順（[移行の対応表 §12-5](./migration-mapping-grade-display-names.md)）は、この期限の内だけ使える。
+- 2026-10-24 に読んだ時点で、この Artifact はもう残っていない（期限の前に消えている。消した記録は無い）。0034・0035 は、`display_name_rewrites` に残した前の値と `drizzle/rollback/` の SQL でだけ戻せる。
 - 続く実行 `38560660381`（2026-10-14 12:00〜12:05 UTC、PR #94 の `42b7f6b`）は未適用の移行が0件だったので、書き出し・保管・適用を飛ばして配布とスモークだけを流した（どちらも success）。
 
 確かめる要点（配布の後に読み取りだけで見る）:
@@ -395,7 +421,9 @@ LIMIT 50;
 
 未適用の移行があると、Deploy workflow は本番 D1 の全体を書き出し、Artifact `d1-backup-<実行の id>` に14日置きます。2回目の書き出しは、消した KGI の値を戻せる唯一の元です。
 
-- Public のリポジトリで、この Artifact を誰が落とせるか・どこに置くかは、[バックログ](./product/backlog.md) の SECURITY-014 で利用者が決めます。P05 のマージの前に決めます。
+- 1回目（Deploy workflow の実行 `39562261411`、2026-10-21 07:28 UTC、0038）と2回目（`39564492520`、07:47 UTC、0039）の書き出しは、この時点の workflow のとおり平文のまま保管された。
+- 2026-10-24 に読んだ時点で、2つの Artifact はどちらも残っていない（保管の期限 2026-11-04 の前に消えている。消した記録は無い）。だから、消した KGI の値を書き出しから戻すことは、もうできません。
+- これより後の書き出しは、age の公開鍵で暗号化してから置きます（§1 の「書き出しの暗号化」、[DD-031](./product/design-decisions.md)）。
 - KGI の値を14日より長く保管するかは、P08 のマージの前に利用者が決めます（DD-020 の9）。長く置かないなら、期限の後は値を戻せません。
 
 ### 確かめる要点（読み取りだけ）
@@ -442,3 +470,100 @@ pnpm exec wrangler d1 execute hr-evaluation-db --remote --json --command "SELECT
 
 - 1回目: Deploy workflow の実行（id・時刻）、マージの sha、Artifact `d1-backup-<id>` と保管の期限、確かめる要点の結果（根拠の文が残る評価の状態ごとの件数を含む）。
 - 2回目: 同じ項目と、上の件数（`checked`・`flagged`）。
+
+## 15. 行動指針の割り当てを既定へ戻す配布（移行 0040）
+
+行動指針の既定の分け方（等級1・等級2に1つ目、等級3・等級4-1・等級4-2に2つ目、等級5-1・等級5-2は出さない）からずれた会社を、等級の識別子で既定へ戻します。決めたことは [DD-026](./product/design-decisions.md) です。移行は feature `feature-guideline-kpi-ux-and-two-way-sync` の P05 の PR に入り、main へのマージで Deploy workflow が流すので、手で `db:migrate:remote` を流しません。
+
+| 移行 | 中身 | 2回流したとき |
+|---|---|---|
+| 0040 | 記録の表 `behavior_band_default_rewrites` を作り、7つの識別子（`beginner`・`regular`・`chief`・`am1`・`am2`・`manager1`・`manager2`）の等級のうち、既定と違う `grades.behavior_band` を既定へ書き換える。前の値は記録の表に残し、書き換えた行の `updated_at` は移行の時刻にする。雛形の会社と、使用を止めた等級も対象にする。会社が足した等級・観点の文・まとまりの呼び名は変えない。使用中の既定のまとまり（`g1_2`・`g3_4`）の両方がそろっていない会社は書き換えず、記録の表に `table_name = 'companies'` の行を1つ残す | 変化0（`IF NOT EXISTS`・`INSERT OR IGNORE`。書き換えるのは今の値が記録の前の値のままの行だけ） |
+
+- 割り当ては NULL（出さない）を取るので、記録の `old_value`・`new_value` も NULL を取ります。移行と戻しは `IS`・`IS NOT` で比べます。
+- 移行の後に会社が変えた割り当ては、もう一度流しても、戻しても上書きしません。例外が1つあります。会社が移行の前と同じ値へ戻した行は、記録の前の値のままの行と見分けられないので、0040 を手で流し直すと既定へ書き換わります（wrangler は適用済みの移行を流し直さないので、Deploy workflow では起きません）。
+- 0040 は生の SQL なので、設定を保存したときの追従（[DD-028](./product/design-decisions.md) の4）は流れません。書き換えた会社の回答0件の下書きは、割り当ての `updated_at` が下書きより新しくなるので、KPI・評価セットの入口の「設定とずれた下書き」の知らせに「設定に合わせて作り直す」として出ます。会社の管理者が「内容を見る → そろえる」を押して作り直します（下の「ずれた下書きをそろえる」）。公開中・締め切ったアンケートは変えません。
+- 上の性質と、下の読み取りの SQL がそのまま流せることは、`src/db/behavior-band-default-migration.test.ts` が `pnpm test` で確かめます。新しい会社が既定で始まることは `src/actions/behavior-default-company.integration.test.ts` が確かめます。
+
+### 書き出しの保管
+
+未適用の 0040 があるので、Deploy workflow は本番 D1 の全体を書き出し、暗号化して Artifact `d1-backup-<実行の id>` に14日置きます。戻す元はまず記録の表で、この書き出しはもう1つの元です（DD-026）。
+
+- 書き出しを使うときも、全体は流し込みません（0040 の後の保存が消えるため。前例は §9 の 0034 の戻し方）。書き出しから割り当ての表（`grades` の `id` と `behavior_band`）だけを取り出し、今の値と比べてから入れ直します。
+- 書き出しは age の公開鍵で暗号化してから置きます（§1 の「書き出しの暗号化」、[DD-031](./product/design-decisions.md)）。repo の Variables に `D1_BACKUP_AGE_RECIPIENT` を設定するまで、0040 を含む Deploy は書き出しの前で止まり、0040 は当たりません（本番は変わりません）。P05 をマージする前に、利用者が鍵を用意して変数を設定します。
+- 期限の後は書き出しが消え、戻す元は記録の表だけになります。
+
+### 確かめる要点（読み取りだけ）
+
+本番で流すときは `pnpm exec wrangler d1 execute hr-evaluation-db --remote --command "<SQL>"` を使います（`SELECT` だけ）。手元の token が本番 D1 を読めない間（[バックログ](./product/backlog.md) の OPS-017）は流せません。
+
+- 書き換えなかった会社の数。0件でなければ、`row_id` の会社の行動指針の画面を会社の管理者が開き、割り当てを人が決めます。
+
+  ```sql
+  SELECT COUNT(*) AS n FROM behavior_band_default_rewrites WHERE table_name = 'companies';
+  ```
+
+- 書き換えた等級の数（会社ごと）。
+
+  ```sql
+  SELECT company_id, COUNT(*) AS n FROM behavior_band_default_rewrites WHERE table_name = 'grades' GROUP BY company_id ORDER BY company_id;
+  ```
+
+- 配布の直後に、書き換えなかった会社を除いて、7つの識別子の等級で既定と違う行が0件。
+
+  ```sql
+  SELECT COUNT(*) AS n FROM grades WHERE code IN ('beginner', 'regular', 'chief', 'am1', 'am2', 'manager1', 'manager2') AND behavior_band IS NOT CASE code WHEN 'beginner' THEN 'g1_2' WHEN 'regular' THEN 'g1_2' WHEN 'chief' THEN 'g3_4' WHEN 'am1' THEN 'g3_4' WHEN 'am2' THEN 'g3_4' END AND company_id NOT IN (SELECT row_id FROM behavior_band_default_rewrites WHERE table_name = 'companies');
+  ```
+
+- `wrangler d1 migrations list` の未適用が0件（Deploy workflow が確かめて、記録に残す）。
+
+### 戻すとき
+
+自動では戻しません（§8）。本番の DB への書き込みなので、**利用者の承認を得てから**流します。
+
+1. 戻らない行（移行の後に会社が変えた行）の数を確かめ、承認を求めるときに一緒に伝えます。
+
+   ```sql
+   SELECT COUNT(*) AS n FROM behavior_band_default_rewrites w JOIN grades g ON g.id = w.row_id WHERE w.table_name = 'grades' AND w.migration = '0040_behavior_band_defaults' AND w.new_value IS NOT g.behavior_band;
+   ```
+
+2. 承認を得てから流します。
+
+   ```bash
+   pnpm exec wrangler d1 execute hr-evaluation-db --remote --file drizzle/rollback/0040_behavior_band_defaults_rollback.sql
+   ```
+
+- 戻るのは、今の値が記録の `new_value` のままの行だけです。移行の後に会社が変えた割り当ては上書きしません。戻した行の `updated_at` は戻した時刻になります。
+- 記録の表は消しません。戻した後に 0040 をもう一度流しても、最初の値の記録は上書きされず、同じ結果になります。
+- `table_name = 'companies'` の行は数えるための記録なので、戻す対象にありません。
+- コードは戻さなくて構いません。説明の文はいまの割り当てから作るので、戻した割り当てのとおりに出ます。
+- 戻すと割り当ての `updated_at` がまた進むので、戻した会社の回答0件の下書きは、もう一度「設定とずれた下書き」の知らせに出ます。会社の管理者が、下の手順でもう一度そろえます。
+
+### ずれた下書きをそろえる
+
+0040 で割り当てが変わった会社と、設定とアンケートを別々に直した会社には、KPI・評価セットの入口（`/admin/scheme`）に「設定とずれた下書きのアンケートが N 件あります」が出ます。そろえる操作は回答0件の下書きだけを書き換え、公開中・締め切ったアンケートには触れません（[DD-028](./product/design-decisions.md) の6）。
+
+- **件数の読み方**: N は、そろえられる下書きと、そろえられない下書きの合計です。「内容を見る」は何も書かずに、一覧を2つに分けて出します。
+  - そろえられる下書きには、向きが1つずつ付きます。「設定に合わせて作り直す」は、設定の方が新しい下書きで、設問を設定から作り直します。「下書きの直しを設定へ反映する」は、設問の方が新しい下書きで、会社の設定（等級・昇格の要件、行動指針、KPI の設問、評価セットの項目）の文を下書きに合わせて書き換えます。向きは、設定の `updated_at` の最大と、下書きの設問（`form_questions.updated_at`）の最大を比べて決めます。
+  - そろえられない下書きには、理由と「直す画面を開く」が付きます。人がその画面で直してから、もう一度「内容を見る」を押します。
+- **本番の手順**: 本番の DB への書き込みなので、**利用者の承認を得てから**流します。
+  1. 全体管理者が会社を切り替え、入口で「内容を見る」を押し、一覧の件数と向きを控えます。
+  2. 「下書きの直しを設定へ反映する」が1件でもある会社は、P13 では流しません。そろえる操作は会社の一覧を全部まとめて流すので、その1件だけを外せません。そして、会社の設定を書き換えるうえ、設定の保存と同じ追従が続きます（回答のある公開中のアンケートには次の版の下書きができ、確定前の評価は集計し直す）。その会社は、アンケートごとに会社の管理者が中身を確かめてから流します。
+  3. 承認を求めるときに、会社ごとの件数と向きを一緒に伝えます。
+  4. 承認を得てから、流す前の行を手元へ書き出します。置き場はリポジトリの外（`$TMPDIR`）で、コミットしません。「設定に合わせて作り直す」だけなら `forms`・`form_questions` を書き出します。「下書きの直しを設定へ反映する」を流すときは、さらに `grade_requirements`・`promotion_requirements`・`behavior_guidelines`・`kpi_questions`・`scheme_items` と、追従が書く `evaluations`・`evaluation_items` も書き出します。
+
+     ```bash
+     pnpm exec wrangler d1 export hr-evaluation-db --remote --no-schema --table forms --table form_questions --output "$TMPDIR/align-<会社の id>-<時刻>.sql"
+     ```
+
+  5. 入口で「そろえる」を押し、もう一度「内容を見る」を押して、そろえられる下書きが0件になったことを確かめます。間に誰かが保存していたら、そろえる操作は断ります。もう一度内容を見てから押します。
+  6. 受け入れは「そろえられる下書きが0件」です。そろえられない下書きは0件を条件にせず、件数と理由を配布の記録に残します。
+- **そろえた結果を戻すとき**: 利用者の承認を得てから、4 の書き出しから、そろえた下書きの `forms` の行と `form_questions` の行だけを取り出し、今の行と比べてから入れ直します（`wrangler d1 execute --remote --file`）。書き出し全体は流し込みません（そろえた後の保存が消えるため）。設定の側も、4 の書き出しの7つの表を元にします。そろえた記録（`constitution_events` の `before_json`）は、消えた KPI の設問が要約しか残らないので、補助にとどめます（[DD-028](./product/design-decisions.md) の6）。
+
+### 見本の会社を入れ直す
+
+見本の会社（見本商事（サンプル））には、受付中の評価期間（2026年度 下期）を1つ置きます（[DD-029](./product/design-decisions.md)）。提出済み5名（s1・s3・s5・s7・s9）・入力途中2名（s2・s6）・未回答4名（s4・s8・s10 と上長）で、評価はまだ作りません。
+
+- 本番の見本を新しい中身にするのは、**利用者の承認を得てから** `pnpm db:sample:remote` を流します。見本の会社だけを消してから入れ直し、他の会社には触れません（§2 の `db:sample:*:remote` の説明）。消すだけのときは `pnpm db:sample:remove:remote` です。
+- 入れ直すと、見本の利用者の仮パスワードも作り直されます。台本は平文を出さないので、使う人の分は管理画面の「仮パスワードを再発行する」から発行します。
+
+配布の記録（P13 が書く）: Deploy workflow の実行（id・時刻）、マージの sha、Artifact `d1-backup-<id>` と保管の期限、暗号化の step のログの行（「暗号化しました: backup.sql.age（受け手 N 本）」）、確かめる要点の件数。

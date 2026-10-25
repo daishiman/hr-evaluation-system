@@ -32,6 +32,7 @@ export type FreshnessResource =
   | "credential-memos"
   | "cycles"
   | "evaluations"
+  | "form-align"
   | "form-extensions"
   | "forms"
   | "improvements"

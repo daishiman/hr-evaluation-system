@@ -18,13 +18,13 @@ import { useDraftMap } from "@/components/use-draft-map";
  *
  * 点数（模範3／信頼2／安定1／不安定0／悪影響-1）は制度の骨格なので変えられない。
  * 変えられるのは「どういう状態をその点数と見なすか」の文章、その呼び名、
- * 次に作るアンケートでその観点を使うかどうかだけにしている。
+ * 設問を作るときにその観点を使うかどうかだけにしている。
  * 点数まで会社ごとに動かせるようにすると、昇格に必要な点数（等級ごとに設定）の意味が
  * 会社ごとにずれ、過去の評価と比べられなくなる。
  *
  * 等級要件・昇格要件の編集と同じ作法に揃える:
  *   - 1件＝1行で読み、「内容を直す」を押したときだけ入力欄が開く（行の形は ListRowBody。spec §28-14）
- *   - 保存すると次に作るアンケートから反映される（公開済みと確定済みは動かない）
+ *   - 保存後の追従範囲は BehaviorIntro の共通説明にまとめる
  */
 
 export interface BehaviorLevelRow {
@@ -114,10 +114,11 @@ export function BehaviorGuidelineEditor({
                 />
               )
             }
+            /* 「呼び名がそのまま設問になる」は観点ごとに同じ文なので、画面の冒頭の注記（BehaviorIntro）にまとめた */
             sub={
               g.isActive
-                ? `次に作るアンケートでは、この呼び名がそのまま設問になります（${g.levels.length}段階）`
-                : `現在は使いません。すでに公開したアンケートと確定済みの評価はそのまま残ります（${g.levels.length}段階）`
+                ? `${g.levels.length}段階`
+                : `現在は使いません（${g.levels.length}段階）`
             }
             actions={
               renaming ? (
@@ -146,7 +147,7 @@ export function BehaviorGuidelineEditor({
                       label="今後使わない"
                       variant="danger-outline"
                       busy={saving}
-                      confirm={`「${g.aspectName}」を次に作るアンケートから出さないようにします。すでに公開したアンケートと確定済みの評価はそのまま残ります。`}
+                      confirm={`「${g.aspectName}」を今後使わない設定にします。あとからもう一度使えます。`}
                       onConfirm={() => void send({ kind: "behaviorGuideline", id: g.id, isActive: false })}
                     />
                   ) : (

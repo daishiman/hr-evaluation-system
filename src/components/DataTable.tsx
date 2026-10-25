@@ -73,7 +73,7 @@ export function DataTable<T>({
 
   const table = (
     <Card className={scroll ? "table-scroll relative overflow-x-auto [--table-head-top:0px]" : "table-scroll"}>
-      <table>
+      <table className="ui-table">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr>

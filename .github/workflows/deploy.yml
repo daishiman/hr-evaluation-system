@@ -134,6 +134,19 @@ jobs:
             echo "::notice::未適用マイグレーションを検出したため、バックアップ後に自動適用します。"
           fi
 
+      # 書き出しは age の公開鍵で暗号化してから Artifact に置く（DD-031）。
+      # このリポジトリは Public で、Artifact はログインした誰もが落とせるため。
+      # 受け手の公開鍵が無いか形が違えば、書き出す前に止める（本番は何も変わらない）。
+      - name: 本番 D1 のバックアップの暗号化の準備
+        if: steps.migration_plan.outputs.status == 'pending'
+        env:
+          D1_BACKUP_AGE_RECIPIENT: ${{ vars.D1_BACKUP_AGE_RECIPIENT }}
+        run: |
+          bash .github/scripts/encrypt-d1-backup.sh check
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age
+          age --version
+
       # 未適用がある場合だけ、変更前の本番DBを退避する。
       # バックアップに失敗したら以降の適用・デプロイは実行されない。
       - name: 本番 D1 のバックアップ取得
@@ -143,12 +156,19 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: ${{ steps.pm.outputs.run }} db:backup
 
+      # 暗号化したら平文の backup.sql は消す。保管するのは backup.sql.age だけ。
+      - name: 本番 D1 のバックアップを暗号化
+        if: steps.migration_plan.outputs.status == 'pending'
+        env:
+          D1_BACKUP_AGE_RECIPIENT: ${{ vars.D1_BACKUP_AGE_RECIPIENT }}
+        run: bash .github/scripts/encrypt-d1-backup.sh encrypt
+
       - name: 本番 D1 のバックアップを保管
         if: always() && steps.migration_plan.outputs.status == 'pending'
         uses: actions/upload-artifact@v4
         with:
           name: d1-backup-${{ github.run_id }}
-          path: backup.sql
+          path: backup.sql.age
           if-no-files-found: error
           retention-days: 14
 

@@ -32,7 +32,7 @@ export async function applyMasterUpdate(args: {
   companyId: string;
   viewerId: string;
   body: MasterUpdateBody;
-}): Promise<{ message: string; warnings?: string[]; id?: string; previousVersionId?: string }> {
+}): Promise<{ message: string; warnings?: string[]; id?: string; previousVersionId?: string; unchanged?: boolean }> {
   const { db, companyId, viewerId, body } = args;
 
   /** 自社のレコードであることを必ず確かめてから触る。 */
@@ -108,8 +108,8 @@ export async function applyMasterUpdate(args: {
         if (Object.keys(patch).length === 1 && body.behaviorBand !== undefined) {
           return {
             message: body.behaviorBand
-              ? "この等級に出す行動指針を保存しました。次に作るアンケートから反映されます。"
-              : "この等級では行動指針を出さない設定にしました。次に作るアンケートから反映されます。",
+              ? "この等級に出す行動指針を保存しました。"
+              : "この等級では行動指針を出さない設定にしました。",
           };
         }
         return { message: "等級の設定を保存しました。" };
@@ -446,7 +446,7 @@ export async function applyMasterUpdate(args: {
 
         return {
           message:
-            "ランクA〜Eの基準を保存しました。次に集計する評価から反映されます（確定済みの評価は当時の基準のまま残ります）。",
+            "ランクA〜Eの基準を保存しました。",
         };
       }
       case "kpiCategoryCreate": {
@@ -631,7 +631,7 @@ export async function applyMasterUpdate(args: {
           return { message: `「${name}」を保存しました。${warnings.join("")}`, warnings };
         }
         if (Object.keys(patch).length === 0 && questionStatements.length === 0) {
-          return { message: "変更はありませんでした。" };
+          return { message: "変更はありませんでした。", unchanged: true };
         }
         return { message: `「${name}」を保存しました。` };
       }

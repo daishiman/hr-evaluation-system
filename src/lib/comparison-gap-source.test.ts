@@ -107,6 +107,16 @@ describe("比べる警告の字面の閉じ込め（AC3）", () => {
       phrase: "書いてある事実と現物が食い違うときは現物を優先する。",
       reason: "作業指示文に載せる作業の規約で、画面の警告ではない",
     },
+    {
+      file: "src/components/FormAlignNotice.tsx",
+      phrase: "設定とずれた下書き",
+      reason: "ずれた下書きをそろえる操作（DD-028 の6・I30）の知らせで、項目の差を示す比べる警告ではない",
+    },
+    {
+      file: "src/lib/domain/form-align.ts",
+      phrase: "設定とずれた下書き",
+      reason: "そろえる操作（DD-028 の6・I30）の件数と結果の文で、項目の差を示す比べる警告ではない",
+    },
   ];
   const SCOPES = ["src/app", "src/components", "src/lib", "src/actions"];
 

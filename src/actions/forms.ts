@@ -3,8 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { runAction } from "@/lib/action";
-import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
-import { batchAll } from "@/lib/db-batch";
+import { getDb, schema as s } from "@/lib/db";
 import { newId } from "@/lib/id";
 import { assertCompanyChosen, HttpError } from "@/lib/session";
 import {
@@ -23,6 +22,7 @@ import { contentEditRefusal, formTransitions, operationRefusal, statusChangeRefu
 import { loadSchemeReadiness } from "@/lib/scheme-readiness";
 import { loadStaleAsking } from "@/lib/stale-asking-loader";
 import { schemeIdForCycle } from "@/lib/cycle-scheme";
+import { planFormToSettings, writeFormToSettings } from "@/lib/masters/form-to-settings";
 import { SCREEN_SECTIONS } from "@/lib/question-order";
 
 /**
@@ -279,7 +279,7 @@ const formRefSchema = z.object({ formId: z.string().min(1) });
  *
  * アンケートは作った時点の制度の写しなので、評価項目を選び直すと静かにズレる。
  * ズレたまま集計すると、聞いていない項目が判定外になり配点ぶんの点が付かない。
- * 「制度が正・アンケートは写し」という向きを保つため、直すのは常にこちら側にする。
+ * この操作は設定から写し直す。アンケート側での設問編集は、先に設定へ反映してから他の下書きを追従させる。
  */
 export async function rebuildFormQuestions(raw: unknown) {
   return runAction({ operation: "forms.rebuildQuestions", input: formRefSchema }, raw, async ({ viewer, input }) => {
@@ -324,7 +324,15 @@ const questionSchema = z.object({
   kpiQuestionKey: z.string().nullable().optional(),
 });
 
-const questionsSchema = z.object({ formId: z.string().min(1), questions: z.array(questionSchema).max(200) });
+const questionsSchema = z.object({
+  formId: z.string().min(1),
+  questions: z.array(questionSchema).max(200),
+  /**
+   * 画面を開いたときのアンケートの更新時刻（ミリ秒）。後から入った保存を上書きしないよう比べる。
+   * 保存は設定まで書き換えるので、送らない保存は受け付けない（RELIABILITY-008）。
+   */
+  expectedUpdatedAt: z.number().int().nonnegative(),
+});
 
 /**
  * アンケートの設問を丸ごと保存する（クリック操作の組み立て画面から呼ぶ）。
@@ -347,6 +355,10 @@ export async function saveFormQuestions(raw: unknown) {
         .limit(1)
     )[0];
     if (!form) throw new HttpError(404, "アンケートが見つかりませんでした。");
+    /* 保存は設定まで書き換えるので、開いた後に入った別の保存を古い画面の内容で消さない */
+    if (form.updatedAt.getTime() > input.expectedUpdatedAt) {
+      throw new HttpError(409, "このアンケートは、ほかの人が先に保存しました。再読み込みして、最新の内容を確かめてから保存してください。");
+    }
 
     const [responses, cycles] = await Promise.all([
       db.select({ id: s.formResponses.id }).from(s.formResponses)
@@ -361,7 +373,29 @@ export async function saveFormQuestions(raw: unknown) {
 
     const q = input.questions;
     if (q.length === 0) throw new HttpError(400, "設問が1問もありません。1問以上にしてください。");
-    for (const x of q) {
+
+    // 集計との紐づけは、保存済みの同じ設問からの引き継ぎだけを受け付ける（DD-015）
+    const stored = await db
+      .select({
+        id: s.formQuestions.id,
+        title: s.formQuestions.title,
+        section: s.formQuestions.section,
+        questionType: s.formQuestions.questionType,
+        gradeRequirementId: s.formQuestions.gradeRequirementId,
+        promotionRequirementId: s.formQuestions.promotionRequirementId,
+        behaviorGuidelineId: s.formQuestions.behaviorGuidelineId,
+        kpiItemId: s.formQuestions.kpiItemId,
+        kpiQuestionKey: s.formQuestions.kpiQuestionKey,
+        isGate: s.formQuestions.isGate,
+      })
+      .from(s.formQuestions)
+      .where(and(eq(s.formQuestions.companyId, companyId), eq(s.formQuestions.formId, form.id)));
+    const links = checkQuestionLinks(q, stored);
+    if (!links.ok) throw new HttpError(400, links.message);
+
+    q.forEach((x, i) => {
+      // 設定の行を選んで足した設問は、送られた形でなく設定から作り直すので、ここでは確かめない
+      if (links.ids[i] === "add") return;
       if ((x.questionType === "single" || x.questionType === "multi") && (x.options ?? []).length < 2) {
         throw new HttpError(400, `「${x.title}」の選択肢が足りません。2つ以上にしてください。`);
       }
@@ -392,27 +426,13 @@ export async function saveFormQuestions(raw: unknown) {
       ) {
         throw new HttpError(400, `「${x.title}」の入力範囲が逆になっています。`);
       }
-    }
+    });
 
-    // 集計との紐づけは、保存済みの同じ設問からの引き継ぎだけを受け付ける（DD-015）
-    const stored = await db
-      .select({
-        id: s.formQuestions.id,
-        section: s.formQuestions.section,
-        questionType: s.formQuestions.questionType,
-        gradeRequirementId: s.formQuestions.gradeRequirementId,
-        promotionRequirementId: s.formQuestions.promotionRequirementId,
-        behaviorGuidelineId: s.formQuestions.behaviorGuidelineId,
-        kpiItemId: s.formQuestions.kpiItemId,
-        kpiQuestionKey: s.formQuestions.kpiQuestionKey,
-        isGate: s.formQuestions.isGate,
-      })
-      .from(s.formQuestions)
-      .where(and(eq(s.formQuestions.companyId, companyId), eq(s.formQuestions.formId, form.id)));
-    const links = checkQuestionLinks(q, stored);
-    if (!links.ok) throw new HttpError(400, links.message);
+    /* 紐づいた設問の文の直し・外し・設定の行からの足しを、制度の設定へ写す（DD-028）。
+       断るときは何も書く前に止まり、アンケートも設定も変わらない */
+    const plan = await planFormToSettings({ db, companyId, actorId: viewer.id, form, submitted: q, ids: links.ids, stored });
 
-    const rows = q.map((x, i) => ({
+    const typed = q.map((x, i) => ({
       id: links.ids[i] === "keep" && x.id ? x.id : newId("fq"),
       companyId,
       formId: form.id,
@@ -438,14 +458,21 @@ export async function saveFormQuestions(raw: unknown) {
       kpiItemId: x.kpiItemId ?? null,
       kpiQuestionKey: x.kpiQuestionKey ?? null,
       isGate: x.isGate ?? false,
+      ...(plan.relinked.get(i) ?? {}),
     }));
+    // 設定の行を選んで足した設問は、設定から作った設問（KPI は聞くことの数だけ）に置き換える
+    const rows = q
+      .flatMap((_, i): (typeof s.formQuestions.$inferInsert)[] =>
+        links.ids[i] === "add"
+          ? (plan.addedRows.get(i) ?? []).map((body) => ({ ...body, id: newId("fq"), companyId, formId: form.id, displayOrder: 0 }))
+          : [typed[i]],
+      )
+      .map((row, i) => ({ ...row, displayOrder: i + 1 }));
 
-    // D1の1query 100 bind上限内に分けつつ、DELETEと全INSERTは1つのbatchで原子的に行う。
-    await batchAll(db, [
-      db.delete(s.formQuestions).where(eq(s.formQuestions.formId, form.id)),
-      ...chunkRowsForD1(rows).map((chunk) => db.insert(s.formQuestions).values(chunk)),
-    ]);
+    const follow = await writeFormToSettings({ db, companyId, actorId: viewer.id, formId: form.id, plan, rows });
 
-    return { message: `設問を保存しました（${q.length}問）。` };
+    return {
+      message: `設問を保存しました（${rows.length}問）。` + (plan.kinds.length > 0 ? "制度の設定にも反映しました。" : "") + follow,
+    };
   });
 }

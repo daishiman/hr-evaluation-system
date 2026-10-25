@@ -3,7 +3,7 @@ status: confirmed
 category: infrastructure
 aggregate: 確定
 spec_cells: [infrastructure.web, infrastructure.mobile, infrastructure.tablet, infrastructure.desktop-windows, infrastructure.desktop-linux, infrastructure.desktop-macos]
-serves_goals: [G2, G6, G8, G10, G13, G17]
+serves_goals: [G2, G6, G8, G10, G13, G17, G28]
 ---
 
 # インフラ (infrastructure)
@@ -15,9 +15,9 @@ serves_goals: [G2, G6, G8, G10, G13, G17]
 
 | プラットフォーム | 状態 | 根拠 |
 |---|---|---|
-| Web (web) | 確定 | 確定質疑: qa-x15。裏付け質疑 (`qa_refs`): `qa-r-infrastructure-3`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-d01`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v25`, `qa-v29`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-z03` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G6, G8, G10, G13, G17 |
-| モバイル (mobile) | 確定 | 確定質疑: qa-x15。裏付け質疑 (`qa_refs`): `qa-r-infrastructure-3`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-d01`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v25`, `qa-v29`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-z03` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G6, G8, G10, G13, G17 |
-| タブレット (tablet) | 確定 | 確定質疑: qa-x15。裏付け質疑 (`qa_refs`): `qa-r-infrastructure-3`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-d01`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v25`, `qa-v29`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-z03` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G6, G8, G10, G13, G17 |
+| Web (web) | 確定 | 確定質疑: qa-x15。裏付け質疑 (`qa_refs`): `qa-r-infrastructure-3`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-d01`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v25`, `qa-v29`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-z03`, `qa-ab12-showcase-data-location`, `qa-ab13-foundation-016-approval`, `qa-ab15-foundation-017-approval`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G6, G8, G10, G13, G17, G28 |
+| モバイル (mobile) | 確定 | 確定質疑: qa-x15。裏付け質疑 (`qa_refs`): `qa-r-infrastructure-3`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-d01`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v25`, `qa-v29`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-z03`, `qa-ab12-showcase-data-location`, `qa-ab13-foundation-016-approval`, `qa-ab15-foundation-017-approval`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G6, G8, G10, G13, G17, G28 |
+| タブレット (tablet) | 確定 | 確定質疑: qa-x15。裏付け質疑 (`qa_refs`): `qa-r-infrastructure-3`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-d01`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v25`, `qa-v29`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-z03`, `qa-ab12-showcase-data-location`, `qa-ab13-foundation-016-approval`, `qa-ab15-foundation-017-approval`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G6, G8, G10, G13, G17, G28 |
 | デスクトップ (Windows) (desktop-windows) | 対象外 | 理由: infrastructure: デスクトップのネイティブアプリは存在せず作る予定も無い（qa-f01。利用者も qa-u08 で対象外と確認）。PC からの利用はブラウザ経由で web 列に含まれ、Workers と OpenNext の配信とキャッシュはデスクトップ固有の要件を持たない。 |
 | デスクトップ (Linux) (desktop-linux) | 対象外 | 理由: infrastructure: デスクトップのネイティブアプリは存在せず作る予定も無い（qa-f01。利用者も qa-u08 で対象外と確認）。PC からの利用はブラウザ経由で web 列に含まれ、Workers と OpenNext の配信とキャッシュはデスクトップ固有の要件を持たない。 |
 | デスクトップ (macOS) (desktop-macos) | 対象外 | 理由: infrastructure: デスクトップのネイティブアプリは存在せず作る予定も無い（qa-f01。利用者も qa-u08 で対象外と確認）。PC からの利用はブラウザ経由で web 列に含まれ、Workers と OpenNext の配信とキャッシュはデスクトップ固有の要件を持たない。 |
@@ -36,8 +36,8 @@ serves_goals: [G2, G6, G8, G10, G13, G17]
 
 | 設計 concern | 上流の正本 (authority) | 導く範囲 | 出典 | 最終確認 | 本章の確定セルへの反映 |
 |---|---|---|---|---|---|
-| reliability | Google SRE | SLO/エラーバジェット・冗長性・スケーリング・監視の上流指針 | https://sre.google/books/ | 2026-07-12 | Google SRE の『測れないものは直せない』に沿い、⌘+Shift+R でも出なかった事象（qa-u03）を推測で閉じない。成功・失敗どちらの応答にも Worker が応答を作った時刻（x-generated-at）を付け、本番で新しく作られた応答かを確かめられるようにする（qa-r-infrastructure-3 (2)）。Next.js を 16.3.8 へ上げる変更は、pnpm test と preview での確認を経てから出す（同 (4)）。 （2026-10-13 追記：G6〜G15）所属の表の追加・移し替えと等級名の一律の書き換えを、失敗したら途中の状態を残さず、2回流しても同じ結果になるマイグレーションにする（qa-v29 (2)）。書き換え前の値を表に残して戻す手順を用意し、障害のときに人が推測で戻す作業を残さない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）2回目の公開（P08 の PR のマージで Deploy workflow が 0039 を当てる）の後に、本番 DB に KGI の3つの表と評価の2列が無いことを読み取りだけで確かめ、推測で閉じない（qa-x15 (4) とその訂正、O17 の測り方）。2回目の前に数えた値、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact（d1-backup-<実行 id>）の id、2回目の後の確かめの結果は、P13 が docs/deploy-notes.md の配布の記録に書く（qa-y16 (9) の訂正、DD-020）。どの確かめも SELECT と PRAGMA だけで、本番 DB には書かない。 (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない)) |
-| operations | Google SRE | 運用手順・障害対応・トイル削減・ポストモーテムの上流指針 | https://sre.google/workbook/ | 2026-07-12 | Google SRE の変更管理に沿い、今は workers.dev だけで配っていてゾーンのキャッシュ規則が効かないことを記録し、独自ドメインへ移すときに規則を読み取りだけの手順で確かめ、変更が要るときは確認を取ってから行う（qa-r-infrastructure-3 (3)）。控えの鍵を本番へ設定する作業（wrangler secret put）も外部への変更として同じガードを通し、ローカルは .dev.vars で完結させる（同 (5)、deploy-notes §6）。構成を変えないので、配備手順や容量検査（check:bundle-size）に新しい運用負担を持ち込まない。 （2026-10-13 追記：G6〜G15）マイグレーションは drizzle/migrations の 0033 以降に置き、本番の Deploy の自動マイグレーションと fail-closed のゲート（release-and-forms.md）に乗せて、手で本番 DB に流さない（qa-v29 (1)）。並べ替えと権限の定義で依存も表も足さないので（同 (3)、D-005・D-007 ①）、配る先・構成・配備の手順は変わらない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）Google SRE の変更管理に沿い、本番への反映は main へのマージと Deploy workflow の自動の公開だけにする（qa-x15 (4) とその訂正、DD-020）。KGI の削除は2回のマージに分け、1回目の P05 の PR で 0038 を、2回目の P08 の PR で 0039 を当てる。どちらも未適用の migration があるので、Deploy workflow が本番 D1 の全体を d1-backup-<実行 id>（保管14日）の Artifact に書き出してから当てる。手で deploy せず、db:migrate:remote・db:backup も手で流さない。2回目を戻すときは DB だけを drizzle/rollback/0039_* と Artifact の書き出しから戻し、P08 のマージの後は P05 を revert しない。新しい環境・バインディング・依存は足さない（同 (5)）。 (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない)) |
+| reliability | Google SRE | SLO/エラーバジェット・冗長性・スケーリング・監視の上流指針 | https://sre.google/books/ | 2026-07-12 | Google SRE の『測れないものは直せない』に沿い、⌘+Shift+R でも出なかった事象（qa-u03）を推測で閉じない。成功・失敗どちらの応答にも Worker が応答を作った時刻（x-generated-at）を付け、本番で新しく作られた応答かを確かめられるようにする（qa-r-infrastructure-3 (2)）。Next.js を 16.3.8 へ上げる変更は、pnpm test と preview での確認を経てから出す（同 (4)）。 （2026-10-13 追記：G6〜G15）所属の表の追加・移し替えと等級名の一律の書き換えを、失敗したら途中の状態を残さず、2回流しても同じ結果になるマイグレーションにする（qa-v29 (2)）。書き換え前の値を表に残して戻す手順を用意し、障害のときに人が推測で戻す作業を残さない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）2回目の公開（P08 の PR のマージで Deploy workflow が 0039 を当てる）の後に、本番 DB に KGI の3つの表と評価の2列が無いことを読み取りだけで確かめ、推測で閉じない（qa-x15 (4) とその訂正、O17 の測り方）。2回目の前に数えた値、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact（d1-backup-<実行 id>）の id、2回目の後の確かめの結果は、P13 が docs/deploy-notes.md の配布の記録に書く（qa-y16 (9) の訂正、DD-020）。どの確かめも SELECT と PRAGMA だけで、本番 DB には書かない。 （2026-10-22 追記：G25〜G29）割り当ての移行（I26、G25）は、Deploy workflow が当てる前に書き出す d1-backup-<実行 id> を戻す元とし、当てた後に既定の割り当てになった会社の数と書き換えなかった会社の数を SELECT だけで確かめる。見本の受付中の期（I31、G28）は本番に入れた後、見本の会社の期が1つ受付中になり、他社の行の数が変わらないことを読み取りで確かめる（qa-ab12）。 (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない)) |
+| operations | Google SRE | 運用手順・障害対応・トイル削減・ポストモーテムの上流指針 | https://sre.google/workbook/ | 2026-07-12 | Google SRE の変更管理に沿い、今は workers.dev だけで配っていてゾーンのキャッシュ規則が効かないことを記録し、独自ドメインへ移すときに規則を読み取りだけの手順で確かめ、変更が要るときは確認を取ってから行う（qa-r-infrastructure-3 (3)）。控えの鍵を本番へ設定する作業（wrangler secret put）も外部への変更として同じガードを通し、ローカルは .dev.vars で完結させる（同 (5)、deploy-notes §6）。構成を変えないので、配備手順や容量検査（check:bundle-size）に新しい運用負担を持ち込まない。 （2026-10-13 追記：G6〜G15）マイグレーションは drizzle/migrations の 0033 以降に置き、本番の Deploy の自動マイグレーションと fail-closed のゲート（release-and-forms.md）に乗せて、手で本番 DB に流さない（qa-v29 (1)）。並べ替えと権限の定義で依存も表も足さないので（同 (3)、D-005・D-007 ①）、配る先・構成・配備の手順は変わらない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）Google SRE の変更管理に沿い、本番への反映は main へのマージと Deploy workflow の自動の公開だけにする（qa-x15 (4) とその訂正、DD-020）。KGI の削除は2回のマージに分け、1回目の P05 の PR で 0038 を、2回目の P08 の PR で 0039 を当てる。どちらも未適用の migration があるので、Deploy workflow が本番 D1 の全体を d1-backup-<実行 id>（保管14日）の Artifact に書き出してから当てる。手で deploy せず、db:migrate:remote・db:backup も手で流さない。2回目を戻すときは DB だけを drizzle/rollback/0039_* と Artifact の書き出しから戻し、P08 のマージの後は P05 を revert しない。新しい環境・バインディング・依存は足さない（同 (5)）。 （2026-10-22 追記：G25〜G29）割り当ての移行は通常の Deploy の流れで当て、手で db:migrate:remote を流さない（I26）。本番の見本の会社への投入は既存の db:sample:remote の手順で、実行の前に利用者の確認を取り、実行の記録を配布の記録（docs/deploy-notes.md）に残す（qa-ab12、I31、G28）。色と手応え（G29）と画面の分け方（G26）は CSS と画面の変更だけで出す。 (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない)) |
 
 ## 確定内容 (質疑録)
 
@@ -45,7 +45,7 @@ serves_goals: [G2, G6, G8, G10, G13, G17]
 
 ### Web (web)
 
-- 資するゴール: G2, G6, G8, G10, G13, G17
+- 資するゴール: G2, G6, G8, G10, G13, G17, G28
 
 #### 主たる接地根拠: `qa-x15`
 
@@ -843,9 +843,81 @@ KGI 無しの式で残す。個人Pt＝KPI評価点の合計とし、賞与額�
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（4問、どれも単一選択）。2026-10-20T05:38:39Z に4問を問うた（各問の1つ目の選択肢に推奨の印『(Recommended)』を付けた）。2026-10-20T07:25:09Z に回答（会話記録の時刻）。question は4問と各選択肢の説明、answer は回答の逐語。3問目の答え『prは出さなくて良い』は選択肢に無い自由記述で、エージェントは『別の PR を出さず、この作業ツリーの変更の中で直す』と読み、2件をこの作業ツリーで直した（docs/product/spec-receipts/2026-10-20-evaluation-report-plan-review.md §6）。spec-state への反映は1問目の答えのとおり P12 で行い、この entry はその反映のときに記録した。決めた中身の記録は DD-020〜DD-024（docs/product/design-decisions.md）と計画レビューの受領書。 / 回答時刻: 2026-10-20T07:25:09Z)
 
+#### 裏付け質疑: `qa-ab12-showcase-data-location`
+
+**問**
+
+「評価を作る」画面を試すための仮のデータ（提出済みの回答を含む。氏名は実在しない「サンプル」など）を、どこに用意するか。本物の会社のデータには入れない（README の規範）。選択肢：手元の見本だけ／手元と本番の見本の会社の両方（製品仕様 §14 で避けた受付中の期を本番に作り、本番の未回答の一覧に見本の人が並ぶ）／今回は決めない。
+
+**答**
+
+手元と本番の見本の会社の両方。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（2問、各3択）。qa-ab07〜qa-ab10 の記録の後、評価セットの保存処理（src/actions/scheme.ts の saveScheme が等級区分ごとの項目数・固定枠・20点枠をサーバーで検査する）と、下書きにつながった設問を新しく足せないこと（src/lib/domain/form-question-links.ts の checkQuestionLinks）、画像の 0 / 9 が手元の見本（8人）と本番の見本の会社（一般10名）のどちらとも合わないことを確かめてから問い、回答を受けた直後の 2026-10-22T00:35:44Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れず、『今回は決めない』の選択肢を置いた（N1〜N4）。 / 回答時刻: 2026-10-22T00:35:44Z)
+
+#### 裏付け質疑: `qa-ab13-foundation-016-approval`
+
+**問**
+
+要件基盤への追記を、今の文と新しい文を preview に並べた4問の2択（この内容で確定する／確定を保留する）で確かめる。(1) U1 の末尾と U2 の末尾に、2026-10-22 の依頼とコード調査の結果を足す。(2) G25（行動指針の分け方の既定）と O25・I26、G26（行動指針と KPI・評価セットの画面の認知の負荷）と O26・I27、それぞれの成功基準・範囲・制約。(3) G27（後から設定した方を正とする両方向の追従）と O27・I28・I29・I30、成功基準・範囲の外・制約。(4) G28（評価を作る画面を試す仮のデータ）と O28・I31、G29（共通部品のグラデーションと色使い）と O29・I32、範囲の外・制約。
+
+**答**
+
+4問とも「この内容で確定する」。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（4問、各2択）。qa-ab11・qa-ab12 の記録と、追記の下書きを writer の set-foundation で候補ファイルへ当てて形の検査を通した（rc=0）後に問い、回答を受けた直後の 2026-10-22T01:01:02Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。 / 回答時刻: 2026-10-22T01:01:02Z)
+
+#### 裏付け質疑: `qa-ab15-foundation-017-approval`
+
+**問**
+
+qa-ab14 で広げた範囲の要件基盤の追記を、今の文と新しい文を preview に並べた3問の2択（この内容で確定する／確定を保留する）で確かめる。(1) G29・O29・I32・成功基準を、ボタンだけでなくカード・見出しの面・選ぶ部品・状態の印・進み具合・数の面・知らせ・表・いまいる場所の印まで広げる。(2) I33（色使い以外の手応えと強弱。押す・選ぶ・開く部品の状態の見分け、押せる面は 44px 四方以上、1つの面で主の操作は1つ、段階的な開示と境界のはっきりしたカードを共通部品で全ての画面へ、画面の組み替えは I27 の2画面と評価を作る画面に限る）を足す。(3) 8章（ui-ux・frontend・backend・database・security・auth・infrastructure・maintenance-ops）の確定セルの serves_goals に G25〜G29 を、qa_refs に qa-ab01〜qa-ab14 を足す。
+
+**答**
+
+3問とも「この内容で確定する」。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（3問、各2択）。completeness evaluator の FAIL（foundation_trace：appr-foundation-016 の承認が qa-ab14 で広げた G29・O29・I32・成功基準と I33 を覆わない）を受け、広げた文を writer の set-foundation で候補ファイルへ当てて形の検査を通した後に、今の文と新しい文を preview に並べて問い、回答を受けた直後の 2026-10-22T02:03:52Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。この承認を appr-foundation-017 として記録し、appr-foundation-016 を置き換える。 / 回答時刻: 2026-10-22T02:03:52Z)
+
+#### 裏付け質疑: `qa-ab16-foundation-018-approval`
+
+**問**
+
+completeness evaluator の goal-seek 2周目の FAIL（foundation_trace：G27・I28・I29 が DD-015 の『新しい設問を KPI 項目に紐づけない』と DD-016 が却下した『聞き方の保存で下書きを書き換える』を改めるのに、要件基盤にも設計原則の適用にも、改める DD を書くことが記録されていない）を受け、要件基盤の制約に「アンケートから設定への反映（I28）と、設定の保存での下書きの作り直し（I29）は、DD-015（新しい設問を KPI 項目に紐づけず、紐づけは作り直しのときにだけサーバーが書く）と、DD-016 が却下した「聞き方の保存で下書きを書き換える」を改める。DD-015・DD-016 を改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す。」を足して確定するかを、今の文と新しい文を preview に並べた1問の2択（この内容で確定する／確定を保留する）で確かめる。合わせて、qa-ab15 の承認の範囲内として ui-ux・frontend・maintenance-ops の確定セルに抜けていた qa-ab の参照を足し、maintenance-ops・backend の設計原則の適用に同じ一文を足すことを preview に示した。
+
+**答**
+
+「この内容で確定する」。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（1問、2択）。足す制約を writer の set-foundation で候補ファイルへ当てて形の検査（rc=0、制約26件）を通した後に、今の文と新しい文を preview に並べて問い、回答を受けた直後の 2026-10-22T03:44:17Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。この承認を appr-foundation-018 として記録し、appr-foundation-017 を置き換える。人の章 release-and-forms.md §7 には、今の実装の動きと改まる点を分けた注記を先に足した。 / 回答時刻: 2026-10-22T03:44:17Z)
+
+#### 裏付け質疑: `qa-ab17-foundation-019-approval`
+
+**問**
+
+completeness evaluator の goal-seek 3周目の FAIL（foundation_trace：範囲の内の「行動指針の既定の分け方へのデータの移行」（I26・G25）が、範囲の外の「本番データの移行・修正（…を除く）」の除外に入っておらず、同じ移行が範囲の内と外の両方にある。あわせて low として、範囲の外の「本番 DB へのテストデータの投入」と G28・I31 の「本番の見本の会社への仮のデータ」の区別が書かれていない）を受け、範囲の外の2つの文を改めて確定するかを、今の文と新しい文を preview に並べた2問の2択（この内容で確定する／確定を保留する）で確かめる。(1) 除外の括弧に「行動指針の既定の割り当てへの書き換え（I26）」を足す。(2) 「本番 DB へのテストデータ（手元の seed と E2E のデータ）の投入。本番の見本の会社への仮のデータ（G28・I31）は除く」に改める。
+
+**答**
+
+2問とも「この内容で確定する」。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（2問、各2択）。改めた範囲の文を writer の set-foundation で候補ファイルへ当てて形の検査（rc=0）を通した後に、今の文と新しい文を preview に並べて問い、回答を受けた直後の 2026-10-22T04:17:54Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。中身は qa-ab10（既定へ書き換える）と qa-ab12（手元と本番の見本の会社の両方）で決まっていた判断を範囲の文へ写すもので、この承認を appr-foundation-019 として記録し、appr-foundation-018 を置き換える。 / 回答時刻: 2026-10-22T04:17:54Z)
+
+#### 裏付け質疑: `qa-ab18-foundation-020-approval`
+
+**問**
+
+completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲の内の「1つのアカウントでの複数の会社への所属」に伴う、所属の表への既存の利用者の写し（0033）と取り込みで作った人の所属の補い（0036）が、範囲の外の「本番データの移行・修正（…を除く）」の除外に入っていない。qa-v26 (1)・qa-v29 (1) で決めた移行）を受け、この仕様で足した移行（drizzle/migrations の 0032〜0039）のうち行を書き換えるものを全部洗い（0032・0033・0034・0035・0036・0039。0037・0038 は表と列の追加だけ）、これから足す I26 と合わせて除外に挙げる形へ範囲の外の文を改めて確定するかを、今の文と新しい文を preview に並べた1問の2択（この内容で確定する／確定を保留する）で確かめる。
+
+**答**
+
+「この内容で確定する」。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（1問、2択）。改めた範囲の文を writer の set-foundation で候補ファイルへ当てて形の検査（rc=0）を通した後に、今の文と新しい文を preview に並べて問い、回答を受けた直後の 2026-10-22T06:34:15Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。中身は qa-v26 (1)・qa-v29 (1)（所属の表と移行）、qa-r-database-3 (6)（0032 の番号の振り直し）、範囲の内の等級名の書き換え（0034・0035）・事業所の表の削除（0039）・I26 で決まっていた判断を範囲の文へ写すもので、この承認を appr-foundation-020 として記録し、appr-foundation-019 を置き換える。0021・0023・0025・0030 も行を書き換えるが、この仕様より前（2026-08〜09 の PR #75・#77・#80・#88）に足した移行なので挙げない。 / 回答時刻: 2026-10-22T06:34:15Z)
+
 ### モバイル (mobile)
 
-- 資するゴール: G2, G6, G8, G10, G13, G17
+- 資するゴール: G2, G6, G8, G10, G13, G17, G28
 
 #### 主たる接地根拠: `qa-x15`
 
@@ -909,10 +981,22 @@ KGI 無しの式で残す。個人Pt＝KPI評価点の合計とし、賞与額�
 - 裏付け質疑 `qa-x07` — 本章の上掲に既出
 
 - 裏付け質疑 `qa-z03` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab12-showcase-data-location` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab13-foundation-016-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab15-foundation-017-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab16-foundation-018-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab17-foundation-019-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab18-foundation-020-approval` — 本章の上掲に既出
 
 ### タブレット (tablet)
 
-- 資するゴール: G2, G6, G8, G10, G13, G17
+- 資するゴール: G2, G6, G8, G10, G13, G17, G28
 
 #### 主たる接地根拠: `qa-x15`
 
@@ -976,6 +1060,18 @@ KGI 無しの式で残す。個人Pt＝KPI評価点の合計とし、賞与額�
 - 裏付け質疑 `qa-x07` — 本章の上掲に既出
 
 - 裏付け質疑 `qa-z03` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab12-showcase-data-location` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab13-foundation-016-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab15-foundation-017-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab16-foundation-018-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab17-foundation-019-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab18-foundation-020-approval` — 本章の上掲に既出
 
 ## To-Be / Delta
 
@@ -989,6 +1085,7 @@ KGI 無しの式で残す。個人Pt＝KPI評価点の合計とし、賞与額�
 - **G10**: 同じメールアドレスの人が、1つのアカウントのまま複数の会社に所属でき、会社ごとの役割・等級・上司で使える。所属していない会社のデータは見えない。
 - **G13**: 並び順を持つ全ての編集画面で、矢印のボタンに加えて、長押ししたままのドラッグとキーボードでも並べ替えられる。
 - **G17**: 事業所KGIの達成率の仕組み（メニュー・画面・計算・保存・表・列・文書・テスト）を残さず消す。賞与（仮）は KGI を使わない式（個人Pt＝KPI評価点の合計、賞与額＝個人Pt×昇給の設定の1点あたりの円）で出し続ける。
+- **G28**: 評価・結果を確認する画面で「提出済みの回答から評価を作る」を試せるよう、提出済みの回答を含む受付中の評価期間の仮のデータ（氏名は実在しない「サンプル」など）を、手元の見本と本番の見本の会社の両方に用意する。
 
 ### 受入条件 (Delta の判定点)
 
@@ -1000,6 +1097,7 @@ KGI 無しの式で残す。個人Pt＝KPI評価点の合計とし、賞与額�
 | O10 | 同じメールアドレスで2社目に所属できるようにする。 | 登録済みのメールアドレスで別の会社へ追加でき、会社を切り替えるとその会社の役割・等級・上司で画面と権限が変わる結合テスト。所属していない会社を指定した要求が拒否されるテスト。 |
 | O13 | 並び順を持つ全ての編集画面で、ドラッグ・矢印・キーボードのどれでも同じ並びになる。 | 並べ替えの部品のテストで3つの操作の結果が一致し、並び順を持つ編集画面がすべてその部品を使うことを静的検査で確かめる。 |
 | O17 | KGI に関わるコード・画面・メニュー・台帳の行・表・列を0件にし、賞与（仮）を KGI を使わない式で計算する。 | src・docs・route-ledger・nav で KGI の参照を探す静的検査が0件。docs のうち経緯を残す5種類（受領書・バックログの履歴・レビューの記録・判断の記録・デプロイ時の注意）は走査から外し、外す先が実在することも同じ検査で確かめる。賞与の計算の単体テスト（個人Pt＝KPI評価点の合計、1点あたりの円が0以下なら賞与額を出さない）。2回目の公開（P08 の PR のマージで Deploy workflow が動く）の後に、本番 DB に3つの表と2列が無いことを読み取りで確かめる。 |
+| O28 | 手元の seed と本番の見本の会社に、提出済み・下書き・未回答が混ざった受付中の評価期間を足す。 | 見本の生成のテスト（受付中の期が1つあり、提出済み・下書き・未回答が混ざる、評価はまだ作られていない、氏名と会社が見本の印を持つ、他社の行に触れない）。手元の見本で「提出済みの回答から評価を作る」を押して、評価の一覧と詳細まで進める E2E。製品仕様 §14 の「受付中の期は作らない」を改める DD。 |
 
 ### 本章がかなえる具体的やりたいこと (U9)
 
@@ -1010,6 +1108,7 @@ KGI 無しの式で残す。個人Pt＝KPI評価点の合計とし、賞与額�
 - **I11**: 会社への所属を表にし、会社ごとに役割・等級・上司を持たせる。メールアドレスの重複はシステム全体で拒否したままにし、他社に既にアカウントがある人へ別の会社の所属を足すのは、全体管理者だけの専用操作にする。ヘッダーの会社の切り替えを複数の会社に所属する人にも出し、選んでいる会社が無いときは、有効な所属のうち会社名の順で最初の会社を開く。
 - **I14**: 並べ替えを共通の部品にし、長押しのドラッグ・矢印・キーボードで動かせるようにする。保存には、並び順の全体を送る形を足す。
 - **I18**: KGI のメニュー・画面・サーバー処理・計算・テスト・台帳の行を消し、賞与（仮）を個人Pt＝KPI評価点の合計で出す。2回目の Deploy で、3つの表と評価の2列を消すマイグレーションを当てる。
+- **I31**: scripts/sample-data.mjs の見本の会社に受付中の評価期間を1つ足し、提出済み・下書き・未回答を混ぜる（作り方は buildSeed の使い回しのまま、INSERT だけ・見本の会社に紐づく行だけ）。手元の seed（scripts/seed-data.mjs）の受付中の期も、評価を作る画面で試せる人数の提出済みを持たせる。本番への投入は既存の db:sample:remote の手順で行い、実行の前に利用者の確認を取る。製品仕様 §14 の「受付中の期は作らない」を改め、§14 が挙げた影響（未回答の一覧に見本の人が並ぶ）を記す。
 
 ### 本章に効く確定意思決定
 
@@ -1038,9 +1137,9 @@ KGI 無しの式で残す。個人Pt＝KPI評価点の合計とし、賞与額�
 
 ### 本章での適用
 
-resource-map にインフラ用の deep knowledge card が無いため、上流指針（Google SRE）を直接当てた。鮮度を『キャッシュを入れて後から消す』問題として扱わず、ログイン後の画面をサーバーやエッジで保存しない既定（OpenNext の既定と force-dynamic）を保つ（qa-r-infrastructure-3 (1)）。Server Functions の refresh は、保存したものを消すのではなく、今の画面を同じ応答で作り直すため、この既定と矛盾しない。構成は変えず、Next.js だけを脆弱性の修正を含む 16.3.8 へ上げる（同 (4)）。応答の生成時刻は Next.js の外側（worker.ts）で付け、サーバー側の実行ファイルの容量上限を守る（同 (2)）。 （2026-10-13 追記：G6〜G15）上流指針（Google SRE）の『変更を小さく、戻せる形にする』を当てた。所属の表の追加・移し替えと等級名の一律の書き換えはD1 のマイグレーション（0033 以降）にし、本番の Deploy の自動マイグレーションと fail-closed のゲートに乗せる（qa-v29 (1)）。どれも2回流して同じ結果にし、書き換え前の値を表に残して戻す手順を用意する（同 (2)）。並べ替えはPointer Events で自作し（D-005）、権限の定義は route-ledger.json に足して（D-007 ①）、依存も表も足さず、配備の構成を変えない（同 (3)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）インフラ用の deep knowledge card が無いので、引き続き Google SRE を直接当てた。KGI の削除は2回のマージに分け、どちらも Deploy workflow の自動の公開に任せる。1回目（P05 の PR）でコードの読み書きをやめて 0038 を当て、2回目（P08 の PR）で 0039 が表と列を消す。Deploy workflow はマイグレーションを Worker の配布より先に当てるため、1回で出すとその間に古いコードが消えた表を読んで失敗する（qa-x15 (4) とその訂正、DD-020、G17）。未適用のマイグレーションがあると Deploy workflow が本番 D1 の全体を d1-backup-<実行 id>（保管14日）に書き出すので、0039 を当てる直前の2回目の書き出しが、消した値を戻すときの元になる。2回目の前の読み取りの値と実行 id などの記録は P13 が docs/deploy-notes.md に書き、手で deploy も db:backup もしない。構成と依存は変えず、図は recharts、印刷はブラウザで行い、印刷のための配信の経路を作らない（同 (5)）。上司の判断の追加ではこの章を reopen しておらず、テストデータを本番に入れない決めは database (12) と maintenance-ops (9) が持つ。
+resource-map にインフラ用の deep knowledge card が無いため、上流指針（Google SRE）を直接当てた。鮮度を『キャッシュを入れて後から消す』問題として扱わず、ログイン後の画面をサーバーやエッジで保存しない既定（OpenNext の既定と force-dynamic）を保つ（qa-r-infrastructure-3 (1)）。Server Functions の refresh は、保存したものを消すのではなく、今の画面を同じ応答で作り直すため、この既定と矛盾しない。構成は変えず、Next.js だけを脆弱性の修正を含む 16.3.8 へ上げる（同 (4)）。応答の生成時刻は Next.js の外側（worker.ts）で付け、サーバー側の実行ファイルの容量上限を守る（同 (2)）。 （2026-10-13 追記：G6〜G15）上流指針（Google SRE）の『変更を小さく、戻せる形にする』を当てた。所属の表の追加・移し替えと等級名の一律の書き換えはD1 のマイグレーション（0033 以降）にし、本番の Deploy の自動マイグレーションと fail-closed のゲートに乗せる（qa-v29 (1)）。どれも2回流して同じ結果にし、書き換え前の値を表に残して戻す手順を用意する（同 (2)）。並べ替えはPointer Events で自作し（D-005）、権限の定義は route-ledger.json に足して（D-007 ①）、依存も表も足さず、配備の構成を変えない（同 (3)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）インフラ用の deep knowledge card が無いので、引き続き Google SRE を直接当てた。KGI の削除は2回のマージに分け、どちらも Deploy workflow の自動の公開に任せる。1回目（P05 の PR）でコードの読み書きをやめて 0038 を当て、2回目（P08 の PR）で 0039 が表と列を消す。Deploy workflow はマイグレーションを Worker の配布より先に当てるため、1回で出すとその間に古いコードが消えた表を読んで失敗する（qa-x15 (4) とその訂正、DD-020、G17）。未適用のマイグレーションがあると Deploy workflow が本番 D1 の全体を d1-backup-<実行 id>（保管14日）に書き出すので、0039 を当てる直前の2回目の書き出しが、消した値を戻すときの元になる。2回目の前の読み取りの値と実行 id などの記録は P13 が docs/deploy-notes.md に書き、手で deploy も db:backup もしない。構成と依存は変えず、図は recharts、印刷はブラウザで行い、印刷のための配信の経路を作らない（同 (5)）。上司の判断の追加ではこの章を reopen しておらず、テストデータを本番に入れない決めは database (12) と maintenance-ops (9) が持つ。 （2026-10-22 追記：G25〜G29）既定の割り当てへ戻すデータの移行（I26、G25）は、Deploy workflow が未適用のマイグレーションの前に本番 D1 の全体を d1-backup-<実行 id> に書き出す今の流れのまま当て、戻すときはその書き出しから戻す（qa-ab10）。移行は割り当ての列だけを書き換え、書き換えた会社と、既定のまとまりが無くて書き換えなかった会社の数を読み取りで数えて記録する。本番の見本の会社への受付中の期の追加（I31、G28）は db:sample:remote の手順で、利用者の確認の後に流し、流す前に見本の会社の行だけが変わることを手元で確かめる（qa-ab12）。書き戻しと自動の下書き（I28・I29、G27）、共通部品の色（G29）、画面の分け方（G26）は、新しい環境・バインディング・依存を足さない。
 
-- (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない) / 記録時刻: 2026-10-21T00:25:46Z)
+- (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない) / 記録時刻: 2026-10-22T02:09:16Z)
 
 - `ref-system-design-knowledge/references/resource-map.yaml` (本章へ引く card は 0 件。未着手ではなく、上の適用記述で0 件である理由を述べた上での確定である)
 
@@ -1048,10 +1147,10 @@ resource-map にインフラ用の deep knowledge card が無いため、上流�
 
 | 対象 | バージョン | 公式発行元 | 出典URL | 取得 | 最新確認 |
 |---|---|---|---|---|---|
-| opennext-cloudflare-caching | @opennextjs/cloudflare 1.20.12 | OpenNext (opennext.js.org) | https://opennext.js.org/cloudflare/caching | 2026-10-19T14:06:45Z | 2026-10-19T14:06:45Z |
+| opennext-cloudflare-caching | @opennextjs/cloudflare 1.20.13 | OpenNext (opennext.js.org) | https://opennext.js.org/cloudflare/caching | 2026-10-22T06:36:05Z | 2026-10-22T06:36:05Z |
 | cloudflare-workers-pricing | 2026-10-02 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/platform/pricing/ | 2026-10-19T13:57:49Z | 2026-10-19T13:57:49Z |
 | cloudflare-wrangler-config | 2026-10-20 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/wrangler/configuration/ | 2026-10-21T00:22:10Z | 2026-10-21T00:22:10Z |
-| opennext-cloudflare-get-started | @opennextjs/cloudflare 1.20.12 | OpenNext (opennext.js.org) | https://opennext.js.org/cloudflare/get-started | 2026-10-19T14:06:45Z | 2026-10-19T14:06:45Z |
+| opennext-cloudflare-get-started | @opennextjs/cloudflare 1.20.13 | OpenNext (opennext.js.org) | https://opennext.js.org/cloudflare/get-started | 2026-10-22T06:36:05Z | 2026-10-22T06:36:05Z |
 | cloudflare-workers-secrets | 2026-10-15 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/configuration/secrets/ | 2026-10-19T13:57:49Z | 2026-10-19T13:57:49Z |
 | cloudflare-wrangler-d1-commands | 2026-04-23 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/wrangler/commands/d1/ | 2026-10-19T13:57:49Z | 2026-10-19T13:57:49Z |
 | sqlite-alter-table | 2026-10-05 | SQLite (www.sqlite.org) | https://www.sqlite.org/lang_altertable.html | 2026-10-19T13:53:44Z | 2026-10-19T13:53:44Z |

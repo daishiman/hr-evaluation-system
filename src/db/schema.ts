@@ -1282,6 +1282,32 @@ export const displayNameRewrites = sqliteTable(
   (t) => [primaryKey({ columns: [t.tableName, t.rowId, t.columnName] })],
 );
 
+/* ─────────────────────── 移行で既定へ戻した行動指針の割り当ての記録 ───────────────────────
+ *
+ * 移行 0040 が等級の行動指針の割り当て（grades.behavior_band）を識別子から既定へ戻したときの、
+ * 書き換える前の値（DD-026）。戻すときは drizzle/rollback/0040_behavior_band_defaults_rollback.sql が
+ * old_value を元の行へ書き戻す。割り当ては null（出さない）を取るので、old_value・new_value も null を取る。
+ *
+ * 既定のまとまりを持たず書き換えなかった会社は、table_name='companies'・column_name='behavior_band_default'・
+ * old_value/new_value='missing_default_sets' の行で数える。
+ * 列と残し方は displayNameRewrites と同じ（主キーが同じ形なので、表を分けて戻しの元を混ぜない）。
+ */
+export const behaviorBandDefaultRewrites = sqliteTable(
+  "behavior_band_default_rewrites",
+  {
+    tableName: text("table_name").notNull(),
+    rowId: text("row_id").notNull(),
+    columnName: text("column_name").notNull(),
+    oldValue: text("old_value"),
+    newValue: text("new_value"),
+    companyId: text("company_id"),
+    /** 書き換えた移行の名前（0040_behavior_band_defaults） */
+    migration: text("migration").notNull(),
+    recordedAt: integer("recorded_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.tableName, t.rowId, t.columnName] })],
+);
+
 /* ─────────────────────── 見た目の選択の集計 ───────────────────────
  *
  * 過去に使っていた「配色 × 明るさ」の切り替え回数を保存する旧テーブル。

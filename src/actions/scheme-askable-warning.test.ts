@@ -54,7 +54,11 @@ const ITEMS = [
 ];
 
 const NO_ASKING = "実績の聞き方がまだ決まっていません";
-const save = () => saveScheme({ schemeId: IDS.scheme, pointGroup: "Regular", items: ITEMS });
+/** 画面と同じく、読んだときの評価セットの更新時刻を添えて保存する */
+const save = async () => {
+  const [scheme] = await t.db.select({ updatedAt: s.evaluationSchemes.updatedAt }).from(s.evaluationSchemes).where(eq(s.evaluationSchemes.id, IDS.scheme));
+  return saveScheme({ schemeId: IDS.scheme, pointGroup: "Regular", items: ITEMS, expectedUpdatedAt: scheme.updatedAt.getTime() });
+};
 const warningsOf = (result: unknown) => (result as { warnings: string[] }).warnings;
 
 beforeEach(async () => {

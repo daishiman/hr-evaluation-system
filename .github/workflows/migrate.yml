@@ -92,6 +92,17 @@ jobs:
       - name: 依存関係のインストール（${{ steps.pm.outputs.name }}）
         run: ${{ steps.pm.outputs.install }}
 
+      # 書き出しは age の公開鍵で暗号化してから残す（DD-031）。
+      # 受け手の公開鍵が無いか形が違えば、書き出す前に止める。
+      - name: バックアップの暗号化の準備
+        env:
+          D1_BACKUP_AGE_RECIPIENT: ${{ vars.D1_BACKUP_AGE_RECIPIENT }}
+        run: |
+          bash .github/scripts/encrypt-d1-backup.sh check
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age
+          age --version
+
       # 先にバックアップ。ここが失敗したらマイグレーションには進ませない。
       - name: バックアップ取得
         env:
@@ -99,15 +110,22 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: ${{ steps.pm.outputs.run }} db:backup
 
+      # 暗号化したら平文の backup.sql は消す。保管するのは backup.sql.age だけ。
+      - name: バックアップを暗号化
+        env:
+          D1_BACKUP_AGE_RECIPIENT: ${{ vars.D1_BACKUP_AGE_RECIPIENT }}
+        run: bash .github/scripts/encrypt-d1-backup.sh encrypt
+
       # 後から取り出せるように残す。
-      # 注意: Artifact は認証なしでは落とせないが、リポジトリの書き込み権限を持つ人は
-      # 全員取得できる。個人情報を含むデータベースでは保管期間を短くしておく。
+      # 注意: このリポジトリは Public なので、Artifact は GitHub にログインした誰もが
+      # 落とせる。だから平文は置かず、暗号化したものだけを置く。開く鍵（秘密鍵）は
+      # 利用者の手元にだけあり、CI には公開鍵しか渡さない。
       - name: バックアップを保管
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: d1-backup-${{ github.run_id }}
-          path: backup.sql
+          path: backup.sql.age
           if-no-files-found: error
           retention-days: 14
 

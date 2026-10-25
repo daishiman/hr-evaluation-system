@@ -24,7 +24,7 @@ describe("人の一覧", () => {
     const html = render();
     expect(html).toContain("等級の低い順・2 / 2人を表示");
     expect(html).toContain('role="status"');
-    expect(html).toContain('class="card"');
+    expect(html).toContain('class="card ui-card"');
     expect(html).toContain("山田 太郎");
     expect(html).toContain("佐藤 花子");
     expect(html).toContain("社員番号 A-001");

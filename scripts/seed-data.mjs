@@ -477,6 +477,9 @@ export function demoPasswordHash(password = DEMO_PASSWORD) {
  *        上長コメント。null を返すとコメント無しの評価になる。
  * @param {string} [options.today] 受付中のアンケートの締切を決める基準日（YYYY-MM-DD。既定: 日本時間の今日）。
  *        同じ日に何回作っても同じ SQL になり、日がたっても公開中のアンケートが締切切れにならない。
+ * @param {Record<string, {status: "submitted"|"draft", on: string, evaluatedOn?: string}>} [options.openResponses]
+ *        受付中の期の回答の予定（社員のキーごと。書いていない人は未回答）。evaluatedOn を書いた人だけ下書きの評価を作る。
+ *        給付事業の見本の期は SHOWCASE_RESPONSES を使うので、この値は見ない。
  *
  * 上司の判断・昇格要件の未達・受付中の期の見本は、既定の社員（employees を渡さない）のときだけ入れる。
  * そのうち上司の判断の見本・等級の履歴・受付中の期の見本・設定のずれは、給付事業（showcase の会社）だけ。
@@ -1302,10 +1305,12 @@ export async function buildSeed(options = {}) {
           return;
         }
 
-        /* 受付中の見本の期は、SHOWCASE_RESPONSES に書いた人だけが回答している（ほかは未回答）。 */
-        if (!sc) return;
+        /* 受付中の期は、回答の予定（給付事業の見本は SHOWCASE_RESPONSES、ほかは options.openResponses）に
+           書いた人だけが回答している（ほかは未回答）。予定が無ければ誰も回答していない。 */
+        const plans = sc ? SHOWCASE_RESPONSES : isOpen ? options.openResponses : null;
+        if (!plans) return;
         members.forEach((e) => {
-          const plan = SHOWCASE_RESPONSES[e.key];
+          const plan = plans[e.key];
           if (!plan) return;
           const v = versions.find((x) => x.form.version === (plan.version ?? versions.length));
           if (!v) throw new Error(`${e.key} の回答先の版（第${plan.version}版）がありません。`);

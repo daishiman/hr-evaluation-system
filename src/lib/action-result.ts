@@ -6,12 +6,19 @@
  * 文面を伏せてしまい、利用者に「何を直せばよいか」を伝えられないため。
  */
 export type ActionOk<T extends object = object> = { ok: true; message: string } & T;
-export type ActionFail = { ok: false; message: string };
+/** fixHref は、断った理由を直す画面の場所。あるときだけ画面が「直す画面を開く」のリンクを出す（DD-028 の2） */
+export type ActionFail = { ok: false; message: string; fixHref?: string };
 export type ActionResult<T extends object = object> = ActionOk<T> | ActionFail;
 
-/** 画面に渡す書き込みの型。入力は呼び出し側の形をそのまま受ける。 */
+/**
+ * 画面に渡す書き込みの型。入力は呼び出し側の形をそのまま受ける。
+ *
+ * 失敗の側は fixHref を持たない形で受ける。ActionFail のままだと、`{ ok: false; message }` を返す
+ * 書き込みから T を推し量れず（never になる）、useSaveAction が型で断る。fixHref を持つ失敗もこの形に収まり、
+ * 画面へ返す値（ActionResult）にはそのまま残る。
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type SaveAction<I = any, T extends object = object> = (input: I) => Promise<ActionResult<T>>;
+export type SaveAction<I = any, T extends object = object> = (input: I) => Promise<ActionOk<T> | { ok: false; message: string }>;
 
 /**
  * 画面を描いた会社（`__scope`）を入力に添える（S7・D-004）。サーバー側で取り除くのは action.ts の takeScope。

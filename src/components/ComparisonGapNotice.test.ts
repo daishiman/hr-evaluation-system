@@ -82,7 +82,7 @@ describe("ComparisonGapNotice: 閉じた状態（AC2）", () => {
   it("注意の枠の1つの段に、件数の文と『直すところを見る』の札だけを置く（既定で閉じている）", () => {
     const html = render([gap()]);
     expect(html).toContain("caution-panel");
-    expect(html).toMatch(/<details class="inline-detail">/);
+    expect(html).toMatch(/<details class="inline-detail ui-reveal">/);
     expect(html).not.toMatch(/<details[^>]*\bopen\b/);
     expect(html).toContain("<summary>直すところを見る");
     const closed = closedPart(html);
@@ -95,7 +95,7 @@ describe("ComparisonGapNotice: 閉じた状態（AC2）", () => {
 
   it("枠ごと文節で折り、最後の行に1〜2文字だけ落とさない（375px で「くださ／い」と割れた）", () => {
     const html = render([gap()]);
-    expect(html).toContain('<div class="caution-panel text-pretty [word-break:auto-phrase]">');
+    expect(html).toContain('<div class="caution-panel text-pretty [word-break:auto-phrase] ui-notice ui-notice-caution">');
   });
 });
 
@@ -232,9 +232,9 @@ describe("ComparisonGapNotice: 3種類の行（等級要件・行動指針・KPI
     const opened = openedPart(render([gap(THREE_KINDS)]));
     expect(closedPart(render([gap(THREE_KINDS)]))).toContain("評価項目とのズレ 5件（足りない3・余分2）");
     for (const label of ["等級要件", "行動指針", "KPI項目"]) expect(opened).toContain(`>${label}</td>`);
-    expect(opened).toContain('<a class="text-brand-deep" href="/admin/masters/requirements?grade=grd_1#grade-requirement-gr_2">記録を当日中に残す</a>');
-    expect(opened).toContain('<a class="text-brand-deep" href="/admin/behavior?grade=grd_1&amp;band=g1_2#behavior-guideline-bg_2">専門性について</a>');
-    expect(opened).toContain('<a class="text-brand-deep" href="/admin/scheme?item=kpi_b#kpi-item-kpi_b">残業率</a>');
+    expect(opened).toContain('<a href="/admin/masters/requirements?grade=grd_1#grade-requirement-gr_2">記録を当日中に残す</a>');
+    expect(opened).toContain('<a href="/admin/behavior?grade=grd_1&amp;band=g1_2#behavior-guideline-bg_2">専門性について</a>');
+    expect(opened).toContain('<a href="/admin/scheme/items?item=kpi_b#kpi-item-kpi_b">残業率</a>');
     // 足りない行を先に、余分な行をあとに並べる
     const order = ["記録を当日中に残す", "残業率", "粗利率", "専門性について", "定着率"].map((name) => opened.indexOf(`>${name}</a>`));
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -265,9 +265,9 @@ describe("ComparisonGapNotice: 実績の聞き方（設問のひな形）が決�
 
   it("表の項目名に「設問なし」の札を付ける（聞き方のある項目と余分な項目には付けない）", () => {
     const opened = openedPart(render([gap({ unaskable: ["kpi_c"] })]));
-    expect(count(opened, '<span class="badge badge-required">設問なし</span>')).toBe(1);
+    expect(count(opened, '<span class="badge badge-required ui-mark">設問なし</span>')).toBe(1);
     // 札は項目名のリンクの外に置く（札まで押せる範囲にしない）
-    expect(opened).toContain('粗利率</a> <span class="badge badge-required">設問なし</span>');
+    expect(opened).toContain('粗利率</a> <span class="badge badge-required ui-mark">設問なし</span>');
     expect(opened).not.toContain('残業率</a> <span class="badge');
     expect(opened).not.toContain('定着率</a> <span class="badge');
   });
@@ -279,7 +279,7 @@ describe("ComparisonGapNotice: 実績の聞き方（設問のひな形）が決�
       expect(opened).not.toContain("rebuildFormQuestions");
       // 2つのページのリンクに加えて、KPI項目の画面で先頭の項目（残業率）の入力欄を開くリンクが1つ
       expect(count(opened, 'href="/admin/scheme/Regular"')).toBe(1);
-      expect(opened).toContain('href="/admin/scheme?item=kpi_b#kpi-item-kpi_b"');
+      expect(opened).toContain('href="/admin/scheme/items?item=kpi_b#kpi-item-kpi_b"');
       expect(opened).toContain("「残業率」ほか1項目の聞き方を決める");
       expect(opened).toContain("「残業率」・「粗利率」は、実績の聞き方がまだ決まっていません。");
     }
@@ -288,7 +288,7 @@ describe("ComparisonGapNotice: 実績の聞き方（設問のひな形）が決�
   it("聞き方のある項目も足りなくても、先に聞き方を決めさせる（決めれば作り直し1回で全部直る）", () => {
     const opened = openedPart(render([gap({ unaskable: ["kpi_c"], form: form({ status: "draft" }) })]));
     expect(opened).not.toContain("<button");
-    expect(opened).toContain('href="/admin/scheme?item=kpi_c#kpi-item-kpi_c"');
+    expect(opened).toContain('href="/admin/scheme/items?item=kpi_c#kpi-item-kpi_c"');
     expect(opened).toContain("「粗利率」の聞き方を決める");
   });
 

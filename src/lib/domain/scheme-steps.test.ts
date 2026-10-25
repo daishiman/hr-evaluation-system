@@ -5,6 +5,7 @@ import {
   kpiItemAnchor,
   kpiItemPath,
   KPI_ITEM_PARAM,
+  KPI_ITEMS_PATH,
   nextGroupOf,
   overallProgress,
   schemeStepPath,
@@ -183,12 +184,12 @@ describe("手順の名前とURL", () => {
   it("KPI項目を指すURLは、入力欄を開く項目をクエリで、飛ぶ先の行を # で指す", () => {
     expect(KPI_ITEM_PARAM).toBe("item");
     expect(kpiItemAnchor("kpi_b")).toBe("kpi-item-kpi_b");
-    expect(kpiItemPath("kpi_b")).toBe("/admin/scheme?item=kpi_b#kpi-item-kpi_b");
+    expect(kpiItemPath("kpi_b")).toBe("/admin/scheme/items?item=kpi_b#kpi-item-kpi_b");
   });
 
   it("KPI項目を指すURLは、IDに記号や空白があっても壊れない", () => {
     const url = new URL(kpiItemPath("a&b #c"), "https://example.test");
-    expect(url.pathname).toBe("/admin/scheme");
+    expect(url.pathname).toBe(KPI_ITEMS_PATH);
     expect(url.searchParams.get(KPI_ITEM_PARAM)).toBe("a&b #c");
     expect(decodeURIComponent(url.hash.slice(1))).toBe(kpiItemAnchor("a&b #c"));
   });

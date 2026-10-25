@@ -7,6 +7,7 @@ import {
   promotionQuestion,
   quoteSetting,
   requirementQuestion,
+  settingTextFromTitle,
   yesNoChoices,
 } from "./form-question-text";
 
@@ -23,6 +24,21 @@ describe("quoteSetting", () => {
     expect(quoteSetting("インテークやアセスメント")).toBe("「インテークやアセスメント」");
     expect(quoteSetting("支援に必要な記録及び準備。")).toBe("「支援に必要な記録及び準備」");
     expect(quoteSetting("「ダイアローグ基礎研修」")).toBe("「ダイアローグ基礎研修」");
+  });
+});
+
+describe("settingTextFromTitle", () => {
+  it("要件の設問の3つの型から、かぎかっこの中を取り出す（作った文と行き来できる）", () => {
+    expect(settingTextFromTitle(requirementQuestion("support", "インテーク").title)).toBe("インテーク");
+    expect(settingTextFromTitle(promotionQuestion("report", "基礎研修").title)).toBe("基礎研修");
+    expect(settingTextFromTitle(promotionQuestion("test", "制度の理解").title)).toBe("制度の理解");
+    expect(settingTextFromTitle("  「前後の空白」のテストに合格しましたか？ ")).toBe("前後の空白");
+  });
+
+  it("型を崩した文と、かぎかっこの中が空の文は取り出さない", () => {
+    expect(settingTextFromTitle("等級要件を行ったか")).toBeNull();
+    expect(settingTextFromTitle("「」のテストに合格しましたか？")).toBeNull();
+    expect(settingTextFromTitle("「 」のテストに合格しましたか？")).toBeNull();
   });
 });
 

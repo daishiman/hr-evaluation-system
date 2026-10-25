@@ -111,7 +111,9 @@ export function HeaderNav({ role }: { role: Role }) {
                   {step.label}
                 </Link>
               ) : (
-                <span aria-current={i === trail.length - 1 ? "page" : undefined}>{step.label}</span>
+                <span className="ui-here" aria-current={i === trail.length - 1 ? "page" : undefined}>
+                  {step.label}
+                </span>
               )}
             </li>
           ))}

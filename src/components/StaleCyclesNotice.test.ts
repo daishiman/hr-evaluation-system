@@ -20,6 +20,19 @@ describe("StaleCyclesNotice", () => {
     expect(html).toContain("集計し直す");
   });
 
+  it("集計し直せる期間が2つ以上でも、直し方の文は1回だけ書き、リンクは期間ごとに置く", () => {
+    const html = renderToStaticMarkup(
+      createElement(StaleCyclesNotice, {
+        cycles: [cycle(), cycle({ cycleId: "cycle-2026-h2", cycleName: "2026年度下期", recomputable: 1, finalized: 0 })],
+      }),
+    );
+
+    expect(html.split("確認中の評価だけを、現在の基準で集計し直せます。")).toHaveLength(2);
+    expect(html).toContain("2026年度下期：確認中 1件が古い基準のままです。");
+    expect(html).toContain('href="/manager/cycles?cycle=cycle-2026-h1"');
+    expect(html).toContain('href="/manager/cycles?cycle=cycle-2026-h2"');
+  });
+
   it("確定済みしかなければ再集計できるように見せない", () => {
     const html = renderToStaticMarkup(
       createElement(StaleCyclesNotice, { cycles: [cycle({ recomputable: 0, finalized: 4 })] }),

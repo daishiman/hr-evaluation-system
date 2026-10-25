@@ -62,3 +62,11 @@ Deploy自身が未適用状態を分類し、必要な場合だけバックア�
 | フォーム原子化 | `src/lib/form-build.ts` |
 | 版分類 | `src/lib/domain/versioned-master.ts` |
 | 監査契約 | `src/lib/domain/constitution-events.ts` / `src/db/schema.ts` |
+
+## 設定と設問の双方向保存（DD-028・DD-031）
+
+設問から設定への保存は `planFormToSettings` で検査・計画し、`writeFormToSettings` が設問・設定・制度変更記録を同じ D1 batch に書く。設定保存後は `followSettings` が下書きと確定前評価へ追従させ、追従失敗を保存結果へ明記する。復旧は `alignDraftForms` の事前確認と planKey 照合を通す。公開・確定履歴の写しは残す。
+
+本番移行前の書き出しは `.github/scripts/encrypt-d1-backup.sh` が age で暗号化し、Artifact には暗号化済みファイルだけを置く。公開鍵が未設定なら移行を止める。今回のPRでは本番移行を実行しない。
+
+検証と仕様反映の記録: [2026-10-26 最終受領書](../docs/product/spec-receipts/2026-10-26-guideline-kpi-pr-review.md)。

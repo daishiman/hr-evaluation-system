@@ -80,79 +80,76 @@ export function BehaviorBandAssignmentEditor({
     );
   const noneNote = choiceNote("");
 
+  /* 反映範囲などの決まりは、画面の冒頭の開く注記にまとめた（BehaviorIntro・DD-027）。
+     ここで同じ説明を繰り返さない。 */
   return (
-    <div className="stack">
-      <Card className="card-pad">
-        <p className="footnote m-0">変更は次に作るアンケートから反映されます。</p>
-        <p className="footnote m-0 mt-1">作成・公開済みのアンケートと評価は変わりません。</p>
-      </Card>
-
-      <Card>
-        <CardHead
-          title={grade.name}
-          sub={
-            baseline
-              ? `現在は「${behaviorBandLabel(bandSets, baseline)}」を出します。`
-              : "現在は行動指針を出しません。"
-          }
-        />
-        <div className="card-pad">
-          <label>
-            <span className="block text-note text-ink-muted">この等級に出す行動指針</span>
-            <select
-              value={draft}
-              onChange={(event) => choose(event.target.value)}
-              disabled={saving}
-              className="input mt-1 w-full"
-              aria-label={`${grade.name}に出す行動指針`}
-            >
-              <option value="" disabled={noneNote !== null}>
-                行動指針を出さない{noneNote && `（${noneNote}）`}
+    <Card>
+      <CardHead
+        title={grade.name}
+        sub={
+          baseline
+            ? `現在は「${behaviorBandLabel(bandSets, baseline)}」を出します。`
+            : "現在は行動指針を出しません。"
+        }
+      />
+      <div className="card-pad">
+        <label>
+          <span className="block text-note text-ink-muted">この等級に出す行動指針</span>
+          <select
+            value={draft}
+            onChange={(event) => choose(event.target.value)}
+            disabled={saving}
+            className="input mt-1 w-full"
+            aria-label={`${grade.name}に出す行動指針`}
+          >
+            <option value="" disabled={noneNote !== null}>
+              行動指針を出さない{noneNote && `（${noneNote}）`}
+            </option>
+            {currentUnavailable && (
+              <option value={draft} disabled>
+                {behaviorBandLabel(bandSets, draft)}（いまは選べません）
               </option>
-              {currentUnavailable && (
-                <option value={draft} disabled>
-                  {behaviorBandLabel(bandSets, draft)}（いまは選べません）
+            )}
+            {selectableBands.map((code) => {
+              const note = choiceNote(code);
+              return (
+                <option key={code} value={code} disabled={note !== null}>
+                  {behaviorBandLabel(bandSets, code)}
+                  {note && `（${note}）`}
                 </option>
-              )}
-              {selectableBands.map((code) => {
-                const note = choiceNote(code);
-                return (
-                  <option key={code} value={code} disabled={note !== null}>
-                    {behaviorBandLabel(bandSets, code)}
-                    {note && `（${note}）`}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
+              );
+            })}
+          </select>
+        </label>
 
-          {draft ? (
+        {/* 選び直したときだけ、保存すると何が変わるかを添える（今の値は見出しの下の1文で足りる） */}
+        {draft !== baseline &&
+          (draft ? (
             <p className="footnote m-0 mt-2">
               <b>{grade.name}</b>のアンケートにこの行動指針を出します。
             </p>
           ) : (
             <p className="footnote m-0 mt-2">
-              この等級では行動指針を出しません。次に作るアンケートから、行動指針の質問が出なくなります。
+              この等級では行動指針を出さない設定にします。
             </p>
-          )}
+          ))}
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" variant="primary" disabled={saving || draft === baseline} onClick={() => void submit()}>
-              {saving ? "保存しています…" : "この等級の設定を保存"}
-            </Button>
-            <Button type="button" variant="tertiary" disabled={saving || draft === baseline} onClick={() => choose(baseline)}>
-              現在値へ戻す
-            </Button>
-          </div>
-
-          {error && (
-            <div role="alert" className="mt-3">
-              <ReasonNote>{error}</ReasonNote>
-            </div>
-          )}
-          <RefreshStatus message={message} refreshing={saving} target="画面" className="m-0 mt-3 text-sub text-brand-deep" />
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button type="button" variant="primary" disabled={saving || draft === baseline} onClick={() => void submit()}>
+            {saving ? "保存しています…" : "この等級の設定を保存"}
+          </Button>
+          <Button type="button" variant="tertiary" disabled={saving || draft === baseline} onClick={() => choose(baseline)}>
+            現在値へ戻す
+          </Button>
         </div>
-      </Card>
-    </div>
+
+        {error && (
+          <div role="alert" className="mt-3">
+            <ReasonNote>{error}</ReasonNote>
+          </div>
+        )}
+        <RefreshStatus message={message} refreshing={saving} target="画面" className="m-0 mt-3 text-sub text-brand-deep" />
+      </div>
+    </Card>
   );
 }

@@ -1,5 +1,7 @@
 # 機能文書の入口
 
+行動指針と KPI・評価セットの [機能定義](./guideline-kpi-ux-and-two-way-sync.md) と [context](./feature-guideline-kpi-ux-and-two-way-sync.context.json) に対応する変更は、[2026-10-26 最終レビュー・仕様反映受領書](../docs/product/spec-receipts/2026-10-26-guideline-kpi-pr-review.md) を参照してください。Beads は `hr-6pi.1`〜`hr-6pi.13`、dev-graph は `SYS-GUIDE-KPI-P01`〜`P13` です。P01〜P12 の成果物をまとめてレビューし、P13 の本番作業は未実施です。
+
 評価レポートの [生成された機能定義](./evaluation-report-and-raise-judgment.md) と [context](./feature-evaluation-report-and-raise-judgment.context.json) は計画時点の記録です。
 
 現在の状態・仕様反映・品質ゲート・2段階の公開単位は [最終レビュー受領書](../docs/product/spec-receipts/2026-10-21-evaluation-report-final-review-pr.md)、生成物の読み替えは同受領書から辿る計画レビューを参照してください。

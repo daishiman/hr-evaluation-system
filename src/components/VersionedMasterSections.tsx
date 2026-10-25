@@ -48,7 +48,6 @@ export function VersionedMasterSections<T extends VersionedMasterItem>({
     <>
       <Disclosure summary="以前使っていた項目" meta={`${stopped.length}件`}>
         <p className="footnote m-0">ここには、今後使わない現行項目が出ます。</p>
-        <p className="footnote m-0 mt-1">再開は次に作るアンケートから反映されます。</p>
         {reactivationBlocked && stopped.length > 0 && (
           <p id={reasonId} className="footnote m-0 mt-2 text-danger">
             先に1項目を「今後使わない」にしてください。

@@ -1,4 +1,6 @@
-import { describe, expect, it, beforeAll, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { createTestDatabase } from "../src/test-support/sqlite-d1";
 import {
   buildSampleSeed,
@@ -12,28 +14,38 @@ import {
 
 vi.mock("@/lib/db", async () => {
   const actual = await vi.importActual("@/lib/db");
-  return { ...actual, getDb: async () => globalThis.__sampleStalledDb };
+  return { ...actual, getDb: async () => globalThis.__sampleDb };
 });
 
 const { listStalledEvaluations } = await import("@/lib/stalled");
+const { listCycleSubmissionRows, listFormSubmissionRows } = await import("@/lib/submission-queries");
+const { buildEvaluationsForCycle } = await import("@/lib/evaluate");
 
 /**
  * サンプルデータの検査。
  *
  * 見るのは2つ。
  *  1. 既にあるデータに触らないこと（今回いちばん壊してはいけない約束）。
- *  2. 画面で確かめたいこと（推移・等級ごとの違い・ランクのばらつき・コメントの有無）が
- *     実際にデータとして入っていること。データが薄いと、画面を開いても何も分からない。
+ *  2. 画面で確かめたいこと（推移・等級ごとの違い・ランクのばらつき・コメントの有無・
+ *     受付中の期で評価を作る流れ）が実際にデータとして入っていること。
+ *     データが薄いと、画面を開いても何も分からない。
  */
 
 /** 本物のパスワード作成は遅いので、検査では固定の文字列に置き換える。 */
 const fakeHash = async (userId) => `hashed:${userId}`;
 
+/** 受付中の期の締切は作った日で決まる。検査では日を決めて作り、いつ流しても同じ結果にする。 */
+const TODAY = "2026-10-22";
+/** 受付中の期（DD-029） */
+const OPEN_CYCLE_ID = "cyc_sample_2026h2";
+/** 利用者のIDから社員のキー（s1 など）を取り出す */
+const keyOf = (userId) => userId.replace(/^usr_sample_/, "");
+
 let seed;
 const rowsOf = (table) => seed.tableRows.find(([t]) => t === table)?.[1] ?? [];
 
 beforeAll(async () => {
-  seed = await buildSampleSeed({ passwordHashFor: fakeHash });
+  seed = await buildSampleSeed({ passwordHashFor: fakeHash, today: TODAY });
 });
 
 describe("既にあるデータに触らないこと", () => {
@@ -129,14 +141,15 @@ describe("画面で見えるべきものが入っていること", () => {
     expect(rowsOf("form_responses").some((r) => withoutResults.includes(r.cycle_id))).toBe(false);
   });
 
-  it("受付中の期は1つも作らない（本番の未回答一覧に見本の方が混ざらないように）", () => {
-    expect(SAMPLE_CYCLES.every((c) => c.status === "closed")).toBe(true);
-    expect(rowsOf("evaluation_cycles").every((c) => c.status === "closed")).toBe(true);
+  it("締めた5期と受付中の1期を作る", () => {
+    expect(SAMPLE_CYCLES.filter((c) => c.status === "closed")).toHaveLength(5);
+    expect(SAMPLE_CYCLES.filter((c) => c.status === "open")).toHaveLength(1);
+    expect(rowsOf("evaluation_cycles").map((c) => c.status)).toEqual(SAMPLE_CYCLES.map((c) => c.status));
   });
 
-  it("5期を締めても、放置評価の一覧には1件も混ざらない", async () => {
+  it("締めた5期も受付中の期も、放置評価の一覧には1件も混ざらない", async () => {
     const current = createTestDatabase();
-    globalThis.__sampleStalledDb = current.db;
+    globalThis.__sampleDb = current.db;
     try {
       for (const statement of seed.sql) current.raw.exec(statement);
 
@@ -159,14 +172,184 @@ describe("画面で見えるべきものが入っていること", () => {
       expect(emptyEvaluations.count).toBe(0);
 
       // #38 の問い合わせ本体まで通す。結果あり4期は全件確定済み、空期には提出回答も無い。
+      // 受付中の期の提出済み（評価はまだ無い）は、締めるまで放置に数えない。
       const stalled = await listStalledEvaluations(SAMPLE_COMPANY_ID, {
         now: new Date("2027-01-01T00:00:00Z"),
       });
       expect(stalled).toEqual([]);
     } finally {
       current.close();
-      delete globalThis.__sampleStalledDb;
+      delete globalThis.__sampleDb;
     }
+  });
+});
+
+describe("受付中の期で、提出済みの回答から評価を作れること（DD-029）", () => {
+  const openResponses = () => rowsOf("form_responses").filter((r) => r.cycle_id === OPEN_CYCLE_ID);
+  const formsOf = (s) => s.tableRows.find(([t]) => t === "forms")[1].filter((f) => f.cycle_id === OPEN_CYCLE_ID);
+
+  it("受付中の期は「2026年度 下期（サンプル）」の1つだけで、期間は 2026-10-01〜2027-03-31", () => {
+    const open = rowsOf("evaluation_cycles").filter((c) => c.status === "open");
+    expect(open.map(({ id, name, period_start, period_end }) => ({ id, name, period_start, period_end }))).toEqual([
+      { id: OPEN_CYCLE_ID, name: "2026年度 下期（サンプル）", period_start: "2026-10-01", period_end: "2027-03-31" },
+    ]);
+  });
+
+  it("アンケートは全等級ぶん公開中で、締切は期の終わりと作った日から14日後の遅い方", async () => {
+    const forms = formsOf(seed);
+    expect(forms).toHaveLength(rowsOf("grades").length);
+    expect(forms.every((f) => f.status === "published")).toBe(true);
+    // 期の終わりのほうが遅い日に作ったときは、期の終わりまで
+    expect(forms.every((f) => f.closes_at === "2027-03-31")).toBe(true);
+    // 期の終わりの直前に作ったときは、作った日から14日後まで（締切切れのまま見本を入れない）
+    const late = await buildSampleSeed({ passwordHashFor: fakeHash, today: "2027-03-25" });
+    expect(formsOf(late).every((f) => f.closes_at === "2027-04-08")).toBe(true);
+  });
+
+  it("提出済み（s1・s3・s5・s7・s9）、入力途中（s2・s6）、未回答（s4・s8・s10）が混ざる", () => {
+    const statusOf = Object.fromEntries(openResponses().map((r) => [keyOf(r.employee_id), r.status]));
+    // 未回答の人（管理者・マネージャーも含む）には回答の行そのものが無い
+    expect(statusOf).toEqual({
+      s1: "submitted", s3: "submitted", s5: "submitted", s7: "submitted", s9: "submitted",
+      s2: "draft", s6: "draft",
+    });
+    const submitted = openResponses().filter((r) => r.status === "submitted");
+    expect(submitted.every((r) => r.submitted_at > 0)).toBe(true);
+    expect(openResponses().filter((r) => r.status === "draft").every((r) => r.submitted_at === null)).toBe(true);
+  });
+
+  it("提出済みは全設問に答え、入力途中は一部の設問だけに答えている", () => {
+    expect(openResponses().length).toBeGreaterThan(0);
+    for (const r of openResponses()) {
+      const total = rowsOf("form_questions").filter((q) => q.form_id === r.form_id).length;
+      const answered = rowsOf("form_answers").filter((a) => a.response_id === r.id).length;
+      if (r.status === "submitted") expect(answered, keyOf(r.employee_id)).toBe(total);
+      else {
+        expect(answered, keyOf(r.employee_id)).toBeGreaterThan(0);
+        expect(answered, keyOf(r.employee_id)).toBeLessThan(total);
+      }
+    }
+  });
+
+  it("回答はその人の等級のアンケートに付き、答えには答えた時点の設問の写し（question_*）が入る", () => {
+    const users = new Map(rowsOf("users").map((u) => [u.id, u]));
+    const forms = new Map(rowsOf("forms").map((f) => [f.id, f]));
+    const questions = new Map(rowsOf("form_questions").map((q) => [q.id, q]));
+    for (const r of openResponses()) {
+      expect(forms.get(r.form_id).grade_id, keyOf(r.employee_id)).toBe(users.get(r.employee_id).grade_id);
+      expect(r.grade_id).toBe(users.get(r.employee_id).grade_id);
+    }
+    const ids = new Set(openResponses().map((r) => r.id));
+    const answers = rowsOf("form_answers").filter((a) => ids.has(a.response_id));
+    expect(answers.length).toBeGreaterThan(0);
+    for (const a of answers) {
+      const q = questions.get(a.question_id);
+      expect({
+        title: a.question_title, type: a.question_type, section: a.question_section,
+        unit: a.question_unit, options: a.question_options_json, order: a.question_display_order,
+      }).toEqual({
+        title: q.title, type: q.question_type, section: q.section,
+        unit: q.unit, options: q.options_json, order: q.display_order,
+      });
+    }
+  });
+
+  it("受付中の期の評価はまだ無い（「提出済みの回答から評価を作る」を見本で試すため）", () => {
+    expect(openResponses().some((r) => r.status === "submitted")).toBe(true);
+    expect(rowsOf("evaluations").filter((e) => e.cycle_id === OPEN_CYCLE_ID)).toEqual([]);
+  });
+
+  it("答えた人の氏名・期・会社に見本の印がある", () => {
+    const users = new Map(rowsOf("users").map((u) => [u.id, u]));
+    expect(openResponses().length).toBeGreaterThan(0);
+    expect(openResponses().every((r) => users.get(r.employee_id).name.startsWith("サンプル"))).toBe(true);
+    expect(rowsOf("evaluation_cycles").find((c) => c.id === OPEN_CYCLE_ID)?.name).toContain("（サンプル）");
+    expect(rowsOf("companies")[0].name).toContain("サンプル");
+  });
+
+  it("増えた回答と答えは見本の会社の行で、削除SQLが答え→回答の順に消す", () => {
+    const ids = new Set(openResponses().map((r) => r.id));
+    const answers = rowsOf("form_answers").filter((a) => ids.has(a.response_id));
+    expect(answers.length).toBeGreaterThan(0);
+    expect([...openResponses(), ...answers].every((row) => row.company_id === SAMPLE_COMPANY_ID)).toBe(true);
+    expect(assertSampleOnly(seed.sql)).toBe(true);
+    const answersAt = seed.removeSql.indexOf(`DELETE FROM form_answers WHERE company_id = '${SAMPLE_COMPANY_ID}';`);
+    const responsesAt = seed.removeSql.indexOf(`DELETE FROM form_responses WHERE company_id = '${SAMPLE_COMPANY_ID}';`);
+    expect(answersAt).toBeGreaterThan(-1);
+    expect(responsesAt).toBeGreaterThan(answersAt);
+  });
+});
+
+/**
+ * 手元の見本（drizzle/seed.sql のデモの会社）と同じデータベースに入れて、
+ * 画面が読む問い合わせ（提出状況・評価づくり）と削除SQLまで通す。
+ */
+describe("デモの会社と並べて入れても、他社の行に触れないこと（DD-029）", () => {
+  let current;
+  /** 表ごとの行の数。投入前と削除後で同じなら、他社の行に触れず、見本の消し漏れも無い */
+  const countAll = () =>
+    Object.fromEntries(
+      current.raw
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '\\_%' ESCAPE '\\' ORDER BY name")
+        .all()
+        .map(({ name }) => [name, current.raw.prepare(`SELECT count(*) AS n FROM "${name}"`).get().n]),
+    );
+  let before;
+
+  beforeEach(() => {
+    current = createTestDatabase();
+    globalThis.__sampleDb = current.db;
+    current.raw.exec(readFileSync(join(process.cwd(), "drizzle/seed.sql"), "utf8"));
+    before = countAll();
+    for (const statement of seed.sql) current.raw.exec(statement);
+  });
+
+  afterEach(() => {
+    current.close();
+    delete globalThis.__sampleDb;
+  });
+
+  it("見本の受付中の期の提出状況は、対象11人のうち提出済み5人・入力途中2人・未回答4人", async () => {
+    const { rows, counts } = await listCycleSubmissionRows(SAMPLE_COMPANY_ID, OPEN_CYCLE_ID);
+    expect(counts).toEqual({ total: 11, submitted: 5, draft: 2, none: 4 });
+    // 未回答は s4・s8・s10 と、等級のあるマネージャー（管理者は等級が無いので対象外）
+    expect(rows.filter((r) => r.state === "none").map((r) => keyOf(r.employeeId)).sort()).toEqual(
+      ["mgr", "s10", "s4", "s8"],
+    );
+    expect(rows.every((r) => r.name.includes("サンプル"))).toBe(true);
+  });
+
+  it("デモの会社（給付事業）の未回答の一覧と提出状況に、見本の人は混ざらない", async () => {
+    const isSample = (r) => r.employeeId.startsWith("usr_sample_") || r.name.includes("サンプル");
+    const cycle = await listCycleSubmissionRows("cmp_kyufu", "cyc_kyufu_2026h2");
+    expect(cycle.rows.length).toBeGreaterThan(0);
+    expect(cycle.rows.filter(isSample)).toEqual([]);
+    expect(cycle.rows.some((r) => r.state === "none")).toBe(true);
+    const form = await listFormSubmissionRows("cmp_kyufu", "frm_kyufu_2026h2_regular");
+    expect(form.rows.length).toBeGreaterThan(0);
+    expect(form.rows.filter(isSample)).toEqual([]);
+    // 見本のIDで他社の画面を開いても、見本の回答は読めない
+    expect(await listFormSubmissionRows("cmp_kyufu", "frm_sample_2026h2_beginner")).toBeNull();
+  });
+
+  it("提出済みの5人ぶんの評価を作れ、他社の評価は増えない", async () => {
+    const kyufuBefore = current.raw.prepare("SELECT count(*) AS n FROM evaluations WHERE company_id <> ?").get(SAMPLE_COMPANY_ID).n;
+    const results = await buildEvaluationsForCycle(SAMPLE_COMPANY_ID, OPEN_CYCLE_ID, "usr_sample_admin");
+    expect(results.map((r) => ({ key: keyOf(r.employeeId), ok: r.ok })).sort((a, b) => a.key.localeCompare(b.key))).toEqual(
+      ["s1", "s3", "s5", "s7", "s9"].map((key) => ({ key, ok: true })),
+    );
+    const built = current.raw
+      .prepare("SELECT status, total_score FROM evaluations WHERE company_id = ? AND cycle_id = ?")
+      .all(SAMPLE_COMPANY_ID, OPEN_CYCLE_ID);
+    expect(built).toHaveLength(5);
+    expect(built.every((e) => e.status === "draft" && e.total_score !== null)).toBe(true);
+    expect(current.raw.prepare("SELECT count(*) AS n FROM evaluations WHERE company_id <> ?").get(SAMPLE_COMPANY_ID).n).toBe(kyufuBefore);
+  });
+
+  it("削除SQLを流すと、どの表も見本を入れる前と同じ行の数に戻る", () => {
+    expect(countAll()).not.toEqual(before);
+    for (const statement of seed.removeSql) current.raw.exec(statement);
+    expect(countAll()).toEqual(before);
   });
 });
 
