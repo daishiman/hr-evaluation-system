@@ -43,7 +43,8 @@ export interface SchemeGroup {
 }
 
 export interface SchemeSetup {
-  scheme: { id: string; raiseRequiresAllA: boolean } | null;
+  /** updatedAt は読んだ時点の保存日時（ミリ秒）。保存のときに送り、後からほかの人が保存していたら断る（DD-028 の3） */
+  scheme: { id: string; raiseRequiresAllA: boolean; updatedAt: number } | null;
   groups: SchemeGroup[];
   /** 等級区分の表示順。手順の「次はどこか」の判断に使う */
   order: string[];
@@ -72,7 +73,9 @@ export async function loadSchemeSetup(companyId: string): Promise<SchemeSetup> {
   });
 
   return {
-    scheme: scheme ? { id: scheme.id, raiseRequiresAllA: scheme.raiseRequiresAllA } : null,
+    scheme: scheme
+      ? { id: scheme.id, raiseRequiresAllA: scheme.raiseRequiresAllA, updatedAt: scheme.updatedAt.getTime() }
+      : null,
     groups,
     order: groups.map((g) => g.pointGroup),
   };

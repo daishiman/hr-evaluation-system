@@ -8,6 +8,7 @@ import { newId } from "@/lib/id";
 import { applyMasterUpdate } from "@/lib/masters/apply-master-update";
 import { bodySchema, deleteBodySchema } from "@/lib/masters/body-schema";
 import { deleteMasterItem as removeMasterItem } from "@/lib/masters/delete-master-item";
+import { followSettings } from "@/lib/masters/follow-settings";
 import { assertCompanyChosen } from "@/lib/session";
 
 /**
@@ -23,17 +24,23 @@ import { assertCompanyChosen } from "@/lib/session";
  * 制度の値をコードに書かないための入口。ここで保存した値が評価の計算に使われる。
  * 確定済みの評価は判定当時の値を持っているため、ここを変えても過去の結果は動かない。
  * 入力は kind ごとに分かれる1つの形（bodySchema）で受け、振り分けは applyMasterUpdate が行う。
+ *
+ * 保存の後、締め切っていないアンケートと確定前の評価をいまの設定に追従させ、その結果を文に続ける（DD-028 の4）。
+ * 追従は設定の batch の後に別に書くので、追従が失敗しても設定の保存は戻らない（失敗は文に出る）。
  */
 export async function saveMaster(raw: unknown) {
   return runAction({ operation: "masters.save", input: bodySchema }, raw, async ({ viewer, input }) => {
     assertCompanyChosen(viewer);
     const db = await getDb();
-    return applyMasterUpdate({
+    const result = await applyMasterUpdate({
       db,
       companyId: viewer.companyId,
       viewerId: viewer.id,
       body: input,
     });
+    if (result.unchanged) return result;
+    const follow = await followSettings(db, { companyId: viewer.companyId, actorId: viewer.id, kinds: [input.kind] });
+    return { ...result, message: `${result.message}${follow}` };
   });
 }
 

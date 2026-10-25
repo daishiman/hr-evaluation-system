@@ -9,13 +9,21 @@ import { RememberOpen } from "@/components/RememberOpen";
 
 type ButtonVariant = "primary" | "secondary" | "tertiary" | "danger-outline";
 
+/**
+ * 押したときの手応えの部品クラス（DD-030）。主の操作は勾配と光、副の操作は薄い勾配と沈み。
+ * 色は btn-* のまま変えず、面の質感と状態の見た目だけを globals.css の ui- の規則で足す。
+ */
+function pressClass(variant: ButtonVariant): string {
+  return variant === "primary" ? "ui-press ui-press-main" : "ui-press ui-press-sub";
+}
+
 export function Button({
   variant = "secondary",
   block,
   className,
   ...rest
 }: ComponentProps<"button"> & { variant?: ButtonVariant; block?: boolean }) {
-  return <button className={clsx("btn", `btn-${variant}`, block && "btn-block", className)} {...rest} />;
+  return <button className={clsx("btn", `btn-${variant}`, block && "btn-block", pressClass(variant), className)} {...rest} />;
 }
 
 export function LinkButton({
@@ -24,7 +32,7 @@ export function LinkButton({
   className,
   ...rest
 }: ComponentProps<typeof Link> & { variant?: ButtonVariant; block?: boolean }) {
-  return <Link className={clsx("btn", `btn-${variant}`, block && "btn-block", className)} {...rest} />;
+  return <Link className={clsx("btn", `btn-${variant}`, block && "btn-block", pressClass(variant), className)} {...rest} />;
 }
 
 /**
@@ -39,7 +47,7 @@ export function DownloadButton({
   className,
   ...rest
 }: ComponentProps<"a"> & { variant?: ButtonVariant }) {
-  return <a className={clsx("btn", `btn-${variant}`, className)} {...rest} />;
+  return <a className={clsx("btn", `btn-${variant}`, pressClass(variant), className)} {...rest} />;
 }
 
 /* ───────────────────────── 選ぶ ─────────────────────────
@@ -102,7 +110,7 @@ export function ChoiceChip({
   className,
   ...rest
 }: Omit<ComponentProps<"button">, "type" | "aria-pressed"> & { selected?: boolean }) {
-  return <button type="button" className={clsx("chip", className)} aria-pressed={selected} {...rest} />;
+  return <button type="button" className={clsx("chip", "ui-pick", className)} aria-pressed={selected} {...rest} />;
 }
 
 /**
@@ -117,12 +125,12 @@ export function ChipLink({
   className,
   ...rest
 }: ComponentProps<typeof Link> & { current?: boolean }) {
-  return <Link className={clsx("chip", className)} aria-current={current ? "true" : undefined} {...rest} />;
+  return <Link className={clsx("chip", "ui-pick", className)} aria-current={current ? "true" : undefined} {...rest} />;
 }
 
 /** 読むだけの札（回答の選択肢の下書き表示など）。押せる見た目を与えない。 */
 export function ChipTag({ children }: { children: ReactNode }) {
-  return <span className="chip">{children}</span>;
+  return <span className="chip ui-tag">{children}</span>;
 }
 
 /**
@@ -143,7 +151,7 @@ export function OptionCard({
   selected?: boolean;
 }) {
   return (
-    <button type="button" className={clsx("option-card", className)} aria-pressed={selected} {...rest}>
+    <button type="button" className={clsx("option-card", "ui-pick ui-pick-card", className)} aria-pressed={selected} {...rest}>
       <span className="option-card-title">{title}</span>
       {sub && <span className="option-card-sub">{sub}</span>}
     </button>
@@ -166,7 +174,7 @@ export function OptionCheck({
   disabled?: boolean;
 }) {
   return (
-    <label className="option-card option-card-check" data-on={checked ? "true" : undefined}>
+    <label className="option-card option-card-check ui-pick ui-pick-card" data-on={checked ? "true" : undefined}>
       <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onToggle(e.target.checked)} />
       {label}
     </label>
@@ -206,7 +214,7 @@ export function HintToggle({
   return (
     <button
       type="button"
-      className="profile-row-label"
+      className="profile-row-label ui-reveal"
       aria-expanded={open}
       aria-controls={open ? controls : undefined}
       {...rest}
@@ -253,7 +261,7 @@ export function RevealToggle({
   return (
     <button
       type="button"
-      className="field-toggle"
+      className="field-toggle ui-reveal"
       aria-pressed={visible}
       aria-controls={controls}
       aria-label={`${label}を${visible ? "隠す" : "表示する"}`}
@@ -271,13 +279,15 @@ export function RevealToggle({
 type BadgeTone = "active" | "done" | "closed" | "dropped" | "alert" | "required";
 
 export function Badge({ tone = "done", children }: { tone?: BadgeTone; children: ReactNode }) {
-  return <span className={`badge badge-${tone}`}>{children}</span>;
+  // 進行中と要対応は、色相を増やさず面の明暗と縁で一段強める
+  const strong = tone === "active" || tone === "alert";
+  return <span className={clsx("badge", `badge-${tone}`, "ui-mark", strong && "ui-mark-strong")}>{children}</span>;
 }
 
 /** 仮置きの値であることを画面上で正直に示す。 */
 export function ProvisionalMark({ note }: { note?: string | null }) {
   return (
-    <span className="badge badge-dropped" title={note ?? "制度として未確定のため、叩き台の初期値を入れています。"}>
+    <span className="badge badge-dropped ui-mark" title={note ?? "制度として未確定のため、叩き台の初期値を入れています。"}>
       仮置き
     </span>
   );
@@ -301,11 +311,15 @@ export function Num({
   className?: string;
 }) {
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return <span className="text-ink-muted">—</span>;
+    return (
+      <span className="ui-num" data-empty="true">
+        —
+      </span>
+    );
   }
   const parts = nf.format(value).split(",");
   return (
-    <span className={clsx(display ? "num-display" : "num", className)}>
+    <span className={clsx(display ? "num-display" : "num", "ui-num", className)}>
       {parts.map((p, i) => (
         <span key={i}>
           {i > 0 && <span className="num-sep">,</span>}
@@ -344,7 +358,7 @@ export function Code({ children, block }: { children: ReactNode; block?: boolean
  */
 export function Card({ className, off, children }: { className?: string; off?: boolean; children: ReactNode }) {
   return (
-    <div className={clsx("card", className)} data-off={off ? "true" : undefined}>
+    <div className={clsx("card", className, "ui-card")} data-off={off ? "true" : undefined}>
       {children}
     </div>
   );
@@ -405,7 +419,7 @@ export function PageTitle({
           </nav>
         )}
         {/* 絵は見出しの左に添えるだけ（意味は文字が持つ）。左のメニューと同じ絵を出す */}
-        <h1 className="page-title">
+        <h1 className="page-title ui-title">
           <PageHeadIcon />
           {title}
         </h1>
@@ -432,7 +446,7 @@ export function SectionHeading({
   return (
     <>
       <div className="section-head">
-        <h2 className="section-heading">{children}</h2>
+        <h2 className="section-heading ui-heading">{children}</h2>
         {aside}
       </div>
       {help && <p className="footnote m-0 -mt-1.5 mb-2">{help}</p>}
@@ -498,7 +512,7 @@ export function FieldGroup({
  */
 export function StepMark({ children }: { children: ReactNode }) {
   return (
-    <span className="step-mark num" aria-hidden="true">
+    <span className="step-mark num ui-step-mark" aria-hidden="true">
       {children}
     </span>
   );
@@ -506,7 +520,7 @@ export function StepMark({ children }: { children: ReactNode }) {
 
 /** {@link StepBlock} を縦に並べる箱。段の間の空きと区切り線はここで決める。 */
 export function StepFlow({ children }: { children: ReactNode }) {
-  return <div className="step-flow">{children}</div>;
+  return <div className="step-flow ui-step-flow">{children}</div>;
 }
 
 /**
@@ -529,7 +543,7 @@ export function StepBlock({
   children: ReactNode;
 }) {
   return (
-    <section className="step-block">
+    <section className="step-block ui-step">
       <div className="step-block-head">
         <StepMark>{step}</StepMark>
         <h3 className="step-block-title">{title}</h3>
@@ -550,7 +564,7 @@ export function StepBlock({
  */
 export function NoteBlock({ label, children }: { label?: string; children: ReactNode }) {
   return (
-    <div className="note-block">
+    <div className="note-block ui-notice">
       {label && <p className="note-block-label">{label}</p>}
       {children}
     </div>
@@ -594,7 +608,7 @@ export function Disclosure({
   rememberAs?: string;
 }) {
   return (
-    <details className="disclosure card" open={defaultOpen || undefined}>
+    <details className="disclosure card ui-reveal" open={defaultOpen || undefined}>
       <summary>
         <span>{summary}</span>
         {meta && <span className="disclosure-meta">{meta}</span>}
@@ -628,7 +642,7 @@ export function InlineDetail({
   open?: boolean;
 }) {
   return (
-    <details className="inline-detail" open={open}>
+    <details className="inline-detail ui-reveal" open={open}>
       <summary>{summary}</summary>
       <div className="inline-detail-body">{children}</div>
     </details>
@@ -641,7 +655,7 @@ export function InlineDetail({
 
 export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
-    <div className="empty-state">
+    <div className="empty-state ui-notice">
       {/* 「まだ何も入っていない入れ物」を絵でも示す。文字だけの空白は、
           読み込み中なのか本当に0件なのかが一目で分かりにくい。
           絵は見出しの頭に添える（絵だけの段を作ると、その段は左右とも空く） */}
@@ -694,7 +708,7 @@ export function PageLoading({ lede }: { lede: string }) {
  */
 export function ReasonNote({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="caution-panel flex flex-wrap items-center justify-between gap-3">
+    <div className="caution-panel flex flex-wrap items-center justify-between gap-3 ui-notice ui-notice-caution">
       {/* 「手を止めて読んでほしい」を色以外でも示す（色だけで状態を伝えない） */}
       <span className="flex min-w-0 items-start gap-2">
         <Icon name="info" className="reason-note-mark" />
@@ -712,11 +726,11 @@ export function ReasonNote({ children, action }: { children: ReactNode; action?:
 export function Bar({ value, max, label }: { value: number; max: number; label?: string }) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
   return (
-    <div>
+    <div className="ui-meter">
       <div className="bar-track" role="img" aria-label={`${label ?? "達成度"} ${max}中 ${value}`}>
         <div className="bar-fill" style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-1 text-note text-ink-muted">
+      <p className="mt-1 text-note">
         <Num value={value} /> / <Num value={max} />
         {label ? ` ${label}` : ""}
       </p>
@@ -755,7 +769,7 @@ export function DefList({ rows }: { rows: { label: string; value: ReactNode; key
  */
 export function StatGrid({ stats }: { stats: { label: string; value: ReactNode }[] }) {
   return (
-    <dl className="stat-grid" style={{ "--stat-cols": Math.min(stats.length, 4) } as CSSProperties}>
+    <dl className="stat-grid ui-stats" style={{ "--stat-cols": Math.min(stats.length, 4) } as CSSProperties}>
       {stats.map((s) => (
         <div key={s.label}>
           <dt>{s.label}</dt>
@@ -791,8 +805,10 @@ export interface RecordItem {
 }
 
 export function RecordList({ items }: { items: RecordItem[] }) {
+  // 外側の字面 class="card record-list" は ui-rules.test.ts が固定している。Card を通すと ui-card が付いて字面が変わるので、
+  // 同じ面の質感（影）は globals.css の .card.record-list に ui-card と並べて当てる
   return (
-    <Card className="record-list">
+    <div className="card record-list">
       {items.map((it) => (
         <div key={it.key} className="list-card" data-off={it.off ? "true" : undefined}>
           <div className="list-card-head">
@@ -804,7 +820,7 @@ export function RecordList({ items }: { items: RecordItem[] }) {
           {it.action && <div className="list-card-actions">{it.action}</div>}
         </div>
       ))}
-    </Card>
+    </div>
   );
 }
 
@@ -877,7 +893,7 @@ export function CardRow({
   off?: boolean;
 }) {
   return (
-    <div className={clsx("card-row", alignTop && "items-start", className)} data-off={off ? "true" : undefined}>
+    <div className={clsx(clsx("card-row", alignTop && "items-start", className), "ui-card-row")} data-off={off ? "true" : undefined}>
       {lead}
       <div className="row-main">
         <p className="todo-row-title m-0">{title}</p>
@@ -950,6 +966,7 @@ export function CardHead({ lead, title, heading, sub, detail, actions, pinned, n
       <div
         className={clsx(
           "flex flex-wrap items-start justify-between gap-3",
+          "ui-card-head",
           pinned && PINNED_CARD_HEAD_CLASS,
         )}
         data-narrow={pinned && narrow ? "pin" : undefined}
@@ -978,9 +995,8 @@ export function RankMark({ rank }: { rank: string | null }) {
     <span
       className={clsx(
         "num inline-flex h-6 w-6 items-center justify-center rounded-full border text-note font-bold",
-        strong
-          ? "border-brand bg-brand-soft text-brand-deep"
-          : "border-line bg-subtle text-ink-muted",
+        "ui-mark ui-mark-rank",
+        strong && "ui-mark-strong",
       )}
       aria-label={rank ? `ランク ${rank}` : "実績が未入力のため判定外"}
     >

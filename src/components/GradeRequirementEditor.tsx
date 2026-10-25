@@ -7,6 +7,7 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { ListAddArea, ListAddRow } from "@/components/ListRow";
 import { BlockedHelp, UsedByDetail, blockedRows } from "@/components/UsedByDetail";
 import { VersionedMasterSections } from "@/components/VersionedMasterSections";
+import { SettingsFollowScope } from "@/components/SettingsFollowScope";
 import { DELETE_LABEL, deleteConfirmText } from "@/lib/domain/master-delete";
 import type { UsageMap } from "@/lib/master-usage";
 import { RefreshStatus } from "@/components/RefreshStatus";
@@ -33,7 +34,7 @@ import {
  *   - 「いま何個 / あと何個」を常に出す。ここが達成率の分母になるため、数が見えないと制度が読めない。
  *
  * 保存はすべて制度マスタの Server Action（saveMaster）。止め方は2段階:
- *   - 「使わない」: 次に作るアンケートから外すだけ。あとから戻せる。
+ *   - 「使わない」: 設問生成の対象から外す。あとから戻せる。
  *   - 「完全に消す」: まだ一度もアンケートに出しておらず、評価の記録にも無いときだけ出る。
  * 一度でも使った項目は消せない（過去のアンケート・確定済みの評価がこの行を参照しているため、
  * 消すと過去が読めなくなる）。判定はサーバー側で行う。
@@ -217,10 +218,10 @@ export function GradeRequirementEditor({
           この等級のアンケートには <b>支援について {support.length}項目</b>・<b>運営について {operation.length}項目</b>（合計{" "}
           <b>{denominator}項目</b>）が出ます。
         </p>
-        <p className="footnote m-0 mt-1">
-          ここでの変更は<b>次に作るアンケートから反映されます</b>。すでに作成・公開したアンケートと、確定済みの評価は変わりません。
-        </p>
         <p className="footnote m-0 mt-1">内容を直すと、新版を作ります。</p>
+        <InlineDetail summary="変更が反映される範囲">
+          <SettingsFollowScope kinds={["gradeRequirementRevise"]} />
+        </InlineDetail>
         {/* 達成率の出し方は、いま項目を書くうえでは要らない背景。押したときだけ出す */}
         <InlineDetail summary="達成率の出し方">
           <p className="m-0">等級要件達成率は「達成した項目数 ÷ 登録した{denominator}項目」です。</p>
@@ -245,7 +246,7 @@ export function GradeRequirementEditor({
           <div className="stack mt-3">
             {denominator === 0 ? (
               <p className="footnote m-0">
-                いまは1項目も登録されていないため、次に作るアンケートに等級要件の設問は出ません。その場合、達成率は「判定外」になります。
+                いまは項目が無いため、この設定で作るアンケートに等級要件は出ません。達成率は「判定外」になります。
               </p>
             ) : (
               (["support", "operation"] as RequirementCategory[]).map((c) => {

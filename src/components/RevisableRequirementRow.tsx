@@ -103,7 +103,7 @@ export function revisableRequirementActions({
 }: RowBase & {
   /** 「内容を直す」の次に置く、画面ごとの操作（昇格要件の「任意の新版にする／必須の新版にする」） */
   extraAction?: ReactNode;
-  /** 今後使わない（次に作るアンケートから外す。あとから戻せる） */
+  /** 今後使わない（設問生成の対象から外す。あとから戻せる） */
   onStop: () => void;
   /** 完全に消す。一度も使っていない行にだけ出す */
   onDelete: () => void;
@@ -119,7 +119,7 @@ export function revisableRequirementActions({
         label="今後使わない"
         variant="danger-outline"
         busy={busy}
-        confirm={`「${text}」を今後使わない設定にします。過去のアンケートと評価は変わりません。`}
+        confirm={`「${text}」を今後使わない設定にします。あとからもう一度使えます。`}
         onConfirm={onStop}
       />
       {blockedMark(usedBy) === null && (

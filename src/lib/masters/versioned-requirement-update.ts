@@ -76,7 +76,7 @@ function databaseMessage(error: unknown): string {
 }
 
 /** migration trigger / UNIQUE が止めた競合を、画面が扱える業務エラーへ戻す。 */
-function translateWriteError(error: unknown, label: string): never {
+export function translateWriteError(error: unknown, label: string): never {
   const message = databaseMessage(error);
   if (message.includes("grade_requirement_active_limit")) {
     throw new HttpError(400, `「支援について」「運営について」は、それぞれ${GRADE_REQUIREMENT_MAX}項目までです。`);
@@ -155,7 +155,7 @@ async function reviseGrade(
     translateWriteError(error, "等級要件");
   }
   return {
-    message: "等級要件の新しい版を作りました。次に作るアンケートから反映し、作成済みのアンケートと評価は変わりません。",
+    message: "等級要件の新しい版を作りました。",
     id,
     previousVersionId: current.id,
   };
@@ -209,7 +209,7 @@ async function revisePromotion(
     translateWriteError(error, "昇格要件");
   }
   return {
-    message: "昇格要件の新しい版を作りました。次に作るアンケートから反映し、作成済みのアンケートと評価は変わりません。",
+    message: "昇格要件の新しい版を作りました。",
     id,
     previousVersionId: current.id,
   };
@@ -259,7 +259,7 @@ export async function applyVersionedRequirementUpdate(args: {
       } catch (error) {
         translateWriteError(error, "等級要件");
       }
-      return { message: "等級要件を追加しました。次に作るアンケートから設問に載ります。", id };
+      return { message: "等級要件を追加しました。", id };
     }
 
     case "gradeRequirementRevise": {
@@ -308,8 +308,8 @@ export async function applyVersionedRequirementUpdate(args: {
       }
       return {
         message: body.isActive
-          ? "等級要件をもう一度使う状態にしました。次に作るアンケートから反映し、作成済みのアンケートと評価は変わりません。"
-          : "等級要件を使わない状態にしました。次に作るアンケートから外れ、作成済みのアンケートと評価は変わりません。",
+          ? "等級要件をもう一度使う状態にしました。"
+          : "等級要件を使わない状態にしました。",
         id: current.id,
       };
     }
@@ -398,7 +398,7 @@ export async function applyVersionedRequirementUpdate(args: {
           },
         })),
       ]);
-      return { message: "昇格要件を追加しました。次に作るアンケートから設問に載ります。", id };
+      return { message: "昇格要件を追加しました。", id };
     }
 
     case "promotionRequirementRevise": {
@@ -450,8 +450,8 @@ export async function applyVersionedRequirementUpdate(args: {
       }
       return {
         message: body.isActive
-          ? "昇格要件をもう一度使う状態にしました。次に作るアンケートから反映し、作成済みのアンケートと評価は変わりません。"
-          : "昇格要件を使わない状態にしました。次に作るアンケートから外れ、作成済みのアンケートと評価は変わりません。",
+          ? "昇格要件をもう一度使う状態にしました。"
+          : "昇格要件を使わない状態にしました。",
         id: current.id,
       };
     }

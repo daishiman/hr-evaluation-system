@@ -22,10 +22,11 @@ async function expectDrawn(target: Locator) {
 }
 
 test("新しいKPI項目で「＋ 聞くことを追加」を続けて押しても、聞くことと追加のボタンが消えない（DD-017）", async ({ page }) => {
-  await page.goto("/admin/scheme");
+  // KPI項目の追加と修正は、KPI・評価セットの入口から /admin/scheme/items へ分けた（DD-027）
+  await page.goto("/admin/scheme/items");
   await switchCompany(page, fixture.company.name);
-  await page.goto("/admin/scheme");
-  await waitForHydration(page, "main fieldset button");
+  await page.goto("/admin/scheme/items");
+  await waitForHydration(page, "main button");
   await page.getByRole("button", { name: "＋ KPI項目を追加" }).click();
 
   const group = page.getByRole("group", { name: "実績の聞き方" });

@@ -111,6 +111,8 @@ describe("等級・昇格要件の版管理", () => {
     const before = testDb.raw.prepare("SELECT * FROM grade_requirements WHERE id = 'greq_old'").get();
 
     const result = await apply({ kind: "gradeRequirementRevise", id: "greq_old", text: "新しい本文" });
+    // 保存本体は操作の事実を返す。追従先・実績は saveMaster の followMessage が報告する。
+    expect(result.message).toBe("等級要件の新しい版を作りました。");
 
     const oldAfter = testDb.raw.prepare("SELECT * FROM grade_requirements WHERE id = 'greq_old'").get();
     expect(oldAfter).toEqual(before);

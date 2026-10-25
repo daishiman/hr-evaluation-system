@@ -33,8 +33,18 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
   if (!viewer.companyId) notFound();
   const companyId = viewer.companyId;
 
-  const form = await getForm(companyId, id);
-  if (!form) notFound();
+  const db = await getDb();
+  /* 更新時刻は設問より先に読む。設問の保存はこの時刻より後の保存を断るので、
+     設問のほうが新しくても古い時刻で断られるだけで、ほかの人の保存を上書きしない（DD-028） */
+  const [form, stamp] = await Promise.all([
+    getForm(companyId, id),
+    db
+      .select({ updatedAt: s.forms.updatedAt })
+      .from(s.forms)
+      .where(and(eq(s.forms.companyId, companyId), eq(s.forms.id, id)))
+      .limit(1),
+  ]);
+  if (!form || !stamp[0]) notFound();
   // 画面に出す題名。空（既定の題名）なら評価期間と等級名から作る
   const displayTitle = formRowTitle(form);
   const defaultTitle = formRowTitle({ ...form, title: "" });
@@ -45,7 +55,6 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
     loadFormComparisonGap(companyId, { id: form.id, cycleId: form.cycleId }, { role: viewer.role, current: "form" }),
   ]);
 
-  const db = await getDb();
   const [responses, laterVersions] = await Promise.all([
     db
       .select({ id: s.formResponses.id })
@@ -327,6 +336,7 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
       <FormBuilder
         formId={form.id}
         initial={rows}
+        updatedAt={stamp[0].updatedAt.getTime()}
         editable={editable}
         lockReason={
           editable

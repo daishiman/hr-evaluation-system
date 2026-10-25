@@ -60,7 +60,10 @@
           "G18",
           "G20",
           "G23",
-          "G24"
+          "G24",
+          "G25",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-database-3",
@@ -98,7 +101,20 @@
           "qa-y05",
           "qa-y06",
           "qa-y07",
-          "qa-z03"
+          "qa-z03",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "mobile": {
@@ -117,7 +133,10 @@
           "G18",
           "G20",
           "G23",
-          "G24"
+          "G24",
+          "G25",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-database-3",
@@ -155,7 +174,20 @@
           "qa-y05",
           "qa-y06",
           "qa-y07",
-          "qa-z03"
+          "qa-z03",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "tablet": {
@@ -174,7 +206,10 @@
           "G18",
           "G20",
           "G23",
-          "G24"
+          "G24",
+          "G25",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-database-3",
@@ -212,7 +247,20 @@
           "qa-y05",
           "qa-y06",
           "qa-y07",
-          "qa-z03"
+          "qa-z03",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "desktop-windows": {
@@ -245,7 +293,8 @@
           "G8",
           "G10",
           "G19",
-          "G24"
+          "G24",
+          "G27"
         ],
         "qa_refs": [
           "qa-r-auth-3",
@@ -284,7 +333,14 @@
           "qa-y06",
           "qa-y07",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "mobile": {
@@ -297,7 +353,8 @@
           "G8",
           "G10",
           "G19",
-          "G24"
+          "G24",
+          "G27"
         ],
         "qa_refs": [
           "qa-r-auth-3",
@@ -336,7 +393,14 @@
           "qa-y06",
           "qa-y07",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "tablet": {
@@ -349,7 +413,8 @@
           "G8",
           "G10",
           "G19",
-          "G24"
+          "G24",
+          "G27"
         ],
         "qa_refs": [
           "qa-r-auth-3",
@@ -388,7 +453,14 @@
           "qa-y06",
           "qa-y07",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "desktop-windows": {
@@ -431,7 +503,12 @@
           "G19",
           "G21",
           "G22",
-          "G24"
+          "G24",
+          "G25",
+          "G26",
+          "G27",
+          "G28",
+          "G29"
         ],
         "qa_refs": [
           "qa-r-uiux-3",
@@ -486,7 +563,23 @@
           "qa-aa07-report-threshold-marker-audit",
           "qa-aa08-report-marker-detail-print-design",
           "qa-aa09-report-print-final-alignment",
-          "qa-aa10-report-print-background-preparation"
+          "qa-aa10-report-print-background-preparation",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab03-settings-pages-load-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab06-shared-ui-theme-contract-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab14-ui-scope-beyond-buttons",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "mobile": {
@@ -509,7 +602,12 @@
           "G19",
           "G21",
           "G22",
-          "G24"
+          "G24",
+          "G25",
+          "G26",
+          "G27",
+          "G28",
+          "G29"
         ],
         "qa_refs": [
           "qa-r-uiux-3",
@@ -555,7 +653,23 @@
           "qa-y07",
           "qa-y08",
           "qa-y09",
-          "qa-z03"
+          "qa-z03",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab03-settings-pages-load-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab06-shared-ui-theme-contract-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab14-ui-scope-beyond-buttons",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "tablet": {
@@ -578,7 +692,12 @@
           "G19",
           "G21",
           "G22",
-          "G24"
+          "G24",
+          "G25",
+          "G26",
+          "G27",
+          "G28",
+          "G29"
         ],
         "qa_refs": [
           "qa-r-uiux-3",
@@ -624,7 +743,23 @@
           "qa-y07",
           "qa-y08",
           "qa-y09",
-          "qa-z03"
+          "qa-z03",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab03-settings-pages-load-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab06-shared-ui-theme-contract-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab14-ui-scope-beyond-buttons",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "desktop-windows": {
@@ -661,7 +796,9 @@
           "G17",
           "G19",
           "G21",
-          "G24"
+          "G24",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-security-3",
@@ -716,7 +853,15 @@
           "qa-aa06-report-score-grade-design",
           "qa-aa07-report-threshold-marker-audit",
           "qa-aa08-report-marker-detail-print-design",
-          "qa-aa09-report-print-final-alignment"
+          "qa-aa09-report-print-final-alignment",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "mobile": {
@@ -733,7 +878,9 @@
           "G17",
           "G19",
           "G21",
-          "G24"
+          "G24",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-security-3",
@@ -779,7 +926,15 @@
           "qa-y14",
           "qa-w12",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "tablet": {
@@ -796,7 +951,9 @@
           "G17",
           "G19",
           "G21",
-          "G24"
+          "G24",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-security-3",
@@ -842,7 +999,15 @@
           "qa-y14",
           "qa-w12",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "desktop-windows": {
@@ -874,7 +1039,8 @@
           "G8",
           "G10",
           "G13",
-          "G17"
+          "G17",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-infrastructure-3",
@@ -899,7 +1065,13 @@
           "qa-x05",
           "qa-x06",
           "qa-x07",
-          "qa-z03"
+          "qa-z03",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "mobile": {
@@ -911,7 +1083,8 @@
           "G8",
           "G10",
           "G13",
-          "G17"
+          "G17",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-infrastructure-3",
@@ -936,7 +1109,13 @@
           "qa-x05",
           "qa-x06",
           "qa-x07",
-          "qa-z03"
+          "qa-z03",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "tablet": {
@@ -948,7 +1127,8 @@
           "G8",
           "G10",
           "G13",
-          "G17"
+          "G17",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-infrastructure-3",
@@ -973,7 +1153,13 @@
           "qa-x05",
           "qa-x06",
           "qa-x07",
-          "qa-z03"
+          "qa-z03",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "desktop-windows": {
@@ -1020,7 +1206,10 @@
           "G21",
           "G22",
           "G23",
-          "G24"
+          "G24",
+          "G25",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-backend-4",
@@ -1075,7 +1264,22 @@
           "qa-aa06-report-score-grade-design",
           "qa-aa07-report-threshold-marker-audit",
           "qa-aa08-report-marker-detail-print-design",
-          "qa-aa09-report-print-final-alignment"
+          "qa-aa09-report-print-final-alignment",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "mobile": {
@@ -1102,7 +1306,10 @@
           "G21",
           "G22",
           "G23",
-          "G24"
+          "G24",
+          "G25",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-backend-4",
@@ -1148,7 +1355,22 @@
           "qa-y07",
           "qa-y12",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "tablet": {
@@ -1175,7 +1397,10 @@
           "G21",
           "G22",
           "G23",
-          "G24"
+          "G24",
+          "G25",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-backend-4",
@@ -1221,7 +1446,22 @@
           "qa-y07",
           "qa-y12",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "desktop-windows": {
@@ -1263,7 +1503,11 @@
           "G19",
           "G21",
           "G22",
-          "G24"
+          "G24",
+          "G25",
+          "G26",
+          "G27",
+          "G29"
         ],
         "qa_refs": [
           "qa-r-frontend-3",
@@ -1318,7 +1562,22 @@
           "qa-aa07-report-threshold-marker-audit",
           "qa-aa08-report-marker-detail-print-design",
           "qa-aa09-report-print-final-alignment",
-          "qa-aa10-report-print-background-preparation"
+          "qa-aa10-report-print-background-preparation",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab03-settings-pages-load-observed",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab06-shared-ui-theme-contract-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab14-ui-scope-beyond-buttons",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "mobile": {
@@ -1340,7 +1599,11 @@
           "G19",
           "G21",
           "G22",
-          "G24"
+          "G24",
+          "G25",
+          "G26",
+          "G27",
+          "G29"
         ],
         "qa_refs": [
           "qa-r-frontend-3",
@@ -1386,7 +1649,22 @@
           "qa-y08",
           "qa-y09",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab03-settings-pages-load-observed",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab06-shared-ui-theme-contract-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab14-ui-scope-beyond-buttons",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "tablet": {
@@ -1408,7 +1686,11 @@
           "G19",
           "G21",
           "G22",
-          "G24"
+          "G24",
+          "G25",
+          "G26",
+          "G27",
+          "G29"
         ],
         "qa_refs": [
           "qa-r-frontend-3",
@@ -1454,7 +1736,22 @@
           "qa-y08",
           "qa-y09",
           "qa-z03",
-          "qa-z04"
+          "qa-z04",
+          "qa-ab01-settings-ui-overhaul-request",
+          "qa-ab03-settings-pages-load-observed",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab06-shared-ui-theme-contract-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab14-ui-scope-beyond-buttons",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "desktop-windows": {
@@ -1501,7 +1798,10 @@
           "G21",
           "G22",
           "G23",
-          "G24"
+          "G24",
+          "G25",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-ops-3",
@@ -1551,7 +1851,21 @@
           "qa-aa07-report-threshold-marker-audit",
           "qa-aa08-report-marker-detail-print-design",
           "qa-aa09-report-print-final-alignment",
-          "qa-aa10-report-print-background-preparation"
+          "qa-aa10-report-print-background-preparation",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "mobile": {
@@ -1578,7 +1892,10 @@
           "G21",
           "G22",
           "G23",
-          "G24"
+          "G24",
+          "G25",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-ops-3",
@@ -1620,7 +1937,21 @@
           "qa-y07",
           "qa-y08",
           "qa-y09",
-          "qa-z03"
+          "qa-z03",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "tablet": {
@@ -1647,7 +1978,10 @@
           "G21",
           "G22",
           "G23",
-          "G24"
+          "G24",
+          "G25",
+          "G27",
+          "G28"
         ],
         "qa_refs": [
           "qa-r-ops-3",
@@ -1689,7 +2023,21 @@
           "qa-y07",
           "qa-y08",
           "qa-y09",
-          "qa-z03"
+          "qa-z03",
+          "qa-ab02-behavior-band-default-observed",
+          "qa-ab05-evaluation-build-showcase-observed",
+          "qa-ab10-band-drift-rewrite",
+          "qa-ab12-showcase-data-location",
+          "qa-ab13-foundation-016-approval",
+          "qa-ab15-foundation-017-approval",
+          "qa-ab04-setting-copy-propagation-observed",
+          "qa-ab07-survey-to-setting-direction",
+          "qa-ab08-published-form-follow",
+          "qa-ab09-finalized-evaluation-keep",
+          "qa-ab11-survey-writeback-rule-conflict",
+          "qa-ab16-foundation-018-approval",
+          "qa-ab17-foundation-019-approval",
+          "qa-ab18-foundation-020-approval"
         ]
       },
       "desktop-windows": {
@@ -4064,6 +4412,244 @@
       "answer": "可逆な差分設計。具体的な待機場面の確認回答は未着であり、直前の印刷文脈からレポート準備と仮定する。画面表示後に紙用の全グラフとフォントを背景で準備し、A3を選んだ場合だけ紙面測定を先に行う。同じ会社・社員・閲覧形・レポート内容の画面内だけで結果を再利用する。準備中も用紙選択と別画面への移動ができ、取消と再試行を提供する。会社・社員・閲覧形・内容の変更および離脱では古い処理と結果を破棄する。準備完了後の利用者の明示クリックでのみ印刷を開き、背景完了から勝手にwindow.printを呼ばない。ブラウザ・OSの印刷ダイアログ自身は背景化しない。図と文字の15秒上限、未準備印刷の抑止、A3過長時のA4全文への回復、紙面と本人向け数値非表示・認可を維持する。新API・永続ジョブ・外部送信・スキーマは追加しない。本番の長い待機は未再現であり、ローカルGET891msを本番実測と扱わない。検証結果は実装担当が受領書へ追記する。",
       "provenance": "2026-10-21 利用者の追加依頼「待機時間がめちゃくちゃ長かったりして、次の流れに全然進めないです。これって何かもっと軽くできたりとか、この辺、次に進めたりするのが、処理は裏で動いていたりとかっていう形で進めないですかね。この待機をずっとひたすら待っておかないと、次に進めないのはめちゃくちゃ億劫です。」。印刷という適用場面は回答済みの事実ではなく、rootが明示した仮定に基づく。製品仕様§29・DD025および既存受領書のP09補足に対応。",
       "basis": "agent-inference"
+    },
+    {
+      "id": "qa-ab01-settings-ui-overhaul-request",
+      "question": "2026-10-22 の依頼（画像5枚：行動指針、KPI・評価セットの入口、KPI項目の一覧、アンケートのズレ表、評価・結果を確認する）に添えた利用者の本文。",
+      "answer": "対象の新機能: この画像や文章等のし自分を分析・解析し、既存のシステムとの差分を比較して、この画像の通りになるようにUI、UX、バックエンド、フロントエンド、セキュリティなど全ての内容を反映させるようにしてください。\n漏れなく全てに反映させること。\n\nこの画像や依頼分から想定されるバックエンド、フロントエンド、見えない部分の追加機能なども含めて改善を行ってください。[Image #3]この辺の等級指針の設定はちょっとおかしいです。今のこの画面で言う等級1と等級2に関しては同じ行動指針。等級3と等級4の1、等級4の2っていうのが同じ行動指針になります。これがデフォルトで設定となるようにしておいてください。行動指針を出さないのは等級5の2と等級5の1になります。これら呼び名っていうのは会社さんごとに変わるかと思いますが、デフォルトはこの考え方でお願いします。\n\nなので、この画面、今の画面、行動指針の画面、やり方としては間違っているかと思います。あとは、各情報が、情報量、文字数が多くなりすぎてしまって、直感的に読めないです。認知負荷が高くなりすぎてしまっています。\n\nこの行動指針の認知負荷、情報量をできるだけ下げるように、認知負荷をできるだけ落とすように。行動作業をしていくと、アクションをしていくと、何か表示させるっていうのはありですが、いきなりパッと表示数が多ければ多いほど情報を整理するのに時間がかかってしまって、これを読むのがちょっと嫌だ、面倒くさいなというふうに思ってしまうので、そのように認知負荷をできるだけ最初は下げるような形にしておいてほしいです。[Image #5] [Image #6]このページ、KPI評価セットに関しても同様です。ちょっと認知負荷が高すぎるし、各等級ごとのこの表がいまいちわかりづらいです。何をどういうふうに表示したいのかっていうのが見えにくいです。\n\nテーブル形式にするとちょっと見にくいかもしれないですが、カードとかブロックごとに表示するとかっていう形にしておかないと、その境界線が全然ないのでめちゃくちゃ見にくいです。ただ、かといって表形式にすると見た目がダサいっていうところもあるので、いいバランスで整えてほしいです。\n\nで、KPIの項目に関しても認知負荷が高いです。認知負荷をどうやって下げるのかっていうところを意識してこの辺整えてほしいです。この文章を全部読むとか、変なところで改行があって読みにくいとかっていうふうに感じてしまうので、この辺を整えてほしいです。めちゃくちゃ読みにくいです。このページ下の方に行くとKPIカテゴリーという形であったりするのですが、この辺に関してもこのページに複数の作業をやらないといけない、表示させることがあったりとかしているので、この辺もっと分かりやすく認知負荷を下げれるようにページ設定を整えてほしいです。[Image #8]それで、基本的には後から設定した方を正とするようにしてください。今の設定なのか、このアンケートなのかっていうところで、もしこのアンケートの方が後から改善しているのであれば、このアンケートが正しいですし、今の設定っていう方が後から設定しているのであれば、それが反映されると。っていうふうに、後から設定したものを常に追従して、他の画面にも反映させるっていうふうにしてください。\n\n一つの画面を設定したら、他の画面に設定を反映させないっていうふうなことはやめてください。一つを設定すると、他の画面に設定を反映させる。これは全ての画面、全ての機能で共通です。抜け漏れなく全ての内容を確認してほしいです。[Image #9]テストしたいので、提出済みの情報に関しても反映させてデータを作成しておいてほしいです。仮情報でOKです。\n\nそれで、評価を作るという画面の確認を行いたいなと思っているので、そのデータを作っておいてほしいです。あとはUI、UXに関しては、エージェントキットで最新の情報が反映されているかと思うのですが、ちょっと見た目がダサいというところがあるので、もっと見た目を、カードのグラデーションだったり、ボタンのグラデーションだったり、色使いだったりとか、きらびやかにしたりとか。\n\nこの辺がちょっと古臭いというか、見た目がダサいような仕様になっているので、この辺も合わせて整えてください。これ共通化していると思うので、その共通化しているところを改善すればいけるのかなというふうに思ったりしてますが、この辺整えてほしいです。",
+      "provenance": "2026-10-21T23:38:27Z（日本時間 2026-10-22 08:38）に利用者が送った依頼の「対象の新機能」以降を、画像の参照記号を含めてそのまま転記。画像の中身と、そこから読んだ現状の観測は qa-ab02〜qa-ab06 に分ける。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-21T23:38:27Z",
+      "required_info_items": [
+        "information-priority",
+        "product-goal"
+      ]
+    },
+    {
+      "id": "qa-ab02-behavior-band-default-observed",
+      "question": "行動指針の等級の分け方の既定はどこで決まり、依頼の画像の分け方はなぜ既定と違うのか。",
+      "answer": "実装確認: 既定の分け方の正本は data/grades.json の band、drizzle/seed.sql、src/lib/domain/behavior.ts の DEFAULT_BAND_SETS の3つで、どれも 等級1・等級2→g1_2、等級3・等級4-1・等級4-2→g3_4、等級5-1・等級5-2→出さない（null）、観点は各5件。新しい会社はテンプレート会社の等級・セット・観点を写すだけで、既定を当て直す処理は無い（src/actions/companies.ts、src/lib/template.ts）。まとまりは等級名ではなくセットの code と等級の display_order で決まり（src/lib/domain/behavior-band-range.ts の bandRuns）、等級名の変更は割り当てを変えない。画像の4枚のカード（等級1----が飛び飛び、等級2が観点6件、等級3・4-1・4-2が飛び飛び、等級5-1・5-2が出さない）は、等級1だけが g3_4 へ移った状態と一致する。これは製品仕様 §28-12 と DD-010 に記録された本番の状態で、管理者の1手で直す task（tasks/improvement-requests-2026-10.md）に完了の記録が無い。観点6件は既定に無く、どこかのセットに1件足されたと見られる（未確認）。「行動指針の初期設定について」の文（src/app/admin/behavior/page.tsx 177-190）は等級の code で今の名前を差し込むだけで、いまの割り当てを読まないため、画面のカードと食い違って見える。",
+      "provenance": "調査担当（読み取りのみ）の報告と、担当による src/app/admin/behavior/page.tsx 170-192 の再確認。根拠のファイルは data/grades.json、drizzle/seed.sql、src/lib/domain/behavior.ts、src/lib/domain/behavior-band-range.ts、src/lib/domain/behavior-band-range.test.ts、docs/product/spec.md §28-12、docs/product/design-decisions.md DD-010。",
+      "basis": "observed-fact",
+      "answered_at": "2026-10-21T23:54:02Z",
+      "required_info_items": [
+        "domain-model"
+      ]
+    },
+    {
+      "id": "qa-ab03-settings-pages-load-observed",
+      "question": "行動指針と KPI・評価セットの画面は、最初の表示で何をどれだけ並べているか。",
+      "answer": "実装確認: 行動指針の画面（/admin/behavior）は、冒頭の説明3文、飛び飛びの警告と理由の4文、初期設定の折りたたみ3段落、点数の注記を同じ面に並べる。BehaviorBandAssignmentEditor（冒頭と同じ文の繰り返しと「次に作るアンケートから」の再掲）、BehaviorBandSetEditor、BehaviorGuidelineEditor もそれぞれ5〜6か所の説明文を持ち、「同じ行動指針は、等級の並びで続いた等級にだけ出せます」は2か所に出る。KPI・評価セットの入口（/admin/scheme、src/app/admin/scheme/page.tsx 118-240）は、古い評価期間の知らせ、配点の決まりの食い違いの警告、進み具合と次の区分、等級区分ごとの設定（RecordList のカード。中に等級の並び・使うKPI・配点・基準・次にやること）、共通の設定（昇給の条件）、KPI項目の追加と修正、KPIカテゴリの7つの作業を1画面に並べる。KPI項目の一覧（src/components/KpiItemEditor.tsx）は、行の補足を「分類／実績区分／単位／向き」のあと改行し、聞くこと A・B…と計算式を全角空白でつないだ1行を続ける。データは33項目、1項目の設問は最大4件、設問文は最長64字。規範は製品仕様 §5-2（初期表示は判断に要る状態・件数・主要入力だけ）、§5-5（表は既定の器ではない）、§22（1文40字、理由・背景・繰り返しは畳む、情報は消さず見せ方を変える）。",
+      "provenance": "調査担当（読み取りのみ）の報告。根拠のファイルは src/app/admin/behavior/page.tsx、src/components/BehaviorBandAssignmentEditor.tsx、src/components/BehaviorBandSetEditor.tsx、src/components/BehaviorGuidelineEditor.tsx、src/app/admin/scheme/page.tsx、src/components/KpiItemEditor.tsx、data/kpi-master.json、data/kpi-questions.json、docs/product/spec.md §5-2・§5-5・§22。",
+      "basis": "observed-fact",
+      "answered_at": "2026-10-21T23:54:02Z",
+      "required_info_items": [
+        "frontend-arch",
+        "information-priority"
+      ]
+    },
+    {
+      "id": "qa-ab04-setting-copy-propagation-observed",
+      "question": "いまの設定とアンケートのズレはどう判定され、片方を後から変えたときに他方へ反映する経路はあるか。",
+      "answer": "実装確認: ズレ表（src/components/ComparisonGapNotice.tsx、src/lib/domain/comparison-gap.ts）は、等級要件・行動指針・KPI の3種類について、いまの設定から作るはずの項目の集合とアンケートが聞いている項目の集合の差（足りない・余分）だけを出し、文の違いや更新時刻は比べない。設定とアンケートは「制度が正・アンケートは写し」（src/lib/form-build.ts）で、src/lib/domain/form-sync.ts は配布済みのアンケートを追従させず人が決めるとしている。反映の経路は、下書きで回答0件のときの作り直す（rebuildFormQuestions。全設問を1つの batch で入れ直す）と、新しい版を作る（createForms）の2つだけで、アンケートから設定へ戻す経路は無い。アンケートの設問は下書きの間だけ saveFormQuestions で直せ、回答が1件でもあれば直せない。form_questions、form_answers の question_*、evaluations と evaluation_* は作った時点の写しで、評価セットの選択・ズレの警告・レポートは参照。updated_at は多くの表にあるが、使うのは src/lib/impact.ts の集計し直しの判定だけ。制度マスタの同時保存は後の保存を 409 で止め、黙って上書きしない。保存後は runAction と refresh()、他のタブは FreshnessSync と BroadcastChannel で取り直す（製品仕様 §27）。",
+      "provenance": "調査担当（読み取りのみ）の報告と、担当による src/lib/domain/comparison-gap.ts 284-304 と src/actions/forms.ts 100-140・330-420 の再確認。根拠は ほかに src/lib/comparison-gap-loader.ts、src/lib/form-build.ts、src/lib/evaluate.ts、src/db/schema.ts、docs/product/spec.md §27、docs/product/design-decisions.md DD-012・DD-022・DD-024。",
+      "basis": "observed-fact",
+      "answered_at": "2026-10-21T23:54:02Z",
+      "required_info_items": [
+        "api-contract",
+        "data-persistence",
+        "domain-model"
+      ]
+    },
+    {
+      "id": "qa-ab05-evaluation-build-showcase-observed",
+      "question": "「評価を作る」を試すための提出済みの回答は、いまの見本データのどこにあるか。",
+      "answer": "実装確認: 「評価・結果を確認する」（/manager/cycles、src/app/manager/cycles/page.tsx）は「{提出数} / {対象数} 人が提出済み」と、提出済みの回答から評価を作るボタン（buildEvaluations）を持ち、提出0件のときは理由を出す。評価を作ると、一覧・CSV・集計し直し・評価の詳細（確定・コメント・上司の判断）へ進める。手元の seed（scripts/seed-data.mjs。scripts/seed-target.mjs が --remote を断るローカル専用）は kyufu 社の受付中の期 2026h2 に e2・e5・e8 の提出済みと e3・e4 の下書きを持つ。本番向けのサンプル（scripts/sample-data.mjs、会社 cmp_sample、氏名は全員「サンプル ○○」）は5期すべて締め済みで、受付中の期を作らない（製品仕様 §14。本番の未回答一覧に見本の12名が並び、本物の未回答者が埋もれるため）。提出済みの回答は seed が直接 INSERT で作るのが既存の作法。公開リポジトリのため実データは置かない（README「本番運用とデータの注意」）。",
+      "provenance": "調査担当（読み取りのみ）の報告と、担当による scripts/seed-data.mjs 415-440、docs/product/spec.md 712-737、scripts/sample-data.mjs 30-60 の再確認。",
+      "basis": "observed-fact",
+      "answered_at": "2026-10-21T23:54:02Z",
+      "required_info_items": [
+        "data-persistence",
+        "ops-runbook"
+      ]
+    },
+    {
+      "id": "qa-ab06-shared-ui-theme-contract-observed",
+      "question": "共通の UI 部品と配色の契約は、カードやボタンのグラデーションをどこまで許すか。",
+      "answer": "実装確認: 共通部品は src/components/ui.tsx（Button の variant は primary・secondary・tertiary・danger-outline、Card、Badge、CardHead など）。色は src/app/globals.css の意味トークンで、既定のインディゴと azure・sand・moss・midnight・graphite の系統、自動と明示の暗い表示、prefers-contrast、印刷を持つ。グラデーションの既存利用は .card.hero-tint（var(--surface) から var(--brand-soft) への微グラデ。1画面1箇所。使えない状態と印刷では面の色）。契約テスト（src/components/theme-contract.test.ts、src/components/palette-contract.test.ts、src/components/ui-rules.test.ts、scripts/aidd-kit-boundary.test.mjs）は、TSX に16進色・rgb()・hsl()・Tailwind の色見本・任意値の var() を書かないこと、全系統と明暗で AA を満たすこと、系統は骨格18トークンだけを上書きすること、印刷はライトであること、globals.css 冒頭の宣言を持つことを固定する。AGENTS.md と DD-003 により平賀配色へ移さず、契約テストと冒頭の宣言を書き換えない。したがって、グラデーションは globals.css の部品クラスとして既存トークンだけで書くのが契約の内側の方法になる。",
+      "provenance": "調査担当（読み取りのみ）の報告と、担当による src/app/globals.css 1618-1632 の再確認。根拠は ほかに src/components/ui.tsx、AGENTS.md「配色とテーマ」、docs/product/design-decisions.md DD-003・DD-012・DD-024。",
+      "basis": "observed-fact",
+      "answered_at": "2026-10-21T23:54:02Z",
+      "required_info_items": [
+        "frontend-arch"
+      ]
+    },
+    {
+      "id": "qa-ab07-survey-to-setting-direction",
+      "question": "下書きのアンケートで、設定とつながった設問（KPI・行動指針・等級要件）を後から足したり外したりしたとき、その変更を元の設定（評価セットやマスタ）へどう扱うか。選択肢：保存と同時に設定へ反映／波及先を見せてから反映／今回は決めない。",
+      "answer": "保存と同時に設定へ反映。",
+      "provenance": "AskUserQuestion（4問、各3択）。2026-10-21T23:54:02Z の計測の後に問い、回答を受けた直後の 2026-10-22T00:12:56Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れず、『今回は決めない』の選択肢を置いた（N1〜N4）。問は qa-ab01 の依頼と qa-ab02・qa-ab04 の観測だけでは決められない点に限った。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T00:12:56Z",
+      "required_info_items": [
+        "api-contract",
+        "domain-model"
+      ]
+    },
+    {
+      "id": "qa-ab08-published-form-follow",
+      "question": "設定を後から変えたとき、すでに公開して回答が集まり始めたアンケートはどう追従させるか。選択肢：次の版の下書きを自動で作る／公開中の設問を差し替える／今回は決めない。",
+      "answer": "次の版の下書きを自動で作る。",
+      "provenance": "AskUserQuestion（4問、各3択）。2026-10-21T23:54:02Z の計測の後に問い、回答を受けた直後の 2026-10-22T00:12:56Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れず、『今回は決めない』の選択肢を置いた（N1〜N4）。問は qa-ab01 の依頼と qa-ab02・qa-ab04 の観測だけでは決められない点に限った。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T00:12:56Z",
+      "required_info_items": [
+        "data-persistence",
+        "domain-model"
+      ]
+    },
+    {
+      "id": "qa-ab09-finalized-evaluation-keep",
+      "question": "設定を後から変えたとき、すでに確定した評価と評価レポートはどう扱うか。選択肢：確定した時点のまま残す（確定前の評価だけが最新に追従する）／確定済みも最新で集計し直す／今回は決めない。",
+      "answer": "確定した時点のまま残す。",
+      "provenance": "AskUserQuestion（4問、各3択）。2026-10-21T23:54:02Z の計測の後に問い、回答を受けた直後の 2026-10-22T00:12:56Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れず、『今回は決めない』の選択肢を置いた（N1〜N4）。問は qa-ab01 の依頼と qa-ab02・qa-ab04 の観測だけでは決められない点に限った。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T00:12:56Z",
+      "required_info_items": [
+        "data-persistence",
+        "domain-model"
+      ]
+    },
+    {
+      "id": "qa-ab10-band-drift-rewrite",
+      "question": "行動指針の分け方が既定（等級1・2／等級3・4-1・4-2／等級5-1・5-2は出さない）からずれている会社（画像の会社を含む）は、どう既定に合わせるか。選択肢：データを既定へ書き換える／画面に「既定に戻す」を置く／今回は決めない。",
+      "answer": "データを既定へ書き換える。",
+      "provenance": "AskUserQuestion（4問、各3択）。2026-10-21T23:54:02Z の計測の後に問い、回答を受けた直後の 2026-10-22T00:12:56Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れず、『今回は決めない』の選択肢を置いた（N1〜N4）。問は qa-ab01 の依頼と qa-ab02・qa-ab04 の観測だけでは決められない点に限った。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T00:12:56Z",
+      "required_info_items": [
+        "data-persistence",
+        "domain-model"
+      ]
+    },
+    {
+      "id": "qa-ab11-survey-writeback-rule-conflict",
+      "question": "下書きのアンケートで設問を足したり外したりした結果が、評価セットの決まり（等級区分ごとの項目数・固定枠・20点枠）や、KPI の計算に要る設問（分子・分母など）に合わなくなるとき、保存をどう扱うか。選択肢：保存を断り理由と直す所を示す／保存して反映し食い違いを知らせる／今回は決めない。",
+      "answer": "保存を断り理由と直す所を示す。",
+      "provenance": "AskUserQuestion（2問、各3択）。qa-ab07〜qa-ab10 の記録の後、評価セットの保存処理（src/actions/scheme.ts の saveScheme が等級区分ごとの項目数・固定枠・20点枠をサーバーで検査する）と、下書きにつながった設問を新しく足せないこと（src/lib/domain/form-question-links.ts の checkQuestionLinks）、画像の 0 / 9 が手元の見本（8人）と本番の見本の会社（一般10名）のどちらとも合わないことを確かめてから問い、回答を受けた直後の 2026-10-22T00:35:44Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れず、『今回は決めない』の選択肢を置いた（N1〜N4）。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T00:35:44Z",
+      "required_info_items": [
+        "api-contract",
+        "domain-model"
+      ]
+    },
+    {
+      "id": "qa-ab12-showcase-data-location",
+      "question": "「評価を作る」画面を試すための仮のデータ（提出済みの回答を含む。氏名は実在しない「サンプル」など）を、どこに用意するか。本物の会社のデータには入れない（README の規範）。選択肢：手元の見本だけ／手元と本番の見本の会社の両方（製品仕様 §14 で避けた受付中の期を本番に作り、本番の未回答の一覧に見本の人が並ぶ）／今回は決めない。",
+      "answer": "手元と本番の見本の会社の両方。",
+      "provenance": "AskUserQuestion（2問、各3択）。qa-ab07〜qa-ab10 の記録の後、評価セットの保存処理（src/actions/scheme.ts の saveScheme が等級区分ごとの項目数・固定枠・20点枠をサーバーで検査する）と、下書きにつながった設問を新しく足せないこと（src/lib/domain/form-question-links.ts の checkQuestionLinks）、画像の 0 / 9 が手元の見本（8人）と本番の見本の会社（一般10名）のどちらとも合わないことを確かめてから問い、回答を受けた直後の 2026-10-22T00:35:44Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れず、『今回は決めない』の選択肢を置いた（N1〜N4）。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T00:35:44Z",
+      "required_info_items": [
+        "data-persistence",
+        "ops-runbook"
+      ]
+    },
+    {
+      "id": "qa-ab13-foundation-016-approval",
+      "question": "要件基盤への追記を、今の文と新しい文を preview に並べた4問の2択（この内容で確定する／確定を保留する）で確かめる。(1) U1 の末尾と U2 の末尾に、2026-10-22 の依頼とコード調査の結果を足す。(2) G25（行動指針の分け方の既定）と O25・I26、G26（行動指針と KPI・評価セットの画面の認知の負荷）と O26・I27、それぞれの成功基準・範囲・制約。(3) G27（後から設定した方を正とする両方向の追従）と O27・I28・I29・I30、成功基準・範囲の外・制約。(4) G28（評価を作る画面を試す仮のデータ）と O28・I31、G29（共通部品のグラデーションと色使い）と O29・I32、範囲の外・制約。",
+      "answer": "4問とも「この内容で確定する」。",
+      "provenance": "AskUserQuestion（4問、各2択）。qa-ab11・qa-ab12 の記録と、追記の下書きを writer の set-foundation で候補ファイルへ当てて形の検査を通した（rc=0）後に問い、回答を受けた直後の 2026-10-22T01:01:02Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T01:01:02Z",
+      "required_info_items": [
+        "api-contract",
+        "context-of-use",
+        "data-persistence",
+        "domain-model",
+        "frontend-arch",
+        "information-priority",
+        "ops-runbook",
+        "product-goal",
+        "security-posture"
+      ]
+    },
+    {
+      "id": "qa-ab14-ui-scope-beyond-buttons",
+      "question": "（利用者からの追加の指示。こちらから問うたものではない）G29 の色使いを、どの部品と UI/UX の範囲まで反映させるか。",
+      "answer": "UI と UI/UX について、ボタンのグラデーションだけではなく、それ以外の内容に関しても反映させる。",
+      "provenance": "qa-ab13 の承認の直後、作業中に利用者が送った文（原文:「UIに関して、UI/UXに関して、ボタンのグラデーションだけではなく、それ以外の内容に関しても反映させるようにしておいてほしいです。」）。受け取った直後の 2026-10-22T01:03:16Z を回答時刻とした。範囲は src/components の共通部品の一覧（ui.tsx の Button〜RankMark、ActionButton・ConfirmButton・DataTable・Charts・ComparisonGapNotice・AppSidebar・HeaderNav）から読み、G29・O29・I32 の対象を全ての共通部品へ広げ、I33 を足した。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T01:03:16Z",
+      "required_info_items": [
+        "context-of-use",
+        "frontend-arch",
+        "information-priority"
+      ]
+    },
+    {
+      "id": "qa-ab15-foundation-017-approval",
+      "question": "qa-ab14 で広げた範囲の要件基盤の追記を、今の文と新しい文を preview に並べた3問の2択（この内容で確定する／確定を保留する）で確かめる。(1) G29・O29・I32・成功基準を、ボタンだけでなくカード・見出しの面・選ぶ部品・状態の印・進み具合・数の面・知らせ・表・いまいる場所の印まで広げる。(2) I33（色使い以外の手応えと強弱。押す・選ぶ・開く部品の状態の見分け、押せる面は 44px 四方以上、1つの面で主の操作は1つ、段階的な開示と境界のはっきりしたカードを共通部品で全ての画面へ、画面の組み替えは I27 の2画面と評価を作る画面に限る）を足す。(3) 8章（ui-ux・frontend・backend・database・security・auth・infrastructure・maintenance-ops）の確定セルの serves_goals に G25〜G29 を、qa_refs に qa-ab01〜qa-ab14 を足す。",
+      "answer": "3問とも「この内容で確定する」。",
+      "provenance": "AskUserQuestion（3問、各2択）。completeness evaluator の FAIL（foundation_trace：appr-foundation-016 の承認が qa-ab14 で広げた G29・O29・I32・成功基準と I33 を覆わない）を受け、広げた文を writer の set-foundation で候補ファイルへ当てて形の検査を通した後に、今の文と新しい文を preview に並べて問い、回答を受けた直後の 2026-10-22T02:03:52Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。この承認を appr-foundation-017 として記録し、appr-foundation-016 を置き換える。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T02:03:52Z",
+      "required_info_items": [
+        "auth-model",
+        "context-of-use",
+        "data-persistence",
+        "domain-model",
+        "frontend-arch",
+        "information-priority",
+        "infra-topology",
+        "ops-runbook",
+        "product-goal",
+        "security-posture"
+      ]
+    },
+    {
+      "id": "qa-ab16-foundation-018-approval",
+      "question": "completeness evaluator の goal-seek 2周目の FAIL（foundation_trace：G27・I28・I29 が DD-015 の『新しい設問を KPI 項目に紐づけない』と DD-016 が却下した『聞き方の保存で下書きを書き換える』を改めるのに、要件基盤にも設計原則の適用にも、改める DD を書くことが記録されていない）を受け、要件基盤の制約に「アンケートから設定への反映（I28）と、設定の保存での下書きの作り直し（I29）は、DD-015（新しい設問を KPI 項目に紐づけず、紐づけは作り直しのときにだけサーバーが書く）と、DD-016 が却下した「聞き方の保存で下書きを書き換える」を改める。DD-015・DD-016 を改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す。」を足して確定するかを、今の文と新しい文を preview に並べた1問の2択（この内容で確定する／確定を保留する）で確かめる。合わせて、qa-ab15 の承認の範囲内として ui-ux・frontend・maintenance-ops の確定セルに抜けていた qa-ab の参照を足し、maintenance-ops・backend の設計原則の適用に同じ一文を足すことを preview に示した。",
+      "answer": "「この内容で確定する」。",
+      "provenance": "AskUserQuestion（1問、2択）。足す制約を writer の set-foundation で候補ファイルへ当てて形の検査（rc=0、制約26件）を通した後に、今の文と新しい文を preview に並べて問い、回答を受けた直後の 2026-10-22T03:44:17Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。この承認を appr-foundation-018 として記録し、appr-foundation-017 を置き換える。人の章 release-and-forms.md §7 には、今の実装の動きと改まる点を分けた注記を先に足した。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T03:44:17Z",
+      "required_info_items": [
+        "api-contract",
+        "data-persistence",
+        "domain-model",
+        "frontend-arch",
+        "ops-runbook"
+      ]
+    },
+    {
+      "id": "qa-ab17-foundation-019-approval",
+      "question": "completeness evaluator の goal-seek 3周目の FAIL（foundation_trace：範囲の内の「行動指針の既定の分け方へのデータの移行」（I26・G25）が、範囲の外の「本番データの移行・修正（…を除く）」の除外に入っておらず、同じ移行が範囲の内と外の両方にある。あわせて low として、範囲の外の「本番 DB へのテストデータの投入」と G28・I31 の「本番の見本の会社への仮のデータ」の区別が書かれていない）を受け、範囲の外の2つの文を改めて確定するかを、今の文と新しい文を preview に並べた2問の2択（この内容で確定する／確定を保留する）で確かめる。(1) 除外の括弧に「行動指針の既定の割り当てへの書き換え（I26）」を足す。(2) 「本番 DB へのテストデータ（手元の seed と E2E のデータ）の投入。本番の見本の会社への仮のデータ（G28・I31）は除く」に改める。",
+      "answer": "2問とも「この内容で確定する」。",
+      "provenance": "AskUserQuestion（2問、各2択）。改めた範囲の文を writer の set-foundation で候補ファイルへ当てて形の検査（rc=0）を通した後に、今の文と新しい文を preview に並べて問い、回答を受けた直後の 2026-10-22T04:17:54Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。中身は qa-ab10（既定へ書き換える）と qa-ab12（手元と本番の見本の会社の両方）で決まっていた判断を範囲の文へ写すもので、この承認を appr-foundation-019 として記録し、appr-foundation-018 を置き換える。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T04:17:54Z",
+      "required_info_items": [
+        "data-persistence",
+        "domain-model",
+        "ops-runbook",
+        "product-goal"
+      ]
+    },
+    {
+      "id": "qa-ab18-foundation-020-approval",
+      "question": "completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲の内の「1つのアカウントでの複数の会社への所属」に伴う、所属の表への既存の利用者の写し（0033）と取り込みで作った人の所属の補い（0036）が、範囲の外の「本番データの移行・修正（…を除く）」の除外に入っていない。qa-v26 (1)・qa-v29 (1) で決めた移行）を受け、この仕様で足した移行（drizzle/migrations の 0032〜0039）のうち行を書き換えるものを全部洗い（0032・0033・0034・0035・0036・0039。0037・0038 は表と列の追加だけ）、これから足す I26 と合わせて除外に挙げる形へ範囲の外の文を改めて確定するかを、今の文と新しい文を preview に並べた1問の2択（この内容で確定する／確定を保留する）で確かめる。",
+      "answer": "「この内容で確定する」。",
+      "provenance": "AskUserQuestion（1問、2択）。改めた範囲の文を writer の set-foundation で候補ファイルへ当てて形の検査（rc=0）を通した後に、今の文と新しい文を preview に並べて問い、回答を受けた直後の 2026-10-22T06:34:15Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。中身は qa-v26 (1)・qa-v29 (1)（所属の表と移行）、qa-r-database-3 (6)（0032 の番号の振り直し）、範囲の内の等級名の書き換え（0034・0035）・事業所の表の削除（0039）・I26 で決まっていた判断を範囲の文へ写すもので、この承認を appr-foundation-020 として記録し、appr-foundation-019 を置き換える。0021・0023・0025・0030 も行を書き換えるが、この仕様より前（2026-08〜09 の PR #75・#77・#80・#88）に足した移行なので挙げない。",
+      "basis": "user-decision",
+      "answered_at": "2026-10-22T06:34:15Z",
+      "required_info_items": [
+        "data-persistence",
+        "domain-model",
+        "ops-runbook",
+        "product-goal"
+      ]
     }
   ],
   "approval_log": [
@@ -4130,6 +4716,26 @@
     {
       "id": "appr-foundation-015",
       "note": "利用者は qa-z07 により、U2 の G22、U9 の I23、成功基準のズレの警告の行、O22 の測り方に「今の設定と一致した新しい版」の条件を足す差し替えを、今の文と新しい文を preview に並べた2問の2択（この内容で確定する／確定を保留する。利点と不利な点を対称に書き、推奨の印は入れなかった）で、2問とも『この内容で確定する』と承認した。差し替えは実装と DD-012・DD-022 に土台をそろえるためで、新しい決定は含まない。ほかの G・O・I・成功基準・制約は appr-foundation-014 のとおり。本記録は appr-foundation-014 を置き換える（superseded）。"
+    },
+    {
+      "id": "appr-foundation-016",
+      "note": "利用者は qa-ab13 により、U1 と U2 の末尾への追記、G25〜G29、O25〜O29、I26〜I33、成功基準6件・範囲に入れる5件・範囲の外5件・制約4件の追加を、今の文と新しい文を preview に並べた4問の2択（この内容で確定する／確定を保留する。利点と不利な点を対称に書き、推奨の印は入れなかった）で、4問とも『この内容で確定する』と承認した。追加は qa-ab01 の依頼、qa-ab02〜qa-ab06 の観測、qa-ab07〜qa-ab12 の利用者の判断に土台を置く。新しい決定は、DD-010（移行で行動指針の割り当てを書き換えない）を改めること（qa-ab10）と、製品仕様 §14（受付中の期は作らない）を改めること（qa-ab12）を含む。その直後に利用者は qa-ab14 で、ボタンのグラデーションだけでなくほかの UI/UX にも反映するよう指示した。これを受けて G29・O29・I32・G29 の成功基準の文の対象をボタン以外の全ての共通部品へ広げ、I33（色以外の手応えと強弱、段階的な開示とカードを共通部品から全ての画面へ）を足した。広げた文は指示の範囲を文にしたもので、preview を並べて問い直してはいない。ほかの G・O・I・成功基準・範囲・制約は appr-foundation-015 のとおり。本記録は appr-foundation-015 を置き換える（superseded）。"
+    },
+    {
+      "id": "appr-foundation-017",
+      "note": "利用者は qa-ab15 により、qa-ab14 の指示で広げた G29・O29・I32・G29 の成功基準（ボタンだけでなく、カード・見出しの面・選ぶ部品・状態の印・進み具合・数の面・知らせ・表・いまいる場所の印の全ての共通部品）と、I33（押す・選ぶ・開く部品の状態の見分け、押せる面は 44px 四方以上、1つの面で主の操作は1つ、段階的な開示と境界のはっきりしたカードを共通部品で全ての画面へ、画面の組み替えは I27 の2画面と評価を作る画面に限る）と、8章（ui-ux・frontend・backend・database・security・auth・infrastructure・maintenance-ops）の確定セルへの G25〜G29 と qa-ab01〜qa-ab14 の追加を、今の文と新しい文を preview に並べた3問の2択（この内容で確定する／確定を保留する。利点と不利な点を対称に書き、推奨の印は入れなかった）で、3問とも『この内容で確定する』と承認した。appr-foundation-016 で preview を並べて問い直していなかった広げた文は、これで利用者の承認を持つ。ほかの U1〜U9・G・O・I・成功基準・範囲・制約は appr-foundation-016 のとおり。本記録は appr-foundation-016 を置き換える（superseded）。"
+    },
+    {
+      "id": "appr-foundation-018",
+      "note": "利用者は qa-ab16 により、要件基盤の制約に「アンケートから設定への反映（I28）と、設定の保存での下書きの作り直し（I29）は、DD-015（新しい設問を KPI 項目に紐づけず、紐づけは作り直しのときにだけサーバーが書く）と、DD-016 が却下した「聞き方の保存で下書きを書き換える」を改める。DD-015・DD-016 を改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す。」を足すことを、今の文と新しい文を preview に並べた1問の2択（この内容で確定する／確定を保留する。利点と不利な点を対称に書き、推奨の印は入れなかった）で『この内容で確定する』と承認した。completeness evaluator の goal-seek 2周目が foundation_trace で指摘した、DD-015・DD-016 を改めることの記録の無さは、これで利用者の承認を持つ制約になる。ほかの U1〜U9・G・O・I・成功基準・範囲・制約は appr-foundation-017 のとおり。本記録は appr-foundation-017 を置き換える（superseded）。"
+    },
+    {
+      "id": "appr-foundation-019",
+      "note": "利用者は qa-ab17 により、範囲の外の2つの文を改めることを、今の文と新しい文を preview に並べた2問の2択（この内容で確定する／確定を保留する。利点と不利な点を対称に書き、推奨の印は入れなかった）で、2問とも『この内容で確定する』と承認した。(1) 「本番データの移行・修正」の除外の括弧に「行動指針の既定の割り当てへの書き換え（I26）」を足し、範囲の内の「行動指針の既定の分け方へのデータの移行」との食い違いを無くす。(2) 「本番 DB へのテストデータ（手元の seed と E2E のデータ）の投入。本番の見本の会社への仮のデータ（G28・I31）は除く」に改め、G20 の「本番には入れない」テストデータと、G28・I31 の見本の会社の仮のデータを分ける。中身は qa-ab10 と qa-ab12 で決まっていた判断を範囲の文へ写すもの。ほかの U1〜U9・G・O・I・成功基準・範囲・制約は appr-foundation-018 のとおり。本記録は appr-foundation-018 を置き換える（superseded）。"
+    },
+    {
+      "id": "appr-foundation-020",
+      "note": "qa-ab18-foundation-020-approval（2026-10-22T06:34:15Z、AskUserQuestion 1問2択）で「この内容で確定する」。completeness evaluator の goal-seek 4周目の foundation_trace の指摘（所属の表への移行 0033・0036 が範囲の外の除外に無い）を受け、範囲の外の「本番データの移行・修正」の除外を、この仕様で足した 0032〜0039 のうち行を書き換える移行の全部（0032・0033・0034・0035・0036・0039）と、これから足す I26 を挙げる形へ改めた。appr-foundation-019 を置き換える。"
     }
   ],
   "reopen_log": [
@@ -6071,11 +6677,67 @@
       "also_categories": [
         "frontend"
       ]
+    },
+    {
+      "target_id": "mdn-css-color-mix",
+      "category": "frontend",
+      "also_categories": [
+        "ui-ux"
+      ]
+    },
+    {
+      "target_id": "mdn-css-linear-gradient",
+      "category": "frontend",
+      "also_categories": [
+        "ui-ux"
+      ]
+    },
+    {
+      "target_id": "mdn-prefers-reduced-motion",
+      "category": "ui-ux",
+      "also_categories": [
+        "frontend"
+      ]
+    },
+    {
+      "target_id": "mdn-prefers-contrast",
+      "category": "ui-ux",
+      "also_categories": [
+        "frontend"
+      ]
+    },
+    {
+      "target_id": "w3c-wcag22-contrast-minimum",
+      "category": "ui-ux",
+      "also_categories": [
+        "frontend"
+      ]
+    },
+    {
+      "target_id": "w3c-wcag22-non-text-contrast",
+      "category": "ui-ux",
+      "also_categories": [
+        "frontend"
+      ]
+    },
+    {
+      "target_id": "w3c-wcag22-focus-visible",
+      "category": "ui-ux",
+      "also_categories": [
+        "frontend"
+      ]
+    },
+    {
+      "target_id": "w3c-wcag22-target-size-enhanced",
+      "category": "ui-ux",
+      "also_categories": [
+        "frontend"
+      ]
     }
   ],
   "requirements_foundation": {
-    "essential_purpose": "利用者が作成・変更・削除した結果を、成功表示の直後の画面・再読み込み・他のタブと画面復帰のどれでも必ず確認できるようにし、『本当に保存できたのか』を疑わずに次の作業へ進める状態をシステムとして保証する。あわせて、等級の呼び名・役割ごとにできること・各人の等級と評価・アンケートの提出状況・設定の足りない所を、どの画面でも同じ言葉で、見てよい人にだけ示し、利用者が『誰が何をできるか』『どこで何を直せばよいか』を迷わずに判断して操作できる状態にする。さらに、管理者・直属の上司・本人が、その人が評価に値するかどうか・点数・項目ごとの強みと弱み・過去の推移を、毎回同じ型で作られる個人別の評価レポートで一目で確かめられるようにする。そのために、アンケートの設問と回答・昇給の設定・KPI 評価セットが、同じ評価期間の定義で食い違わずにつながり、評価の結果がいつ作っても同じになる状態を保つ。使っていない事業所KGIの仕組みは残さない。評価に値するかの結論は、点数の判定だけで決めず、評価を確定する上司が理由とともに記録した判断を合わせて決め、その理由は本人にも同じ文で示す。",
-    "background": "2026-09-30 の報告で、会社追加の成功メッセージとパスワード控えが出ても会社一覧（6社）に新しい会社が現れず、再読み込み（⌘+Shift+R を含む）でも出ないまま、しばらく後に反映される事象が確認された。利用者登録・アンケート作成など新規作成の全機能で同様とされる。コード調査で、書き込み後の鮮度を保証する共通の仕組みが無く、34 ファイルが個別に useRefreshAfterSave（router.refresh）を呼ぶだけで、サーバー側の revalidatePath と Server Actions は 0 件だった。連続作成フォーム（RecordForm の generate 経路）では、控えを残すため refresh 自体が次の送信まで省略される。会社追加 API は会社・管理者・所属を別々に書き込み、途中失敗で中途状態が残り得る。2026-10-12 の依頼（画像9枚）で、次の問題が報告された。等級名が『等級１：Beginner』のように英語を含み、行動指針や評価セットでは『Regular』『Chief』などの区分名がそのまま出て、等級名とそろっていない。等級名を変えても、画面の文やボタンに反映されない所がある。役割ごとにどの画面で何ができるかを確かめる手段が無い。利用者一覧から、各人の等級と最新の評価を確かめられない。複数の会社に所属するマネージャーを、メールアドレスが登録済みのため2社目に登録できない。アンケートで誰が提出していないかが一覧で分からない画面がある。設定不足の警告が『Chief: 選んだ項目のうち1件の基準(A〜E)が未設定です。』のように、何をどこで直すかが分からない。並べ替えが矢印のボタンだけで、ドラッグできない。アンケートの選択肢を押しても選べない。評価期間などの画面で右側の余白が目立つ。コード調査で、等級名を表示用に整える共通の関数が無く、区分（pointGroup）の英語名が結合キーと表示を兼ねていること、users.email が一意で会社への所属を表す表が無いこと、警告が文字列だけで直す画面へのリンクを持たないこと、ドラッグ用の部品が無いこと、権限の一覧表がコードのどこにも無いことを確かめた。 2026-10-14 の依頼（画像1枚）で、アンケート一覧の警告が、どのページとどのページの内容が食い違っているかを示さず、たどれないことが報告された。同じ日の追加の指示で、警告の文が長く並んで読みにくいため、既定では出さずに押すと出す形にし、直すところを箇条書きや表で示すよう求められた。コード調査で、警告の型（SetupGap）がリンクを1本しか持てず、ズレの片側しか指せないこと、ズレがアンケート一覧にしか出ないこと、公開後のズレを直すには全等級の新しい版を作るしかないことを確かめた。 2026-10-19 の依頼（画像2枚：評価・結果を確認する画面とアンケートの画面）で、次のことが求められた。サイドバー『運用を補う』の『事業所KGIの達成率』は、仕組みが整っておらず当面使わないため、将来の再導入で競合しないよう完全に消す。昇給の設定とアンケートの回答を踏まえた個人別の評価レポートを、図やグラフ（評価に値するか・点数・三角形〜六角形のレーダー図・過去のその等級の点数・等級ごとの点数・過去の実績）で、再現性のあるテンプレートに沿って毎回作れるようにする。担当者と権限のある人が、部下の評価結果の中身を見られるようにする。全項目を確かめられるテストデータを入れる。アンケートの全機能（URL・回答・回答一覧・内容の確認と編集・締め切る・評価項目とのズレの直すところ）を確かめ、アンケート・昇給の設定・KPI 評価セットの依存関係を整える。コード調査で次を確かめた。KGI は賞与（仮）の計算（個人Pt＝KPI評価点の合計×KGI係数）と一体で、3つの表と評価の表の2列を持つ。本番の Deploy はマイグレーションをコードより先に当てる。個人別のレポートの画面は無い。シードは受付中の評価期間の評価を作らず、評価結果の中身を確かめられない。CSV の書き出しはマネージャーにも会社の全員分を返し、管理者向けのメモがマネージャーに見える。評価項目とのズレは KPI 項目だけを比べ、等級要件と行動指針を比べず、項目ごとの直すリンクが無い。下書きの新しい版がズレていなければ、回答を集めている公開中の古い版の警告が消える。ズレを比べる評価セット（会社の有効なもの）と、アンケートを作る・点数を計算する評価セット（評価期間に指定したもの）が別々に決まる。アンケートの状態の変更（締切済みから公開中など）をサーバーで止めていない。古い版を締め切る処理と版の番号を決める処理が会社で絞っていない。締め切ったアンケートの延長で、画面に無い操作を案内する。 同日の追加の依頼で、個人別の評価レポートを A4 で印刷できるようにすることが明示された。 さらに同じ作業の途中で、昇給・昇格を点数の判定だけで決めず、上司のコメントと判断（例：アンケートの基準は満たしているが上げない）を合わせて決め、それをレポートとして本人・上司・管理者に渡せるようにすることが求められた。コード調査で、昇給と昇格の可否は点数で自動に決まり、上司のコメントの欄は判定に効かず、上司が止めるには項目の実績値を書き換えるしかないことを確かめた。",
+    "essential_purpose": "利用者が作成・変更・削除した結果を、成功表示の直後の画面・再読み込み・他のタブと画面復帰のどれでも必ず確認できるようにし、『本当に保存できたのか』を疑わずに次の作業へ進める状態をシステムとして保証する。あわせて、等級の呼び名・役割ごとにできること・各人の等級と評価・アンケートの提出状況・設定の足りない所を、どの画面でも同じ言葉で、見てよい人にだけ示し、利用者が『誰が何をできるか』『どこで何を直せばよいか』を迷わずに判断して操作できる状態にする。さらに、管理者・直属の上司・本人が、その人が評価に値するかどうか・点数・項目ごとの強みと弱み・過去の推移を、毎回同じ型で作られる個人別の評価レポートで一目で確かめられるようにする。そのために、アンケートの設問と回答・昇給の設定・KPI 評価セットが、同じ評価期間の定義で食い違わずにつながり、評価の結果がいつ作っても同じになる状態を保つ。使っていない事業所KGIの仕組みは残さない。評価に値するかの結論は、点数の判定だけで決めず、評価を確定する上司が理由とともに記録した判断を合わせて決め、その理由は本人にも同じ文で示す。さらに、設定（等級要件・行動指針・KPI・評価セット）とアンケートの設問のどちらを後から変えても、後から変えた方を正として、もう一方と、その写しを持つ全ての画面と機能が追従する状態を保つ（確定した評価と評価レポートは確定した時点のまま残す）。行動指針と KPI・評価セットの画面は、最初に見る量を判断に要るものだけに絞り、操作に応じて詳しい内容を開ける形にして、設定の作業の認知の負荷を下げる。",
+    "background": "2026-09-30 の報告で、会社追加の成功メッセージとパスワード控えが出ても会社一覧（6社）に新しい会社が現れず、再読み込み（⌘+Shift+R を含む）でも出ないまま、しばらく後に反映される事象が確認された。利用者登録・アンケート作成など新規作成の全機能で同様とされる。コード調査で、書き込み後の鮮度を保証する共通の仕組みが無く、34 ファイルが個別に useRefreshAfterSave（router.refresh）を呼ぶだけで、サーバー側の revalidatePath と Server Actions は 0 件だった。連続作成フォーム（RecordForm の generate 経路）では、控えを残すため refresh 自体が次の送信まで省略される。会社追加 API は会社・管理者・所属を別々に書き込み、途中失敗で中途状態が残り得る。2026-10-12 の依頼（画像9枚）で、次の問題が報告された。等級名が『等級１：Beginner』のように英語を含み、行動指針や評価セットでは『Regular』『Chief』などの区分名がそのまま出て、等級名とそろっていない。等級名を変えても、画面の文やボタンに反映されない所がある。役割ごとにどの画面で何ができるかを確かめる手段が無い。利用者一覧から、各人の等級と最新の評価を確かめられない。複数の会社に所属するマネージャーを、メールアドレスが登録済みのため2社目に登録できない。アンケートで誰が提出していないかが一覧で分からない画面がある。設定不足の警告が『Chief: 選んだ項目のうち1件の基準(A〜E)が未設定です。』のように、何をどこで直すかが分からない。並べ替えが矢印のボタンだけで、ドラッグできない。アンケートの選択肢を押しても選べない。評価期間などの画面で右側の余白が目立つ。コード調査で、等級名を表示用に整える共通の関数が無く、区分（pointGroup）の英語名が結合キーと表示を兼ねていること、users.email が一意で会社への所属を表す表が無いこと、警告が文字列だけで直す画面へのリンクを持たないこと、ドラッグ用の部品が無いこと、権限の一覧表がコードのどこにも無いことを確かめた。 2026-10-14 の依頼（画像1枚）で、アンケート一覧の警告が、どのページとどのページの内容が食い違っているかを示さず、たどれないことが報告された。同じ日の追加の指示で、警告の文が長く並んで読みにくいため、既定では出さずに押すと出す形にし、直すところを箇条書きや表で示すよう求められた。コード調査で、警告の型（SetupGap）がリンクを1本しか持てず、ズレの片側しか指せないこと、ズレがアンケート一覧にしか出ないこと、公開後のズレを直すには全等級の新しい版を作るしかないことを確かめた。 2026-10-19 の依頼（画像2枚：評価・結果を確認する画面とアンケートの画面）で、次のことが求められた。サイドバー『運用を補う』の『事業所KGIの達成率』は、仕組みが整っておらず当面使わないため、将来の再導入で競合しないよう完全に消す。昇給の設定とアンケートの回答を踏まえた個人別の評価レポートを、図やグラフ（評価に値するか・点数・三角形〜六角形のレーダー図・過去のその等級の点数・等級ごとの点数・過去の実績）で、再現性のあるテンプレートに沿って毎回作れるようにする。担当者と権限のある人が、部下の評価結果の中身を見られるようにする。全項目を確かめられるテストデータを入れる。アンケートの全機能（URL・回答・回答一覧・内容の確認と編集・締め切る・評価項目とのズレの直すところ）を確かめ、アンケート・昇給の設定・KPI 評価セットの依存関係を整える。コード調査で次を確かめた。KGI は賞与（仮）の計算（個人Pt＝KPI評価点の合計×KGI係数）と一体で、3つの表と評価の表の2列を持つ。本番の Deploy はマイグレーションをコードより先に当てる。個人別のレポートの画面は無い。シードは受付中の評価期間の評価を作らず、評価結果の中身を確かめられない。CSV の書き出しはマネージャーにも会社の全員分を返し、管理者向けのメモがマネージャーに見える。評価項目とのズレは KPI 項目だけを比べ、等級要件と行動指針を比べず、項目ごとの直すリンクが無い。下書きの新しい版がズレていなければ、回答を集めている公開中の古い版の警告が消える。ズレを比べる評価セット（会社の有効なもの）と、アンケートを作る・点数を計算する評価セット（評価期間に指定したもの）が別々に決まる。アンケートの状態の変更（締切済みから公開中など）をサーバーで止めていない。古い版を締め切る処理と版の番号を決める処理が会社で絞っていない。締め切ったアンケートの延長で、画面に無い操作を案内する。 同日の追加の依頼で、個人別の評価レポートを A4 で印刷できるようにすることが明示された。 さらに同じ作業の途中で、昇給・昇格を点数の判定だけで決めず、上司のコメントと判断（例：アンケートの基準は満たしているが上げない）を合わせて決め、それをレポートとして本人・上司・管理者に渡せるようにすることが求められた。コード調査で、昇給と昇格の可否は点数で自動に決まり、上司のコメントの欄は判定に効かず、上司が止めるには項目の実績値を書き換えるしかないことを確かめた。 2026-10-22 の依頼（画像5枚：行動指針、KPI・評価セットの入口、KPI 項目の一覧、アンケートと評価項目のズレの表、評価・結果を確認する）で、次が求められた。行動指針の分け方の既定を、等級1・2で1つ、等級3・4-1・4-2で1つ、等級5-1・5-2は出さない形にする（呼び名は会社ごとに変わるが、考え方は同じ）。行動指針と KPI・評価セットの画面の認知の負荷を下げる（最初は少なく見せて操作に応じて出す、等級ごとの表示を境界のはっきりしたカードやブロックにする、KPI 項目の文の長さと改行を整える、1画面に並ぶ複数の作業を分ける）。後から設定した方を正とし、設定とアンケートのどちらを後から直しても他の画面へ反映することを、全ての画面と機能で行う。評価を作る画面を試すため、提出済みの回答を含む仮のデータを作る。カードとボタンのグラデーションなど、共通部品の見た目を華やかにする。コード調査で次を確かめた。画像の行動指針は、等級1だけが等級3〜4-2のまとまりへ移った状態（製品仕様 §28-12 と DD-010 に記録された本番の状態）で、「行動指針の初期設定について」の文はいまの割り当てを読まずに既定の形を示す。設定とアンケートは設定からアンケートへの一方向の写しで、反映は回答0件の下書きの作り直しと新しい版を作る操作の2つだけ。アンケートから設定へ戻す経路は無く、下書きに設定とつながった設問を新しく足すこともできない。評価セットの保存は、等級区分ごとの項目数・固定枠・20点枠をサーバーで検査する。行動指針と KPI・評価セットの入口は、説明と警告と最大7つの作業を1画面に並べ、KPI 項目の一覧は、聞くことと計算式を全角空白でつないだ1行で出す。本番の見本の会社は5期すべて締め済みで、提出済みの回答のある受付中の期を持たない。グラデーションは見出しの面の微グラデ1か所だけで、色は意味のトークンと契約テストで固定されている。",
     "goals": [
       {
         "id": "G1",
@@ -6172,6 +6834,26 @@
       {
         "id": "G24",
         "text": "昇給と昇格の可否を、点数の判定と、評価を確定する上司が理由とともに記録した判断（点数の判定どおり／変える）を合わせて決め、その結論と理由を、評価レポート・画面・CSV で本人・直属の上司・管理者に同じ形で示す。点数の判定は書き換えずに残す。"
+      },
+      {
+        "id": "G25",
+        "text": "行動指針の分け方の既定（等級1・2で1つ、等級3・4-1・4-2で1つ、等級5-1・5-2は出さない。呼び名を変えた会社でも、等級の内部の識別子で同じ分け方にする）を、新しい会社と、既定からずれた既存の会社の両方で成り立たせる。画面の初期設定の説明は、いまの割り当てを読んで示す。"
+      },
+      {
+        "id": "G26",
+        "text": "行動指針と KPI・評価セットの画面を、最初は判断に要る状態・件数・次にやることだけを見せ、操作に応じて詳しい説明と編集を開く形にする（情報は消さず、見せ方を変える）。KPI・評価セットは作業ごとに画面を分け、等級区分ごとの設定を境界のはっきりしたカードで示し、KPI 項目を読みやすい区切りで示す。"
+      },
+      {
+        "id": "G27",
+        "text": "設定（等級要件・行動指針・KPI・評価セット）とアンケートの設問のどちらを後から変えても、後から変えた方を正として、もう一方と、その写しを持つ全ての画面と機能が追従する。確定した評価と評価レポートは確定した時点のまま残し、確定前の評価だけが最新に追従する。"
+      },
+      {
+        "id": "G28",
+        "text": "評価・結果を確認する画面で「提出済みの回答から評価を作る」を試せるよう、提出済みの回答を含む受付中の評価期間の仮のデータ（氏名は実在しない「サンプル」など）を、手元の見本と本番の見本の会社の両方に用意する。"
+      },
+      {
+        "id": "G29",
+        "text": "ボタンだけでなく、カード・見出しの面・選ぶ部品・状態の印・進み具合・数の面・知らせ・表・いまいる場所の印など、全ての画面の共通部品に、いまのテーマの変数から作る、はっきりしたグラデーションと色の変化を持たせ、押した・選んだ・開いたが分かる手応えと、主の操作が一目で分かる強弱をそろえる。全ての系統・明暗・コントラストを強くする設定・印刷で読みやすさを保つ。平賀配色へは移さない。"
       }
     ],
     "objectives": [
@@ -6366,6 +7048,46 @@
         "serves": [
           "G24"
         ]
+      },
+      {
+        "id": "O25",
+        "text": "既定からずれた会社の割り当てをデータの移行で既定へ書き換え、新しい会社は既定で始め、初期設定の説明をいまの割り当てから作る。",
+        "measure": "移行のテスト（等級1だけが2つ目のまとまりへ移った会社が既定へ戻る・既定の会社は変わらない・呼び名を変えた会社も識別子で戻る・既定のまとまりが無い会社は書き換えずに件数を報告する・観点の中身は変わらない）。新しい会社が既定の割り当てで始まる結合テスト。初期設定の説明がいまの割り当てと一致し、既定と違うときに違いを示す画面のテスト。",
+        "serves": [
+          "G25"
+        ]
+      },
+      {
+        "id": "O26",
+        "text": "2つの画面の初期表示の量を減らし、KPI・評価セットの作業を画面ごとに分ける。",
+        "measure": "初期表示で見える説明文の数と1文の長さ（製品仕様 §22 の40字）と、同じ文が1画面に2回出ないことを固定する画面のテスト。KPI・評価セットの入口から、等級区分ごとの設定・全等級区分に共通の設定・KPI 項目・KPI カテゴリへ、それぞれ別の画面で進めること、等級区分ごとのカードに等級の並び・項目数・配点の合計・状態が出ること、KPI 項目の聞くことが1つずつ別の行に出ることの E2E。スマホとタブレットの幅で横にはみ出さないことの E2E。",
+        "serves": [
+          "G26"
+        ]
+      },
+      {
+        "id": "O27",
+        "text": "アンケートから設定へ、設定からアンケートと評価へ、の両方向の反映を保存の処理に組み込み、写しを持つ全ての場所に追従の規則を決める。",
+        "measure": "下書きのアンケートで設定とつながった設問を足す・外す・文を直すと、元の設定が同じ保存で変わること、評価セットの決まりや KPI の計算に要る設問に合わなくなる保存は断られ、合わない決まりと直す画面が示されることの、サーバー処理のテスト。設定を変えると、回答0件の下書きが作り直され（設定とつながらない設問は残る）、回答のある公開中のアンケートには次の版の下書きが1つだけでき、締め切ったアンケート・確定した評価・レポートは変わらず、確定前の評価は集計し直されることの結合テスト。写しを持つ場所の一覧（文書）とコードが一致することの契約テスト。保存の直後に、関係する画面と他のタブが新しい内容で出る E2E（製品仕様 §27）。",
+        "serves": [
+          "G27"
+        ]
+      },
+      {
+        "id": "O28",
+        "text": "手元の seed と本番の見本の会社に、提出済み・下書き・未回答が混ざった受付中の評価期間を足す。",
+        "measure": "見本の生成のテスト（受付中の期が1つあり、提出済み・下書き・未回答が混ざる、評価はまだ作られていない、氏名と会社が見本の印を持つ、他社の行に触れない）。手元の見本で「提出済みの回答から評価を作る」を押して、評価の一覧と詳細まで進める E2E。製品仕様 §14 の「受付中の期は作らない」を改める DD。",
+        "serves": [
+          "G28"
+        ]
+      },
+      {
+        "id": "O29",
+        "text": "共通部品の色使いと手応えを globals.css の部品クラスとして既存のトークンだけで書き、全ての画面が共通部品から使う。",
+        "measure": "既存のテーマの契約テスト（theme-contract・palette-contract・ui-rules・aidd-kit-boundary）が書き換えなしで通ること。I32・I33 に挙げた部品の全てが新しい部品クラスを使い、TSX に色を書いていないことを確かめる新しいテスト。全ての系統と明暗で、グラデーションの両端の色と文字の色の比が 4.5:1 以上（大きな文字と部品の縁は 3:1 以上）であることを確かめる新しいテスト。押す・選ぶ・開く部品で focus-visible の印が見えることのテスト。prefers-reduced-motion で動きが止まり、印刷・使えない状態・コントラストを強くする設定では平らな面に戻ることのテスト。主要な画面の明暗の見た目の記録。",
+        "serves": [
+          "G29"
+        ]
       }
     ],
     "success_criteria": [
@@ -6396,7 +7118,13 @@
       "ズレの警告で、等級要件・行動指針・KPI 項目の項目ごとに、直す画面へのリンクが出る。新しい版が下書きの間は、回答を集めている公開中の版の警告が消えず、今の設定と一致した新しい版を公開して古い版が締め切られたら出ない。",
       "ズレの比較・アンケートの作成・点数の計算・レポートの作成が、同じ評価期間の評価セットを使う。",
       "評価を確定するとき、上司は昇給と昇格のそれぞれで『点数の判定どおり／変える』を選び、変えるときは理由を書く。選ばずには確定できない。",
-      "レポート・画面・CSV で、昇給と昇格の結論が点数の判定と上司の判断を合わせたもので出る。上司が変えたときは印と理由が見え、理由は本人にも同じ文で見える。"
+      "レポート・画面・CSV で、昇給と昇格の結論が点数の判定と上司の判断を合わせたもので出る。上司が変えたときは印と理由が見え、理由は本人にも同じ文で見える。",
+      "新しい会社と、既定からずれていた会社の行動指針が、等級1・2で1つ、等級3・4-1・4-2で1つ、等級5-1・5-2は出さない形で表示され、初期設定の説明がいまの割り当てと一致する。",
+      "行動指針と KPI・評価セットの画面を開いた直後は、状態と次にやることだけが見え、詳しい説明と編集は開いたときに出る。KPI・評価セットの作業は、それぞれ別の画面で行える。",
+      "下書きのアンケートで設定とつながった設問を変えて保存すると、元の設定と、同じ設定を使う画面が同じ内容になる。評価セットの決まりに合わなくなる保存は、理由と直す画面とともに断られる。",
+      "設定を変えると、回答の無い下書きは作り直され、回答のある公開中のアンケートには次の版の下書きができ、確定前の評価は集計し直される。確定した評価と評価レポートは変わらない。",
+      "手元と本番の見本の会社で、提出済みの回答から評価を作り、評価の一覧と詳細まで確かめられる。",
+      "ボタン・カード・見出し・選ぶ部品・状態の印・進み具合・数の面・知らせ・表・いまいる場所の印の全てにグラデーションと色の変化と押した・選んだ・開いたの手応えが付き、既存のテーマの契約テストが書き換えなしで通り、グラデーションのコントラストと focus-visible の検査も全ての系統と明暗で通る。"
     ],
     "stakeholders": [
       "システム管理者: 会社追加・利用者登録の直後に結果を確かめ、控えを管理者へ渡す。",
@@ -6433,24 +7161,34 @@
         "アンケートの配布 URL・回答・回答一覧・内容の確認と編集・公開・締め切る・延長の、状態と案内の整理とサーバー側の守り",
         "評価項目とのズレの比べる範囲（等級要件・行動指針・KPI 項目）と、項目ごとの直すリンク",
         "評価期間から評価セットを決める処理の一本化（ズレの比較・アンケートの作成・点数の計算・レポート）と、依存関係の文書化",
-        "昇給と昇格の可否への上司の判断（判定どおり／変える・理由・記録した人と時刻）と、確定の前に必ず選ぶ形、全ての表示先での結論と印"
+        "昇給と昇格の可否への上司の判断（判定どおり／変える・理由・記録した人と時刻）と、確定の前に必ず選ぶ形、全ての表示先での結論と印",
+        "行動指針の既定の分け方へのデータの移行と、初期設定の説明をいまの割り当てから作ること",
+        "行動指針と KPI・評価セットの画面の段階的な表示、等級区分ごとのカード、KPI 項目の読みやすい区切り、KPI・評価セットの作業ごとの画面分け",
+        "設定とアンケートの両方向の追従（下書きのアンケートの保存で設定へ反映、設定の保存で下書きの作り直し・次の版の下書き・確定前の評価の集計し直し）と、写しを持つ場所の一覧と契約テスト",
+        "評価を作る画面を試すための、提出済みの回答を含む受付中の評価期間の仮のデータ（手元の見本と本番の見本の会社）",
+        "共通部品のグラデーションと色使い（テーマの契約の内側）"
       ],
       "out": [
         "別の利用者が開いている画面への即時配信（WebSocket 等の push）。別の利用者も次の画面遷移・再読み込みで最新を見られることは G2 で保証する",
         "オフライン編集と同期",
         "配色・テーマの変更（AGENTS.md と DD-003 により対象外）",
-        "本番データの移行・修正（等級名と、等級名を含む表示名の一律の書き換えと、事業所KGIの3つの表と評価の KGI の2列の削除を除く）",
+        "本番データの移行・修正。ただし範囲の内の項目に伴う次の移行は除く（この仕様で足した 0032〜0039 のうち行を書き換えるものの全部と、これから足す I26）：制度マスタの監査記録の、同じ実体の中での番号の重なりの振り直し（0032。複数の表を書く書き込みの守り）、所属の表への既存の利用者の写しと、取り込みで作った人の所属の補い（0033・0036。複数の会社への所属）、等級名と、等級名・区分名を含む表示名と写しの一律の書き換え（0034・0035）、事業所KGIの3つの表と評価の KGI の2列の削除（0039）、行動指針の既定の割り当てへの書き換え（I26）",
         "役割の種類の追加（『システム開発者』の役割は作らず、画面名だけを変える）",
         "役割ごとの権限の中身の変更（等級名を変更できる役割の制限と、評価結果の中身・レポート・CSV・メモの見える範囲を除く）",
         "比べる警告以外の設定不足の一覧（公開前の不足など）の表示の形の変更",
         "事業所KGIに代わる仕組みを作ること（将来の再導入は別の依頼で扱う）",
         "レポートを PDF などのファイルとしてサーバーで作ること（ブラウザの印刷で紙や PDF にする）",
         "間接の部下（部下の部下）へのマネージャーの閲覧",
-        "本番 DB へのテストデータの投入",
+        "本番 DB へのテストデータ（手元の seed と E2E のデータ）の投入。本番の見本の会社への仮のデータ（G28・I31）は除く",
         "確定済みの評価の個人Pt・賞与額・根拠の文の作り直し（そのときの計算の記録として変えない）",
         "上司の判断で等級を自動で変えること（等級は今と同じく管理者が人の設定で変える）",
         "上司の判断を賞与（仮）の計算に効かせること",
-        "上書きした前の判断の履歴を残すこと（記録した人と時刻だけを持つ）"
+        "上書きした前の判断の履歴を残すこと（記録した人と時刻だけを持つ）",
+        "確定した評価と評価レポートを新しい設定で集計し直すこと",
+        "公開中・締め切ったアンケートの設問をその場で差し替えること",
+        "評価セットの決まりや KPI の計算に合わなくなる変更を、アンケートから設定へ反映すること（理由と直す画面を示して断る）",
+        "平賀配色への移行と、新しい色のトークンの追加",
+        "本物の会社のデータに仮のデータを入れること"
       ]
     },
     "constraints": [
@@ -6474,7 +7212,12 @@
       "テストデータには実在の人名・評価値を使わない（公開リポジトリ）。本番の設定ではシードを動かさない。",
       "図は既存の recharts で描き、新しい依存を足さない。色は今のテーマの変数から取り、平賀配色への移行はしない。",
       "上司の判断の理由は本人にもそのまま見えるので、性格ではなく行動や事実で書くよう画面で促す。",
-      "点数の判定（raiseEligible・promotionEligible と理由の文）は上司の判断で書き換えない。判定を変えるためだけに項目の実績値を上書きしなくて済むようにする。"
+      "点数の判定（raiseEligible・promotionEligible と理由の文）は上司の判断で書き換えない。判定を変えるためだけに項目の実績値を上書きしなくて済むようにする。",
+      "行動指針の既定への書き換えは等級の内部の識別子で決め、呼び名では決めない。書き換えるのは割り当てだけで、観点の文と会社が足した観点は書き換えない。DD-010 を改める DD を書く。",
+      "アンケートから設定への反映も、設定の保存と同じ権限（会社の管理者以上）・会社の絞り込み・同時に保存したときの 409・制度の変更の記録を通し、評価セットの決まりの検査を画面に頼らずサーバーで行う。",
+      "グラデーションは globals.css の部品クラスに既存のトークンと color-mix だけで書き、TSX に色を書かない。テーマの契約テストと globals.css 冒頭の宣言を書き換えない。文字はグラデーションの両端で 4.5:1 以上にし、動きは prefers-reduced-motion で止め、印刷・使えない状態・コントラストを強くする設定では平らな面にする。",
+      "仮のデータは実在しない氏名と見本の会社だけで作り、INSERT と見本の会社に紐づく行の削除だけにする。本番への投入は、実行の前に利用者の確認を取る。",
+      "アンケートから設定への反映（I28）と、設定の保存での下書きの作り直し（I29）は、DD-015（新しい設問を KPI 項目に紐づけず、紐づけは作り直しのときにだけサーバーが書く）と、DD-016 が却下した「聞き方の保存で下書きを書き換える」を改める。DD-015・DD-016 を改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す。"
     ],
     "concrete_intents": [
       {
@@ -6655,10 +7398,67 @@
         "serves": [
           "G24"
         ]
+      },
+      {
+        "id": "I26",
+        "text": "既定の割り当て（beginner・regular を1つ目のまとまり、chief・am1・am2 を2つ目のまとまり、manager1・manager2 は出さない）へ書き換えるデータの移行を足す。書き換えるのは等級とまとまりの割り当てだけで、観点の文と会社が足した観点は残す。移行の後に会社が割り当てを変えたときは、その変更を正とする。書き換えた会社のアンケートは I29 の規則で追従させる。初期設定の説明の文は固定の文をやめ、いまの割り当てから作る。DD-010 の「移行で書き換えない」を改める DD を書く。",
+        "serves": [
+          "G25"
+        ]
+      },
+      {
+        "id": "I27",
+        "text": "行動指針の画面は、冒頭を1文とまとまりの状態（数・飛び飛びの有無）にし、理由・初期設定・点数の注記は開いたときだけ出す。割り当て・まとまり・観点の編集部品にある同じ説明の繰り返しを1か所にまとめる。KPI・評価セットの入口は、等級区分ごとのカード（等級の並び・項目数・配点の合計・状態・次にやること）と、ほかの作業への入口だけにする。等級区分ごとの設定、全等級区分に共通の設定（昇給の条件）、KPI 項目の追加と修正、KPI カテゴリは、それぞれ別の画面にする。KPI 項目は名前と分類を見出しにし、聞くこと A・B…を1行ずつ並べ、計算式と実績区分・単位・向きは開いたときに出す。表の形は使わず、境界のあるカードとブロックで並べる。",
+        "serves": [
+          "G26"
+        ]
+      },
+      {
+        "id": "I28",
+        "text": "下書きのアンケートで、設定とつながった設問を足す（設定の項目を選んで足す）・外す・文を直すと、保存と同時に元の設定（KPI の設問の文・評価セットの項目・行動指針の観点・等級要件）へ反映する。評価セットの決まり（等級区分ごとの項目数・固定枠・20点枠）や KPI の計算に要る設問（分子・分母など）に合わなくなる保存は、アンケートも設定も変えずに断り、合わない決まりと直す画面を示す。反映も、設定の保存と同じ権限（会社の管理者以上）・会社の絞り込み・同時に保存したときの 409・制度の変更の記録を通す。",
+        "serves": [
+          "G27"
+        ]
+      },
+      {
+        "id": "I29",
+        "text": "設定を保存すると、同じ設定を使う、回答0件の下書きのアンケートを自動で作り直し（設定とつながらない設問は残す）、回答のある公開中のアンケートには次の版の下書きを自動で作る（すでに次の版の下書きがあれば、それを作り直す。公開は人が行う）。締め切ったアンケート・確定した評価・評価レポートは変えず、確定前の評価は自動で集計し直す。どのアンケートと評価が変わったかを、保存の結果の文で示す。",
+        "serves": [
+          "G27"
+        ]
+      },
+      {
+        "id": "I30",
+        "text": "設定の写しを持つ全ての場所（アンケートの設問、回答の見出し、評価の項目・行動指針・等級要件、ズレの表、評価レポート、CSV など）を一覧にして文書に置き、それぞれを「参照」「追従」「確定した時点の写し」のどれかに決め、契約テストで抜けを落とす。保存の後は、関係する全ての画面を取り直し、他のタブにも知らせる（製品仕様 §27）。いまずれている下書きは、更新時刻の新しい方へそろえる。",
+        "serves": [
+          "G27"
+        ]
+      },
+      {
+        "id": "I31",
+        "text": "scripts/sample-data.mjs の見本の会社に受付中の評価期間を1つ足し、提出済み・下書き・未回答を混ぜる（作り方は buildSeed の使い回しのまま、INSERT だけ・見本の会社に紐づく行だけ）。手元の seed（scripts/seed-data.mjs）の受付中の期も、評価を作る画面で試せる人数の提出済みを持たせる。本番への投入は既存の db:sample:remote の手順で行い、実行の前に利用者の確認を取る。製品仕様 §14 の「受付中の期は作らない」を改め、§14 が挙げた影響（未回答の一覧に見本の人が並ぶ）を記す。",
+        "serves": [
+          "G28"
+        ]
+      },
+      {
+        "id": "I32",
+        "text": "globals.css に、既存の意味のトークンと color-mix だけで部品クラスを足し、src/components/ui.tsx などの共通部品から使う。対象はボタン（Button・LinkButton・DownloadButton・ActionButton・ConfirmButton。主の操作を最も強いグラデーションにし、副の操作は薄い色にして強弱を付ける）、カード（Card・CardHead・CardRow・OptionCard。縁と見出しの色の帯、強調するカードの面）、見出し（PageTitle・SectionHeading）、選ぶ部品（Segmented・ChoiceChip・ChipLink・ChipTag・OptionCheck）、状態の印（Badge・DecisionBadge・RankMark・ProvisionalMark）、進み具合（StepFlow・StepMark・StepBlock）、数の面（Bar・StatGrid・Num と Charts の系列の色）、知らせ（NoteBlock・ReasonNote・EmptyState・ComparisonGapNotice）、表（DataTable の見出しの行と選んだ行）、いまいる場所の印（AppSidebar・HeaderNav）。TSX には色を書かない。押せる部品の光の動き（きらめき）は短く控えめにし、prefers-reduced-motion では止める。見出しの面の微グラデ（hero-tint）の「1画面1箇所」は保つ。",
+        "serves": [
+          "G29"
+        ]
+      },
+      {
+        "id": "I33",
+        "text": "色使い以外の手応えと強弱も共通部品でそろえる。押す・選ぶ・開く部品は、指を乗せた・押した・選んだ・開いた・キーボードで選んだ（focus-visible）の状態をそれぞれ見て分かるようにし、押せる面は 44px 四方以上を保つ。1つの面で主の操作は1つにして最も強く見せ、ほかは控えめにする。G26 の段階的な開示（Disclosure・HintToggle・RevealToggle・InlineDetail）と境界のはっきりしたカード（Card・CardHead）は共通部品に入れ、行動指針と KPI・評価セットの画面だけでなく、同じ部品を使う全ての画面に効かせる。画面ごとの組み替えは I27 の2画面と評価を作る画面に限る。",
+        "serves": [
+          "G29",
+          "G26"
+        ]
       }
     ],
     "confirmed": true,
-    "approval_ref": "appr-foundation-015"
+    "approval_ref": "appr-foundation-020"
   },
   "decisions": [
     {
@@ -7709,43 +8509,43 @@
   "knowledge_candidates": [],
   "design_applications": {
     "database": {
-      "text": "DDD の集約境界を会社追加に当てはめた。会社・制度ひな形の複製・管理者の利用者・ログイン用アカウント・所属・控えは、『会社を追加したら全部そろって存在する』という一つの不変条件（qa-f02）を持つ一つの集約として扱う。D1 は対話的なトランザクションを持たず、ひな形の複製が数百行になりうるため、この集約は 1 回の batch に入らない。そこで書き込みを 3 段階に分け、各段階に取り消しを組にして、途中で失敗したら逆順に消す（qa-r-database-3 (1)、D-003 の opt-batch-first）。集約の外にある他社の行には触れず、companyId を会社境界として保つ。ほかの複数の表を書く経路は、操作ごとの不変条件が 1 回の batch に収まるので batch で書き、取り消しの組を増やさない（同 (2)）。制度マスタの監査記録は実体ごとの番号を一意にし、同時保存の後のほうを丸ごと失敗させる（同 (6)）。 （2026-10-13 追記：G6〜G15）DDD の集約境界を所属に当てはめた。会社ごとの役割・等級・事業所・上司は『利用者と会社の組』という所属の集約が持ち、users に残っていた会社ごとの列は所属を正として、移行で既存の利用者全員に1件ずつ作る（qa-v26 (1)、D-004）。等級の呼び名は、等級の名前という一つの値から導く派生値として扱い、行動指針のセット名やアンケートの既定のタイトルに写しを保存しない（同 (4)）。等級名の一律の書き換えでは結合キーの pointGroup と id を不変条件として保ち、表示名だけを変える（同 (3)）。一覧の等級と点数も確定した評価から読み、写しの列を作らない（同 (5)）。権限の定義は業務データではなく仕様の台帳（route-ledger.json）の定義なので DB に持たない（同 (9)、D-007 ①）。 （2026-10-20 追記：G17〜G24）DDD の集約境界を、評価と上司の判断に当てはめた。上司の判断（昇給と昇格それぞれの follow／override・理由・記録した人と時刻）は、評価の確定と同時にだけ意味を持つので、別の表に切り出さず評価の集約（evaluations の1行）の列として持つ（qa-y15 (13)、G24）。確定の書き込みは評価の1行の更新で判断も同じ1文で書くので、確定済みなのに判断が無い・判断だけ書かれて未確定、という中間の状態ができない。点数の判定の列（raise_eligible・promotion_eligible と理由）は集約の中で書き換えない値として残し、最終の可否は保存せず読むたびに導く。レポートは新しい集約を作らず、確定済みの評価と評価の項目から読む派生の表現として扱う（同 (11)、G18）。KGI の3つの表と評価の2列は集約から外れた古い部分として消すが、個人Pt・賞与額・根拠の文は確定時の値として残す（同 (10)、G17）。評価セットは評価期間が指す1つを集約の外の参照として持ち、ズレの比較・アンケート・計算・レポートが同じ参照を辿る（G23）。シードは集約ごとに整った状態だけを作り、判断の5通りを含める（同 (12)(15)、G20）。",
-      "recorded_at": "2026-10-19T21:47:35Z",
+      "text": "DDD の集約境界を会社追加に当てはめた。会社・制度ひな形の複製・管理者の利用者・ログイン用アカウント・所属・控えは、『会社を追加したら全部そろって存在する』という一つの不変条件（qa-f02）を持つ一つの集約として扱う。D1 は対話的なトランザクションを持たず、ひな形の複製が数百行になりうるため、この集約は 1 回の batch に入らない。そこで書き込みを 3 段階に分け、各段階に取り消しを組にして、途中で失敗したら逆順に消す（qa-r-database-3 (1)、D-003 の opt-batch-first）。集約の外にある他社の行には触れず、companyId を会社境界として保つ。ほかの複数の表を書く経路は、操作ごとの不変条件が 1 回の batch に収まるので batch で書き、取り消しの組を増やさない（同 (2)）。制度マスタの監査記録は実体ごとの番号を一意にし、同時保存の後のほうを丸ごと失敗させる（同 (6)）。 （2026-10-13 追記：G6〜G15）DDD の集約境界を所属に当てはめた。会社ごとの役割・等級・事業所・上司は『利用者と会社の組』という所属の集約が持ち、users に残っていた会社ごとの列は所属を正として、移行で既存の利用者全員に1件ずつ作る（qa-v26 (1)、D-004）。等級の呼び名は、等級の名前という一つの値から導く派生値として扱い、行動指針のセット名やアンケートの既定のタイトルに写しを保存しない（同 (4)）。等級名の一律の書き換えでは結合キーの pointGroup と id を不変条件として保ち、表示名だけを変える（同 (3)）。一覧の等級と点数も確定した評価から読み、写しの列を作らない（同 (5)）。権限の定義は業務データではなく仕様の台帳（route-ledger.json）の定義なので DB に持たない（同 (9)、D-007 ①）。 （2026-10-20 追記：G17〜G24）DDD の集約境界を、評価と上司の判断に当てはめた。上司の判断（昇給と昇格それぞれの follow／override・理由・記録した人と時刻）は、評価の確定と同時にだけ意味を持つので、別の表に切り出さず評価の集約（evaluations の1行）の列として持つ（qa-y15 (13)、G24）。確定の書き込みは評価の1行の更新で判断も同じ1文で書くので、確定済みなのに判断が無い・判断だけ書かれて未確定、という中間の状態ができない。点数の判定の列（raise_eligible・promotion_eligible と理由）は集約の中で書き換えない値として残し、最終の可否は保存せず読むたびに導く。レポートは新しい集約を作らず、確定済みの評価と評価の項目から読む派生の表現として扱う（同 (11)、G18）。KGI の3つの表と評価の2列は集約から外れた古い部分として消すが、個人Pt・賞与額・根拠の文は確定時の値として残す（同 (10)、G17）。評価セットは評価期間が指す1つを集約の外の参照として持ち、ズレの比較・アンケート・計算・レポートが同じ参照を辿る（G23）。シードは集約ごとに整った状態だけを作り、判断の5通りを含める（同 (12)(15)、G20）。 （2026-10-22 追記：G25〜G29）行動指針のまとまりの割り当ては等級の集約の中の値として扱い、既定へ戻す移行は等級の内部の識別子（beginner・regular／chief・am1・am2／manager1・manager2）で割り当てだけを書き換え、観点の文と会社が足した観点には触れない（qa-ab02・qa-ab10、I26、G25）。既定のまとまりが無い会社は書き換えずに件数を報告する。アンケートから設定への書き戻しでは、評価セットの決まり（等級区分ごとの項目数・固定枠・20点枠）と KPI の計算に要る設問（分子・分母など）を、評価セットと KPI 項目の集約が持つ不変条件とし、破る保存はアンケートも設定も変えずに断る（qa-ab11、I28、G27）。設定の写しを持つ場所は『参照』『追従』『確定した時点の写し』の3つに分け、確定した評価とレポートは確定した時点の写しとして集約の外から書き換えない（qa-ab04・qa-ab09、I30）。同じ設定を2人が同時に保存したときに後の保存を 409 で止める今の決まりを、書き戻しにもそのまま当てる（I28）。設定の保存に続けて書く行（下書きの作り直し・次の版の下書き・確定前の評価の集計し直し）が1回の batch に収まるかは、実装の前に見本の会社の件数で見積もり、収まらないときは会社追加と同じく段階に分けて各段階に取り消しを組にする（I29）。見本の受付中の期は見本の会社（cmp_sample）の集約の中だけに作り、他社の行に触れない（qa-ab12、I31、G28）。",
+      "recorded_at": "2026-10-22T03:45:00Z",
       "basis": "agent-inference"
     },
     "auth": {
-      "text": "Secure by Design の『安全な既定』を Server Functions に当てはめた。Server Function は画面から呼ぶ関数でも、外から直接 POST できる公開の入口になる。そのため共通の入口（runAction・runRead）が毎回、送り元のサイト・セッション・役割の順に確かめてから本体を呼ぶ（qa-r-auth-3 (1)）。認可が通らない限り、書き込み・画面の作り直し・他タブへの通知のどれも動かない。この順序を、関数ごとの書き忘れに頼らず入口に固定する。Bearer 鍵で呼ぶ外部の API と端末の承認は、今の Route Handler と認可のまま残し、一つの入口に二つの認可方式を混ぜない。 （2026-10-13 追記：G6〜G15）Secure by Design の『安全な既定』を複数の会社への所属に当てはめた。選んでいる会社の cookie は利用者が書き換えられる入力として扱い、そのまま信じず、リクエストのたびに所属をサーバーで確かめてから会社・役割・等級を作る。指す会社に所属が無ければ、所属のうち最初の会社へ戻す（qa-v27 (1)(2)、D-004）。等級名の変更の可否も、画面の欄の有無に頼らずサーバー処理の入口で役割と会社を確かめる（同 (3)）。開けるページとできる操作の判定は route-ledger.json の1つだけから引き、判定の元を散らさない（同 (4)、D-007 ①）。 （2026-10-14 訂正：qa-w12・D-009）選んでいる会社が無いとき（cookie が無い・所属していない会社を指す）の復帰先は、有効な所属のうち会社名の順で最初の会社（同名は会社 id の順）とする。切り替えの一覧と同じ順なので、利用者がどの会社が開くかを予想できる。DD-009 の『最も古い有効な所属』は利用者の選択で取り消した。どちらの順でも、リクエストのたびに所属をサーバーで確かめることは変わらない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）安全な既定を、新しい見える範囲と記録の権限に当てはめた。レポートを開ける人は canViewEvaluationOf の1つの判定で決め、当てはまらない人は既定で見えない（qa-y13 (6) とその訂正、G19）。この判定を呼ぶのはレポートの画面だけにし、確定した後だけという条件は判定に持たせず、確定した評価だけを読む loadEvaluationReport に置いた。期をまたぐレポートでは、どの評価の状態で判定するかが決まらないためである（DD-021 の4・6、DD-024 の4・5）。評価の詳細の2画面は今の判定のまま残し、CSV とメモはそれぞれ canReviewEmployeeEvaluation と readableNoteVisibilities の今の判定で絞る。間接の部下を含めないのも、広げる理由の無いものは開けない側に倒したもの。上司の判断を記録できる人は新しい役割を作らず、評価を確定できる人の判定（canActOnEmployeeEvaluation）をそのまま使い、自分自身の評価は既定で記録できない（同 (8)、G24）。権限一覧に出す台帳（route-ledger.json）にレポートと判断の記録を足し、KGI のページと操作を消して、表示と判定を同じ定義から出す（同 (7)(8)、G17）。",
-      "recorded_at": "2026-10-20T23:58:12Z",
+      "text": "Secure by Design の『安全な既定』を Server Functions に当てはめた。Server Function は画面から呼ぶ関数でも、外から直接 POST できる公開の入口になる。そのため共通の入口（runAction・runRead）が毎回、送り元のサイト・セッション・役割の順に確かめてから本体を呼ぶ（qa-r-auth-3 (1)）。認可が通らない限り、書き込み・画面の作り直し・他タブへの通知のどれも動かない。この順序を、関数ごとの書き忘れに頼らず入口に固定する。Bearer 鍵で呼ぶ外部の API と端末の承認は、今の Route Handler と認可のまま残し、一つの入口に二つの認可方式を混ぜない。 （2026-10-13 追記：G6〜G15）Secure by Design の『安全な既定』を複数の会社への所属に当てはめた。選んでいる会社の cookie は利用者が書き換えられる入力として扱い、そのまま信じず、リクエストのたびに所属をサーバーで確かめてから会社・役割・等級を作る。指す会社に所属が無ければ、所属のうち最初の会社へ戻す（qa-v27 (1)(2)、D-004）。等級名の変更の可否も、画面の欄の有無に頼らずサーバー処理の入口で役割と会社を確かめる（同 (3)）。開けるページとできる操作の判定は route-ledger.json の1つだけから引き、判定の元を散らさない（同 (4)、D-007 ①）。 （2026-10-14 訂正：qa-w12・D-009）選んでいる会社が無いとき（cookie が無い・所属していない会社を指す）の復帰先は、有効な所属のうち会社名の順で最初の会社（同名は会社 id の順）とする。切り替えの一覧と同じ順なので、利用者がどの会社が開くかを予想できる。DD-009 の『最も古い有効な所属』は利用者の選択で取り消した。どちらの順でも、リクエストのたびに所属をサーバーで確かめることは変わらない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）安全な既定を、新しい見える範囲と記録の権限に当てはめた。レポートを開ける人は canViewEvaluationOf の1つの判定で決め、当てはまらない人は既定で見えない（qa-y13 (6) とその訂正、G19）。この判定を呼ぶのはレポートの画面だけにし、確定した後だけという条件は判定に持たせず、確定した評価だけを読む loadEvaluationReport に置いた。期をまたぐレポートでは、どの評価の状態で判定するかが決まらないためである（DD-021 の4・6、DD-024 の4・5）。評価の詳細の2画面は今の判定のまま残し、CSV とメモはそれぞれ canReviewEmployeeEvaluation と readableNoteVisibilities の今の判定で絞る。間接の部下を含めないのも、広げる理由の無いものは開けない側に倒したもの。上司の判断を記録できる人は新しい役割を作らず、評価を確定できる人の判定（canActOnEmployeeEvaluation）をそのまま使い、自分自身の評価は既定で記録できない（同 (8)、G24）。権限一覧に出す台帳（route-ledger.json）にレポートと判断の記録を足し、KGI のページと操作を消して、表示と判定を同じ定義から出す（同 (7)(8)、G17）。 （2026-10-22 追記：G25〜G29）アンケートの保存から設定へ書き戻す経路を新しい入口として開けず、設定の保存と同じ runAction を通して、会社の管理者以上・会社の絞り込み・同時に保存したときの 409・制度の変更の記録（constitution_events）を同じ順で当てる（qa-ab07・qa-ab11、I28、G27）。アンケートの下書きを直せることだけで、設定を変えられるようにはしない。設定の保存が自動で作り直す下書きと次の版の下書きも、保存した人の会社の範囲の中だけに作り、公開は人が行う（qa-ab08、I29）。見本の会社への受付中の期の追加は既存の db:sample:remote の手順だけで行い、新しい役割や入口を足さない（qa-ab12、I31、G28）。色と手応えの変更（G29）と画面の分け方（G26）は、今の認可の判定をそのまま使い、画面を分けても入口ごとに同じ判定を当てる。",
+      "recorded_at": "2026-10-22T02:09:16Z",
       "basis": "agent-inference"
     },
     "ui-ux": {
-      "text": "Information Design の『表現物ごとに何を残し何を落とすか』を連続作成の画面に当てはめた。続けて登録するときに最も頻繁に確かめるのは『いま追加した行が一覧にあるか』なので、一覧の新しい行と件数を最優先にし、成功の知らせ、控えの順に置く（qa-u19、qa-r-uiux-3 (2)）。控えは成功の知らせの後ろに畳み、開いたときだけ発行の日時と開ける期限（発行から 14 日、qa-u24）を添えて出す。閉じても一覧の行から開き直せるので、スマホ（375px）の幅でも新しい行を押し出さずに済む（同 (5)）。 （2026-10-13 追記：G6〜G15）Information Design を権限一覧と一覧の画面に当てはめた。最も多い問いは『この役割はこのページで何ができるか』なので、広い画面ではページ名を行・役割を列にした表を主にし、役割のタブで1つの役割に絞れるようにする。スマホではページごとのカードに切り替え、説明を常に見せる（qa-v18 (2)(3)、D-006）。利用者一覧の『役割ごとにできること』の欄は畳めるようにし、一覧の行を押し出さない（同 (4)）。設定不足は『何が足りない・どう直す・直す画面』の3つに絞り、件数が多いときは直す画面ごとにまとめて初めの数件だけを出す（同 (7)）。等級と点数には、どの評価期間の値かを添え、確定した評価が無い人を空欄にせず『確定した評価なし』と言葉で出す（同 (5)）。 （2026-10-14 追記：G16）Information Design の『表現物ごとに何を残し何を落とすか』と、HIG の『その場で開く補足（disclosure）』を、比べる警告に当てはめた。最も多い問いは『ズレがあるか・いくつか』なので、閉じた1行には注意の印・件数（足りない◯・余分◯）・押す場所だけを残し、説明の段落を落とす（qa-w06 (13)）。直すときに要る『どことどこを比べたか・何を直すか』は押したときだけその場で開き、上から指示の1行・比べている2つのページのリンク（階層つきのページ名、いま開いているページには『（このページ）』）・項目ごとの ○／— の表・ボタン1つ・必要なときだけの注記1行の順に並べる。窓（モーダル）を使わないので一覧の行の位置と文脈を失わず、狭い幅でも表を横に流せる枠で同じ振る舞いになる（同 (13)）。 （2026-10-20 追記：G17〜G24）表現物ごとに何を残し何を落とすかを、評価レポートと確定の画面に当てはめた。レポートは、読む人が最初に知りたい『上がるのか、なぜか』を②に置き、点数・レーダー図・推移・等級ごとの点数・過去の実績をその根拠として下に並べる（qa-y10 (15)(22)、G18・G24）。②では点数の判定・上司の判断・結論を並べ、上司が変えたときは印と理由を添えて、判定と結論の違いが一目で分かるようにする（同 (21)(22)）。本人向けは点数の数値と比べる値を落とし、判定の文と同じ理由だけを残す（同 (15)、G19）。印刷では1枚目に結論と根拠、2枚目に推移と過去を置き、長い文は切り詰めずに続ける（同 (23)）。ズレの警告は種類の列と直す画面へのリンクを行ごとに持たせ、読んだ人が次にすることを表の中で示す（同 (18)、G22）。アンケートは状態ごとに出す操作を決め、その状態でできない操作を出さない（同 (17)、G21）。KGI の項目はメニューと賞与（仮）の欄から落とす（同 (14)、G17）。",
-      "recorded_at": "2026-10-19T21:47:35Z",
+      "text": "Information Design の『表現物ごとに何を残し何を落とすか』を連続作成の画面に当てはめた。続けて登録するときに最も頻繁に確かめるのは『いま追加した行が一覧にあるか』なので、一覧の新しい行と件数を最優先にし、成功の知らせ、控えの順に置く（qa-u19、qa-r-uiux-3 (2)）。控えは成功の知らせの後ろに畳み、開いたときだけ発行の日時と開ける期限（発行から 14 日、qa-u24）を添えて出す。閉じても一覧の行から開き直せるので、スマホ（375px）の幅でも新しい行を押し出さずに済む（同 (5)）。 （2026-10-13 追記：G6〜G15）Information Design を権限一覧と一覧の画面に当てはめた。最も多い問いは『この役割はこのページで何ができるか』なので、広い画面ではページ名を行・役割を列にした表を主にし、役割のタブで1つの役割に絞れるようにする。スマホではページごとのカードに切り替え、説明を常に見せる（qa-v18 (2)(3)、D-006）。利用者一覧の『役割ごとにできること』の欄は畳めるようにし、一覧の行を押し出さない（同 (4)）。設定不足は『何が足りない・どう直す・直す画面』の3つに絞り、件数が多いときは直す画面ごとにまとめて初めの数件だけを出す（同 (7)）。等級と点数には、どの評価期間の値かを添え、確定した評価が無い人を空欄にせず『確定した評価なし』と言葉で出す（同 (5)）。 （2026-10-14 追記：G16）Information Design の『表現物ごとに何を残し何を落とすか』と、HIG の『その場で開く補足（disclosure）』を、比べる警告に当てはめた。最も多い問いは『ズレがあるか・いくつか』なので、閉じた1行には注意の印・件数（足りない◯・余分◯）・押す場所だけを残し、説明の段落を落とす（qa-w06 (13)）。直すときに要る『どことどこを比べたか・何を直すか』は押したときだけその場で開き、上から指示の1行・比べている2つのページのリンク（階層つきのページ名、いま開いているページには『（このページ）』）・項目ごとの ○／— の表・ボタン1つ・必要なときだけの注記1行の順に並べる。窓（モーダル）を使わないので一覧の行の位置と文脈を失わず、狭い幅でも表を横に流せる枠で同じ振る舞いになる（同 (13)）。 （2026-10-20 追記：G17〜G24）表現物ごとに何を残し何を落とすかを、評価レポートと確定の画面に当てはめた。レポートは、読む人が最初に知りたい『上がるのか、なぜか』を②に置き、点数・レーダー図・推移・等級ごとの点数・過去の実績をその根拠として下に並べる（qa-y10 (15)(22)、G18・G24）。②では点数の判定・上司の判断・結論を並べ、上司が変えたときは印と理由を添えて、判定と結論の違いが一目で分かるようにする（同 (21)(22)）。本人向けは点数の数値と比べる値を落とし、判定の文と同じ理由だけを残す（同 (15)、G19）。印刷では1枚目に結論と根拠、2枚目に推移と過去を置き、長い文は切り詰めずに続ける（同 (23)）。ズレの警告は種類の列と直す画面へのリンクを行ごとに持たせ、読んだ人が次にすることを表の中で示す（同 (18)、G22）。アンケートは状態ごとに出す操作を決め、その状態でできない操作を出さない（同 (17)、G21）。KGI の項目はメニューと賞与（仮）の欄から落とす（同 (14)、G17）。 （2026-10-22 追記：G25〜G29）行動指針と KPI・評価セットの画面では、最初に判断に要る状態・件数・次にやることだけを残し、理由・初期設定・点数の注記・計算式は開いたときに出す。情報は消さず見せ方を変える（qa-ab01・qa-ab03、I27、G26）。同じ説明が1画面に2回出ないようにし、1文は40字を目安にする（製品仕様 §22）。KPI・評価セットは作業ごとに画面を分け、等級区分ごとの設定を境界のはっきりしたカード（等級の並び・項目数・配点の合計・状態・次にやること）で示し、KPI 項目は名前と分類を見出しにして聞くことを1行ずつ並べる。初期設定の説明はいまの割り当てを読んで作り、既定と違うときは違いを示す（qa-ab02、I26、G25）。設定やアンケートを保存したときは、どのアンケートと評価が変わったかを保存の結果の文で示す（I29、G27）。共通部品の色使いは、主の操作を最も強く、副の操作を控えめにした強弱で次の操作を示し、押した・選んだ・開いたを見て分かるようにする（qa-ab14、I32・I33、G29）。",
+      "recorded_at": "2026-10-22T02:09:16Z",
       "basis": "agent-inference"
     },
     "security": {
-      "text": "Secure by Design の『必要最小の情報しか渡さない』と『秘密を復元できる形で持たない』を当てはめた。他タブへの通知には変わった資源の種類と時刻だけを載せ、氏名やパスワードの控えを載せない（qa-r-security-3 (1)）。一覧の行から控えを開き直せるようにする（qa-u19）ため控えを保存するが、平文では持たず、利用者 ID に結び付けて AES-GCM で暗号化し、鍵（CREDENTIAL_ENC_KEY）を Workers の secret に分けて置く（同 (6)）。保存の期間は、本人の変更・再発行・発行から 14 日のいちばん早い時点で終わる（qa-u24）。別のサイトからの呼び出しは、Next.js の検査と入口の assertSameOrigin で二重に断る（同 (7)）。 （2026-10-13 追記：G6〜G15）Secure by Design の『必要最小の情報しか渡さない』を、等級と点数と所属に当てはめた。等級と点数は、見てよい役割と担当の範囲にだけサーバーでデータを作る段階で載せ、一般の社員への応答に含めない（qa-v28 (2)）。他社に既にアカウントがある人を足すときも、足す側にその人の所属先を知らせない（同 (4)）。所属を消すときはその会社の所属だけを消し、他社で使っているアカウントとセッションを残す（同 (5)）。権限一覧の表示と実際の判定を同じ定義（route-ledger.json）から作り、ずれをテストで落とす（同 (6)、D-007 ①）。 （2026-10-14 追記：G16）Secure by Design の『必要最小の情報しか渡さない』と、OWASP の『既定で拒否し、要求ごとに認可を確かめる』を比べる警告に当てはめた。警告に載せるリンクは、ルート台帳にあり、見る人の役割で開けるページに限る（qa-w09 (8)）。ズレを読む処理は会社の範囲で絞り、他社の名前を含めない。createForms は自社のものでない gradeId が1件でもあれば何も作らずに拒否し、他社の ID を黙って外して残りだけ作る今の振る舞いをやめる（同 (8)）。拒否を部分的な成功にしないので、渡された ID の誤りが黙って通らない。 （2026-10-14 訂正：qa-w11・D-008）Secure by Design の『安全な既定』と OWASP の最小権限を、会社をまたぐ所属追加に当てはめた。他社に既にアカウントがある人へ別の会社の所属を足すのは、全体管理者だけの専用操作（addMembership）とする。会社の管理者のメンバー追加と CSV の取り込みは、メールアドレスの重複をシステム全体で拒否し、所属を足さない。会社をまたぐ権限が、明示した1つの操作でしか付かない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）必要最小の情報しか渡さないことを、評価レポートと上司の判断に当てはめた。見える範囲の外の人には、レポート・評価の中身・CSV・メモ・判断と理由をサーバーが返さない（qa-z02 (9)(15) とその訂正、G19・G24）。レポートの URL は、範囲の外の人・他社の人・存在しない人を区別せず同じ 404 にし、応答の違いから人の有無を読ませない。マネージャーの CSV は直属の部下の行だけ、「管理者のみ」のメモは会社の管理者以上だけに返す。本人向けの応答には点数の数値・満点・比べる値の鍵を持たせず、同じ等級の平均は重ならない社員が3人未満なら作らない（qa-z02 (10)、qa-z01 の訂正）。判断の理由は本人にも見える文なので、HTML として解釈せず文字として出す（qa-z02 (15)）。理由と上司コメントは保存の前に CRITERIA_LEAK_PATTERNS で検査し、本人に見せられない語を名指しして書き直してもらう（qa-z01 の訂正、DD-023）。アンケートの状態の変更・延長・催促・版の番号は会社の範囲で絞り、他社の版に触れない（qa-z02 (11)、G21）。印刷のために別のデータを返す経路を作らず、画面と同じ制限がそのまま効く（同 (13)）。KGI の表を消した後に読み書きの経路が残らないことを静的検査で確かめる（同 (12)、G17）。",
-      "recorded_at": "2026-10-20T23:58:12Z",
+      "text": "Secure by Design の『必要最小の情報しか渡さない』と『秘密を復元できる形で持たない』を当てはめた。他タブへの通知には変わった資源の種類と時刻だけを載せ、氏名やパスワードの控えを載せない（qa-r-security-3 (1)）。一覧の行から控えを開き直せるようにする（qa-u19）ため控えを保存するが、平文では持たず、利用者 ID に結び付けて AES-GCM で暗号化し、鍵（CREDENTIAL_ENC_KEY）を Workers の secret に分けて置く（同 (6)）。保存の期間は、本人の変更・再発行・発行から 14 日のいちばん早い時点で終わる（qa-u24）。別のサイトからの呼び出しは、Next.js の検査と入口の assertSameOrigin で二重に断る（同 (7)）。 （2026-10-13 追記：G6〜G15）Secure by Design の『必要最小の情報しか渡さない』を、等級と点数と所属に当てはめた。等級と点数は、見てよい役割と担当の範囲にだけサーバーでデータを作る段階で載せ、一般の社員への応答に含めない（qa-v28 (2)）。他社に既にアカウントがある人を足すときも、足す側にその人の所属先を知らせない（同 (4)）。所属を消すときはその会社の所属だけを消し、他社で使っているアカウントとセッションを残す（同 (5)）。権限一覧の表示と実際の判定を同じ定義（route-ledger.json）から作り、ずれをテストで落とす（同 (6)、D-007 ①）。 （2026-10-14 追記：G16）Secure by Design の『必要最小の情報しか渡さない』と、OWASP の『既定で拒否し、要求ごとに認可を確かめる』を比べる警告に当てはめた。警告に載せるリンクは、ルート台帳にあり、見る人の役割で開けるページに限る（qa-w09 (8)）。ズレを読む処理は会社の範囲で絞り、他社の名前を含めない。createForms は自社のものでない gradeId が1件でもあれば何も作らずに拒否し、他社の ID を黙って外して残りだけ作る今の振る舞いをやめる（同 (8)）。拒否を部分的な成功にしないので、渡された ID の誤りが黙って通らない。 （2026-10-14 訂正：qa-w11・D-008）Secure by Design の『安全な既定』と OWASP の最小権限を、会社をまたぐ所属追加に当てはめた。他社に既にアカウントがある人へ別の会社の所属を足すのは、全体管理者だけの専用操作（addMembership）とする。会社の管理者のメンバー追加と CSV の取り込みは、メールアドレスの重複をシステム全体で拒否し、所属を足さない。会社をまたぐ権限が、明示した1つの操作でしか付かない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）必要最小の情報しか渡さないことを、評価レポートと上司の判断に当てはめた。見える範囲の外の人には、レポート・評価の中身・CSV・メモ・判断と理由をサーバーが返さない（qa-z02 (9)(15) とその訂正、G19・G24）。レポートの URL は、範囲の外の人・他社の人・存在しない人を区別せず同じ 404 にし、応答の違いから人の有無を読ませない。マネージャーの CSV は直属の部下の行だけ、「管理者のみ」のメモは会社の管理者以上だけに返す。本人向けの応答には点数の数値・満点・比べる値の鍵を持たせず、同じ等級の平均は重ならない社員が3人未満なら作らない（qa-z02 (10)、qa-z01 の訂正）。判断の理由は本人にも見える文なので、HTML として解釈せず文字として出す（qa-z02 (15)）。理由と上司コメントは保存の前に CRITERIA_LEAK_PATTERNS で検査し、本人に見せられない語を名指しして書き直してもらう（qa-z01 の訂正、DD-023）。アンケートの状態の変更・延長・催促・版の番号は会社の範囲で絞り、他社の版に触れない（qa-z02 (11)、G21）。印刷のために別のデータを返す経路を作らず、画面と同じ制限がそのまま効く（同 (13)）。KGI の表を消した後に読み書きの経路が残らないことを静的検査で確かめる（同 (12)、G17）。 （2026-10-22 追記：G25〜G29）本番の見本の会社に受付中の期を足すとき、氏名は全員『サンプル ○○』の架空の値にし、本物の会社の行に触れず、本番の未回答の一覧に見本の人が並ぶ影響を製品仕様 §14 の改めとして記す（qa-ab05・qa-ab12、I31、G28）。投入は db:sample:remote の手順で、実行の前に利用者の確認を取る。公開リポジトリのため、実データは見本にも試験にも置かない。アンケートから設定への書き戻しは、会社の範囲の外の設定や他社の版を読まず書かず、断った保存には合わない決まりと直す画面だけを返す（qa-ab11、I28、G27）。設定の保存が作る次の版の下書きは公開せず、公開は人が行う（qa-ab08、I29）。色と手応えの変更（G29）は応答のデータの形を変えない。",
+      "recorded_at": "2026-10-22T02:09:16Z",
       "basis": "agent-inference"
     },
     "infrastructure": {
-      "text": "resource-map にインフラ用の deep knowledge card が無いため、上流指針（Google SRE）を直接当てた。鮮度を『キャッシュを入れて後から消す』問題として扱わず、ログイン後の画面をサーバーやエッジで保存しない既定（OpenNext の既定と force-dynamic）を保つ（qa-r-infrastructure-3 (1)）。Server Functions の refresh は、保存したものを消すのではなく、今の画面を同じ応答で作り直すため、この既定と矛盾しない。構成は変えず、Next.js だけを脆弱性の修正を含む 16.3.8 へ上げる（同 (4)）。応答の生成時刻は Next.js の外側（worker.ts）で付け、サーバー側の実行ファイルの容量上限を守る（同 (2)）。 （2026-10-13 追記：G6〜G15）上流指針（Google SRE）の『変更を小さく、戻せる形にする』を当てた。所属の表の追加・移し替えと等級名の一律の書き換えはD1 のマイグレーション（0033 以降）にし、本番の Deploy の自動マイグレーションと fail-closed のゲートに乗せる（qa-v29 (1)）。どれも2回流して同じ結果にし、書き換え前の値を表に残して戻す手順を用意する（同 (2)）。並べ替えはPointer Events で自作し（D-005）、権限の定義は route-ledger.json に足して（D-007 ①）、依存も表も足さず、配備の構成を変えない（同 (3)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）インフラ用の deep knowledge card が無いので、引き続き Google SRE を直接当てた。KGI の削除は2回のマージに分け、どちらも Deploy workflow の自動の公開に任せる。1回目（P05 の PR）でコードの読み書きをやめて 0038 を当て、2回目（P08 の PR）で 0039 が表と列を消す。Deploy workflow はマイグレーションを Worker の配布より先に当てるため、1回で出すとその間に古いコードが消えた表を読んで失敗する（qa-x15 (4) とその訂正、DD-020、G17）。未適用のマイグレーションがあると Deploy workflow が本番 D1 の全体を d1-backup-<実行 id>（保管14日）に書き出すので、0039 を当てる直前の2回目の書き出しが、消した値を戻すときの元になる。2回目の前の読み取りの値と実行 id などの記録は P13 が docs/deploy-notes.md に書き、手で deploy も db:backup もしない。構成と依存は変えず、図は recharts、印刷はブラウザで行い、印刷のための配信の経路を作らない（同 (5)）。上司の判断の追加ではこの章を reopen しておらず、テストデータを本番に入れない決めは database (12) と maintenance-ops (9) が持つ。",
-      "recorded_at": "2026-10-21T00:25:46Z",
+      "text": "resource-map にインフラ用の deep knowledge card が無いため、上流指針（Google SRE）を直接当てた。鮮度を『キャッシュを入れて後から消す』問題として扱わず、ログイン後の画面をサーバーやエッジで保存しない既定（OpenNext の既定と force-dynamic）を保つ（qa-r-infrastructure-3 (1)）。Server Functions の refresh は、保存したものを消すのではなく、今の画面を同じ応答で作り直すため、この既定と矛盾しない。構成は変えず、Next.js だけを脆弱性の修正を含む 16.3.8 へ上げる（同 (4)）。応答の生成時刻は Next.js の外側（worker.ts）で付け、サーバー側の実行ファイルの容量上限を守る（同 (2)）。 （2026-10-13 追記：G6〜G15）上流指針（Google SRE）の『変更を小さく、戻せる形にする』を当てた。所属の表の追加・移し替えと等級名の一律の書き換えはD1 のマイグレーション（0033 以降）にし、本番の Deploy の自動マイグレーションと fail-closed のゲートに乗せる（qa-v29 (1)）。どれも2回流して同じ結果にし、書き換え前の値を表に残して戻す手順を用意する（同 (2)）。並べ替えはPointer Events で自作し（D-005）、権限の定義は route-ledger.json に足して（D-007 ①）、依存も表も足さず、配備の構成を変えない（同 (3)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）インフラ用の deep knowledge card が無いので、引き続き Google SRE を直接当てた。KGI の削除は2回のマージに分け、どちらも Deploy workflow の自動の公開に任せる。1回目（P05 の PR）でコードの読み書きをやめて 0038 を当て、2回目（P08 の PR）で 0039 が表と列を消す。Deploy workflow はマイグレーションを Worker の配布より先に当てるため、1回で出すとその間に古いコードが消えた表を読んで失敗する（qa-x15 (4) とその訂正、DD-020、G17）。未適用のマイグレーションがあると Deploy workflow が本番 D1 の全体を d1-backup-<実行 id>（保管14日）に書き出すので、0039 を当てる直前の2回目の書き出しが、消した値を戻すときの元になる。2回目の前の読み取りの値と実行 id などの記録は P13 が docs/deploy-notes.md に書き、手で deploy も db:backup もしない。構成と依存は変えず、図は recharts、印刷はブラウザで行い、印刷のための配信の経路を作らない（同 (5)）。上司の判断の追加ではこの章を reopen しておらず、テストデータを本番に入れない決めは database (12) と maintenance-ops (9) が持つ。 （2026-10-22 追記：G25〜G29）既定の割り当てへ戻すデータの移行（I26、G25）は、Deploy workflow が未適用のマイグレーションの前に本番 D1 の全体を d1-backup-<実行 id> に書き出す今の流れのまま当て、戻すときはその書き出しから戻す（qa-ab10）。移行は割り当ての列だけを書き換え、書き換えた会社と、既定のまとまりが無くて書き換えなかった会社の数を読み取りで数えて記録する。本番の見本の会社への受付中の期の追加（I31、G28）は db:sample:remote の手順で、利用者の確認の後に流し、流す前に見本の会社の行だけが変わることを手元で確かめる（qa-ab12）。書き戻しと自動の下書き（I28・I29、G27）、共通部品の色（G29）、画面の分け方（G26）は、新しい環境・バインディング・依存を足さない。",
+      "recorded_at": "2026-10-22T02:09:16Z",
       "basis": "agent-inference"
     },
     "backend": {
-      "text": "Clean Architecture の依存の向きを書き込みに当てはめた。画面から呼ぶ書き込みを Server Functions（src/actions）に移し（qa-u18 の D-002）、どの関数も共通の入口 runAction を通す。入口が『送り元と認可→大きさの上限→入力の検証→本体→成功したときだけ refresh→結果の返却』という順序を持ち、各関数は業務の書き込みだけを書く（qa-r-backend-4 (2)）。結果は例外ではなく {ok, message} の値で返すので、本番で例外の中身が隠れても画面は理由を出せる。複数の表を書く守り方は batch・取り消し・やり直しの 3 つの型に限り、関数はどの型かを選ぶだけにする（同 (3)、D-003）。 （2026-10-13 追記：G6〜G15）Clean Architecture の依存の向きを、等級の呼び名・権限・所属に当てはめた。等級の呼び名を作る規則を一つの関数に置き、区分名・セット名・警告文・既定のタイトルなどがすべてそこを通る。pointGroup は結合キーとして内側に閉じ、表示に出さない（qa-v30 (1)）。権限の定義は route-ledger.json を中心に置き、サイドバー・ページの入口・サーバー処理の役割の指定・session.ts の判定がそこを読む向きにする（同 (2)、D-007 ①）。所属は getViewer の内側で決め、viewer.companyId の読み手は所属の値をそのまま使う（同 (5)、D-004）。設定不足は文ではなく『何が・どう直す・道筋と名前』の構造で返し、表現は画面側に任せる（同 (7)）。 （2026-10-14 追記：G16）Clean Architecture の依存の向きを比べる警告に当てはめた。ズレを ComparisonGap という型で返し、比べている2つのページの名前と href と項目ごとの有無を必須にする（qa-w08 (11)）。ページ名は文として持たず、ルート台帳の画面名と見出しから組み立て（pointGroupLabel＋stepTitle(\"select\")、formRowTitle）、リンクは schemeStepPath とアンケートの道筋から作るので、画面名を変えても警告の名前とリンクが台帳に従ってそろう。新しい版は既存の createForms に gradeIds を1件渡すだけで作り、書き込みの経路を増やさない（同 (11)）。 （2026-10-14 訂正：qa-w11・qa-w12・D-008・D-009）利用者の作成・メンバーの追加・会社の追加・CSV の取り込みの重複の検査は、システム全体でメールアドレスの重複を拒否する形を保ち、所属の単位に改めない。所属の追加は addMembership だけが書き、所属と監査を同じ batch で保存する。getViewer の復帰先は、有効な所属のうち会社名の順で最初の会社とする（今の createdAt 昇順から変える）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）依存の向きを、上司の判断・レポート・評価セット・アンケートの状態に当てはめた。最終の可否の規則は domain の finalDecision（点数の判定・判断）に1つだけ置き、レポート・評価の詳細の読み出し・本人の結果・評価期間の一覧・CSV の書き出しがこれだけに依存し、結果を列に保存しない（qa-z01 (18) とその訂正、G24）。点数の判定は書き換えずに残し、判断は確定の入力で別の値として受ける（同 (17)）。確定のときの理由と上司コメントは保存の前に CRITERIA_LEAK_PATTERNS で検査し、引っかかった語を名指しして 400 で返す。自分自身の評価と部下でない人の評価は、検査の前に 403 で断る（同、DD-023）。評価セットの決め方は resolveSchemeForCycle に1つ置き、ズレの比較・アンケートの作成・点数の計算・レポートがこれだけを使う（同 (14)、G23）。アンケートの状態の規則は formTransitions に1つ置き、updateForm・延長・催促・画面の出し分けが同じ規則を使う（同 (16)、G21）。レポートは、純粋な関数 buildEvaluationReport（src/lib/domain/report.ts。確定した評価の行・評価の項目・同じ等級の点数から empty／reviewer／self を作る）と、読む側の loadEvaluationReport（src/lib/report-data.ts。会社・対象の人・見せる形を受けて確定した評価だけを読む）に分け、self の形は点数の数値と比べる値の鍵を持たない（同 (13) とその訂正、DD-024 の3・4、G18・G19）。CSV は先頭の23列をそのまま（「昇格可否」は最終の結論）にし、末尾に7列を足す（同 (20)）。ズレの比較は3種類の項目に広げ、各行に直す画面の href を持たせる（同 (15)、G22）。KGI の domain とサーバー処理を消し、賞与（仮）の計算を scoring の側へ移す（同 (12)、G17）。",
-      "recorded_at": "2026-10-20T23:58:12Z",
+      "text": "Clean Architecture の依存の向きを書き込みに当てはめた。画面から呼ぶ書き込みを Server Functions（src/actions）に移し（qa-u18 の D-002）、どの関数も共通の入口 runAction を通す。入口が『送り元と認可→大きさの上限→入力の検証→本体→成功したときだけ refresh→結果の返却』という順序を持ち、各関数は業務の書き込みだけを書く（qa-r-backend-4 (2)）。結果は例外ではなく {ok, message} の値で返すので、本番で例外の中身が隠れても画面は理由を出せる。複数の表を書く守り方は batch・取り消し・やり直しの 3 つの型に限り、関数はどの型かを選ぶだけにする（同 (3)、D-003）。 （2026-10-13 追記：G6〜G15）Clean Architecture の依存の向きを、等級の呼び名・権限・所属に当てはめた。等級の呼び名を作る規則を一つの関数に置き、区分名・セット名・警告文・既定のタイトルなどがすべてそこを通る。pointGroup は結合キーとして内側に閉じ、表示に出さない（qa-v30 (1)）。権限の定義は route-ledger.json を中心に置き、サイドバー・ページの入口・サーバー処理の役割の指定・session.ts の判定がそこを読む向きにする（同 (2)、D-007 ①）。所属は getViewer の内側で決め、viewer.companyId の読み手は所属の値をそのまま使う（同 (5)、D-004）。設定不足は文ではなく『何が・どう直す・道筋と名前』の構造で返し、表現は画面側に任せる（同 (7)）。 （2026-10-14 追記：G16）Clean Architecture の依存の向きを比べる警告に当てはめた。ズレを ComparisonGap という型で返し、比べている2つのページの名前と href と項目ごとの有無を必須にする（qa-w08 (11)）。ページ名は文として持たず、ルート台帳の画面名と見出しから組み立て（pointGroupLabel＋stepTitle(\"select\")、formRowTitle）、リンクは schemeStepPath とアンケートの道筋から作るので、画面名を変えても警告の名前とリンクが台帳に従ってそろう。新しい版は既存の createForms に gradeIds を1件渡すだけで作り、書き込みの経路を増やさない（同 (11)）。 （2026-10-14 訂正：qa-w11・qa-w12・D-008・D-009）利用者の作成・メンバーの追加・会社の追加・CSV の取り込みの重複の検査は、システム全体でメールアドレスの重複を拒否する形を保ち、所属の単位に改めない。所属の追加は addMembership だけが書き、所属と監査を同じ batch で保存する。getViewer の復帰先は、有効な所属のうち会社名の順で最初の会社とする（今の createdAt 昇順から変える）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）依存の向きを、上司の判断・レポート・評価セット・アンケートの状態に当てはめた。最終の可否の規則は domain の finalDecision（点数の判定・判断）に1つだけ置き、レポート・評価の詳細の読み出し・本人の結果・評価期間の一覧・CSV の書き出しがこれだけに依存し、結果を列に保存しない（qa-z01 (18) とその訂正、G24）。点数の判定は書き換えずに残し、判断は確定の入力で別の値として受ける（同 (17)）。確定のときの理由と上司コメントは保存の前に CRITERIA_LEAK_PATTERNS で検査し、引っかかった語を名指しして 400 で返す。自分自身の評価と部下でない人の評価は、検査の前に 403 で断る（同、DD-023）。評価セットの決め方は resolveSchemeForCycle に1つ置き、ズレの比較・アンケートの作成・点数の計算・レポートがこれだけを使う（同 (14)、G23）。アンケートの状態の規則は formTransitions に1つ置き、updateForm・延長・催促・画面の出し分けが同じ規則を使う（同 (16)、G21）。レポートは、純粋な関数 buildEvaluationReport（src/lib/domain/report.ts。確定した評価の行・評価の項目・同じ等級の点数から empty／reviewer／self を作る）と、読む側の loadEvaluationReport（src/lib/report-data.ts。会社・対象の人・見せる形を受けて確定した評価だけを読む）に分け、self の形は点数の数値と比べる値の鍵を持たない（同 (13) とその訂正、DD-024 の3・4、G18・G19）。CSV は先頭の23列をそのまま（「昇格可否」は最終の結論）にし、末尾に7列を足す（同 (20)）。ズレの比較は3種類の項目に広げ、各行に直す画面の href を持たせる（同 (15)、G22）。KGI の domain とサーバー処理を消し、賞与（仮）の計算を scoring の側へ移す（同 (12)、G17）。 （2026-10-22 追記：G25〜G29）アンケートから設定への書き戻しと、設定からアンケート・評価への追従は、どちらも共通の入口 runAction を通るサーバー処理として書き、画面の部品は追従の規則を持たない（qa-ab07・qa-ab08、I28・I29、G27）。決まり（評価セットの項目数・固定枠・20点枠と KPI の計算に要る設問）に合うかの判定は domain の純粋な関数に置き、合わない保存はその関数が返す決まりと直す画面で断る（qa-ab11）。回答0件の下書きは今の rebuildFormQuestions で作り直し、回答のある公開中のアンケートには次の版の下書きを1つだけ作る（すでにあれば作り直す）。確定前の評価の集計し直しは今の impact の判定を使い、確定した評価とレポートには触れない（qa-ab09）。この書き戻しと作り直しは、DD-015（組み立て画面から設問を KPI 項目に結び付けない）と、DD-016 が却下した『聞き方の保存で下書きを書き換える』を改めるので、改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す（qa-ab16、I28・I29）。写しを持つ場所の3分類は一覧の定義を1つ持ち、契約テストがコードと突き合わせる（I30）。既定の割り当ては data/grades.json・drizzle/seed.sql・DEFAULT_BAND_SETS の3か所で同じ値を保ち、等級名ではなく内部の識別子で決める（qa-ab02、I26、G25）。",
+      "recorded_at": "2026-10-22T03:45:00Z",
       "basis": "agent-inference"
     },
     "frontend": {
-      "text": "Clean Architecture の『方針を詳細から切り離す』を画面側に当てはめた。同じタブの反映は Server Function の応答に載った新しい描画が担い、各画面は useSaveAction の結果 {ok, message} を出すだけにする（qa-r-frontend-3 (1)）。成功の結果は createCommitGate で新しい描画が終わるまで返さないので、言葉と一覧がずれない。他タブの通知・タブ復帰・通信の回復・bfcache 復元で取り直す方針は FreshnessSync という一つの共通口が持ち、BroadcastChannel・visibilitychange・online・pageshow という詳細はその内側に閉じる（同 (3)(4)）。 （2026-10-13 追記：G6〜G15）Clean Architecture の『方針を詳細から切り離す』を部品に当てはめた。並べ替えの方針（持ち上げる・動かす・置く・戻す・読み上げる）を一つの共通部品に置き、Pointer Events の長押し・矢印のボタン・キーボードという入力の詳細はその内側に閉じる（qa-v22 (2)、D-005）。権限一覧の表・タブ・カード・説明は同じデータから描く共通部品にし、ページとモーダルで使い回す（同 (3)、D-006）。設定不足の表示も共通の部品にして、各画面は構造化された値を渡すだけにする（同 (4)）。等級名はサーバーから受け取り、部品は英語の区分名を持たない（同 (1)）。 （2026-10-14 追記：G16）Clean Architecture の『方針を詳細から切り離す』を比べる警告に当てはめた。『閉じた1行に件数・押すとその場で開く・2つのページのリンクと表とボタン』という見せ方の方針を ComparisonGapNotice という一つの部品に置き、3画面はサーバーから受け取った ComparisonGap の値を渡すだけにする（qa-w07 (8)）。開閉の詳細は既存の InlineDetail（<details>/<summary>）の内側に閉じ、画面ごとに <details> を書かない。表の読み上げ（th の scope、○ と — の『ある』『ない』）も部品の中で一度だけ決めるので、使う画面が増えても抜け落ちない（同 (8)）。 （2026-10-20 追記：G17〜G24）方針を詳細から切り離すことを、レポートと上司の判断の部品に当てはめた。最終の可否の規則は domain の finalDecision に置き、結論の表示は共通の部品（DecisionBadge）が受け取った結果を描くだけにする。評価の詳細・本人の結果・評価期間の一覧・レポートが同じ部品を使い、結論と印の文言は1か所に置く（qa-y11 (15)、G24）。確定のボタンを押せない理由も、サーバーと同じ入力の検査の関数で決める（同 (14)）。レポートは1つのテンプレート（ReportTemplate）がサーバーで作ったデータの形だけを受けて描き、本人向けの形には点数のキーを持たせない（同 (10)、G18・G19）。アンケートの操作の出し分けはサーバーから受け取る『できる操作』の一覧で決める（同 (12)、G21）。ズレの警告の部品は行ごとのリンクを描くだけで、比べる処理を持たない（同 (11)、G22）。KGI の部品とナビの項目は消す（同 (9)、G17）。",
-      "recorded_at": "2026-10-19T21:47:35Z",
+      "text": "Clean Architecture の『方針を詳細から切り離す』を画面側に当てはめた。同じタブの反映は Server Function の応答に載った新しい描画が担い、各画面は useSaveAction の結果 {ok, message} を出すだけにする（qa-r-frontend-3 (1)）。成功の結果は createCommitGate で新しい描画が終わるまで返さないので、言葉と一覧がずれない。他タブの通知・タブ復帰・通信の回復・bfcache 復元で取り直す方針は FreshnessSync という一つの共通口が持ち、BroadcastChannel・visibilitychange・online・pageshow という詳細はその内側に閉じる（同 (3)(4)）。 （2026-10-13 追記：G6〜G15）Clean Architecture の『方針を詳細から切り離す』を部品に当てはめた。並べ替えの方針（持ち上げる・動かす・置く・戻す・読み上げる）を一つの共通部品に置き、Pointer Events の長押し・矢印のボタン・キーボードという入力の詳細はその内側に閉じる（qa-v22 (2)、D-005）。権限一覧の表・タブ・カード・説明は同じデータから描く共通部品にし、ページとモーダルで使い回す（同 (3)、D-006）。設定不足の表示も共通の部品にして、各画面は構造化された値を渡すだけにする（同 (4)）。等級名はサーバーから受け取り、部品は英語の区分名を持たない（同 (1)）。 （2026-10-14 追記：G16）Clean Architecture の『方針を詳細から切り離す』を比べる警告に当てはめた。『閉じた1行に件数・押すとその場で開く・2つのページのリンクと表とボタン』という見せ方の方針を ComparisonGapNotice という一つの部品に置き、3画面はサーバーから受け取った ComparisonGap の値を渡すだけにする（qa-w07 (8)）。開閉の詳細は既存の InlineDetail（<details>/<summary>）の内側に閉じ、画面ごとに <details> を書かない。表の読み上げ（th の scope、○ と — の『ある』『ない』）も部品の中で一度だけ決めるので、使う画面が増えても抜け落ちない（同 (8)）。 （2026-10-20 追記：G17〜G24）方針を詳細から切り離すことを、レポートと上司の判断の部品に当てはめた。最終の可否の規則は domain の finalDecision に置き、結論の表示は共通の部品（DecisionBadge）が受け取った結果を描くだけにする。評価の詳細・本人の結果・評価期間の一覧・レポートが同じ部品を使い、結論と印の文言は1か所に置く（qa-y11 (15)、G24）。確定のボタンを押せない理由も、サーバーと同じ入力の検査の関数で決める（同 (14)）。レポートは1つのテンプレート（ReportTemplate）がサーバーで作ったデータの形だけを受けて描き、本人向けの形には点数のキーを持たせない（同 (10)、G18・G19）。アンケートの操作の出し分けはサーバーから受け取る『できる操作』の一覧で決める（同 (12)、G21）。ズレの警告の部品は行ごとのリンクを描くだけで、比べる処理を持たない（同 (11)、G22）。KGI の部品とナビの項目は消す（同 (9)、G17）。 （2026-10-22 追記：G25〜G29）段階的な開示（Disclosure・HintToggle・RevealToggle・InlineDetail）と境界のはっきりしたカード（Card・CardHead）は共通部品に置き、行動指針と KPI・評価セットの画面だけでなく、同じ部品を使う全ての画面で同じ振る舞いにする（qa-ab14、I33、G26・G29）。画面ごとの組み替えは I27 の2画面と評価を作る画面に限る。色と手応えは globals.css の部品クラスに閉じ、部品は状態（主・副・選んだ・開いた）をクラスで渡すだけにして、TSX に色を書かない（qa-ab06、I32、G29）。保存の後に変わったアンケートと評価の一覧はサーバーの結果を描くだけにし、画面が追従の規則を持たない（I29、G27）。初期設定の説明の文は、サーバーから受け取ったいまの割り当てから作る（I26、G25）。",
+      "recorded_at": "2026-10-22T02:09:16Z",
       "basis": "agent-inference"
     },
     "maintenance-ops": {
-      "text": "Clean Code の『一つの規則は一か所に書き、検査で守る』を、鮮度と原子性の契約に当てはめた。書き込みの順序を共通の入口に集め、入口を通らない書き込み・batch の外で 2 つ以上の表を書く関数・送り元の検査の欠けを、pnpm test の 3 つの契約試験で 0 件に保つ（qa-r-ops-3 (1)）。取り消しややり直しまで失敗したときは compensation_failed・rollforward_failed を構造化したログに残し、それを手掛かりに本番 DB を手で書き換えずに直す手順を文書にする（同 (3)）。規則を人の記憶ではなく、検査と記録に持たせる（G4・G5）。 （2026-10-13 追記：G6〜G15）Clean Code の『一つの規則は一か所に書き、検査で守る』を、等級の呼び名・権限・所属・提出状況・設定不足・並べ替えに広げた。表示の文字列に英語やカタカナの区分名が無いこと、ルート台帳（route-ledger.json）の権限の定義と各判定の一致、一般の社員の応答に他人の等級と点数が無いこと、所属していない会社のデータが読めないことなどを pnpm test の検査に足す（qa-v31 (3)）。画面名の変更は台帳・定数・文書・テストのすべてで同じ名前にそろえ、check:docs で漏れを落とす（同 (1)）。本番の一律の書き換えは、前後を読み取りで数えて記録し、外部変更ガードを通す（同 (4)）。 （2026-10-14 追記：G16）Clean Code の『一つの規則は一か所に書き、検査で守る』を比べる警告に当てはめた。『ズレの警告は必ず2つのページを持つ』『食い違・ズレを含む警告は ComparisonGap からしか作らない』『リンク先は台帳にあり、見る人の役割で開ける』を pnpm test の検査にし、規則を人の記憶に頼らない（qa-w10 (5)）。新しい版がその等級の版だけを増やすこと、他社の等級を拒否することも検査に足し、domain のカバレッジ 100% を保つ。文書（spec.md §22 と system-spec）と受領書を同じ変更でそろえる（同 (5)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）一つの規則は一か所に書き、検査で守ることを、今回足した規則に当てはめた。最終の可否（finalDecision）と評価セットの決め方（resolveSchemeForCycle）は、使う側の全てがその関数だけを使うことを契約テスト（final-decision.contract.test.ts・scheme-resolution.contract.test.ts）で守る（qa-y16 (7)(11)、G23・G24）。アンケートの状態の規則（formTransitions）は、状態・締切・回答の有無の組の単体テストと、会社の条件の結合テスト（forms-transitions.integration.test.ts）で守る（同 (7)、G21）。見える範囲は、canViewEvaluationOf を使うのがレポートの画面だけで、CSV とメモはこの関数を使わない（それぞれ canReviewEmployeeEvaluation と readableNoteVisibilities）ことを、同じ契約テスト（src/lib/report-visibility.contract.test.ts）で確かめる（qa-y16 の訂正、DD-021 の6、DD-024 の5、G19）。finalDecision は5通りの単体テストで domain のカバレッジ 100% にする。KGI は消した後に参照が残らないことを静的検査で0件に保つ（同 (6)、G17）。レポートは、同じ入力で同じ出力・軸の数・重ならない社員が3人未満なら同じ等級の平均を出さない・本人向けに点数の鍵が無いことを単体テストで、A4 の2枚組と図や表が途中で切れないことを E2E で確かめる（同 (7)(10)(13)、G18）。ズレの3種類と行ごとのリンクを契約テストで確かめる（同 (7)、G22）。テストデータは架空の名前と値で、2回流しても同じ結果になり、本番には入れない（同 (9)、G20）。依存関係の図を docs/product に残し、契約テストの一覧と対応させる（同 (8)(12)）。",
-      "recorded_at": "2026-10-20T23:58:12Z",
+      "text": "Clean Code の『一つの規則は一か所に書き、検査で守る』を、鮮度と原子性の契約に当てはめた。書き込みの順序を共通の入口に集め、入口を通らない書き込み・batch の外で 2 つ以上の表を書く関数・送り元の検査の欠けを、pnpm test の 3 つの契約試験で 0 件に保つ（qa-r-ops-3 (1)）。取り消しややり直しまで失敗したときは compensation_failed・rollforward_failed を構造化したログに残し、それを手掛かりに本番 DB を手で書き換えずに直す手順を文書にする（同 (3)）。規則を人の記憶ではなく、検査と記録に持たせる（G4・G5）。 （2026-10-13 追記：G6〜G15）Clean Code の『一つの規則は一か所に書き、検査で守る』を、等級の呼び名・権限・所属・提出状況・設定不足・並べ替えに広げた。表示の文字列に英語やカタカナの区分名が無いこと、ルート台帳（route-ledger.json）の権限の定義と各判定の一致、一般の社員の応答に他人の等級と点数が無いこと、所属していない会社のデータが読めないことなどを pnpm test の検査に足す（qa-v31 (3)）。画面名の変更は台帳・定数・文書・テストのすべてで同じ名前にそろえ、check:docs で漏れを落とす（同 (1)）。本番の一律の書き換えは、前後を読み取りで数えて記録し、外部変更ガードを通す（同 (4)）。 （2026-10-14 追記：G16）Clean Code の『一つの規則は一か所に書き、検査で守る』を比べる警告に当てはめた。『ズレの警告は必ず2つのページを持つ』『食い違・ズレを含む警告は ComparisonGap からしか作らない』『リンク先は台帳にあり、見る人の役割で開ける』を pnpm test の検査にし、規則を人の記憶に頼らない（qa-w10 (5)）。新しい版がその等級の版だけを増やすこと、他社の等級を拒否することも検査に足し、domain のカバレッジ 100% を保つ。文書（spec.md §22 と system-spec）と受領書を同じ変更でそろえる（同 (5)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）一つの規則は一か所に書き、検査で守ることを、今回足した規則に当てはめた。最終の可否（finalDecision）と評価セットの決め方（resolveSchemeForCycle）は、使う側の全てがその関数だけを使うことを契約テスト（final-decision.contract.test.ts・scheme-resolution.contract.test.ts）で守る（qa-y16 (7)(11)、G23・G24）。アンケートの状態の規則（formTransitions）は、状態・締切・回答の有無の組の単体テストと、会社の条件の結合テスト（forms-transitions.integration.test.ts）で守る（同 (7)、G21）。見える範囲は、canViewEvaluationOf を使うのがレポートの画面だけで、CSV とメモはこの関数を使わない（それぞれ canReviewEmployeeEvaluation と readableNoteVisibilities）ことを、同じ契約テスト（src/lib/report-visibility.contract.test.ts）で確かめる（qa-y16 の訂正、DD-021 の6、DD-024 の5、G19）。finalDecision は5通りの単体テストで domain のカバレッジ 100% にする。KGI は消した後に参照が残らないことを静的検査で0件に保つ（同 (6)、G17）。レポートは、同じ入力で同じ出力・軸の数・重ならない社員が3人未満なら同じ等級の平均を出さない・本人向けに点数の鍵が無いことを単体テストで、A4 の2枚組と図や表が途中で切れないことを E2E で確かめる（同 (7)(10)(13)、G18）。ズレの3種類と行ごとのリンクを契約テストで確かめる（同 (7)、G22）。テストデータは架空の名前と値で、2回流しても同じ結果になり、本番には入れない（同 (9)、G20）。依存関係の図を docs/product に残し、契約テストの一覧と対応させる（同 (8)(12)）。 （2026-10-22 追記：G25〜G29）写しを持つ場所の3分類（参照・追従・確定した時点の写し）は一覧の文書に1か所で書き、契約テストがコードとの抜けを0件に保つ（qa-ab04、I30、G27）。書き戻しの決まりの判定は1つの関数に置き、画面の押せない理由とサーバーの保存が同じ関数を使う（I28）。既定の割り当てを持つ3か所（data/grades.json・drizzle/seed.sql・DEFAULT_BAND_SETS）が同じ値であることをテストで確かめる（qa-ab02、I26、G25）。DD-010 の『移行で書き換えない』と製品仕様 §14 の『受付中の期は作らない』は、改める DD を書いてから実装する（I26・I31）。DD-015 の『新しい設問を KPI 項目に紐づけない』と、DD-016 が却下した『聞き方の保存で下書きを書き換える』も、改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す（qa-ab16、I28・I29）。共通部品の色使いは既存のテーマの契約テストを書き換えずに通し、グラデーションのコントラストと focus-visible の検査を新しいテストに1か所で書く（O29、G29）。見本の生成は手元と本番の見本の会社で同じ作り方（buildSeed）を使い、本番への投入は利用者の確認の後に db:sample:remote で行う（qa-ab12、I31、G28）。",
+      "recorded_at": "2026-10-22T03:45:00Z",
       "basis": "agent-inference"
     }
   },
@@ -7757,82 +8557,82 @@
   "doctrine_applications": {
     "database": {
       "data-access": {
-        "text": "Clean Architecture の gateway 境界に沿い、会社追加の段階と取り消しの組は、書き込みの関数の中に散らさず永続化層（src/lib 配下のwithCompensation）に置く。copyCompanyMasters は今の chunkRowsForD1（1 文の bound parameter を 99 個以下）のまま使い、取り消しは会社の ID で複製した行を消す形にする（qa-r-database-3 (1)）。控えの表（initial_credential_memos）は暗号文・初期化ベクトル・鍵の版・発行者・発行時刻だけを持ち、平文の列を作らない。期限切れの行は次の発行の batch の先頭で消し、決まった時刻に動く仕組みを足さない（同 (5)）。 （2026-10-13 追記：G6〜G15）所属の読み書きは永続化層の関数に閉じ、getViewer と一覧の問い合わせは『選んでいる会社の所属』を受け取るだけにする。users の会社ごとの列を読む箇所は所属の値へそろえる（qa-v26 (1)）。並び順は全体を受けて display_order を 1 から振り直す書き込みを1回の batch で行い、版を持つ要件は新しい版を作る今の仕組みに従う（同 (7)）。提出状況は既存の表から求め、新しい表を作らない（同 (6)）。 （2026-10-20 追記：G17〜G24）gateway の境界に沿い、上司の判断の列は永続化層の評価の読み書きの中だけで扱い、画面や CSV が列の名前（raise_decision ほか）を直接知らないようにする（qa-y15 (13)）。最終の可否は列に保存せず、読み出した判定と判断を domain の finalDecision に渡して得る。レポートのための表は作らず、（会社・人・状態）で引ける索引を確かめてから既存の表を読む（同 (11)）。KGI の表と列を消す前に、読み書きする経路を永続化層から先に無くす（同 (10)）。",
-        "recorded_at": "2026-10-19T21:47:35Z",
+        "text": "Clean Architecture の gateway 境界に沿い、会社追加の段階と取り消しの組は、書き込みの関数の中に散らさず永続化層（src/lib 配下のwithCompensation）に置く。copyCompanyMasters は今の chunkRowsForD1（1 文の bound parameter を 99 個以下）のまま使い、取り消しは会社の ID で複製した行を消す形にする（qa-r-database-3 (1)）。控えの表（initial_credential_memos）は暗号文・初期化ベクトル・鍵の版・発行者・発行時刻だけを持ち、平文の列を作らない。期限切れの行は次の発行の batch の先頭で消し、決まった時刻に動く仕組みを足さない（同 (5)）。 （2026-10-13 追記：G6〜G15）所属の読み書きは永続化層の関数に閉じ、getViewer と一覧の問い合わせは『選んでいる会社の所属』を受け取るだけにする。users の会社ごとの列を読む箇所は所属の値へそろえる（qa-v26 (1)）。並び順は全体を受けて display_order を 1 から振り直す書き込みを1回の batch で行い、版を持つ要件は新しい版を作る今の仕組みに従う（同 (7)）。提出状況は既存の表から求め、新しい表を作らない（同 (6)）。 （2026-10-20 追記：G17〜G24）gateway の境界に沿い、上司の判断の列は永続化層の評価の読み書きの中だけで扱い、画面や CSV が列の名前（raise_decision ほか）を直接知らないようにする（qa-y15 (13)）。最終の可否は列に保存せず、読み出した判定と判断を domain の finalDecision に渡して得る。レポートのための表は作らず、（会社・人・状態）で引ける索引を確かめてから既存の表を読む（同 (11)）。KGI の表と列を消す前に、読み書きする経路を永続化層から先に無くす（同 (10)）。 （2026-10-22 追記：G25〜G29）アンケートから設定への書き戻しは、設定の保存と同じ永続化層の関数を通し、アンケートの設問と元の設定を同じ batch で書く。決まりに合わない保存は batch を作る前に断り、片方だけが書かれた状態を作らない（qa-ab11、I28、G27）。写しを持つ表（form_questions・form_answers の question_*・evaluations と evaluation_*）は3分類の一覧に載せ、確定した評価の写しは書き換えない（qa-ab04、I30）。既定の割り当てへの移行は割り当ての列だけを UPDATE し、観点の行には触れない（I26、G25）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       },
       "reliability": {
-        "text": "Google SRE の観点で、部分失敗の行を人が探して消す作業（トイル）を減らす。1 回の batch に入る書き込みは batch で書いて部分失敗そのものを起こさず、入りきらない会社追加だけ取り消しが自動で行を消す（qa-r-database-3 (1)(2)）。取り消しまで失敗したときだけ構造化したログを残して人が直す。同時保存は uq_ce_entity_seq で後のほうを 409 で断り、自動でやり直さない（同 (6)）。読み取りは primary に届く今の方式を保ち、読み取りの複製を入れる場合は、書き込みの応答の bookmark を次の読み取りへ渡すことを条件にする（同 (3)）。 （2026-10-13 追記：G6〜G15）本番の全社に効く等級名の一律の書き換えを、2回流しても結果が変わらず、変更前の値を記録用の表に残して戻せるマイグレーションにする（qa-v26 (3)）。等級名の変更と所属の追加・削除は監査ジャーナルに変更前と変更後を残し、問い合わせを受けたときに推測ではなく記録で確かめられるようにする（同 (8)）。 （2026-10-20 追記：G17〜G24）Google SRE の変更管理に沿い、スキーマの変更を戻せる単位に分ける。上司の判断の列は NULL を許して足すだけなので、コードより先に当てても今のコードが動き、今の Deploy の順番のまま1回で出せる（qa-y15 (14)）。消す側の変更（KGI の3つの表と評価の2列、同 (10)）は、読み書きをやめるコードを先に出し、表と列を消すマイグレーションを後の Deploy に分ける（infrastructure (4) と同じ順）。既存の確定済みの行は書き換えず、判断の記録なしのまま残す（同 (13)）。",
-        "recorded_at": "2026-10-19T21:47:35Z",
+        "text": "Google SRE の観点で、部分失敗の行を人が探して消す作業（トイル）を減らす。1 回の batch に入る書き込みは batch で書いて部分失敗そのものを起こさず、入りきらない会社追加だけ取り消しが自動で行を消す（qa-r-database-3 (1)(2)）。取り消しまで失敗したときだけ構造化したログを残して人が直す。同時保存は uq_ce_entity_seq で後のほうを 409 で断り、自動でやり直さない（同 (6)）。読み取りは primary に届く今の方式を保ち、読み取りの複製を入れる場合は、書き込みの応答の bookmark を次の読み取りへ渡すことを条件にする（同 (3)）。 （2026-10-13 追記：G6〜G15）本番の全社に効く等級名の一律の書き換えを、2回流しても結果が変わらず、変更前の値を記録用の表に残して戻せるマイグレーションにする（qa-v26 (3)）。等級名の変更と所属の追加・削除は監査ジャーナルに変更前と変更後を残し、問い合わせを受けたときに推測ではなく記録で確かめられるようにする（同 (8)）。 （2026-10-20 追記：G17〜G24）Google SRE の変更管理に沿い、スキーマの変更を戻せる単位に分ける。上司の判断の列は NULL を許して足すだけなので、コードより先に当てても今のコードが動き、今の Deploy の順番のまま1回で出せる（qa-y15 (14)）。消す側の変更（KGI の3つの表と評価の2列、同 (10)）は、読み書きをやめるコードを先に出し、表と列を消すマイグレーションを後の Deploy に分ける（infrastructure (4) と同じ順）。既存の確定済みの行は書き換えず、判断の記録なしのまま残す（同 (13)）。 （2026-10-22 追記：G25〜G29）Google SRE の変更管理に沿い、割り当ての移行は戻せる単位にして、書き換えた会社の数と、既定のまとまりが無くて書き換えなかった会社の数を残す（qa-ab10、I26、G25）。同じ設定を2人が同時に保存したときの 409 を書き戻しと自動の下書きにも当て、後の保存が黙って上書きしないようにする（I28・I29、G27）。見本の受付中の期は見本の会社に紐づく行だけに INSERT し、他社の行が変わらないことを生成のテストで確かめる（I31、G28）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       }
     },
     "auth": {
       "authentication": {
-        "text": "OWASP ASVS のセッション管理の要求（権限の取り消しがすぐ効くこと）に沿い、セッションは要求ごとに D1 から読み、better-auth の cookieCache を入れない（qa-r-auth-3 (2)）。Server Functions もこのセッションの読み方で認可するので、移行しても認可の鮮度は変わらない。会社の利用停止や利用者の無効化は次の要求で拒否され、他タブは取り直しの時点のセッションで判定を受ける（同 (3)(4)）。cookieCache は maxAge が切れるまで取り消しを伝えないため、入れる場合は鮮度の契約を見直すことを条件にした。 （2026-10-13 追記：G6〜G15）1つのアカウントで複数の会社を使えるようにしても、ログインとセッションはアカウントの単位のまま1つにし、会社ごとに資格情報を分けない（qa-v27 (1)）。会社の切り替えはセッションを作り直さず、選んでいる会社の cookie だけを変え、リクエストのたびに所属で確かめる。所属を外された会社は、cookie がその会社を指していても次のリクエストから使われない（同 (1)(2)、D-004）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）セッションを要求ごとに D1 から読む今の形のまま、レポートの画面（/reports/[id]）は、その要求のセッションから見る人を作り直してから canViewEvaluationOf を当てる。確定と判断の記録も、作り直した見る人で canManageEmployee（中で canActOnEmployeeEvaluation）を当てる（qa-y13 (6)(8) とその訂正）。CSV の書き出しの canReviewEmployeeEvaluation と、メモの読み出しの readableNoteVisibilities も、その要求のセッションから作った見る人に当てる（qa-z02 の訂正）。評価の詳細の2画面は今の判定のまま残す（SECURITY-013 を決めるときに寄せる）。どの入口もセッションの写しを持ち越さないので、所属の上司が変わったり役割を外されたりしたら、次の要求から見えなくなり記録もできなくなる。",
-        "recorded_at": "2026-10-20T23:58:12Z",
+        "text": "OWASP ASVS のセッション管理の要求（権限の取り消しがすぐ効くこと）に沿い、セッションは要求ごとに D1 から読み、better-auth の cookieCache を入れない（qa-r-auth-3 (2)）。Server Functions もこのセッションの読み方で認可するので、移行しても認可の鮮度は変わらない。会社の利用停止や利用者の無効化は次の要求で拒否され、他タブは取り直しの時点のセッションで判定を受ける（同 (3)(4)）。cookieCache は maxAge が切れるまで取り消しを伝えないため、入れる場合は鮮度の契約を見直すことを条件にした。 （2026-10-13 追記：G6〜G15）1つのアカウントで複数の会社を使えるようにしても、ログインとセッションはアカウントの単位のまま1つにし、会社ごとに資格情報を分けない（qa-v27 (1)）。会社の切り替えはセッションを作り直さず、選んでいる会社の cookie だけを変え、リクエストのたびに所属で確かめる。所属を外された会社は、cookie がその会社を指していても次のリクエストから使われない（同 (1)(2)、D-004）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）セッションを要求ごとに D1 から読む今の形のまま、レポートの画面（/reports/[id]）は、その要求のセッションから見る人を作り直してから canViewEvaluationOf を当てる。確定と判断の記録も、作り直した見る人で canManageEmployee（中で canActOnEmployeeEvaluation）を当てる（qa-y13 (6)(8) とその訂正）。CSV の書き出しの canReviewEmployeeEvaluation と、メモの読み出しの readableNoteVisibilities も、その要求のセッションから作った見る人に当てる（qa-z02 の訂正）。評価の詳細の2画面は今の判定のまま残す（SECURITY-013 を決めるときに寄せる）。どの入口もセッションの写しを持ち越さないので、所属の上司が変わったり役割を外されたりしたら、次の要求から見えなくなり記録もできなくなる。 （2026-10-22 追記：G25〜G29）アンケートの保存から設定へ書き戻す処理も、その要求のセッションから作った見る人で会社の管理者以上を確かめてから本体へ進む。アンケートを直せることから、設定を直せる権限を推し量らない（qa-ab07、I28、G27）。設定の保存が自動で作る下書きは、保存した人の会社のアンケートだけを対象にする（I29）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       },
       "security": {
-        "text": "Server Function は外から直接呼べる公開の入口になる、という前提で設計する。入口は送り元のサイトを確かめた後、関数ごとに今の requireRole・apiViewer と同じ判定を行い、認可に失敗したら、書き込みも画面の作り直しも他タブへの通知もしない（qa-r-auth-3 (1)）。他タブへの通知は同じブラウザ・同じオリジンにしか届かず、受け取ったタブはその時点のセッションで認可を受け直す（同 (3)(4)）。通知が認可の代わりになる経路は無い。 （2026-10-13 追記：G6〜G15）OWASP ASVS のアクセス制御の要求（サーバー側で、既定で拒否し、最小権限）に沿い、等級名の変更を、マネージャー・一般の社員・他社の会社の管理者からはサーバー処理で 403 にする。画面の欄を出さないことは補助で、判定は saveMaster と行動指針の割り当ての処理の入口に置く（qa-v27 (3)）。開けるページとできる操作は route-ledger.json の accessClass と各ページの操作の定義から引き、見せる権限と強制する権限をずらさない（同 (4)、D-007 ①）。役割の種類は増やさず、『システム開発者』は画面名だけにする（同 (5)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）OWASP ASVS のアクセス制御の要求（サーバー側で、既定で拒否する）に沿い、新しい入口ごとに判定の関数を1つに決め、画面ごとに条件を写して食い違う穴を作らない。レポートの画面は canViewEvaluationOf（本人は self、会社の管理者以上と直属の上長は reviewer、ほかは null）だけを使う。確定した後だけという条件は判定に持たせず、確定した評価だけを読む loadEvaluationReport に置く（qa-y13 の訂正、DD-021 の4・6、DD-024 の4・5、G19）。判断の記録は評価を確定できる人の判定（canActOnEmployeeEvaluation）をそのまま使い、自分自身の評価と部下でない人の評価は 403 で断る（qa-y13 (8)、G24）。上司の判断と理由は確定前の評価の詳細と同じ範囲で見せ、本人には確定した後だけ返す。KGI のページと操作は台帳から消し、開く入口そのものを残さない（同 (7)、G17）。",
-        "recorded_at": "2026-10-20T23:58:12Z",
+        "text": "Server Function は外から直接呼べる公開の入口になる、という前提で設計する。入口は送り元のサイトを確かめた後、関数ごとに今の requireRole・apiViewer と同じ判定を行い、認可に失敗したら、書き込みも画面の作り直しも他タブへの通知もしない（qa-r-auth-3 (1)）。他タブへの通知は同じブラウザ・同じオリジンにしか届かず、受け取ったタブはその時点のセッションで認可を受け直す（同 (3)(4)）。通知が認可の代わりになる経路は無い。 （2026-10-13 追記：G6〜G15）OWASP ASVS のアクセス制御の要求（サーバー側で、既定で拒否し、最小権限）に沿い、等級名の変更を、マネージャー・一般の社員・他社の会社の管理者からはサーバー処理で 403 にする。画面の欄を出さないことは補助で、判定は saveMaster と行動指針の割り当ての処理の入口に置く（qa-v27 (3)）。開けるページとできる操作は route-ledger.json の accessClass と各ページの操作の定義から引き、見せる権限と強制する権限をずらさない（同 (4)、D-007 ①）。役割の種類は増やさず、『システム開発者』は画面名だけにする（同 (5)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）OWASP ASVS のアクセス制御の要求（サーバー側で、既定で拒否する）に沿い、新しい入口ごとに判定の関数を1つに決め、画面ごとに条件を写して食い違う穴を作らない。レポートの画面は canViewEvaluationOf（本人は self、会社の管理者以上と直属の上長は reviewer、ほかは null）だけを使う。確定した後だけという条件は判定に持たせず、確定した評価だけを読む loadEvaluationReport に置く（qa-y13 の訂正、DD-021 の4・6、DD-024 の4・5、G19）。判断の記録は評価を確定できる人の判定（canActOnEmployeeEvaluation）をそのまま使い、自分自身の評価と部下でない人の評価は 403 で断る（qa-y13 (8)、G24）。上司の判断と理由は確定前の評価の詳細と同じ範囲で見せ、本人には確定した後だけ返す。KGI のページと操作は台帳から消し、開く入口そのものを残さない（同 (7)、G17）。 （2026-10-22 追記：G25〜G29）OWASP ASVS のアクセス制御に沿い、書き戻しで変わる設定（KPI の設問の文・評価セットの項目・行動指針の観点・等級要件）は、それぞれの設定の画面を保存できる人と同じ判定で絞る。断った保存は理由を返しても、他社の設定の名前や有無を返さない（qa-ab11、I28、G27）。KPI・評価セットの作業を別の画面に分けても、どの画面の入口にも今の役割の判定を当て、台帳（route-ledger.json）に足す（I27、G26）。見本の会社への投入は新しい役割を作らず、既存の手順に利用者の確認を挟む（qa-ab12、I31、G28）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       }
     },
     "ui-ux": {
       "presentation": {
-        "text": "Apple HIG の『利用者の文脈を保つ』に沿い、他タブや画面復帰で取り直しても、入力中のフォームの内容とスクロール位置を失わない。画面全体を読み込み中の表示に切り替えず、今の表示のまま差し替える（qa-r-uiux-3 (3)(4)）。連続作成では一覧の新しい行を先に見せ、控えは利用者が開いたときだけ前面に出し、期限を過ぎた控えにはボタンを出さずに再発行を案内する（同 (2)）。スマホ（375px）・タブレット（768px）でも同じ振る舞いにし、route-ledger の 4 幅の検証と鮮度の画面の通し試験に含める（同 (5)）。 （2026-10-13 追記：G6〜G15）Apple HIG のアクセシビリティと一貫性に沿い、権限一覧の可否を色だけでなく同じ記号と言葉で示し、説明はポインター・フォーカス・タップのどれでも出す（qa-v18 (2)(3)）。並べ替えは長押しのドラッグだけに頼らず、矢印のボタンとキーボードでも同じことができ、結果を読み上げる。タッチの長押しはふつうのスクロールと取り違えない（同 (9)、D-005）。アンケートの選択肢は文字のどこを押しても選べ、読み取り専用の表示は押せるように見せない（同 (10)）。等級はどの画面でも会社の等級名だけで呼ぶ（同 (1)）。375・768・1280・1600 の4つの幅で同じ振る舞いにする（同 (12)）。 （2026-10-20 追記：G17〜G24）Apple HIG の明確さと、利用者が次にできることを示す原則に沿う。確定の画面では、上司の判断を両方選び、変えるときの理由を書くまで確定のボタンを押せないようにし、押せない理由を1行で出す（qa-y10 (20)）。理由の入力欄の上に、本人にもそのまま見える文であることと、性格ではなく行動や事実で書くことを示す。結論・印・判定は色だけで区別せず文で示す（同 (21)）。レポートの図には同じ内容の表か文を添え、4つの幅で同じ順に並べる（同 (15)）。",
-        "recorded_at": "2026-10-19T21:47:35Z",
+        "text": "Apple HIG の『利用者の文脈を保つ』に沿い、他タブや画面復帰で取り直しても、入力中のフォームの内容とスクロール位置を失わない。画面全体を読み込み中の表示に切り替えず、今の表示のまま差し替える（qa-r-uiux-3 (3)(4)）。連続作成では一覧の新しい行を先に見せ、控えは利用者が開いたときだけ前面に出し、期限を過ぎた控えにはボタンを出さずに再発行を案内する（同 (2)）。スマホ（375px）・タブレット（768px）でも同じ振る舞いにし、route-ledger の 4 幅の検証と鮮度の画面の通し試験に含める（同 (5)）。 （2026-10-13 追記：G6〜G15）Apple HIG のアクセシビリティと一貫性に沿い、権限一覧の可否を色だけでなく同じ記号と言葉で示し、説明はポインター・フォーカス・タップのどれでも出す（qa-v18 (2)(3)）。並べ替えは長押しのドラッグだけに頼らず、矢印のボタンとキーボードでも同じことができ、結果を読み上げる。タッチの長押しはふつうのスクロールと取り違えない（同 (9)、D-005）。アンケートの選択肢は文字のどこを押しても選べ、読み取り専用の表示は押せるように見せない（同 (10)）。等級はどの画面でも会社の等級名だけで呼ぶ（同 (1)）。375・768・1280・1600 の4つの幅で同じ振る舞いにする（同 (12)）。 （2026-10-20 追記：G17〜G24）Apple HIG の明確さと、利用者が次にできることを示す原則に沿う。確定の画面では、上司の判断を両方選び、変えるときの理由を書くまで確定のボタンを押せないようにし、押せない理由を1行で出す（qa-y10 (20)）。理由の入力欄の上に、本人にもそのまま見える文であることと、性格ではなく行動や事実で書くことを示す。結論・印・判定は色だけで区別せず文で示す（同 (21)）。レポートの図には同じ内容の表か文を添え、4つの幅で同じ順に並べる（同 (15)）。 （2026-10-22 追記：G25〜G29）Apple HIG の明確さと、強弱で次の操作を示す原則に沿う。1つの面で主の操作は1つにして最も強いグラデーションで示し、副の操作は薄い色にする（qa-ab14、I32・I33、G29）。押す・選ぶ・開く部品は、指を乗せた・押した・選んだ・開いた・キーボードで選んだ状態をそれぞれ見て分かるようにし、押せる面は 44px 四方以上を保つ（WCAG 2.2 の 2.5.5）。文字とグラデーションの両端の比は 4.5:1 以上、大きな文字と部品の縁は 3:1 以上にし、focus-visible の印を全ての系統と明暗で見えるようにする（WCAG 2.2 の 1.4.3・1.4.11・2.4.7）。prefers-reduced-motion では光の動きを止め、prefers-contrast と印刷では平らな面に戻す。行動指針と KPI・評価セットの画面は最初に状態と次にやることだけを見せ、詳しい説明は開いたときに出す（I27、G26）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       }
     },
     "security": {
       "security": {
-        "text": "OWASP ASVS のデータ保護と Secrets Management の要求に沿う。ログイン後の HTML と API は今どおり private, no-store で返す（qa-r-security-3 (2)）。初期パスワードの控えは利用者 ID に結び付けた AES-GCM で暗号化して保存し、鍵（CREDENTIAL_ENC_KEY）は Workers の secret に置いてリポジトリと DB から分ける。行には鍵の版を持たせ、鍵の入れ替えに備える。開くたびに認可し、誰が誰の控えを開いたかを値を含めずに記録し、発行から 14 日を過ぎた控えは開けない（同 (6)）。別のサイトからの呼び出しは、Next.js の Origin と Host の検査と入口の assertSameOrigin の二重で断り、許可するオリジンを広げない（同 (7)、action-origin.test.ts）。BroadcastChannel は同じオリジンの中だけで動くので、CSP の connect-src も広げない（同 (5)）。 （2026-10-13 追記：G6〜G15）OWASP ASVS のアクセス制御とデータ保護に沿い、他人の等級と点数は見てよい役割にだけサーバーで載せ、一般の社員の応答に含めない（qa-v28 (2)）。複数の会社に所属する人の読み書きはすべて選んでいる会社の所属で絞り、cookie の値を信じずサーバーで所属を確かめ、会社の切り替えはオリジンを確かめる Server Action で受ける（同 (3)、D-004）。他社に既にアカウントがある人を足すとき、所属先を足す側へ漏らさない（同 (4)）。等級名の変更・所属の増減・本番の一律の書き換えを、変更前の値とともに監査に残す（同 (7)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）OWASP ASVS のアクセス制御の要求（認可はサーバーで、既定で拒否する）に沿い、マネージャーの CSV の書き出しを canReviewEmployeeEvaluation で直属の部下の行だけに絞る。管理者向けのメモは readableNoteVisibilities で会社の管理者以上にだけ返し、マネージャーからの「管理者のみ」の保存はサーバーでも 403 にする（qa-z02 (9) とその訂正。この2件の漏れはこの作業ツリーの変更で直した）。レポートの URL は、範囲の外の人・他社の人・存在しない人を区別せず同じ 404 にし、応答の違いから人の有無を読ませない（同）。判断の記録は画面でボタンを隠すだけにせず、サーバーの処理でも同じ判定で拒否する（同 (14)）。データ保護の要求に沿い、本人向けの応答の形から点数のキーそのものを落とし、隠すのを画面に任せない（同 (10)）。本人にも見える理由と上司コメントは保存の前に CRITERIA_LEAK_PATTERNS で検査し、本人に見せられない語を保存させない（qa-z01 の訂正、DD-023）。",
-        "recorded_at": "2026-10-20T23:58:12Z",
+        "text": "OWASP ASVS のデータ保護と Secrets Management の要求に沿う。ログイン後の HTML と API は今どおり private, no-store で返す（qa-r-security-3 (2)）。初期パスワードの控えは利用者 ID に結び付けた AES-GCM で暗号化して保存し、鍵（CREDENTIAL_ENC_KEY）は Workers の secret に置いてリポジトリと DB から分ける。行には鍵の版を持たせ、鍵の入れ替えに備える。開くたびに認可し、誰が誰の控えを開いたかを値を含めずに記録し、発行から 14 日を過ぎた控えは開けない（同 (6)）。別のサイトからの呼び出しは、Next.js の Origin と Host の検査と入口の assertSameOrigin の二重で断り、許可するオリジンを広げない（同 (7)、action-origin.test.ts）。BroadcastChannel は同じオリジンの中だけで動くので、CSP の connect-src も広げない（同 (5)）。 （2026-10-13 追記：G6〜G15）OWASP ASVS のアクセス制御とデータ保護に沿い、他人の等級と点数は見てよい役割にだけサーバーで載せ、一般の社員の応答に含めない（qa-v28 (2)）。複数の会社に所属する人の読み書きはすべて選んでいる会社の所属で絞り、cookie の値を信じずサーバーで所属を確かめ、会社の切り替えはオリジンを確かめる Server Action で受ける（同 (3)、D-004）。他社に既にアカウントがある人を足すとき、所属先を足す側へ漏らさない（同 (4)）。等級名の変更・所属の増減・本番の一律の書き換えを、変更前の値とともに監査に残す（同 (7)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）OWASP ASVS のアクセス制御の要求（認可はサーバーで、既定で拒否する）に沿い、マネージャーの CSV の書き出しを canReviewEmployeeEvaluation で直属の部下の行だけに絞る。管理者向けのメモは readableNoteVisibilities で会社の管理者以上にだけ返し、マネージャーからの「管理者のみ」の保存はサーバーでも 403 にする（qa-z02 (9) とその訂正。この2件の漏れはこの作業ツリーの変更で直した）。レポートの URL は、範囲の外の人・他社の人・存在しない人を区別せず同じ 404 にし、応答の違いから人の有無を読ませない（同）。判断の記録は画面でボタンを隠すだけにせず、サーバーの処理でも同じ判定で拒否する（同 (14)）。データ保護の要求に沿い、本人向けの応答の形から点数のキーそのものを落とし、隠すのを画面に任せない（同 (10)）。本人にも見える理由と上司コメントは保存の前に CRITERIA_LEAK_PATTERNS で検査し、本人に見せられない語を保存させない（qa-z01 の訂正、DD-023）。 （2026-10-22 追記：G25〜G29）OWASP の最小権限とデータ保護に沿い、本番の見本の会社への受付中の期の追加は、見本の会社に紐づく行だけを INSERT し、氏名と会社が見本の印を持つことを生成のテストで確かめる（qa-ab12、I31、G28）。投入の前に利用者の確認を取り、実データを見本に混ぜない。アンケートから設定への書き戻しは、画面で設問の操作を隠すだけにせず、サーバーの処理でも会社の管理者以上と会社の範囲で拒否する（qa-ab07、I28、G27）。グラデーションのために外から読み込む資源を足さず、globals.css の中だけで作る（I32、G29）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       }
     },
     "infrastructure": {
       "reliability": {
-        "text": "Google SRE の『測れないものは直せない』に沿い、⌘+Shift+R でも出なかった事象（qa-u03）を推測で閉じない。成功・失敗どちらの応答にも Worker が応答を作った時刻（x-generated-at）を付け、本番で新しく作られた応答かを確かめられるようにする（qa-r-infrastructure-3 (2)）。Next.js を 16.3.8 へ上げる変更は、pnpm test と preview での確認を経てから出す（同 (4)）。 （2026-10-13 追記：G6〜G15）所属の表の追加・移し替えと等級名の一律の書き換えを、失敗したら途中の状態を残さず、2回流しても同じ結果になるマイグレーションにする（qa-v29 (2)）。書き換え前の値を表に残して戻す手順を用意し、障害のときに人が推測で戻す作業を残さない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）2回目の公開（P08 の PR のマージで Deploy workflow が 0039 を当てる）の後に、本番 DB に KGI の3つの表と評価の2列が無いことを読み取りだけで確かめ、推測で閉じない（qa-x15 (4) とその訂正、O17 の測り方）。2回目の前に数えた値、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact（d1-backup-<実行 id>）の id、2回目の後の確かめの結果は、P13 が docs/deploy-notes.md の配布の記録に書く（qa-y16 (9) の訂正、DD-020）。どの確かめも SELECT と PRAGMA だけで、本番 DB には書かない。",
-        "recorded_at": "2026-10-21T00:25:46Z",
+        "text": "Google SRE の『測れないものは直せない』に沿い、⌘+Shift+R でも出なかった事象（qa-u03）を推測で閉じない。成功・失敗どちらの応答にも Worker が応答を作った時刻（x-generated-at）を付け、本番で新しく作られた応答かを確かめられるようにする（qa-r-infrastructure-3 (2)）。Next.js を 16.3.8 へ上げる変更は、pnpm test と preview での確認を経てから出す（同 (4)）。 （2026-10-13 追記：G6〜G15）所属の表の追加・移し替えと等級名の一律の書き換えを、失敗したら途中の状態を残さず、2回流しても同じ結果になるマイグレーションにする（qa-v29 (2)）。書き換え前の値を表に残して戻す手順を用意し、障害のときに人が推測で戻す作業を残さない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）2回目の公開（P08 の PR のマージで Deploy workflow が 0039 を当てる）の後に、本番 DB に KGI の3つの表と評価の2列が無いことを読み取りだけで確かめ、推測で閉じない（qa-x15 (4) とその訂正、O17 の測り方）。2回目の前に数えた値、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact（d1-backup-<実行 id>）の id、2回目の後の確かめの結果は、P13 が docs/deploy-notes.md の配布の記録に書く（qa-y16 (9) の訂正、DD-020）。どの確かめも SELECT と PRAGMA だけで、本番 DB には書かない。 （2026-10-22 追記：G25〜G29）割り当ての移行（I26、G25）は、Deploy workflow が当てる前に書き出す d1-backup-<実行 id> を戻す元とし、当てた後に既定の割り当てになった会社の数と書き換えなかった会社の数を SELECT だけで確かめる。見本の受付中の期（I31、G28）は本番に入れた後、見本の会社の期が1つ受付中になり、他社の行の数が変わらないことを読み取りで確かめる（qa-ab12）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       },
       "operations": {
-        "text": "Google SRE の変更管理に沿い、今は workers.dev だけで配っていてゾーンのキャッシュ規則が効かないことを記録し、独自ドメインへ移すときに規則を読み取りだけの手順で確かめ、変更が要るときは確認を取ってから行う（qa-r-infrastructure-3 (3)）。控えの鍵を本番へ設定する作業（wrangler secret put）も外部への変更として同じガードを通し、ローカルは .dev.vars で完結させる（同 (5)、deploy-notes §6）。構成を変えないので、配備手順や容量検査（check:bundle-size）に新しい運用負担を持ち込まない。 （2026-10-13 追記：G6〜G15）マイグレーションは drizzle/migrations の 0033 以降に置き、本番の Deploy の自動マイグレーションと fail-closed のゲート（release-and-forms.md）に乗せて、手で本番 DB に流さない（qa-v29 (1)）。並べ替えと権限の定義で依存も表も足さないので（同 (3)、D-005・D-007 ①）、配る先・構成・配備の手順は変わらない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）Google SRE の変更管理に沿い、本番への反映は main へのマージと Deploy workflow の自動の公開だけにする（qa-x15 (4) とその訂正、DD-020）。KGI の削除は2回のマージに分け、1回目の P05 の PR で 0038 を、2回目の P08 の PR で 0039 を当てる。どちらも未適用の migration があるので、Deploy workflow が本番 D1 の全体を d1-backup-<実行 id>（保管14日）の Artifact に書き出してから当てる。手で deploy せず、db:migrate:remote・db:backup も手で流さない。2回目を戻すときは DB だけを drizzle/rollback/0039_* と Artifact の書き出しから戻し、P08 のマージの後は P05 を revert しない。新しい環境・バインディング・依存は足さない（同 (5)）。",
-        "recorded_at": "2026-10-20T23:58:12Z",
+        "text": "Google SRE の変更管理に沿い、今は workers.dev だけで配っていてゾーンのキャッシュ規則が効かないことを記録し、独自ドメインへ移すときに規則を読み取りだけの手順で確かめ、変更が要るときは確認を取ってから行う（qa-r-infrastructure-3 (3)）。控えの鍵を本番へ設定する作業（wrangler secret put）も外部への変更として同じガードを通し、ローカルは .dev.vars で完結させる（同 (5)、deploy-notes §6）。構成を変えないので、配備手順や容量検査（check:bundle-size）に新しい運用負担を持ち込まない。 （2026-10-13 追記：G6〜G15）マイグレーションは drizzle/migrations の 0033 以降に置き、本番の Deploy の自動マイグレーションと fail-closed のゲート（release-and-forms.md）に乗せて、手で本番 DB に流さない（qa-v29 (1)）。並べ替えと権限の定義で依存も表も足さないので（同 (3)、D-005・D-007 ①）、配る先・構成・配備の手順は変わらない。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）Google SRE の変更管理に沿い、本番への反映は main へのマージと Deploy workflow の自動の公開だけにする（qa-x15 (4) とその訂正、DD-020）。KGI の削除は2回のマージに分け、1回目の P05 の PR で 0038 を、2回目の P08 の PR で 0039 を当てる。どちらも未適用の migration があるので、Deploy workflow が本番 D1 の全体を d1-backup-<実行 id>（保管14日）の Artifact に書き出してから当てる。手で deploy せず、db:migrate:remote・db:backup も手で流さない。2回目を戻すときは DB だけを drizzle/rollback/0039_* と Artifact の書き出しから戻し、P08 のマージの後は P05 を revert しない。新しい環境・バインディング・依存は足さない（同 (5)）。 （2026-10-22 追記：G25〜G29）割り当ての移行は通常の Deploy の流れで当て、手で db:migrate:remote を流さない（I26）。本番の見本の会社への投入は既存の db:sample:remote の手順で、実行の前に利用者の確認を取り、実行の記録を配布の記録（docs/deploy-notes.md）に残す（qa-ab12、I31、G28）。色と手応え（G29）と画面の分け方（G26）は CSS と画面の変更だけで出す。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       }
     },
     "backend": {
       "application-architecture": {
-        "text": "書き込みの順序を各関数に書かず、共通の入口 runAction に集める（qa-r-backend-4 (2)、I1）。Next.js の文書のとおり、Server Function の中で呼ぶ refresh は今の画面のサーバー描画を同じ応答に載せるので、成功の知らせと一覧の更新が一度の往復でそろう。Route Handler から呼ぶ revalidatePath にはこの効果が無い（qa-d01）ので、画面から呼ぶ書き込みを Server Functions へ移し、移した後の Route Handler は消して経路を二重にしない（同 (1)）。入口を通らない書き込みは server-actions-contract.test.ts で落とす（同 (4)）。 （2026-10-13 追記：G6〜G15）等級の呼び名と設定不足の構造をそれぞれ一つの関数に、権限の定義を route-ledger.json に置き、画面やサーバー処理はそこを呼ぶだけにする（qa-v30 (1)(2)(7)）。サイドバー（nav.ts）・requireRole・ActionSpec.role・session.ts の canEdit〜 がそろって route-ledger.json の権限の定義から引き、台帳と突き合わせる契約テストで食い違いを落とす（同 (2)、D-007 ①）。書き込みは今の共通の包み（I1）を通し、成功の表示と同じ描画で一覧が新しくなる鮮度の契約を新しい処理にも当てる（同 (10)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）共通の入口 runAction の順序（送り元と認可→大きさの上限→入力の検証→本体）を崩さない。入力の検証の段（zod）では判断の値の形だけを見る。本体では、評価が会社の中に無ければ 404 を返し、自分自身の評価と部下でない人の評価は中身の検査の前に 403 で断る。そのあと上司コメントを本人に見せられない語の一覧（CRITERIA_LEAK_PATTERNS）で検査し、確定では判断の中身（どちらかが無い・override で理由が空白だけ・2000 字超・理由に見せられない語）を、画面の押せない理由と同じ関数 validateDecisionInput で決める。引っかかったら語を名指しした同じ文で 400 を返す（qa-z01 (17) とその訂正、DD-023）。コメントだけの保存では判断を変えない。確定を戻しても判断を消さず、評価を作り直したときだけ消えて次の確定で選び直す（同 (19)）。",
-        "recorded_at": "2026-10-21T00:25:46Z",
+        "text": "書き込みの順序を各関数に書かず、共通の入口 runAction に集める（qa-r-backend-4 (2)、I1）。Next.js の文書のとおり、Server Function の中で呼ぶ refresh は今の画面のサーバー描画を同じ応答に載せるので、成功の知らせと一覧の更新が一度の往復でそろう。Route Handler から呼ぶ revalidatePath にはこの効果が無い（qa-d01）ので、画面から呼ぶ書き込みを Server Functions へ移し、移した後の Route Handler は消して経路を二重にしない（同 (1)）。入口を通らない書き込みは server-actions-contract.test.ts で落とす（同 (4)）。 （2026-10-13 追記：G6〜G15）等級の呼び名と設定不足の構造をそれぞれ一つの関数に、権限の定義を route-ledger.json に置き、画面やサーバー処理はそこを呼ぶだけにする（qa-v30 (1)(2)(7)）。サイドバー（nav.ts）・requireRole・ActionSpec.role・session.ts の canEdit〜 がそろって route-ledger.json の権限の定義から引き、台帳と突き合わせる契約テストで食い違いを落とす（同 (2)、D-007 ①）。書き込みは今の共通の包み（I1）を通し、成功の表示と同じ描画で一覧が新しくなる鮮度の契約を新しい処理にも当てる（同 (10)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）共通の入口 runAction の順序（送り元と認可→大きさの上限→入力の検証→本体）を崩さない。入力の検証の段（zod）では判断の値の形だけを見る。本体では、評価が会社の中に無ければ 404 を返し、自分自身の評価と部下でない人の評価は中身の検査の前に 403 で断る。そのあと上司コメントを本人に見せられない語の一覧（CRITERIA_LEAK_PATTERNS）で検査し、確定では判断の中身（どちらかが無い・override で理由が空白だけ・2000 字超・理由に見せられない語）を、画面の押せない理由と同じ関数 validateDecisionInput で決める。引っかかったら語を名指しした同じ文で 400 を返す（qa-z01 (17) とその訂正、DD-023）。コメントだけの保存では判断を変えない。確定を戻しても判断を消さず、評価を作り直したときだけ消えて次の確定で選び直す（同 (19)）。 （2026-10-22 追記：G25〜G29）書き戻しは、入口（runAction）→権限と会社の範囲→決まりに合うかの判定（domain の純粋な関数）→設定とアンケートを書く→追従（下書きの作り直し・次の版の下書き・確定前の評価の集計し直し）の順に1つの処理で行い、どの段で断っても何も書かない（qa-ab07・qa-ab11、I28・I29、G27）。決まりの判定は合わない決まりと直す画面の href を返し、画面の押せない理由と同じ文を使う。見本の生成は buildSeed を使い回し、新しい生成の道を作らない（I31、G28）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       },
       "data-access": {
-        "text": "複数の表を書く操作は、まず 1 回の D1 batch に入るかを確かめ、入るものは batch で書く。入りきらない会社追加だけを、段階ごとの『書く処理』と『取り消す処理』の組を逆順に戻す小さな実行器（withCompensation）で書き、取り消せない認証ライブラリの書き込みの続きは 1 回の batch を 1 回だけやり直す（rollForward。qa-r-backend-4 (3)）。関数が知るのは操作の成否だけで、表の構成や chunk の分け方は永続化層に閉じる。取り消しややり直しも失敗したら、個人情報を除いた構造化したログを残す。batch の外で 2 つ以上の表を書く関数は write-atomicity-contract.test.ts で落とす。 （2026-10-13 追記：G6〜G15）3つの一覧の等級と点数は、一覧ぶんをまとめて1回の問い合わせで取り、人数に比例して問い合わせを増やさない。見てよくない役割の呼び出しでは値を作らない（qa-v30 (4)）。重複の検査は、システム全体でメールアドレスの重複を拒否する今の形を保ち、所属の単位に改めない。他社に既にアカウントがある人への所属の追加は、全体管理者だけの addMembership が所属と監査を同じ batch で書く（同 (5) を 2026-10-14 に訂正：qa-w08 の訂正 (5)・qa-w11・D-008）。選んでいる会社が無いときの復帰先は、有効な所属を会社名の順（同名は会社 id の順）に並べた最初の会社とし、並べる処理は所属を読む永続化層に閉じる（qa-w12・D-009）。提出状況は対象者ごとの状態と提出日時を返し、一覧には状態ごとの人数を返す（同 (6)）。並び順は全体の id の並びで受けて1回で保存し、今の集まりと違えば 409 で取り直しを求める（同 (8)）。選択肢の値は保存のときも重複を拒否する（同 (9)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）確定の書き込みは評価の1行の更新のまま、判断・記録した人・時刻を同じ1文で書き、半分だけ書かれた状態を作らない（qa-z01 (17)）。書く前に、自分自身の評価と部下でない人の評価を 403 で断り、そのうえで理由と上司コメントを CRITERIA_LEAK_PATTERNS で検査して、引っかかった語を名指しして 400 で返す（qa-z01 の訂正、DD-023）。レポートの読み出しは loadEvaluationReport（src/lib/report-data.ts）に閉じる。会社・対象の人・見せる形を受け、確定した評価だけを評価期間の開始日の順に読んで、純粋な buildEvaluationReport に渡す。同じ等級の平均と幅は、同じ会社の確定した評価で重ならない社員が3人以上（REPORT_PEER_MIN。本人も数に入る）のときだけ作る（同 (13) とその訂正、DD-024 の3・4）。最終の可否は finalDecision で出して列に保存しない。CSV は先頭の23列をそのまま、末尾に7列を足し、行の範囲は canReviewEmployeeEvaluation で絞る（同 (18)〜(20) とその訂正、DD-021 の4）。",
-        "recorded_at": "2026-10-20T23:58:12Z",
+        "text": "複数の表を書く操作は、まず 1 回の D1 batch に入るかを確かめ、入るものは batch で書く。入りきらない会社追加だけを、段階ごとの『書く処理』と『取り消す処理』の組を逆順に戻す小さな実行器（withCompensation）で書き、取り消せない認証ライブラリの書き込みの続きは 1 回の batch を 1 回だけやり直す（rollForward。qa-r-backend-4 (3)）。関数が知るのは操作の成否だけで、表の構成や chunk の分け方は永続化層に閉じる。取り消しややり直しも失敗したら、個人情報を除いた構造化したログを残す。batch の外で 2 つ以上の表を書く関数は write-atomicity-contract.test.ts で落とす。 （2026-10-13 追記：G6〜G15）3つの一覧の等級と点数は、一覧ぶんをまとめて1回の問い合わせで取り、人数に比例して問い合わせを増やさない。見てよくない役割の呼び出しでは値を作らない（qa-v30 (4)）。重複の検査は、システム全体でメールアドレスの重複を拒否する今の形を保ち、所属の単位に改めない。他社に既にアカウントがある人への所属の追加は、全体管理者だけの addMembership が所属と監査を同じ batch で書く（同 (5) を 2026-10-14 に訂正：qa-w08 の訂正 (5)・qa-w11・D-008）。選んでいる会社が無いときの復帰先は、有効な所属を会社名の順（同名は会社 id の順）に並べた最初の会社とし、並べる処理は所属を読む永続化層に閉じる（qa-w12・D-009）。提出状況は対象者ごとの状態と提出日時を返し、一覧には状態ごとの人数を返す（同 (6)）。並び順は全体の id の並びで受けて1回で保存し、今の集まりと違えば 409 で取り直しを求める（同 (8)）。選択肢の値は保存のときも重複を拒否する（同 (9)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）確定の書き込みは評価の1行の更新のまま、判断・記録した人・時刻を同じ1文で書き、半分だけ書かれた状態を作らない（qa-z01 (17)）。書く前に、自分自身の評価と部下でない人の評価を 403 で断り、そのうえで理由と上司コメントを CRITERIA_LEAK_PATTERNS で検査して、引っかかった語を名指しして 400 で返す（qa-z01 の訂正、DD-023）。レポートの読み出しは loadEvaluationReport（src/lib/report-data.ts）に閉じる。会社・対象の人・見せる形を受け、確定した評価だけを評価期間の開始日の順に読んで、純粋な buildEvaluationReport に渡す。同じ等級の平均と幅は、同じ会社の確定した評価で重ならない社員が3人以上（REPORT_PEER_MIN。本人も数に入る）のときだけ作る（同 (13) とその訂正、DD-024 の3・4）。最終の可否は finalDecision で出して列に保存しない。CSV は先頭の23列をそのまま、末尾に7列を足し、行の範囲は canReviewEmployeeEvaluation で絞る（同 (18)〜(20) とその訂正、DD-021 の4）。 （2026-10-22 追記：G25〜G29）設定の写しを読む場所を3分類の一覧に沿って分け、『参照』はいまの設定を読み、『追従』は保存のときに作り直し、『確定した時点の写し』は確定した評価とレポートとして読むだけにする（qa-ab09、I30、G27）。確定前の評価の集計し直しは今の impact の判定を使い、確定した評価の行には書かない。いまずれている下書きは更新時刻の新しい方へそろえる（I30）。行動指針の既定の割り当ては等級の内部の識別子で引き、呼び名に頼らない（qa-ab02、I26、G25）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       }
     },
     "frontend": {
       "presentation": {
-        "text": "Apple HIG のフィードバックの原則（操作の結果をすぐ、はっきり示す）に沿い、成功の知らせと、一覧・件数・会社切替メニューの更新を、Server Function の一度の応答でそろえ、新しい描画が終わってから成功を返す（qa-r-frontend-3 (1)）。連続作成フォームでも一覧の更新を省略せず、控えは成功の知らせの後ろに畳んで、畳んでいる間は値を画面に置かない（同 (2)）。Next.js の文書のとおり router.refresh は影響を受けない useState とスクロール位置を保つので、他タブの通知で取り直しても入力中の内容を失わない。 （2026-10-13 追記：G6〜G15）Apple HIG のフィードバックの原則に沿い、並べ替えでは動かしている間に落とす位置を示し、離したら並びを変え、何番目になったかを aria-live で読み上げる（qa-v22 (2)、D-005）。権限一覧のモーダルは dialog 要素で作り、開いたらフォーカスを中に移し、閉じたら元のボタンへ戻す（同 (3)）。選択肢は label の全面で押せ、見本では試しに選べても送信の操作を出さず、読み取り専用の .chip はポインターの形とホバーの変化を出さない（同 (5)）。余白の見直しは各画面の段組みで行い、配色・テーマの宣言と契約テストは変えない（同 (7)）。 （2026-10-20 追記：G17〜G24）印刷の体裁を @media print の中だけで組み替え、HTML の順（読み上げの順）は画面と同じにする（qa-y11 (16)）。⑤の前で改ページし、図は印刷のときに決まった大きさで描く。図に role=\"img\" と aria-label を付けて同じ内容の表を添え、色はテーマの変数から取る（同 (10)(13)）。テーマの契約テストと globals.css 冒頭の宣言は変えない。",
-        "recorded_at": "2026-10-19T21:47:35Z",
+        "text": "Apple HIG のフィードバックの原則（操作の結果をすぐ、はっきり示す）に沿い、成功の知らせと、一覧・件数・会社切替メニューの更新を、Server Function の一度の応答でそろえ、新しい描画が終わってから成功を返す（qa-r-frontend-3 (1)）。連続作成フォームでも一覧の更新を省略せず、控えは成功の知らせの後ろに畳んで、畳んでいる間は値を画面に置かない（同 (2)）。Next.js の文書のとおり router.refresh は影響を受けない useState とスクロール位置を保つので、他タブの通知で取り直しても入力中の内容を失わない。 （2026-10-13 追記：G6〜G15）Apple HIG のフィードバックの原則に沿い、並べ替えでは動かしている間に落とす位置を示し、離したら並びを変え、何番目になったかを aria-live で読み上げる（qa-v22 (2)、D-005）。権限一覧のモーダルは dialog 要素で作り、開いたらフォーカスを中に移し、閉じたら元のボタンへ戻す（同 (3)）。選択肢は label の全面で押せ、見本では試しに選べても送信の操作を出さず、読み取り専用の .chip はポインターの形とホバーの変化を出さない（同 (5)）。余白の見直しは各画面の段組みで行い、配色・テーマの宣言と契約テストは変えない（同 (7)）。 （2026-10-20 追記：G17〜G24）印刷の体裁を @media print の中だけで組み替え、HTML の順（読み上げの順）は画面と同じにする（qa-y11 (16)）。⑤の前で改ページし、図は印刷のときに決まった大きさで描く。図に role=\"img\" と aria-label を付けて同じ内容の表を添え、色はテーマの変数から取る（同 (10)(13)）。テーマの契約テストと globals.css 冒頭の宣言は変えない。 （2026-10-22 追記：G25〜G29）グラデーションと色の変化は globals.css の部品クラスに、既存の意味のトークンと color-mix・linear-gradient だけで書き、系統は骨格のトークンを上書きするだけのまま全ての系統と明暗に効かせる（qa-ab06、I32、G29）。テーマの契約テストと globals.css 冒頭の宣言は変えず、平賀配色へは移さない（DD-003）。見出しの面の微グラデ（hero-tint）は1画面1箇所を保ち、使えない状態・印刷・コントラストを強くする設定では平らな面に戻す。開いた・閉じたの状態は色だけでなく印と文で示す（I33、G26）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       },
       "application-architecture": {
-        "text": "他タブとの連携を共通口（FreshnessSync）の内側に置き、通知の送り手と受け手が互いの画面の構造を知らないようにする（qa-r-frontend-3 (3)(4)）。受け手は『何が変わったか』を受けて router.refresh を呼ぶだけで、取り直しは 1.5 秒に 1 回へ間引く。タブ復帰（visibilitychange）・通信の回復（online）・bfcache 復元（pageshow の persisted）も同じ入口を使い、bfcache のときはルーターが画面を戻し終えた後に取り直す。画面から書き込みの fetch を直接呼ぶ箇所は server-actions-contract.test.ts で落とし、sendBeacon などの例外は理由付きで検査に列挙する（同 (5)）。 （2026-10-13 追記：G6〜G15）並べ替え・権限一覧・設定不足の表示を、それぞれ共通の部品に置き、各画面は値を渡すだけにする（qa-v22 (2)(3)(4)）。権限一覧の表とカードは同じデータから描き、幅で切り替えるだけにして内容をずらさない。開閉の状態は localStorage に置き、読めないときも既定の状態で動く（同 (6)）。等級名はサーバーから受け取り、クライアントの部品に区分名の対応を持たせない（同 (1)）。 （2026-10-20 追記：G17〜G24）判断の値と理由は確定の操作と一緒に1回で送り、別の保存ボタンや別の Server Function を作らない（qa-y11 (14)）。画面は useSaveAction の結果を出すだけという今の形を、確定の操作にもそのまま当てる。レポートのデータの形は本人向けとそれ以外で型を分け、部品が見る人の役割を判定しない（同 (10)）。",
-        "recorded_at": "2026-10-19T21:47:35Z",
+        "text": "他タブとの連携を共通口（FreshnessSync）の内側に置き、通知の送り手と受け手が互いの画面の構造を知らないようにする（qa-r-frontend-3 (3)(4)）。受け手は『何が変わったか』を受けて router.refresh を呼ぶだけで、取り直しは 1.5 秒に 1 回へ間引く。タブ復帰（visibilitychange）・通信の回復（online）・bfcache 復元（pageshow の persisted）も同じ入口を使い、bfcache のときはルーターが画面を戻し終えた後に取り直す。画面から書き込みの fetch を直接呼ぶ箇所は server-actions-contract.test.ts で落とし、sendBeacon などの例外は理由付きで検査に列挙する（同 (5)）。 （2026-10-13 追記：G6〜G15）並べ替え・権限一覧・設定不足の表示を、それぞれ共通の部品に置き、各画面は値を渡すだけにする（qa-v22 (2)(3)(4)）。権限一覧の表とカードは同じデータから描き、幅で切り替えるだけにして内容をずらさない。開閉の状態は localStorage に置き、読めないときも既定の状態で動く（同 (6)）。等級名はサーバーから受け取り、クライアントの部品に区分名の対応を持たせない（同 (1)）。 （2026-10-20 追記：G17〜G24）判断の値と理由は確定の操作と一緒に1回で送り、別の保存ボタンや別の Server Function を作らない（qa-y11 (14)）。画面は useSaveAction の結果を出すだけという今の形を、確定の操作にもそのまま当てる。レポートのデータの形は本人向けとそれ以外で型を分け、部品が見る人の役割を判定しない（同 (10)）。 （2026-10-22 追記：G25〜G29）部品は主・副・選んだ・開いたの状態をクラスの名前で受け取るだけにし、どの色を使うかを部品の中で決めない（I32、G29）。KPI・評価セットの作業を別の画面に分けても、各画面はサーバーから受け取った設定と『できる操作』を描くだけにし、保存は今の useSaveAction の形を使う（I27、G26）。書き戻しと追従の結果（変わったアンケートと評価）はサーバーの応答をそのまま出し、他のタブへは今の FreshnessSync で知らせる（I29・I30、G27）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       }
     },
     "maintenance-ops": {
       "operations": {
-        "text": "Google SRE の障害対応（推測より観測）に沿い、『反映されない』報告の切り分けを、生成時刻のヘッダー・Workers Logs・ゾーンのキャッシュ規則の順に、読み取りだけで確かめる手順として文書にする（qa-r-ops-3 (3)、deploy-notes §7）。compensation_failed と rollforward_failed を Workers Logs で見つけ、本番 DB を手で書き換えずに直す手順も同じ文書に置く。6 つの経路と控えの畳み方の画面の通し試験を、375px・768px でも、ローカルの preview だけに向けて回す（同 (2)、LOCAL_HOSTS）。 （2026-10-13 追記：G6〜G15）本番の等級名の一律の書き換えは、その前に本番 DB を読み取り専用で数え（会社数・等級数・英語入りの表示名の数）、書き換え前の値を記録し、外部変更ガードを通して Deploy する。Deploy の後は、英語の区分名が残っていないことを読み取りで確かめる（qa-v31 (4)）。決まりの文書（spec.md・account-and-users.md・routes-and-access.md・master-settings.md）を改め、受領書をdocs/product/spec-receipts/ に残す（同 (2)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）Google SRE の変更管理に沿い、本番への反映を確かめられる手順に分ける。1回目（P05 の PR のマージ）の前に、その PR の上で pnpm test・typecheck・test:coverage・test:e2e と cf:dry-run・check:bundle-size を通す。1回目の確かめ（本番に KGI の画面と操作が無いこと）は、P07 が配った sha の静的検査と台帳で示し、本番の画面は開かない（qa-y16 (9) とその訂正、DD-020 の6・7）。2回目（P08 の PR のマージ）の前に本番 DB を読み取りだけで数え、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact の id を、P13 が docs/deploy-notes.md に記録する。テストデータは本番に入れず、シードが本番の設定で動かないことを確かめる（同 (9)、O20）。上司の判断の列は足すだけなので、今の Deploy の順番のまま出せる（database (14)）。docs/product/spec.md の昇給・昇格の判定の節に最終の可否の決め方を足し、運用する人が判定と結論の違いを説明できるようにする（同 (12)）。",
-        "recorded_at": "2026-10-20T23:58:12Z",
+        "text": "Google SRE の障害対応（推測より観測）に沿い、『反映されない』報告の切り分けを、生成時刻のヘッダー・Workers Logs・ゾーンのキャッシュ規則の順に、読み取りだけで確かめる手順として文書にする（qa-r-ops-3 (3)、deploy-notes §7）。compensation_failed と rollforward_failed を Workers Logs で見つけ、本番 DB を手で書き換えずに直す手順も同じ文書に置く。6 つの経路と控えの畳み方の画面の通し試験を、375px・768px でも、ローカルの preview だけに向けて回す（同 (2)、LOCAL_HOSTS）。 （2026-10-13 追記：G6〜G15）本番の等級名の一律の書き換えは、その前に本番 DB を読み取り専用で数え（会社数・等級数・英語入りの表示名の数）、書き換え前の値を記録し、外部変更ガードを通して Deploy する。Deploy の後は、英語の区分名が残っていないことを読み取りで確かめる（qa-v31 (4)）。決まりの文書（spec.md・account-and-users.md・routes-and-access.md・master-settings.md）を改め、受領書をdocs/product/spec-receipts/ に残す（同 (2)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）Google SRE の変更管理に沿い、本番への反映を確かめられる手順に分ける。1回目（P05 の PR のマージ）の前に、その PR の上で pnpm test・typecheck・test:coverage・test:e2e と cf:dry-run・check:bundle-size を通す。1回目の確かめ（本番に KGI の画面と操作が無いこと）は、P07 が配った sha の静的検査と台帳で示し、本番の画面は開かない（qa-y16 (9) とその訂正、DD-020 の6・7）。2回目（P08 の PR のマージ）の前に本番 DB を読み取りだけで数え、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact の id を、P13 が docs/deploy-notes.md に記録する。テストデータは本番に入れず、シードが本番の設定で動かないことを確かめる（同 (9)、O20）。上司の判断の列は足すだけなので、今の Deploy の順番のまま出せる（database (14)）。docs/product/spec.md の昇給・昇格の判定の節に最終の可否の決め方を足し、運用する人が判定と結論の違いを説明できるようにする（同 (12)）。 （2026-10-22 追記：G25〜G29）運用する人が、設定を変えたときに何が追従するかを説明できるよう、写しを持つ場所の3分類の一覧を docs/product に置き、製品仕様 §27 から辿れるようにする（I30、G27）。DD-010 と製品仕様 §14 を改める DD を書き、本番の未回答の一覧に見本の人が並ぶことを運用の注意として記す（I26・I31、G25・G28）。共通部品の色を変えたときは、主要な画面の明暗の見た目の記録を取り直す（O29、G29）。",
+        "recorded_at": "2026-10-22T02:09:16Z",
         "basis": "agent-inference"
       }
     }

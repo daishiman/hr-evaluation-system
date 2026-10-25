@@ -17,8 +17,11 @@ export interface StaleCycle {
 
 export function StaleCyclesNotice({ cycles }: { cycles: StaleCycle[] }) {
   if (cycles.length === 0) return null;
-  // 集計し直せる期間は、ほかの設定不足と同じ「何が・どう直す・どこで」の組で出す（setup-gaps.ts）
-  const gaps = staleCycleGaps(cycles);
+  // 集計し直せる期間は、ほかの設定不足と同じ「何が・どう直す・どこで」の組で出す（setup-gaps.ts）。
+  // 直し方の文はどの期間も同じなので、2件目からは書かずリンクだけにする（同じ文を2回出さない。§22-10）
+  const gaps = staleCycleGaps(cycles).map((gap, i, all) =>
+    all.findIndex((g) => g.how === gap.how) === i ? gap : { ...gap, how: "" },
+  );
   // 確定済みしかない期間は直すものが無いので、据え置きの事実だけを添える
   const settled = cycles.filter((c) => c.recomputable === 0);
   const settledNote = (

@@ -98,6 +98,26 @@ export function promotionQuestion(kind: "report" | "test", text: string): BuiltQ
   };
 }
 
+/** 要件の設問の型（requirementQuestion・promotionQuestion の title）。かぎかっこの中が設定の文言 */
+const SETTING_TITLE_PATTERNS = [
+  /^「(.+)」を、この半期に自分の担当として行いましたか？$/,
+  /^「(.+)」を受講し、報告書を提出しましたか？$/,
+  /^「(.+)」のテストに合格しましたか？$/,
+];
+
+/**
+ * 要件の設問文から、設定の文言（かぎかっこの中）を取り出す。型を崩した文は null。
+ * アンケートで直した要件の文を設定へ写すときに使う（DD-028 の1）。
+ */
+export function settingTextFromTitle(title: string): string | null {
+  const trimmed = title.trim();
+  for (const pattern of SETTING_TITLE_PATTERNS) {
+    const inner = trimmed.match(pattern)?.[1].trim();
+    if (inner) return inner;
+  }
+  return null;
+}
+
 /** 行動指針の説明文。選択肢そのものは制度マスタ（behavior_levels）の文言をそのまま使う。 */
 export const BEHAVIOR_HELP = "この半期のふだんの行動に、もっとも近いものを1つだけ選んでください。";
 

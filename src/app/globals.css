@@ -3731,3 +3731,254 @@ body:has(.reorder-list[data-reorder-phase="dragging"]) .feedback-fab { opacity: 
     grid-template-columns: minmax(16rem, 1fr) minmax(0, max-content);
   }
 }
+
+/* ============================================================
+   部品クラス（ui-）— 色の強弱と手応えをそろえる（DD-030）
+   共通部品（src/components/ui.tsx ほか）が今のクラスに重ねて付ける。
+   新しい色のトークン（--*）は足さず、意味のトークンを var() と color-mix(in srgb, …) で混ぜるだけ。
+   色の正本は今のクラス（btn-*・chip・badge-* など）のままにし、ここは面の質感と状態の見た目を足す。
+   全ての系統と明暗で文字 4.5:1・縁 3:1 を保つことは gradient-contrast.test.ts が測る。
+   ============================================================ */
+
+/* ---- 押す（Button・LinkButton・DownloadButton） ----
+   主の操作は --cta-bg から --cta-bg-hover への勾配で最も強く、副の操作は文字の色をごく薄く混ぜた勾配にする。
+   今の .btn-*:hover:not(:disabled) は background の一括指定で勾配を消すので、主の操作の hover は同じ強さで後ろに置いて塗り直す。
+   副の操作の hover は今の平らな面（brand-soft・subtle・danger-soft）のまま。 */
+:where(.ui-press) { position: relative; }
+.ui-press {
+  transition: background-color 120ms, border-color 120ms, box-shadow 120ms, transform 80ms;
+}
+.ui-press:active:not(:disabled, [aria-disabled="true"]) { transform: translateY(1px); }
+.ui-press-main {
+  background-image: linear-gradient(180deg, var(--cta-bg), var(--cta-bg-hover));
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--cta-bg-hover) 35%, transparent);
+}
+.ui-press-main:hover:not(:disabled, [aria-disabled="true"]) {
+  background-image: linear-gradient(180deg, var(--cta-bg-hover), var(--cta-bg));
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--cta-bg-hover) 35%, transparent);
+}
+.ui-press-main:active:not(:disabled, [aria-disabled="true"]),
+.ui-press-main[aria-pressed="true"] {
+  background-image: linear-gradient(180deg, var(--cta-bg-hover), var(--cta-bg-hover));
+  box-shadow: none;
+}
+/* きらめき: 上の縁を走る 2px の光。文字に重ねない（重ねると文字の比が下がる）。
+   指を乗せたとき・キーボードで選んだときに1回だけ走らせ、常には動かさない。 */
+.ui-press-main::after {
+  content: "";
+  position: absolute;
+  inset: 1px 10px auto;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cta-fg) 75%, transparent), transparent) 0 0 / 40% 100% no-repeat;
+  opacity: 0;
+  pointer-events: none;
+}
+.ui-press-main:is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"])::after {
+  animation: ui-glint 600ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+@keyframes ui-glint {
+  from { opacity: 1; background-position: -70% 0; }
+  to { opacity: 0; background-position: 170% 0; }
+}
+.ui-press-sub {
+  background-image: linear-gradient(180deg, var(--surface), color-mix(in srgb, currentColor 6%, var(--surface)));
+}
+.ui-press-sub:active:not(:disabled, [aria-disabled="true"]),
+.ui-press-sub[aria-pressed="true"] {
+  background-image: none;
+  box-shadow: inset 0 1px 2px color-mix(in srgb, currentColor 25%, transparent);
+}
+/* 使えない状態は平らな面。押してある（aria-pressed）の勾配と同じ強さなので、それより後ろに置く */
+.ui-press:is(:disabled, [aria-disabled="true"]) {
+  background-image: none;
+  box-shadow: none;
+  transform: none;
+}
+.ui-press:is(:disabled, [aria-disabled="true"])::after { content: none; }
+/* 操作の結果の一文（ActionButton の RefreshStatus） */
+.ui-press-status { color: var(--brand-deep); }
+
+/* ---- 選ぶ（ChoiceChip・ChipLink・OptionCard・OptionCheck と Segmented の各ボタン） ----
+   Segmented のボタンは字面 className="segmented-btn" を ui-rules.test.ts が固定しているので、
+   ui-pick を付けずに、同じ規則へ .segmented-btn を並べる。
+   選んだ面は surface 寄りから brand-soft へ下る勾配と、brand の内側の線（色だけに頼らない）。 */
+:is(.ui-pick, .segmented-btn) {
+  transition: background-color 120ms, border-color 120ms, box-shadow 120ms;
+}
+.ui-pick:is(button, a, label):hover:not(:disabled, [aria-disabled="true"], :has(> input:disabled)) {
+  border-color: var(--brand);
+}
+:is(.ui-pick, .segmented-btn):is([aria-pressed="true"], [aria-checked="true"], [aria-current="true"], [aria-current="page"], [data-on="true"], :has(> input:checked)):not([data-off="true"], :disabled, [aria-disabled="true"], :has(> input:disabled)) {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--brand-soft) 40%, var(--surface)), var(--brand-soft));
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+/* 名前＋補足の2行の選択肢は面が大きいので、選んだときに少し浮かせる */
+.ui-pick-card:is([aria-pressed="true"], [aria-checked="true"], [data-on="true"], :has(> input:checked)):not([data-off="true"], :disabled, [aria-disabled="true"], :has(> input:disabled)) {
+  box-shadow: inset 0 0 0 1px var(--brand), 0 1px 3px color-mix(in srgb, var(--brand) 25%, transparent);
+}
+:is(.ui-pick, .segmented-btn):is(:disabled, [aria-disabled="true"]) {
+  background-image: none;
+  box-shadow: none;
+}
+/* 読むだけの札（ChipTag）。押せる見た目を与えない */
+.ui-tag { cursor: default; }
+
+/* ---- 開く（Disclosure・InlineDetail・HintToggle・RevealToggle） ----
+   開いていることを、見出しの色と面で示す（＋／－ の印や summary の表示はそのまま）。 */
+details.ui-reveal[open] > summary { color: var(--brand-deep); }
+details.inline-detail.ui-reveal[open] > summary {
+  border-color: var(--brand);
+  background-color: var(--brand-soft);
+  color: var(--brand-deep);
+}
+button.ui-reveal:is([aria-expanded="true"], [aria-pressed="true"]) {
+  color: var(--brand-deep);
+  background-color: color-mix(in srgb, var(--brand-soft) 60%, var(--surface));
+}
+
+/* ---- 面（Card・CardHead・CardRow・RecordList） ----
+   一覧のカード（RecordList）は字面 class="card record-list" を ui-rules.test.ts が固定しているので、ui-card と並べる */
+:is(.ui-card, .card.record-list) {
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+:is(.ui-card, .card.record-list)[data-off="true"] { box-shadow: none; }
+:is(.ui-card-head, .ui-card-row) .todo-row-title { color: var(--ink); }
+:is(.ui-card-head, .ui-card-row) .todo-row-sub { color: var(--ink-muted); }
+
+/* ---- 見出し（PageTitle・SectionHeading） ----
+   勾配は付けない（見出しの面の微グラデ hero-tint は1画面1箇所のまま） */
+:where(.ui-title, .ui-heading) { color: var(--ink); }
+
+/* ---- 印（Badge・ProvisionalMark・DecisionBadge・RankMark） ----
+   強める印（進行中・要対応・ランクA）は、色相を増やさず上の明るみと縁で一段持ち上げる */
+.ui-mark-strong {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--surface) 40%, transparent), transparent 70%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 25%, transparent);
+}
+.ui-mark-rank {
+  border-color: var(--line);
+  background-color: var(--subtle);
+  color: var(--ink-muted);
+}
+.ui-mark-rank.ui-mark-strong {
+  border-color: var(--brand);
+  background-color: var(--brand-soft);
+  color: var(--brand-deep);
+}
+/* 上司の判断を変えたときの補足（点数の判定）は muted、中の理由は本文の色 */
+.ui-mark-note { color: var(--ink-muted); }
+.ui-mark-note > * { color: var(--ink); }
+
+/* ---- 順番のある説明（StepFlow・StepMark・StepBlock） ---- */
+.ui-step-mark {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--surface) 45%, var(--brand-soft)), var(--brand-soft));
+}
+.ui-step .step-block-title { color: var(--ink); }
+.ui-step-flow > .ui-step + .ui-step { border-top-color: var(--line); }
+
+/* ---- 数値（Bar・StatGrid・Num） ----
+   メーターの塗りは brand から、値の端へ向けて brand-deep を混ぜて濃くする（どの点も溝の subtle に 3:1 以上） */
+.ui-meter .bar-fill {
+  background-image: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 60%, var(--brand-deep)));
+}
+.ui-meter > p { color: var(--ink-muted); }
+.ui-stats dt { color: var(--ink-muted); }
+.ui-num[data-empty] { color: var(--ink-muted); }
+
+/* ---- 注記（NoteBlock・EmptyState・ReasonNote・ComparisonGapNotice） ----
+   中のリンク（class を持たない素の a）は brand-deep。注意の枠の中で開いた補足の1行目（導入）は本文の色 */
+.ui-notice a:not([class]) { color: var(--brand-deep); }
+.ui-notice-caution .inline-detail-body > :first-child { color: var(--ink); }
+
+/* ---- 表（DataTable） ----
+   見出しの行は本文の色の太字と、下へ subtle が差す薄い勾配。選んだ行は brand-soft */
+.ui-table thead th {
+  color: var(--ink);
+  font-weight: 600;
+  background-image: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--subtle) 60%, var(--surface)));
+}
+.ui-table tbody tr:is([aria-selected="true"], [aria-current="true"]) { background-color: var(--brand-soft); }
+
+/* ---- 現在地（AppSidebar・HeaderNav） ----
+   太字と左の帯（道しるべは下線）でも示し、色だけに頼らない */
+.ui-here[aria-current="page"] { font-weight: 600; }
+.sidebar-link.ui-here[aria-current="page"] {
+  box-shadow: inset 3px 0 0 var(--brand);
+  background-image: linear-gradient(90deg, var(--brand-soft), color-mix(in srgb, var(--brand-soft) 40%, var(--surface)));
+}
+.trail .ui-here[aria-current="page"] {
+  text-decoration: underline;
+  text-decoration-color: var(--brand);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+/* ---- キーボードで選んだときの印 ---- */
+:is(.ui-press, .ui-pick, .segmented-btn, button.ui-reveal, a.ui-here):focus-visible,
+details.ui-reveal > summary:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ---- 指で押す端末: 部品クラスの押せるものも 44px 以上 ---- */
+@media (pointer: coarse) {
+  .ui-press,
+  .ui-pick:is(button, a, label),
+  button.ui-reveal,
+  details.ui-reveal > summary {
+    min-height: 44px;
+  }
+}
+
+/* ---- 動きを減らす設定: 光と移り変わりと沈みを止める ---- */
+@media (prefers-reduced-motion: reduce) {
+  .ui-press-main::after { content: none; animation: none !important; }
+  .ui-press,
+  :is(.ui-pick, .segmented-btn) { transition: none; }
+  .ui-press:active { transform: none; }
+}
+
+/* ---- コントラストを強くする設定と印刷: 勾配と影の無い平らな面に戻す ----
+   面の色は今のクラス（btn-*・chip・badge-* など）の background-color がそのまま残る。
+   一覧のカードの影（ui-card）は消すが、面の勾配（hero-tint）は今の規則に任せる。 */
+@media (prefers-contrast: more) {
+  .ui-press,
+  .ui-press-main,
+  .ui-press-sub,
+  .ui-pick,
+  .ui-pick-card,
+  .segmented-btn,
+  .ui-mark-strong,
+  .ui-step-mark,
+  .ui-here,
+  .ui-table thead th,
+  .ui-meter .bar-fill {
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+  .ui-card,
+  .card.record-list { box-shadow: none !important; }
+  .ui-press-main::after { content: none !important; }
+  /* 印の輪郭は半透明の縁から文字と同じ色の縁へ強める（面の色の差に頼らず、札だと分かる） */
+  .ui-mark { border-color: currentColor; }
+}
+@media print {
+  .ui-press,
+  .ui-press-main,
+  .ui-press-sub,
+  .ui-pick,
+  .ui-pick-card,
+  .segmented-btn,
+  .ui-mark-strong,
+  .ui-step-mark,
+  .ui-here,
+  .ui-table thead th,
+  .ui-meter .bar-fill {
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+  .ui-card,
+  .card.record-list { box-shadow: none !important; }
+  .ui-press-main::after { content: none !important; }
+}

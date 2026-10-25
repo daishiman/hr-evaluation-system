@@ -42,6 +42,7 @@ function render(askableItemIds: string[]) {
   return renderToStaticMarkup(
     createElement(SchemeGroupPicker, {
       schemeId: "sch_1",
+      updatedAt: 0,
       pointGroup: "Regular",
       groupLabel: "一般",
       gradeNames: ["一般"],
@@ -60,13 +61,13 @@ function render(askableItemIds: string[]) {
   ).replace(/<!-- -->/g, "");
 }
 
-const BADGE = '<span class="badge badge-required">設問なし</span>';
+const BADGE = '<span class="badge badge-required ui-mark">設問なし</span>';
 
 describe("使うKPIを選ぶの候補: 実績の聞き方（設問のひな形）が決まっていない項目", () => {
   it("聞き方の無い候補にだけ札「設問なし」を付け、選んだ時点で、決める場所を添えて警告する", () => {
     const html = render(["kpi_a"]);
     expect(html.split(BADGE)).toHaveLength(2);
-    expect(html).toMatch(new RegExp(`粗利率 <span class="badge badge-done">選択中</span> ${BADGE}`));
+    expect(html).toMatch(new RegExp(`粗利率 <span class="badge badge-done ui-mark">選択中</span> ${BADGE}`));
     expect(html).toContain("「粗利率」は、実績の聞き方がまだ決まっていません。");
     expect(html).toContain("その項目の「内容を直す」を押してください。");
     // 聞き方のある項目と、等級要件の設問から数える固定枠は名指ししない

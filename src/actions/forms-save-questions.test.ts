@@ -6,10 +6,12 @@ import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1"
 import { IDS, seedCompany, seedMemberships } from "@/test-support/evaluation-fixture";
 
 /*
- * 設問の保存で、集計との紐づけをサーバーが確かめる（DD-015・spec 一覧の 20）。
+ * 設問の保存で、集計との紐づけをサーバーが確かめる（DD-015・spec 一覧の 20。DD-028 で改めた）。
  *
- * 紐づけは作り直しのときにサーバーが書く値で、組み立て画面は引き継ぐだけ。
+ * 紐づけはサーバーが設定の行から書く値で、組み立て画面は保存済みの設問の紐づけを引き継ぐだけ。
  * 保存の要求に入っていた紐づけを信じず、保存済みの同じ設問の値と同じものだけを受け付ける。
+ * 新しい設問には、自社の設定の行を1つだけ指す紐づけ（KPI は項目だけ）を付けて「設定の項目を選んで足す」ことができる（DD-028 の1）。
+ * 足す・外す・文を直すが設定へ写る経路は src/actions/form-to-settings-sync.test.ts が確かめる。
  */
 
 const mocked = vi.hoisted(() => ({
@@ -86,6 +88,12 @@ function messageOf(result: unknown): string {
   return (result as { message: string }).message;
 }
 
+/** 画面と同じく、開いたときのアンケートの更新時刻を添えて保存する */
+async function save(questions: unknown[]) {
+  const [form] = await t.db.select({ updatedAt: s.forms.updatedAt }).from(s.forms).where(eq(s.forms.id, IDS.form));
+  return saveFormQuestions({ formId: IDS.form, expectedUpdatedAt: form.updatedAt.getTime(), questions });
+}
+
 beforeEach(async () => {
   t = createTestDatabase();
   t.raw.exec("PRAGMA foreign_keys = ON");
@@ -119,7 +127,7 @@ describe("設問の保存と集計との紐づけ", () => {
     const before = await storedQuestions();
     expect(before.some((q) => q.kpiQuestionKey === "q_h")).toBe(true);
 
-    const result = await saveFormQuestions({ formId: IDS.form, questions: [...before.map(sent), freeQuestion] });
+    const result = await save([...before.map(sent), freeQuestion]);
 
     expect(result).toMatchObject({ ok: true });
     const after = await storedQuestions();
@@ -129,23 +137,30 @@ describe("設問の保存と集計との紐づけ", () => {
     expect(after.at(-1)).toMatchObject({ title: "ひとこと", kpiItemId: null, kpiQuestionKey: null, isGate: false });
   });
 
-  it("新しい設問に紐づけを付けて送っても断り、保存済みの設問は変えない", async () => {
+  it("新しい設問に聞くことの key まで付けて送ると断り、保存済みの設問は変えない（KPI は項目だけを選ぶ）", async () => {
     const before = await storedQuestions();
 
-    const result = await saveFormQuestions({
-      formId: IDS.form,
-      questions: [...before.map(sent), { ...freeQuestion, kpiItemId: IDS.itemHigher, kpiQuestionKey: "q_h" }],
-    });
+    const result = await save([...before.map(sent), { ...freeQuestion, kpiItemId: IDS.itemHigher, kpiQuestionKey: "q_h" }]);
 
     expect(result).toMatchObject({ ok: false });
-    expect(messageOf(result)).toContain("「ひとこと」の集計との紐づけが、いまのアンケートの設問と合いません");
+    expect(messageOf(result)).toBe("「ひとこと」に付けられる紐づけは、設定の項目1つだけです。KPI は項目だけを選んでください。");
+    expect(await storedQuestions()).toEqual(before);
+  });
+
+  it("この版がもう聞いている KPI 項目を選んで足すと断り、保存済みの設問は変えない", async () => {
+    const before = await storedQuestions();
+
+    const result = await save([...before.map(sent), { ...freeQuestion, kpiItemId: IDS.itemHigher }]);
+
+    expect(result).toMatchObject({ ok: false });
+    expect(messageOf(result)).toBe("「稼働率」は、このアンケートがもう聞いています。同じ項目を2回は足せません。");
     expect(await storedQuestions()).toEqual(before);
   });
 
   it("新しい設問を昇格の必須要件にして送っても断る", async () => {
     const before = await storedQuestions();
 
-    const result = await saveFormQuestions({ formId: IDS.form, questions: [...before.map(sent), { ...freeQuestion, isGate: true }] });
+    const result = await save([...before.map(sent), { ...freeQuestion, isGate: true }]);
 
     expect(result).toMatchObject({ ok: false });
     expect(await storedQuestions()).toEqual(before);
@@ -155,7 +170,7 @@ describe("設問の保存と集計との紐づけ", () => {
     const before = await storedQuestions();
     const questions = before.map(sent).map((q) => (q.kpiQuestionKey === "q_h" ? { ...q, kpiQuestionKey: "q_l" } : q));
 
-    const result = await saveFormQuestions({ formId: IDS.form, questions });
+    const result = await save(questions);
 
     expect(result).toMatchObject({ ok: false });
     expect(messageOf(result)).toContain("の集計との紐づけは、この画面では変えられません");
@@ -166,7 +181,7 @@ describe("設問の保存と集計との紐づけ", () => {
     const before = await storedQuestions();
     const questions = before.map(sent).map((q) => (q.kpiQuestionKey === "q_h" ? { ...q, questionType: "text" as const } : q));
 
-    const result = await saveFormQuestions({ formId: IDS.form, questions });
+    const result = await save(questions);
 
     expect(result).toMatchObject({ ok: false });
     expect(messageOf(result)).toContain("は集計に使う設問なので、まとまりと答え方は変えられません");
@@ -175,14 +190,11 @@ describe("設問の保存と集計との紐づけ", () => {
 
   it("自由設問は、まとまりも答え方も変えられる", async () => {
     const before = await storedQuestions();
-    expect(await saveFormQuestions({ formId: IDS.form, questions: [...before.map(sent), freeQuestion] })).toMatchObject({ ok: true });
+    expect(await save([...before.map(sent), freeQuestion])).toMatchObject({ ok: true });
     const saved = await storedQuestions();
     const free = saved.at(-1)!;
 
-    const result = await saveFormQuestions({
-      formId: IDS.form,
-      questions: [...saved.slice(0, -1).map(sent), { ...sent(free), section: "support" as const, questionType: "yesno" as const }],
-    });
+    const result = await save([...saved.slice(0, -1).map(sent), { ...sent(free), section: "support" as const, questionType: "yesno" as const }]);
 
     expect(result).toMatchObject({ ok: true });
     expect((await storedQuestions()).at(-1)).toMatchObject({ id: free.id, section: "support", questionType: "yesno" });
@@ -191,7 +203,7 @@ describe("設問の保存と集計との紐づけ", () => {
   it("この版に無い id の自由設問は、新しい id で保存する", async () => {
     const before = await storedQuestions();
 
-    const result = await saveFormQuestions({ formId: IDS.form, questions: [...before.map(sent), { ...freeQuestion, id: "fq_other_form" }] });
+    const result = await save([...before.map(sent), { ...freeQuestion, id: "fq_other_form" }]);
 
     expect(result).toMatchObject({ ok: true });
     const last = (await storedQuestions()).at(-1)!;

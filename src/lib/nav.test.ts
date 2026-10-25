@@ -321,6 +321,18 @@ describe("階層表示の組み立て", () => {
     expect(trail[3].href).toBe("/admin/scheme/Chief");
   });
 
+  it("ほかの役割のホームを途中の段にしない（ホームを2回出さない）", () => {
+    // 全体管理者が会社の画面を開くと、URL の途中に会社の管理者のホーム /admin がある
+    const trail = resolveTrail("/admin/members/u_1", "SUPER_ADMIN");
+    expect(trail.map((s) => s.label)).toEqual(["ホーム", "人を管理する", "社員", "社員1人"]);
+    expect(trail[0].href).toBe("/system");
+    expect(trail[2].href).toBe("/admin/members");
+    // 会社の管理者が自分の評価を開くと、URL の途中に一般の方のホーム /me がある
+    expect(resolveTrail("/me/forms", "COMPANY_ADMIN").filter((s) => s.label === "ホーム")).toEqual([
+      { label: "ホーム", href: "/admin" },
+    ]);
+  });
+
   it("開いても何も無い中継のURLは段にしない", () => {
     const trail = resolveTrail("/manager/evaluations/ev_1", "MANAGER");
     expect(trail.map((s) => s.label)).toEqual(["ホーム", "評価1件"]);

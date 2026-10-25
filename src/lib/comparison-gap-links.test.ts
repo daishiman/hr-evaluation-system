@@ -278,8 +278,8 @@ describe("等級要件・行動指針の読み出し（比べる警告の3種類
     });
     // 固定枠（等級要件達成率）は等級要件の設問で聞けている。残るのは KPI項目の2つだけ
     expect(await rowsOf()).toEqual([
-      ["kpi", "稼働率", "/admin/scheme?item=kpi_higher#kpi-item-kpi_higher"],
-      ["kpi", "残業率", "/admin/scheme?item=kpi_lower#kpi-item-kpi_lower"],
+      ["kpi", "稼働率", "/admin/scheme/items?item=kpi_higher#kpi-item-kpi_higher"],
+      ["kpi", "残業率", "/admin/scheme/items?item=kpi_lower#kpi-item-kpi_lower"],
     ]);
   });
 
@@ -357,7 +357,7 @@ describe("実績の聞き方（設問のひな形）が決まっていない項�
     // 準備の残り（配点ルールが無い）より先に、聞き方を決めさせる。先頭の項目の入力欄を開いた KPI項目の画面へ
     expect(gap?.fix).toEqual({
       kind: "defineAsking",
-      href: "/admin/scheme?item=kpi_higher#kpi-item-kpi_higher",
+      href: "/admin/scheme/items?item=kpi_higher#kpi-item-kpi_higher",
       names: ["稼働率", "残業率"],
     });
   });
@@ -370,7 +370,7 @@ describe("実績の聞き方（設問のひな形）が決まっていない項�
     const gap = (await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts())).get(IDS.form);
     expect(noTemplateOf(gap)).toEqual([["創造性について", false], ["等級要件達成率", false], ["稼働率", false], ["残業率", true]]);
     // 決める操作が指すのは、残った項目
-    expect(gap?.fix).toMatchObject({ kind: "defineAsking", href: "/admin/scheme?item=kpi_lower#kpi-item-kpi_lower", names: ["残業率"] });
+    expect(gap?.fix).toMatchObject({ kind: "defineAsking", href: "/admin/scheme/items?item=kpi_lower#kpi-item-kpi_lower", names: ["残業率"] });
     expectNoLeak(gap);
   });
 
@@ -387,7 +387,7 @@ describe("実績の聞き方（設問のひな形）が決まっていない項�
       id: "q_v2_req", companyId: IDS.company, formId: "frm_test_v2", section: "support", questionType: "yes_no",
       title: "等級要件1", displayOrder: 1, gradeRequirementId: "gr_v2",
     });
-    const define = { kind: "defineAsking", href: "/admin/scheme?item=kpi_higher#kpi-item-kpi_higher", names: ["稼働率", "残業率"] };
+    const define = { kind: "defineAsking", href: "/admin/scheme/items?item=kpi_higher#kpi-item-kpi_higher", names: ["稼働率", "残業率"] };
     const gaps = await loadCycleComparisonGaps(IDS.company, IDS.cycle, opts());
     expect(gaps.get("frm_test_v2")!.fix).toEqual(define);
     expect(gaps.get("frm_test_v2")!.note).toContain("「稼働率」・「残業率」は、実績の聞き方がまだ決まっていません。");

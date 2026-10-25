@@ -6,7 +6,7 @@
 
 ## 1. 台帳の読み方
 
-`route-ledger.json` が、実装にある **47個すべての `page.tsx`** を列挙する。各routeは1つの `accessClass` を参照し、そのclassが「状態 × 4ロール × 期待結果」を定義する。同じ契約を **375 / 768 / 1280 / 1600px** の4幅すべてに適用する。各ページの主な操作・可否・説明も同じ台帳の `permissions` が持ち、実装と権限一覧はそこから作る（[製品仕様 §28-2](../docs/product/spec.md#28-2-権限の台帳と権限一覧s4s5s10受入-a3a4a9)）。
+`route-ledger.json` が、実装にある **50個すべての `page.tsx`** を列挙する。各routeは1つの `accessClass` を参照し、そのclassが「状態 × 4ロール × 期待結果」を定義する。同じ契約を **375 / 768 / 1280 / 1600px** の4幅すべてに適用する。各ページの主な操作・可否・説明も同じ台帳の `permissions` が持ち、実装と権限一覧はそこから作る（[製品仕様 §28-2](../docs/product/spec.md#28-2-権限の台帳と権限一覧s4s5s10受入-a3a4a9)）。
 
 | 結果 | 意味 |
 |---|---|
@@ -34,14 +34,22 @@
 
 COMPANY_ADMIN と SUPER_ADMIN も評価される本人になりうるため、`/me/*` は EMPLOYEE 専用ではなく全ロール共通の自己サービスである。ロールだけでなく、会社・本人・直属上長・確定状態を組み合わせて判定する。
 
-## 3. 47routeの完全性
+## 3. 50routeの完全性
 
-台帳には通常画面のほか、redirect専用の `/` と `/admin/masters/kpi-categories` も含める。製品仕様から漏れていた次の2画面も独立routeとして扱う。
+台帳には通常画面のほか、redirect専用の `/` と `/admin/masters/kpi-categories`（`/admin/scheme/categories` へ移す）も含める。製品仕様から漏れていた次の2画面も独立routeとして扱う。
 
 - `/admin/forms/[id]/responses`: 会社管理者が提出状況と回答を確認する。
 - `/me/responses/[id]`: 回答時点の設問と回答本文を権限範囲内で読み返す。
 - `/admin/improvements`・`/admin/improvements/[id]`: 各画面から届いた改善要望を読み、対応状況を変える（COMPANY_ADMIN 以上・自社分だけ）。
 - `/system/permissions`: システム全体管理者が、台帳から作る各ページと操作の権限を確認する。
+
+KPI・評価セットは、入口の `/admin/scheme` を進み具合と作業の画面を選ぶだけの画面にし、等級区分によらない作業を次の3画面へ分けた（[DD-027](../docs/product/design-decisions.md)）。開ける人と会社の絞り込みは `/admin/scheme` と同じ（COMPANY_ADMIN 以上・自社分だけ）。静的な segment なので `/admin/scheme/[group]` とは重ならない。
+
+- `/admin/scheme/common`: 全等級区分に共通の設定（昇給の条件）を決める。
+- `/admin/scheme/items`: KPI項目を追加・修正する。旧いリンクの `/admin/scheme?item=<id>` は `/admin/scheme/items?item=<id>#kpi-item-<id>` へredirectする。
+- `/admin/scheme/categories`: KPI項目の分類を追加・削除する。
+
+入口の `/admin/scheme` には、設定とずれた回答の無い下書きのアンケートがあるときだけ、まとめてそろえる操作（台帳の `forms.align`。COMPANY_ADMIN 以上・自社分だけ）を出す（[DD-028](../docs/product/design-decisions.md) の6）。
 
 routeを追加・削除・改名するときは `route-ledger.json` を同じ変更で更新する。漏れ・古いroute・重複は `pnpm run check:docs` が失敗させる。
 

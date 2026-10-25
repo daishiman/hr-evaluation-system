@@ -1,5 +1,5 @@
 {
-  "$schemaNote": "47個の page.tsx の正本台帳。各routeはaccessClassの全state×4roleを、375/768/1280/1600pxの全幅で検証する。accessClasses[].access は役割ごとに画面を開けるか（full・conditional・none）、routes[].permissions はその画面でできる操作と、操作ができる最も弱い役割。sharedOperations は複数の画面で使う操作、publicEndpoints はログインの役割で判定しない入口と理由。権限一覧の画面・ページの入口・サーバー処理・メニューはこの台帳を読む（D-007）。",
+  "$schemaNote": "50個の page.tsx の正本台帳。各routeはaccessClassの全state×4roleを、375/768/1280/1600pxの全幅で検証する。accessClasses[].access は役割ごとに画面を開けるか（full・conditional・none）、routes[].permissions はその画面でできる操作と、操作ができる最も弱い役割。sharedOperations は複数の画面で使う操作、publicEndpoints はログインの役割で判定しない入口と理由。権限一覧の画面・ページの入口・サーバー処理・メニューはこの台帳を読む（D-007）。",
   "widths": [
     375,
     768,
@@ -1205,13 +1205,13 @@
     },
     {
       "path": "/admin/masters/kpi-categories",
-      "label": "KPI・評価セット",
+      "label": "KPIカテゴリ",
       "accessClass": "legacyRedirect",
       "widthPolicy": "all",
-      "purpose": "旧KPIカテゴリ入口から評価セットへ移す",
+      "purpose": "旧KPIカテゴリ入口からKPIカテゴリの画面へ移す",
       "subject": "旧URLへ来た利用者",
       "permissions": {
-        "summary": "古い入口。KPI・評価セットの画面へ移すだけ。",
+        "summary": "古い入口。KPIカテゴリの画面へ移すだけ。",
         "operations": []
       }
     },
@@ -1232,10 +1232,10 @@
       "label": "KPI・評価セット",
       "accessClass": "companyAdminStatic",
       "widthPolicy": "all",
-      "purpose": "KPI・評価セットの進捗を確認する",
+      "purpose": "KPI・評価セットの進捗を確認し、作業の画面を選ぶ",
       "subject": "操作対象会社",
       "permissions": {
-        "summary": "KPI・評価セットの進み具合を見て、共通の設定を保存する。",
+        "summary": "KPI・評価セットの進み具合を見て、作業の画面を選ぶ。保存はそれぞれの作業の画面で行う。設定とずれた回答の無い下書きがあれば、ここでまとめてそろえる。",
         "operations": [
           {
             "id": "scheme.save",
@@ -1245,6 +1245,16 @@
               "actions/scheme.ts#saveScheme"
             ],
             "description": "等級の区分ごとに使うKPIと、その基準を保存する。"
+          },
+          {
+            "id": "forms.align",
+            "label": "設定とずれた下書きをそろえる",
+            "minRole": "COMPANY_ADMIN",
+            "actions": [
+              "actions/form-align.ts#previewFormAlignment",
+              "actions/form-align.ts#applyFormAlignment"
+            ],
+            "description": "回答の無い下書きのアンケートと設定を比べ、後から保存した方に合わせてそろえる。内容を見た後に保存が入っていたら、何も変えずに断る。"
           }
         ]
       }
@@ -1270,6 +1280,42 @@
       "subject": "操作対象会社の有効な等級区分",
       "permissions": {
         "summary": "選んだKPIの A〜E の基準を決める。",
+        "operations": []
+      }
+    },
+    {
+      "path": "/admin/scheme/common",
+      "label": "全等級区分に共通の設定",
+      "accessClass": "companyAdminStatic",
+      "widthPolicy": "all",
+      "purpose": "全等級区分に共通の設定（昇給の条件）を決める",
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "全等級区分に共通の設定を保存する。保存は「KPI・評価セットを保存する」と同じ操作。",
+        "operations": []
+      }
+    },
+    {
+      "path": "/admin/scheme/items",
+      "label": "KPI項目",
+      "accessClass": "companyAdminStatic",
+      "widthPolicy": "all",
+      "purpose": "KPI項目を追加・修正する",
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "KPI項目を足す・直す・使わない設定にする・消す。保存は「制度の設定を保存する」、消すのは「制度の設定を消す」と同じ操作。",
+        "operations": []
+      }
+    },
+    {
+      "path": "/admin/scheme/categories",
+      "label": "KPIカテゴリ",
+      "accessClass": "companyAdminStatic",
+      "widthPolicy": "all",
+      "purpose": "KPI項目の分類を追加・削除する",
+      "subject": "操作対象会社",
+      "permissions": {
+        "summary": "KPI項目の分類を足す・消す。保存は「制度の設定を保存する」、消すのは「制度の設定を消す」と同じ操作。",
         "operations": []
       }
     },
@@ -1361,7 +1407,7 @@
             "actions": [
               "actions/forms.ts#saveFormQuestions"
             ],
-            "description": "設問の文・選択肢・並びを保存する。"
+            "description": "設問の文・選択肢・並びを保存する。設定から作った設問の文の直し・外しと、設定の行から足した設問は、制度の設定へも写す。開いた後にほかの保存が入っていたら、何も変えずに断る。"
           }
         ]
       }

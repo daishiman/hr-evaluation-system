@@ -318,7 +318,7 @@ describe("内容の編集と終了済み評価期間の案内", () => {
 describe("内容の変更は3つの入口で同じ版を守る", () => {
   const operations = [
     { name: "タイトル・説明", run: () => updateForm({ formId: IDS.form, title: "変更", description: "変更" }), responseReason: "タイトルと説明文を変更できません" },
-    { name: "設問の保存", run: () => saveFormQuestions({ formId: IDS.form, questions: [{ section: "free", questionType: "text", title: "追加", required: false }] }), responseReason: "設問を変更できません" },
+    { name: "設問の保存", run: () => saveFormQuestions({ formId: IDS.form, expectedUpdatedAt: Date.now(), questions: [{ section: "free", questionType: "text", title: "追加", required: false }] }), responseReason: "設問を変更できません" },
     { name: "制度から作り直し", run: () => rebuildFormQuestions({ formId: IDS.form }), responseReason: "設問を作り直せません" },
   ];
   it.each(operations)("$name: 回答のある下書きを拒否し、原本を保つ", async ({ run, responseReason }) => {

@@ -11,7 +11,7 @@ import { IDS, seedCompany, seedMemberships, seedResponse } from "@/test-support/
  * 見たいのは3つ。
  *  1. 判断がそろわない確定は 400 で断り、評価の行を1文字も変えない（画面の「押せない理由」と同じ文）
  *  2. 確定の1文で、判断・記録した人・時刻がまとめて書かれる（判断の無い確定を残さない）
- *  3. コメントだけの保存と確定を戻す操作は判断を消さない。作り直し（buildEvaluations）では消えて、次の確定で選び直す
+ *  3. コメントだけの保存・確定を戻す操作・作り直し（buildEvaluations）は判断を消さない（作り直しは DD-028 の4 で改めた）。確定のたびに選び直す
  */
 
 const mocked = vi.hoisted(() => ({
@@ -288,20 +288,22 @@ describe("判断を消す操作と消さない操作", () => {
     });
   });
 
-  it("確定を戻したあとの作り直しでは判断が消え、次の確定で選び直す", async () => {
+  it("確定を戻したあとの作り直しでも判断は残り、次の確定ではまた選ぶ", async () => {
     await finalize({ raiseDecision: "override", raiseDecisionReason: "引き継ぎを放置した", promotionDecision: "follow" });
     const row = await evaluation();
     await updateEvaluation({ evaluationId: row.id, action: "reopen" });
+    const recorded = await evaluation();
 
     expect((await buildEvaluations({ cycleId: IDS.cycle })).ok).toBe(true);
 
+    // 設定の保存で流れる集計し直しと同じ関数なので、設定を保存しただけで判断が消えないことも、ここで確かめている
     expect(await evaluation()).toMatchObject({
       status: "draft",
-      raiseDecision: null,
-      raiseDecisionReason: null,
-      promotionDecision: null,
-      decisionRecordedBy: null,
-      decisionRecordedAt: null,
+      raiseDecision: "override",
+      raiseDecisionReason: "引き継ぎを放置した",
+      promotionDecision: "follow",
+      decisionRecordedBy: IDS.evaluator,
+      decisionRecordedAt: recorded.decisionRecordedAt,
     });
     expect((await finalize()).ok).toBe(false);
   });

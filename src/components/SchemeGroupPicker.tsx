@@ -58,6 +58,7 @@ export function SchemeGroupPicker({
   categories,
   kpiItems,
   criteriaPath,
+  updatedAt,
 }: {
   schemeId: string;
   /** 区分の鍵。保存と下書きの照合にだけ使い、画面の文には出さない */
@@ -75,6 +76,8 @@ export function SchemeGroupPicker({
   kpiItems: KpiOption[];
   /** 保存後に進む先（手順2） */
   criteriaPath: string;
+  /** 読んだ時点の評価セットの保存日時（ミリ秒）。後からほかの人が保存していたら、保存を断る */
+  updatedAt: number;
 }) {
   const router = useRouter();
   /* 保存の応答に保存後の画面が同梱されるので、別に取り直しを頼まない。
@@ -216,6 +219,7 @@ export function SchemeGroupPicker({
     setMessage(null);
     const result = await save({
       schemeId,
+      expectedUpdatedAt: updatedAt,
       pointGroup,
       items: selections.map((x) => ({
         kpiItemId: x.kpiItemId,

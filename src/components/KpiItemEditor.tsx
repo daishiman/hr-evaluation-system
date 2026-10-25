@@ -2,7 +2,7 @@
 
 import { useMasterAction } from "@/components/use-master-action";
 import { useEffect, useId, useState } from "react";
-import { Badge, Button, Card, Code, Disclosure, FieldGroup, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, Code, DefList, Disclosure, FieldGroup, InlineDetail, ReasonNote } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ListAddArea, ListAddRow, ListRowActions, ListRowBody, ListRowItem, ListRows } from "@/components/ListRow";
 import { UsedByDetail, blockedRows } from "@/components/UsedByDetail";
@@ -93,33 +93,8 @@ const draftFromRow = (row: KpiItemRow): Draft => ({
   isMonetary: row.isMonetary,
 });
 
-/** 一覧の行に出す、聞くことと計算式の要約。 */
-function askingNote(row: KpiItemRow) {
-  const { questions, formula } = row.asking;
-  if (questions.length === 0) {
-    if (row.isFixedSlot) return formula ? <>計算式 <Code>{formula}</Code></> : null;
-    return (
-      <>
-        聞くことがまだありません（アンケートに出ず、点が付きません）
-        {formula && (
-          <>
-            {" "}／ 計算式のメモ <Code>{formula}</Code>
-          </>
-        )}
-      </>
-    );
-  }
-  return (
-    <>
-      聞くこと {questions.map((q, i) => `${ASKING_LETTERS[i] ?? "・"} ${q.text}`).join("　")}
-      {formula && (
-        <>
-          {" "}／ 計算式 <Code>{formula}</Code>
-        </>
-      )}
-    </>
-  );
-}
+/** 聞くことがまだ無く、アンケートに出ない項目か。固定枠は制度の決まりで聞き方を持たないので含めない */
+const unasked = (row: KpiItemRow) => row.isActive && !row.isFixedSlot && row.asking.questions.length === 0;
 
 /** 指されて入力欄を開ける項目。固定枠は直せないので開かない。無い項目を指されたら null */
 export function openableItem<T extends { id: string; isFixedSlot: boolean }>(items: readonly T[], id: string | null): T | null {
@@ -149,6 +124,10 @@ export function kpiItemIdFromHash(hash: string): string | null {
  *
  * 比べる警告の「聞き方を決める」は、この画面へ項目を指して来る（scheme-steps.ts の kpiItemPath）。
  * 指された項目は入力欄を開いた状態で描き、各行の id で URL の # からその行へ飛ばす。
+ *
+ * 行の頭は名前と分類だけにし、聞くことは A・B… と1行ずつ並べる。計算式・実績区分・単位・向きは
+ * 開いたときにだけ出す（DD-027 の3）。以前は1行の補足にすべてを「／」でつないでいて、
+ * 聞くことが横に詰まって読み分けにくかった。
  */
 export function KpiItemEditor({
   items,
@@ -193,6 +172,7 @@ export function KpiItemEditor({
   }, [items]);
 
   const { usedByOf, markOf, anyBlocked } = blockedRows(usage, items);
+  const activeCount = items.filter((row) => row.isActive).length;
 
   /* 失敗したときは入力欄を閉じずに残す（send が true を返したときだけ閉じる）。 */
   const create = async () => {
@@ -259,13 +239,25 @@ export function KpiItemEditor({
       {/* 行の形は等級要件・昇格の条件と同じ（番号 → 本文と札 → 補足 → 使っている場所、操作は右の列。spec §28-14）。
           KPI 項目は No. で並ぶので並べ替えは置かない */}
       <Card>
+        <div className="card-pad">
+          <CardHead
+            title="登録しているKPI項目"
+            sub={`使う ${activeCount}件・使わない ${items.length - activeCount}件`}
+            detail={
+              /* 札「聞くことが未定」の意味は、どの行でも同じ文なので頭に1つだけ置く */
+              items.some(unasked) && (
+                <p className="footnote m-0 mt-1">「聞くことが未定」の項目はアンケートに出ず、点が付きません。</p>
+              )
+            }
+          />
+        </div>
         {items.length > 0 && (
-          <ListRows label="KPI項目">
+          <ListRows label="KPI項目" className="border-t border-line">
             {items.map((row) => {
               const mark = markOf(row.id);
               const locked = usedByOf(row.id).length > 0;
               const isEditing = editingId === row.id;
-              const asking = askingNote(row);
+              const { questions, formula } = row.asking;
 
               return (
                 <ListRowItem key={row.id} id={kpiItemAnchor(row.id)} off={!row.isActive}>
@@ -294,27 +286,36 @@ export function KpiItemEditor({
                         wide
                         text={row.name}
                         badges={
-                          (row.isFixedSlot || row.isProvisional || !row.isActive) && (
+                          (row.isFixedSlot || row.isProvisional || !row.isActive || unasked(row)) && (
                             <span className="inline-flex flex-wrap gap-1">
                               {row.isFixedSlot && <Badge tone="done">固定枠</Badge>}
                               {row.isProvisional && <Badge tone="dropped">仮置き</Badge>}
                               {!row.isActive && <Badge tone="dropped">使用しない</Badge>}
+                              {unasked(row) && <Badge tone="required">聞くことが未定</Badge>}
                             </span>
                           )
                         }
-                        note={
-                          <>
-                            {row.categoryName ?? "分類未設定"} ／ {row.measureType} ／ 単位 {row.unit} ／{" "}
-                            {row.direction === "lower" ? "低いほど良い" : "高いほど良い"}
-                            {asking && (
-                              <>
-                                <br />
-                                {asking}
-                              </>
-                            )}
-                          </>
-                        }
+                        note={row.categoryName ?? "分類未設定"}
                       >
+                        {questions.length > 0 && (
+                          <ol aria-label={`${row.name}の聞くこと`} className="footnote m-0 mt-1 list-none p-0">
+                            {questions.map((q, i) => (
+                              <li key={q.key}>
+                                {ASKING_LETTERS[i] ?? "・"} {q.text}
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                        <InlineDetail summary={formula ? "計算式・実績区分・単位・向き" : "実績区分・単位・向き"}>
+                          <DefList
+                            rows={[
+                              ...(formula ? [{ label: "計算式", value: <Code>{formula}</Code> }] : []),
+                              { label: "実績区分", value: row.measureType },
+                              { label: "単位", value: row.unit },
+                              { label: "向き", value: row.direction === "lower" ? "低いほど良い" : "高いほど良い" },
+                            ]}
+                          />
+                        </InlineDetail>
                         {mark !== null && <UsedByDetail mark={mark} usedBy={usedByOf(row.id)} />}
                       </ListRowBody>
                       {/* 固定枠（等級要件達成率）は制度の決まりなので、直す・止める・消すを出さない */}

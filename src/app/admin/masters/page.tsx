@@ -107,7 +107,7 @@ export default async function AdminMasters({ searchParams }: { searchParams: Pro
           <p className="m-0 text-sub font-bold">等級要件（支援・運営）</p>
           <p className="m-0 mt-1 text-sub">
             いまは <b>支援について {supportCount}項目</b>・<b>運営について {operationCount}項目</b>（合計{" "}
-            <b>{supportCount + operationCount}項目</b>）です。次に作るアンケートでは、この有効な項目の合計が達成率の分母になります。
+            <b>{supportCount + operationCount}項目</b>）です。この設定で作るアンケートでは、有効な項目の合計が達成率の分母になります。
           </p>
           <p className="footnote m-0 mt-1">区分ごとに{GRADE_REQUIREMENT_MAX}項目までです。</p>
           <div className="mt-3">

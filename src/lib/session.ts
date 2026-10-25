@@ -290,12 +290,18 @@ export async function canManageEmployee(v: Viewer, employeeId: string): Promise<
 /** 役割や範囲が足りないときの言い方（入口の判定と、所属による制限で同じ文にする） */
 export const FORBIDDEN_MESSAGE = "この操作を行う権限がありません。";
 
-/** API用。権限が足りなければ 401 / 403 を投げる。 */
+/**
+ * API用。権限が足りなければ 401 / 403 を投げる。
+ *
+ * fixHref は、断った理由を直す画面の場所（DD-028 の2）。画面からの書き込みでは action.ts の run が結果へ写し、
+ * 画面は「直す画面を開く」のリンクにする。
+ */
 export class HttpError extends Error {
   constructor(
     readonly status: number,
     message: string,
     readonly responseHeaders?: HeadersInit,
+    readonly fixHref?: string,
   ) {
     super(message);
   }

@@ -251,6 +251,11 @@ export const ROUTE_META: RouteMeta[] = routeLedger.routes.map((route) => ({
 /* 途中の段として出しても行き先が無いURL。階層表示から外す。 */
 const HIDDEN_PREFIXES = ["/manager/evaluations"];
 
+/* 役割ごとのホーム（/me・/manager・/admin・/system）。台帳ではどれも「ホーム」と呼ぶ。
+   1段目に自分のホームを置くので、URLをたどる段ではほかの役割のホームも出さない。
+   全体管理者が /admin/* を開くと「ホーム → 分類 → ホーム → 社員」になっていた（UX-034）。 */
+const ROLE_HOMES = new Set(Object.values(MENUS).map((groups) => groups[0].items[0].href));
+
 /** URL 1本ぶんの、対応表の引き当て。 */
 export function routeMetaOf(pathname: string): RouteMeta | null {
   const segs = pathname.split("/").filter(Boolean);
@@ -307,7 +312,7 @@ export function resolveTrail(pathname: string, role: Role): TrailStep[] {
   const segs = pathname.split("/").filter(Boolean);
   for (let i = 1; i <= segs.length; i++) {
     const href = `/${segs.slice(0, i).join("/")}`;
-    if (href === home.href) continue;
+    if (href === home.href || ROLE_HOMES.has(href)) continue;
     if (HIDDEN_PREFIXES.includes(href)) continue;
     const meta = routeMetaOf(href);
     if (!meta || meta.hidden) continue;
