@@ -61,3 +61,17 @@ BeadsはP01〜P12と親を `in_progress` として検証と受領書を記録し
 ## 最終判定
 
 今回の実装・文書に、draft PRへの提出を止める未解決指摘はない。旧契約の説明を是正し、必要な既存ゲートを再実行した。上記の残課題と本番適用条件をPRへ引き継ぐ。テストの画像・認証状態・D1データ・検証用ログはコミット対象に含めない。
+
+
+## 提出結果
+
+- 実装コミット: `ec4ad014937ffe386547520c17e17d1f93b1c82c`。新規feature文書の末尾の空行は追加コミット `40580bbcd59453e3d6c266a2bd9572df26f8a5bc` で整えた。最終の `git diff --check origin/main...HEAD` は成功した。
+- `origin/devgraph/feature-guideline-kpi-ux-and-two-way-sync` へpush済み。
+- **draft PRは未作成**。ghは認証失効、GitHub連携のcreate_pull_requestは403（Resource not accessible by integration）、Chromeは未ログインで、作成を完了できなかった。ブラウザでもbase main・2 commits・174 changed files・Able to mergeを確認した。
+- [PR本文](../../reviews/2026-10-26-guideline-kpi-pr-body.md) を保存した。CLIの再認証後、次のコマンドで同じ内容のdraft PRを作れる。
+
+```bash
+gh pr create --repo daishiman/hr-evaluation-system --draft --base main --head devgraph/feature-guideline-kpi-ux-and-two-way-sync --title 'feat: 行動指針とKPI設定を整理しアンケートと連動させる' --body-file docs/reviews/2026-10-26-guideline-kpi-pr-body.md
+```
+
+PR番号が無いためdev-graphへのPRリンクは未登録。作成後にP01〜P12へ紐付け、P13を完了にせずマージ後の本番作業へ引き継ぐ。

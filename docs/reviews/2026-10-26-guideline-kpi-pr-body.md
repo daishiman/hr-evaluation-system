@@ -1,0 +1,93 @@
+## 1. 目的 — 何のためにやったか
+
+評価の設定画面を読みやすくし、設定とアンケートのどちらを直しても、必要な場所へ変更が届くようにします。
+
+## 2. 背景 — なぜ必要だったか
+
+画面に説明や設定が集中し、次に何をすればよいか分かりにくい状態でした。また、設定とアンケートを別々に直すと内容が食い違い、同じ変更を繰り返す必要がありました。
+
+## 3. やったこと — 中学生にも分かる説明
+
+学校の「採点の決まり」と「配る問題用紙」を、別々に直していたような状態を改善しました。片方を直すと、まだ使っていない問題用紙にも変更が届きます。すでに回答した問題用紙や決まった成績は、そのときの記録として残します。
+
+設定画面は作業ごとに分け、必要な説明を開いて読めるようにしました。練習用の会社では、回答から評価を作る流れも試せます。
+
+## 4. できるようになったこと
+
+- 行動指針の割り当てと、次に設定する場所を確認できる。
+- 分類・評価項目・共通設定・等級ごとの設定へ迷わず進める。
+- 設定と下書きの設問を連動させ、ずれが残った場合は内容を確認してそろえられる。
+- 過去の回答や確定した評価を保ちながら、これから使う内容を直せる。
+- 練習用の回答から評価を作り、一覧と詳細まで確認できる。
+
+## 5. 含めたこと / 含めていないこと
+
+**含めたこと**
+
+- 行動指針の既定割り当て、画面整理、双方向の反映、見本データ、共通部品の状態表現。
+- 変更前のデータを暗号化して残す配布手順、仕様・設計・運用文書、検証とBeadsの更新。
+- 現在の未コミット成果物を1本の統合PRとして提出する扱いを、tasksの入口と受領書に記録。
+
+**含めていないこと**
+
+- 本番での移行・下書き整列・見本の入れ直し。公開鍵の設定、マージ後の確認、会社ごとの書き込み前確認が必要なため、P13に残します。
+- テーマの変更、確定済み評価の再計算、他の利用者への即時配信。
+- `.claude/state/` の既存のキット改善提案と、別の作業場所の既存のBeads操作ログ。
+
+## 6. 技術的にやったこと（エンジニア向け）
+
+- `planFormToSettings` / `writeFormToSettings` が紐づいた設問と元設定を検査し、設問・設定・制度変更記録を同一D1 batchへ保存。更新時刻を必須化し、検出した競合を拒否します。
+- `followSettings` が回答0件の下書きを再生成し、回答のある公開中の版には必要に応じて次版の下書きを作成。確定前評価を対象設定に応じて再集計し、確定済みの写しを保全します。追従障害は保存結果へ明記します。
+- `alignDraftForms` に事前確認・planKey照合・処理中に失敗した下書きの保全を実装。共通の候補読取と反映範囲の表示を整理。
+- 移行0040は等級の識別子で既定割り当てへ補正し、変更前値と除外会社を記録。戻しSQLは移行後に変更されていない値だけを戻します。
+- KPI入口を4つの作業へ分割し、旧URLを転送。テーマの変数を使う部品クラスを追加し、既存の配色・明暗の契約を保持。
+- Deploy/Migrateのバックアップはageで暗号化後にArtifactへ保存。公開鍵未設定時は移行前に停止。
+
+**仕様反映: あり**
+
+承認済み要件 `system-spec/spec-state.json` → 要件定義と8章 → `specs/`・`architecture/` → feature・taskの既存フローを照合。製品仕様、DD-026〜031、写しの一覧、運用文書へ反映済みです。最終レビューで補助仕様の旧一方向契約を修正しました。新しい要件の追加・承認済み判断の変更はありません。
+
+受領書: `docs/product/spec-receipts/2026-10-26-guideline-kpi-pr-review.md`
+タスク別の状態: `tasks/feature-guideline-kpi-ux-and-two-way-sync/README.md`
+
+**Beads ID**: `hr-6pi`、`hr-6pi.1`〜`hr-6pi.12` はレビュー中。`hr-6pi.13` は本番適用待ち。
+
+**dev-graph node ID**: `feature-guideline-kpi-ux-and-two-way-sync`、`SYS-GUIDE-KPI-P01`〜`SYS-GUIDE-KPI-P13`。
+
+dev-graph:SYS-GUIDE-KPI-P01
+dev-graph:SYS-GUIDE-KPI-P02
+dev-graph:SYS-GUIDE-KPI-P03
+dev-graph:SYS-GUIDE-KPI-P04
+dev-graph:SYS-GUIDE-KPI-P05
+dev-graph:SYS-GUIDE-KPI-P06
+dev-graph:SYS-GUIDE-KPI-P07
+dev-graph:SYS-GUIDE-KPI-P08
+dev-graph:SYS-GUIDE-KPI-P09
+dev-graph:SYS-GUIDE-KPI-P10
+dev-graph:SYS-GUIDE-KPI-P11
+dev-graph:SYS-GUIDE-KPI-P12
+
+P13はこのPRのマージだけで完了しません。
+
+## 7. 確認したこと
+
+- `git fetch origin` → mainの作業場所で `git merge --ff-only origin/main` → 作業ブランチで `git merge main`。すべて同じ起点44a2e02で競合なし。リモートにdevはなく、baseはmain。
+- `pnpm run test:coverage --maxWorkers=2`: 241ファイル・3,920件成功、1件スキップ。対象domainのカバレッジは全指標100%。
+- `pnpm run typecheck`、`pnpm run check:docs`、`git diff --check`: 成功。
+- `pnpm run cf:dry-run`: 終了コード0、Worker生成成功。
+- `pnpm run check:bundle-size`: 2,138.8 KiB、Free上限の69.6%。
+- 専用ローカルpreview（8792）に対する対象4本のPlaywright: 認証準備を含む49件成功。両方向の反映、別タブ、権限、整列、見本の評価作成、375px/768px、部品状態・明暗の記録を確認。
+- `validate-coverage-matrix.py`（complete/basis/foundation）、`validate-source-citation.py`、`validate-spec-doc-sync.py`、`validate-graph-schema.py`: 成功。graph違反0。
+- 保護対象のテーマ契約4件・T2に起点から差分なし。globals.css冒頭宣言とfeature contextのdigestは起点・登録値と一致。
+
+MVPとして全E2Eの再実行とローカルD1への試験データの手動再投入は省略し、既存の対象試験と実SQLite結合試験を使いました。
+
+## 8. 注意・残課題
+
+- SECURITY-014: 方式はDD-031で決定済み。秘密鍵の保管と `D1_BACKUP_AGE_RECIPIENT` の設定は利用者側の作業で、設定済みかは今回未確認。
+- OPS-019 / P13: マージ後のDeploy実行・本番読取・会社ごとの確認・整列・見本投入を別途実施する必要があります。
+- RELIABILITY-008: 読取とbatchの間の競合を完全に防ぐ保証は未実装。更新時刻の必須化と先行保存の検出まで。
+- PERFORMANCE-008: 入口で全下書きを解析するコストは実測後に判断。
+- 通常スキップする1件は本番ランク基準の実データを指定した場合だけの検査。本番データは取得していません。
+- OpenNextは `js-tokens` / `strip-ansi` のコピー失敗をログに出しましたが、終了コード0でWorker生成し、ローカルの49件の画面試験は成功しました。
+- PRはdraftとして提出し、本番公開とBeadsの完了処理は行いません。
