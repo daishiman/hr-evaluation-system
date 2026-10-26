@@ -310,7 +310,7 @@ test.describe("設問と保存済みデータの接続（A10・A11）", () => {
     await expect(page.getByRole("button", { name: "設問を保存する", exact: true })).toBeEnabled();
   };
 
-  test("追加設問は再保存でも同じIDを保ち、作り直し後の保存で旧設問を復活させない", async ({ page }) => {
+  test("追加設問は再保存でも作り直しでも同じIDのまま残り、作り直し後の保存で重ならない（DD-028 の4）", async ({ page }) => {
     await page.goto(await draftFormHref(page));
     await waitForHydration(page, "main button");
     const marker = `E2E 保存と再生成 ${Date.now()}`;
@@ -325,13 +325,31 @@ test.describe("設問と保存済みデータの接続（A10・A11）", () => {
     await page.reload();
     await expect(previewTitle).toHaveAttribute("id", assignedId!);
 
+    // 作り直しは設定とつながる設問だけを新しいIDで作り直し、手で足した設問は同じIDのまま後ろに残す
     const rebuild = "いまの制度の設定から設問を作り直す";
+    const firstPreview = page.locator('main [id^="preview_t_"]').first();
+    const firstBefore = await firstPreview.getAttribute("id");
     await waitForHydration(page, "main button");
     await page.getByRole("button", { name: rebuild, exact: true }).click();
     await page.getByRole("dialog", { name: `${rebuild}の確認` }).getByRole("button", { name: rebuild, exact: true }).click();
     await expect(page.getByText(/設問を作り直しました（\d+問）/)).toBeVisible();
-    await expect(handles(page).filter({ hasText: marker })).toHaveCount(0);
-    expect(await names(page)).not.toContain(marker);
+    await expect(firstPreview).not.toHaveAttribute("id", firstBefore!);
+    await expect(previewTitle).toHaveAttribute("id", assignedId!);
+    const rebuilt = await names(page);
+    expect(rebuilt.filter((name) => name === marker)).toHaveLength(1);
+    expect(rebuilt.at(-1)).toBe(marker);
+
+    // 作り直した後の画面で保存しても、作り直す前の設問を送り返さない（並びは作り直した直後のまま）
+    await saveQuestions(page);
+    await page.reload();
+    expect(await names(page)).toEqual(rebuilt);
+    await expect(previewTitle).toHaveAttribute("id", assignedId!);
+
+    // 流すたびに溜まらないよう、足した設問を消して保存する
+    const row = page.getByRole("listitem").filter({ has: page.getByRole("button", { name: `${rebuilt.length}番目『${marker}』を並べ替え` }) });
+    await waitForHydration(page, "main button");
+    await row.getByRole("button", { name: "内容を直す", exact: true }).click();
+    await page.getByRole("button", { name: "この設問を削除する", exact: true }).click();
     await saveQuestions(page);
     await page.reload();
     expect(await names(page)).not.toContain(marker);

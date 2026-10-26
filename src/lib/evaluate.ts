@@ -55,7 +55,11 @@ export async function buildEvaluationsForCycle(
   companyId: string,
   cycleId: string,
   evaluatorId: string,
-  opts?: { employeeIds?: string[] },
+  opts?: {
+    employeeIds?: string[];
+    /** 設定の保存に追従して集計し直すとき。集計した上司は保存した人に替えず、元の行のまま残す（DD-028 の4） */
+    keepEvaluator?: boolean;
+  },
 ): Promise<BuildResult[]> {
   const db = await getDb();
 
@@ -418,7 +422,15 @@ export async function buildEvaluationsForCycle(
         promotionBlockedReasonEmployee: overall.promotionBlockedReasonEmployee,
         requiredKpiPointsSnapshot: th?.requiredKpiPoints ?? null,
         requiredBehaviorPointsSnapshot: hasBehavior ? (th?.requiredBehaviorPoints ?? null) : null,
-        evaluatorId,
+        evaluatorId: (opts?.keepEvaluator ? existing?.evaluatorId : null) ?? evaluatorId,
+        // 上司のコメントと判断は同じ行の列なので、行を作り直しても元の値を写して残す（DD-028 の4）
+        evaluatorComment: existing?.evaluatorComment ?? null,
+        raiseDecision: existing?.raiseDecision ?? null,
+        raiseDecisionReason: existing?.raiseDecisionReason ?? null,
+        promotionDecision: existing?.promotionDecision ?? null,
+        promotionDecisionReason: existing?.promotionDecisionReason ?? null,
+        decisionRecordedBy: existing?.decisionRecordedBy ?? null,
+        decisionRecordedAt: existing?.decisionRecordedAt ?? null,
         status: "draft",
         // いつの基準で計算したかを必ず残す。
         // ここが空だと「基準を変えたのに集計し直していない評価」を

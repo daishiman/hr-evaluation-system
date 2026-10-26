@@ -147,7 +147,7 @@ export function AppSidebar({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="sidebar-link no-underline"
+                  className="sidebar-link no-underline ui-here"
                   aria-current={isCurrent(pathname, item, allHrefs) ? "page" : undefined}
                   /* 畳むと文字が消えるので、読み上げには常に名前を渡しておく */
                   aria-label={item.label}

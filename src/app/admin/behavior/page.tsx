@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireRoute } from "@/lib/session";
 import { listBehaviorBandSets, listBehaviorGuidelines, listGrades } from "@/lib/queries";
 import { getDb } from "@/lib/db";
@@ -7,9 +6,10 @@ import { BehaviorBandAssignmentEditor } from "@/components/BehaviorBandAssignmen
 import { BehaviorBandSetEditor } from "@/components/BehaviorBandSetEditor";
 import { BehaviorGuidelineEditor } from "@/components/BehaviorGuidelineEditor";
 import { gradesUsingBand } from "@/lib/domain/behavior";
-import { bandSetLabel, DEFAULT_GRADE_NAMES, gradeLabel } from "@/lib/domain/grade-label";
+import { bandSetLabel, gradeLabel } from "@/lib/domain/grade-label";
 import { bandRuns, bandSplitMessage, bandSplits } from "@/lib/domain/behavior-band-range";
-import { ChipLink, Disclosure, EmptyState, PageTitle, ReasonNote, SectionHeading } from "@/components/ui";
+import { ChipLink, EmptyState, ReasonNote, SectionHeading } from "@/components/ui";
+import { BehaviorIntro } from "./BehaviorIntro";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,7 @@ function behaviorHref({ grade, band }: { grade?: string; band?: string | null })
  *
  * 点数の重み（模範3〜悪影響-1）と、昇格に必要な合計点は、ここでは変えられない。
  * 前者は制度の骨格、後者は「昇格の条件」の設定なので、それぞれの持ち場で決める。
+ * その決まりと初期設定の説明は、冒頭の開く注記（BehaviorIntro）の1か所にまとめている（DD-027 の4）。
  */
 export default async function AdminBehavior({
   searchParams,
@@ -80,9 +81,6 @@ export default async function AdminBehavior({
   const splitBands = new Set(splits.map((split) => split.band));
   const stoppedGrades = lineGrades.filter((g) => !g.isActive);
   const aspectCountOf = (code: string) => guidelines.filter((g) => g.band === code && g.isActive).length;
-  /* 初期の分け方の説明に、会社のいまの等級名を使う（無ければ既定の名前） */
-  const nameByCode = (code: keyof typeof DEFAULT_GRADE_NAMES) =>
-    gradeLabel(grades.find((g) => g.code === code) ?? { name: DEFAULT_GRADE_NAMES[code] });
 
   const rows = guidelines.map((g) => ({
     id: g.id,
@@ -96,10 +94,19 @@ export default async function AdminBehavior({
 
   return (
     <>
-      <PageTitle
-        title="行動指針"
-        lede="アンケートで問う行動指針の中身と、どの等級に出すかを決めます。変更は次に作るアンケートから反映されます。すでに公開したアンケートと確定済みの評価は動きません。"
+      {/* 初期設定の説明は、いまの割り当てから作る（DD-026 の9）。まとまりは保存した名前のまま渡す
+          （割り当てた等級の名前から作る呼び名を渡すと、「等級1・等級2に等級1・等級2向けを出し」と重なる） */}
+      <BehaviorIntro
         tags={selectedGrade && <span className="tag">編集中の等級 {selectedGrade.name}</span>}
+        grades={grades.map((g) => ({
+          id: g.id,
+          code: g.code,
+          name: gradeLabel(g),
+          displayOrder: g.displayOrder,
+          isActive: g.isActive,
+          behaviorBand: g.behaviorBand,
+        }))}
+        sets={bandSets.map((set) => ({ code: set.code, name: set.name, isActive: set.isActive }))}
       />
 
       <SectionHeading>等級を選ぶ</SectionHeading>
@@ -173,23 +180,6 @@ export default async function AdminBehavior({
         </>
       )}
 
-      <div className="mt-3">
-        <Disclosure summary="行動指針の初期設定について">
-          <p className="footnote m-0">
-            初期の分け方は3つです。{nameByCode("beginner")}・{nameByCode("regular")}に1つ目の行動指針、
-            {nameByCode("chief")}・{nameByCode("am1")}・{nameByCode("am2")}に2つ目の行動指針を出し、
-            {nameByCode("manager1")}・{nameByCode("manager2")}には出しません。
-          </p>
-          <p className="footnote m-0 mt-1">
-            同じ行動指針は、等級の並びで続いた等級にだけ出せます。間の等級を飛ばして同じ行動指針を出す設定は保存できません。
-          </p>
-          <p className="footnote m-0 mt-1">
-            移行元には、{nameByCode("am1")}・{nameByCode("am2")}へ行動指針を出さない記録がありました。実際に出したアンケートも残っていたので、
-            初期値は出す側にしています。
-          </p>
-        </Disclosure>
-      </div>
-
       <SectionHeading>何を問うか</SectionHeading>
 
       <div className="mb-3">
@@ -230,13 +220,6 @@ export default async function AdminBehavior({
               </ChipLink>
             ))}
           </div>
-          <p className="footnote">
-            点数（模範3・信頼2・安定1・不安定0・悪影響-1）は変えられません。会社ごとに変えられるのは「どういう状態をその点数と見なすか」の文章です。昇格に必要な合計点は
-            <Link href="/admin/masters/promotion" className="mx-1 text-brand-deep">
-              昇格の条件・要件
-            </Link>
-            で決めます。
-          </p>
           <BehaviorGuidelineEditor key={band} band={band} bandSets={labeledSets} rows={rows} usage={usage} />
         </>
       )}

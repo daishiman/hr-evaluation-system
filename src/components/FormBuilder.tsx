@@ -3,7 +3,7 @@
 import { useSaveAction } from "@/lib/use-refresh";
 import { saveFormQuestions } from "@/actions/forms";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Badge, Button, Card, CardHead, CardRow, FieldGroup, ReasonNote } from "@/components/ui";
+import { Badge, Button, Card, CardHead, CardRow, FieldGroup, LinkButton, ReasonNote } from "@/components/ui";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { NumberField } from "@/components/NumberField";
 import { SCREEN_SECTIONS, sectionLabel } from "@/lib/question-order";
@@ -49,11 +49,14 @@ const TYPE_LABEL: Record<string, string> = {
 export function FormBuilder({
   formId,
   initial,
+  updatedAt,
   editable,
   lockReason,
 }: {
   formId: string;
   initial: BuilderQuestion[];
+  /** 画面を描いたときのアンケートの更新時刻（ミリ秒）。保存に添え、後から入った別の保存を上書きさせない */
+  updatedAt: number;
   editable: boolean;
   lockReason?: string;
 }) {
@@ -61,6 +64,8 @@ export function FormBuilder({
   const [rows, setRows] = useState<BuilderQuestionDraft[]>(() => withClientKeys(initial));
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // 断った理由を直す画面の場所（設定の画面で直すものだけ。DD-028 の2）
+  const [fixHref, setFixHref] = useState<string | null>(null);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const nextClientKey = useRef(0);
   const initialKey = JSON.stringify(initial);
@@ -141,15 +146,19 @@ export function FormBuilder({
     const blank = rows.findIndex((r) => !r.title.trim());
     if (blank >= 0) {
       setError(`${blank + 1}問目の設問文が空です。入力してから保存してください。`);
+      setFixHref(null);
       setOpenKey(rows[blank].clientKey);
       return;
     }
     setError(null);
+    setFixHref(null);
     setMessage(null);
     // 保存の応答には保存後の画面が同梱される（サーバー側の refresh()）
     const sent = rows;
     const result = await save({
       formId,
+      // 描いた画面の時刻を送る（設問が変わった再取得は上の conflict で止めるので、ここまで来るのは設問以外の保存で進んだ時刻だけ）
+      expectedUpdatedAt: updatedAt,
       questions: rows.map((r) => ({
         id: r.id,
         section: r.section,
@@ -173,6 +182,7 @@ export function FormBuilder({
     // 失敗しても入力した設問は消さない（直してもう一度保存できるように）
     if (!result.ok) {
       setError(result.message);
+      setFixHref(result.fixHref ?? null);
       return;
     }
     // useSaveActionは応答の画面が描き終わってから返る。成功と送信内容の一致を確認してから採番IDも採用する。
@@ -197,7 +207,9 @@ export function FormBuilder({
 
   return (
     <FieldGroup disabled={saving} aria-busy={saving}>
-      {error && <ReasonNote>{error}</ReasonNote>}
+      {error && (
+        <ReasonNote action={fixHref ? <LinkButton href={fixHref}>直す画面を開く</LinkButton> : undefined}>{error}</ReasonNote>
+      )}
       {conflict && (
         <div className="mb-3">
           <ReasonNote>保存済みの設問が変わりました。未保存の入力は残していますが、古い内容で上書きしないよう保存を止めています。</ReasonNote>

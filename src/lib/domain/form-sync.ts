@@ -13,8 +13,8 @@
  *
  * どちらも、設問のひな形（kpi_questions）のある項目ならアンケートを作り直せば直る。
  * ひな形の無い項目は作り直しても設問が出ないので、comparison-gap.ts が先に KPI項目の画面で聞き方を決めるよう案内する（DD-016）。
- * 作り直すかどうかは回答状況を見て人が決めることなので、
- * ここでは判定だけを行い、自動では何もしない。
+ * 設定を保存すると、回答の無い下書きは作り直し、回答のある公開中のアンケートには次の版の下書きを作る（DD-028 の4）。
+ * 締め切ったアンケートと、公開を待つ間にまだ残るズレは、ここで見つけて警告にする。
  * 画面に出す警告（2つのページと直す操作1つの組）は comparison-gap.ts が作る（DD-012）。ここで文は作らない。
  */
 
@@ -102,4 +102,94 @@ export function staleAskingItems(input: {
     if (needed.every((v) => formKeys.has(v))) return [];
     return [{ kpiItemId: id, name: item.name, rebuildFixes: needed.every((v) => rebuiltKeys.has(v)) }];
   });
+}
+
+/** 作り直しで残すかを決めるのに要る、設問の紐づけ */
+export interface RebuildQuestion {
+  id: string;
+  displayOrder: number;
+  kpiItemId: string | null;
+  behaviorGuidelineId: string | null;
+  gradeRequirementId: string | null;
+  promotionRequirementId: string | null;
+  isGate: boolean;
+}
+
+/**
+ * 設定の保存で下書きを作り直すとき、作り直した設問の後ろに残す設問（DD-028 の4）。
+ *
+ * 設定とつながった設問と入口の問い（isGate）は、いまの設定から作り直すので残さない。
+ * それ以外は人が組み立て画面で足した設問なので、同じ id のまま元の並びで残す。
+ * 番号は、作り直した設問（startOrder の手前まで）と前に残した設問より後ろなら元のまま、重なるときだけ次の空きへ送る。
+ */
+export function questionsKeptOnRebuild<T extends RebuildQuestion>(questions: readonly T[], startOrder: number): T[] {
+  let next = startOrder;
+  return questions
+    .filter((q) => !q.kpiItemId && !q.behaviorGuidelineId && !q.gradeRequirementId && !q.promotionRequirementId && !q.isGate)
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map((q) => {
+      const displayOrder = Math.max(q.displayOrder, next);
+      next = displayOrder + 1;
+      return { ...q, displayOrder };
+    });
+}
+
+/** 設定から作る設問の中身。id・並び・日時は比べない（作り直すと変わるため） */
+export interface LinkedQuestionContent {
+  section: string;
+  questionType: string;
+  title: string;
+  helpText?: string | null;
+  unit?: string | null;
+  required?: boolean | null;
+  validationMin?: number | null;
+  validationMax?: number | null;
+  validationInteger?: boolean | null;
+  optionsJson?: string | null;
+  gradeRequirementId?: string | null;
+  promotionRequirementId?: string | null;
+  behaviorGuidelineId?: string | null;
+  kpiItemId?: string | null;
+  kpiQuestionKey?: string | null;
+  isGate?: boolean | null;
+}
+
+/** 1問の中身を1つの文字列にする。DB の既定（必須・整数でない・入口の問いでない）に合わせて欠けた値を埋める */
+function linkedQuestionKey(q: LinkedQuestionContent): string {
+  return JSON.stringify([
+    q.section,
+    q.questionType,
+    q.title,
+    q.helpText ?? null,
+    q.unit ?? null,
+    q.required ?? true,
+    q.validationMin ?? null,
+    q.validationMax ?? null,
+    q.validationInteger ?? false,
+    q.optionsJson ?? null,
+    q.gradeRequirementId ?? null,
+    q.promotionRequirementId ?? null,
+    q.behaviorGuidelineId ?? null,
+    q.kpiItemId ?? null,
+    q.kpiQuestionKey ?? null,
+    q.isGate ?? false,
+  ]);
+}
+
+/**
+ * 版の設問のうち設定から作った部分が、いまの設定から作り直した設問と同じか（DD-028 の4）。
+ *
+ * 同じなら、設定を保存しても下書きを作り直さず、回答のあるアンケートに次の版も作らない。
+ * 保存のたびに中身の同じ版が増えると、公開を待つ版がどれか分からなくなるため。
+ * 比べるのは作り直しで置き換わる設問（questionsKeptOnRebuild が残さない側）だけで、手で足した設問は見ない。
+ * 並びは見ない。同じ中身の設問が2問あれば2問として数える。
+ */
+export function linkedQuestionsMatch(
+  current: readonly (LinkedQuestionContent & RebuildQuestion)[],
+  rebuilt: readonly LinkedQuestionContent[],
+): boolean {
+  const kept = new Set(questionsKeptOnRebuild(current, 0).map((q) => q.id));
+  const before = current.filter((q) => !kept.has(q.id)).map(linkedQuestionKey).sort();
+  const after = rebuilt.map(linkedQuestionKey).sort();
+  return before.length === after.length && before.every((key, i) => key === after[i]);
 }

@@ -214,7 +214,7 @@ flowchart LR
 #### Reliability and recovery
 
 - SLO/alerts/on-call: この機能では SLO と当番を新たに置かない。配布後のスモーク試験と Workers Logs の記録で異常に気づく。
-- Backup/restore/RPO/RTO/DR: 移行の前に `wrangler d1 export` で全体を書き出し、Artifact に14日保管する。RPO・RTO の数値目標は置いていない。DB を戻すときは、保管したバックアップと移行の互換性を確かめる（`docs/deploy-notes.md` §8）。
+- Backup/restore/RPO/RTO/DR: 移行の前に `wrangler d1 export` で全体を書き出し、age の公開鍵で暗号化した `backup.sql.age` だけを Artifact に14日保管する（DD-031。公開鍵の変数が無ければ、移行を伴う配布は書き出しの前で止まる）。RPO・RTO の数値目標は置いていない。DB を戻すときは、手元の鍵で開いたバックアップと移行の互換性を確かめる（`docs/deploy-notes.md` §1・§8）。
 - Failure domains/failover: 自動のロールバックはしない。移行の後に配布だけが失敗したら同じ workflow を再実行する。古い isolate・認証・設定の不備を切り分けてから `wrangler rollback` を選ぶ。
 
 #### Infrastructure verification
@@ -249,7 +249,7 @@ flowchart LR
 #### Migration and recovery
 
 - Versioning/backfill/online migration: 0031 で控えの表を足す。0032 は同じ実体の中で（`seq`・`occurred_at`・`id`）の順に番号を振り直してから一意の索引を張る。移行は配布の前に同じ workflow で適用する。
-- Backup/restore/integrity reconciliation: 移行の前の `wrangler d1 export`（Artifact に14日）。戻すときは移行との互換性を確かめる。パスワード変更の続きが失敗したときは、本人がもう一度パスワードを変えれば揃う（本番 DB を手で書き換えない）。
+- Backup/restore/integrity reconciliation: 移行の前の `wrangler d1 export`（暗号化して Artifact に14日。DD-031）。戻すときは移行との互換性を確かめる。パスワード変更の続きが失敗したときは、本人がもう一度パスワードを変えれば揃う（本番 DB を手で書き換えない）。
 
 #### Data verification
 
@@ -306,7 +306,7 @@ flowchart LR
 
 ## Delivery, migration and rollback
 
-- Build/deploy topology: `main` への push で `deploy.yml` が動く。試験と build（`check:docs`・`cf-typegen`・`typecheck`・`test:coverage`・`cf:dry-run`・`check:bundle-size`）→ D1 のバックアップ（Artifact に14日）→ 移行の適用 → `deploy:worker` → スモーク試験の順。D1 の操作と配布は同じ concurrency group で直列。
+- Build/deploy topology: `main` への push で `deploy.yml` が動く。試験と build（`check:docs`・`cf-typegen`・`typecheck`・`test:coverage`・`cf:dry-run`・`check:bundle-size`）→ D1 のバックアップ（未適用の移行があるときだけ。暗号化して Artifact に14日、DD-031）→ 移行の適用 → `deploy:worker` → スモーク試験の順。D1 の操作と配布は同じ concurrency group で直列。
 - Migration sequence: 0031（控えの表）→ 0032（監査記録の番号の振り直しと一意の索引）。どちらも前へ進める形で、配布の前に適用する。適用済みの移行は再適用されない。
 - Rollback trigger/procedure: 自動のロールバックはしない。スモーク試験の失敗や、Workers Logs の `compensation_failed`・`rollforward_failed` がきっかけ。移行の後に配布だけが失敗したら同じ workflow を再実行する（未適用0件を確かめてから配布を再開する）。古い isolate・認証・設定の不備を切り分けてから `wrangler rollback` を選ぶ。DB を戻すときは、保管したバックアップと移行の互換性を確かめる（`docs/deploy-notes.md` §8）。
 

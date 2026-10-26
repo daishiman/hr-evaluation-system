@@ -446,3 +446,15 @@ Claude Code からの取得を `via` で区別し、API のときは使われた
 POLICY-005（事業所の達成係数は仮値）は、係数を確定する代わりに、達成率の入力・係数の表・変更履歴・画面を仕組みごと削除して解消した（利用者の依頼「完全削除」。[DD-024](./design-decisions.md)）。賞与（仮）は KPI評価点合計 × 1点あたり金額で出す（[製品仕様 §11](./spec.md)）。表と列は2回の公開で消す（[デプロイ時の注意](../deploy-notes.md) の 0038・0039 の節）。
 
 同じ回の計画レビューで、SECURITY-013 を書き直し、SECURITY-014・OPS-017・OPS-018 を足した（[計画レビューの受領書](./spec-receipts/2026-10-20-evaluation-report-plan-review.md)）。current backlog は105件。
+
+## 2026-10-24 行動指針と KPI・評価セットの feature（hr-6pi）の最終レビューのあとで、任された判断を決めた
+
+利用者が「ベストプラクティスの方法でお任せします。」と判断を任せ、エージェントが次のとおり決めた。中身と確かめ方は [最終レビューの受領書](./spec-receipts/2026-10-22-guideline-kpi-final-review.md) の「任された判断と、そのあとに直したもの」に残した。
+
+**閉じた項目**: UX-034。全体管理者が会社の管理画面を開くと、パンくずに「ホーム」が2回出ていた。`resolveTrail` が URL をたどる段で、どの役割のホームも積まないようにした（`src/lib/nav.ts`）。同じ日に見つけて足し、同じ日に直した。
+
+- **SECURITY-014**: [DD-031](./design-decisions.md) に決めた。書き出しを age の公開鍵で暗号化してから置き、公開鍵の変数が無ければ移行を伴う Deploy と Migrate を止める。鍵の用意と変数の設定を待つので blocked にした。2026-10-21 の平文の書き出し2つは、読んだ時点で Artifact から消えていた。
+- **RELIABILITY-008**: 設問の保存と評価セットの保存で、開いた時刻を必須にした。照合を書き込みの条件へ入れることは observe に残した。
+- **文書の追従**: DD-031 に合わせて `architecture/data-freshness.md` の書き出しの記述3か所に暗号化を書き足した。system-spec の章（`specs/system-spec-requirements.md`・`architecture/system-spec-infrastructure.md`・`architecture/system-spec-maintenance-ops.md`）の「d1-backup の Artifact に14日」は今も誤りではないので触らなかった。章は writer の管轄で、訂正を足すと dev-graph の取込元の digest が変わる。次に system-spec を compile し直すとき、戻すには手元の秘密鍵で開くことを訂正で足す。
+- **足した行**: SECURITY-016・RELIABILITY-008・OPS-019・OPS-020・PERFORMANCE-008（最終レビューの指摘 J・I・P13 の待ち・M・K）。
+- current backlog は113件（このブランチの前の108件に6件を足し、UX-034 を除いた）。

@@ -8,9 +8,11 @@ import { chunkRowsForD1, getDb, schema as s } from "@/lib/db";
 import { batchAll } from "@/lib/db-batch";
 import { assertCompanyChosen, HttpError } from "@/lib/session";
 import { newId } from "@/lib/id";
+import { constitutionEventStatements, isConstitutionSeqConflict } from "@/lib/domain/constitution-events";
 import { validateScheme } from "@/lib/domain/scheme";
 import { pointsForSlot, slotKindOf, targetsPointGroup, type GradePointRule } from "@/lib/domain/grade-points";
 import { pointGroupLabel } from "@/lib/domain/grade-label";
+import { followSettings } from "@/lib/masters/follow-settings";
 import { listAskableKpiItemIds } from "@/lib/queries";
 
 /**
@@ -62,7 +64,101 @@ const saveSchema = z.object({
   ratios: z
     .array(z.object({ rank: z.enum(["A", "B", "C", "D", "E"]), ratio: z.number().min(0).max(1) }))
     .optional(),
+  /**
+   * 画面が評価セットを読んだときの更新時刻（ミリ秒）。これより後に保存されていれば 409 で断る（DD-028 の8）。
+   * 照合を飛ばして先の人の変更を消さないよう、送らない保存は受け付けない（RELIABILITY-008）。
+   */
+  expectedUpdatedAt: z.number().int().nonnegative(),
 });
+
+/** 読んだ後にほかの人が保存していたとき・同時に保存したときの文（DD-028 の8） */
+const SCHEME_CONFLICT_MESSAGE =
+  "この評価セットは、ほかの人が先に保存しました。再読み込みして、最新の内容を確かめてから保存してください。";
+
+type Snapshot = Record<string, unknown>;
+
+/**
+ * 制度の変更の記録に残す、評価セットのこの保存で触る部分。
+ * 記録は変わった列だけを残すので、項目の組と割合は1つの文字列にして比べる（配列は中身が同じでも別物になるため）。
+ */
+async function schemeSnapshot(
+  db: Db,
+  scheme: typeof s.evaluationSchemes.$inferSelect,
+  input: z.infer<typeof saveSchema>,
+): Promise<Snapshot> {
+  const snapshot: Snapshot = {};
+  if (input.pointGroup) {
+    const rows = await db
+      .select({ kpiItemId: s.schemeItems.kpiItemId, isFixedSlot: s.schemeItems.isFixedSlot, isMajorSlot: s.schemeItems.isMajorSlot })
+      .from(s.schemeItems)
+      .where(and(eq(s.schemeItems.schemeId, scheme.id), eq(s.schemeItems.pointGroup, input.pointGroup)))
+      .orderBy(s.schemeItems.displayOrder);
+    snapshot[`items:${input.pointGroup}`] = JSON.stringify(rows.map(slotEntry));
+  }
+  if (input.ratios) {
+    const rows = await db
+      .select({ rank: s.schemeRankRatios.rank, ratio: s.schemeRankRatios.ratio })
+      .from(s.schemeRankRatios)
+      .where(eq(s.schemeRankRatios.schemeId, scheme.id))
+      .orderBy(s.schemeRankRatios.rank);
+    snapshot.ratios = JSON.stringify(rows.map((r) => [r.rank, r.ratio]));
+  }
+  if (input.raiseRequiresAllA !== undefined) snapshot.raiseRequiresAllA = scheme.raiseRequiresAllA;
+  if (input.scoringMode !== undefined) snapshot.scoringMode = scheme.scoringMode;
+  return snapshot;
+}
+
+/** 選んだ項目を「項目 id と枠」の1組にする（記録の前後で同じ形にそろえる） */
+function slotEntry(item: { kpiItemId: string; isFixedSlot: boolean; isMajorSlot?: boolean | null }): [string, string] {
+  return [item.kpiItemId, item.isFixedSlot ? "fixed" : item.isMajorSlot ? "major" : "minor"];
+}
+
+/** 保存の後の姿。送られた値だけを前の姿に重ねる */
+function savedSnapshot(before: Snapshot, input: z.infer<typeof saveSchema>): Snapshot {
+  const after: Snapshot = { ...before };
+  if (input.pointGroup && input.items) after[`items:${input.pointGroup}`] = JSON.stringify(input.items.map(slotEntry));
+  if (input.ratios) {
+    after.ratios = JSON.stringify([...input.ratios].sort((a, b) => a.rank.localeCompare(b.rank)).map((r) => [r.rank, r.ratio]));
+  }
+  if (input.raiseRequiresAllA !== undefined) after.raiseRequiresAllA = input.raiseRequiresAllA;
+  if (input.scoringMode !== undefined) after.scoringMode = input.scoringMode;
+  return after;
+}
+
+/**
+ * 評価セットの更新時刻を進める文・制度の変更の記録の文と、送られた書き込みを1つの batch で書く。
+ *
+ * 2人が同じ時刻に読んで同時に保存すると、記録の番号（seq）が重なって一意索引で後の保存が止まる。
+ * 後の保存は何も書かれていないので、上書きせずに 409 で断る（先の人の変更を黙って消さない）。
+ */
+async function writeScheme(
+  db: Db,
+  args: { scheme: typeof s.evaluationSchemes.$inferSelect; companyId: string; actorId: string; input: z.infer<typeof saveSchema> },
+  statements: SqliteBatchItem[],
+): Promise<void> {
+  const { scheme, companyId, actorId, input } = args;
+  const before = await schemeSnapshot(db, scheme, input);
+  const events = await constitutionEventStatements({
+    db,
+    companyId,
+    entityType: "evaluationScheme",
+    entityId: scheme.id,
+    eventType: "updated",
+    actorId,
+    before,
+    after: savedSnapshot(before, input),
+  });
+  try {
+    await batchAll(db, [
+      ...statements,
+      db.update(s.evaluationSchemes).set({ updatedAt: new Date() }).where(eq(s.evaluationSchemes.id, scheme.id)),
+      ...events,
+    ]);
+  } catch (error) {
+    if (isConstitutionSeqConflict(error)) throw new HttpError(409, SCHEME_CONFLICT_MESSAGE);
+    throw error;
+  }
+}
 
 /**
  * 全等級区分に共通の設定（昇給の条件・ランクの割合）を書く文。
@@ -129,6 +225,10 @@ export async function saveScheme(raw: unknown) {
         .limit(1)
     )[0];
     if (!scheme) throw new HttpError(404, "評価セットが見つかりませんでした。");
+    if (scheme.updatedAt.getTime() > input.expectedUpdatedAt) {
+      throw new HttpError(409, SCHEME_CONFLICT_MESSAGE);
+    }
+    const writeArgs = { scheme, companyId, actorId: viewer.id, input };
 
     /* 全等級区分に共通の設定（昇給の条件）だけの保存。
        等級区分ごとの項目には一切触らない（別の等級区分の設定を巻き込まないため）。 */
@@ -139,8 +239,12 @@ export async function saveScheme(raw: unknown) {
       if (input.raiseRequiresAllA === undefined && input.scoringMode === undefined && !input.ratios) {
         throw new HttpError(400, "保存する内容がありませんでした。");
       }
-      await batchAll(db, commonStatements(db, scheme.id, companyId, input));
-      return { message: "全等級区分に共通の設定を保存しました。", warnings: [] as string[] };
+      await writeScheme(db, writeArgs, commonStatements(db, scheme.id, companyId, input));
+      // ランクの割合は点に効くので確定前の評価を集計し直す。昇給の条件は点にも設問にも効かないので追従させない
+      const follow = input.ratios
+        ? await followSettings(db, { companyId, actorId: viewer.id, kinds: ["rankCriteriaSet"] })
+        : "";
+      return { message: `全等級区分に共通の設定を保存しました。${follow}`, warnings: [] as string[] };
     }
     const items = input.items;
     const pointGroup = input.pointGroup;
@@ -225,7 +329,7 @@ export async function saveScheme(raw: unknown) {
       isMajorSlot: i.isMajorSlot,
       displayOrder: idx + 1,
     }));
-    await batchAll(db, [
+    await writeScheme(db, writeArgs, [
       db
         .delete(s.schemeItems)
         .where(and(eq(s.schemeItems.schemeId, scheme.id), eq(s.schemeItems.pointGroup, pointGroup))),
@@ -233,11 +337,13 @@ export async function saveScheme(raw: unknown) {
       ...chunkRowsForD1(itemRows).map((rows) => db.insert(s.schemeItems).values(rows)),
       ...commonStatements(db, scheme.id, companyId, input),
     ]);
+    const follow = await followSettings(db, { companyId, actorId: viewer.id, kinds: ["scheme"] });
 
     return {
       message:
         `${groupLabel}の評価セット（${selections.length}項目・${v.total}点）を保存しました。` +
-        "確定済みの評価は判定当時の設定のまま残るため、過去の結果は変わりません。",
+        "確定済みの評価は判定当時の設定のまま残るため、過去の結果は変わりません。" +
+        follow,
       // 保存はできたが伝えるべきこと（ランク基準が未定義の項目など）。画面がそのまま出す。
       warnings: v.warnings,
     };

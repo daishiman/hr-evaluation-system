@@ -15,9 +15,12 @@ import { useSaveAction } from "@/lib/use-refresh";
 export function SchemeCommonSettings({
   schemeId,
   raiseRequiresAllA,
+  updatedAt,
 }: {
   schemeId: string;
   raiseRequiresAllA: boolean;
+  /** 読んだ時点の評価セットの保存日時（ミリ秒）。後からほかの人が保存していたら、保存を断る */
+  updatedAt: number;
 }) {
   /* 保存の応答に保存後の画面が同梱されるので、別に取り直しを頼まない。
      saving は「保存して画面に出し終えるまで」の間ずっと true。 */
@@ -30,7 +33,7 @@ export function SchemeCommonSettings({
   const submit = async () => {
     setError(null);
     setMessage(null);
-    const result = await save({ schemeId, raiseRequiresAllA: allA });
+    const result = await save({ schemeId, raiseRequiresAllA: allA, expectedUpdatedAt: updatedAt });
     if (!result.ok) {
       // 選んだ内容はそのまま残す（直して押し直せるように）
       setError(result.message);

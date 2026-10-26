@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  *
  * 制度マスタの中に混ぜていたときは「支援について」「運営について」が1つの一覧に
  * 混ざって見えず、いくつ登録できるのかも分からなかった。
- * 等級要件は次に作るアンケートの達成率分母を決める設定なので、専用の画面に切り出して数を見せる。
+ * 等級要件はアンケートの達成率分母を決める設定なので、専用の画面に切り出して数を見せる。
  */
 export default async function AdminGradeRequirements({
   searchParams,
@@ -47,7 +47,7 @@ export default async function AdminGradeRequirements({
       <PageTitle
         sticky
         title="等級要件（支援・運営）"
-        lede="等級ごとに「支援について」「運営について」の項目を決めます。次に作るアンケートでは、有効な項目の数が等級要件達成率の分母になります。公開済みアンケートは作成時の項目数を保ちます。"
+        lede="等級ごとに「支援について」「運営について」の項目を決めます。"
         tags={
           <>
             <span className="tag">

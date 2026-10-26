@@ -99,7 +99,8 @@ async function run<S extends z.ZodType, T extends { message?: string }>(
   } catch (e) {
     // redirect() や notFound() は Next.js が扱う合図なので、握りつぶさずに投げ直す
     unstable_rethrow(e);
-    return { ok: false, message: describeError(e).message };
+    const fixHref = e instanceof HttpError ? e.fixHref : undefined;
+    return fixHref ? { ok: false, message: describeError(e).message, fixHref } : { ok: false, message: describeError(e).message };
   }
 }
 

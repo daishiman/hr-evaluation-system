@@ -39,7 +39,7 @@ export function DecisionBadge({
 }) {
   const fd = finalDecision(scoreJudgement, decision);
   return (
-    <span className="decision-badge block">
+    <span className="decision-badge block ui-mark">
       <span className="block font-semibold">{conclusionText(subject, fd)}</span>
       {!conclusionOnly && <DecisionDetails fd={fd} reason={reason} finalized={finalized} compact={compact} />}
     </span>
@@ -63,10 +63,11 @@ export function DecisionDetails({
 }) {
   if (fd.overridden) {
     return (
-      <span className="block text-note text-ink-muted">
+      // 文字の色は ui-mark-note の規則が持つ（補足は muted、中の理由は本文の色）
+      <span className="block text-note ui-mark-note">
         {scoreJudgementText(fd.scoreJudgement)}
         {!compact && reason && (
-          <span className="block whitespace-pre-wrap text-sub text-ink">理由：{reason}</span>
+          <span className="block whitespace-pre-wrap text-sub">理由：{reason}</span>
         )}
       </span>
     );

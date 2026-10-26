@@ -1,7 +1,8 @@
 /**
  * 見本用（サンプル）の会社と、その会社の過去の評価を組み立てる。
  *
- * ねらいは「確定済みの評価が画面でどう見えるか」を、本物のデータに触らずに確かめられるようにすること。
+ * ねらいは「確定済みの評価が画面でどう見えるか」と「受付中の期の回答から評価を作る流れ」を、
+ * 本物のデータに触らずに確かめられるようにすること。
  *
  * 大事な決めごとが3つある。
  *
@@ -38,10 +39,12 @@ export const SAMPLE_COMPANY = {
 /**
  * 期。確定済みを4期ぶん作る（点数の推移が折れ線として読めるのは3点以上から）。
  *
- * 5期すべてを締め済みにしてある。受付中の期を1つでも開けておくと、
- * 本番の「未回答の方」一覧に見本の12名が並び、本物の未回答者が埋もれるため。
- * 最後の2026年度上期だけは `withResults: false` で回答・評価を作らず、
+ * 2026年度上期だけは `withResults: false` で回答・評価を作らず、
  * 「締め切ったが評価がまだ無い期」の見え方も残している。
+ *
+ * 最後の2026年度下期は受付中にして、SAMPLE_OPEN_RESPONSES の人だけが回答している（評価はまだ無い）。
+ * 見本の会社で「提出済みの回答から評価を作る」を試せるようにするため（DD-029）。
+ * 未回答の一覧も提出状況も会社ごとに読むので、見本の人が本物の会社の一覧に混ざることはない。
  */
 export const SAMPLE_CYCLES = [
   { key: "2024h1", name: "2024年度 上期（サンプル）", start: "2024-04-01", end: "2024-09-30", status: "closed" },
@@ -49,7 +52,23 @@ export const SAMPLE_CYCLES = [
   { key: "2025h1", name: "2025年度 上期（サンプル）", start: "2025-04-01", end: "2025-09-30", status: "closed" },
   { key: "2025h2", name: "2025年度 下期（サンプル）", start: "2025-10-01", end: "2026-03-31", status: "closed" },
   { key: "2026h1", name: "2026年度 上期（サンプル）", start: "2026-04-01", end: "2026-09-30", status: "closed", withResults: false },
+  { key: "2026h2", name: "2026年度 下期（サンプル）", start: "2026-10-01", end: "2027-03-31", status: "open" },
 ];
+
+/**
+ * 受付中の期（2026年度下期）の回答。提出済み・入力途中・未回答を混ぜる。
+ * 書いていない s4・s8・s10 は未回答。評価は作らない（画面の「提出済みの回答から評価を作る」で作る）。
+ * 日付はどれも見本を作り始めた日（2026-10-22）より前にしてある。
+ */
+export const SAMPLE_OPEN_RESPONSES = {
+  s1: { status: "submitted", on: "2026-10-06" },
+  s2: { status: "draft", on: "2026-10-09" },
+  s3: { status: "submitted", on: "2026-10-07" },
+  s5: { status: "submitted", on: "2026-10-08" },
+  s6: { status: "draft", on: "2026-10-13" },
+  s7: { status: "submitted", on: "2026-10-12" },
+  s9: { status: "submitted", on: "2026-10-14" },
+};
 
 /**
  * 一般の利用者。7等級すべてを1人以上そろえる（等級ごとに配点の組み立てが違うことを見比べられるように）。
@@ -104,8 +123,10 @@ export function sampleEvaluatorComment({ employee, cycle, allA }) {
  * @param {object} opts
  * @param {(userId: string) => Promise<string>} opts.passwordHashFor
  *        利用者1人ごとのパスワードハッシュを返す関数。平文はここに渡さない。
+ * @param {string} [opts.today] 受付中のアンケートの締切を決める基準日（YYYY-MM-DD。既定: 日本時間の今日）。
+ *        締切は「期の終わり」と「この日から14日後」の遅い方になる（buildSeed の options.today）。
  */
-export async function buildSampleSeed({ passwordHashFor }) {
+export async function buildSampleSeed({ passwordHashFor, today }) {
   const { sql, tableRows, counts } = await buildSeed({
     companies: [SAMPLE_COMPANY],
     cycles: SAMPLE_CYCLES,
@@ -117,6 +138,8 @@ export async function buildSampleSeed({ passwordHashFor }) {
     // 誰も知らない仮パスワードで作るので、最初のログインで必ず変更してもらう。
     mustChangePassword: true,
     evaluatorComment: sampleEvaluatorComment,
+    today,
+    openResponses: SAMPLE_OPEN_RESPONSES,
   });
 
   return { sql, removeSql: buildRemoveSql(tableRows), counts, tableRows };

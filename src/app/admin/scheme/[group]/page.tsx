@@ -72,6 +72,7 @@ export default async function SchemeSelectPage({ params }: { params: Promise<{ g
       )}
       <SchemeGroupPicker
         schemeId={setup.scheme.id}
+        updatedAt={setup.scheme.updatedAt}
         pointGroup={group.pointGroup}
         groupLabel={group.label}
         gradeNames={group.gradeNames}

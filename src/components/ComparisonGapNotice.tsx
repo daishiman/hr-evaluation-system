@@ -33,14 +33,15 @@ export function ComparisonGapNotice({ gaps }: { gaps: readonly ComparisonGap[] }
   return (
     // 狭い幅で「くださ／い」「余分／0）」のように1〜2文字だけ落ちる割れ方を作らない。
     // 文節で折り（auto-phrase。効かない環境では今までどおり）、最後の行を短く残さない（pretty）。
-    <div className="caution-panel text-pretty [word-break:auto-phrase]">
+    // 文字とリンクの色は ui-notice・ui-notice-caution の規則が持つ（TSX に色のクラスを書かない。DD-030）
+    <div className="caution-panel text-pretty [word-break:auto-phrase] ui-notice ui-notice-caution">
       <div className="flex min-w-0 items-start gap-2">
         <Icon name="info" className="reason-note-mark" />
         {/* 開いたら札ごと次の行へ回し、中身を枠の幅いっぱいに使う */}
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 *:open:basis-full">
           <p className="m-0 font-bold">{comparisonSummary(gaps)}</p>
           <InlineDetail summary={COMPARISON_OPEN_LABEL}>
-            <p className="m-0 font-bold text-ink">{COMPARISON_LEAD}</p>
+            <p className="m-0 font-bold">{COMPARISON_LEAD}</p>
             {onSelection ? (
               <SelectionBody gaps={gaps} />
             ) : (
@@ -126,7 +127,7 @@ function PageLink({ page }: { page: ComparisonPage }) {
   return (
     <>
       {page.href ? (
-        <Link href={page.href} className="text-brand-deep" aria-current={page.current ? "page" : undefined}>
+        <Link href={page.href} aria-current={page.current ? "page" : undefined}>
           {page.label}
         </Link>
       ) : (
@@ -143,7 +144,7 @@ function PageLink({ page }: { page: ComparisonPage }) {
  */
 function RowName({ row }: { row: ComparisonRow }) {
   const name = row.href ? (
-    <Link href={row.href} className="text-brand-deep">
+    <Link href={row.href}>
       {row.name}
     </Link>
   ) : (

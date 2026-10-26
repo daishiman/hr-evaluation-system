@@ -87,8 +87,7 @@ export async function applyBehaviorMasterUpdate(args: {
         if (body.isActive === false) {
           return {
             message:
-              `「${current.name}」の使用を止めました。次に作るアンケートでは選べません` +
-              "（すでに公開したアンケートと確定済みの評価はそのまま残ります）。",
+              `「${current.name}」の使用を止めました。`,
           };
         }
         if (body.isActive === true) return { message: `「${current.name}」をもう一度使う状態にしました。` };
@@ -310,7 +309,7 @@ export async function applyBehaviorMasterUpdate(args: {
       ]);
       return {
         message:
-          "行動指針を保存しました。次に作るアンケートから反映されます。すでに公開したアンケートと確定済みの評価は変わりません。",
+          "行動指針を保存しました。",
       };
     }
     case "behaviorLevel": {
@@ -340,7 +339,7 @@ export async function applyBehaviorMasterUpdate(args: {
       ]);
       return {
         message:
-          "行動指針を保存しました。次に作るアンケートから反映されます。すでに公開したアンケートと確定済みの評価は変わりません。",
+          "行動指針を保存しました。",
       };
     }
   }

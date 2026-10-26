@@ -134,7 +134,7 @@ Claude Code の中からは `/improvements`（一覧を見る）と `/improve-re
 
 - 回答の本文は提出するまで本人だけが読めます。提出済みの回答だけが評価作成の対象です。
 - 本人の結果画面 `/me/results` には確定済みの評価だけが表示されます。自分自身の評価は自分で確定できません。
-- アンケートには作成時点の制度が保存されます。制度を直しても作成済みの版には自動反映されず、確定済み評価も当時の制度と結果のまま残ります。
+- 制度を保存すると、締め切っていない期の回答のない下書きは新しい設定に追従します。回答のある公開中のアンケートには次の版の下書きを作り、公開済みの設問と確定済み評価は当時の内容を保ちます。詳しい反映範囲は [製品仕様 §30-2](./docs/product/spec.md) を参照してください。
 - `/f/[token]` の配布用URLでもログインが必要です。回答できる等級と受付期間の条件も適用されます。
 
 アンケートの中身だけを確認する場合は `/forms` を開きます。画面の目的・制度・用語の詳しい説明は [製品仕様](./docs/product/spec.md) を参照してください。
@@ -157,10 +157,12 @@ Cloudflare へ配る構成をローカルで確認するときは `pnpm run cf:d
 - [システム仕様](./system-spec/index.md) — API・データ・認証の契約
 - [アーキテクチャ](./architecture/index.md) — 構成と設計判断
 - [デプロイ時の注意](./docs/deploy-notes.md) — migration、配布、スモーク確認
-- [30思考法レビュー](./docs/reviews/elegant-review-2026-10-21.md) — 今回のワークツリーの重複整理・共通化・確認結果（先行レビュー：[2026-10-16](./docs/reviews/elegant-review-2026-10-16-refactor.md)・[2026-10-14 の共通化](./docs/reviews/elegant-review-2026-10-14-refactor.md)・[2026-10-14](./docs/reviews/elegant-review-2026-10-14.md)）
+- [行動指針・KPI改善の最終レビュー](./docs/product/spec-receipts/2026-10-26-guideline-kpi-pr-review.md) — 仕様反映・品質ゲート・Beadsと13タスクの状態、本番適用の残条件
+- [30思考法レビュー](./docs/reviews/elegant-review-2026-10-24.md) — 今回のワークツリーの重複整理・共通化・確認結果（先行レビュー：[2026-10-21](./docs/reviews/elegant-review-2026-10-21.md)・[2026-10-16](./docs/reviews/elegant-review-2026-10-16-refactor.md)・[2026-10-14 の共通化](./docs/reviews/elegant-review-2026-10-14-refactor.md)・[2026-10-14](./docs/reviews/elegant-review-2026-10-14.md)）
 - [エージェント向けの規約](./AGENTS.md) — Claude Code・Codex 共通。キットの扱い、配色の優先順位、改善要望の手順
 - 生成物と記録 — `specs/`・`features/`・`tasks/`・`docs/requirements/` は開発の計画づくり（dev-graph・system-dev-planner）が作った文書、`.dev-graph/`・`eval-log/` はその状態と実行の記録（端末ごとに残り、git では共有しない）で、どれも正本ではありません。画面と振る舞いは製品仕様、API・データ・認証の契約はシステム仕様、構成と設計判断はアーキテクチャを正とし、食い違ったら生成物の側を直します。
   評価レポートの13 task は、[計画レビューの読み替え](./docs/product/spec-receipts/2026-10-20-evaluation-report-plan-review.md#2-task-ごとの読み替え)を先に読みます。配布の実行手順は [デプロイ時の注意 §14](./docs/deploy-notes.md#14-評価レポートと上司の判断の配布移行-00380039) に集約しています。
+  行動指針と KPI・評価セットの13 task は、[最終レビューの tasks/ の読み方](./docs/product/spec-receipts/2026-10-22-guideline-kpi-final-review.md#tasks-の読み方)を先に読みます。配布とずれた下書きをそろえる手順は [デプロイ時の注意 §15](./docs/deploy-notes.md#15-行動指針の割り当てを既定へ戻す配布移行-0040)、設定の写しを持つ表と追従の関数は [写しの一覧](./docs/product/settings-copy-ledger.md) にあります。
 
 ## 本番運用とデータの注意
 

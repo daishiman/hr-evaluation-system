@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { BehaviorIntro } from "@/app/admin/behavior/BehaviorIntro";
 
 const ROOT = process.cwd();
 const read = (path: string) => readFileSync(join(ROOT, path), "utf8");
@@ -88,7 +91,7 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     expect(apply).not.toContain("db.delete(s.behaviorBandSets)");
     expect(apply).not.toContain("db.delete(s.behaviorGuidelines)");
     expect(setEditor).toContain('from "@/components/ConfirmButton"');
-    expect(setEditor).toContain("すでに公開したアンケートと確定済みの評価はそのまま残ります");
+    expect(setEditor).toContain("中身は残るので、あとからもう一度使えます。");
   });
 
   it("消せない項目には、画面に理由と次にすることが出る", () => {
@@ -176,7 +179,17 @@ describe("行動指針の画面・フォーム・評価の境界", () => {
     expect(editor).toContain('from "@/components/ConfirmButton"');
     expect(editor).toContain('isActive: false');
     expect(editor).toContain('isActive: true');
-    expect(editor).toContain("すでに公開したアンケートと確定済みの評価はそのまま残ります");
+    expect(editor).toContain("あとからもう一度使えます。");
+  });
+
+  it("公開済み設問・確定済み評価の保全は、画面冒頭の共通説明で伝える", () => {
+    expect(read("src/app/admin/behavior/page.tsx")).toContain("<BehaviorIntro");
+    // 行ごとに旧文を持たせず、実際の画面部品を通して共通説明まで描く。
+    const html = renderToStaticMarkup(createElement(BehaviorIntro, { grades: [], sets: [] }));
+    expect(html).toContain("公開済みの設問と確定済みの評価は、そのまま残ります。");
+    expect(html).toContain("回答の無い下書きに反映します。");
+    expect(html).toContain("次の版の下書きを作ります。");
+    expect(html).toContain("既存の評価は集計し直しません。");
   });
 
   it("アンケートの中身を見る画面は公開済みの設問だけを読む（基準を直しても動かない）", () => {

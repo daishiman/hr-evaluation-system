@@ -11,7 +11,7 @@ import { BLOCKED_HELP_LABEL, BLOCKED_KEEP, BLOCKED_WHAT, BLOCKED_WHY, blockedMar
 describe("使用中の行を消せない理由（BlockedHelp）", () => {
   it("押すと開く畳みの中に、理由 → 消さずに残す訳 → 代わりにできること の順で3段を出す", () => {
     expect(renderToStaticMarkup(createElement(BlockedHelp))).toBe(
-      '<details class="disclosure card">' +
+      '<details class="disclosure card ui-reveal">' +
         `<summary><span>${BLOCKED_HELP_LABEL}</span></summary>` +
         '<div class="disclosure-body">' +
         `<p class="m-0 text-sub">${BLOCKED_WHY}</p>` +

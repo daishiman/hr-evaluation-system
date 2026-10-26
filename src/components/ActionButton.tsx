@@ -67,7 +67,7 @@ export function ActionButton({
         message={result}
         refreshing={saving}
         target="画面"
-        className="m-0 mb-2 max-w-[22rem] text-note text-brand-deep"
+        className="m-0 mb-2 max-w-[22rem] text-note ui-press-status"
       />
       {confirm ? (
         <ConfirmButton

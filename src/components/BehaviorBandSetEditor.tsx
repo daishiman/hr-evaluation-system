@@ -63,7 +63,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
       <div className="card-pad">
         <CardHead
           title="基準は何セット用意するか"
-          sub="等級ごとに問う内容を変えたいときは、基準を分けて作ります。よく使うのは、いまの基準を複製して一部だけ書き換えるやり方です。"
+          sub="等級ごとに問う内容を変えるときは、基準を分けて作ります。"
         />
         {error && (
           <div className="mt-3">
@@ -79,12 +79,10 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           const nameDraft = editingName.drafts[set.id];
           const inUse = set.usedByGradeNames.length > 0;
           /* 止められない理由は2種類あり、扱いが違う。
-             ①どれかの等級に出す設定が残っている … 行ごとに内容が違い、直す順番も示すので畳まない
+             ①どれかの等級に出す設定が残っている … 行には出している等級を書き、止められないことと
+               直す順番は一覧の下に1つだけ置く（どの行でも同じ文になり、行ごとに並べると同じ文が重なる）。畳まない
              ②観点をアンケートに出したことがある … 行には「使用中（◯件）」だけ残し、
                どこで使っているかは押したら出す。全行で同じになる理由は一番下に1つだけ置く。 */
-          /* 等級名はすぐ上の行に出ているので、理由の文では繰り返さない
-             （繰り返すと、等級が増えたぶんだけ長い1文が行の中に出る）。 */
-          const assignedReason = inUse ? BAND_SET_ASSIGNED_NEXT : null;
           const mark = blockedMark(set.usedBy);
           return (
             <ListRowItem key={set.id} off={!set.isActive}>
@@ -97,13 +95,6 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                     <>
                       観点{set.aspectCount}件・
                       {inUse ? `${set.usedByGradeNames.join("／")}に出します` : "どの等級にも出していません"}
-                      {/* 止められないときは、その理由と直す順番をここで読めるようにする */}
-                      {assignedReason !== null && (
-                        <>
-                          <br />
-                          {assignedReason}
-                        </>
-                      )}
                     </>
                   }
                 >
@@ -150,7 +141,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                         variant="danger-outline"
                         busy={saving}
                         busyLabel="保存しています…"
-                        confirm={`「${set.name}」を次に作るアンケートで選べないようにします。中身は残るので、あとからもう一度使えます。すでに公開したアンケートと確定済みの評価はそのまま残ります。`}
+                        confirm={`「${set.name}」の使用を止めます。中身は残るので、あとからもう一度使えます。`}
                         onConfirm={() => void send({ kind: "behaviorBandSet", id: set.id, isActive: false })}
                       />
                     )
@@ -159,7 +150,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
                       もう一度使う
                     </Button>
                   )}
-                  {assignedReason === null && mark === null && (
+                  {!inUse && mark === null && (
                     <ConfirmButton
                       label={DELETE_LABEL}
                       variant="danger-outline"
@@ -183,7 +174,7 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
           頭との区切りは上の一覧の線が引くので、基準が0件でも線を2本重ねない */}
       <ListAddArea hasRows={sets.length > 0}>
         {draft === null ? (
-          <ListAddRow note="いまの基準を複製して作れます。空から作ることもできます。">
+          <ListAddRow note="いまの基準を複製するか、空から作ります。">
             <Button variant="secondary" disabled={saving} onClick={openDraft}>
               ＋ 基準を追加
             </Button>
@@ -241,6 +232,11 @@ export function BehaviorBandSetEditor({ sets, currentBand }: { sets: BehaviorBan
               </Button>
             </div>
           </>
+        )}
+
+        {/* 等級に出している基準を止められないことと、直す順番。どの行でも同じ文なので、ここに1つだけ置く */}
+        {sets.some((set) => set.usedByGradeNames.length > 0) && (
+          <p className="footnote m-0 mt-3">等級に出している基準は止められません。{BAND_SET_ASSIGNED_NEXT}</p>
         )}
 
         {/* 全行で同じ文になる「なぜ消せないか」は、行から外してここへ1つだけ置く。

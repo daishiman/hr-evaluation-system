@@ -33,7 +33,10 @@ type Question = typeof s.kpiQuestions.$inferSelect;
 /** 単位の「-」は単位なしと同じ（form-question-text.ts の kpiQuestion も同じに読む） */
 const unitOf = (unit: string | null | undefined): string | null => (unit && unit.trim() !== "-" ? unit.trim() : null);
 
-function summarize(rows: readonly { questionKey: string; text: string; unit: string | null; validation: string | null }[]): string {
+/** 監査記録に残す、聞くことの並びの要約。アンケートから聞くことを直したときも同じ形で残す（form-to-settings.ts） */
+export function summarizeAsking(
+  rows: readonly { questionKey: string; text: string; unit: string | null; validation: string | null }[],
+): string {
   return rows.map((q) => `${q.questionKey} ${q.text}（${[unitOf(q.unit), q.validation].filter(Boolean).join("・")}）`).join("／");
 }
 
@@ -148,5 +151,5 @@ export async function planKpiAsking(args: {
   });
   for (const q of removed) statements.push(db.delete(s.kpiQuestions).where(eq(s.kpiQuestions.id, q.id)));
 
-  return { statements, formula, summaryBefore: summarize(existing), summaryAfter: summarize(after) };
+  return { statements, formula, summaryBefore: summarizeAsking(existing), summaryAfter: summarizeAsking(after) };
 }

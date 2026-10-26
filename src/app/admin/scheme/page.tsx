@@ -1,242 +1,85 @@
+import { redirect } from "next/navigation";
 import { requireRoute } from "@/lib/session";
-import { Badge, Bar, EmptyState, LinkButton, Num, PageTitle, ReasonNote, RecordList, SectionHeading } from "@/components/ui";
+import { EmptyState, ReasonNote } from "@/components/ui";
 import { detectStaleCycles } from "@/lib/impact";
 import { StaleCyclesNotice } from "@/components/StaleCyclesNotice";
-import { checkGradePointRule } from "@/lib/domain/grade-points";
-import { overallProgress, schemeStepPath, stepTitle } from "@/lib/domain/scheme-steps";
-import { loadSchemeSetup } from "./data";
-import { SchemeCommonSettings } from "@/components/SchemeCommonSettings";
-import { KpiCategoryEditor } from "@/components/KpiCategoryEditor";
-import { KpiItemEditor } from "@/components/KpiItemEditor";
-import { listKpiCategories, listKpiItems, listKpiQuestions } from "@/lib/queries";
-import { kpiCategoryUsage, kpiItemCollectingForms, kpiItemUsage } from "@/lib/master-usage";
-import { askingView } from "@/lib/domain/kpi-asking";
+import { FormAlignNotice } from "@/components/FormAlignNotice";
 import { getDb } from "@/lib/db";
+import { alignDraftForms } from "@/lib/form-align";
+import { checkGradePointRule } from "@/lib/domain/grade-points";
+import { kpiItemPath } from "@/lib/domain/scheme-steps";
+import { listKpiCategories, listKpiItems } from "@/lib/queries";
+import { loadSchemeSetup } from "./data";
+import { SchemeHub } from "./SchemeHub";
 
 export const dynamic = "force-dynamic";
 
 /**
  * KPI・評価セットの入口。会社の管理者のみ。
  *
- * この画面の目的は1つだけ：**どの等級区分を設定するかを選ぶ**。
- * 実際の設定（使うKPIを選ぶ／基準を決める）は等級区分ごとの手順画面で行う。
+ * この画面の目的は1つだけ：**どの作業をするかを選ぶ**。
+ * 等級区分ごとの設定（使うKPIを選ぶ／基準を決める）は等級区分ごとの手順画面、
+ * 共通の設定・KPI項目・KPIカテゴリはそれぞれの画面で行う（DD-027）。
  *
  * 以前はこの1画面で「等級区分の切り替え・配点の確認・項目の選択・基準の編集・KPIの比較」を
  * 同時にやらせていて、何をする画面なのか分からなくなっていた（2026-08-11 の指摘）。
+ * 手順を分けたあとも、共通の設定・KPI項目・カテゴリをこの画面に積んでいたので、DD-027 で外へ出した。
  */
 export default async function AdminSchemePage({
   searchParams,
 }: {
-  /** item は入力欄を開いておくKPI項目（scheme-steps.ts の KPI_ITEM_PARAM。比べる警告の「聞き方を決める」から来る） */
+  /** item は以前の「聞き方を決める」のリンク（/admin/scheme?item=<id>）。KPI項目の画面のその行へ送る */
   searchParams: Promise<{ item?: string }>;
 }) {
   const viewer = await requireRoute("/admin/scheme");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
 
-  const [setup, staleCycles, categories, kpiItems, kpiQuestions] = await Promise.all([
+  /* 旧い URL は消さずに転送する（文書・ブックマーク・比べる警告のリンクが 404 にならないように） */
+  const item = (await searchParams).item;
+  if (item) redirect(kpiItemPath(item));
+
+  const db = await getDb();
+  const [setup, staleCycles, categories, kpiItems, drift] = await Promise.all([
     loadSchemeSetup(viewer.companyId),
     detectStaleCycles(viewer.companyId),
     listKpiCategories(viewer.companyId),
     listKpiItems(viewer.companyId),
-    listKpiQuestions(viewer.companyId),
+    /* 設定とずれた下書きの件数（何も書かない）。そろえられないものも、直す必要があるので数える（DD-028 の6） */
+    alignDraftForms(db, { companyId: viewer.companyId, dryRun: true, actorId: viewer.id }),
   ]);
-  const db = await getDb();
-  const openItemId = (await searchParams).item ?? null;
-  const [categoryUsage, itemUsage, collecting] = await Promise.all([
-    kpiCategoryUsage(db, viewer.companyId),
-    kpiItemUsage(db, viewer.companyId),
-    kpiItemCollectingForms(db, viewer.companyId),
-  ]);
-  const categoryOptions = categories.map((c) => ({ id: c.id, name: c.name }));
-  const itemRows = kpiItems.map((i) => ({
-    id: i.id,
-    no: i.no,
-    name: i.name,
-    categoryId: i.categoryId,
-    categoryName: categories.find((c) => c.id === i.categoryId)?.name ?? null,
-    measureType: i.measureType,
-    unit: i.unit,
-    direction: i.direction === "lower" ? ("lower" as const) : ("higher" as const),
-    formula: i.formula,
-    formulaNote: i.formulaNote,
-    remarks: i.remarks,
-    isMonetary: i.isMonetary,
-    isProvisional: i.isProvisional,
-    isActive: i.isActive,
-    isFixedSlot: i.isFixedSlot,
-    asking: askingView(i, kpiQuestions.filter((q) => q.kpiItemId === i.id)),
-    keySetLockedBy: collecting[i.id] ?? null,
-  }));
-
-  if (!setup.scheme) {
-    return (
-      <>
-        <PageTitle title="KPI・評価セット" />
-        <StaleCyclesNotice cycles={staleCycles} />
-        <ReasonNote>有効な評価セットが登録されていません。初期データの投入が済んでいるかご確認ください。</ReasonNote>
-        <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。">
-          KPI項目
-        </SectionHeading>
-        <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} openItemId={openItemId} />
-        <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
-          KPIのカテゴリ
-        </SectionHeading>
-        <KpiCategoryEditor categories={categories} usage={categoryUsage} />
-      </>
-    );
-  }
-
-  if (setup.groups.length === 0) {
-    return (
-      <>
-        <PageTitle title="KPI・評価セット" />
-        <StaleCyclesNotice cycles={staleCycles} />
-        <ReasonNote>等級区分ごとの配点ルールが登録されていません。初期データの投入をご確認ください。</ReasonNote>
-        <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。">
-          KPI項目
-        </SectionHeading>
-        <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} openItemId={openItemId} />
-        <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
-          KPIのカテゴリ
-        </SectionHeading>
-        <KpiCategoryEditor categories={categories} usage={categoryUsage} />
-      </>
-    );
-  }
-
-  /* 区分は鍵（pointGroup）で照合し、文には等級名から作った呼び名（label）を出す */
-  const labelOf = (pointGroup: string) => setup.groups.find((g) => g.pointGroup === pointGroup)?.label ?? "";
-  const overall = overallProgress(
-    setup.groups.map((g) => g.progress),
-    labelOf,
-  );
 
   /* 配点の型そのものが壊れていると、どう選んでも保存できない状態になる。
      「保存できない」とだけ出すと画面の不具合に見えるため、原因をここで名指しする。 */
   const ruleErrors = setup.groups.flatMap((g) => checkGradePointRule(g.rule, g.label));
 
   return (
-    <>
-      <PageTitle
-        title="KPI・評価セット"
-        lede="等級区分ごとに、評価に使うKPIと、その項目の基準を決めます。1つの等級区分につき2つの手順に分かれています。設定した内容は、次に作るアンケートと集計に使われます。"
-      />
-      <StaleCyclesNotice cycles={staleCycles} />
-
-      {ruleErrors.length > 0 && (
-        <ReasonNote>
-          <p className="m-0 font-bold">配点の決まりに食い違いがあります（このままでは保存できません）</p>
-          <ul className="m-0 list-disc pl-5">
-            {ruleErrors.map((e) => (
-              <li key={e}>{e}</li>
-            ))}
-          </ul>
-        </ReasonNote>
-      )}
-
-      <div className="mt-3">
-        <Bar value={overall.done} max={overall.total} label="等級区分の設定が完了" />
-        <p className="mt-2 text-sub">{overall.summary}</p>
-        {overall.nextGroup && (
-          <p className="m-0 mt-2">
-            <LinkButton variant="primary" href={schemeStepPath(overall.nextGroup, "select")}>
-              {labelOf(overall.nextGroup)}の設定を始める
-            </LinkButton>
-          </p>
-        )}
-      </div>
-
-      <SectionHeading help="上から順に設定します。設定済みの等級区分も、押せばいつでも見直せます。">
-        等級区分ごとの設定
-      </SectionHeading>
-
-      <RecordList
-        items={setup.groups.map((g) => {
-          const p = g.progress;
-          const step = p.nextStep ?? "select";
-          return {
-            key: g.pointGroup,
-            title: g.label,
-            marks: p.done ? <Badge tone="done">設定済み</Badge> : <Badge tone="required">設定が未完了</Badge>,
-            rows: [
-              {
-                // 等級名を「・」でつないでカッコに入れると、1行が130文字を超える。
-                // 「どの等級が入るか」は数えるものなので、並びで出す。
-                label: "この区分に入る等級",
-                value:
-                  g.gradeNames.length === 0 ? (
-                    "この等級区分の等級は未登録です"
-                  ) : (
-                    <ul className="m-0 list-disc pl-5">
-                      {g.gradeNames.map((name) => (
-                        <li key={name}>{name}</li>
-                      ))}
-                    </ul>
-                  ),
-              },
-              {
-                label: "使うKPI",
-                value: (
-                  <>
-                    <Num value={p.selectedCount} unit="件" /> / {p.expectedCount}件
-                    {p.selectionDone ? "" : "（選び終わっていません）"}
-                  </>
-                ),
-              },
-              {
-                label: "配点の合計",
-                value: (
-                  <>
-                    <Num value={p.totalPoints} unit="点" /> / {p.maxPoints}点
-                  </>
-                ),
-              },
-              {
-                label: "基準（A〜E）",
-                value:
-                  !p.selectionDone ? (
-                    "項目を選んでから設定します"
-                  ) : p.unratedCount > 0 ? (
-                    <>
-                      未設定 <Num value={p.unratedCount} unit="件" />
-                    </>
-                  ) : (
-                    "設定済み"
-                  ),
-              },
-            ],
-            note: <>次にやること：{p.nextAction}</>,
-            action: (
-              <LinkButton
-                variant={overall.nextGroup === g.pointGroup ? "primary" : "secondary"}
-                href={schemeStepPath(g.pointGroup, step)}
-              >
-                {p.done ? `${g.label}の設定を見直す` : `${g.label}の${stepTitle(step)}`}
-              </LinkButton>
-            ),
-          };
-        })}
-      />
-
-      <SectionHeading help="等級区分ごとではなく、会社全体で1つだけ決める設定です。">
-        全等級区分に共通の設定
-      </SectionHeading>
-      <SchemeCommonSettings schemeId={setup.scheme.id} raiseRequiresAllA={setup.scheme.raiseRequiresAllA} />
-
-      <SectionHeading help="名前・単位・向き・分類などを決めて、KPI項目を足す・直すことができます。使用中は一部の列だけ直せます。">
-        KPI項目
-      </SectionHeading>
-      <KpiItemEditor items={itemRows} categories={categoryOptions} usage={itemUsage} openItemId={openItemId} />
-
-      <SectionHeading help="KPI項目の分類を増やしたり、使っていないものを消したりできます。">
-        KPIのカテゴリ
-      </SectionHeading>
-      <KpiCategoryEditor categories={categories} usage={categoryUsage} />
-
-      <p className="footnote mt-4">
-        確定済みの評価は判定した当時の配点・基準のまま残ります。ここでの変更は、次に作るアンケートと、
-        まだ確定していない評価にだけ反映されます。
-      </p>
-    </>
+    <SchemeHub
+      notices={
+        <>
+          <StaleCyclesNotice cycles={staleCycles} />
+          <FormAlignNotice count={drift.items.length + drift.failed.length} />
+          {!setup.scheme && (
+            <ReasonNote>有効な評価セットが登録されていません。初期データの投入が済んでいるかご確認ください。</ReasonNote>
+          )}
+          {setup.scheme && setup.groups.length === 0 && (
+            <ReasonNote>等級区分ごとの配点ルールが登録されていません。初期データの投入をご確認ください。</ReasonNote>
+          )}
+          {ruleErrors.length > 0 && (
+            <ReasonNote>
+              <p className="m-0 font-bold">配点の決まりに食い違いがあります（このままでは保存できません）</p>
+              <ul className="m-0 list-disc pl-5">
+                {ruleErrors.map((e) => (
+                  <li key={e}>{e}</li>
+                ))}
+              </ul>
+            </ReasonNote>
+          )}
+        </>
+      }
+      groups={setup.scheme ? setup.groups : []}
+      raiseRequiresAllA={setup.scheme?.raiseRequiresAllA ?? null}
+      items={{ active: kpiItems.filter((i) => i.isActive).length, total: kpiItems.length }}
+      categoryCount={categories.length}
+    />
   );
 }

@@ -34,14 +34,14 @@
     },
     {
       "target_id": "opennext-cloudflare-caching",
-      "retrieved_at": "2026-10-19T14:06:45Z",
+      "retrieved_at": "2026-10-22T06:36:05Z",
       "source_url": "https://opennext.js.org/cloudflare/caching",
       "official_publisher": "OpenNext",
       "official_host": "opennext.js.org",
-      "version": "@opennextjs/cloudflare 1.20.12",
+      "version": "@opennextjs/cloudflare 1.20.13",
       "last_updated": "2026-05-07",
-      "latest_checked_at": "2026-10-19T14:06:45Z",
-      "summary": "OpenNext の Cloudflare でのキャッシュ。SSR の route はキャッシュ設定なしで動く。ISR/SSG とデータキャッシュには incremental cache（R2 推奨・KV は結果整合のため非推奨・静的アセットは再検証不可）を置く。時間ベースの再検証には queue、オンデマンドの再検証（revalidatePath / revalidateTag）には tag cache（小規模は D1NextTagCache）が要る。npm の latest は 1.20.12（2026-10-15T07:53:11Z 公開、2026-10-19T14:05:47Z に確認）。1.20.12 の変更は @opennextjs/aws 4.1.11 への更新（Next.js 16.4 への対応と、2026-10-14 の Next.js のセキュリティ更新に合わせた依存の更新）と、ビルド時の loadManifest の同梱に preview-props.json を含める修正だけで、キャッシュの設定に関わる変更は無い（GitHub の公式リリース）。頁に更新日の表示は無く、last_updated は公式リポジトリ opennextjs/docs の pages/cloudflare/caching.mdx の最終コミット日（7c8a550、2026-05-07。2026-10-19 に GitHub で確かめ、それより後のコミットは無い）。"
+      "latest_checked_at": "2026-10-22T06:36:05Z",
+      "summary": "OpenNext の Cloudflare でのキャッシュ。SSR の route はキャッシュ設定なしで動く。ISR/SSG とデータキャッシュには incremental cache（R2 推奨・KV は結果整合のため非推奨・静的アセットは再検証不可で SSG 向け）を置く。時間ベースの再検証には queue（Durable Object の queue。memory queue は検証環境向け）、オンデマンドの再検証（revalidatePath / revalidateTag）には tag cache（小規模は D1NextTagCache、高負荷は ShardedDOTagCache）が要る。npm の latest は 1.20.13（2026-10-21T13:23:57Z 公開、2026-10-22 に registry.npmjs.org で確認。それより新しい版は無い）。1.20.13 の変更は @opennextjs/aws 4.1.12 への更新（Next.js 15 のビルドを受け付ける修正を含む）、server action の redirect が要求の host を使う修正、webpackChunkName の chunk を Worker に同梱する修正だけで、キャッシュの設定に関わる変更は無い（GitHub の公式リリース）。頁に更新日の表示は無く、last_updated は公式リポジトリ opennextjs/docs の pages/cloudflare/caching.mdx の最終コミット日（7c8a550、2026-05-07。2026-10-22 に GitHub で確かめ、それより後のコミットは無い）。"
     },
     {
       "target_id": "better-auth-session",
@@ -160,14 +160,14 @@
     },
     {
       "target_id": "opennext-cloudflare-get-started",
-      "retrieved_at": "2026-10-19T14:06:45Z",
+      "retrieved_at": "2026-10-22T06:36:05Z",
       "source_url": "https://opennext.js.org/cloudflare/get-started",
       "official_publisher": "OpenNext",
       "official_host": "opennext.js.org",
-      "version": "@opennextjs/cloudflare 1.20.12",
+      "version": "@opennextjs/cloudflare 1.20.13",
       "last_updated": "2026-04-28",
-      "latest_checked_at": "2026-10-19T14:06:45Z",
-      "summary": "@opennextjs/cloudflare と wrangler を入れ、wrangler.jsonc の main を .open-next/worker.js、assets を .open-next/assets にし、nodejs_compat と compatibility_date 2024-09-23 以降を指定する。WORKER_SELF_REFERENCE の service binding、open-next.config.ts の defineCloudflareConfig、preview / deploy の script を置く。edge runtime は使えない。npm の latest は 1.20.12（2026-10-15T07:53:11Z 公開、2026-10-19T14:05:47Z に確認。導入の設定に関わる変更は無い）。頁に更新日の表示は無く、last_updated は公式リポジトリ opennextjs/docs の pages/cloudflare/get-started.mdx の最終コミット日（70ae87b、2026-04-28。2026-10-19 に GitHub で確かめ、それより後のコミットは無い）。"
+      "latest_checked_at": "2026-10-22T06:36:05Z",
+      "summary": "@opennextjs/cloudflare と wrangler（3.99.0 以降）を入れ、wrangler.jsonc の main を .open-next/worker.js、assets を .open-next/assets（binding ASSETS）にし、nodejs_compat と global_fetch_strictly_public、compatibility_date 2024-09-23 以降を指定する。WORKER_SELF_REFERENCE の service binding、open-next.config.ts の defineCloudflareConfig、preview / deploy / upload / cf-typegen の script を置く。edge runtime は使えない。npm の latest は 1.20.13（2026-10-21T13:23:57Z 公開、2026-10-22 に registry.npmjs.org で確認。それより新しい版は無い）。1.20.13 の変更に wrangler の設定・互換フラグ・script に関わるものは無い（GitHub の公式リリース）。頁に更新日の表示は無く、last_updated は公式リポジトリ opennextjs/docs の pages/cloudflare/get-started.mdx の最終コミット日（70ae87b、2026-04-28。2026-10-22 に GitHub で確かめ、それより後のコミットは無い）。"
     },
     {
       "target_id": "nextjs-refresh",
@@ -520,6 +520,90 @@
       "last_updated": "2026-09-06",
       "latest_checked_at": "2026-10-19T13:53:44Z",
       "summary": "SC 1.1.1 Non-text Content（レベル A）。文字でない内容には同じ目的を果たす代替テキストを付ける。図表には、何の図かを示す短い代替と、データや傾向を伝える長い説明の両方が要り、できればデータの表も添える。last_updated はページの更新日（Updated 06 September 2026）。レーダー図と等級ごとの点数のグラフに、短い代替と同じ値の表を添える根拠。"
+    },
+    {
+      "target_id": "mdn-css-color-mix",
+      "retrieved_at": "2026-10-22T01:08:52Z",
+      "source_url": "https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/color-mix",
+      "official_publisher": "Mozilla (MDN Web Docs)",
+      "official_host": "developer.mozilla.org",
+      "last_updated": "2026-09-28",
+      "latest_checked_at": "2026-10-22T01:08:52Z",
+      "summary": "color-mix() は2つの色を指定の色空間（既定は oklab）で混ぜる。Baseline Widely available（2023年5月から主要ブラウザで使える）。割合を省くと各50%、片方だけ省くともう片方の残り。割合の合計が100%未満だと、その合計を透明度として掛けるため、面の色を作るときは合計を100%にして意図しない透けを防ぐ。last_updated はページの更新日（Sep 28, 2026）。既存の意味のトークン（主の色・面の色）から、カードの縁と見出しの帯、ボタンのグラデーションの両端の色を TSX に色を書かずに作る根拠（G29・I32）。"
+    },
+    {
+      "target_id": "mdn-css-linear-gradient",
+      "retrieved_at": "2026-10-22T01:08:52Z",
+      "source_url": "https://developer.mozilla.org/en-US/docs/Web/CSS/gradient/linear-gradient",
+      "official_publisher": "Mozilla (MDN Web Docs)",
+      "official_host": "developer.mozilla.org",
+      "last_updated": "2026-08-28",
+      "latest_checked_at": "2026-10-22T01:08:52Z",
+      "summary": "linear-gradient() は直線方向に色を変える画像を作る。Baseline Widely available（2015年7月から）。色の途中の止まり位置（color hint）と、補間の色空間（in oklab・in oklch など）を指定できる。ページ自体には文字とグラデーションのコントラストの節は無く、コントラストは WCAG 1.4.3・1.4.11 の側で確かめる。last_updated はページの更新日（Aug 28, 2026）。主ボタン・強調するカードの面・見出しの帯のグラデーションを部品クラスで書き、色ずれを抑えるため oklab で補間する根拠（G29・I32）。"
+    },
+    {
+      "target_id": "mdn-prefers-reduced-motion",
+      "retrieved_at": "2026-10-22T01:08:52Z",
+      "source_url": "https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion",
+      "official_publisher": "Mozilla (MDN Web Docs)",
+      "official_host": "developer.mozilla.org",
+      "last_updated": "2026-06-10",
+      "latest_checked_at": "2026-10-22T01:08:52Z",
+      "summary": "prefers-reduced-motion は利用者が端末で動きを減らす設定にしているかを示す。値は no-preference と reduce で、@media (prefers-reduced-motion) は reduce と同じ。拡大や大きな物の移動は前庭障害のある人に不快を起こしうる。Baseline Widely available（2020年1月から）。last_updated はページの更新日（Jun 10, 2026）。押せる部品の光の動き（きらめき）を reduce で止める根拠（I32・O29）。"
+    },
+    {
+      "target_id": "mdn-prefers-contrast",
+      "retrieved_at": "2026-10-22T01:08:52Z",
+      "source_url": "https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-contrast",
+      "official_publisher": "Mozilla (MDN Web Docs)",
+      "official_host": "developer.mozilla.org",
+      "last_updated": "2026-04-20",
+      "latest_checked_at": "2026-10-22T01:08:52Z",
+      "summary": "prefers-contrast は利用者がより強い（more）・より弱い（less）・独自の（custom）コントラストを望むかを示す。custom は forced-colors: active の利用者が指定した色に一致する。Baseline Widely available（2022年5月から）。last_updated はページの更新日（Apr 20, 2026）。コントラストを強くする設定（more）と強制色（forced-colors）ではグラデーションをやめて平らな面と縁に戻す根拠（G29・O29）。"
+    },
+    {
+      "target_id": "w3c-wcag22-contrast-minimum",
+      "retrieved_at": "2026-10-22T01:08:52Z",
+      "source_url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+      "official_publisher": "W3C Web Accessibility Initiative (WAI)",
+      "official_host": "www.w3.org",
+      "version": "WCAG 2.2",
+      "last_updated": "2026-09-06",
+      "latest_checked_at": "2026-10-22T01:08:52Z",
+      "summary": "SC 1.4.3 Contrast (Minimum)（レベル AA）。文字と文字の画像は 4.5:1 以上。大きな文字（18pt 以上、または 14pt 以上の太字。約 24px と 18.5px）は 3:1 以上。使えない部品の文字・飾り・ロゴは除く。背景画像が文字との対比を欠く場合は失敗例 F83。last_updated はページの更新日（Updated 06 September 2026）。グラデーションの上の文字を、両端の色のどちらに対しても 4.5:1 以上にする検査の根拠（O29）。"
+    },
+    {
+      "target_id": "w3c-wcag22-non-text-contrast",
+      "retrieved_at": "2026-10-22T01:08:52Z",
+      "source_url": "https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html",
+      "official_publisher": "W3C Web Accessibility Initiative (WAI)",
+      "official_host": "www.w3.org",
+      "version": "WCAG 2.2",
+      "last_updated": "2026-09-06",
+      "latest_checked_at": "2026-10-22T01:08:52Z",
+      "summary": "SC 1.4.11 Non-text Contrast（レベル AA）。部品とその状態（選んだ・フォーカス）を見分けるのに要る見た目と、内容の理解に要る図の部分は、隣の色に対して 3:1 以上（丸めない）。作り手が足した hover の効果は補助なので 3:1 は要らないが、部品やほかの状態の印の対比を下げてはならない。グラデーションは最も対比の低い所で確かめる。last_updated はページの更新日（Updated 06 September 2026）。カードの縁・選ぶ部品の選んだ状態・状態の印・グラフの系列を 3:1 以上にする根拠（O29・I32・I33）。"
+    },
+    {
+      "target_id": "w3c-wcag22-focus-visible",
+      "retrieved_at": "2026-10-22T01:08:52Z",
+      "source_url": "https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html",
+      "official_publisher": "W3C Web Accessibility Initiative (WAI)",
+      "official_host": "www.w3.org",
+      "version": "WCAG 2.2",
+      "last_updated": "2026-09-06",
+      "latest_checked_at": "2026-10-22T01:08:52Z",
+      "summary": "SC 2.4.7 Focus Visible（レベル AA）。キーボードで操作できる部品には、キーボードのフォーカスの印が見える操作の仕方がある。印は時間で消してはならず、印は文字でない内容として 1.4.11 の 3:1 も受ける。形と大きさは 2.4.13 Focus Appearance（AAA）が手引き。last_updated はページの更新日（Updated 06 September 2026）。押す・選ぶ・開く部品の focus-visible の印をグラデーションの上でも見えるようにする根拠（I33・O29）。"
+    },
+    {
+      "target_id": "w3c-wcag22-target-size-enhanced",
+      "retrieved_at": "2026-10-22T01:08:52Z",
+      "source_url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced.html",
+      "official_publisher": "W3C Web Accessibility Initiative (WAI)",
+      "official_host": "www.w3.org",
+      "version": "WCAG 2.2",
+      "last_updated": "2026-09-06",
+      "latest_checked_at": "2026-10-22T01:08:52Z",
+      "summary": "SC 2.5.5 Target Size (Enhanced)（レベル AAA）。指で押す対象は 44×44 CSS px 以上。例外は、同じページに 44px 以上の同等の部品がある、文の中にある、ブラウザが大きさを決めて作り手が変えていない、その見た目が情報に欠かせない、の4つ。last_updated はページの更新日（Updated 06 September 2026）。押せる面を 44px 四方以上に保つ根拠（I33）。"
     }
   ]
 }

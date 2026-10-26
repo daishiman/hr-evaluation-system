@@ -30,6 +30,7 @@ export type ConstitutionEntityType =
   | "kpiRankCriteria"
   | "kpiCategory"
   | "kpiItem"
+  | "evaluationScheme"
   | "membership";
 
 export type ConstitutionEventType =

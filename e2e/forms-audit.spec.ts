@@ -293,7 +293,7 @@ function gapItems(): { requirement: GapItem; behavior: GapItem; kpi: [GapItem, G
   const kpiItem = (k: { id: string; name: string }): GapItem => ({
     kind: "KPI項目",
     ...k,
-    href: `/admin/scheme?item=${encodeURIComponent(k.id)}#${encodeURIComponent(`kpi-item-${k.id}`)}`,
+    href: `/admin/scheme/items?item=${encodeURIComponent(k.id)}#${encodeURIComponent(`kpi-item-${k.id}`)}`,
   });
   return {
     requirement: {

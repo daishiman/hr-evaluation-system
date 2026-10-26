@@ -145,7 +145,7 @@ describe("formPublicationGaps（アンケートを公開する前）", () => {
     });
     expectComplete(gaps);
     expect(gaps.map((gap) => [gap.href, gap.linkLabel])).toEqual([
-      ["/admin/scheme?item=kpi_b#kpi-item-kpi_b", "「残業率」の聞き方を直す"],
+      ["/admin/scheme/items?item=kpi_b#kpi-item-kpi_b", "「残業率」の聞き方を直す"],
       ["/admin/forms/f1", "設問を作り直す"],
     ]);
     expect(gaps[1].what).toBe("「稼働率」「定着率」の設問が、いまの聞き方と合っていません。");

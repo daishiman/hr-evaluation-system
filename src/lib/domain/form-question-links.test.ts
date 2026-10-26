@@ -46,6 +46,27 @@ describe("checkQuestionLinks", () => {
     expect(result.ok ? "" : result.message).toContain("画面を読み込み直してから");
   });
 
+  it("新しい設問に設定の行を1つだけ選んでいれば、設定から作る設問として足す", () => {
+    const result = checkQuestionLinks(
+      [
+        { title: "項目", section: "kpi", questionType: "number", kpiItemId: "kpi_b" },
+        { title: "指針", section: "behavior", questionType: "single", behaviorGuidelineId: "bg_2", kpiQuestionKey: null, isGate: false },
+        { title: "要件", section: "support", questionType: "yesno", gradeRequirementId: "greq_2" },
+        { title: "昇格", section: "report", questionType: "yesno", promotionRequirementId: "pr_2" },
+      ],
+      stored,
+    );
+    expect(result).toEqual({ ok: true, ids: ["add", "add", "add", "add"] });
+  });
+
+  it("新しい設問に設定の行と一緒に key か印を付けたり、行を2つ選んだりすると断る", () => {
+    const message = "「新」に付けられる紐づけは、設定の項目1つだけです。KPI は項目だけを選んでください。";
+    const sentNew = { title: "新", section: "kpi", questionType: "number" };
+    expect(checkQuestionLinks([{ ...sentNew, kpiItemId: "kpi_b", kpiQuestionKey: "q2_1" }], stored)).toEqual({ ok: false, message });
+    expect(checkQuestionLinks([{ ...sentNew, promotionRequirementId: "pr_2", isGate: true }], stored)).toEqual({ ok: false, message });
+    expect(checkQuestionLinks([{ ...sentNew, kpiItemId: "kpi_b", behaviorGuidelineId: "bg_2" }], stored)).toEqual({ ok: false, message });
+  });
+
   it("作り直しで消えた id の紐づけ付きの設問（古い画面からの保存）も断る", () => {
     expect(checkQuestionLinks([asSent({ ...kpi, id: "fq_before_rebuild" })], stored)).toMatchObject({ ok: false });
   });

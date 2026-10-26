@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireRoute } from "@/lib/session";
-import { Badge, Card, CardHead, Code, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { Badge, Card, CardHead, Code, Disclosure, EmptyState, LinkButton, Num, PageTitle, ProvisionalMark, ReasonNote } from "@/components/ui";
+import { SettingsFollowScope } from "@/components/SettingsFollowScope";
 import { DetailDialogButton } from "@/components/ConfirmButton";
 import { RankCriteriaSetForm } from "@/components/RankCriteriaSetForm";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
@@ -199,10 +200,9 @@ export default async function SchemeCriteriaPage({ params }: { params: Promise<{
         ))}
       </div>
 
-      <p className="footnote mt-4">
-        変更は次に作るアンケートと、まだ確定していない評価に反映されます。すでに公開したアンケートと確定済みの評価は
-        当時の基準のまま残ります。
-      </p>
+      <Disclosure summary="変更が反映される範囲">
+        <SettingsFollowScope kinds={["rankCriteriaSet"]} />
+      </Disclosure>
 
       <StickyActionBar
         status={

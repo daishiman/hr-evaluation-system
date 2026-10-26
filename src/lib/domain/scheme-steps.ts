@@ -11,6 +11,10 @@
  *     手順2（/admin/scheme/[区分]/criteria）… 選んだ項目だけの基準（A〜E）を決める
  *     → 次の等級区分の手順1へ。全区分が終わったら制度設定ガイドへ戻す。
  *
+ *   等級区分によらない作業は、入口から別の画面へ分けた（DD-027）。
+ *     /admin/scheme/common（全等級区分に共通の設定）・/admin/scheme/items（KPI項目）・
+ *     /admin/scheme/categories（KPIカテゴリ）
+ *
  * ここには点数も等級区分名も書かない。すべて呼び出し側がDBから渡す。
  * このファイルが持つのは「どこまで進んでいるか」「次は何か」の判断だけ。
  */
@@ -54,10 +58,13 @@ export function kpiItemAnchor(itemId: string): string {
   return `kpi-item-${itemId}`;
 }
 
+/** KPI項目の画面の URL（DD-027）。入口の /admin/scheme?item= は、ここへ転送する */
+export const KPI_ITEMS_PATH = "/admin/scheme/items";
+
 /** KPI項目の画面を、その項目の入力欄を開いた状態で、その行の位置から見せるURL */
 export function kpiItemPath(itemId: string): string {
   const id = encodeURIComponent(itemId);
-  return `/admin/scheme?${KPI_ITEM_PARAM}=${id}#${encodeURIComponent(kpiItemAnchor(itemId))}`;
+  return `${KPI_ITEMS_PATH}?${KPI_ITEM_PARAM}=${id}#${encodeURIComponent(kpiItemAnchor(itemId))}`;
 }
 
 export interface SavedPick {

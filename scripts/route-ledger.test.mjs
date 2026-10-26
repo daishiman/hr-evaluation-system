@@ -25,15 +25,15 @@ function toRoute(file) {
   return route ? `/${route}` : "/";
 }
 
-test("47個の page.tsx とルート台帳が完全に一致する", () => {
+test("50個の page.tsx とルート台帳が完全に一致する", () => {
   const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
   const implemented = walkPages(join(root, "src/app")).map(toRoute).sort();
   const documented = ledger.routes.map((route) => route.path).sort();
 
-  assert.equal(implemented.length, 47);
+  assert.equal(implemented.length, 50);
   assert.equal(new Set(documented).size, documented.length, "台帳のパスが重複しています");
   assert.deepEqual(documented, implemented);
-  assert.match(ledger.$schemaNote, /47個/);
+  assert.match(ledger.$schemaNote, /50個/);
 });
 
 /* 権限一覧（S5）と画面名（S10）。台帳が権限の正本なので、どちらも台帳の側で固定する */
