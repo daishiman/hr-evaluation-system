@@ -3,6 +3,7 @@
 import { useRouterRefresh } from "@/lib/use-refresh";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { safeRedirectPath } from "@/lib/security/safe-redirect";
 import { signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui";
 
@@ -38,7 +39,8 @@ export function LoginForm({ next }: { next?: string }) {
       setError("メールアドレスかパスワードが違います。もう一度お試しください。");
       return;
     }
-    router.replace(next ?? "/");
+    // 画面から受けた値も、遷移の直前にもう一度確かめる（DD-032 の6）
+    router.replace(safeRedirectPath(next, "/"));
     refresh();
   }
 

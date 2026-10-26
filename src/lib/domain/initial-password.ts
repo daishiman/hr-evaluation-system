@@ -15,7 +15,7 @@
 /**
  * 発行するパスワードの文字数。
  *
- * 本人の変更画面が求める下限（PasswordChangeForm の MIN_LENGTH ＝ 10文字）を
+ * 共通の長さの決まり（src/lib/security/password.ts）の下限を
  * 下回らないこと。仮のものが規則を満たしていないと、渡された本人が
  * 「発行された値のままでは変更画面を通せない」ちぐはぐに出くわす。
  * 下限ちょうどではなく12文字にしているのは、この値が紙やチャットに残りやすく、
@@ -58,7 +58,7 @@ export type IssuedMemberCredential = {
  */
 export function generateInitialPassword(): string {
   /* 長さと文字種はこのファイルの定数で、`initial-password.test.ts` が
-     「長さは10文字以上」「文字種は重複なく揃っている」ことを検査している。
+     「共通の長さの決まりを満たす」「文字種は重複なく揃っている」ことを検査している。
      以前あった「長さ0・文字種0なら空文字を返す」逃げ道は、その検査がある限り
      通ることが無く、読む人に「空のパスワードが出ることがある」と誤解させるため外した。 */
   const n = PASSWORD_ALPHABET.length;

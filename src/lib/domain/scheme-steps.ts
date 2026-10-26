@@ -50,6 +50,18 @@ export function schemeStepPath(pointGroup: string, step: StepKey): string {
   return step === "select" ? base : `${base}/criteria`;
 }
 
+/**
+ * URL の区切り（[group]）から等級区分名を読み戻す。schemeStepPath の逆。
+ * 壊れた % の並びは投げずに受け取った文字のまま返す。どの区分にも当たらないので、画面は 404 になる（500 にしない。DD-032 の17）。
+ */
+export function pointGroupFromParam(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 /** KPI項目の画面で、入力欄を開いておく項目を指すクエリの名前 */
 export const KPI_ITEM_PARAM = "item";
 

@@ -5,7 +5,8 @@ import { Button, LinkButton } from "@/components/ui";
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error(error);
+    // 文面には入力した値や SQL が写りうるので、型の名前と照合用の digest だけを残す（DD-032 の7）
+    console.error("画面を表示できませんでした", error.name, error.digest ?? "digest なし");
   }, [error]);
 
   return (

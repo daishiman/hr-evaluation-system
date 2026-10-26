@@ -6,7 +6,8 @@
  *
  * 集めるのは「その画面を直すために要るもの」だけにする。何でも集めると、
  * 記録票が読まれなくなるうえに、入力した中身まで外へ出てしまう。
- * - 画面の入力欄そのものは**一切見ない**（押した／触れた欄の名前だけ）
+ * - 画面の入力欄そのものは**一切見ない**（押した／触れたものの種類と、開発側が付けた name だけ）
+ * - 画面に出ている文字も読まない。リンクやボタンの文字には社員名が入りうる（DD-032 の17）
  * - 通信は失敗したものだけ。中身は自分のアプリ宛てに限り、ヘッダーとクエリは持たない
  * - 伏せる処理・件数と大きさの上限・種類ごとの収集量は
  *   src/lib/domain/improvement-instruction.ts が正本（送信直前にそこを必ず通す）
@@ -15,6 +16,7 @@
  */
 
 import {
+  breadcrumbLabelOf,
   DIAGNOSTICS_LIMITS,
   diagnosticsLevelFor,
   maskSensitive,
@@ -26,6 +28,8 @@ import {
   type ImprovementDiagnostics,
   type ImprovementKind,
 } from "@/lib/domain/improvement-instruction";
+import { routeMetaOf } from "@/lib/nav";
+import { sameOriginUrl } from "@/lib/security/same-origin-url";
 
 interface Timed {
   at: number;
@@ -54,16 +58,15 @@ function toText(value: unknown): string {
   }
 }
 
-/** 押したもの・触れた欄の「呼び名」。中身（打った値）は取らない。 */
+/**
+ * 押したもの・触れた欄の「呼び名」。名前の決め方は breadcrumbLabelOf が正本。
+ * 渡すのは要素の種類・書かれた href・name 属性だけで、画面の文字と打った値は渡さない。
+ */
 function labelOf(el: Element): string {
-  const aria = el.getAttribute("aria-label");
-  if (aria) return aria;
-  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
-    const labelled = el.labels?.[0]?.textContent;
-    if (labelled) return labelled.trim();
-    return el.getAttribute("name") || el.id || el.tagName.toLowerCase();
-  }
-  return (el.textContent || el.tagName.toLowerCase()).trim();
+  return breadcrumbLabelOf(
+    { tag: el.tagName, role: el.getAttribute("role"), href: el.getAttribute("href"), name: el.getAttribute("name") },
+    (path) => routeMetaOf(path)?.label ?? null,
+  );
 }
 
 /**
@@ -136,8 +139,9 @@ export function installDiagnostics(): void {
     const method = (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
     const url = input instanceof Request ? input.url : String(input);
     // 自分のアプリ以外への通信は、宛先と結果だけを控える。よその中身は持ち出さない。
-    const external = /^[a-z][\w+.-]*:\/\//i.test(url) && !url.startsWith(window.location.origin);
-    const base = { method, path: pathOnly(url), external, truncated: false };
+    const localUrl = sameOriginUrl(url, window.location.href);
+    const external = localUrl === null;
+    const base = { method, path: localUrl?.pathname ?? pathOnly(url), external, truncated: false };
 
     const remember = (status: number | null, requestBody: string | null, responseBody: string | null) => {
       push(
@@ -165,7 +169,9 @@ export function installDiagnostics(): void {
         remember(response.status, sentBody, null);
         // 返りの中身は複製から読む。原本を読むと、呼び出し元が読めなくなる。
         // 読み終わるのを待たずに応答を返す（画面の反応を遅らせない）。
-        if (!external) {
+        // 自社宛てでも、リダイレクト先が外部なら応答本文は持たない。
+        // 合成Responseにはurlが無いので、その場合は元の要求を基準にする。
+        if (!external && (!response.url || sameOriginUrl(response.url, window.location.href) !== null)) {
           const slot = network[network.length - 1];
           void response
             .clone()

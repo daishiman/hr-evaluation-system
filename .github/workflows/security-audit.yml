@@ -1,0 +1,52 @@
+# 依存の既知の脆弱性を見る（DD-032）。
+# 本番に入る依存（--prod）と、開発・ビルドだけで使う依存も含めた全体を別々に流し、
+# どちらで見つかったかを step の名前で分かるようにする。high 以上で赤くする。
+# 新しい脆弱性はコードを変えなくても見つかるので、週1回の定期実行も入れる。
+# 何も書き込まず、鍵も持たない。
+name: Security audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # 毎週月曜 09:00（日本時間）
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # pnpm の版は package.json の packageManager から読む。
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      # Node の版は .nvmrc の1か所だけで決める（手元・CI・本番の配布で同じ版にする）。
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: 依存のインストール（install scripts なし）
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 本番に入る依存の脆弱性
+        run: pnpm audit --prod --audit-level high
+
+      # 上が赤くても、全体の結果も見られるように流す。
+      - name: 開発・ビルドで使う依存も含めた脆弱性
+        if: success() || failure()
+        run: pnpm audit --audit-level high

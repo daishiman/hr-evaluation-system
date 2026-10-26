@@ -5,12 +5,12 @@ import { getForm, getResponse, listFormQuestions } from "@/lib/queries";
 import { formRowTitle } from "@/lib/domain/grade-label";
 import { listActiveExtensions } from "@/lib/response-access";
 import { FormAnswer } from "@/components/FormAnswer";
-import { toAnswerQuestions } from "@/components/answer-questions";
+import { toAnswerQuestions, toAnswerValues } from "@/components/answer-questions";
 import { ResponseSnapshot } from "@/components/ResponseSnapshot";
 import { Card, DefList, PageTitle, ReasonNote } from "@/components/ui";
 import { formatDate, formatPeriod } from "@/lib/view";
 import { formatJpDate, judgeFormDeadline } from "@/lib/domain/form-deadline";
-import { parseMulti, toAnswerRows } from "@/lib/domain/answer-snapshot";
+import { toAnswerRows } from "@/lib/domain/answer-snapshot";
 import { answerLockedReason, judgeAnswerBlock, judgeFormEntry } from "@/lib/domain/form-entry";
 
 export const dynamic = "force-dynamic";
@@ -142,12 +142,7 @@ export default async function AnswerForm({ params }: { params: Promise<{ id: str
       <FormAnswer
         formId={form.id}
         questions={toAnswerQuestions(questions)}
-        initial={(response?.answers ?? []).map((a) => ({
-          questionId: a.questionId,
-          valueNumber: a.valueNumber,
-          valueText: a.valueText,
-          valueChoices: a.valueJson ? parseMulti(a.valueJson) : null,
-        }))}
+        initial={toAnswerValues(questions, response?.answers ?? [])}
         submitted={false}
         // 連絡先と延長の案内は judgement.message が状態ごとに1回だけ持つ（延長は期限切れにしか効かない）。
         // ここで継ぎ足すと、同じ案内が2回並んだり、延長できない状態にまで延長を約束したりする

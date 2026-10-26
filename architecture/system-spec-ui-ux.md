@@ -2,7 +2,7 @@
 graph_node_id: "arch-system-spec-ui-ux"
 artifact_kind: "architecture"
 artifact_subtypes: ["frontend"]
-title: "UI-UX：利用者に見える鮮度、追加要件の画面設計、評価レポートと上司の判断、設定画面の段階的な表示と後から変えた方への追従、共通部品の色使い"
+title: "UI-UX：利用者に見える鮮度、追加要件の画面設計、評価レポートの印刷（A4・A3）と得点・実績の図、上司の判断"
 project_id: "hr-evaluation-system"
 domain: "ui-ux"
 status: "done"
@@ -16,11 +16,11 @@ file_path: "architecture/system-spec-ui-ux.md"
 template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
-evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "ac7e81291313ab24286030766026e0db5c1b2463c2a6d12a0228a930740bc9d9", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-2026-10-22.json"}
-source_lineage: {"imported_at": "2026-10-22T07:58:56Z", "origin_kind": "system-spec-harness", "source_digest": "ac7e81291313ab24286030766026e0db5c1b2463c2a6d12a0228a930740bc9d9", "source_path": "system-spec/ui-ux.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
-created_at: "2026-10-22T08:03:51.121694Z"
-updated_at: "2026-10-22T08:03:51.121694Z"
+evaluation_status: "stale"
+confirmation_evidence: {"evaluated_digest": "3204fa6bf77a829c46e4e66e3713a0df319f7ce17960aa2ac1f319041f2b006a", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
+source_lineage: {"imported_at": "2026-10-22T13:49:14Z", "origin_kind": "system-spec-harness", "source_digest": "3204fa6bf77a829c46e4e66e3713a0df319f7ce17960aa2ac1f319041f2b006a", "source_path": "system-spec/ui-ux.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-22T13:57:45.864509Z"
+updated_at: "2026-10-26T20:54:12.328854Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -44,7 +44,7 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-26T20:54:12.328854Z", "missing_sections": [], "status": "complete"}
 ---
 
 # Architecture overview
@@ -62,6 +62,10 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 行動指針と KPI・評価セットの画面を、最初は状態・件数・次にやることだけを見せる形にし、KPI・評価セットは作業ごとに画面を分ける（G26）。行動指針の既定の分け方（等級1・2で1つ、等級3・4-1・4-2で1つ、等級5-1・5-2は出さない）を、新しい会社と既定からずれた会社の両方で成り立たせる（G25）。設定とアンケートの設問はどちらを後から変えても後から変えた方を正として追従し、確定した評価と評価レポートは確定した時点のまま残す（G27）。評価を作る画面を試せる仮のデータを手元と本番の見本の会社に置き（G28）、全ての共通部品にいまのテーマの変数から作るグラデーションと色の変化を持たせる（平賀配色へは移さない、G29）。評価レポートは用紙の初期選択を A4 縦のままにし、A3 横を選ぶと1枚に収め、評価者向けにキーごとの獲得点と配点、全ての確定期の等級の推移を示す（qa-aa06・qa-aa09）。要件基盤への追記は4回の置き換えを経て appr-foundation-020 で確定した。
 根拠: qa-ab01、qa-ab13、qa-ab14、qa-ab18、qa-aa06、qa-aa09、G25、G26、G27、G28、G29、appr-foundation-016、appr-foundation-017、appr-foundation-018、appr-foundation-019、appr-foundation-020（system-spec/ui-ux.md）
 
+2026-10-19〜20 の追加: サイドバーの『事業所の達成率』の項目とその画面を消し（開くと 404）、個人別の評価レポート（①見出し・②評価に値するか・③点数・④レーダー図・⑤その等級の推移・⑥等級ごとの点数・⑦過去の実績）を足す。マネージャーは直属の部下の評価の中身とレポートへ移れ、アンケートは状態ごとに出す操作を決め、ズレの警告は行ごとに直す画面へのリンクを持つ。評価の確定の前に『上司の判断』の欄を置き、結論と印を全ての表示先で同じ形に出す。印刷は A4 縦2枚組にする。
+2026-10-21〜22 の追加: 個人別の評価レポートの印刷を整えた。用紙は A4 縦を既定とし、複数枚を許して全文を残す。A3 横は選んだときに標準1枚で、①〜④と上長のコメントを左、⑤〜⑦を右に置く。アプリのナビとリンク先の URL は紙に出さない。キーごとの点数・等級の推移・黒い縦線の意味が見て分かるよう、得点の棒と実績値の線を分けて説明する。紙用のグラフとフォントは、画面の表示後に背景で準備する。
+根拠: qa-aa01-report-access-print、qa-aa03-report-paper-user-revision、qa-aa04-report-landscape-onepage-design、qa-aa05-report-score-grade-request、qa-aa09-report-print-final-alignment、qa-aa10-report-print-background-preparation（system-spec/ui-ux.md）
+
 ## Context and drivers
 
 出発点は、会社や利用者を追加しても一覧に出ず、再読み込みしても出ないという報告で、新規作成の全機能に共通する問題として扱った（qa-u01）。連続作成の画面では、利用者が選んだとおり一覧の反映を最優先にし、控えはサーバーに保存して一覧の行から開き直せるようにした（qa-u19）。2026-10-12 の依頼（qa-v01）、利用者の決定（qa-v02）、上位概念 G6〜G15 の全文承認（qa-v03）が追加の駆動要因である。並べ替えは、利用者が Pointer Events で自作する案を選んだ（D-005、qa-v13）。権限一覧は、利用者が一覧表・項目ごとの詳細・スマホのカードの組み合わせを求めた（D-006、qa-v14）。この章の全文は、2026-10-13T00:03:46Z に利用者が全文のまま承認した（qa-v18）。上流指針は Apple HIG で、取り直しても入力中のフォームの内容とスクロール位置を失わないこと、画面全体を読み込み中の表示に切り替えないことを導く。追加要件では、可否を色だけでなく記号と言葉で示すこと、説明をポインター・フォーカス・タップのどれでも出すことも導く。根拠: qa-v18, qa-r-uiux-3, qa-u01, qa-u19, qa-v13, qa-v14／system-spec/ui-ux.md
@@ -77,6 +81,10 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 2026-10-22 の依頼（qa-ab01、画像5枚）は、行動指針の分け方の誤り、行動指針と KPI・評価セットの画面の認知の負荷の高さ、後から設定した方を正とする追従、評価を作る画面を試すデータ、見た目の古さを挙げた。調査では、画像の行動指針のカードは等級1だけが2つ目のまとまりへ移った状態と一致し（qa-ab02）、KPI・評価セットの入口は7つの作業を1画面に並べていた（qa-ab03）。利用者は、ずれた会社はデータを既定へ書き換える（qa-ab10）、下書きのアンケートの変更は保存と同時に設定へ反映する（qa-ab07）、公開中のアンケートには次の版の下書きを自動で作る（qa-ab08）、確定した評価は確定した時点のまま残す（qa-ab09）、決まりに合わない保存は断って理由と直す所を示す（qa-ab11）を選んだ。色使いは、ボタンだけでなくほかの部品にも広げるよう指示した（qa-ab14）。2026-10-21 の依頼では、A4 か A3 での印刷の整え、URL の入らない出力、キーごとの点数と等級の推移、基準帯の黒い縦線の意味、印刷の待ち時間の長さが挙がった（qa-aa03・qa-aa05・qa-aa10）。
 根拠: qa-ab01、qa-ab02、qa-ab03、qa-ab07、qa-ab08、qa-ab09、qa-ab10、qa-ab11、qa-ab14、qa-aa03、qa-aa05、qa-aa10（system-spec/ui-ux.md）
 
+2026-10-19〜20 の追加: 2026-10-19 の依頼（事業所の達成率の削除・図とグラフのあるレポート・直属の部下の閲覧・アンケートの全機能の監査・整合）と、作業中に届いた A4 の印刷の依頼（qa-x08・qa-y08）、2026-10-20 の上司の判断の依頼で、画面の構成が変わった。優先する品質は、一目で分かる図と表（G18）、役割ごとの見え方（G19）、状態に合った操作だけを出すこと（G21）、判断と理由の見せ方（G24）である。
+2026-10-21〜22 の追加: 2026-10-21 の依頼で、利用者は『A4であれば複数枚またがってもOK』『A3であれば1枚にまとめる』と述べ、URL などが入ったレポートの出力が不適切だと示した（qa-aa03）。あわせて、キーごとの点数と等級の変化がパッと見て分かること、黒い縦の線の内容が適切かを問うた（qa-aa05）。
+根拠: qa-aa03-report-paper-user-revision、qa-aa05-report-score-grade-request（system-spec/ui-ux.md）
+
 ## Goals and non-goals
 
 ゴールは G1（同じタブで成功の知らせと一覧がそろう）、G3（他タブと画面復帰で古い一覧を残さない）、G6（等級はその会社の等級名だけで表す）、G8（役割ごとにできることをページ名の単位で確かめられる）、G9（見てよい人だけが等級と点数を一覧で見る）、G11（提出状況を一覧で見る）、G12（設定不足は何・どう直す・どこで直すを示す）、G13（並べ替えをドラッグとキーボードでも行える）、G14（押しても何も起きない選択肢を無くす）、G15（右側の余白を無くす）である。非ゴールは、別の利用者の画面への即時配信、オフライン編集と同期、配色・テーマの変更、本番データの移行・修正で、等級名の一律の書き換え（I7）だけは追加要件として扱う。全画面共通の本文の最大幅と、配色・明るさのテーマの契約は変えない（AGENTS.md と DD-003）。根拠: qa-v18, qa-r-uiux-3, qa-u24／system-spec/ui-ux.md
@@ -91,6 +99,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 
 2026-10-21〜22 の追加: Goals に G25（行動指針の既定の分け方を新しい会社と既定からずれた会社の両方で成り立たせる）、G26（行動指針と KPI・評価セットの画面を、最初は判断に要る状態・件数・次にやることだけにする）、G27（後から変えた方を正とする両方向の追従）、G28（評価を作る画面を試す仮のデータ）、G29（全ての共通部品のグラデーションと色の変化）を足した。G26 では情報を消さず、見せ方を変える。Non-goals: 平賀配色への移行と、テーマの契約テストの書き換え。画面ごとの組み替えは I27 の2画面と評価を作る画面に限り、ほかの画面へは共通部品を通して効かせる（I33）。範囲の外の「本番データの移行・修正」の除外に、行動指針の既定の割り当てへの書き換え（I26）を足した（qa-ab17）。
 根拠: qa-ab13、qa-ab14、qa-ab15、qa-ab17、G25、G26、G27、G28、G29、appr-foundation-020（system-spec/ui-ux.md）
+
+2026-10-21〜22 の追加: Goals: A4 は本文を欠落させずに複数枚で、A3 は1枚で刷れる。キーごとの獲得点／配点と判定、全確定期の等級ラベルと達成率の推移が見える。黒線が実績値の位置であって得点ではないことが凡例で分かる。Non-goals: 新しい列・再計算・判断基準・閲覧権限の追加、新しい API・永続ジョブ・スキーマ、ブラウザ自身のヘッダーとフッターを全環境で強制すること（残るときは印刷設定でオフにする案内を出す）。
+根拠: qa-aa04-report-landscape-onepage-design、qa-aa06-report-score-grade-design、qa-aa08-report-marker-detail-print-design、qa-aa09-report-print-final-alignment、qa-aa10-report-print-background-preparation（system-spec/ui-ux.md）
 
 ## System context and boundaries
 
@@ -135,6 +146,11 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 設定（等級要件・行動指針・KPI・評価セット）とアンケートの設問は、どちらを後から変えても後から変えた方を正とし、もう一方と写しを持つ全ての画面と機能が追従する（G27）。確定した評価と評価レポートは確定した時点のまま残し、確定前の評価だけが最新に追従する（qa-ab09）。設定の写しを持つ場所（アンケートの設問、回答の見出し、評価の項目、ズレの表、評価レポート、CSV など）は一覧にして文書に置き、それぞれを「参照」「追従」「確定した時点の写し」のどれかに決める（I30）。全ての画面の共通部品は、いまのテーマの変数から作るグラデーションと色の変化を持ち、全ての系統・明暗・コントラストを強くする設定・印刷で読みやすさを保ち、平賀配色へは移さない（G29）。評価レポートでは等級名を分類の印として扱って連続した数として線で結ばず、過去の期は評価した時点の等級のまま示す（qa-aa06）。
 根拠: qa-ab07、qa-ab09、qa-ab14、qa-aa06、G27、G29（system-spec/ui-ux.md）
 
+等級の呼び名は、どの画面でもその会社の等級名だけで表し（既定は『等級1』『等級2』『等級3』『等級4-1』『等級4-2』『等級5-1』『等級5-2』）、英語の区分名（Beginner・Regular・Chief・AM・Manager）とカタカナの区分名を出さない。等級名を変えると、等級の一覧・行動指針の向け先・評価セットの区分・昇格の条件と要件・評価の基準・警告文・アンケートのタイトル・ボタン・説明文の全てに、次に表示した画面から反映する。設定不足は1件ごとに『何が足りないか』『どう直すか』『直す画面へのリンク（文字は画面名）』の3つで出し、多いときは直す画面ごとにまとめて初めの数件だけ見せ、制度設定ガイド・会社の管理者のホーム・評価期間・アンケート・事業所の達成率・システムのホームの全てを同じ形にする。権限一覧の説明は1〜2文で、表ではポインターを載せる・フォーカスする・タップするのどれでも出し、カードでは常に見える形で出す。ポインターを載せたときだけ出る情報は作らない。鮮度の面では、取り直しの間も今の表示を保って差し替え、入力中の内容とスクロール位置を失わない。根拠: qa-v18, qa-r-uiux-3, qa-v14／system-spec/ui-ux.md
+2026-10-19〜20 の追加: 図には同じ内容の表か文を添え、色だけで区別しない。本人向けは②に本人向けの理由、③④を判定（A〜E）で描いて点数の数値を出さず、⑤⑥の比べる値を出さない。上司が変えたときは『上司の判断』の印を付け、点数の判定と理由を並べて見せ、判断の記録が無い古い確定は『上司の判断の記録なし（この仕組みより前に確定）』と出す。理由の入力欄の上に『この文は本人にもそのまま見えます。性格ではなく、行動や事実で書いてください』と出す。設定不足の表示をそろえる画面の並びから事業所の達成率を外す（事業所の達成率の画面を無くすため）。
+2026-10-21〜22 の追加: 本人向けの紙面と画面に、点数の数値・割合・同じ等級の平均を持たせない既存の形を保つ。認可と確定の条件は変えない。
+根拠: qa-aa06-report-score-grade-design、qa-aa10-report-print-background-preparation（system-spec/ui-ux.md）
+
 ## Subtype architecture
 
 合成対象の subtype と該当テンプレート:
@@ -144,6 +160,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 - Infrastructure: N/A: subtype 非選択
 - Data: N/A: subtype 非選択
 - Security: N/A: subtype 非選択
+
+2026-10-21〜22 の追加: Frontend に、評価レポートの印刷（A4・A3）・得点と実績の図・印刷の背景での準備を足す。部品の実装は system-spec-frontend が担う。
+根拠: qa-aa04-report-landscape-onepage-design、qa-aa08-report-marker-detail-print-design、qa-aa10-report-print-background-preparation（system-spec/ui-ux.md）
 
 ### Frontend architecture
 
@@ -156,6 +175,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 
 2026-10-21〜22 の追加: 設定かアンケートを保存した直後に、関係する全ての画面を取り直し、他のタブにも知らせて新しい内容で出す（I30、製品仕様 §27）。保存の結果の文で、どのアンケートと評価が変わったかを示す（I29）。評価レポートは画面を出した後に紙用の全てのグラフとフォントを裏で用意し、用意ができてから利用者が押したときだけ印刷を開く（qa-aa10）。
 根拠: qa-ab07、qa-ab08、qa-aa10、G27（system-spec/ui-ux.md）
+
+2026-10-21〜22 の追加: 印刷の体裁は、@page margin:0 と本文側の12mm の padding、box-decoration-break:clone（webkit 併記）のページごとの反復で作り、ブラウザの URL と日時の余白表示を抑える。A4 は後半を新しい紙から始め、長文や長い実績は続きのページへ送る。A3 に収まらないときは切り詰めや極端な縮小をせず、A4 で全文を印刷する操作へ案内する。保存や確定などの操作パネルは紙に出さない。
+根拠: qa-aa04-report-landscape-onepage-design、qa-aa09-report-print-final-alignment（system-spec/ui-ux.md）
 
 #### Routes, screens and navigation
 
@@ -172,6 +194,10 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: KPI・評価セットの入口（/admin/scheme）から、等級区分ごとの設定・全等級区分に共通の設定・KPI 項目・KPI カテゴリへ、それぞれ別の画面で進める（O26）。画面ごとの組み替えは、行動指針と KPI・評価セットの2画面と評価を作る画面に限る（I33）。評価・結果を確認する画面（/manager/cycles）では、見本の会社で「提出済みの回答から評価を作る」を押して評価の一覧と詳細まで進める（G28）。評価レポートには社員の詳細への直接のリンクを足し、回答からはその回答に対応した見てよい評価へ移れる（qa-aa01）。評価の詳細の今の印刷は「評価の詳細を印刷」として確定レポートへの入口と分け、確定前でも残す（qa-aa08）。
 根拠: qa-ab03、qa-ab05、qa-aa01、qa-aa08、G26、G28（system-spec/ui-ux.md）
 
+2026-10-19〜20 の追加: 事業所の達成率の画面とサイドバーの項目を消す。個人別の評価レポートの画面を足し、管理者・マネージャー・本人の入口から開く。マネージャーの担当チームの一覧と評価の画面から直属の部下の評価の中身とレポートへ移れる。古い版の配布 URL には、同じ評価期間・等級の公開中の新しい版への案内を出す。
+2026-10-21〜22 の追加: 社員詳細からレポートへの直リンクを加え、レポートが最新の確定評価であることを明示する。回答からは、回答 ID に対応した閲覧可能な評価へ接続する。全体管理者は既存の会社切替で、選んだ会社の全メンバーを閲覧できる。評価詳細の既存の印刷は『評価の詳細を印刷』として、確定レポートの入口と区別する。
+根拠: qa-aa01-report-access-print、qa-aa08-report-marker-detail-print-design（system-spec/ui-ux.md）
+
 #### Component and design-system boundaries
 
 権限一覧は、表・役割のタブ・スマホのカード・説明を1つの部品にし、ページとモーダルで同じものを出す（D-006）。可否は記号と言葉を併用して色だけに頼らない。説明は1〜2文で、表ではポインター・フォーカス・タップのどれでも出し、カードでは常に見える形で出す。モーダルは閉じるボタンと Esc で閉じ、開いたらフォーカスを中へ移し、閉じたら元のボタンへ戻す。並べ替えの対象は、今、矢印のボタンで並べ替える等級要件・昇格の条件と要件・アンケートの設問と、新しく並べ替えを足す設問の選択肢である。つまみを押したまま（マウスは押し続け、タッチは長押し）上下に動かし、動かしている間は落とす位置を示し、矢印のボタン（先頭へ・1つ上へ・1つ下へ・末尾へ）もドラッグの代わりの単一ポインターの操作として残す。キーボードではつまみにフォーカスして Space で持ち上げ、↑↓で動かし、Space で置き、Esc で戻し、何番目になったかを読み上げる。タッチの長押しはふつうのスクロールと取り違えない（D-005）。読み取り専用の表示は押せるように見せず、下に固定したバーが選択肢に重ならないようにし、配色・明るさのテーマの契約は変えない。出典は WCAG 2.2 の解説（w3c-wcag22-dragging-movements、w3c-wcag22-content-on-hover-focus、w3c-wcag22-reflow）と APG（w3c-apg-tabs、w3c-apg-tooltip、w3c-apg-dialog-modal）である。根拠: qa-v18, qa-v13, qa-v14／system-spec/ui-ux.md
@@ -186,6 +212,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 
 2026-10-21〜22 の追加: globals.css に既存の意味のトークンと color-mix だけで部品クラスを足し、ボタン・カード・見出し・選ぶ部品・状態の印・進み具合・数の面・知らせ・表・いまいる場所の印（AppSidebar・HeaderNav）の共通部品から使い、TSX には色を書かない（I32）。1つの面で主の操作は1つにして最も強いグラデーションで示し、副の操作は薄い色にする。押す・選ぶ・開く部品は、指を乗せた・押した・選んだ・開いた・キーボードで選んだ（focus-visible）状態をそれぞれ見て分かるようにし、押せる面は 44px 四方以上を保つ（I33、w3c-wcag22-focus-visible・w3c-wcag22-target-size-enhanced）。光の動きは短く控えめにして prefers-reduced-motion では止め、prefers-contrast と印刷では平らな面に戻し、見出しの面の微グラデ（hero-tint）の「1画面1箇所」は保つ。段階的な開示（Disclosure・HintToggle・RevealToggle・InlineDetail）と境界のはっきりしたカード（Card・CardHead）は共通部品に入れ、同じ部品を使う全ての画面に効かせる。評価レポートの基準帯の凡例は「黒線＝実績値の位置（得点ではありません）」とし、得点の棒と基準帯を分けて示す（qa-aa08）。
 根拠: qa-ab06、qa-ab14、qa-ab15、qa-aa08、G26、G29、appr-foundation-017（system-spec/ui-ux.md）
+
+2026-10-21〜22 の追加: 評価者向けの KPI 一覧に、キーごとの獲得点／配点と判定を図と併記する。⑤は全確定期の等級ラベルと達成率を時系列の折れ線と表で示し、等級名は分類のラベルとして線を結ばない。期や等級をまたぐ図は、評価者向けは KPI 合計／満点、本人向けは等級要件の達成率を使い、過去の期は評価の時点の等級を保つ。得点の棒の上は『得点の割合』、基準帯の上は『実績の位置（現在の基準）』とし、凡例『黒線＝実績値の位置（得点ではありません）。』『帯は現在の基準、判定は集計時の記録です。』を出す。黒線が表示範囲の外にあるときは方向を文で説明し、実績値と単位を title と aria にも含める。
+根拠: qa-aa06-report-score-grade-design、qa-aa07-report-threshold-marker-audit、qa-aa08-report-marker-detail-print-design（system-spec/ui-ux.md）
 
 #### State and data flow
 
@@ -202,6 +231,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 下書きのアンケートで設定とつながった設問を足す・外す・文を直すと、保存と同時に元の設定（KPI の設問の文・評価セットの項目・行動指針の観点・等級要件）へ反映する（I28）。評価セットの決まり（等級区分ごとの項目数・固定枠・20点枠）や KPI の計算に要る設問に合わなくなる保存は、アンケートも設定も変えずに断る（qa-ab11）。設定を保存すると、回答0件の下書きを作り直し（設定とつながらない設問は残す）、回答のある公開中のアンケートには次の版の下書きを1つだけ作り、確定前の評価は集計し直す（I29）。いまずれている下書きは、更新時刻の新しい方へそろえる（I30）。レポートの印刷の準備の結果は同じ会社・社員・閲覧の形・内容の画面の中だけで使い回し、どれかが変わるか画面を離れたら古い処理と結果を捨てる（qa-aa10）。
 根拠: qa-ab07、qa-ab08、qa-ab09、qa-ab11、qa-aa10、G27（system-spec/ui-ux.md）
 
+2026-10-21〜22 の追加: 評価の対象を絞る処理で、employeeIds が空の配列のときに全員を対象にしていた不具合を直した（未指定は全員、空の配列は対象なし）。紙用の準備の結果は、同じ会社・社員・閲覧形・内容の画面の中だけで再利用し、変更や離脱で古い処理と結果を破棄する。
+根拠: qa-aa02-empty-evaluation-scope、qa-aa10-report-print-background-preparation（system-spec/ui-ux.md）
+
 #### Backend integration
 
 画面に出す等級名・点数は、サーバーが返す値をそのまま出す。権限一覧の可否・操作・説明は、実際の判定と同じ定義（route-ledger.json の各ページに置いた権限の定義。D-007 ①）から作った値を出す。等級と点数は、システム全体管理者・会社の管理者・マネージャーが開く一覧にだけ載り、一般の社員はその一覧を開けず値も見えない。提出状況は、対象者の全員が提出済み・入力途中・未回答のどれか1つで出る。並べ替えの保存は並び順の全体を送る形にする（I14）。根拠: qa-v18, qa-v25, qa-v27, qa-v28, qa-v30／system-spec/ui-ux.md・system-spec/auth.md・system-spec/security.md・system-spec/backend.md
@@ -212,12 +244,18 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: アンケートから設定への反映も、設定の保存と同じ権限（会社の管理者以上）・会社の絞り込み・同時に保存したときの 409・制度の変更の記録を通す（I28）。決まりに合わない保存を断るときは、合わない決まりと直す画面を示す。見本のデータは buildSeed の使い回しのまま INSERT だけで作り、見本の会社に紐づく行だけに触れる（I31）。評価レポートの改善では新しい API・永続のジョブ・外部への送信・スキーマを足さず、本人向けに点数の数値・割合・同じ等級の平均を持たせない今の形を保つ（qa-aa06・qa-aa10）。
 根拠: qa-ab05、qa-ab11、qa-aa06、qa-aa10、G27、G28（system-spec/ui-ux.md）
 
+2026-10-21〜22 の追加: 新しい API・永続ジョブ・外部送信・スキーマは足さない。コメントのみの保存は判断や設定を変えず、昇給と昇格の結論は上司の判断と理由の確定で変える。
+根拠: qa-aa01-report-access-print、qa-aa10-report-print-background-preparation（system-spec/ui-ux.md）
+
 #### Performance and observability
 
 他タブは通知の受信またはタブ復帰から1秒以内に新しい行を表示する（O3）。取り直しの間に画面全体を読み込み中の表示に切り替えないので、待ち時間が利用者の操作を止めない。設定不足が多い画面は直す画面ごとにまとめ、初めの数件だけ出して残りは開いて見る形にし、一度に読む量を抑える。根拠: qa-v18, qa-r-uiux-3／system-spec/ui-ux.md
 
 2026-10-21〜22 の追加: 評価レポートは、画面を出した後に紙用の全てのグラフとフォントを裏で用意し、A3 を選んだときだけ紙面の測定を先に行う（qa-aa10）。用意の間も用紙の選択と別の画面への移動ができ、取り消しと再試行を出す。図と文字は15秒を上限に待ち、揃わなければ印刷を開かず理由と再試行を示す（qa-aa01）。本番の長い待ちはまだ再現しておらず、手元の測定を本番の実測として扱わない。
 根拠: qa-aa01、qa-aa10（system-spec/ui-ux.md）
+
+2026-10-21〜22 の追加: 画面の表示後に紙用の全グラフとフォントを背景で準備し（A3 を選んだときは紙面の測定を先に行う）、準備中も用紙の選択と別画面への移動ができ、取消と再試行がある。準備が整った後の明示のクリックでだけ印刷を開く。図と文字が15秒で揃わなければ印刷を開かず、理由と再試行を示す。
+根拠: qa-aa01-report-access-print、qa-aa10-report-print-background-preparation（system-spec/ui-ux.md）
 
 #### Frontend verification
 
@@ -234,6 +272,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 初期表示で見える説明文の数と1文の長さ（40字）と、同じ文が1画面に2回出ないことを画面のテストで固定する（O26）。KPI・評価セットの入口から4つの作業へ別の画面で進めること、等級区分ごとのカードに等級の並び・項目数・配点の合計・状態が出ること、KPI 項目の聞くことが1つずつ別の行に出ること、スマホとタブレットの幅で横にはみ出さないことを E2E で確かめる。初期設定の説明がいまの割り当てと一致し、既定と違うときに違いを示すことを画面のテストで確かめる（O25）。保存の直後に関係する画面と他のタブが新しい内容で出ること、見本の会社で評価を作って一覧と詳細まで進めることを E2E で確かめる（O27・O28）。共通部品が新しい部品クラスを使い TSX に色を書いていないこと、全ての系統と明暗での色の比、focus-visible の印、prefers-reduced-motion で動きが止まることをテストし、主要な画面の明暗の見た目を記録する（O29）。評価レポートの印刷は、実際の PDF での最終の試験の結果を受領書へ追記する（qa-aa08・qa-aa09）。
 根拠: qa-ab03、qa-ab05、qa-ab14、qa-aa08、qa-aa09、G25、G26、G27、G28、G29（system-spec/ui-ux.md）
 
+2026-10-21〜22 の追加: 印刷の体裁（ナビと URL を紙に出さないこと・A4 で全文が残ること・A3 の1枚と過長のときの案内）を画面のテストで確かめる。employeeIds が空の配列のときに対象が無いことは、実 DB の回帰テストで確かめた。
+根拠: qa-aa02-empty-evaluation-scope、qa-aa04-report-landscape-onepage-design、qa-aa09-report-print-final-alignment（system-spec/ui-ux.md）
+
 ## Architecture decisions
 
 D-001（opt-broadcast）により、他タブへは BroadcastChannel で知らせ、visibilitychange と pageshow（persisted）でも取り直すので、利用者はタブを戻すだけで最新の一覧を見られる。D-002（opt-server-functions）により書き込みを Server Functions へ移し、成功の応答で表示中の画面を作り直す（後に next/cache の refresh にそろえた）ので、成功の知らせと一覧が同じ描画で出る。控えは成功の知らせの後ろに畳み『仮パスワードの控えを見る』で開き、開いた控えには発行の日時と開ける期限（発行から14日）を出し、期限を過ぎた控えは一覧の行にボタンを出さず再発行を案内する。D-005（opt-pointer-hook）は利用者が選んだ案で、AI の推奨と同じである（qa-v13）。ドラッグに加え、矢印のボタンをドラッグの代わりの操作（WCAG 2.2 の SC 2.5.7）として残し、キーボードでも同じことができる。D-006（opt-combined）は、利用者が自由記述で①②③の組み合わせを求めたので足した案で、AI の推奨（opt-single-table）とは別の案である（qa-v14）。D-007（opt-route-ledger-extend）は利用者が選んだ案で、AI が委任に基づいて選んだ別の案とは違う（qa-v25）。権限一覧の可否・操作・説明は、実際の判定と同じ定義（route-ledger.json）から出す。表の行と列の組み方、開閉の状態を端末ごとに覚えること、モーダルのフォーカスの扱い、直す画面ごとのまとめ方、キーボードの割り当て、余白を埋める手段の候補は、この章の全文に書いて示し、利用者が全文のまま承認した（qa-v18、2026-10-13T00:03:46Z）。根拠: qa-v18, qa-r-uiux-3, qa-u19, qa-v13, qa-v14, qa-v25／system-spec/ui-ux.md
@@ -249,6 +290,9 @@ D-001（opt-broadcast）により、他タブへは BroadcastChannel で知ら�
 2026-10-21〜22 の追加: 利用者は、既定からずれた会社はデータを既定へ書き換えること（qa-ab10）、下書きのアンケートでの変更は保存と同時に設定へ反映すること（qa-ab07）、公開中のアンケートには次の版の下書きを自動で作ること（qa-ab08）、決まりに合わない保存は断って理由と直す所を示すこと（qa-ab11）を選んだ。これに合わせて、DD-010 の「移行で書き換えない」、DD-015・DD-016、製品仕様 §14 の「受付中の期は作らない」を改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す。色使いは globals.css の部品クラスとして既存の意味のトークンと color-mix だけで書き、テーマの契約テストと globals.css 冒頭の宣言は書き換えない（qa-ab06、AGENTS.md と DD-003）。印刷の用紙の初期選択は A4 縦のままにし、A3 横は選んだときに1枚を標準とし、収まらなければ A4 の全文の印刷へ案内する（qa-aa09、qa-aa04 の A3 を既定にする案は採らない）。URL と日時の余白の表示は @page margin:0 と本文の12mm の余白のページごとの繰り返しで抑え、残るときは印刷設定でヘッダーとフッターを切る案内を出す。
 根拠: qa-ab06、qa-ab07、qa-ab08、qa-ab10、qa-ab11、qa-ab16、qa-aa04、qa-aa09、appr-foundation-018（system-spec/ui-ux.md）
 
+2026-10-21〜22 の追加: 用紙の初期選択は A4 縦のままとし、qa-aa04 の A3 既定の案と『余白ボックスも空にする』案は採らない（qa-aa09）。黒線は実績値の位置として残し、保存された得点と判定を再計算・上書きして帯へ合わせない（qa-aa07）。過去の質疑の本文は履歴として残し、今の規範は qa-aa09 と製品仕様 §29・DD-025 による。
+根拠: qa-aa04-report-landscape-onepage-design、qa-aa07-report-threshold-marker-audit、qa-aa09-report-print-final-alignment（system-spec/ui-ux.md）
+
 ## Delivery, migration and rollback
 
 鮮度の仕組みは Server Functions への移行を終えており、書き込みの二つの経路の混在は残っていない（D-002 の 2026-10-01 追記）。等級名は、既定を『等級1』〜『等級5-2』にし、既存の会社の等級名と英語を含む表示名を一律に書き換える移行を入れる（I7）。受入では、既定の等級名と移行後の本番の等級名が『等級N』『等級N-M』の形であることを確かめる（O6）。余白の見直しは画面ごとの配置（幅に応じた2列の段組み、補足の情報を右の列に置く、などから選ぶ）で行い、全画面共通の本文の最大幅と配色・テーマには手を入れない。根拠: qa-v18／system-spec/ui-ux.md
@@ -261,6 +305,10 @@ D-001（opt-broadcast）により、他タブへは BroadcastChannel で知ら�
 
 2026-10-21〜22 の追加: 行動指針は、等級の内部の識別子で既定の割り当て（等級1・2で1つ、等級3・4-1・4-2で1つ、等級5-1・5-2は出さない）へ書き換えるデータの移行を足し、書き換えるのは等級とまとまりの割り当てだけで、観点の文と会社が足した観点は残す（I26）。移行の後に会社が割り当てを変えたときはその変更を正とし、書き換えた会社のアンケートは I29 の規則で追従させる。この書き換えは、範囲の外の「本番データの移行・修正」の除外に挙げた（qa-ab17・qa-ab18）。本番の見本の会社への仮のデータは既存の db:sample:remote の手順で入れ、実行の前に利用者の確認を取る（I31）。
 根拠: qa-ab10、qa-ab17、qa-ab18、G25、G28、appr-foundation-020（system-spec/ui-ux.md）
+
+2026-10-19〜20 の追加: 事業所の達成率の画面とメニューは1回目の Deploy で消える。判断の欄と結論の表示は、判断の列のマイグレーションと同じ Deploy で出し、古い確定は『記録なし』の表示になる。
+2026-10-21〜22 の追加: 印刷の準備は画面の中だけで行い、新しい API・スキーマを足さないので、マイグレーションは要らない。
+根拠: qa-aa10-report-print-background-preparation（system-spec/ui-ux.md）
 
 ## Risks and verification
 
@@ -276,4 +324,7 @@ D-001（opt-broadcast）により、他タブへは BroadcastChannel で知ら�
 
 2026-10-21〜22 の追加: 危険は、基準帯の黒い縦線を得点と読み違えること（黒線は実績値の位置で、項目の基準・単位・向きが違えば同じ判定でも位置が違う、qa-aa07）と、本番の見本の会社に受付中の期を作ると本番の未回答の一覧に見本の人が並ぶこと（I31）である。黒線には凡例・単位・範囲の外にあるときの向きの説明を足し、保存した得点と判定を帯に合わせて計算し直さない（qa-aa08）。O25〜O29 で、既定への書き換えの移行、初期表示の量と作業ごとの画面、両方向の反映と断る保存、見本の生成、共通部品の色の比を確かめる。既存のテーマの契約テスト（theme-contract・palette-contract・ui-rules・aidd-kit-boundary）は書き換えずに通す（O29）。
 根拠: qa-aa07、qa-aa08、qa-ab05、qa-ab06、G25、G26、G27、G28、G29（system-spec/ui-ux.md）
+
+2026-10-21〜22 の追加: リスクは、ブラウザ自身のヘッダーとフッターを全環境で強制できないことで、残るときは印刷設定でオフにする案内を出す。異なる満点や項目構成の点数の大小だけで優劣を断定しない。本番の長い待機はまだ再現しておらず、ローカルの測定を本番の実測として扱わない。
+根拠: qa-aa04-report-landscape-onepage-design、qa-aa06-report-score-grade-design、qa-aa10-report-print-background-preparation（system-spec/ui-ux.md）
 

@@ -1,4 +1,5 @@
 import { and, eq, ne } from "drizzle-orm";
+import { z } from "zod";
 import { hashPassword } from "better-auth/crypto";
 import { getDb, schema as s } from "@/lib/db";
 import { batchAll, type BatchStatement } from "@/lib/db-batch";
@@ -12,6 +13,15 @@ import { normalizeKey } from "@/lib/csv-normalize";
 import { memoPurgeExpired, memoUpsert, sealMemo, type VaultKey } from "@/lib/credential-vault";
 
 /* ───────────────── 社員一覧の取り込み ───────────────── */
+
+/** 氏名・所属の上限（画面の登録・編集の z.string().max(60) と同じ） */
+const NAME_MAX = 60;
+/** メールの長さの上限（RFC 5321 の 254 文字） */
+const EMAIL_MAX = 254;
+/** メールの形は画面の登録（members.ts）と同じ zod の検査。長さは先に EMAIL_MAX で見てから渡す */
+const MEMBER_EMAIL = z.string().email();
+/** 取り込めない理由を明かさない行の文言 */
+const UNAVAILABLE_ROW = "この行は取り込めませんでした（全体管理者へお問い合わせください）";
 
 export type MemberRowResult = {
   row: number;
@@ -202,13 +212,20 @@ export async function importMembersCsv(
 
     if (name === "" && email === "") continue;
     if (name === "") { fail("氏名が空欄です"); continue; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fail(`メールアドレスの形式を確認してください（${email || "空欄"}）`); continue; }
+    // 長さは画面の登録・編集と同じ上限にそろえる（DD-032 の17）
+    if (name.length > NAME_MAX) { fail(`氏名は${NAME_MAX}文字以内にしてください`); continue; }
+    if (at(line, col.department).length > NAME_MAX) { fail(`所属は${NAME_MAX}文字以内にしてください`); continue; }
+    // 長さを先に見る。zod は1つの検査が落ちても次の検査を流すので、長い値が形の正規表現に渡らないようにする（DD-032 の10）
+    if (email.length > EMAIL_MAX) { fail(`メールアドレスは${EMAIL_MAX}文字以内にしてください`); continue; }
+    // 形は画面の登録と同じ検査にそろえ、理由には受け取った値を写さない
+    if (!MEMBER_EMAIL.safeParse(email).success) { fail(email ? "メールアドレスの形式を確認してください" : "メールアドレスが空欄です"); continue; }
     if (seenEmail.has(email)) { fail(`同じメールアドレスがこのファイルの${seenEmail.get(email)}行目にもあります`); continue; }
     seenEmail.set(email, rowNo);
 
     const existing = userByEmail.get(email);
-    // この会社に所属していない人（他社だけの人・全体管理者）は、取り込みでは変えない
-    if (existing && !membershipByUser.has(existing.id)) { fail("このメールアドレスは他社で使われています"); continue; }
+    // この会社に所属していない人（他社だけの人・全体管理者）は、取り込みでは変えない。
+    // 他社に人がいるかどうかを会社の管理者へ知らせないよう、理由はぼかす（DD-032 の17）
+    if (existing && !membershipByUser.has(existing.id)) { fail(UNAVAILABLE_ROW); continue; }
 
     const employeeCode = at(line, col.employeeCode) || null;
     if (employeeCode) {

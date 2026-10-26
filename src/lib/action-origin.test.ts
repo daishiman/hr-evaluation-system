@@ -90,12 +90,21 @@ describe("runAction・runRead の入口で、送り元のサイトを確かめ�
     expect(mocked.getSession).toHaveBeenCalledOnce();
   });
 
-  it("Origin を付けない呼び出し（画面以外）は、この検査ではなくログインの確認で止まる", async () => {
-    request({ host: "hyoka.example" });
+  it("Origin が無くても、ブラウザが同じサイトからと示していれば検査を通り、ログインの確認へ進む", async () => {
+    request({ host: "hyoka.example", "sec-fetch-site": "same-origin" });
     expect(await runAction({ operation: "account.updateProfile", input }, { name: "a" }, vi.fn())).toEqual({
       ok: false,
       message: "ログインが必要です。",
     });
+  });
+
+  it("Origin も Sec-Fetch-Site も無い呼び出しは、送り元を確かめられないので断る（DD-032 の17）", async () => {
+    request({ host: "hyoka.example" });
+    expect(await runAction({ operation: "account.updateProfile", input }, { name: "a" }, vi.fn())).toEqual({
+      ok: false,
+      message: REJECTED,
+    });
+    expect(mocked.getSession).not.toHaveBeenCalled();
   });
 });
 

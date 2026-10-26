@@ -1,5 +1,7 @@
 # 機能文書の入口
 
+脆弱性対策の[機能定義](./vulnerability-audit-and-hardening.md)と[context](./feature-vulnerability-audit-and-hardening.context.json)、[タスク一覧](../tasks/feature-vulnerability-audit-and-hardening/README.md)に対応する現在の状態は[最終レビュー・仕様反映受領書](../docs/product/spec-receipts/2026-10-27-vulnerability-final-review-pr.md)を参照。Beadsは`hr-r2r`・`hr-r2r.1`〜`.13`。P01〜P12をレビューし、P13はマージ後に残す。
+
 行動指針と KPI・評価セットの [機能定義](./guideline-kpi-ux-and-two-way-sync.md) と [context](./feature-guideline-kpi-ux-and-two-way-sync.context.json) に対応する変更は、[2026-10-26 最終レビュー・仕様反映受領書](../docs/product/spec-receipts/2026-10-26-guideline-kpi-pr-review.md) を参照してください。Beads は `hr-6pi.1`〜`hr-6pi.13`、dev-graph は `SYS-GUIDE-KPI-P01`〜`P13` です。P01〜P12 の成果物をまとめてレビューし、P13 の本番作業は未実施です。
 
 評価レポートの [生成された機能定義](./evaluation-report-and-raise-judgment.md) と [context](./feature-evaluation-report-and-raise-judgment.context.json) は計画時点の記録です。

@@ -16,6 +16,7 @@ import { writeMembership, type MembershipValues } from "@/lib/memberships";
 import { getSelfProfile, listProfileFieldPolicies } from "@/lib/queries";
 import { AUTH_ATTEMPT_RATE_LIMIT, consumeRateLimit } from "@/lib/rate-limit";
 import { HttpError } from "@/lib/session";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/security/password";
 
 type SqliteBatchItem = BatchItem<"sqlite">;
 
@@ -31,8 +32,8 @@ const passwordSchema = z.object({
   currentPassword: z.string().min(1, "いまのパスワードを入力してください"),
   newPassword: z
     .string()
-    .min(10, "新しいパスワードは10文字以上にしてください")
-    .max(200, "新しいパスワードが長すぎます"),
+    .min(PASSWORD_MIN_LENGTH, `新しいパスワードは${PASSWORD_MIN_LENGTH}文字以上にしてください`)
+    .max(PASSWORD_MAX_LENGTH, "新しいパスワードが長すぎます"),
 });
 
 const WRONG_PASSWORD = "いまのパスワードが違います。もう一度お試しください。";

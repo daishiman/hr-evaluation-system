@@ -24,7 +24,7 @@ const responseSchema = z.object({
         questionId: z.string().min(1),
         valueNumber: z.number().finite().nullish(),
         valueText: z.string().max(4000).nullish(),
-        /** 複数選択で選んだ選択肢の value。ほかの形式では使わない */
+        /** 選んだ選択肢の value（単一選択は1つ、複数選択はいくつでも）。所属は設問の選択肢で検査する */
         valueChoices: z.array(z.string().max(200)).max(100).nullish(),
       }),
     )

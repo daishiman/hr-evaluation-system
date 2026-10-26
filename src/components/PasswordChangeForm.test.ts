@@ -17,18 +17,15 @@ const CSS = readFileSync(join(SRC, "app", "globals.css"), "utf8");
 describe("パスワード変更画面", () => {
   it("画面に出す文字数の条件は、サーバーの判定と同じ数字である", () => {
     // 画面だけ「8文字以上」に見えてサーバーが10文字を要求する、が最悪。
+    // 数字は src/lib/security/password.ts の1か所だけに置き、画面とサーバーの両方がそこから読む（DD-032 の4）
+    const shared = 'import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/security/password";';
+    expect(FORM).toContain(shared);
+    expect(ROUTE).toContain(shared);
+    // 画面に自前の数字を持たない（持つと、共通の値を変えたときに画面だけ取り残される）
+    expect(FORM).not.toMatch(/(?:MIN|MAX)_LENGTH = \d+/);
     // 「いまのパスワード」の必須指定と混ざらないよう、新しいパスワードの定義だけを見る
     const newPasswordRule = ROUTE.slice(ROUTE.indexOf("newPassword:"));
-
-    const shown = FORM.match(/MIN_LENGTH = (\d+)/)?.[1];
-    const required = newPasswordRule.match(/\.min\((\d+),/)?.[1];
-    expect(shown).toBeTruthy();
-    expect(shown).toBe(required);
-
-    const shownMax = FORM.match(/MAX_LENGTH = (\d+)/)?.[1];
-    const requiredMax = newPasswordRule.match(/\.max\((\d+),/)?.[1];
-    expect(shownMax).toBeTruthy();
-    expect(shownMax).toBe(requiredMax);
+    expect(newPasswordRule).toMatch(/^newPassword:[^;]*?\.min\(PASSWORD_MIN_LENGTH,[^;]*?\.max\(PASSWORD_MAX_LENGTH,/s);
   });
 
   it("ブラウザのパスワード管理と噛み合う指定を持つ", () => {

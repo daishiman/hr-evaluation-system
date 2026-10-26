@@ -24,24 +24,28 @@ export const FRESHNESS_CHANNEL = "hr-evaluation:freshness";
  * 名前は src/actions のファイル名にそろえる。取り込み（member-import・response-import）は、
  * 取り込み先の members・responses を名乗る。書き間違えると、集計で同じ操作が別の行に散る。
  */
-export type FreshnessResource =
-  | "account"
-  | "agent-keys"
-  | "companies"
-  | "company-scope"
-  | "credential-memos"
-  | "cycles"
-  | "evaluations"
-  | "form-align"
-  | "form-extensions"
-  | "forms"
-  | "improvements"
-  | "masters"
-  | "members"
-  | "notes"
-  | "responses"
-  | "scheme"
-  | "system-users";
+export const FRESHNESS_RESOURCES = [
+  "account",
+  "agent-keys",
+  "companies",
+  "company-scope",
+  "credential-memos",
+  "cycles",
+  "evaluations",
+  "form-align",
+  "form-extensions",
+  "forms",
+  "improvements",
+  "masters",
+  "members",
+  "notes",
+  "responses",
+  "scheme",
+  "system-users",
+] as const;
+
+/** 利用状況の受け口も、この一覧に無い種類の /actions/<種類> は数えない（lib/usage.ts。DD-032 の17） */
+export type FreshnessResource = (typeof FRESHNESS_RESOURCES)[number];
 
 export interface FreshnessMessage {
   kind: "saved";

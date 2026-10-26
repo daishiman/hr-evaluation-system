@@ -1,8 +1,8 @@
 "use client";
 
-import { memo, useDeferredValue, useEffect, useId, useMemo, useState } from "react";
+import { memo, useDeferredValue, useEffect, useId, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { CredentialMemoButton } from "@/components/CredentialMemoButton";
 import { Icon } from "@/components/Icon";
@@ -18,6 +18,7 @@ import {
   personLabels,
   QUERY_MAX_LENGTH,
   reversed,
+  settleOwnUrlWrite,
   SORT_KEY_LABEL,
   sortLabel,
   sortPeople,
@@ -54,13 +55,20 @@ function replaceUrlKeepingHistory(url: URL) {
   window.history.replaceState(own, "", url);
 }
 
-function syncPeopleUrl(view: PeopleView, sortKeys: readonly PeopleSortKey[]) {
+/**
+ * 検索語と並びを URL に書き、書いた引数（useSearchParams().toString() と同じ形）を控え（remember）に足す。
+ * Next はこの書き換えを useSearchParams へ後から（transition で）届けるので、届いたときに自分の書き換えだと見分けるのに使う。
+ */
+function syncPeopleUrl(view: PeopleView, sortKeys: readonly PeopleSortKey[], remember: Dispatch<SetStateAction<readonly string[]>>) {
   const url = new URL(window.location.href);
   for (const [key, value] of Object.entries(peopleViewParams(view, sortKeys))) {
     if (value === null) url.searchParams.delete(key);
     else url.searchParams.set(key, value);
   }
-  if (url.href !== window.location.href) replaceUrlKeepingHistory(url);
+  if (url.href === window.location.href) return;
+  replaceUrlKeepingHistory(url);
+  const written = url.searchParams.toString();
+  remember((pending) => [...pending, written]);
 }
 
 export function PeopleList({
@@ -83,20 +91,30 @@ export function PeopleList({
   const keysId = sortKeys.join();
   const [loadedUrl, setLoadedUrl] = useState(urlId);
   const [loadedKeys, setLoadedKeys] = useState(keysId);
+  // 自分で URL に書き、まだ searchParams に届いていない引数（書いた順）
+  const [pendingWrites, setPendingWrites] = useState<readonly string[]>([]);
   // 会社の札やブラウザの「戻る」で移動したら、移動先のURLを採用する。
   // 手元の入力だけが変わった間はURLが同じなので、未反映の入力を消さない。
-  // native replaceStateでもNextのsearchParamsが更新される。cachedなserver props(initial)は復元の根拠にしない。
+  // native replaceStateでもNextのsearchParamsが更新されるが、届くのは後になる。届いた時点で入力がもう先へ進んでいる
+  // （「検索を消す」を押した等）ことがあるので、自分の書き換えが届いただけなら入力を戻さない。
+  // cachedなserver props(initial)は復元の根拠にしない。
   if (loadedUrl !== urlId || loadedKeys !== keysId) {
-    const view = parsePeopleView({
-      q: searchParams.get("q") ?? undefined,
-      sort: searchParams.get("sort") ?? undefined,
-      dir: searchParams.get("dir") ?? undefined,
-    }, sortKeys);
+    const rest = loadedKeys === keysId ? settleOwnUrlWrite(pendingWrites, urlId) : null;
     setLoadedUrl(urlId);
     setLoadedKeys(keysId);
-    setQuery(view.q);
-    setSort(view.sort);
-    setDir(view.dir);
+    if (rest !== null) {
+      setPendingWrites(rest);
+    } else {
+      const view = parsePeopleView({
+        q: searchParams.get("q") ?? undefined,
+        sort: searchParams.get("sort") ?? undefined,
+        dir: searchParams.get("dir") ?? undefined,
+      }, sortKeys);
+      if (pendingWrites.length > 0) setPendingWrites([]);
+      setQuery(view.q);
+      setSort(view.sort);
+      setDir(view.dir);
+    }
   }
   // 入力欄はすぐに変え、一覧の描き直しは後から追いかける
   const deferredQuery = useDeferredValue(query);
@@ -108,7 +126,7 @@ export function PeopleList({
   const visible = useMemo(() => filterPeople(sorted, index, deferredQuery), [sorted, index, deferredQuery]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => syncPeopleUrl({ q: query, sort, dir }, sortKeys), URL_SYNC_DELAY_MS);
+    const timer = window.setTimeout(() => syncPeopleUrl({ q: query, sort, dir }, sortKeys, setPendingWrites), URL_SYNC_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [query, sort, dir, sortKeys]);
 
@@ -121,7 +139,7 @@ export function PeopleList({
   return (
     // 入力から会社の札や詳細へフォーカスが移る時は待たずに確定する。
     // 札や詳細への移動に備える。即時の会社切替も実ブラウザの回帰試験で確認する。
-    <div onBlur={() => syncPeopleUrl({ q: query, sort, dir }, sortKeys)}>
+    <div onBlur={() => syncPeopleUrl({ q: query, sort, dir }, sortKeys, setPendingWrites)}>
       <div className="mb-2 flex flex-wrap items-end gap-3">
         <div className="field min-w-0 flex-[1_1_16rem]">
           <label htmlFor={`${id}-q`}>探す</label>
@@ -265,6 +283,15 @@ const PersonRow = memo(function PersonRow({ row, showMemo }: { row: PeopleListRo
   );
 });
 
+/** 範囲の札の行き先。今の URL の引数（search）のうち、範囲の引数だけを差し替える */
+function scopeHref(basePath: string, param: string, search: string, value: string) {
+  const next = new URLSearchParams(search);
+  if (value === "") next.delete(param);
+  else next.set(param, value);
+  const query = next.toString();
+  return query === "" ? basePath : `${basePath}?${query}`;
+}
+
 /**
  * 一覧の範囲を切り替える札（会社でしぼる など）。
  * 切り替えても、選んでいる並びと検索語は引き継ぐ（URL の q・sort・dir を残す）。
@@ -283,20 +310,30 @@ export function PeopleScopeChips({
   current: string;
 }) {
   const searchParams = useSearchParams();
-  const hrefOf = (value: string) => {
-    const next = new URLSearchParams(searchParams.toString());
-    if (value === "") next.delete(param);
-    else next.set(param, value);
-    const query = next.toString();
-    return query === "" ? basePath : `${basePath}?${query}`;
-  };
+  const router = useRouter();
   return (
     <div className="mb-5 flex flex-wrap gap-2">
-      {items.map((item) => (
-        <ChipLink key={item.value} href={hrefOf(item.value)} current={current === item.value}>
-          {item.label}
-        </ChipLink>
-      ))}
+      {items.map((item) => {
+        const href = scopeHref(basePath, param, searchParams.toString(), item.value);
+        return (
+          <ChipLink
+            key={item.value}
+            href={href}
+            current={current === item.value}
+            onClick={(e) => {
+              // 検索欄を離れた直後は、一覧が書いた検索語がまだ searchParams（描いた href）に届いていない。
+              // 押した時点の URL から行き先を作り直す。別タブで開く押し方はブラウザに任せる
+              if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              const live = scopeHref(basePath, param, window.location.search, item.value);
+              if (live === href) return;
+              e.preventDefault();
+              router.push(live);
+            }}
+          >
+            {item.label}
+          </ChipLink>
+        );
+      })}
     </div>
   );
 }

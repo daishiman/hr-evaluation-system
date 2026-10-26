@@ -1,11 +1,12 @@
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { z } from "zod";
-import { chunkRowsForD1, schema as s, type DB } from "@/lib/db";
+import { chunkRowsForD1, schema as s, summarizeErrorForLog, type DB } from "@/lib/db";
 import { batchAll } from "@/lib/db-batch";
 import { routeIdentityOf, routeMetaOf, ROUTE_META } from "@/lib/nav";
 import type { Role } from "@/lib/session";
 import {
+  ACTION_USAGE_PREFIX,
   addApiCounters,
   addScreenCounters,
   EMPTY_API_COUNTERS,
@@ -13,11 +14,14 @@ import {
   USAGE_BATCH_MAX_APIS,
   USAGE_BATCH_MAX_SCREENS,
   USAGE_MAX_DWELL_MS,
+  USAGE_MAX_ROWS_PER_COMPANY_DAY,
   usageRetentionCutoff,
   type UsageApiCounters,
   type UsageScreenCounters,
 } from "@/lib/domain/usage";
 import { jstDateKey } from "@/lib/domain/jst";
+import { FRESHNESS_RESOURCES } from "@/lib/freshness";
+import { isAllowedAuthRoute } from "@/lib/security/auth-route-allowlist";
 
 /**
  * 利用状況の受け取りと読み出し。
@@ -83,17 +87,40 @@ function screenRouteOf(path: string): string | null {
 }
 
 /**
+ * 数えてよい API（method と形）。src/app/api の route.ts が出している method と同じ並び（結合試験で突き合わせる）。
+ * 記録を送る /api/usage 自身は入れない（数えると、数えたことでまた通信が増える）。
+ * 認証の口は、通している3つだけを数える（auth-route-allowlist.ts を見る）。
+ */
+export const USAGE_KNOWN_API_ROUTES: ReadonlySet<string> = new Set([
+  "POST /api/agent/device",
+  "PUT /api/agent/device",
+  "POST /api/agent/token",
+  "GET /api/export",
+  "GET /api/improvements",
+  "POST /api/improvements",
+  "PATCH /api/improvements",
+  "PATCH /api/improvements/[id]",
+  "GET /api/search",
+  "GET /api/theme-choice",
+  "PUT /api/theme-choice",
+]);
+
+/** 画面からの保存は、変わったものの種類（freshness.ts）の名前だけを数える */
+const KNOWN_ACTION_ROUTES: ReadonlySet<string> = new Set(FRESHNESS_RESOURCES.map((r) => `${ACTION_USAGE_PREFIX}${r}`));
+
+/**
  * APIの宛先（と画面からの保存の種類）を集計用の形にする。
  *
  * 画面の台帳（route-ledger）はAPIを持たないので、ID部分を自前で潰す。
  * ランダムなIDをそのまま残すと、同じAPIが呼ばれるたびに新しい行が増えて
- * 行数の頭打ちが壊れる。
+ * 行数の頭打ちが壊れる。潰した形が上の一覧に無い宛先は数えない（null）。
+ * 好きな文字の宛先を送られて、行が増えたり集計の画面に並んだりしないようにする（DD-032 の17）。
  */
-export function apiRoutePatternOf(path: string): string | null {
+export function apiRoutePatternOf(method: string, path: string): string | null {
   const clean = path.split(/[?#]/)[0] || "";
   /* /actions/ は画面からの保存（Server Action）。宛先URLを持たないので、
      ブラウザ側が種類名で数えて送ってくる（src/lib/usage-client.ts の recordActionCall）。 */
-  if (!clean.startsWith("/api/") && !clean.startsWith("/actions/")) return null;
+  if (!clean.startsWith("/api/") && !clean.startsWith(ACTION_USAGE_PREFIX)) return null;
   const normalized = clean
     .split("/")
     .map((seg) =>
@@ -108,7 +135,28 @@ export function apiRoutePatternOf(path: string): string | null {
         : seg,
     )
     .join("/");
-  return normalized.slice(0, 120);
+  if (normalized.startsWith(ACTION_USAGE_PREFIX)) return method === "POST" && KNOWN_ACTION_ROUTES.has(normalized) ? normalized : null;
+  if (normalized.startsWith("/api/auth/")) return isAllowedAuthRoute(method, normalized) ? normalized : null;
+  return USAGE_KNOWN_API_ROUTES.has(`${method} ${normalized}`) ? normalized : null;
+}
+
+/**
+ * 1社1日の行数の上限（DD-032 の17）。既にある行はそのまま通し、新しい行は上限までのぶんだけ、送られた順に通す。
+ * existing はその日のその会社の既存の行の key。
+ */
+export function withinDailyRowLimit<T extends { key: string }>(
+  rows: readonly T[],
+  existing: readonly string[],
+  limit: number = USAGE_MAX_ROWS_PER_COMPANY_DAY,
+): T[] {
+  const known = new Set(existing);
+  let room = Math.max(0, limit - known.size);
+  return rows.filter((row) => {
+    if (known.has(row.key)) return true;
+    if (room === 0) return false;
+    room -= 1;
+    return true;
+  });
 }
 
 const screenKey = (date: string, companyId: string, routePattern: string, role: string) =>
@@ -156,9 +204,8 @@ export async function recordUsageBatch(
 
   const apis = new Map<string, { method: string; routePattern: string; counters: UsageApiCounters }>();
   for (const row of batch.apis) {
-    const routePattern = apiRoutePatternOf(row.path);
-    // 記録を送るAPI自身は数えない（数えると、数えたことでまた通信が増える）
-    if (!routePattern || routePattern === "/api/usage") continue;
+    const routePattern = apiRoutePatternOf(row.method, row.path);
+    if (!routePattern) continue;
     const mapKey = `${row.method} ${routePattern}`;
     const current = apis.get(mapKey)?.counters ?? EMPTY_API_COUNTERS;
     apis.set(mapKey, {
@@ -173,7 +220,7 @@ export async function recordUsageBatch(
     });
   }
 
-  const screenRows = [...screens.values()].map(({ routePattern, counters }) => ({
+  const builtScreenRows = [...screens.values()].map(({ routePattern, counters }) => ({
     key: screenKey(date, companyId, routePattern, role),
     date,
     companyId,
@@ -183,7 +230,7 @@ export async function recordUsageBatch(
     updatedAt: now,
   }));
 
-  const apiRows = [...apis.values()].map(({ method, routePattern, counters }) => ({
+  const builtApiRows = [...apis.values()].map(({ method, routePattern, counters }) => ({
     key: apiKey(date, companyId, method, routePattern),
     date,
     companyId,
@@ -192,6 +239,26 @@ export async function recordUsageBatch(
     ...counters,
     updatedAt: now,
   }));
+
+  /* 1社1日の行数に上限を置く。宛先は台帳と上の一覧で絞ってあるので、ふだんの使い方では届かない。
+     同時に届いた送信どうしでは数行はみ出しうるが、送信の回数を利用者ごとに絞っている
+     （api/usage の USAGE_INGEST_RATE_LIMIT）ので、上限の近くに留まる。 */
+  const [screenKeysToday, apiKeysToday] = await Promise.all([
+    builtScreenRows.length === 0
+      ? []
+      : db
+          .select({ key: s.usageScreenDaily.key })
+          .from(s.usageScreenDaily)
+          .where(and(eq(s.usageScreenDaily.companyId, companyId), eq(s.usageScreenDaily.date, date))),
+    builtApiRows.length === 0
+      ? []
+      : db
+          .select({ key: s.usageApiDaily.key })
+          .from(s.usageApiDaily)
+          .where(and(eq(s.usageApiDaily.companyId, companyId), eq(s.usageApiDaily.date, date))),
+  ]);
+  const screenRows = withinDailyRowLimit(builtScreenRows, screenKeysToday.map((r) => r.key));
+  const apiRows = withinDailyRowLimit(builtApiRows, apiKeysToday.map((r) => r.key));
 
   /* 既にある行には足す（上書きしない）。SQLite の upsert で、
      いま送られてきた値（excluded）を今の値に加算する。
@@ -266,7 +333,7 @@ async function pruneOldUsageOncePerDay(db: DB, now: Date): Promise<void> {
     ]);
   } catch (e) {
     // 掃除に失敗しても、記録そのものは受け取れている。業務を止めない。
-    console.warn("利用状況の古い記録を消せませんでした", e);
+    console.warn("利用状況の古い記録を消せませんでした", summarizeErrorForLog(e));
   }
 }
 

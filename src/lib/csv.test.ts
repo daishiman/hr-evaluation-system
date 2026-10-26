@@ -105,3 +105,52 @@ describe("parseCsv（貼り付け＝タブ区切り）", () => {
     expect(parseCsv("氏名,【支援】１）インテークやアセスメント\n田中,基準を満たす")[1]).toEqual(["田中", "基準を満たす"]);
   });
 });
+
+/**
+ * 書き出した CSV を表計算で開いたとき、値が式として動かないようにする（DD-032 の5）。
+ * 回答の自由記述や氏名は外から入る文なので、先頭の文字で式と見なされうる値は、
+ * 先頭に「'」を付けて引用符で囲む。数値と、数値だけの文字列はそのまま出す（負の数を壊さない）。
+ */
+describe("toCsv の式の無害化（DD-032 の5）", () => {
+  /** 1列1行の CSV の、値の行だけを取り出す */
+  const cellOf = (v: string | number) => toCsv(["v"], [[v]]).slice("﻿v\r\n".length, -"\r\n".length);
+
+  it("先頭が = + - @ の値は、先頭に ' を付けて引用符で囲む", () => {
+    expect(cellOf("=1+1")).toBe(`"'=1+1"`);
+    expect(cellOf("+1")).toBe(`"'+1"`);
+    expect(cellOf("-1+2")).toBe(`"'-1+2"`);
+    expect(cellOf("@SUM(A1)")).toBe(`"'@SUM(A1)"`);
+  });
+
+  it("先頭の半角・全角の空白の後に式の文字が来る値も対象にする", () => {
+    expect(cellOf(" =1+1")).toBe(`"' =1+1"`);
+    expect(cellOf("　=1+1")).toBe(`"'　=1+1"`);
+  });
+
+  it("先頭がタブか CR の値も対象にする", () => {
+    expect(cellOf("\t=1+1")).toBe(`"'\t=1+1"`);
+    expect(cellOf("\r=1+1")).toBe(`"'\r=1+1"`);
+  });
+
+  it("数値と、数値だけの文字列はそのまま出す", () => {
+    expect(cellOf(-5)).toBe("-5");
+    expect(cellOf("-5")).toBe("-5");
+    expect(cellOf("-1.5")).toBe("-1.5");
+    expect(cellOf("12.5")).toBe("12.5");
+  });
+
+  it("式の文字が先頭に無い値は変えない", () => {
+    expect(cellOf("田中")).toBe("田中");
+    expect(cellOf("A=1")).toBe("A=1");
+    expect(cellOf("a@example.com")).toBe("a@example.com");
+  });
+
+  it("引用符を含む式の値も、中の引用符を2つ重ねて囲む", () => {
+    expect(cellOf('=HYPERLINK("x")')).toBe(`"'=HYPERLINK(""x"")"`);
+  });
+
+  it("読み戻すと、先頭に ' の付いた文になる", () => {
+    const back = parseCsv(toCsv(["氏名", "備考"], [["=社員A", "-1+2"]]));
+    expect(back[1]).toEqual(["'=社員A", "'-1+2"]);
+  });
+});

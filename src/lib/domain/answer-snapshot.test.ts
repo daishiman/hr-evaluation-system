@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
+  findChosenOption,
   formatAnswer,
   isAnswered,
   isOptionSelected,
@@ -82,6 +85,12 @@ describe("parseOptions", () => {
       { value: "a", label: "あ", score: 1 },
     ]);
   });
+
+  it("管理者のアンケートの画面も、選択肢を parseOptions で読む（壊れた値で 500 にしない。DD-032 の17）", () => {
+    const page = readFileSync(path.join(process.cwd(), "src/app/admin/forms/[id]/page.tsx"), "utf8");
+    expect(page).toContain("options: parseOptions(q.optionsJson)");
+    expect(page).not.toContain("JSON.parse(q.optionsJson)");
+  });
 });
 
 describe("optionScore 選択肢の点数", () => {
@@ -109,19 +118,19 @@ describe("optionScore 選択肢の点数", () => {
 });
 
 describe("optionAnswer 選択肢を押したときの答え", () => {
-  it("点数と選んだ言葉を一緒に入れ、複数選択の手元は空にする", () => {
+  it("公開値と選んだ言葉と明示した選択値を入れる", () => {
     expect(optionAnswer({ value: "2", label: "助言を受けて行った" })).toEqual({
       valueNumber: 2,
       valueText: "助言を受けて行った",
-      valueChoices: null,
+      valueChoices: ["2"],
     });
   });
 
-  it("点数を持たない選択肢は言葉だけを入れる", () => {
+  it("数値でない選択肢も言葉と選択値を入れる", () => {
     expect(optionAnswer({ value: "a", label: "自分から行った" })).toEqual({
       valueNumber: null,
       valueText: "自分から行った",
-      valueChoices: null,
+      valueChoices: ["a"],
     });
   });
 });
@@ -200,6 +209,45 @@ describe("isOptionSelected 選択中の判定", () => {
     ];
     const v = { valueNumber: 1, valueText: "○" };
     expect(options.map((o) => isOptionSelected(o, v, options))).toEqual([true, false]);
+  });
+});
+
+describe("findChosenOption 選ばれた選択肢をサーバーの選択肢から探す（DD-032 の8）", () => {
+  it("言葉が1つに決まれば、送られた数が違ってもその選択肢にする", () => {
+    const options = [
+      { value: "a", label: "はい", score: 5 },
+      { value: "b", label: "いいえ", score: 0 },
+    ];
+    expect(findChosenOption(options, { valueNumber: 99, valueText: " いいえ " })).toBe(options[1]);
+  });
+
+  it("言葉が無ければ配点で探し、どれとも合わなければ答えなしにする", () => {
+    const options = [
+      { value: "a", label: "はい", score: 5 },
+      { value: "b", label: "いいえ", score: 0 },
+    ];
+    expect(findChosenOption(options, { valueNumber: 0, valueText: null })).toBe(options[1]);
+    expect(findChosenOption(options, { valueNumber: 3, valueText: "○" })).toBeNull();
+    expect(findChosenOption(options, { valueNumber: null, valueText: null })).toBeNull();
+  });
+
+  it("同じ言葉が並ぶときは、配点と同じ数を先に、無ければ値を数として読んだものと照らす", () => {
+    const options = [
+      { value: "1", label: "同じ", score: 10 },
+      { value: "2", label: "同じ", score: 20 },
+    ];
+    expect(findChosenOption(options, { valueNumber: 20, valueText: "同じ" })).toBe(options[1]);
+    // 配点を持たない回答画面は、値から読んだ数を送ってくる
+    expect(findChosenOption(options, { valueNumber: 2, valueText: "同じ" })).toBe(options[1]);
+  });
+
+  it("同じ言葉が並び、数でも絞れなければ先頭にする", () => {
+    const options = [
+      { value: "a", label: "同じ" },
+      { value: "b", label: "同じ" },
+    ];
+    expect(findChosenOption(options, { valueNumber: 7, valueText: "同じ" })).toBe(options[0]);
+    expect(findChosenOption(options, { valueNumber: null, valueText: "同じ" })).toBe(options[0]);
   });
 });
 

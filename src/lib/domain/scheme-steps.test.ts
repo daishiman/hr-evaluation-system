@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   computeGroupProgress,
   groupPosition,
@@ -8,6 +10,7 @@ import {
   KPI_ITEMS_PATH,
   nextGroupOf,
   overallProgress,
+  pointGroupFromParam,
   schemeStepPath,
   stepLede,
   stepNumber,
@@ -179,6 +182,27 @@ describe("手順の名前とURL", () => {
     expect(schemeStepPath("Regular", "select")).toBe("/admin/scheme/Regular");
     expect(schemeStepPath("Regular", "criteria")).toBe("/admin/scheme/Regular/criteria");
     expect(schemeStepPath("AM Ⅰ", "select")).toBe(`/admin/scheme/${encodeURIComponent("AM Ⅰ")}`);
+  });
+
+  it("URLの区切りは pointGroupFromParam で等級区分名に戻す（schemeStepPath と往復できる）", () => {
+    for (const group of ["Regular", "AM Ⅰ", "50%/上位"]) {
+      const segment = schemeStepPath(group, "select").slice("/admin/scheme/".length);
+      expect(pointGroupFromParam(segment)).toBe(group);
+    }
+  });
+
+  it("壊れた % の並びでも投げず、受け取った文字のまま返す（どの区分にも当たらず 404 になる。DD-032 の17）", () => {
+    expect(() => pointGroupFromParam("%E0%A4%A")).not.toThrow();
+    expect(pointGroupFromParam("%E0%A4%A")).toBe("%E0%A4%A");
+    expect(pointGroupFromParam("%")).toBe("%");
+  });
+
+  it("等級区分の画面は URL の区切りを自前で decodeURIComponent しない（壊れた URL で 500 にしない）", () => {
+    for (const file of ["src/app/admin/scheme/[group]/page.tsx", "src/app/admin/scheme/[group]/criteria/page.tsx"]) {
+      const source = readFileSync(path.join(process.cwd(), file), "utf8");
+      expect(source).not.toContain("decodeURIComponent(");
+      expect(source).toContain("pointGroupFromParam((await params).group)");
+    }
   });
 
   it("KPI項目を指すURLは、入力欄を開く項目をクエリで、飛ぶ先の行を # で指す", () => {

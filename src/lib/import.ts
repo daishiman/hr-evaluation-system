@@ -211,9 +211,16 @@ export async function importResponsesCsv(
     const name = (nameCol >= 0 ? line[nameCol] : "")?.trim() ?? "";
     const code = (codeCol >= 0 ? line[codeCol] : "")?.trim() ?? "";
 
-    const person =
-      (code ? members.find((m) => (m.employeeCode ?? "").trim() === code) : undefined) ??
-      (name ? members.find((m) => m.name.replace(/[\s　]/g, "") === name.replace(/[\s　]/g, "")) : undefined);
+    const byCode = code ? members.find((m) => (m.employeeCode ?? "").trim() === code) : undefined;
+    const sameName = !byCode && name
+      ? members.filter((m) => m.name.replace(/[\s　]/g, "") === name.replace(/[\s　]/g, ""))
+      : [];
+    // 同じ氏名の人が2人以上いるときは、氏名だけでは決めない（別の人の回答として入るのを防ぐ。DD-032 の17）
+    if (sameName.length > 1) {
+      rows.push({ row: r + 1, name, status: "スキップ", reason: "同じ氏名の方が複数いるため、社員番号でどの方かを示してください" });
+      continue;
+    }
+    const person = byCode ?? sameName[0];
 
     if (!person) {
       rows.push({ row: r + 1, name: name || code, status: "スキップ", reason: "この会社に同じ氏名・社員番号の方が登録されていません" });

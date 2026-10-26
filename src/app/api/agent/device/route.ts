@@ -13,6 +13,7 @@ import {
   expiresInMinutes,
 } from "@/lib/domain/agent-device";
 import { AGENT_API_RATE_LIMIT, consumeRateLimit } from "@/lib/rate-limit";
+import { clientIpKey } from "@/lib/security/client-ip";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ const redeemSchema = z.object({ deviceCode: z.string().min(1).max(500) }).strict
  */
 export async function POST(req: Request) {
   return handle(async () => {
-    const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+    const ip = clientIpKey(req.headers);
     const limit = consumeRateLimit(`agent-device:${ip}`, AGENT_API_RATE_LIMIT);
     if (!limit.allowed) {
       throw new HttpError(429, "しばらく待ってからお試しください。", {
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
  */
 export async function PUT(req: Request) {
   return handle(async () => {
-    const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+    const ip = clientIpKey(req.headers);
     const limit = consumeRateLimit(`agent-device:${ip}`, AGENT_API_RATE_LIMIT);
     if (!limit.allowed) {
       throw new HttpError(429, "しばらく待ってからお試しください。", {

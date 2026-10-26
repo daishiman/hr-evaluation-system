@@ -19,6 +19,7 @@ import { loadFormComparisonGap } from "@/lib/comparison-gap-loader";
 import { REBUILD_LABEL, noTemplateNamesOf, rebuildConfirm, rebuildWontFixNote } from "@/lib/domain/comparison-gap";
 import { FORM_STATUS_LABEL } from "@/lib/view";
 import { formatJpDate } from "@/lib/domain/form-deadline";
+import { parseOptions } from "@/lib/domain/answer-snapshot";
 
 export const dynamic = "force-dynamic";
 
@@ -101,7 +102,8 @@ export default async function AdminFormDetail({ params }: { params: Promise<{ id
     validationMin: q.validationMin,
     validationMax: q.validationMax,
     validationInteger: q.validationInteger,
-    options: q.optionsJson ? (JSON.parse(q.optionsJson) as { value: string; label: string; score?: number }[]) : [],
+    // DB の値でも壊れていれば選択肢0件として描く（管理者の画面を 500 にしない。DD-032 の17）
+    options: parseOptions(q.optionsJson),
     isGate: q.isGate,
     linkLabel: q.kpiItemId
       ? `${kpiItems.find((k) => k.id === q.kpiItemId)?.name ?? "KPI項目"}（${q.kpiQuestionKey ?? ""}）`

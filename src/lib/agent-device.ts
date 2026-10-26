@@ -150,11 +150,12 @@ export async function approveDeviceGrant(
   if (!found) return "expired";
   if (found.state !== "pending") return found.state;
   const db = await getDb();
-  await db
+  const updated = await db
     .update(s.agentDeviceGrants)
     .set({ approvedAt: new Date(), approvedById: actorId, companyId })
-    .where(eq(s.agentDeviceGrants.id, found.id));
-  return "approved";
+    .where(stillUndecided(found.id))
+    .returning({ id: s.agentDeviceGrants.id });
+  return updated.length > 0 ? "approved" : decidedMeanwhile(userCode);
 }
 
 /** 断る。心当たりのない合言葉を押し返すための操作なので、行は残す。 */
@@ -163,11 +164,25 @@ export async function denyDeviceGrant(userCode: string): Promise<DeviceGrantStat
   if (!found) return "expired";
   if (found.state !== "pending") return found.state;
   const db = await getDb();
-  await db
+  const updated = await db
     .update(s.agentDeviceGrants)
     .set({ deniedAt: new Date() })
-    .where(eq(s.agentDeviceGrants.id, found.id));
-  return "denied";
+    .where(stillUndecided(found.id))
+    .returning({ id: s.agentDeviceGrants.id });
+  return updated.length > 0 ? "denied" : decidedMeanwhile(userCode);
+}
+
+/**
+ * 「まだ通しても断ってもいない」ときだけ書く条件（DD-032 の17）。
+ * 読んでから書くまでの間に別の操作が決めていたら0行になり、先の決定を上書きしない。
+ */
+function stillUndecided(id: string) {
+  return and(eq(s.agentDeviceGrants.id, id), isNull(s.agentDeviceGrants.approvedAt), isNull(s.agentDeviceGrants.deniedAt));
+}
+
+/** 書けなかったときは、先に決めた側の結果を読み直して返す（こちらの操作が通ったと伝えない）。 */
+async function decidedMeanwhile(userCode: string): Promise<DeviceGrantState> {
+  return (await findDeviceGrant(userCode))?.state ?? "expired";
 }
 
 /* ───────────────────────── 通行証を引き取る ───────────────────────── */

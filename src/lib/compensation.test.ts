@@ -84,13 +84,15 @@ describe("withCompensation（途中で失敗したら書いた分を消す）", 
     expect(order).toEqual(["company"]);
 
     const failed = JSON.parse(String(error.mock.calls[0]?.[0]));
+    // 失敗の文面は SQL と DB へ渡した値が入りうるので残さず、型と場所の要約だけを残す（DD-032 の7）
     expect(failed).toEqual({
       event: "compensation_failed",
       operation: "company.create",
       step: "masters",
       ids: { companyId: "co1", userId: "u1" },
-      error: "D1 busy",
+      error: expect.stringMatching(/^Error /),
     });
+    expect(failed.error).not.toContain("D1 busy");
     const summary = JSON.parse(String(warn.mock.calls[0]?.[0]));
     expect(summary).toMatchObject({ leftovers: ["masters"], undone: ["company"], failed_step: "account" });
   });
@@ -134,11 +136,13 @@ describe("rollForward（戻せない書き込みの続きを、前へ進めて�
     const write = vi.fn().mockRejectedValue(new Error("D1 down"));
     expect(await rollForward("account.password", { userId: "u1" }, write)).toBe(false);
     expect(write).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(String(error.mock.calls[0]?.[0]))).toEqual({
+    const failed = JSON.parse(String(error.mock.calls[0]?.[0]));
+    expect(failed).toEqual({
       event: "rollforward_failed",
       operation: "account.password",
       ids: { userId: "u1" },
-      error: "D1 down",
+      error: expect.stringMatching(/^Error /),
     });
+    expect(failed.error).not.toContain("D1 down");
   });
 });

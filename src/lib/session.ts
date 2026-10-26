@@ -12,6 +12,7 @@ import {
 import { activeCompanyCondition, activeMembershipFor, membershipIn } from "@/lib/memberships";
 import { atLeast, ROLES, type Role } from "@/lib/roles";
 import { roleCan, roleCanOpen, routeAccessOf } from "@/lib/route-access";
+import { isSameOriginRequest } from "@/lib/security/same-origin";
 
 /**
  * 権限の判定をここ1箇所に集める。
@@ -313,19 +314,17 @@ export class HttpError extends Error {
  * ログインしたまま外部のページを開いても、そこからこのアプリのデータを
  * 書き換えられないようにするための確認。データを変えるAPIはすべて apiViewer を
  * 通るので、ここで1回だけ見ればよい。
+ * Origin が無い送信は、ブラウザの Sec-Fetch-Site で同じサイトからかを確かめる。
+ * どちらも無ければ送り元を確かめられないので拒む（DD-032 の17）。
  */
 async function assertSameOrigin(): Promise<void> {
   const h = await headers();
-  const origin = h.get("origin");
-  if (!origin) return; // 画面以外（社内バッチ等）からの呼び出しにはブラウザが付けない
-  const host = h.get("host");
-  let originHost: string;
-  try {
-    originHost = new URL(origin).host;
-  } catch {
-    throw new HttpError(403, "この操作は受け付けられませんでした。画面を開き直してからもう一度お試しください。");
-  }
-  if (!host || originHost !== host) {
+  const sameOrigin = isSameOriginRequest({
+    origin: h.get("origin"),
+    secFetchSite: h.get("sec-fetch-site"),
+    host: h.get("host"),
+  });
+  if (!sameOrigin) {
     throw new HttpError(403, "この操作は受け付けられませんでした。画面を開き直してからもう一度お試しください。");
   }
 }

@@ -60,8 +60,10 @@ export default defineConfig({
       /**
        * 評価（点数・ランク・賞与・昇格昇給・集計）に関わるファイルだけを網羅率の対象にする。
        * 画面の部品まで混ぜると数字が薄まり、「評価のどこが守られているか」が読めなくなる。
+       * 守りの関数（src/lib/security。送り元・戻り先・回数制限の数え先・鍵）も、試験の無い枝が
+       * そのまま抜け道になるので、同じく100%を課す（DD-032）。
        */
-      include: ["src/lib/domain/**/*.ts", "src/lib/evaluate.ts", "src/lib/impact.ts"],
+      include: ["src/lib/domain/**/*.ts", "src/lib/evaluate.ts", "src/lib/impact.ts", "src/lib/security/**/*.ts"],
       exclude: ["**/*.test.ts"],
       thresholds: {
         // 計算まわり以外（上の include に入る残りのファイル）の下限。

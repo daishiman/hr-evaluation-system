@@ -22,6 +22,7 @@ import { API_CACHE_CONTROL } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { appOrigin } from "@/lib/origin";
 import { AGENT_API_RATE_LIMIT, consumeRateLimit } from "@/lib/rate-limit";
+import { clientIpKey } from "@/lib/security/client-ip";
 
 interface AgentEnv {
   AGENT_API_KEY?: string;
@@ -79,7 +80,7 @@ export type AgentGate = { denied: Response; caller: null } | { denied: null; cal
  * どの鍵で持って行かれたか」を辿れるようにするため。
  */
 export async function guardAgentRequest(req: Request): Promise<AgentGate> {
-  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+  const ip = clientIpKey(req.headers);
   const limit = consumeRateLimit(`agent-api:${ip}`, AGENT_API_RATE_LIMIT);
   if (!limit.allowed) {
     const denied = textResponse(429, "しばらく待ってからお試しください。", {

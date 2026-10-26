@@ -16,6 +16,7 @@ import {
   QUERY_MAX_LENGTH,
   reversed,
   searchTokens,
+  settleOwnUrlWrite,
   sortLabel,
   sortPeople,
   type PersonFields,
@@ -365,6 +366,16 @@ describe("URL の読み書き", () => {
       companyAdmin,
     );
     expect(back).toEqual(view);
+  });
+
+  it("自分で書いた URL が遅れて届いたら、それより後に書いた分だけを控えに残す", () => {
+    expect(settleOwnUrlWrite(["q=a", "q=ab"], "q=a")).toEqual(["q=ab"]);
+    expect(settleOwnUrlWrite(["q=a", "q=ab"], "q=ab")).toEqual([]);
+  });
+
+  it("控えに無い URL（会社の札や「戻る」での移動）は、自分の書き換えとみなさない", () => {
+    expect(settleOwnUrlWrite(["q=a"], "company=c1&q=a")).toBeNull();
+    expect(settleOwnUrlWrite([], "")).toBeNull();
   });
 });
 

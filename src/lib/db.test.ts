@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { chunkRowsForD1, estimateInsertBoundParameters, insertMany } from "./db";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { inspect } from "node:util";
+import { DrizzleQueryError } from "drizzle-orm";
+import { describe, expect, it, vi } from "vitest";
+import { rollForward } from "./compensation";
+import { chunkRowsForD1, estimateInsertBoundParameters, insertMany, summarizeErrorForLog } from "./db";
 
 /**
  * データベースは1回の登録で渡せる値が100個までなので、
@@ -66,5 +71,102 @@ describe("insertMany（まとめて登録するときの分割）", () => {
       calls.push(chunk.length);
     }, [row(0), row(1)]);
     expect(calls).toEqual([2]);
+  });
+});
+
+/**
+ * DB のエラーのログは、種類と場所だけを残す（DD-032 の7）。
+ * Drizzle の失敗の文面には SQL の全文と渡した値が入り、D1 の原因の文面にも SQL が入りうる
+ * （D1_EXEC_ERROR は失敗した行をそのまま載せる）。ログへは名前・原因の種類・操作と表の名前だけを出し、
+ * 社員の氏名やメールのような値が Workers Logs に残らないようにする。
+ */
+describe("summarizeErrorForLog（ログ用の要約）", () => {
+  const SECRET = "見本の値-ログに出さない";
+  const INSERT_SQL = 'insert into "users" ("id", "email", "name") values (?, ?, ?)';
+  const queryError = (sql = INSERT_SQL) =>
+    new DrizzleQueryError(
+      sql,
+      ["usr_x", SECRET, "社員A"],
+      new Error(`D1_ERROR: UNIQUE constraint failed: users.email (${SECRET}): SQLITE_CONSTRAINT`),
+    );
+
+  it("DB の失敗は、名前・D1 の原因の種類・SQL の先頭の操作と表の名前を残す", () => {
+    const text = summarizeErrorForLog(queryError());
+    expect(text).toContain("DrizzleQueryError");
+    expect(text).toContain("D1_ERROR");
+    expect(text).toContain("SQLITE_CONSTRAINT");
+    expect(text).toMatch(/\binsert\b/i);
+    expect(text).toContain("users");
+  });
+
+  it("SQL の全文・DB へ渡した値・原因の文面は載せない", () => {
+    const text = summarizeErrorForLog(queryError());
+    expect(text).not.toContain(SECRET);
+    expect(text).not.toContain("社員A");
+    expect(text).not.toContain('"email", "name"');
+    expect(text).not.toContain("UNIQUE constraint failed");
+  });
+
+  it("select・update・delete も、先頭の操作と表の名前を取り出す", () => {
+    expect(summarizeErrorForLog(queryError('select "id" from "form_answers" where "value_text" = ?'))).toMatch(
+      /select[^]*form_answers/i,
+    );
+    expect(summarizeErrorForLog(queryError('update "evaluations" set "score" = ? where "id" = ?'))).toMatch(
+      /update[^]*evaluations/i,
+    );
+    expect(summarizeErrorForLog(queryError('delete from "sessions" where "token" = ?'))).toMatch(/delete[^]*sessions/i);
+  });
+
+  it("包まれた失敗でも、cause の鎖をたどって DB の失敗と見分ける", () => {
+    const wrapped = new Error("登録できませんでした", { cause: queryError() });
+    const text = summarizeErrorForLog(wrapped);
+    expect(text).toContain("DrizzleQueryError");
+    expect(text).toContain("users");
+    expect(text).not.toContain(SECRET);
+  });
+
+  it("文面が DB の失敗に似ていても、型で見分ける（文面の照合はしない）", () => {
+    const lookalike = new Error(`Failed query: ${INSERT_SQL}\nparams: usr_x,${SECRET}`);
+    const text = summarizeErrorForLog(lookalike);
+    expect(text).not.toContain("DrizzleQueryError");
+    expect(text).not.toMatch(/\binsert\b/i);
+    expect(text).not.toContain(SECRET);
+  });
+
+  it("ほかの失敗は、名前とスタックの先頭の1行（起きた場所）だけを1行で残す", () => {
+    const text = summarizeErrorForLog(new TypeError(`読めない値: ${SECRET}`));
+    expect(text).toContain("TypeError");
+    expect(text).toContain("db.test.ts");
+    expect(text).not.toContain(SECRET);
+    expect(text.split("\n")).toHaveLength(1);
+  });
+
+  it("Error でない値を投げられても、中身は載せない", () => {
+    expect(summarizeErrorForLog(`文字列の失敗 ${SECRET}`)).not.toContain(SECRET);
+    expect(typeof summarizeErrorForLog(null)).toBe("string");
+  });
+
+  it("補償の記録（rollForward）も要約を通し、DB へ渡した値を残さない", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const ok = await rollForward("account.password", { userId: "u1" }, async () => {
+        throw queryError();
+      });
+      expect(ok).toBe(false);
+      const logged = inspect([...warn.mock.calls, ...error.mock.calls], { depth: 5 });
+      expect(logged).toContain("DrizzleQueryError");
+      expect(logged).not.toContain(SECRET);
+    } finally {
+      warn.mockRestore();
+      error.mockRestore();
+    }
+  });
+
+  it("利用状況の古い記録の掃除の警告も、エラーをそのまま渡さず要約を通す", () => {
+    const text = readFileSync(join(process.cwd(), "src/lib/usage.ts"), "utf8");
+    // 本文全体を差分に出さないよう、真偽で比べる
+    expect(text.includes("summarizeErrorForLog("), "usage.ts が要約を通す").toBe(true);
+    expect(/console\.\w+\([^)]*,\s*(e|err|error|cause)\s*\)/.test(text), "usage.ts がエラーをそのまま渡す").toBe(false);
   });
 });

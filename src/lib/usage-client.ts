@@ -18,7 +18,9 @@
  */
 
 import { routeIdentityOf } from "@/lib/nav";
+import { sameOriginUrl } from "@/lib/security/same-origin-url";
 import {
+  ACTION_USAGE_PREFIX,
   EMPTY_API_COUNTERS,
   EMPTY_SCREEN_COUNTERS,
   USAGE_BACKTRACK_WINDOW_MS,
@@ -201,7 +203,7 @@ export function flush(): void {
 }
 
 /** 画面からの保存（Server Action）を数えるときの宛先の頭。/api/ と同じ表に並べる */
-export const ACTION_USAGE_PREFIX = "/actions/";
+export { ACTION_USAGE_PREFIX } from "@/lib/domain/usage";
 
 /**
  * 画面からの保存を1回ぶん数える。
@@ -280,14 +282,9 @@ export function installUsageTracking(): void {
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
     const method = (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
-    let path = "";
-    try {
-      path = new URL(url, window.location.origin).pathname;
-    } catch {
-      path = "";
-    }
+    const path = sameOriginUrl(url, window.location.href)?.pathname ?? "";
     // 自分のアプリのAPIだけを数える。記録を送る先は数えない
-    const counted = path.startsWith("/api/") && path !== ENDPOINT && url.startsWith(window.location.origin);
+    const counted = path.startsWith("/api/") && path !== ENDPOINT;
     if (!counted) return originalFetch(input, init);
 
     const started = performance.now();

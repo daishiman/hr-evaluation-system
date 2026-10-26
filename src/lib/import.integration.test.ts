@@ -335,7 +335,7 @@ describe("社員CSVは会社ごとの値を、この会社の所属の行に書�
     expect(user).toMatchObject({ name: "本人（改名）", isActive: false });
   });
 
-  it("この会社に所属していない人のメールアドレスは、他社の人として止める", async () => {
+  it("この会社に所属していない人のメールアドレスは、他社に人がいることを明かさない文言で止める（DD-032 の17）", async () => {
     await seedCompany(current);
     seedMemberships(current);
     await current.db.insert(s.companies).values({ id: "cmp_other", name: "別の会社", slug: "other" });
@@ -344,7 +344,7 @@ describe("社員CSVは会社ごとの値を、この会社の所属の行に書�
       ["氏名,メールアドレス", "本人,emp@example.com"].join("\n"),
       { dryRun: true },
     );
-    expect(out.rows[0]).toMatchObject({ status: "エラー", reason: "このメールアドレスは他社で使われています" });
+    expect(out.rows[0]).toMatchObject({ status: "エラー", reason: "この行は取り込めませんでした（全体管理者へお問い合わせください）" });
   });
 
   it("社員番号の重なりは、この会社の所属の社員番号で見る", async () => {

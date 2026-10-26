@@ -1,7 +1,5 @@
 # CI: 壊れたコードが main に入るのを防ぐ。何も壊せない（デプロイもDB操作もしない）。
 # 実行時間の目安: 2〜4分。public リポジトリなら完全無料。
-#
-# npm / yarn / pnpm のどれでもそのまま動く（ロックファイルから自動判別する）。
 name: CI
 
 on:
@@ -22,87 +20,56 @@ permissions:
   contents: read
 
 jobs:
-  # このジョブ名（verify）を、ブランチ保護の必須チェックに指定する。
-  # ワークフロー名（CI）ではないので注意。
   verify:
-    # ubuntu 以外は課金倍率が上がる（Windows 2倍 / macOS 10倍）。理由なく変えない。
     runs-on: ubuntu-latest
-    # 暴走したジョブが無料枠を食い潰さないための安全弁。短縮目的ではない。
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
-
-      # 判別の根拠は「設定に書いた宣言」ではなく、ロックファイルが実在するかどうか。
-      # 宣言は書き換え忘れるが、ロックファイルは実際に入れた事実の痕跡なのでズレない。
-      - name: パッケージマネージャを判別
-        id: pm
-        run: |
-          if [ -f pnpm-lock.yaml ]; then
-            echo "name=pnpm"                              >> "$GITHUB_OUTPUT"
-            echo "install=pnpm install --frozen-lockfile" >> "$GITHUB_OUTPUT"
-            echo "run=pnpm run"                           >> "$GITHUB_OUTPUT"
-          elif [ -f yarn.lock ]; then
-            # Yarn は v1 と v2以降（Berry）で引数が違う。.yarnrc.yml があれば Berry。
-            if [ -f .yarnrc.yml ]; then
-              echo "install=yarn install --immutable"       >> "$GITHUB_OUTPUT"
-            else
-              echo "install=yarn install --frozen-lockfile" >> "$GITHUB_OUTPUT"
-            fi
-            echo "name=yarn"    >> "$GITHUB_OUTPUT"
-            echo "run=yarn run" >> "$GITHUB_OUTPUT"
-          else
-            # npm install ではなく npm ci。install だとロックファイルを書き換えることがあり、
-            # CI とローカルで入るものがズレる。
-            echo "name=npm"       >> "$GITHUB_OUTPUT"
-            echo "install=npm ci" >> "$GITHUB_OUTPUT"
-            echo "run=npm run"    >> "$GITHUB_OUTPUT"
-          fi
-
-      # pnpm のときだけ pnpm 本体を入れる。
-      # setup-node の cache より先に置くこと（逆だと「pnpm が見つからない」で落ちる）。
-      - uses: pnpm/action-setup@v4
-        if: steps.pm.outputs.name == 'pnpm'
-        # バージョンは package.json の packageManager から読ませる。
-        # ここで version: を指定すると、packageManager がある repo では
-        # 「Multiple versions of pnpm specified」で落ちる。
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          # wrangler が Node 22 以上を要求する。20 だと cf-typegen で落ちる。
-          node-version: 22
-          cache: ${{ steps.pm.outputs.name }}
+          persist-credentials: false
 
-      - name: 依存関係のインストール（${{ steps.pm.outputs.name }}）
-        run: ${{ steps.pm.outputs.install }}
+      # pnpm の版は package.json の packageManager から読む。
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
 
-      # current/history の混在、安定IDの重複、主要文書のリンク切れを早期に止める。
-      - name: 文書 drift 検査
-        run: ${{ steps.pm.outputs.run }} check:docs
+      # Node の版は .nvmrc の1か所だけで決める（手元・CI・本番の配布で同じ版にする）。
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
 
-      # キット（aidd-agent-kit/）と実配置（.claude/ .agents/ .codex/）が manifest の path/hash と一致するか。
-      # 配布物を直接書き換えた・sync し忘れた、をここで止める。HOME と認証情報には依存しない。
-      # 中で python3（tomllib を使うので 3.11 以上）を呼ぶ。ubuntu-latest には最初から入っている。
-      - name: AIDD エージェントキットの配置検査
+      - name: 依存のインストール
+        run: pnpm install --frozen-lockfile
+
+      # 文書が指している実装（ワークフロー・スクリプト）が消えていないかを見る。
+      - name: 文書と実装の食い違い検査
+        run: pnpm run check:docs
+
+      # AIDD エージェントキットの実配置が編集元と食い違っていないかを見る。
+      - name: エージェントキットの配置検査
         run: bash aidd-agent-kit/verify-codex-layout.sh
+
+      # 直した危ない書き方が戻っていないかを見る（検査の中身は scripts/check-security-patterns.mjs。DD-032）。
+      - name: 危ない書き方の検査
+        run: pnpm run check:security
 
       # Cloudflare の環境変数の型定義（cloudflare-env.d.ts）を作る。
       # このファイルは .gitignore されているため、CI のまっさらなチェックアウトには存在しない。
       # 生成せずに typecheck すると「Property 'DB' does not exist on type 'CloudflareEnv'」で必ず落ちる。
       # wrangler.jsonc から作るだけなので Cloudflare の認証情報は要らない。
       - name: Cloudflare の型定義を生成
-        run: ${{ steps.pm.outputs.run }} cf-typegen
+        run: pnpm run cf-typegen
 
       # 型チェックとテストは分けない。1つのジョブに入れるほうが
       # チェックアウトとインストールの重複がなく、結果的に安く速い。
       - name: 型チェック
-        run: ${{ steps.pm.outputs.run }} typecheck
+        run: pnpm run typecheck
 
       # 網羅率つきで走らせる。評価の計算・保存・表示のどこかが試験されないまま
       # 増えたら、その時点で赤くする（下限は vitest.config.mts の thresholds）。
       # 網羅率は「あとで測る」と必ず下がるので、テストと同じ1回で測りきる。
       - name: テスト（網羅率の下限つき）
-        run: ${{ steps.pm.outputs.run }} test:coverage
+        run: pnpm run test:coverage
 
 
 # 意図的に入れていないもの（入れたくなったら理由を書いてから入れること）
@@ -116,5 +83,5 @@ jobs:
 #     実行数がそのまま本数分増える。動かす環境が1つなら1つでよい。
 # - 自動 fix コミット（lint --fix して push する類）
 #     CI がリポジトリに書き込むと、人が見ていない変更が main に入る。
-# - schedule（定期実行）
-#     誰も見ていない時間に無料枠だけ減る。
+# - 依存の脆弱性の検査と定期実行
+#     security-audit.yml に分けた。新しい脆弱性はコードを変えなくても見つかるので、そちらは週1回も流す。

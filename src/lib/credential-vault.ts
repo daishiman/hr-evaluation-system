@@ -2,6 +2,22 @@ import { eq, gt, lte } from "drizzle-orm";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { schema as s, type DB } from "@/lib/db";
 import { joinMembership } from "@/lib/memberships";
+import { importVaultKey, memoExpiryCutoff, type SealedMemo, type VaultKey } from "@/lib/security/keys";
+
+// 包む・開く処理は DB に触れないので keys.ts に置く（包み直しの script と同じ関数を通るため）
+export {
+  importVaultKey,
+  isMemoExpired,
+  LEGACY_CREDENTIAL_READ_UNTIL,
+  MEMO_TTL_DAYS,
+  memoExpiresAt,
+  memoExpiryCutoff,
+  openMemo,
+  sealMemo,
+  type OpenFailure,
+  type SealedMemo,
+  type VaultKey,
+} from "@/lib/security/keys";
 
 /**
  * 初期パスワードの控え（あとから一覧の行で開き直せるもの）。
@@ -15,6 +31,9 @@ import { joinMembership } from "@/lib/memberships";
  * ── 守ること ──
  * - 平文で保存しない。AES-GCM で暗号化し、鍵は Workers の秘密の値
  *   （CREDENTIAL_ENC_KEY）にだけ置く。DBだけが漏れても読めない。
+ * - 包む鍵は CREDENTIAL_ENC_KEY そのものではなく、HKDF で導いた控え専用の鍵
+ *   （src/lib/security/keys.ts。DD-032 の1）。版は `h1:` で始まる。
+ *   `h1:` の無い古い形式（生の鍵で包んだもの）は、LEGACY_CREDENTIAL_READ_UNTIL までだけ読む。
  * - 暗号文は利用者IDに結び付ける（追加認証データ）。DB上で別の人の行へ
  *   写し替えても開けない。
  * - 本人がパスワードを変えたら消す。再発行したら置き換える。
@@ -25,113 +44,10 @@ import { joinMembership } from "@/lib/memberships";
 
 export const CREDENTIAL_KEY_NAME = "CREDENTIAL_ENC_KEY";
 
-/**
- * 控えを開ける日数（ユーザー決定）。
- *
- * 本人が初めてログインしてパスワードを変えると控えは消えるので、残るのは
- * まだ一度も入っていない人の分だけ。長く残すほど、鍵が漏れたときに読める値が増える。
- * 2週間あれば、渡し損ねた人へ届け直すには足りる。
- */
-export const MEMO_TTL_DAYS = 14;
-const MEMO_TTL_MS = MEMO_TTL_DAYS * 24 * 60 * 60 * 1000;
-
-/** この時刻か、それより前に発行した控えは期限切れ。 */
-export function memoExpiryCutoff(now = new Date()): Date {
-  return new Date(now.getTime() - MEMO_TTL_MS);
-}
-
-export function memoExpiresAt(issuedAt: Date): Date {
-  return new Date(issuedAt.getTime() + MEMO_TTL_MS);
-}
-
-export function isMemoExpired(issuedAt: Date, now = new Date()): boolean {
-  return issuedAt.getTime() <= memoExpiryCutoff(now).getTime();
-}
-
-export interface VaultKey {
-  key: CryptoKey;
-  /** 鍵の指紋。鍵を入れ替えたあと、古い鍵で作った控えを見分けるのに使う */
-  version: string;
-}
-
-export interface SealedMemo {
-  ciphertext: string;
-  iv: string;
-  keyVersion: string;
-}
-
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
-
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary);
-}
-
-function fromBase64(text: string): Uint8Array<ArrayBuffer> {
-  const binary = atob(text);
-  const out = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
-  return out;
-}
-
-/**
- * 設定値から鍵を作る。32バイト（base64で44文字）でなければ鍵なしと同じに扱う。
- *
- * 人が考えた短い文字列を鍵にさせないため、長さが合わないものは受け付けない。
- * 作り方は `openssl rand -base64 32`（docs/deploy-notes.md）。
- */
-export async function importVaultKey(base64: string | null | undefined): Promise<VaultKey | null> {
-  if (!base64) return null;
-  let raw: Uint8Array<ArrayBuffer>;
-  try {
-    raw = fromBase64(base64.trim());
-  } catch {
-    return null;
-  }
-  if (raw.byteLength !== 32) return null;
-  const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", raw));
-  const version = [...digest.slice(0, 6)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return { key, version };
-}
-
 /** 実行環境の秘密の値から鍵を読む。未設定・形が違うときは null。 */
 export async function loadVaultKey(): Promise<VaultKey | null> {
   const { env } = await getCloudflareContext({ async: true });
   return importVaultKey((env as unknown as Record<string, string | undefined>)[CREDENTIAL_KEY_NAME]);
-}
-
-export async function sealMemo(vault: VaultKey, userId: string, password: string): Promise<SealedMemo> {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const cipher = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv, additionalData: encoder.encode(userId) },
-    vault.key,
-    encoder.encode(password),
-  );
-  return { ciphertext: toBase64(new Uint8Array(cipher)), iv: toBase64(iv), keyVersion: vault.version };
-}
-
-/** 開けない理由。画面の言葉は呼び出し側で決める。 */
-export type OpenFailure = "key-changed" | "broken";
-
-export async function openMemo(
-  vault: VaultKey,
-  userId: string,
-  memo: SealedMemo,
-): Promise<{ ok: true; password: string } | { ok: false; reason: OpenFailure }> {
-  if (memo.keyVersion !== vault.version) return { ok: false, reason: "key-changed" };
-  try {
-    const plain = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: fromBase64(memo.iv), additionalData: encoder.encode(userId) },
-      vault.key,
-      fromBase64(memo.ciphertext),
-    );
-    return { ok: true, password: decoder.decode(plain) };
-  } catch {
-    return { ok: false, reason: "broken" };
-  }
 }
 
 /**

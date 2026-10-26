@@ -1,5 +1,23 @@
 /** 用途別CLIの新規発行。既存メールへの所属追加・資格情報の発行は行わない。 */
+// 長さの決まりは画面・サーバーと同じものを使う（DD-032 の4。そのため node --experimental-strip-types で動かす）
+import { validateNewPassword } from "../src/lib/security/password.ts";
+
 const ROLES = ["SUPER_ADMIN", "COMPANY_ADMIN", "MANAGER", "EMPLOYEE"];
+
+export { validateNewPassword };
+
+/**
+ * 発行するパスワードを受け取る。
+ * 引数の値はシェルの履歴とプロセスの一覧に残るので、--password は値を読まずに断る。
+ * 環境変数 ADD_USER_PASSWORD があればそれを使い、無ければ標準入力を読む（末尾の改行だけを落とす）。
+ */
+export async function resolveAddUserPassword({ argv, env, readStdin }) {
+  if (argv.some((arg) => arg === "--password" || arg.startsWith("--password="))) {
+    throw new Error("--password は使えません。ADD_USER_PASSWORD か標準入力で渡してください。");
+  }
+  if (env.ADD_USER_PASSWORD) return env.ADD_USER_PASSWORD;
+  return String(await readStdin()).replace(/\r?\n$/, "");
+}
 const q = (value) => value == null ? "NULL" : `'${String(value).replaceAll("'", "''")}'`;
 
 /** Webの発行・ログインと同じメールの形にそろえる。 */

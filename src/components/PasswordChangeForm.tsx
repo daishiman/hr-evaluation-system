@@ -6,6 +6,7 @@ import { useSaveAction } from "@/lib/use-refresh";
 import { Button, LinkButton, ReasonNote, RevealToggle } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { RefreshStatus } from "@/components/RefreshStatus";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/security/password";
 
 /**
  * パスワードの変更。
@@ -17,11 +18,9 @@ import { RefreshStatus } from "@/components/RefreshStatus";
  * - 何が足りないかは具体的に言う。ただし「いまのパスワード」が合っているかどうかの
  *   詳しい理由はサーバーの言い方のまま出す（総当たりの手掛かりを増やさない）。
  *
- * 決まり事の値（10文字以上）は actions/account.ts と同じものを**表示のためだけに**持つ。
- * ここを変えても実際の判定は変わらない（判定はサーバーが行う）。
+ * 長さの決まりは src/lib/security/password.ts の値を**表示のためだけに**使う。
+ * 実際の判定はサーバーが同じ値で行う（DD-032 の4）。
  */
-const MIN_LENGTH = 10;
-const MAX_LENGTH = 200;
 
 export function PasswordChangeForm() {
   // 成功の応答には「仮パスワードのまま」の案内を消した画面が同梱される（runAction の refresh）
@@ -41,17 +40,17 @@ export function PasswordChangeForm() {
 
   // 新しいパスワードが満たすべき条件。画面の表示と送信前の確認で同じものを見る。
   const rules = [
-    { key: "len", label: `${MIN_LENGTH}文字以上（いまは${next.length}文字）`, met: next.length >= MIN_LENGTH && next.length <= MAX_LENGTH },
+    { key: "len", label: `${PASSWORD_MIN_LENGTH}文字以上（いまは${next.length}文字）`, met: next.length >= PASSWORD_MIN_LENGTH && next.length <= PASSWORD_MAX_LENGTH },
     { key: "diff", label: "いまのパスワードとは違うもの", met: next.length > 0 && next !== current },
     { key: "same", label: "確認用と同じ", met: confirm.length > 0 && confirm === next },
   ];
   const unmet = rules.filter((r) => !r.met).length;
 
   const nextError =
-    touched.next && next.length > 0 && next.length < MIN_LENGTH
-      ? `${MIN_LENGTH}文字以上にしてください。`
-      : touched.next && next.length > MAX_LENGTH
-        ? `${MAX_LENGTH}文字までにしてください。`
+    touched.next && next.length > 0 && next.length < PASSWORD_MIN_LENGTH
+      ? `${PASSWORD_MIN_LENGTH}文字以上にしてください。`
+      : touched.next && next.length > PASSWORD_MAX_LENGTH
+        ? `${PASSWORD_MAX_LENGTH}文字までにしてください。`
         : touched.next && next.length > 0 && next === current
           ? "いまのパスワードとは違うものにしてください。"
           : null;
@@ -66,9 +65,9 @@ export function PasswordChangeForm() {
       setError("3つとも入力してください。");
       return;
     }
-    if (next.length < MIN_LENGTH || next.length > MAX_LENGTH) {
+    if (next.length < PASSWORD_MIN_LENGTH || next.length > PASSWORD_MAX_LENGTH) {
       setTouched((t) => ({ ...t, next: true }));
-      setError(`新しいパスワードは${MIN_LENGTH}文字以上${MAX_LENGTH}文字までにしてください。`);
+      setError(`新しいパスワードは${PASSWORD_MIN_LENGTH}文字以上${PASSWORD_MAX_LENGTH}文字までにしてください。`);
       return;
     }
     if (next === current) {

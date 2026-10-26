@@ -17,6 +17,9 @@
 
 import { jstDateKey } from "./jst";
 
+/** 画面からの保存（Server Action）を通信と同じ表で数える宛先の頭。 */
+export const ACTION_USAGE_PREFIX = "/actions/";
+
 /* ───────────────────────── 数える単位 ───────────────────────── */
 
 /** 画面1枚ぶんの数。すべて「その日・その画面・その役割」での合計。 */
@@ -114,6 +117,13 @@ export type UsageRangeDays = (typeof USAGE_RANGE_DAYS)[number];
 export const USAGE_BATCH_MAX_SCREENS = 40;
 /** 1回の送信に含めてよい通信の種類の数。 */
 export const USAGE_BATCH_MAX_APIS = 40;
+
+/**
+ * 1社1日に作ってよい行の数（画面の表と通信の表それぞれ。DD-032 の17）。
+ * 既にある行への足し込みは上限に関係なく受ける。ふだんの使い方で作られる行の数（画面の数×役割の数、
+ * 通信の宛先の数）はこれより少ない（lib/usage の結合試験で確かめる）。
+ */
+export const USAGE_MAX_ROWS_PER_COMPANY_DAY = 500;
 
 /* ───────────────────────── 日付（日本時間で切る） ───────────────────────── */
 

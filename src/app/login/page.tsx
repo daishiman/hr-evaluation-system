@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { safeRedirectPath } from "@/lib/security/safe-redirect";
 import { getViewer, homePathFor } from "@/lib/session";
 import { LoginForm } from "./LoginForm";
 
@@ -7,8 +8,9 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const viewer = await getViewer();
   const { next } = await searchParams;
-  // 外部サイトへ飛ばされないよう、戻り先は自サイト内のパスだけを受け付ける
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : undefined;
+  // 外部サイトへ飛ばされないよう、戻り先は自サイト内のパスだけを受け付ける（DD-032 の6）。
+  // 使えない値は空にして、役割ごとの既定の行き先へ回す
+  const safeNext = safeRedirectPath(next, "") || undefined;
   if (viewer) redirect(safeNext ?? homePathFor(viewer.role));
 
   return (

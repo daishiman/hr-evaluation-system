@@ -35,6 +35,15 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   typedRoutes: false,
+  // 使っている部品と版を応答で名乗らない（DD-032 の12）
+  poweredByHeader: false,
+  // next dev に AGENTS.md へ指示を書き足させない。AGENTS.md はエージェント向けの規約の正本
+  agentRules: false,
+  /**
+   * 画像の変換の口（/_next/image）は使っていない。最適化を切り、worker.ts でも口を 404 にする
+   * （src/lib/security/public-surface.ts。DD-032 の12）。
+   */
+  images: { unoptimized: true },
   /**
    * ログインとDBの部品は、ビルド時に画面ごとへ複製されると
    * サーバー側の実行ファイルが Cloudflare Workers の容量上限を超える。
@@ -50,8 +59,10 @@ const nextConfig: NextConfig = {
        * 画面の改善要望はスクリーンショット1枚（960KB）を送る。どちらも既定の1MBを
        * 超えうるので、ここで広げる。個々の操作はさらに小さい上限を持つ
        * （src/lib/action.ts の maxBytes と、各入力の zod の max）。
+       * 取り込みの上限（src/lib/import.ts の IMPORT_MAX_BYTES）に、送り方の包みの分を
+       * 足した大きさにする。それより大きい本文は、読む前に断る（DD-032 の9）。
        */
-      bodySizeLimit: "8mb",
+      bodySizeLimit: "6.5mb",
     },
   },
   async headers() {

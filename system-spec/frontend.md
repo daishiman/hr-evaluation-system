@@ -3,7 +3,7 @@ status: confirmed
 category: frontend
 aggregate: 確定
 spec_cells: [frontend.web, frontend.mobile, frontend.tablet, frontend.desktop-windows, frontend.desktop-linux, frontend.desktop-macos]
-serves_goals: [G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29]
+serves_goals: [G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29, G35, G37]
 ---
 
 # フロントエンド (frontend)
@@ -15,9 +15,9 @@ serves_goals: [G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, 
 
 | プラットフォーム | 状態 | 根拠 |
 |---|---|---|
-| Web (web) | 確定 | 確定質疑: qa-y11。裏付け質疑 (`qa_refs`): `qa-r-frontend-3`, `qa-f05`, `qa-f01`, `qa-u01`, `qa-u02`, `qa-d02`, `qa-u05`, `qa-u19`, `qa-u18`, `qa-u22`, `qa-u23`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v14`, `qa-v22`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w07`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x10`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-z04`, `qa-aa01-report-access-print`, `qa-aa03-report-paper-user-revision`, `qa-aa04-report-landscape-onepage-design`, `qa-aa05-report-score-grade-request`, `qa-aa06-report-score-grade-design`, `qa-aa07-report-threshold-marker-audit`, `qa-aa08-report-marker-detail-print-design`, `qa-aa09-report-print-final-alignment`, `qa-aa10-report-print-background-preparation`, `qa-ab01-settings-ui-overhaul-request`, `qa-ab03-settings-pages-load-observed`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab06-shared-ui-theme-contract-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab13-foundation-016-approval`, `qa-ab14-ui-scope-beyond-buttons`, `qa-ab15-foundation-017-approval`, `qa-ab02-behavior-band-default-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29 |
-| モバイル (mobile) | 確定 | 確定質疑: qa-y11。裏付け質疑 (`qa_refs`): `qa-r-frontend-3`, `qa-f05`, `qa-f01`, `qa-u01`, `qa-u02`, `qa-d02`, `qa-u05`, `qa-u19`, `qa-u18`, `qa-u22`, `qa-u23`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v14`, `qa-v22`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w07`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x10`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-z04`, `qa-ab01-settings-ui-overhaul-request`, `qa-ab03-settings-pages-load-observed`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab06-shared-ui-theme-contract-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab13-foundation-016-approval`, `qa-ab14-ui-scope-beyond-buttons`, `qa-ab15-foundation-017-approval`, `qa-ab02-behavior-band-default-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29 |
-| タブレット (tablet) | 確定 | 確定質疑: qa-y11。裏付け質疑 (`qa_refs`): `qa-r-frontend-3`, `qa-f05`, `qa-f01`, `qa-u01`, `qa-u02`, `qa-d02`, `qa-u05`, `qa-u19`, `qa-u18`, `qa-u22`, `qa-u23`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v14`, `qa-v22`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w07`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x10`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-z04`, `qa-ab01-settings-ui-overhaul-request`, `qa-ab03-settings-pages-load-observed`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab06-shared-ui-theme-contract-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab13-foundation-016-approval`, `qa-ab14-ui-scope-beyond-buttons`, `qa-ab15-foundation-017-approval`, `qa-ab02-behavior-band-default-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29 |
+| Web (web) | 確定 | 確定質疑: qa-y11。裏付け質疑 (`qa_refs`): `qa-r-frontend-3`, `qa-f05`, `qa-f01`, `qa-u01`, `qa-u02`, `qa-d02`, `qa-u05`, `qa-u19`, `qa-u18`, `qa-u22`, `qa-u23`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v14`, `qa-v22`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w07`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x10`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-z04`, `qa-aa01-report-access-print`, `qa-aa03-report-paper-user-revision`, `qa-aa04-report-landscape-onepage-design`, `qa-aa05-report-score-grade-request`, `qa-aa06-report-score-grade-design`, `qa-aa07-report-threshold-marker-audit`, `qa-aa08-report-marker-detail-print-design`, `qa-aa09-report-print-final-alignment`, `qa-aa10-report-print-background-preparation`, `qa-ab01-settings-ui-overhaul-request`, `qa-ab03-settings-pages-load-observed`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab06-shared-ui-theme-contract-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab13-foundation-016-approval`, `qa-ab14-ui-scope-beyond-buttons`, `qa-ab15-foundation-017-approval`, `qa-ab02-behavior-band-default-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval`, `qa-ac11`, `qa-ab01`, `qa-ac01` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29, G35, G37 |
+| モバイル (mobile) | 確定 | 確定質疑: qa-y11。裏付け質疑 (`qa_refs`): `qa-r-frontend-3`, `qa-f05`, `qa-f01`, `qa-u01`, `qa-u02`, `qa-d02`, `qa-u05`, `qa-u19`, `qa-u18`, `qa-u22`, `qa-u23`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v14`, `qa-v22`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w07`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x10`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-z04`, `qa-ab01-settings-ui-overhaul-request`, `qa-ab03-settings-pages-load-observed`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab06-shared-ui-theme-contract-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab13-foundation-016-approval`, `qa-ab14-ui-scope-beyond-buttons`, `qa-ab15-foundation-017-approval`, `qa-ab02-behavior-band-default-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval`, `qa-ac11`, `qa-ab01`, `qa-ac01` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29, G35, G37 |
+| タブレット (tablet) | 確定 | 確定質疑: qa-y11。裏付け質疑 (`qa_refs`): `qa-r-frontend-3`, `qa-f05`, `qa-f01`, `qa-u01`, `qa-u02`, `qa-d02`, `qa-u05`, `qa-u19`, `qa-u18`, `qa-u22`, `qa-u23`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v13`, `qa-v14`, `qa-v22`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w07`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x10`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-z04`, `qa-ab01-settings-ui-overhaul-request`, `qa-ab03-settings-pages-load-observed`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab06-shared-ui-theme-contract-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab13-foundation-016-approval`, `qa-ab14-ui-scope-beyond-buttons`, `qa-ab15-foundation-017-approval`, `qa-ab02-behavior-band-default-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval`, `qa-ac11`, `qa-ab01`, `qa-ac01` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29, G35, G37 |
 | デスクトップ (Windows) (desktop-windows) | 対象外 | 理由: frontend: デスクトップのネイティブアプリは存在せず作る予定も無い（qa-f01。利用者も qa-u08 で対象外と確認）。PC からの利用はブラウザ経由で web 列に含まれ、ルーターのキャッシュとタブ間通知はデスクトップ固有の要件を持たない。 |
 | デスクトップ (Linux) (desktop-linux) | 対象外 | 理由: frontend: デスクトップのネイティブアプリは存在せず作る予定も無い（qa-f01。利用者も qa-u08 で対象外と確認）。PC からの利用はブラウザ経由で web 列に含まれ、ルーターのキャッシュとタブ間通知はデスクトップ固有の要件を持たない。 |
 | デスクトップ (macOS) (desktop-macos) | 対象外 | 理由: frontend: デスクトップのネイティブアプリは存在せず作る予定も無い（qa-f01。利用者も qa-u08 で対象外と確認）。PC からの利用はブラウザ経由で web 列に含まれ、ルーターのキャッシュとタブ間通知はデスクトップ固有の要件を持たない。 |
@@ -36,8 +36,8 @@ serves_goals: [G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, 
 
 | 設計 concern | 上流の正本 (authority) | 導く範囲 | 出典 | 最終確認 | 本章の確定セルへの反映 |
 |---|---|---|---|---|---|
-| presentation | Apple Human Interface Guidelines | 画面設計・操作フロー・情報階層・アクセシビリティの上流原則 | https://developer.apple.com/design/human-interface-guidelines | 2026-07-12 | Apple HIG のフィードバックの原則（操作の結果をすぐ、はっきり示す）に沿い、成功の知らせと、一覧・件数・会社切替メニューの更新を、Server Function の一度の応答でそろえ、新しい描画が終わってから成功を返す（qa-r-frontend-3 (1)）。連続作成フォームでも一覧の更新を省略せず、控えは成功の知らせの後ろに畳んで、畳んでいる間は値を画面に置かない（同 (2)）。Next.js の文書のとおり router.refresh は影響を受けない useState とスクロール位置を保つので、他タブの通知で取り直しても入力中の内容を失わない。 （2026-10-13 追記：G6〜G15）Apple HIG のフィードバックの原則に沿い、並べ替えでは動かしている間に落とす位置を示し、離したら並びを変え、何番目になったかを aria-live で読み上げる（qa-v22 (2)、D-005）。権限一覧のモーダルは dialog 要素で作り、開いたらフォーカスを中に移し、閉じたら元のボタンへ戻す（同 (3)）。選択肢は label の全面で押せ、見本では試しに選べても送信の操作を出さず、読み取り専用の .chip はポインターの形とホバーの変化を出さない（同 (5)）。余白の見直しは各画面の段組みで行い、配色・テーマの宣言と契約テストは変えない（同 (7)）。 （2026-10-20 追記：G17〜G24）印刷の体裁を @media print の中だけで組み替え、HTML の順（読み上げの順）は画面と同じにする（qa-y11 (16)）。⑤の前で改ページし、図は印刷のときに決まった大きさで描く。図に role="img" と aria-label を付けて同じ内容の表を添え、色はテーマの変数から取る（同 (10)(13)）。テーマの契約テストと globals.css 冒頭の宣言は変えない。 （2026-10-22 追記：G25〜G29）グラデーションと色の変化は globals.css の部品クラスに、既存の意味のトークンと color-mix・linear-gradient だけで書き、系統は骨格のトークンを上書きするだけのまま全ての系統と明暗に効かせる（qa-ab06、I32、G29）。テーマの契約テストと globals.css 冒頭の宣言は変えず、平賀配色へは移さない（DD-003）。見出しの面の微グラデ（hero-tint）は1画面1箇所を保ち、使えない状態・印刷・コントラストを強くする設定では平らな面に戻す。開いた・閉じたの状態は色だけでなく印と文で示す（I33、G26）。 (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない)) |
-| application-architecture | Robert C. Martin — Clean Architecture | レイヤ境界・依存方向 (内向き)・ユースケース中心設計 | Clean Architecture (2017), the Dependency Rule | 2026-07-12 | 他タブとの連携を共通口（FreshnessSync）の内側に置き、通知の送り手と受け手が互いの画面の構造を知らないようにする（qa-r-frontend-3 (3)(4)）。受け手は『何が変わったか』を受けて router.refresh を呼ぶだけで、取り直しは 1.5 秒に 1 回へ間引く。タブ復帰（visibilitychange）・通信の回復（online）・bfcache 復元（pageshow の persisted）も同じ入口を使い、bfcache のときはルーターが画面を戻し終えた後に取り直す。画面から書き込みの fetch を直接呼ぶ箇所は server-actions-contract.test.ts で落とし、sendBeacon などの例外は理由付きで検査に列挙する（同 (5)）。 （2026-10-13 追記：G6〜G15）並べ替え・権限一覧・設定不足の表示を、それぞれ共通の部品に置き、各画面は値を渡すだけにする（qa-v22 (2)(3)(4)）。権限一覧の表とカードは同じデータから描き、幅で切り替えるだけにして内容をずらさない。開閉の状態は localStorage に置き、読めないときも既定の状態で動く（同 (6)）。等級名はサーバーから受け取り、クライアントの部品に区分名の対応を持たせない（同 (1)）。 （2026-10-20 追記：G17〜G24）判断の値と理由は確定の操作と一緒に1回で送り、別の保存ボタンや別の Server Function を作らない（qa-y11 (14)）。画面は useSaveAction の結果を出すだけという今の形を、確定の操作にもそのまま当てる。レポートのデータの形は本人向けとそれ以外で型を分け、部品が見る人の役割を判定しない（同 (10)）。 （2026-10-22 追記：G25〜G29）部品は主・副・選んだ・開いたの状態をクラスの名前で受け取るだけにし、どの色を使うかを部品の中で決めない（I32、G29）。KPI・評価セットの作業を別の画面に分けても、各画面はサーバーから受け取った設定と『できる操作』を描くだけにし、保存は今の useSaveAction の形を使う（I27、G26）。書き戻しと追従の結果（変わったアンケートと評価）はサーバーの応答をそのまま出し、他のタブへは今の FreshnessSync で知らせる（I29・I30、G27）。 (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない)) |
+| presentation | Apple Human Interface Guidelines | 画面設計・操作フロー・情報階層・アクセシビリティの上流原則 | https://developer.apple.com/design/human-interface-guidelines | 2026-07-12 | Apple HIG のフィードバックの原則（操作の結果をすぐ、はっきり示す）に沿い、成功の知らせと、一覧・件数・会社切替メニューの更新を、Server Function の一度の応答でそろえ、新しい描画が終わってから成功を返す（qa-r-frontend-3 (1)）。連続作成フォームでも一覧の更新を省略せず、控えは成功の知らせの後ろに畳んで、畳んでいる間は値を画面に置かない（同 (2)）。Next.js の文書のとおり router.refresh は影響を受けない useState とスクロール位置を保つので、他タブの通知で取り直しても入力中の内容を失わない。 （2026-10-13 追記：G6〜G15）Apple HIG のフィードバックの原則に沿い、並べ替えでは動かしている間に落とす位置を示し、離したら並びを変え、何番目になったかを aria-live で読み上げる（qa-v22 (2)、D-005）。権限一覧のモーダルは dialog 要素で作り、開いたらフォーカスを中に移し、閉じたら元のボタンへ戻す（同 (3)）。選択肢は label の全面で押せ、見本では試しに選べても送信の操作を出さず、読み取り専用の .chip はポインターの形とホバーの変化を出さない（同 (5)）。余白の見直しは各画面の段組みで行い、配色・テーマの宣言と契約テストは変えない（同 (7)）。 （2026-10-20 追記：G17〜G24）印刷の体裁を @media print の中だけで組み替え、HTML の順（読み上げの順）は画面と同じにする（qa-y11 (16)）。⑤の前で改ページし、図は印刷のときに決まった大きさで描く。図に role="img" と aria-label を付けて同じ内容の表を添え、色はテーマの変数から取る（同 (10)(13)）。テーマの契約テストと globals.css 冒頭の宣言は変えない。 （2026-10-22 追記：G25〜G29）グラデーションと色の変化は globals.css の部品クラスに、既存の意味のトークンと color-mix・linear-gradient だけで書き、系統は骨格のトークンを上書きするだけのまま全ての系統と明暗に効かせる（qa-ab06、I32、G29）。テーマの契約テストと globals.css 冒頭の宣言は変えず、平賀配色へは移さない（DD-003）。見出しの面の微グラデ（hero-tint）は1画面1箇所を保ち、使えない状態・印刷・コントラストを強くする設定では平らな面に戻す。開いた・閉じたの状態は色だけでなく印と文で示す（I33、G26）。 （2026-10-22 追記：G35）HIG の、利用者が行き先を予測できるようにする考え方を、frontend の確定内容（qa-ac11 の (17)・(18)）に次のように当てる。ログイン後の戻り先が同じ origin でないときは、黙ってよそへ送らず既定の画面へ戻す。社員の回答画面には配点を送らず、画面に出さない値をデータとしても渡さない。 (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない)) |
+| application-architecture | Robert C. Martin — Clean Architecture | レイヤ境界・依存方向 (内向き)・ユースケース中心設計 | Clean Architecture (2017), the Dependency Rule | 2026-07-12 | 他タブとの連携を共通口（FreshnessSync）の内側に置き、通知の送り手と受け手が互いの画面の構造を知らないようにする（qa-r-frontend-3 (3)(4)）。受け手は『何が変わったか』を受けて router.refresh を呼ぶだけで、取り直しは 1.5 秒に 1 回へ間引く。タブ復帰（visibilitychange）・通信の回復（online）・bfcache 復元（pageshow の persisted）も同じ入口を使い、bfcache のときはルーターが画面を戻し終えた後に取り直す。画面から書き込みの fetch を直接呼ぶ箇所は server-actions-contract.test.ts で落とし、sendBeacon などの例外は理由付きで検査に列挙する（同 (5)）。 （2026-10-13 追記：G6〜G15）並べ替え・権限一覧・設定不足の表示を、それぞれ共通の部品に置き、各画面は値を渡すだけにする（qa-v22 (2)(3)(4)）。権限一覧の表とカードは同じデータから描き、幅で切り替えるだけにして内容をずらさない。開閉の状態は localStorage に置き、読めないときも既定の状態で動く（同 (6)）。等級名はサーバーから受け取り、クライアントの部品に区分名の対応を持たせない（同 (1)）。 （2026-10-20 追記：G17〜G24）判断の値と理由は確定の操作と一緒に1回で送り、別の保存ボタンや別の Server Function を作らない（qa-y11 (14)）。画面は useSaveAction の結果を出すだけという今の形を、確定の操作にもそのまま当てる。レポートのデータの形は本人向けとそれ以外で型を分け、部品が見る人の役割を判定しない（同 (10)）。 （2026-10-22 追記：G25〜G29）部品は主・副・選んだ・開いたの状態をクラスの名前で受け取るだけにし、どの色を使うかを部品の中で決めない（I32、G29）。KPI・評価セットの作業を別の画面に分けても、各画面はサーバーから受け取った設定と『できる操作』を描くだけにし、保存は今の useSaveAction の形を使う（I27、G26）。書き戻しと追従の結果（変わったアンケートと評価）はサーバーの応答をそのまま出し、他のタブへは今の FreshnessSync で知らせる（I29・I30、G27）。 （2026-10-22 追記：G35・G37）Clean Architecture の依存の向きを、frontend の確定内容（qa-ac11 の (17)〜(19)）に次のように当てる。戻り先の判定は画面の部品に書かず共通の関数に置き、サーバーの redirect とクライアントの router.replace の両方がそれを呼ぶ（G35）。社員向けの選択肢の形は、配点を持たない型として画面の外で作る（G35）。x-powered-by と使っていない画像最適化の口は、画面ではなく設定と入口で閉じる（G37）。 (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない)) |
 
 ## 確定内容 (質疑録)
 
@@ -45,7 +45,7 @@ serves_goals: [G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, 
 
 ### Web (web)
 
-- 資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29
+- 資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29, G35, G37
 
 #### 主たる接地根拠: `qa-y11`
 
@@ -223,6 +223,7 @@ D-001（他タブ・画面復帰の方式）・D-002（同じタブの反映の�
 > 本文中の記述と食い違う場合は、訂正側が正である。
 >
 > - `2026-10-01T09:43:30Z` — 本 qa の R1 問1 の表 A などで示した I1・I2・I3・I5・I6・O2・O3（測り方を含む）・G4・U8 (1)・U6 の文面は、保存している文面を縮めたり言い換えたりしたもので、保存文面そのものではなかった（O4 は目標文を示さず、測り方の行だけを示した）。完成度評価の7回目がこれを指摘したため、R5（qa-u26、2026-10-01T09:29:16Z）で R1 の文面と保存している全文を並べて示し、I1 を『1. 全文で確定する』で、ほかの10項目を保存している全文のまま確定し直した。上位概念の承認は appr-foundation-007 に移した。
+> - `2026-10-22T12:24:39Z` — 本 qa の出所の表にある U8 (1) の『Next.js 16 系（16.3.8 へ上げる）』は、2026-10-01 時点の決めである。16.3.8 は 2026-10-14 公開の勧告 GHSA-p3m5-59mp-jv5r の影響範囲（16.0.0〜16.4.0）に入るため、16.3.8 で止めない。今の版の決めは、上位概念の制約の1行目『脆弱性の修正を含む 16.4.1 以上へ上げる』と G32・O32・I36（appr-foundation-022。2026-10-22T11:10:02Z の回答 qa-ac02）の『next は 16.4.1 以上』が正である。question/answer は当時の逐語として変更しない。corrected_at はこの訂正の記録時刻で、利用者の回答時刻ではない。
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: 下のフェンス内の逐語 / 回答時刻: 2026-10-01T05:23:38Z)
 
@@ -369,6 +370,11 @@ AskUserQuestion（会話記録 セッション c1cbb5bd-2317-4106-84d7-c7008c6c9
 **答**
 
 前半＝『auth（4項目）, security（7項目）, backend（4項目）, database（6項目）』、後半＝『frontend（5項目）, infrastructure（5項目）, maintenance-ops（4項目）, ui-ux（5項目）』。8章すべてを表の文面で確定し、保留は無い。章ごとの文面は qa-r-auth-3・qa-r-security-3・qa-r-backend-4・qa-r-database-3・qa-r-frontend-3・qa-r-infrastructure-3・qa-r-ops-3・qa-r-uiux-3 に逐語で写した。
+
+> **訂正あり** — 直上の答は凍結された記録であり、後から次の訂正が入っている。
+> 本文中の記述と食い違う場合は、訂正側が正である。
+>
+> - `2026-10-22T12:24:39Z` — 本 qa の出所の表にある (4) の『Next.js は脆弱性の修正を含む 16.3.8 へ上げる。』は、2026-10-01 時点の決めである。16.3.8 は 2026-10-14 公開の勧告 GHSA-p3m5-59mp-jv5r の影響範囲（16.0.0〜16.4.0）に入るため、16.3.8 で止めない。今の版の決めは、上位概念の制約の1行目『脆弱性の修正を含む 16.4.1 以上へ上げる』と G32・O32・I36（appr-foundation-022。2026-10-22T11:10:02Z の回答 qa-ac02）の『next は 16.4.1 以上』が正である。question/answer は当時の逐語として変更しない。corrected_at はこの訂正の記録時刻で、利用者の回答時刻ではない。
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（会話記録 セッション c1cbb5bd-2317-4106-84d7-c7008c6c966a、tool_use toolu_01ER39ybgv66SEANd4ggpjNH、質問 2026-10-01T07:37:04Z、回答 2026-10-01T07:37:33Z）。2026-10-01T07:36:59Z に、仕様書の8章について R1〜R3 の決定と実装に合わせて書き直した文面を、全文で会話に表示した。表の地の文で示した答え方の決まり：区分は 同（前の版と同じ）・改（直した）・新（足した）。章ごとに確定するかを選び、選ばなかった章は保留として残す。自由記述（Other）だけで答えた問も保留にする。選択肢は章の順に並べただけで、おすすめの順ではない。R1 の表では全5回と予告したが、R4 で全項目が決まったため R1〜R4 の4回で終えた。表示から回答まで34秒、質問から回答まで29秒。問と選択肢（全文）: [1] 表の auth・security・backend・database の章を、表の文面で確定しますか？（選んだ章を確定。選ばない章は保留。並びは章の順で、推奨の順ではありません）（複数選択。選択肢: 『auth（4項目）』（説明: (1) を入口の検査に合わせて改訂。(2)〜(4) は前の版と同じ）、『security（7項目）』（説明: (6) に控えの14日の期限と掃除、(7) に送り元の二重の検査と試験での固定を反映）、『backend（4項目）』（説明: (3) を D-003 案 A（batch・補償・前進回復の3つの型）と契約試験に改訂）、『database（6項目）』（説明: (2) に batch へまとめた4か所、(5) に14日の期限、(6) に同時保存の409を追加）） [2] 表の frontend・infrastructure・maintenance-ops・ui-ux の章を、表の文面で確定しますか？（選んだ章を確定。選ばない章は保留。並びは章の順で、推奨の順ではありません）（複数選択。選択肢: 『frontend（5項目）』（説明: 実装の名前（useSaveAction・createCommitGate・FreshnessSync・online・bfcache の順序）に合わせて改訂）、『infrastructure（5項目）』（説明: (2) 生成時刻を Next.js の外側で付ける、(3) workers.dev だけで配っている事実、(5) 鍵の手順を反映）、『maintenance-ops（4項目）』（説明: (1) 3つの検査、(2) 375px・768px の通し試験を追加、(3) rollforward_failed の手順を追加）、『ui-ux（5項目）』（説明: (2) ボタン名と14日の期限の表示、(5) 375px・768px の通し試験を反映））。回答（逐語）: [1]＝『auth（4項目）, security（7項目）, backend（4項目）, database（6項目）』、[2]＝『frontend（5項目）, infrastructure（5項目）, maintenance-ops（4項目）, ui-ux（5項目）』。表示した全文（逐語）: ⟪R4 の確認です。仕様書の8章について、これまでの決定（R1〜R3）と実装に合わせて書き直した文面を、全文で示します。
 
@@ -1118,6 +1124,11 @@ A4であれば複数枚またがってもOKです。A3であれば1枚にまと�
 
 ちょっと不適切かなっていう部分はあったりするので、この辺も整えるようにしてほしいなと思ってます。
 
+> **訂正あり** — 直上の答は凍結された記録であり、後から次の訂正が入っている。
+> 本文中の記述と食い違う場合は、訂正側が正である。
+>
+> - `2026-10-22T11:49:02Z` — answered_at が無かったので補う。出典は、同じ依頼を受けた Codex の会話記録（/Users/dm/.codex/sessions/2026/10/19/rollout-2026-10-19T22-51-45-01a1546e-ba5c-7433-9185-541ba043671a.jsonl の 2373 行目、role は user）の利用者の発言の時刻。照合の結果、利用者の発言の全文と answer が一致した。corrected_at はこの訂正の記録時刻。 補記: {"corrected_field": "answered_at", "previous_value": null, "corrected_value": "2026-10-21T08:39:46Z"}
+
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: 2026-10-21 の追加依頼。親担当が受けた利用者発言の全文をそのまま転記。用紙の向きや寸法、過長の抑止方式は利用者の逐語ではなく次の補足設計に分離する。)
 
 #### 裏付け質疑: `qa-aa04-report-landscape-onepage-design`
@@ -1143,6 +1154,11 @@ qa-aa03 の A3 1枚 / A4 複数枚と URL のない出力を、本文を欠落�
 あと、レポートとしては、キーごとの点数が何点だったりとか、等級がどういうふうに変化しているのかっていうところがパッと見てわかるようにしてほしいです。等級と点数の依存関係のあるグラフ、表、折れ線グラフだったり、その最適なレポートっていうところがわかるようにしてほしいです。で、これ以外にも何か表現として適切なレポートとかあれば記述してほしいなというふうに思うのですが、この辺。
 
 何かいい塩梅のものがあれば整えてほしいです。で、あと各A評価とかC評価とかの横線のグラフが自分自身が今点数どこかっていうところになってますが、このAの位置だったりが各項目によって線の位置がちょっとずれたりしてますが、黒い縦の線ですね。この線の内容って適切ですか？
+
+> **訂正あり** — 直上の答は凍結された記録であり、後から次の訂正が入っている。
+> 本文中の記述と食い違う場合は、訂正側が正である。
+>
+> - `2026-10-22T11:49:02Z` — answered_at が無かったので補う。出典は、同じ依頼を受けた Codex の会話記録（/Users/dm/.codex/sessions/2026/10/19/rollout-2026-10-19T22-51-45-01a1546e-ba5c-7433-9185-541ba043671a.jsonl の 2444 行目、role は user）の利用者の発言の時刻。照合の結果、利用者の483字の発言に answer の320字がそのまま含まれていた。corrected_at はこの訂正の記録時刻。 補記: {"corrected_field": "answered_at", "previous_value": null, "corrected_value": "2026-10-21T08:43:42Z"}
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: 2026-10-21 の追加依頼。親担当から共有された利用者の逐語を全文転記。黒い縦線に関する質問は不具合の確定を意味しない。)
 
@@ -1403,9 +1419,49 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（1問、2択）。改めた範囲の文を writer の set-foundation で候補ファイルへ当てて形の検査（rc=0）を通した後に、今の文と新しい文を preview に並べて問い、回答を受けた直後の 2026-10-22T06:34:15Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。中身は qa-v26 (1)・qa-v29 (1)（所属の表と移行）、qa-r-database-3 (6)（0032 の番号の振り直し）、範囲の内の等級名の書き換え（0034・0035）・事業所の表の削除（0039）・I26 で決まっていた判断を範囲の文へ写すもので、この承認を appr-foundation-020 として記録し、appr-foundation-019 を置き換える。0021・0023・0025・0030 も行を書き換えるが、この仕様より前（2026-08〜09 の PR #75・#77・#80・#88）に足した移行なので挙げない。 / 回答時刻: 2026-10-22T06:34:15Z)
 
+#### 裏付け質疑: `qa-ac11`
+
+**問**
+
+frontend 章の末尾に、preview の (17)〜(20) を【2026-10-22 の追加】として足して確定しますか？（選択肢と説明：① この内容で確定する『利点：戻り先の判定の共通化・配点を送らないこと・外から見える面の削減が章に入る。不利な点：あとで項目を変えるには、もう一度 reopen と承認の手順が要る。』preview『【2026-10-22 の追加】 (17) ログイン後などの戻り先の判定を共通の関数に置き、ログインの画面（サーバーの redirect）とログインの部品（router.replace）の2か所で使う。URL として解釈して同じ origin で、パスが `/` で始まるものだけを許し、それ以外は既定の画面へ戻す（G35・I39）。 (18) 社員の回答画面に、選択肢の配点（score）を送らない。社員向けの選択肢の形から配点のキーを落とし、隠すのを画面に任せない（G35・O35）。 (19) 応答に x-powered-by を出さず、使っていない画像最適化の口は入口で断る（G37）。 (20) CSP の 'unsafe-inline' を外すことは今回の範囲の外で、台帳に残す。』／② 確定を保留する『利点：直したい点を伝えてから決められる。不利な点：G35・G37 の決まりが frontend 章に無いままで、完成度の評価が通らない見込みなので、spec で止まり decompose 以降は実行しない。』preview『frontend 章は今の本文 (1)〜(16) のまま残る。 戻り先・配点・外から見える面の決まりは章に入らない。  spec の完成度の評価は FAIL のままの見込みで、 spec で止まって原因と不足を報告する。』）
+
+**答**
+
+(1) クライアントの部品は等級名をサーバーから受け取って表示し、英語の区分名を持たない。 (2) 並べ替えの共通の部品を作る（Pointer Events による長押しと押したままのドラッグ・矢印のボタン・キーボード・aria-live での読み上げ。D-005 ③）。新しい依存は足さない。等級要件・昇格の条件と要件・アンケートの設問と選択肢の編集の部品をこれへ寄せる。 (3) 権限一覧の部品（表・役割のタブ・スマホのカード・説明の吹き出し。D-006）を、権限一覧のページとモーダルで共用する。表は table 要素、タブは APG の tabs の形にする。説明は aria-describedby で結び、フォーカスとタップでも出す。モーダルは dialog 要素で作る。表とカードは画面の幅で切り替え、どちらも同じデータから描く。 (4) 設定不足を出す共通の部品（何が・どう直す・リンク）を作り、設定不足を出している ReasonNote をこれへ置き換える（ReasonNote の他の用途は残す）。 (5) アンケートの回答の部品で、設問名の label を入力の要素へ結び、選択肢は label の全面で押せるようにする。見本の部品は試しに選べる状態を持ち、送信の操作を出さない。読み取り専用の .chip は、ポインターの形とホバーの変化を出さない。 (6) 開閉の状態など端末ごとに覚えるものは localStorage に置き、読めないときも既定の状態で動く。 (7) 余白の見直しは、各画面の構成（段組み・補足の列）で行う。globals.css の配色・テーマの宣言とテーマの契約テストは変えない（AGENTS.md）。page.tsx の main に max-w を書かないという決まりも守る。 (8) 比べる警告の部品（ComparisonGapNotice）を1つ作り、アンケートの一覧・アンケート1本・使うKPIを選ぶの3画面はこれだけを使う。開閉は既存の InlineDetail で作り、画面ごとに <details> を書かない。件数の行は閉じていても出し、開閉の状態は覚えない。表は table 要素で、th に scope を付け、○ と — に『ある』『ない』の読み上げの文字を添える。ボタンは ActionButton を使う。SetupGapList（公開前の不足など）は今の形のまま残す。 【2026-10-19 の追加】 (9) KGI の画面・部品・ナビの項目を消す。賞与（仮）の欄は KGI の値を受け取らない。 (10) レポートの部品は1つのテンプレート（ReportTemplate）にし、サーバーで作ったデータの形だけを受けて描く。図は既存の Charts.tsx（recharts）を広げてレーダー図・折れ線・棒を足し、新しい依存は足さない。色はテーマの変数から取る。図には同じ内容の表を添え、role="img" と aria-label を付ける。印刷の体裁は @media print で作り、操作のボタンを出さない。本人向けとそれ以外でデータの形を分け、本人向けの形には点数のキーを持たせない。 (11) ズレの警告の部品（ComparisonGapNotice）の表に、種類の列と行ごとのリンク（項目の位置へのアンカー付き）を足す。KpiItemEditor は、URL の項目の指定が変わったときにも開き直す。 (12) アンケートの操作の出し分けは、サーバーから受け取る『できる操作』の一覧で決め、部品の中で状態を判定しない。 (13) 印刷は @page（A4 縦と余白）と @media print で作り、図と表のまとまりに break-inside: avoid を付ける。図は印刷の幅でも崩れない大きさで描き、色はテーマの変数の明るい値で刷る。テーマの契約テストと globals.css 冒頭の宣言は変えない。 【2026-10-20 の追加】 (14) 確定の画面の判断の欄は、評価者向けの部品（今のコメント欄と確定のボタンがある部品）に足す。選んだ値と理由は確定の操作と一緒に1回で送り、別の保存ボタンは作らない。押せない理由は、サーバーと同じ入力の検査の関数で決め、部品の中で規則を書き直さない。 (15) 結論の表示は共通の部品（例：DecisionBadge）にまとめ、評価の詳細・本人の結果・評価期間の一覧・レポートが使う。結論と印の文言は1か所に置く。 (16) 印刷用の配置は @media print の中だけで組み替え、HTML の順（読み上げの順）は画面と同じにする。⑤の前で改ページする（break-before: page）。図は印刷のときに決まった大きさで描き、画面の幅に合わせる部品の幅に頼らない。 【2026-10-22 の追加】 (17) ログイン後などの戻り先の判定を共通の関数に置き、ログインの画面（サーバーの redirect）とログインの部品（router.replace）の2か所で使う。URL として解釈して同じ origin で、パスが `/` で始まるものだけを許し、それ以外は既定の画面へ戻す（G35・I39）。 (18) 社員の回答画面に、選択肢の配点（score）を送らない。社員向けの選択肢の形から配点のキーを落とし、隠すのを画面に任せない（G35・O35）。 (19) 応答に x-powered-by を出さず、使っていない画像最適化の口は入口で断る（G37）。 (20) CSP の 'unsafe-inline' を外すことは今回の範囲の外で、台帳に残す。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（3問、各単一選択）。2026-10-22T11:21:51Z に問い、2026-10-22T11:22:10Z に回答（会話記録の時刻）。旧い本文（qa-y11）の末尾に足す項目を preview に全文で示し、利点と不利な点を対称に書いた2択（推奨の印なし、保留の選択肢あり）で問うた。answer は qa-y11 の全文の末尾に、承認された preview（改行は空白に替えた）を足したもの。この回答を受けてセルを reopen し（reopened_at は writer に当てた時の実測で、問と回答はそれより前）、本 qa で再確定した。旧い qa_refs のうち、置き換え済みの qa-v22 は結び直さなかった。 / 回答時刻: 2026-10-22T11:22:10Z)
+
+#### 裏付け質疑: `qa-ab01`
+
+**問**
+
+上位概念の追加案（G30〜G38・O30〜O38・I34〜I41、成功基準8行、制約の修正2行と追加5行、範囲）を確定しますか？（選択肢と説明：① この内容で確定する『appr-foundation-021 として記録し、015 を置き換える。利点：decompose 以降をこの範囲で進められる。不利な点：あとで範囲を変えるには、もう一度承認の手順が要る。』preview に追加案の全文／② 確定を保留する『上位概念は 015 のまま。利点：直したい点を伝えてから決められる。不利な点：spec の完了条件を満たせないので、spec で止まり、decompose 以降は実行しない。』）
+
+**答**
+
+この内容で確定する。PURPOSE と BACKGROUND の末尾に、2026-10-22 の脆弱性の確認と対策の依頼の文を足す。G30〜G38（公開物に本番のデータと秘密を出さない／漏えいの恐れの後の手順と用途ごとの鍵／勧告を期限のうちに塞ぐ／版の固定と deploy の秘密の渡し方／認証の入口の許可制・偽れない識別・パスワードの決まりの統一／出力の安全／入力の量と計算量の上限／外から見える面の削減／監査の台帳と再発を止める静的検査）と、それぞれの O30〜O38・I34〜I41 を足す。成功基準8行と利害関係者2行を足す。制約の Next.js の行を『16.4.1 以上へ上げる・OpenNext Cloudflare 1 系』に、KGI の削除の行の戻し先を『D-010 で決めた置き場。Actions の成果物のバックアップは公開されていたため 2026-10-22 に削除した』に直し、制約5行を足す。範囲の in に7行、out に6行を足す。ほかは appr-foundation-015 のとおり。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（4問、各単一選択）。2026-10-22T09:10:19Z に問い、2026-10-22T10:00:46Z に回答（会話記録の時刻）。問の前の本文で、D-010〜012 の比較表（案ごとに費用・目標への適合・安全・運用・利点・不利な点・出典。利点と不利な点を対称に書いた）を示し、比較の後の別の段『AI の推奨（参考）』に、推奨・理由・注意点・信頼度・確かめた日（2026-10-22）を置いた。どの問も、推奨の案を先頭に置かず、推奨の印を付けず、保留の選択肢（利点と不利な点つき）を入れた。出典は 2026-10-22 に公式の文書で確かめた（Cloudflare の D1 Time Travel・Workers の料金・R2 の料金と Authentication・WAF のカスタムルールとレート制限・workers.dev、Renovate・Dependabot の公式の文書）。1問目の preview に追加案の全文（scratchpad の foundation-016-proposal.md と同じ内容）を出した。 / 回答時刻: 2026-10-22T10:00:46Z)
+
+#### 裏付け質疑: `qa-ac01`
+
+**問**
+
+（作業中にユーザーが自分から送った依頼）システム全体の脆弱性とセキュリティの確認と対策について
+
+**答**
+
+『最新のリモートのmainもしくはdev（devがある場合はdevでok）ブランチをローカルにマージして、本ブランチにマージして、次内容を対応して。』
+『先日、PHPの脆弱性が発見されて大慌てになっています。今回たまたまPHPだったんですが、今現在使用している仕組みの中で脆弱性がないか、セキュリティ的に問題がないかという観点で、このシステム全体を確認してほしいです。
+
+Node.jsでの問題だったりとか、TypeScript、JavaScript等で問題が生じているところがないかというところを隅々まで確認して、このシステム自体が問題がないかというところを検証を行ってください。Web検索を行って、どういう観点でPHPがこの問題になっているのか、問題が上がったのか、そういう本質的なところまでその問題点を分析解析をして、それと同じ観点で、それよりもさらに踏み込んだ観点で、このシステムに問題がないかというところを確認した上で、分析解析を行って、それに対する対策を行ってほしいです。』
+『https://nodejs.org/en/blog/vulnerability/october-2026-security-releases これも参考になると思うので共有しておきます。ただ、これだけではないです。あくまでも参考です。』
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: user-message（2026-10-22T08:07:14Z の依頼と、2026-10-22T08:25:38Z の追加の共有。会話記録の時刻）。1通目は冒頭の1行と『対象の新機能:』の後の2段落を逐語で記録し、その間にある /dev-graph の11 verb の実行の指示（作業の進め方で、仕様の中身ではない）は除いた。2通目は全文を逐語で記録した。answered_at は2通目の時刻（qa-y01 と同じく、記録した逐語がそろった時刻）。 / 回答時刻: 2026-10-22T08:25:38Z)
+
 ### モバイル (mobile)
 
-- 資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29
+- 資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29, G35, G37
 
 #### 主たる接地根拠: `qa-y11`
 
@@ -1541,10 +1597,16 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 - 裏付け質疑 `qa-ab17-foundation-019-approval` — 本章の上掲に既出
 
 - 裏付け質疑 `qa-ab18-foundation-020-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac11` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab01` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac01` — 本章の上掲に既出
 
 ### タブレット (tablet)
 
-- 資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29
+- 資するゴール: G1, G3, G4, G6, G8, G12, G13, G14, G15, G16, G17, G18, G19, G21, G22, G24, G25, G26, G27, G29, G35, G37
 
 #### 主たる接地根拠: `qa-y11`
 
@@ -1680,6 +1742,12 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 - 裏付け質疑 `qa-ab17-foundation-019-approval` — 本章の上掲に既出
 
 - 裏付け質疑 `qa-ab18-foundation-020-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac11` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab01` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac01` — 本章の上掲に既出
 
 ## To-Be / Delta
 
@@ -1707,6 +1775,8 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 - **G26**: 行動指針と KPI・評価セットの画面を、最初は判断に要る状態・件数・次にやることだけを見せ、操作に応じて詳しい説明と編集を開く形にする（情報は消さず、見せ方を変える）。KPI・評価セットは作業ごとに画面を分け、等級区分ごとの設定を境界のはっきりしたカードで示し、KPI 項目を読みやすい区切りで示す。
 - **G27**: 設定（等級要件・行動指針・KPI・評価セット）とアンケートの設問のどちらを後から変えても、後から変えた方を正として、もう一方と、その写しを持つ全ての画面と機能が追従する。確定した評価と評価レポートは確定した時点のまま残し、確定前の評価だけが最新に追従する。
 - **G29**: ボタンだけでなく、カード・見出しの面・選ぶ部品・状態の印・進み具合・数の面・知らせ・表・いまいる場所の印など、全ての画面の共通部品に、いまのテーマの変数から作る、はっきりしたグラデーションと色の変化を持たせ、押した・選んだ・開いたが分かる手応えと、主の操作が一目で分かる強弱をそろえる。全ての系統・明暗・コントラストを強くする設定・印刷で読みやすさを保つ。平賀配色へは移さない。
+- **G35**: 出力を安全にする。CSV の式を無害にする（数値は除く）。ログイン後などの戻り先は同じ origin だけにする。ログに DB へ渡した値を出さない。社員の画面に選択肢の配点を送らない。
+- **G37**: 外から見える面を減らす。`x-powered-by` を出さない。使っていない画像最適化の口を閉じる。公開の入口は D-012 で決める。
 
 ### 受入条件 (Delta の判定点)
 
@@ -1732,6 +1802,8 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 | O26 | 2つの画面の初期表示の量を減らし、KPI・評価セットの作業を画面ごとに分ける。 | 初期表示で見える説明文の数と1文の長さ（製品仕様 §22 の40字）と、同じ文が1画面に2回出ないことを固定する画面のテスト。KPI・評価セットの入口から、等級区分ごとの設定・全等級区分に共通の設定・KPI 項目・KPI カテゴリへ、それぞれ別の画面で進めること、等級区分ごとのカードに等級の並び・項目数・配点の合計・状態が出ること、KPI 項目の聞くことが1つずつ別の行に出ることの E2E。スマホとタブレットの幅で横にはみ出さないことの E2E。 |
 | O27 | アンケートから設定へ、設定からアンケートと評価へ、の両方向の反映を保存の処理に組み込み、写しを持つ全ての場所に追従の規則を決める。 | 下書きのアンケートで設定とつながった設問を足す・外す・文を直すと、元の設定が同じ保存で変わること、評価セットの決まりや KPI の計算に要る設問に合わなくなる保存は断られ、合わない決まりと直す画面が示されることの、サーバー処理のテスト。設定を変えると、回答0件の下書きが作り直され（設定とつながらない設問は残る）、回答のある公開中のアンケートには次の版の下書きが1つだけでき、締め切ったアンケート・確定した評価・レポートは変わらず、確定前の評価は集計し直されることの結合テスト。写しを持つ場所の一覧（文書）とコードが一致することの契約テスト。保存の直後に、関係する画面と他のタブが新しい内容で出る E2E（製品仕様 §27）。 |
 | O29 | 共通部品の色使いと手応えを globals.css の部品クラスとして既存のトークンだけで書き、全ての画面が共通部品から使う。 | 既存のテーマの契約テスト（theme-contract・palette-contract・ui-rules・aidd-kit-boundary）が書き換えなしで通ること。I32・I33 に挙げた部品の全てが新しい部品クラスを使い、TSX に色を書いていないことを確かめる新しいテスト。全ての系統と明暗で、グラデーションの両端の色と文字の色の比が 4.5:1 以上（大きな文字と部品の縁は 3:1 以上）であることを確かめる新しいテスト。押す・選ぶ・開く部品で focus-visible の印が見えることのテスト。prefers-reduced-motion で動きが止まり、印刷・使えない状態・コントラストを強くする設定では平らな面に戻ることのテスト。主要な画面の明暗の見た目の記録。 |
+| O35 | 出力の4つの穴を塞ぐ | CSV の escape の単体テスト（`=`・`+`・`-`・`@`・タブ・CR で始まる文字列は無害になり、負の数は数値のまま）。戻り先の判定の単体テスト（よその origin に解決されるものを全て拒否）。ログに DB へ渡した値が出ない単体テスト。社員の回答画面に配点が載らない契約テスト |
+| O37 | 外から見える面を減らす | 応答に `x-powered-by` が無いことのテスト。使っていない口が開いていないことのテスト |
 
 ### 本章がかなえる具体的やりたいこと (U9)
 
@@ -1760,6 +1832,8 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 - **I30**: 設定の写しを持つ全ての場所（アンケートの設問、回答の見出し、評価の項目・行動指針・等級要件、ズレの表、評価レポート、CSV など）を一覧にして文書に置き、それぞれを「参照」「追従」「確定した時点の写し」のどれかに決め、契約テストで抜けを落とす。保存の後は、関係する全ての画面を取り直し、他のタブにも知らせる（製品仕様 §27）。いまずれている下書きは、更新時刻の新しい方へそろえる。
 - **I32**: globals.css に、既存の意味のトークンと color-mix だけで部品クラスを足し、src/components/ui.tsx などの共通部品から使う。対象はボタン（Button・LinkButton・DownloadButton・ActionButton・ConfirmButton。主の操作を最も強いグラデーションにし、副の操作は薄い色にして強弱を付ける）、カード（Card・CardHead・CardRow・OptionCard。縁と見出しの色の帯、強調するカードの面）、見出し（PageTitle・SectionHeading）、選ぶ部品（Segmented・ChoiceChip・ChipLink・ChipTag・OptionCheck）、状態の印（Badge・DecisionBadge・RankMark・ProvisionalMark）、進み具合（StepFlow・StepMark・StepBlock）、数の面（Bar・StatGrid・Num と Charts の系列の色）、知らせ（NoteBlock・ReasonNote・EmptyState・ComparisonGapNotice）、表（DataTable の見出しの行と選んだ行）、いまいる場所の印（AppSidebar・HeaderNav）。TSX には色を書かない。押せる部品の光の動き（きらめき）は短く控えめにし、prefers-reduced-motion では止める。見出しの面の微グラデ（hero-tint）の「1画面1箇所」は保つ。
 - **I33**: 色使い以外の手応えと強弱も共通部品でそろえる。押す・選ぶ・開く部品は、指を乗せた・押した・選んだ・開いた・キーボードで選んだ（focus-visible）の状態をそれぞれ見て分かるようにし、押せる面は 44px 四方以上を保つ。1つの面で主の操作は1つにして最も強く見せ、ほかは控えめにする。G26 の段階的な開示（Disclosure・HintToggle・RevealToggle・InlineDetail）と境界のはっきりしたカード（Card・CardHead）は共通部品に入れ、行動指針と KPI・評価セットの画面だけでなく、同じ部品を使う全ての画面に効かせる。画面ごとの組み替えは I27 の2画面と評価を作る画面に限る。
+- **I39**: CSV の escape を直し、戻り先の判定を共通の関数にして2か所で使い、DB のエラーのログから値を外し、社員の回答画面から配点を落とす。
+- **I40**: 本文の上限を確かめる共通の関数を作って入口で使い、正規表現を線形のものに替え、Server Action の本文の上限を絞り、回数制限の表に上限を付け、`poweredByHeader: false` にし、使っていない画像最適化の口を閉じる。
 
 ### 本章に効く確定意思決定
 
@@ -1778,6 +1852,9 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 - **D-007**: 権限の定義（各ページでできる操作と、その説明）をどこに置くか。
   - 採択: route-ledger.json に操作と説明を足す (`opt-route-ledger-extend`)
   - 目的適合: ページの可否・操作・説明が1つの台帳に揃い、表示が判定と食い違わないという G8 を満たせる。
+- **D-012**: 公開の入口を、独自ドメインに移して WAF を置くか、workers.dev のままアプリの入口で使わない口を断るか。
+  - 採択: workers.dev のまま、アプリの入口（Next の処理より前）で使わない口を断る (`opt-workers-dev-entry-filter`)
+  - 目的適合: G37 を、URL も周知も変えずに、アプリの入口で満たす。
 
 ## 適用された設計知識
 
@@ -1786,8 +1863,9 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 ### 本章での適用
 
 Clean Architecture の『方針を詳細から切り離す』を画面側に当てはめた。同じタブの反映は Server Function の応答に載った新しい描画が担い、各画面は useSaveAction の結果 {ok, message} を出すだけにする（qa-r-frontend-3 (1)）。成功の結果は createCommitGate で新しい描画が終わるまで返さないので、言葉と一覧がずれない。他タブの通知・タブ復帰・通信の回復・bfcache 復元で取り直す方針は FreshnessSync という一つの共通口が持ち、BroadcastChannel・visibilitychange・online・pageshow という詳細はその内側に閉じる（同 (3)(4)）。 （2026-10-13 追記：G6〜G15）Clean Architecture の『方針を詳細から切り離す』を部品に当てはめた。並べ替えの方針（持ち上げる・動かす・置く・戻す・読み上げる）を一つの共通部品に置き、Pointer Events の長押し・矢印のボタン・キーボードという入力の詳細はその内側に閉じる（qa-v22 (2)、D-005）。権限一覧の表・タブ・カード・説明は同じデータから描く共通部品にし、ページとモーダルで使い回す（同 (3)、D-006）。設定不足の表示も共通の部品にして、各画面は構造化された値を渡すだけにする（同 (4)）。等級名はサーバーから受け取り、部品は英語の区分名を持たない（同 (1)）。 （2026-10-14 追記：G16）Clean Architecture の『方針を詳細から切り離す』を比べる警告に当てはめた。『閉じた1行に件数・押すとその場で開く・2つのページのリンクと表とボタン』という見せ方の方針を ComparisonGapNotice という一つの部品に置き、3画面はサーバーから受け取った ComparisonGap の値を渡すだけにする（qa-w07 (8)）。開閉の詳細は既存の InlineDetail（<details>/<summary>）の内側に閉じ、画面ごとに <details> を書かない。表の読み上げ（th の scope、○ と — の『ある』『ない』）も部品の中で一度だけ決めるので、使う画面が増えても抜け落ちない（同 (8)）。 （2026-10-20 追記：G17〜G24）方針を詳細から切り離すことを、レポートと上司の判断の部品に当てはめた。最終の可否の規則は domain の finalDecision に置き、結論の表示は共通の部品（DecisionBadge）が受け取った結果を描くだけにする。評価の詳細・本人の結果・評価期間の一覧・レポートが同じ部品を使い、結論と印の文言は1か所に置く（qa-y11 (15)、G24）。確定のボタンを押せない理由も、サーバーと同じ入力の検査の関数で決める（同 (14)）。レポートは1つのテンプレート（ReportTemplate）がサーバーで作ったデータの形だけを受けて描き、本人向けの形には点数のキーを持たせない（同 (10)、G18・G19）。アンケートの操作の出し分けはサーバーから受け取る『できる操作』の一覧で決める（同 (12)、G21）。ズレの警告の部品は行ごとのリンクを描くだけで、比べる処理を持たない（同 (11)、G22）。KGI の部品とナビの項目は消す（同 (9)、G17）。 （2026-10-22 追記：G25〜G29）段階的な開示（Disclosure・HintToggle・RevealToggle・InlineDetail）と境界のはっきりしたカード（Card・CardHead）は共通部品に置き、行動指針と KPI・評価セットの画面だけでなく、同じ部品を使う全ての画面で同じ振る舞いにする（qa-ab14、I33、G26・G29）。画面ごとの組み替えは I27 の2画面と評価を作る画面に限る。色と手応えは globals.css の部品クラスに閉じ、部品は状態（主・副・選んだ・開いた）をクラスで渡すだけにして、TSX に色を書かない（qa-ab06、I32、G29）。保存の後に変わったアンケートと評価の一覧はサーバーの結果を描くだけにし、画面が追従の規則を持たない（I29、G27）。初期設定の説明の文は、サーバーから受け取ったいまの割り当てから作る（I26、G25）。
+（2026-10-22 追記：G35・G37）frontend-arch の確定内容（qa-ac11 の (17)〜(20)）に、画面の部品の型を次のように当てる。ログイン後などの戻り先は、サーバーの redirect とクライアントの router.replace の2か所から同じ判定の関数を呼び、URL として解釈して同じ origin のものだけを通す（G35）。社員の回答画面へ渡す選択肢の形から配点のキーを落とし、隠すことを画面の表示に任せない（G35）。x-powered-by を出さず、使っていない画像最適化の口は入口で断る（G37）。CSP の 'unsafe-inline' を外すことは範囲の外とし、台帳に残す。
 
-- (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない) / 記録時刻: 2026-10-22T02:09:16Z)
+- (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない) / 記録時刻: 2026-10-22T11:49:02Z)
 
 ### Clean Architecture — deep knowledge card
 
@@ -1911,3 +1989,5 @@ Clean Architecture の『方針を詳細から切り離す』を画面側に当�
 | w3c-wcag22-non-text-contrast | WCAG 2.2 | W3C Web Accessibility Initiative (WAI) (www.w3.org) | https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html | 2026-10-22T01:08:52Z | 2026-10-22T01:08:52Z |
 | w3c-wcag22-focus-visible | WCAG 2.2 | W3C Web Accessibility Initiative (WAI) (www.w3.org) | https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html | 2026-10-22T01:08:52Z | 2026-10-22T01:08:52Z |
 | w3c-wcag22-target-size-enhanced | WCAG 2.2 | W3C Web Accessibility Initiative (WAI) (www.w3.org) | https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced.html | 2026-10-22T01:08:52Z | 2026-10-22T01:08:52Z |
+| nextjs-powered-by-header | next 16.4.2 | Vercel (Next.js) (nextjs.org) | https://nextjs.org/docs/app/api-reference/config/next-config-js/poweredByHeader | 2026-10-22T10:10:52Z | 2026-10-22T10:12:35Z |
+| nextjs-image-component | next 16.4.2 | Vercel (Next.js) (nextjs.org) | https://nextjs.org/docs/app/api-reference/components/image | 2026-10-22T10:10:52Z | 2026-10-22T10:12:35Z |
