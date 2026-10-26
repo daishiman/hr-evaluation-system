@@ -1,16 +1,14 @@
 # 復旧・先行適用用の手動マイグレーション。
-# 通常は Deploy workflow がバックアップ取得後に自動適用するため、このworkflowの実行は不要。
+# 通常は Deploy workflow が戻り先（Time Travel）を記録してから自動適用するため、このworkflowの実行は不要。
 # Deployが適用後に失敗した場合の再確認や、互換migrationだけを先行適用したい場合に使う。
 #
 # 設計方針:
 #   - 引き金は手動のみ（workflow_dispatch）。push では絶対に動かさない。
-#   - 実行前に必ずバックアップを取る。取れなければ止まる。
+#   - 適用の前に、本番 D1 の戻り先（Time Travel の bookmark）を実行の Summary に残す。残せなければ止まる。
 #   - confirm 欄に APPLY と打たないと進まない。押し間違いで本番が変わるのを防ぐ。
-#     （Environments の承認者機能は private + Free プランでは使えないため、この方式で代替する）
+#     production 環境の承認とは別の確認。環境の承認者・保護ルールは利用者が設定する。
 #
 # 対象データベースは hr-evaluation-db（wrangler.jsonc の d1_databases.database_name と一致）。
-#
-# npm / yarn / pnpm のどれでもそのまま動く（ロックファイルから自動判別する）。
 name: Migrate
 
 on:
@@ -38,108 +36,69 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Deploy と同じ本番環境の承認を通す（承認者の設定は利用者が行う）。
+    environment: production
 
     steps:
       - name: 入力確認
         # ここで落ちれば以降は一切実行されない。
         if: ${{ inputs.confirm != 'APPLY' }}
         run: |
-          echo "::error::confirm に APPLY と入力されていません。中止します。"
+          printf '::error::confirm に APPLY と入力されていません。中止します。\n'
           exit 1
 
-      # workflow_dispatch で別branchを選ばれても、本番DBへ適用するSQLは
-      # current SSOTであるmainだけから読む。
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: main
+          persist-credentials: false
 
-      - name: パッケージマネージャを判別
-        id: pm
-        run: |
-          if [ -f pnpm-lock.yaml ]; then
-            echo "name=pnpm"                              >> "$GITHUB_OUTPUT"
-            echo "install=pnpm install --frozen-lockfile" >> "$GITHUB_OUTPUT"
-            echo "run=pnpm run"                           >> "$GITHUB_OUTPUT"
-            echo "exec=pnpm exec"                         >> "$GITHUB_OUTPUT"
-          elif [ -f yarn.lock ]; then
-            if [ -f .yarnrc.yml ]; then
-              echo "install=yarn install --immutable"       >> "$GITHUB_OUTPUT"
-            else
-              echo "install=yarn install --frozen-lockfile" >> "$GITHUB_OUTPUT"
-            fi
-            echo "name=yarn"    >> "$GITHUB_OUTPUT"
-            echo "run=yarn run" >> "$GITHUB_OUTPUT"
-            echo "exec=yarn"    >> "$GITHUB_OUTPUT"
-          else
-            echo "name=npm"       >> "$GITHUB_OUTPUT"
-            echo "install=npm ci" >> "$GITHUB_OUTPUT"
-            echo "run=npm run"    >> "$GITHUB_OUTPUT"
-            echo "exec=npx"       >> "$GITHUB_OUTPUT"
-          fi
+      # pnpm の版は package.json の packageManager から読む。
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
 
-      - uses: pnpm/action-setup@v4
-        if: steps.pm.outputs.name == 'pnpm'
-        # バージョンは package.json の packageManager から読ませる。
-        # ここで version: を指定すると、packageManager がある repo では
-        # 「Multiple versions of pnpm specified」で落ちる。
-
-      - uses: actions/setup-node@v4
+      # Node の版は .nvmrc の1か所だけで決める（手元・CI・本番の配布で同じ版にする）。
+      # 依存の cache は戻さない。秘密の無い job が依存のコードを動かした後に保存したものだから（DD-032 の13）。
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          # wrangler が Node 22 以上を要求する。20 だと cf-typegen で落ちる。
-          node-version: 22
-          cache: ${{ steps.pm.outputs.name }}
+          node-version-file: .nvmrc
 
-      - name: 依存関係のインストール（${{ steps.pm.outputs.name }}）
-        run: ${{ steps.pm.outputs.install }}
-
-      # 書き出しは age の公開鍵で暗号化してから残す（DD-031）。
-      # 受け手の公開鍵が無いか形が違えば、書き出す前に止める。
-      - name: バックアップの暗号化の準備
-        env:
-          D1_BACKUP_AGE_RECIPIENT: ${{ vars.D1_BACKUP_AGE_RECIPIENT }}
-        run: |
-          bash .github/scripts/encrypt-d1-backup.sh check
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq age
-          age --version
-
-      # 先にバックアップ。ここが失敗したらマイグレーションには進ませない。
-      - name: バックアップ取得
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: ${{ steps.pm.outputs.run }} db:backup
-
-      # 暗号化したら平文の backup.sql は消す。保管するのは backup.sql.age だけ。
-      - name: バックアップを暗号化
-        env:
-          D1_BACKUP_AGE_RECIPIENT: ${{ vars.D1_BACKUP_AGE_RECIPIENT }}
-        run: bash .github/scripts/encrypt-d1-backup.sh encrypt
-
-      # 後から取り出せるように残す。
-      # 注意: このリポジトリは Public なので、Artifact は GitHub にログインした誰もが
-      # 落とせる。だから平文は置かず、暗号化したものだけを置く。開く鍵（秘密鍵）は
-      # 利用者の手元にだけあり、CI には公開鍵しか渡さない。
-      - name: バックアップを保管
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: d1-backup-${{ github.run_id }}
-          path: backup.sql.age
-          if-no-files-found: error
-          retention-days: 14
+      # 本番の鍵を持つ job では、依存の install scripts を走らせない。
+      - name: 依存のインストール（install scripts なし）
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: 未適用のマイグレーションを表示
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: ${{ steps.pm.outputs.exec }} wrangler d1 migrations list hr-evaluation-db --remote
+        run: pnpm exec wrangler d1 migrations list hr-evaluation-db --remote
+
+      # 適用の前に、今の本番 D1 の戻り先（Time Travel の bookmark）を実行の Summary に残す。
+      # DB の中身を書き出して Actions に置くことはしない（公開リポジトリでは誰でも取れるため。DD-032）。
+      # 戻すときは、この bookmark を `wrangler d1 time-travel restore` に渡す。記録できなければ適用しない。
+      - name: 本番 D1 の戻り先を記録（Time Travel）
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          report="$RUNNER_TEMP/d1-time-travel.txt"
+          if ! pnpm exec wrangler d1 time-travel info hr-evaluation-db >"$report" 2>&1; then
+            cat "$report"
+            printf '::error::本番 D1 の戻り先を記録できなかったため、中止します。\n'
+            exit 1
+          fi
+          cat "$report"
+          {
+            printf '## 適用前の本番 D1 の戻り先（Time Travel）\n\n'
+            printf '```text\n'
+            cat "$report"
+            printf '```\n'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: マイグレーション適用
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: ${{ steps.pm.outputs.run }} db:migrate:remote
+        run: pnpm run db:migrate:remote
 
       # apply の終了コードだけで完了と見なさず、同じ本番 DB を再照会する。
       # 認証・通信失敗や未知の出力も成功扱いにしない。
@@ -150,9 +109,9 @@ jobs:
         shell: bash
         run: |
           report="$RUNNER_TEMP/d1-migrations-after-apply.txt"
-          if ! ${{ steps.pm.outputs.exec }} wrangler d1 migrations list hr-evaluation-db --remote >"$report" 2>&1; then
+          if ! pnpm exec wrangler d1 migrations list hr-evaluation-db --remote >"$report" 2>&1; then
             cat "$report"
-            echo "::error::適用後の本番 D1 を再確認できませんでした。"
+            printf '::error::適用後の本番 D1 を再確認できませんでした。\n'
             exit 1
           fi
           cat "$report"

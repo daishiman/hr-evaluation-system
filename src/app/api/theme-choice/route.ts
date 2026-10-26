@@ -1,5 +1,6 @@
-import { apiViewerFor, handle } from "@/lib/api";
+import { apiViewerFor, handle, SMALL_JSON_MAX_BYTES } from "@/lib/api";
 import { getDb } from "@/lib/db";
+import { readJsonBodyWithinLimit } from "@/lib/request-body";
 import {
   readThemePreferenceUsage,
   themePreferenceSchema,
@@ -17,7 +18,8 @@ export const dynamic = "force-dynamic";
 export async function PUT(req: Request) {
   return handle(async () => {
     const viewer = await apiViewerFor("appearance.save");
-    const choice = themePreferenceSchema.parse(await req.json());
+    // 系統・明暗の短い JSON だけを受ける。上限を超えたら解析も DB も触らずに断る（DD-032 の9）
+    const choice = themePreferenceSchema.parse(await readJsonBodyWithinLimit(req, SMALL_JSON_MAX_BYTES));
     const db = await getDb();
     await upsertThemePreference(db, viewer.id, choice);
     return { message: "現在の外観設定を記録しました。" };

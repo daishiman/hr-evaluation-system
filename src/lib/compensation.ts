@@ -1,3 +1,4 @@
+import { summarizeErrorForLog } from "@/lib/db";
 import { HttpError } from "@/lib/session";
 
 /**
@@ -35,9 +36,8 @@ interface Done {
   undo: () => Promise<unknown>;
 }
 
-function errorText(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
+/** ログに残す失敗の要約。文面（SQL と DB へ渡した値が入りうる）は残さない（DD-032 の7）。 */
+const errorText = summarizeErrorForLog;
 
 /** 構造化ログ。Workers Logs で event 名から探せるよう、1行のJSONで出す。 */
 function log(level: "warn" | "error", fields: Record<string, unknown>): void {

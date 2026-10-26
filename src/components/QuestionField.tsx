@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { ChoiceChip, OptionCard, OptionCheck } from "@/components/ui";
 import { NumberField } from "@/components/NumberField";
 import { numberInputHint, questionNumberPolicy } from "@/lib/domain/number-input";
-import { isOptionSelected, optionAnswer, parseOptions, scaleSteps, type OptionLike } from "@/lib/domain/answer-snapshot";
+import { isOptionSelected, optionAnswer, parseOptions, scaleSteps, yesNoOptions, type OptionLike } from "@/lib/domain/answer-snapshot";
 
 export interface AnswerQuestion {
   id: string;
@@ -26,7 +26,7 @@ export interface AnswerValue {
   questionId: string;
   valueNumber: number | null;
   valueText: string | null;
-  /** 複数選択で選んだ選択肢の value。ほかの形式では使わない */
+  /** 選んだ選択肢の value（単一選択は1つ、複数選択はいくつでも） */
   valueChoices: string[] | null;
 }
 
@@ -106,14 +106,8 @@ export function QuestionInput({
 
   if (q.questionType === "yesno") {
     /* 「はい」がどちらの意味かは設問ごとに違う（提出した／行った／合格した）。
-       設問と一緒に作られた選択肢の文言があればそれを使い、無いときだけ素の はい／いいえ にする。 */
-    const yesNo: OptionLike[] =
-      options.length >= 2
-        ? options
-        : [
-            { value: "1", label: "はい" },
-            { value: "0", label: "いいえ" },
-          ];
+       設問と一緒に作られた選択肢の文言があればそれを使い、無いときだけ素の はい／いいえ にする（採点と同じ選択肢） */
+    const yesNo = yesNoOptions(options);
     return group(
       "mt-2 flex flex-wrap gap-2",
       yesNo.map((o, index) => (
@@ -188,8 +182,8 @@ export function QuestionInput({
   }
 
   if ((q.questionType === "single" || q.questionType === "scale") && options.length > 0) {
-    /* 選択中かどうかは選んだ言葉を先に見る（isOptionSelected）。値が重なった古いデータでも
-       押した1つだけが光り、値が数字でない選択肢も選べる。key も値に頼らない（重なると描き分けが崩れる）。 */
+    /* 選択中かどうかは明示したvalueを先に見る（isOptionSelected）。値が重なった古いデータは
+       言葉も合わせる。key も値に頼らない（重なると描き分けが崩れる）。 */
     return group(
       "mt-2 space-y-1",
       options.map((o, index) => (

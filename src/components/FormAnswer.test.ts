@@ -151,7 +151,7 @@ describe("値が重なった・数字でない選択肢", () => {
     const opt = { value: "b", label: "乙" };
     expect(optionScore(opt)).toBeNull();
     const patch = optionAnswer(opt);
-    expect(patch).toEqual({ valueNumber: null, valueText: "乙", valueChoices: null });
+    expect(patch).toEqual({ valueNumber: null, valueText: "乙", valueChoices: ["b"] });
     expect(isAnswered("single", patch)).toBe(true);
     expect(isOptionSelected(opt, patch)).toBe(true);
     expect(isOptionSelected({ value: "a", label: "甲" }, patch)).toBe(false);
@@ -163,7 +163,8 @@ describe("値が重なった・数字でない選択肢", () => {
     expect(optionScore({ value: "2", label: "x", score: 5 })).toBe(5);
     expect(optionScore({ value: "2", label: "x" })).toBe(2);
     expect(optionScore({ value: " ", label: "x" })).toBeNull();
-    expect(optionAnswer({ value: "2", label: "x", score: 5 })).toEqual({ valueNumber: 5, valueText: "x", valueChoices: null });
+    // 編集用の答えには配点を写さず、公開値と明示選択だけを持つ
+    expect(optionAnswer({ value: "2", label: "x", score: 5 })).toEqual({ valueNumber: 2, valueText: "x", valueChoices: ["2"] });
   });
 });
 

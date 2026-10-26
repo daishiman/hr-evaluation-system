@@ -30,10 +30,11 @@ import {
 import { routeIdentityOf } from "@/lib/nav";
 import { findImprovementBySubmission, saveImprovementRequest } from "@/lib/improvement-write";
 import { consumeRateLimit, IMPROVEMENT_SUBMIT_RATE_LIMIT } from "@/lib/rate-limit";
+import { isSafeRedirectPath } from "@/lib/security/safe-redirect";
 
 export const improvementSubmitSchema = z
   .object({
-    path: z.string().min(1).max(300).refine((value) => value.startsWith("/") && !value.startsWith("//"), {
+    path: z.string().min(1).max(300).refine(isSafeRedirectPath, {
       message: "画面のパスを確認してください",
     }),
     body: z.string().min(1, "改善したいことを入力してください").max(IMPROVEMENT_BODY_MAX),

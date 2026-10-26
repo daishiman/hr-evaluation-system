@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, validateNewPassword } from "@/lib/security/password";
 import {
   generateInitialPassword,
   generateUniqueInitialPassword,
@@ -13,11 +14,13 @@ import {
  * 「本人がそのまま変更画面を通せること」。どちらも文字種と長さの選び方で決まる。
  */
 describe("generateInitialPassword", () => {
-  it("本人の変更画面の下限（10文字）を下回らない", () => {
-    // PasswordChangeForm の MIN_LENGTH。ここを下回ると、発行された値のままでは
-    // 「10文字以上」の条件を満たせず、渡された本人が行き止まりになる。
-    expect(PASSWORD_LENGTH).toBeGreaterThanOrEqual(10);
-    expect(generateInitialPassword()).toHaveLength(PASSWORD_LENGTH);
+  it("12文字で発行し、画面・サーバー・CLI共通の長さの決まりを満たす", () => {
+    expect(PASSWORD_LENGTH).toBe(12);
+    expect(PASSWORD_LENGTH).toBeGreaterThanOrEqual(PASSWORD_MIN_LENGTH);
+    expect(PASSWORD_LENGTH).toBeLessThanOrEqual(PASSWORD_MAX_LENGTH);
+    const password = generateInitialPassword();
+    expect(password).toHaveLength(PASSWORD_LENGTH);
+    expect(validateNewPassword(password)).toBeNull();
   });
 
   it("読み違えやすい文字を使わない（口頭・紙で渡すため）", () => {

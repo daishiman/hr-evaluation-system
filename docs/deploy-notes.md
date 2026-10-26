@@ -7,37 +7,18 @@
 新しいコードが古い DB を読む状態を作らないため、次の順序を固定します。
 
 1. migration と、その追加列がなくても動く後方互換なコードを `main` へ入れる。
-2. 自動の [Deploy workflow](../.github/workflows/deploy.yml) が文書・型・テスト・ビルド・容量の各ゲートを通す。
-3. 未適用 migration があれば、本番DBのバックアップを取得し、age の公開鍵で暗号化してから14日間Artifactに保管する（下の「書き出しの暗号化」）。受け手の公開鍵が無いとき、バックアップか暗号化ができないときは停止する。
+2. 自動の [Deploy workflow](../.github/workflows/deploy.yml) が、秘密を持たない job（`verify-build`）で文書・型・テスト・ビルド・容量・危ない書き方の各ゲートを通し、配布の job（`deploy`）がそのビルドの成果物を受け取る。
+3. 未適用 migration があれば、本番 D1 の戻り先（Time Travel の時刻と bookmark）を実行の Summary に記録する。記録できなければ停止する。DB の書き出しは取らず、成果物にも上げない（[DD-032](./product/design-decisions.md) の13）。
 4. migrationを自動適用し、同じ本番DBを再照会して未適用0件を確認してから配布する。
 5. 自動スモークを確認し、必要な認証付き操作を人が確認する。ログインしたあとの画面が新しい表を読めるかは、§3 の「移行のあとに、ログインしたスモークを流す」で確かめる。
 
-migration がない変更はバックアップと適用をスキップしてそのまま配布します。通常運用で手動操作は不要です。[Migration workflow](../.github/workflows/migrate.yml) は、Deployのmigration適用後に別工程で失敗した場合の復旧確認や、後方互換なmigrationだけを先行適用したい場合に使います。DeployとMigrateは同じconcurrency groupで直列化し、未適用状態が判定不能ならfail-closedで停止します。
+migration がない変更は戻り先の記録と適用を飛ばして、そのまま配布します。通常運用で手動操作は不要です。`deploy` の job は受け取った成果物をすぐ Actions から消すので、`deploy` の job だけを流し直すことはできません。流し直すときはワークフロー全体を流します（[秘密を替える手順書](./security/secret-rotation-runbook.md) の「本番へ出す工程を流し直すとき」）。[Migration workflow](../.github/workflows/migrate.yml) は、Deployのmigration適用後に別工程で失敗した場合の復旧確認や、後方互換なmigrationだけを先行適用したい場合に使います。DeployとMigrateは同じconcurrency groupで直列化し、未適用状態が判定不能ならfail-closedで停止します。
 
-### 書き出しの暗号化
+### DB の復旧に使う記録
 
-このリポジトリは Public で、Actions の Artifact は GitHub にログインした誰もが落とせます。だから本番 D1 の書き出しを平文で Artifact に置きません。Deploy workflow と Migrate workflow は、書き出しを [age](https://age-encryption.org) の公開鍵で暗号化した `backup.sql.age` だけを置き、平文の `backup.sql` はランナーの中で消します。決めたことは [DD-031](./product/design-decisions.md) です。
+未適用の移行があるときは、適用前の D1 Time Travel の bookmark と時刻を実行の Summary に記録します。DB の書き出しは作らず、Actions にも保管しません。戻し方と注意点は [秘密を替える手順書](./security/secret-rotation-runbook.md) の「DB を戻すとき」を参照してください。
 
-- CI が持つのは公開鍵だけです。リポジトリの Variables の `D1_BACKUP_AGE_RECIPIENT` に置きます。開く鍵（秘密鍵）は、CI にも Secrets にもリポジトリにも置きません。
-- `D1_BACKUP_AGE_RECIPIENT` が無いとき、または age の公開鍵（`age1` で始まる62文字）でない値があるときは、書き出す前に止まります。移行も配布もしないので、本番は何も変わりません。形の違う値は、貼り間違えた秘密鍵かもしれないので、ログに出しません。
-- 移行の無い Deploy は書き出さないので、変数が無くても今までどおり配ります。
-- 暗号化と検査は [`.github/scripts/encrypt-d1-backup.sh`](../.github/scripts/encrypt-d1-backup.sh) が行います。暗号化した先頭の行が `age-encryption.org/v1` でなければ、何も保管せずに止まります。workflow の順と台本の振る舞いは `scripts/deploy-workflow-contract.test.mjs` が `pnpm test` で確かめます。
-
-鍵の用意（利用者が1回だけ行う）:
-
-1. 手元に age を入れます: `brew install age`
-2. 鍵を作ります: `age-keygen -o <リポジトリの外の安全な場所>/d1-backup.key`。表示される `Public key: age1...` が公開鍵です。鍵のファイルはリポジトリの中に置かず、コミットしません。
-3. 鍵をなくすと書き出しを開けなくなるので、別の場所（別の端末やパスワード管理の保管庫）でもう1本作ることを勧めます。
-4. 公開鍵だけを変数に置きます: `gh variable set D1_BACKUP_AGE_RECIPIENT --body "age1... age1..."`（空白か改行で区切って複数を書けます）。`AGE-SECRET-KEY-1` で始まる行（秘密鍵）は置きません。
-5. 置いた後に確かめます: `D1_BACKUP_AGE_RECIPIENT="$(gh variable get D1_BACKUP_AGE_RECIPIENT)" bash .github/scripts/encrypt-d1-backup.sh check` が「受け手の公開鍵: N 本」を出します。
-
-書き出しを開く（戻すとき）:
-
-1. `gh run download <実行の id> -n d1-backup-<実行の id> -D <リポジトリの外の場所>`
-2. `age -d -i <鍵の場所>/d1-backup.key -o <リポジトリの外の場所>/backup.sql <リポジトリの外の場所>/backup.sql.age`
-3. 要る表と列だけを取り出して使います。全体は流し込みません（その後の保存が消えるため。§9・§14・§15 の戻し方）。使い終わったら平文の `backup.sql` を消します。
-
-DB の全体をある時点へ戻すときは、書き出しの代わりに D1 の Time Travel（`pnpm exec wrangler d1 time-travel restore hr-evaluation-db --timestamp <時刻>`。戻せるのは無料の枠で7日、有料で30日の内）も使えます。戻した時点の後の保存はすべて消えるので、別に承認を取ってから行います。
+[DD-031](./product/design-decisions.md) の暗号化した書き出しの保管案は、今回の [DD-032](./product/design-decisions.md) と D-010 に置き換えます。`D1_BACKUP_AGE_RECIPIENT` の準備は不要です。既存の変数や外部の鍵の削除は、この変更では行いません。
 
 ## 2. ローカルで Workers 相当を確認する
 
@@ -59,7 +40,7 @@ pnpm run preview
 
 本番へ見本会社だけを追加・削除する `db:sample:*:remote` は、専用IDの行だけを対象にする別機能です。全置換seedの代わりには使いません。
 
-新しい利用者を1人だけ発行する `pnpm user:add` は、会社の役割なら `--company <会社ID>` が必須で、利用中かつテンプレートでない会社にだけアカウント・資格情報・所属をまとめて作ります。`SUPER_ADMIN` に会社は指定できません。既存のメールには何も書かず、登録済みとして終了します。発行後は管理画面で確認でき、秘密値を含む一時SQLは成功・失敗どちらでも削除します（[CLI](../scripts/add-user.mjs)、[DB結合試験](../scripts/add-user.test.mjs)）。
+新しい利用者を1人だけ発行する `pnpm user:add` は、会社の役割なら `--company <会社ID>` が必須で、利用中かつテンプレートでない会社にだけアカウント・資格情報・所属をまとめて作ります。`SUPER_ADMIN` に会社は指定できません。既存のメールには何も書かず、登録済みとして終了します。パスワードは引数では受けず（`--password` は断ります）、`read -rs ADD_USER_PASSWORD && export ADD_USER_PASSWORD` で環境変数に入れるか、パイプで標準入力に渡します。長さは画面とログインと同じ10〜200文字です。発行後は管理画面で確認でき、秘密値を含む一時SQLは成功・失敗どちらでも削除します（[CLI](../scripts/add-user.mjs)、[DB結合試験](../scripts/add-user.test.mjs)）。
 
 ### preview で見る代表経路
 
@@ -245,7 +226,7 @@ pnpm test:e2e
 
 ## 8. 失敗時
 
-自動ロールバックは行いません。migration適用後にDeployだけが失敗した場合は、まず同じDeploy workflowを再実行します。適用済みmigrationは再適用されず、未適用0件の確認後に配布から再開します。旧 isolate、認証・設定不備を切り分けてから `wrangler rollback` を選び、DBを戻す必要がある場合はArtifactのバックアップとmigrationの互換性を確認してください。バックアップは暗号化してあるので、§1 の「書き出しの暗号化」の手順で開きます。移行 0039（KGI の表と列の削除）を当てた後は、`wrangler rollback` で KGI を消す前の版（0038 を出した PR より前）に戻しません。戻し方は §14 にあります。
+自動ロールバックは行いません。migration適用後にDeployだけが失敗した場合は、まず同じDeploy workflowを全体で再実行します（失敗した job だけを流し直すと、成果物がもう無いので止まります）。適用済みmigrationは再適用されず、未適用0件の確認後に配布から再開します。旧 isolate、認証・設定不備を切り分けてから `wrangler rollback` を選びます。DBを戻す必要がある場合は、実行の Summary に記録した bookmark と migration の互換性を確かめ、利用者の承認を得てから Time Travel で戻します（[手順書](./security/secret-rotation-runbook.md) の「DB を戻すとき」）。Time Travel で戻せるのは7日前までです（今の無料のプラン。有料のプランは30日。[Cloudflare D1 の上限](https://developers.cloudflare.com/d1/platform/limits/)）。戻すと、その時点より後の書き込みはすべて失われます。移行 0039（KGI の表と列の削除）を当てた後は、`wrangler rollback` で KGI を消す前の版（0038 を出した PR より前）に戻しません。戻し方は §14 にあります。
 
 ## 9. 2026-10 の改善要望の配布（移行 0033・0034・0035）
 
@@ -262,6 +243,7 @@ pnpm test:e2e
 - Deploy workflow の実行 `38509015552`（2026-10-14 03:58〜04:04 UTC、PR #93 の `03787cb`）。本番 D1 の書き出し → 保管 → 0033・0034・0035 の適用 → 未適用0件 → 配布 → 2回のスモークが、すべて success。
 - 書き出しは Artifact `d1-backup-38509015552` に保管した。保管の期限は 2026-10-28 04:01 UTC。0034・0035 を書き出しから戻す手順（[移行の対応表 §12-5](./migration-mapping-grade-display-names.md)）は、この期限の内だけ使える。
 - 2026-10-24 に読んだ時点で、この Artifact はもう残っていない（期限の前に消えている。消した記録は無い）。0034・0035 は、`display_name_rewrites` に残した前の値と `drizzle/rollback/` の SQL でだけ戻せる。
+- 2026-10-25 の読み取りでも、書き出しの成果物が0件だった（[台帳](./security/audit-ledger.md) の PLT-01）。
 - 続く実行 `38560660381`（2026-10-14 12:00〜12:05 UTC、PR #94 の `42b7f6b`）は未適用の移行が0件だったので、書き出し・保管・適用を飛ばして配布とスモークだけを流した（どちらも success）。
 
 確かめる要点（配布の後に読み取りだけで見る）:
@@ -271,7 +253,7 @@ pnpm test:e2e
 - `display_name_rewrites` の `migration` ごとの件数が、予行の件数と大きく違わない。予行の件数は [移行の対応表 §12](./migration-mapping-grade-display-names.md) にある。
 - 会社の管理者の画面で、等級の名前が『等級1』の形で出て、英語の区分名（Beginner など）が出ない。
 
-戻すとき: 0035 の戻し → 0034 の戻し の順に、`drizzle/rollback/` のファイルを流します。戻るのは「今の値が移行の書いた値のままの行」だけで、移行のあとに会社が自分で直した名前は上書きしません。0033 の所属の表は、古いコードが読まないので残したままで構いません。詳しい手順と、書き出しから戻すときの並べ替えは [移行の対応表 §12-5](./migration-mapping-grade-display-names.md)。
+戻すとき: 0035 の戻し → 0034 の戻し の順に、`drizzle/rollback/` のファイルを流します。戻るのは「今の値が移行の書いた値のままの行」だけで、移行のあとに会社が自分で直した名前は上書きしません。0033 の所属の表は、古いコードが読まないので残したままで構いません。詳しい手順は [移行の対応表 §12-5](./migration-mapping-grade-display-names.md)。書き出しはもう無く、Time Travel で戻せる期間（無料のプランで7日）も過ぎたので、0034・0035 は `drizzle/rollback/` のファイルでだけ戻せます。
 
 ## 10. 2026-10 の改善要望で増えた運用
 
@@ -417,14 +399,13 @@ LIMIT 50;
 - seed の試験（`scripts/seed-idempotent.test.mjs`）は移しません。0039 のファイルが無ければ「0039 で消した表を含まない」を飛ばし、消す表が schema.ts と DB にあることで確かめるので、P05 の PR の上でも `pnpm test` が通ります。
 - コードの側では、1回目で `src/db/schema.ts` から KGI の定義を外します。DB の表と列は、2回目まで残ります（DD-020 の3）。
 
-### 書き出しの保管
+### 書き出しの保管（今は取らない）
 
-未適用の移行があると、Deploy workflow は本番 D1 の全体を書き出し、Artifact `d1-backup-<実行の id>` に14日置きます。2回目の書き出しは、消した KGI の値を戻せる唯一の元です。
+前は、未適用の移行があると Deploy workflow が本番 D1 の全体を書き出し、Artifact に14日置いていました。2026-10-22 の監査の対応で、この工程を消しました（[DD-032](./product/design-decisions.md) の13）。戻す元は D1 の Time Travel だけで、移行の前に実行の Summary に記録した bookmark を使います（§8）。
 
 - 1回目（Deploy workflow の実行 `39562261411`、2026-10-21 07:28 UTC、0038）と2回目（`39564492520`、07:47 UTC、0039）の書き出しは、この時点の workflow のとおり平文のまま保管された。
-- 2026-10-24 に読んだ時点で、2つの Artifact はどちらも残っていない（保管の期限 2026-11-04 の前に消えている。消した記録は無い）。だから、消した KGI の値を書き出しから戻すことは、もうできません。
-- これより後の書き出しは、age の公開鍵で暗号化してから置きます（§1 の「書き出しの暗号化」、[DD-031](./product/design-decisions.md)）。
-- KGI の値を14日より長く保管するかは、P08 のマージの前に利用者が決めます（DD-020 の9）。長く置かないなら、期限の後は値を戻せません。
+- 前に上がった書き出しは、2026-10-25 に成果物の一覧を読むだけで見て、残っていませんでした（[台帳](./security/audit-ledger.md) の PLT-01）。
+- 2回目（0039）で消した表と列は戻しません（ヒアリングの決定。DD-032。[台帳](./security/audit-ledger.md) の「#97 で消した表と列を戻さない決定」）。Time Travel で 0039 の前へ戻せるのは、#97 の配布から7日の 2026-10-28T07:49Z（UTC）ごろまでです。この期限を過ぎると、消した値はどの方法でも戻りません。
 
 ### 確かめる要点（読み取りだけ）
 
@@ -462,13 +443,13 @@ pnpm exec wrangler d1 execute hr-evaluation-db --remote --json --command "SELECT
 自動では戻しません（§8）。どちらも本番の DB への書き込みなので、利用者の承認を得てから流します。
 
 - **1回目を戻す**: コードだけを戻すときは、`drizzle/rollback/0038_evaluation_decisions_rollback.sql` を流しません。足した列はすべて NULL 可なので、前のコードも動きます。列まで消すときだけ流し、先に `SELECT COUNT(*) FROM evaluations WHERE raise_decision IS NOT NULL OR promotion_decision IS NOT NULL;` で、消える判断の件数を確かめます。
-- **2回目を戻す**: DB だけを戻します。`drizzle/rollback/0039_drop_office_kgi_rollback.sql` で3つの表と2列の形を作り直し、値は2回目の書き出しから3つの表と2列だけを取り出して入れ直します。書き出し全体を流し込みません（2回目の後の保存が消えるため。前例は §9 の 0034 の戻し方）。P08 のマージから14日の内は、承認があればすぐ戻します。
+- **2回目は戻しません**: 0039 で消した表と列は戻さないと決めました（[DD-032](./product/design-decisions.md)）。前に値の入れ直しの元にしていた書き出しは、取る工程ごと消しました。`drizzle/rollback/0039_drop_office_kgi_rollback.sql` は、表の形を確かめる試験（下）のために残しますが、本番では流しません。
 - **2回目の後は、P05 を revert しません。** `wrangler rollback` でも P05 より前の版に戻しません。前の版は消えた KGI の表と列を読むので、画面が落ちます。直すときは、前に進める PR で直します（DD-020 の9）。
-- 2つの戻す SQL が表の形を移行の前に戻すこと（0039 を先に、0038 を後に戻す順も含む）と、上の件数の SELECT がそのまま流せることは、`src/db/migration-rollback-0038-0039.test.ts` が `pnpm test` で確かめます。値の入れ直しは確かめていないので、流すときは入れ直した後の件数を書き出しの件数と比べます。
+- 2つの戻す SQL が表の形を移行の前に戻すこと（0039 を先に、0038 を後に戻す順も含む）と、上の件数の SELECT がそのまま流せることは、`src/db/migration-rollback-0038-0039.test.ts` が `pnpm test` で確かめます。
 
 配布の記録（P13 が書く）:
 
-- 1回目: Deploy workflow の実行（id・時刻）、マージの sha、Artifact `d1-backup-<id>` と保管の期限、確かめる要点の結果（根拠の文が残る評価の状態ごとの件数を含む）。
+- 1回目: Deploy workflow の実行（id・時刻）、マージの sha、移行の前の戻り先を実行の Summary に記録したこと（bookmark の値はここに写さない）、確かめる要点の結果（根拠の文が残る評価の状態ごとの件数を含む）。
 - 2回目: 同じ項目と、上の件数（`checked`・`flagged`）。
 
 ## 15. 行動指針の割り当てを既定へ戻す配布（移行 0040）

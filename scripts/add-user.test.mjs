@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestDatabase } from "../src/test-support/sqlite-d1";
-import { buildAddUserSql, buildAddUserOutcomeSql } from "./add-user-data.mjs";
+import { buildAddUserSql, buildAddUserOutcomeSql, resolveAddUserPassword } from "./add-user-data.mjs";
 
 vi.mock("node:child_process", () => ({ execFileSync: vi.fn() }));
 vi.mock("better-auth/crypto", () => ({ hashPassword: async () => "hashed:cli" }));
@@ -15,10 +15,36 @@ const input = (patch = {}) => ({
   passwordHash: "hashed:new", now: 123456, ...patch,
 });
 
+describe("パスワードの受け取り方（DD-032 の4）", () => {
+  // 引数のパスワードはシェルの履歴とプロセスの一覧に残る。標準入力か環境変数だけで受ける。
+  const resolve = (options) => (async () => resolveAddUserPassword(options))();
+
+  it("引数に --password があれば、値を読まずに拒む", async () => {
+    const readStdin = vi.fn(() => "from-stdin-password");
+    await expect(resolve({ argv: ["--email", "a@example.test", "--password", "argv-secret-1"], env: {}, readStdin }))
+      .rejects.toThrow(/--password/);
+    expect(readStdin).not.toHaveBeenCalled();
+  });
+
+  it("ADD_USER_PASSWORD があればそれを使い、標準入力は読まない", async () => {
+    const readStdin = vi.fn(() => "from-stdin-password");
+    await expect(resolve({ argv: [], env: { ADD_USER_PASSWORD: "from-env-password" }, readStdin }))
+      .resolves.toBe("from-env-password");
+    expect(readStdin).not.toHaveBeenCalled();
+  });
+
+  it("どちらも無ければ標準入力を読み、末尾の改行だけを落とす", async () => {
+    await expect(resolve({ argv: [], env: {}, readStdin: () => "from-stdin-password\n" })).resolves.toBe("from-stdin-password");
+    await expect(resolve({ argv: [], env: {}, readStdin: () => "  spaced  pass \r\n" })).resolves.toBe("  spaced  pass ");
+  });
+});
+
 describe("CLIの結果表示と秘密SQLの後片付け", () => {
-  async function runCli(mode = "normal", email = "cli@example.test") {
+  /** 既定は環境変数で渡す（引数の --password は CLI が断る。DD-032 の4）。"argv" は断られることを確かめる試験だけが使う。 */
+  async function runCli(mode = "normal", email = "cli@example.test", { passwordVia = "env", password = "test-secret-password" } = {}) {
     const originalArgs = process.argv;
     const originalExit = process.exitCode;
+    const originalEnvPassword = process.env.ADD_USER_PASSWORD;
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     let sqlFile;
@@ -42,7 +68,10 @@ describe("CLIの結果表示と秘密SQLの後片付け", () => {
       return JSON.stringify([{ success: true, results: t.raw.prepare(args[args.indexOf("--command") + 1]).all() }]);
     });
     try {
-      process.argv = ["node", "add-user.mjs", "--email", email, "--name", "追加者", "--password", "test-secret-password", "--company", "cmp_active"];
+      const passwordArgs = passwordVia === "argv" ? ["--password", password] : [];
+      process.argv = ["node", "add-user.mjs", "--email", email, "--name", "追加者", ...passwordArgs, "--company", "cmp_active"];
+      if (passwordVia === "env") process.env.ADD_USER_PASSWORD = password;
+      else delete process.env.ADD_USER_PASSWORD;
       process.exitCode = 0;
       vi.resetModules();
       await import("./add-user.mjs");
@@ -50,10 +79,13 @@ describe("CLIの結果表示と秘密SQLの後片付け", () => {
         exit: process.exitCode,
         stdout: log.mock.calls.flat().join("\n"), stderr: error.mock.calls.flat().join("\n"),
         sqlFile, fileMode,
+        childEnvs: execFileSync.mock.calls.map(([, , options]) => options.env),
       };
     } finally {
       process.argv = originalArgs;
       process.exitCode = originalExit;
+      if (originalEnvPassword === undefined) delete process.env.ADD_USER_PASSWORD;
+      else process.env.ADD_USER_PASSWORD = originalEnvPassword;
       log.mockRestore();
       error.mockRestore();
       execFileSync.mockReset();
@@ -106,6 +138,45 @@ describe("CLIの結果表示と秘密SQLの後片付け", () => {
     expect(result.stderr).toContain("利用者一覧で確認してください");
     expect(rows("users")).toHaveLength(1);
     expect(existsSync(result.sqlFile)).toBe(false);
+  });
+
+  it("環境変数で受けた10文字のパスワードで追加でき、出力にパスワードを出さない", async () => {
+    const result = await runCli("normal", "cli@example.test", { passwordVia: "env", password: "ten-chars!" });
+    expect(result.exit).toBe(0);
+    expect(result.stdout).toContain("追加しました");
+    expect(rows("users")).toHaveLength(1);
+    expect(result.stdout + result.stderr).not.toContain("ten-chars!");
+  });
+
+  it("書込み・確認の子プロセスに平文パスワードを渡さず、ほかの環境変数を保つ", async () => {
+    vi.stubEnv("HR_ADD_USER_TEST_ENV", "keep-this-value");
+    try {
+      const result = await runCli();
+      expect(result.childEnvs).toHaveLength(2);
+      for (const env of result.childEnvs) {
+        expect(env).not.toHaveProperty("ADD_USER_PASSWORD");
+        expect(env.HR_ADD_USER_TEST_ENV).toBe("keep-this-value");
+        expect(env.PATH).toBe(process.env.PATH);
+      }
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("9文字のパスワードは書き込まずに断り、10文字以上を求める", async () => {
+    const result = await runCli("normal", "cli@example.test", { passwordVia: "env", password: "nine-char" });
+    expect(result.exit).toBe(1);
+    expect(result.stderr).toContain("10文字");
+    expect(result.stdout + result.stderr).not.toContain("nine-char");
+    expect(rows("users")).toEqual([]);
+  });
+
+  it("引数で渡したパスワードは長さに関係なく断り、出力に値を出さない", async () => {
+    const result = await runCli("normal", "cli@example.test", { passwordVia: "argv", password: "argv-secret-password" });
+    expect(result.exit).toBe(1);
+    expect(result.stdout).not.toContain("追加しました");
+    expect(result.stdout + result.stderr).not.toContain("argv-secret-password");
+    expect(rows("users")).toEqual([]);
   });
 });
 

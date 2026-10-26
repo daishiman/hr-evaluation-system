@@ -159,6 +159,8 @@ Cloudflare へ配る構成をローカルで確認するときは `pnpm run cf:d
 - [デプロイ時の注意](./docs/deploy-notes.md) — migration、配布、スモーク確認
 - [行動指針・KPI改善の最終レビュー](./docs/product/spec-receipts/2026-10-26-guideline-kpi-pr-review.md) — 仕様反映・品質ゲート・Beadsと13タスクの状態、本番適用の残条件
 - [30思考法レビュー](./docs/reviews/elegant-review-2026-10-24.md) — 今回のワークツリーの重複整理・共通化・確認結果（先行レビュー：[2026-10-21](./docs/reviews/elegant-review-2026-10-21.md)・[2026-10-16](./docs/reviews/elegant-review-2026-10-16-refactor.md)・[2026-10-14 の共通化](./docs/reviews/elegant-review-2026-10-14-refactor.md)・[2026-10-14](./docs/reviews/elegant-review-2026-10-14.md)）
+- [脆弱性対策の最終レビュー・仕様反映受領書](./docs/product/spec-receipts/2026-10-27-vulnerability-final-review-pr.md) — mainとの統合、品質ゲート、Beadsとタスクの状態
+- [脆弱性の監査の台帳](./docs/security/audit-ledger.md) — 2026-10-22 の監査の指摘ごとの状態・根拠・残るリスク（[秘密を替える手順書](./docs/security/secret-rotation-runbook.md)）
 - [エージェント向けの規約](./AGENTS.md) — Claude Code・Codex 共通。キットの扱い、配色の優先順位、改善要望の手順
 - 生成物と記録 — `specs/`・`features/`・`tasks/`・`docs/requirements/` は開発の計画づくり（dev-graph・system-dev-planner）が作った文書、`.dev-graph/`・`eval-log/` はその状態と実行の記録（端末ごとに残り、git では共有しない）で、どれも正本ではありません。画面と振る舞いは製品仕様、API・データ・認証の契約はシステム仕様、構成と設計判断はアーキテクチャを正とし、食い違ったら生成物の側を直します。
   評価レポートの13 task は、[計画レビューの読み替え](./docs/product/spec-receipts/2026-10-20-evaluation-report-plan-review.md#2-task-ごとの読み替え)を先に読みます。配布の実行手順は [デプロイ時の注意 §14](./docs/deploy-notes.md#14-評価レポートと上司の判断の配布移行-00380039) に集約しています。
@@ -166,7 +168,7 @@ Cloudflare へ配る構成をローカルで確認するときは `pnpm run cf:d
 
 ## 本番運用とデータの注意
 
-本番配布は `main` のコミットを [Deploy workflow](./.github/workflows/deploy.yml) から行います。未適用 migration がある場合は、検査・ビルド完了後に本番DBをバックアップし、migration適用と未適用0件の再確認を済ませてから自動で配布します。[Migration workflow](./.github/workflows/migrate.yml) は復旧・先行適用用です。詳しい順序と復旧判断は [デプロイ時の注意](./docs/deploy-notes.md) に集約しています。
+本番配布は `main` のコミットを [Deploy workflow](./.github/workflows/deploy.yml) から行います。検査とビルドは秘密を持たない job で行い、配布の job はその成果物を受け取って出します。未適用 migration がある場合は、D1 の Time Travel の戻り先（bookmark）を実行の Summary に記録し、migration適用と未適用0件の再確認を済ませてから自動で配布します。DB の書き出しは成果物に上げません。[Migration workflow](./.github/workflows/migrate.yml) は復旧・先行適用用です。詳しい順序と復旧判断は [デプロイ時の注意](./docs/deploy-notes.md) に集約しています。
 
 このリポジトリは Public です。従業員の個人情報、実際の評価・給与データ、認証情報をコミットしないでください。`data/` には個人情報を含まない制度定義と匿名化サンプルだけを置き、秘密値は `.dev.vars` またはデプロイ環境の Secrets で管理します。
 

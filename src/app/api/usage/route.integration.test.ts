@@ -1,8 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { schema as s } from "@/lib/db";
-import { HttpError, type Viewer } from "@/lib/session";
+import { HttpError, ROLES, type Viewer } from "@/lib/session";
 import { _resetRateLimitStoreForTest } from "@/lib/rate-limit";
-import { allMeasurableScreens, readUsageReport, usageScreenLabel } from "@/lib/usage";
+import { FRESHNESS_RESOURCES } from "@/lib/freshness";
+import { jstDateKey } from "@/lib/domain/jst";
+import { USAGE_MAX_ROWS_PER_COMPANY_DAY } from "@/lib/domain/usage";
+import {
+  allMeasurableScreens,
+  readUsageReport,
+  USAGE_KNOWN_API_ROUTES,
+  usageScreenLabel,
+  withinDailyRowLimit,
+} from "@/lib/usage";
 import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1";
 
 /**
@@ -185,15 +196,15 @@ describe("/api/usage", () => {
       usageRequest({
         apis: [
           // 実際のIDは「接頭辞_ランダム20桁」（src/lib/id.ts）
-          { method: "GET", path: "/api/forms/frm_0a1b2c3d4e5f60718293", calls: 3, durationMs: 900, errors: 0, slowCalls: 0 },
-          { method: "GET", path: "/api/forms/frm_ffeeddccbbaa99887766", calls: 2, durationMs: 3000, errors: 1, slowCalls: 1 },
+          { method: "PATCH", path: "/api/improvements/imp_0a1b2c3d4e5f60718293", calls: 3, durationMs: 900, errors: 0, slowCalls: 0 },
+          { method: "PATCH", path: "/api/improvements/imp_ffeeddccbbaa99887766", calls: 2, durationMs: 3000, errors: 1, slowCalls: 1 },
         ],
       }),
     );
 
     const rows = await testDb.db.select().from(s.usageApiDaily);
     expect(rows).toHaveLength(1);
-    expect(rows[0].routePattern).toBe("/api/forms/[id]");
+    expect(rows[0].routePattern).toBe("/api/improvements/[id]");
     expect(rows[0].calls).toBe(5);
     expect(rows[0].errors).toBe(1);
     expect(rows[0].slowCalls).toBe(1);
@@ -215,6 +226,67 @@ describe("/api/usage", () => {
     expect(rows.map((r) => [r.method, r.routePattern, r.calls, r.errors])).toEqual([
       ["POST", "/actions/members", 2, 1],
     ]);
+  });
+
+  it("一覧に無い宛先・種類・method は数えない（好きな文字で行を作れない。DD-032 の17）", async () => {
+    mocked.apiViewer.mockResolvedValue(viewer());
+    const api = (method: string, path: string) => ({ method, path, calls: 1, durationMs: 10, errors: 0, slowCalls: 0 });
+
+    await POST(
+      usageRequest({
+        apis: [
+          api("GET", "/api/not-real"),
+          api("GET", "/api/forms/frm_0a1b2c3d4e5f60718293"),
+          api("DELETE", "/api/search"),
+          api("POST", "/actions/not-a-resource"),
+          api("GET", "/actions/members"),
+          api("POST", "/api/auth/delete-user"),
+          api("POST", "/api/usage"),
+          // 数えるもの：実在の API・通している認証の口・名乗りの一覧にある保存の種類
+          api("GET", "/api/search?q=abc"),
+          api("GET", "/api/auth/get-session"),
+          api("POST", "/actions/forms"),
+        ],
+      }),
+    );
+
+    const rows = await testDb.db.select().from(s.usageApiDaily);
+    expect(rows.map((r) => `${r.method} ${r.routePattern}`).sort()).toEqual([
+      "GET /api/auth/get-session",
+      "GET /api/search",
+      "POST /actions/forms",
+    ]);
+  });
+
+  it("1社1日の行数が上限に達したら、新しい行は作らず、既にある行には足す（ほかの会社には響かない）", async () => {
+    const date = jstDateKey(new Date());
+    const filler = Array.from({ length: USAGE_MAX_ROWS_PER_COMPANY_DAY - 1 }, (_, i) => ({
+      key: `${date}:${COMPANY}:/filler/${i}:EMPLOYEE`,
+      date,
+      companyId: COMPANY,
+      routePattern: `/filler/${i}`,
+      role: "EMPLOYEE",
+      views: 1,
+    }));
+    for (let i = 0; i < filler.length; i += 50) await testDb.db.insert(s.usageScreenDaily).values(filler.slice(i, i + 50));
+    const screen = (path: string) => ({
+      path, views: 1, dwellMs: 0, dwellSamples: 0, longStays: 0, backtracks: 0, rageClicks: 0, abandons: 0, errors: 0,
+    });
+
+    mocked.apiViewer.mockResolvedValue(viewer());
+    // 残り1行ぶん：/me は作れて、/me/forms は作れない（送られた順に通す）
+    await POST(usageRequest({ screens: [screen("/me"), screen("/me/forms")] }));
+    await POST(usageRequest({ screens: [screen("/me"), screen("/me/forms")] }));
+
+    const own = await testDb.db.select().from(s.usageScreenDaily);
+    expect(own).toHaveLength(USAGE_MAX_ROWS_PER_COMPANY_DAY);
+    expect(own.find((r) => r.routePattern === "/me")?.views).toBe(2);
+    expect(own.some((r) => r.routePattern === "/me/forms")).toBe(false);
+
+    mocked.apiViewer.mockResolvedValue(viewer("EMPLOYEE", OTHER));
+    await POST(usageRequest({ screens: [screen("/me/forms")] }));
+    const other = await testDb.db.select().from(s.usageScreenDaily);
+    expect(other.filter((r) => r.companyId === OTHER).map((r) => r.routePattern)).toEqual(["/me/forms"]);
   });
 
   it("読み出しは会社で絞れて、絞らなければ全社を合算する", async () => {
@@ -251,6 +323,34 @@ describe("/api/usage", () => {
 
     expect(response.status).toBe(200);
     expect(await testDb.db.select().from(s.usageScreenDaily)).toHaveLength(0);
+  });
+});
+
+describe("数えてよい宛先の一覧と行数の上限", () => {
+  it("API の一覧は、src/app/api の route.ts が出している method と一致する（認証の口と /api/usage 自身は除く）", () => {
+    const apiRoot = path.join(process.cwd(), "src/app/api");
+    const found = new Set<string>();
+    for (const file of readdirSync(apiRoot, { recursive: true, encoding: "utf8" })) {
+      if (path.basename(file) !== "route.ts") continue;
+      const route = `/api/${path.dirname(file).split(path.sep).join("/")}`;
+      if (route.startsWith("/api/auth/") || route === "/api/usage") continue;
+      const source = readFileSync(path.join(apiRoot, file), "utf8");
+      for (const m of source.matchAll(/^export async function (GET|POST|PUT|PATCH|DELETE)\b/gm)) found.add(`${m[1]} ${route}`);
+    }
+    expect([...USAGE_KNOWN_API_ROUTES].sort()).toEqual([...found].sort());
+  });
+
+  it("ふだんの使い方で作られる行の数は、上限より少ない（上限で本物の記録を落とさない）", () => {
+    expect(allMeasurableScreens().length * ROLES.length).toBeLessThan(USAGE_MAX_ROWS_PER_COMPANY_DAY);
+    // 通信：API の一覧・認証の3つの口・保存の種類
+    expect(USAGE_KNOWN_API_ROUTES.size + 3 + FRESHNESS_RESOURCES.length).toBeLessThan(USAGE_MAX_ROWS_PER_COMPANY_DAY);
+  });
+
+  it("withinDailyRowLimit は、既にある行を常に通し、新しい行を残りの数だけ送られた順に通す", () => {
+    const rows = ["a", "b", "c", "d"].map((key) => ({ key }));
+    expect(withinDailyRowLimit(rows, ["c", "x"], 3).map((r) => r.key)).toEqual(["a", "c"]);
+    expect(withinDailyRowLimit(rows, ["x", "y", "z"], 3).map((r) => r.key)).toEqual([]);
+    expect(withinDailyRowLimit(rows, [], 10).map((r) => r.key)).toEqual(["a", "b", "c", "d"]);
   });
 });
 

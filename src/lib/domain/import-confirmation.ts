@@ -1,3 +1,5 @@
+import { deriveImportConfirmationKey } from "@/lib/security/keys";
+
 const encoder = new TextEncoder();
 
 function bytesToBase64Url(bytes: Uint8Array): string {
@@ -15,11 +17,9 @@ function base64UrlToBytes(value: string): Uint8Array | null {
   }
 }
 
+/** 生の秘密ではなく、この用途のために導いた鍵で印を取る（DD-032 の1） */
 async function hmacKey(secret: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
-    "sign",
-    "verify",
-  ]);
+  return deriveImportConfirmationKey(secret);
 }
 
 function confirmationBody(formId: string, csv: string): ArrayBuffer {

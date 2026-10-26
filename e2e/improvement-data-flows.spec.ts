@@ -26,7 +26,7 @@ test("選択肢を押して提出し、再読込とDB・管理者の提出状況
     await employee.getByRole("button", { name: "提出する", exact: true }).click();
     await expect.poll(() => fixture.db.prepare("SELECT status FROM form_responses WHERE form_id = ? AND employee_id = ?").get(fixture.formId, fixture.employee.id)).toMatchObject({ status: "submitted" });
     const answer = fixture.db.prepare("SELECT a.value_text, a.value_json FROM form_answers a JOIN form_responses r ON r.id=a.response_id WHERE r.form_id=? AND r.employee_id=? ORDER BY a.question_id").all(fixture.formId, fixture.employee.id);
-    expect(answer).toEqual([{ value_text: "甲", value_json: '["a"]' }, { value_text: "乙", value_json: null }]);
+    expect(answer).toEqual([{ value_text: "甲", value_json: '["a"]' }, { value_text: "乙", value_json: '["b"]' }]);
     await employee.reload();
     await expect(employee.locator("main")).toContainText("乙");
     await page.goto("/admin/forms");
@@ -70,9 +70,12 @@ test("評価を確定すると3一覧へ最新点数が出て、一般社員の�
     const response = await employee.goto("/admin/members");
     await expect(employee).toHaveURL(/\/me\?denied=1$/);
     expect(await response!.text()).not.toContain("83.5");
-    const exported = await employeeContext.request.get("/api/export?type=members");
+    // 送り元の検査（DD-032 の17）で止まらないよう、画面からの送信と同じ印を付ける。権限で断られることを見る。
+    const exported = await employeeContext.request.get("/api/export?type=members", { headers: { "sec-fetch-site": "same-origin" } });
     expect(exported.status()).toBe(403);
-    expect(await exported.text()).not.toContain("83.5");
+    const exportedBody = await exported.text();
+    expect(exportedBody).toContain("権限がありません");
+    expect(exportedBody).not.toContain("83.5");
   } finally { await Promise.all([managerContext.close(), adminContext.close(), employeeContext.close()]); }
 });
 

@@ -8,14 +8,16 @@
  *  過去に自分が何を聞かれて何と答えたかは、回答行だけで読み返せるようにする。
  *
  * 設問形式ごとの入れ場所（作れる形式は全部答えられるようにする、という方針の実装箇所）:
- *  yesno  … value_number（はい=1 / いいえ=0）＋ value_text に選んだ言葉
+ *  yesno  … value_number（選択肢の配点。素の はい=1 / いいえ=0）＋ value_text に選んだ言葉
  *  single … value_number（選択肢の score。無ければ数字の value）＋ value_text に選んだ言葉
  *           （点数を持たない選択肢は value_number が空で、言葉だけが入る）
- *  scale  … value_number（段階の数値）
+ *  scale  … value_number（選択肢付きは配点、選択肢なしは段階の数値）
  *  number … value_number
  *  text   … value_text（自由記述。数値は入らない）
  *  multi  … value_json（選んだ選択肢の value の配列）＋ value_text に読める形の控え
  *           （回答画面の手元では valueChoices に配列のまま持つ）
+ *  yesno / single / 選択肢付きscale は value_json に選択値1つも残す。
+ *  value_number の配点と選択肢の value が衝突しても識別でき、古い行は配点と言葉で読む。
  */
 
 export type QuestionLike = {
@@ -53,7 +55,7 @@ export type AnswerValueLike = {
   valueNumber: number | null | undefined;
   valueText: string | null | undefined;
   valueJson?: string | null | undefined;
-  /** 回答画面の手元の形（複数選択で選んだ value の配列）。保存すると value_json になる */
+  /** 選んだ value の配列（単一選択は1つ）。保存すると value_json になる */
   valueChoices?: readonly string[] | null | undefined;
 };
 
@@ -74,14 +76,19 @@ export function isAnswered(questionType: string, v: AnswerValueLike | null | und
     case "multi":
       return (v.valueChoices ?? parseMulti(v.valueJson)).length > 0;
     case "single":
+    case "yesno":
+    case "scale":
+      if (v.valueChoices != null || v.valueJson != null) {
+        return (v.valueChoices ?? parseMulti(v.valueJson)).length === 1;
+      }
       // 点数を持たない（値が数字でない）選択肢は、選んだ言葉だけが入る
-      return hasNumber || hasText;
+      return hasNumber || (questionType === "single" && hasText);
     default:
       return hasNumber;
   }
 }
 
-/** 複数選択の値（JSON文字列）を配列にする。壊れていても落とさず空扱いにする。 */
+/** 選択値（JSON文字列）を配列にする。壊れていても落とさず空扱いにする。 */
 export function parseMulti(valueJson: string | null | undefined): string[] {
   if (!valueJson) return [];
   try {
@@ -100,7 +107,8 @@ export function parseOptions(optionsJson: string | null | undefined): OptionLike
   try {
     const parsed: unknown = JSON.parse(optionsJson);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((o): o is OptionLike => !!o && typeof o === "object" && "value" in o && "label" in o);
+    return parsed.filter((o): o is OptionLike => !!o && typeof o === "object" && "value" in o && "label" in o)
+      .map((o) => ({ ...o, value: String(o.value), label: String(o.label) }));
   } catch {
     return [];
   }
@@ -121,14 +129,16 @@ export function optionScore(o: OptionLike): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** 1つ選ぶ設問で、その選択肢を選んだときの答え（回答画面の手元の形） */
-export function optionAnswer(o: OptionLike): { valueNumber: number | null; valueText: string; valueChoices: null } {
-  return { valueNumber: optionScore(o), valueText: o.label, valueChoices: null };
+/** 1つ選ぶ設問の編集値。配点は使わず、公開valueと言葉と明示選択を持つ。 */
+export function optionAnswer(o: OptionLike): { valueNumber: number | null; valueText: string; valueChoices: string[] } {
+  return { valueNumber: optionScore({ value: o.value, label: o.label }), valueText: o.label, valueChoices: [String(o.value)] };
 }
 
 /**
  * 1つ選ぶ設問で、その選択肢が選ばれているか。
  *
+ * 明示した選択値があればそれを優先する。不正・複数の明示値は旧形式で補わない。
+ * 明示値が無い旧回答だけ、以下の互換判定を使う。
  * 値や点数が重なった古いデータでも押した1つだけを選択中にするため、選んだ言葉（value_text）を先に見る。
  * 同じ言葉の選択肢が複数あるときは点数で絞る。言葉がどの選択肢とも合わないとき
  * （取込で値や「○」と書かれた行など）だけ点数で照らす。
@@ -140,6 +150,7 @@ export function isOptionSelected(
   options: readonly OptionLike[] = [o],
 ): boolean {
   if (!v) return false;
+  if (v.valueChoices != null || v.valueJson != null) return findChosenOption(options, v) === o;
   const byScore = (xs: readonly OptionLike[]) =>
     xs.filter((x) => {
       const score = optionScore(x);
@@ -150,6 +161,59 @@ export function isOptionSelected(
   if (byText.length === 0) return byScore([o]).length > 0;
   const both = byScore(byText);
   return (both.length > 0 ? both : byText).includes(o);
+}
+
+/** 設問と一緒に作られた文言が無い「はい／いいえ」の設問で選ばせる選択肢 */
+const PLAIN_YES_NO: readonly OptionLike[] = [
+  { value: "1", label: "はい" },
+  { value: "0", label: "いいえ" },
+];
+
+/**
+ * 「はい／いいえ」の設問で選ばせる選択肢。
+ * 「はい」がどちらの意味かは設問ごとに違うので、設問と一緒に作られた文言が2つ以上あればそれを使い、
+ * 無いときだけ素の はい／いいえ にする。回答画面と採点（submission-check.ts）が同じものを使う。
+ */
+export function yesNoOptions(options: readonly OptionLike[]): readonly OptionLike[] {
+  return options.length >= 2 ? options : PLAIN_YES_NO;
+}
+
+/** 回答画面・保存・編集初期値が同じ選択肢を使う。段階だけのscaleは空。 */
+export function singleChoiceOptions(q: { questionType: string; optionsJson?: string | null }): readonly OptionLike[] {
+  const options = parseOptions(q.optionsJson);
+  if (q.questionType === "yesno") return yesNoOptions(options);
+  return q.questionType === "single" || q.questionType === "scale" ? options : [];
+}
+
+/**
+ * 1つ選ぶ設問で選ばれた選択肢を、サーバーが持つ選択肢から探す（DD-032 の8）。
+ *
+ * 明示した選択値（valueChoices / 保存済みのvalueJson）を先に読む。
+ * 値が重複した旧設問は言葉も合わせる。不正な値・複数の単一選択は旧形式へ戻さない。
+ * 明示値が無い旧回答だけ、言葉→配点→数値のvalueの互換順で読む。
+ * 言葉がどの選択肢とも合わないときだけ、送られた数を選択肢の配点と照らす（isOptionSelected と同じ見方）。
+ * どれとも合わなければ null（答えなし）。どの道でも、保存する点数は選択肢の配点の中からしか出ない。
+ */
+export function findChosenOption(
+  options: readonly OptionLike[],
+  v: AnswerValueLike,
+): OptionLike | null {
+  if (v.valueChoices != null || v.valueJson != null) {
+    const choices = v.valueChoices ?? parseMulti(v.valueJson);
+    if (choices.length !== 1) return null;
+    const byValue = options.filter((o) => String(o.value) === choices[0]);
+    if (byValue.length === 1) return byValue[0];
+    const byLabel = byValue.filter((o) => String(o.label).trim() === v.valueText?.trim());
+    return byLabel.length === 1 ? byLabel[0] : null;
+  }
+  const n = v.valueNumber ?? null;
+  const scoreIs = (o: OptionLike) => n !== null && optionScore(o) === n;
+  const valueIs = (o: OptionLike) => n !== null && optionScore({ value: o.value, label: o.label }) === n;
+  const text = v.valueText?.trim();
+  const byText = text ? options.filter((o) => String(o.label).trim() === text) : [];
+  if (byText.length === 0) return options.find(scoreIs) ?? null;
+  if (byText.length === 1) return byText[0];
+  return byText.find(scoreIs) ?? byText.find(valueIs) ?? byText[0];
 }
 
 /**

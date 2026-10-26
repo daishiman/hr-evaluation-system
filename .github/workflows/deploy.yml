@@ -7,13 +7,18 @@
 #   CI のランナーは毎回まっさらなチェックアウトしか持たないため、
 #   作業ツリー = コミット が常に一致する。この問題が構造的に消える。
 #
-# npm / yarn / pnpm のどれでもそのまま動く（ロックファイルから自動判別する）。
+# 2つの job に分ける（DD-032）。
+#   verify-build: 検査・テスト・ビルドと、ビルド成果物の静的検査。本番の鍵を持たない。
+#   deploy:       verify-build の成果物だけを受け取り、D1 の適用と配布をする。
+#                 ビルドはせず、依存の install scripts も走らせない。
+# 成果物は Actions に1日だけ置き、deploy が受け取ったらすぐ消す。
+# そのため deploy の job だけを流し直すことはできない。流し直すときはワークフロー全体を流す。
 name: Deploy
 
 on:
   push:
     branches: [main]
-  # 再デプロイしたいときのため
+  # 再デプロイしたいときのため（ワークフロー全体を流す）
   workflow_dispatch:
 
 concurrency:
@@ -25,90 +30,122 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  verify-build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
 
     steps:
-      # workflow_dispatch の画面では実行元branchを選べる。再デプロイでも
-      # main以外の未承認コードを本番へ出さないよう、ここで明示的に止める。
-      - name: main のコミットであることを確認
+      - name: main ブランチからの実行か確認
         if: github.ref != 'refs/heads/main'
         run: |
-          echo "::error::本番へ配布できるのは main のコミットだけです（実行元: $GITHUB_REF）。"
+          printf '::error::本番へのデプロイは main ブランチからだけ実行できます。\n'
           exit 1
 
-      - uses: actions/checkout@v4
-
-      - name: パッケージマネージャを判別
-        id: pm
-        run: |
-          if [ -f pnpm-lock.yaml ]; then
-            echo "name=pnpm"                              >> "$GITHUB_OUTPUT"
-            echo "install=pnpm install --frozen-lockfile" >> "$GITHUB_OUTPUT"
-            echo "run=pnpm run"                           >> "$GITHUB_OUTPUT"
-            echo "exec=pnpm exec"                         >> "$GITHUB_OUTPUT"
-          elif [ -f yarn.lock ]; then
-            if [ -f .yarnrc.yml ]; then
-              echo "install=yarn install --immutable"       >> "$GITHUB_OUTPUT"
-            else
-              echo "install=yarn install --frozen-lockfile" >> "$GITHUB_OUTPUT"
-            fi
-            echo "name=yarn"    >> "$GITHUB_OUTPUT"
-            echo "run=yarn run" >> "$GITHUB_OUTPUT"
-            echo "exec=yarn"    >> "$GITHUB_OUTPUT"
-          else
-            echo "name=npm"       >> "$GITHUB_OUTPUT"
-            echo "install=npm ci" >> "$GITHUB_OUTPUT"
-            echo "run=npm run"    >> "$GITHUB_OUTPUT"
-            echo "exec=npx"       >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: pnpm/action-setup@v4
-        if: steps.pm.outputs.name == 'pnpm'
-        # バージョンは package.json の packageManager から読ませる。
-        # ここで version: を指定すると、packageManager がある repo では
-        # 「Multiple versions of pnpm specified」で落ちる。
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          # wrangler が Node 22 以上を要求する。20 だと cf-typegen で落ちる。
-          node-version: 22
-          cache: ${{ steps.pm.outputs.name }}
+          persist-credentials: false
 
-      - name: 依存関係のインストール（${{ steps.pm.outputs.name }}）
-        run: ${{ steps.pm.outputs.install }}
+      # pnpm の版は package.json の packageManager から読む。
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
 
-      - name: 文書 drift 検査
-        run: ${{ steps.pm.outputs.run }} check:docs
+      # Node の版は .nvmrc の1か所だけで決める（手元・CI・本番の配布で同じ版にする）。
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
 
-      # Cloudflare のバインディング（DB接続など）の型定義を生成する。
-      # このファイルは Git 管理外なので、まっさらなチェックアウトには存在しない。
-      # これを飛ばすと「手元では通るのに CI のビルドだけ型エラーで落ちる」になる。
-      # cf-typegen スクリプトがないプロジェクトではこのステップごと削除してよい。
-      - name: 型定義の生成
-        run: ${{ steps.pm.outputs.run }} cf-typegen
+      - name: 依存のインストール
+        run: pnpm install --frozen-lockfile
 
-      # デプロイ前にもう一度だけ確認する。CI が通っていても、
-      # マージ結果の組み合わせで壊れることがある。
+      - name: 文書と実装の食い違い検査
+        run: pnpm run check:docs
+
+      # cloudflare-env.d.ts は .gitignore されているので、型チェックの前に作る。
+      - name: Cloudflare の型定義を生成
+        run: pnpm run cf-typegen
+
       - name: 型チェック
-        run: ${{ steps.pm.outputs.run }} typecheck
+        run: pnpm run typecheck
 
-      # CI ワークフローとは独立に、実際に配るものと同じ checkout を検査する。
-      # main push で CI と Deploy が同時に始まっても、未テストの SHA は配らない。
-      - name: テスト（カバレッジ含む）
-        run: ${{ steps.pm.outputs.run }} test:coverage
+      - name: テスト（網羅率の下限つき）
+        run: pnpm run test:coverage
 
-      - name: ビルド
-        run: ${{ steps.pm.outputs.run }} cf:dry-run
+      - name: Cloudflare 向けビルド
+        run: pnpm run cf:dry-run
 
-      # 無料プランの圧縮後アップロード上限（3,072 KiB）にどれだけ近いかを、
-      # 実際にデプロイする前に確認する。認証情報は不要（--dry-run のため）。
-      #   - 上限を超えている場合だけワークフローを失敗させる（デプロイを止める）
-      #   - 上限の80%を超えた場合は警告のみ（正常なデプロイは止めない）
-      # 詳細: docs/product/backlog.md「E. 性能」、scripts/check-bundle-size.mjs
-      - name: 公開ファイルの容量チェック
-        run: ${{ steps.pm.outputs.run }} check:bundle-size
+      - name: バンドルサイズ確認
+        run: pnpm run check:bundle-size
+
+      - name: 危ない書き方の検査（リポジトリ）
+        run: pnpm run check:security
+
+      # 配る直前の成果物に、.env・ソースマップ・秘密の値が紛れていないかを見る。
+      - name: 危ない書き方の検査（ビルド成果物）
+        run: node scripts/check-security-patterns.mjs --dir .open-next
+
+      # .open-next/.build のような隠しディレクトリも配布に要るので含める。
+      - name: ビルド成果物を deploy の job に渡す
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: open-next-${{ github.run_id }}
+          path: |
+            .open-next/
+            !.open-next/**/*.map
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    needs: verify-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # 承認者と保護ルールは、利用者が GitHub の production 環境に設定する。
+    environment: production
+    # actions: write は、受け取った成果物を消すためだけに使う。
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - name: main ブランチからの実行か確認
+        if: github.ref != 'refs/heads/main'
+        run: |
+          printf '::error::本番へのデプロイは main ブランチからだけ実行できます。\n'
+          exit 1
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # pnpm の版は package.json の packageManager から読む。
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      # Node の版は .nvmrc の1か所だけで決める（手元・CI・本番の配布で同じ版にする）。
+      # 依存の cache は戻さない。秘密の無い job が依存のコードを動かした後に保存したものだから（DD-032 の13）。
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+
+      # 本番の鍵を持つ job では、依存の install scripts を走らせない。
+      - name: 依存のインストール（install scripts なし）
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # artifact-ids で受けるときは merge-multiple を付けないと、成果物の名前の dir の下に展開される。
+      - name: ビルド成果物の受け取り
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ needs.verify-build.outputs.artifact-id }}
+          path: .open-next
+          merge-multiple: true
+
+      - name: ビルド成果物を Actions から消す
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ needs.verify-build.outputs.artifact-id }}
+        run: gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID"
 
       # migrations list は未適用ファイルだけを返すが JSON 出力を持たない。
       # 専用スクリプトで clear / pending を分類し、未知の出力は fail-closed にする。
@@ -120,66 +157,53 @@ jobs:
         shell: bash
         run: |
           report="$RUNNER_TEMP/d1-migrations-before-deploy.txt"
-          if ! ${{ steps.pm.outputs.exec }} wrangler d1 migrations list hr-evaluation-db --remote >"$report" 2>&1; then
+          if ! pnpm exec wrangler d1 migrations list hr-evaluation-db --remote >"$report" 2>&1; then
             cat "$report"
-            echo "::error::本番 D1 の未適用マイグレーション確認を実行できませんでした。"
+            printf '::error::本番 D1 の未適用マイグレーション確認を実行できませんでした。\n'
             exit 1
           fi
           cat "$report"
           if ! status=$(node scripts/verify-d1-migrations-list.mjs "$report" --print-status); then
             exit 1
           fi
-          echo "status=$status" >> "$GITHUB_OUTPUT"
+          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
           if [ "$status" = "pending" ]; then
-            echo "::notice::未適用マイグレーションを検出したため、バックアップ後に自動適用します。"
+            printf '::notice::未適用マイグレーションを検出したため、戻り先を記録してから自動適用します。\n'
           fi
 
-      # 書き出しは age の公開鍵で暗号化してから Artifact に置く（DD-031）。
-      # このリポジトリは Public で、Artifact はログインした誰もが落とせるため。
-      # 受け手の公開鍵が無いか形が違えば、書き出す前に止める（本番は何も変わらない）。
-      - name: 本番 D1 のバックアップの暗号化の準備
-        if: steps.migration_plan.outputs.status == 'pending'
-        env:
-          D1_BACKUP_AGE_RECIPIENT: ${{ vars.D1_BACKUP_AGE_RECIPIENT }}
-        run: |
-          bash .github/scripts/encrypt-d1-backup.sh check
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq age
-          age --version
-
-      # 未適用がある場合だけ、変更前の本番DBを退避する。
-      # バックアップに失敗したら以降の適用・デプロイは実行されない。
-      - name: 本番 D1 のバックアップ取得
+      # 適用の前に、今の本番 D1 の戻り先（Time Travel の bookmark）を実行の Summary に残す。
+      # DB の中身を書き出して Actions に置くことはしない（公開リポジトリでは誰でも取れるため。DD-032）。
+      # 戻すときは、この bookmark を `wrangler d1 time-travel restore` に渡す。記録できなければ適用しない。
+      - name: 本番 D1 の戻り先を記録（Time Travel）
         if: steps.migration_plan.outputs.status == 'pending'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: ${{ steps.pm.outputs.run }} db:backup
-
-      # 暗号化したら平文の backup.sql は消す。保管するのは backup.sql.age だけ。
-      - name: 本番 D1 のバックアップを暗号化
-        if: steps.migration_plan.outputs.status == 'pending'
-        env:
-          D1_BACKUP_AGE_RECIPIENT: ${{ vars.D1_BACKUP_AGE_RECIPIENT }}
-        run: bash .github/scripts/encrypt-d1-backup.sh encrypt
-
-      - name: 本番 D1 のバックアップを保管
-        if: always() && steps.migration_plan.outputs.status == 'pending'
-        uses: actions/upload-artifact@v4
-        with:
-          name: d1-backup-${{ github.run_id }}
-          path: backup.sql.age
-          if-no-files-found: error
-          retention-days: 14
+        shell: bash
+        run: |
+          report="$RUNNER_TEMP/d1-time-travel.txt"
+          if ! pnpm exec wrangler d1 time-travel info hr-evaluation-db >"$report" 2>&1; then
+            cat "$report"
+            printf '::error::本番 D1 の戻り先を記録できなかったため、中止します。\n'
+            exit 1
+          fi
+          cat "$report"
+          {
+            printf '## 適用前の本番 D1 の戻り先（Time Travel）\n\n'
+            printf '```text\n'
+            cat "$report"
+            printf '```\n'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 本番 D1 のマイグレーション適用
         if: steps.migration_plan.outputs.status == 'pending'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: ${{ steps.pm.outputs.run }} db:migrate:remote
+        run: pnpm run db:migrate:remote
 
-      # apply の終了コードだけで完了とみなさず、同じ本番DBを再照会する。
+      # apply の終了コードだけで完了と見なさず、同じ本番 DB を再照会する。
+      # 認証・通信失敗や未知の出力も成功扱いにしない。
       # 未適用が元から0件だった場合も、配布直前の最終確認として実行する。
       - name: 適用後の未適用マイグレーション確認
         env:
@@ -188,21 +212,21 @@ jobs:
         shell: bash
         run: |
           report="$RUNNER_TEMP/d1-migrations-after-apply.txt"
-          if ! ${{ steps.pm.outputs.exec }} wrangler d1 migrations list hr-evaluation-db --remote >"$report" 2>&1; then
+          if ! pnpm exec wrangler d1 migrations list hr-evaluation-db --remote >"$report" 2>&1; then
             cat "$report"
-            echo "::error::マイグレーション適用後の本番 D1 を再確認できませんでした。"
+            printf '::error::マイグレーション適用後の本番 D1 を再確認できませんでした。\n'
             exit 1
           fi
           cat "$report"
           node scripts/verify-d1-migrations-list.mjs "$report"
 
+      # ビルドは verify-build で済んでいるので、ここでは配布だけ行う
+      # （opennextjs-cloudflare deploy は再ビルドしない）。
       - name: デプロイ
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        # ビルドは上のステップで済んでいるので、ここでは配布だけ行う
-        # （opennextjs-cloudflare deploy は再ビルドしない）。
-        run: ${{ steps.pm.outputs.run }} deploy:worker
+        run: pnpm run deploy:worker
 
       # --- ここから配ったあとの確認 ---
       #
@@ -230,13 +254,16 @@ jobs:
       - name: 失敗したときの案内
         if: failure()
         run: |
-          echo "::error::デプロイ後の確認に失敗しました。"
-          echo "自動では元に戻していません。以下で状況を確認し、人が判断してください。"
-          echo "  npx wrangler deployments list"
-          echo "  npx wrangler rollback [deployment-id]"
-          echo "『本当に壊れている』のか『まだ古いプロセスが残っているだけ』なのかを"
-          echo "機械は区別できないため、ロールバックは自動実行していません。"
+          printf '::error::デプロイか、その後の確認に失敗しました。\n'
+          printf '%s\n' \
+            '自動では元に戻していません。以下で状況を確認し、人が判断してください。' \
+            '  npx wrangler deployments list' \
+            '  npx wrangler rollback [deployment-id]' \
+            'D1 を戻すときは、この実行の Summary にある bookmark を使います。' \
+            '  npx wrangler d1 time-travel restore hr-evaluation-db --bookmark=[bookmark]' \
+            '『本当に壊れている』のか『まだ古いプロセスが残っているだけ』なのかを' \
+            '機械は区別できないため、ロールバックは自動実行していません。'
 
 # マイグレーションは、検査・テスト・ビルドがすべて成功した後にだけ自動適用する。
-# 未適用検出 → バックアップ → 適用 → 未適用0件の再確認 → デプロイの順を固定し、
+# 未適用検出 → 戻り先の記録（Time Travel）→ 適用 → 未適用0件の再確認 → デプロイの順を固定し、
 # D1操作とデプロイを同じconcurrency groupで直列化する。

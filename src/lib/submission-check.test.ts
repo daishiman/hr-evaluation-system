@@ -10,6 +10,7 @@ import {
   type SubmissionQuestion,
 } from "@/lib/submission-check";
 import { stripComments } from "@/test-support/source-code";
+import { stripOptionScores } from "@/lib/domain/form-visibility";
 
 const q = (patch: Partial<SubmissionQuestion> & { id: string }): SubmissionQuestion => ({
   section: "free", displayOrder: 0, questionType: "text", title: patch.id, required: false,
@@ -43,6 +44,130 @@ describe("normalizeAnswers（送られた答えを保存する形にそろえる
     expect(text).toMatchObject({ valueNumber: null, valueText: "書いた文", valueJson: null });
     expect(multi).toMatchObject({ valueNumber: null, valueJson: JSON.stringify(["甲", "乙"]) });
     expect(num).toMatchObject({ valueNumber: 3, valueJson: null });
+  });
+});
+
+describe("normalizeAnswers の採点（1つ選ぶ設問は、サーバーの選択肢から点数を決める。DD-032 の8）", () => {
+  const options = JSON.stringify([
+    { value: "a", label: "できた", score: 3 },
+    { value: "b", label: "一部", score: 1 },
+  ]);
+  const single = q({ id: "single", questionType: "single", optionsJson: options });
+
+  it.each([["a"], ["b"]])("明示した選択値%sを優先し、送られた偽の点数や文言を保存しない", (value) => {
+    const [row] = normalizeAnswers([single], [{ questionId: "single", valueNumber: 999, valueText: "偽装", valueChoices: [value] }]);
+    expect(row).toMatchObject(value === "a"
+      ? { valueNumber: 3, valueText: "できた", valueJson: '["a"]' }
+      : { valueNumber: 1, valueText: "一部", valueJson: '["b"]' });
+  });
+
+  it.each([["unknown"], ["a", "b"], ["a", "a"], []])("不正な単一選択%sを旧配点と言葉で正当化しない", (...values) => {
+    const sent = [{ questionId: "single", valueNumber: 3, valueText: "できた", valueChoices: values }];
+    const required = { ...single, required: true };
+    const normalized = normalizeAnswers([required], sent);
+    expect(normalized[0]).toMatchObject({ valueNumber: null, valueText: null });
+    expect(checkSubmission([required], normalized).ok).toBe(false);
+  });
+
+  it("値が重複した旧設問は明示値と言葉で識別し、言葉でも区別できないものは断る", () => {
+    const twins = { ...single, optionsJson: JSON.stringify([
+      { value: "same", label: "甲", score: 1 }, { value: "same", label: "乙", score: 2 },
+    ]) };
+    const [row] = normalizeAnswers([twins], [{ questionId: "single", valueChoices: ["same"], valueText: "乙", valueNumber: 999 }]);
+    expect(row).toMatchObject({ valueNumber: 2, valueText: "乙", valueJson: '["same"]' });
+    const invalid = normalizeAnswers([twins], [{ questionId: "single", valueChoices: ["same"], valueText: "不明", valueNumber: 1 }]);
+    expect(invalid[0].valueNumber).toBeNull();
+    expect(checkSubmission([twins], invalid).ok).toBe(false);
+  });
+
+  it("送られた数ではなく、選んだ言葉に合う選択肢の配点を入れる", () => {
+    const [row] = normalizeAnswers([single], [{ questionId: "single", valueNumber: 999, valueText: "一部" }]);
+    expect(row).toMatchObject({ valueNumber: 1, valueText: "一部", valueJson: '["b"]' });
+  });
+
+  it("配点を持たない回答画面が値から読んだ数（null）を送っても、配点どおりに入る", () => {
+    const [row] = normalizeAnswers([single], [{ questionId: "single", valueNumber: null, valueText: " できた " }]);
+    expect(row).toMatchObject({ valueNumber: 3, valueText: "できた" });
+  });
+
+  it("言葉が無い・合わないときだけ、送られた数を配点と照らす（言葉は選択肢のものに直す）", () => {
+    const [noText, otherText] = normalizeAnswers([single], [
+      { questionId: "single", valueNumber: 3 },
+      { questionId: "single", valueNumber: 1, valueText: "勝手な言葉" },
+    ]);
+    expect(noText).toMatchObject({ valueNumber: 3, valueText: "できた" });
+    expect(otherText).toMatchObject({ valueNumber: 1, valueText: "一部" });
+  });
+
+  it("言葉も配点も合わない答えは、点数も言葉も入れない（選択肢に無い点数は保存しない。必須なら未入力で断る）", () => {
+    const sent = [{ questionId: "single", valueNumber: 999, valueText: "勝手な言葉" }];
+    const [row] = normalizeAnswers([single], sent);
+    expect(row).toMatchObject({ valueNumber: null, valueText: null });
+    const required = { ...single, required: true };
+    expect(checkSubmission([required], normalizeAnswers([required], sent)).ok).toBe(false);
+  });
+
+  it("同じ言葉の選択肢が並ぶときは、値を数として読んだものと送られた数で絞る", () => {
+    const twins = q({ id: "twins", questionType: "scale", optionsJson: JSON.stringify([
+      { value: "1", label: "ふつう", score: 10 },
+      { value: "2", label: "ふつう", score: 20 },
+    ]) });
+    const [row] = normalizeAnswers([twins], [{ questionId: "twins", valueNumber: 2, valueText: "ふつう" }]);
+    expect(row.valueNumber).toBe(20);
+  });
+
+  it("文言の無い「はい／いいえ」は、回答画面と同じ素の選択肢（はい=1・いいえ=0）で決める", () => {
+    const yesno = q({ id: "yn", questionType: "yesno", optionsJson: null });
+    const [yes, no] = normalizeAnswers([yesno], [
+      { questionId: "yn", valueNumber: 5, valueText: "はい" },
+      { questionId: "yn", valueNumber: 5, valueText: "いいえ" },
+    ]);
+    expect([yes.valueNumber, no.valueNumber]).toEqual([1, 0]);
+  });
+
+  it("選択肢の無い段階の設問（scale）は、送られた段階の数のまま（範囲は checkSubmission が見る）", () => {
+    const steps = q({ id: "steps", questionType: "scale", validationMin: 1, validationMax: 5 });
+    const [row] = normalizeAnswers([steps], [{ questionId: "steps", valueNumber: 4, valueText: "4" }]);
+    expect(row).toMatchObject({ valueNumber: 4, valueText: "4" });
+  });
+
+  it("選択肢が無いsingleへ送った数を点数として保存しない", () => {
+    const empty = { ...single, optionsJson: null };
+    expect(normalizeAnswers([empty], [{ questionId: "single", valueNumber: 999, valueText: "偽装" }])[0])
+      .toMatchObject({ valueNumber: null, valueText: null, valueJson: null });
+  });
+});
+
+describe("配点なしの試しの提出と、本物の提出の判定", () => {
+  const choices = JSON.stringify([{ value: "1", label: "同じ", score: 10 }, { value: "2", label: "同じ", score: 20 }]);
+  const full = q({ id: "scaled", questionType: "scale", required: true, optionsJson: choices, validationMin: 10, validationMax: 20 });
+  const publicQuestion = { ...full, optionsJson: stripOptionScores(choices) };
+
+  it.each([[], [{ questionId: "scaled", valueChoices: ["1"] }], [{ questionId: "scaled", valueChoices: ["不明"] }],
+    [{ questionId: "scaled", valueChoices: ["1", "2"] }]])("公開入力%sに対して同じ可否・知らせになる", (...answers) => {
+    expect(checkSubmission([publicQuestion], normalizeAnswers([publicQuestion], answers)))
+      .toEqual(checkSubmission([full], normalizeAnswers([full], answers)));
+  });
+
+  it("選択肢付きscaleは配点範囲を見ず、選択肢への所属で通す", () => {
+    const input = [{ questionId: "scaled", valueNumber: 999, valueChoices: ["1"] }];
+    expect(checkSubmission([publicQuestion], normalizeAnswers([publicQuestion], input))).toEqual({ ok: true });
+    expect(checkSubmission([full], normalizeAnswers([full], input))).toEqual({ ok: true });
+  });
+
+  it.each(["number", "scale"])("%sの数値入力の範囲・整数検査は残す", (questionType) => {
+    const number = { ...full, questionType, optionsJson: null, validationMin: 1, validationMax: 5, validationInteger: true };
+    for (const valueNumber of [0, 6, 1.5]) {
+      expect(checkSubmission([number], normalizeAnswers([number], [{ questionId: "scaled", valueNumber }])).ok).toBe(false);
+    }
+    expect(checkSubmission([number], normalizeAnswers([number], [{ questionId: "scaled", valueNumber: 3 }]))).toEqual({ ok: true });
+  });
+
+  it("任意の選択肢でも未知のvalueは断り、複数選択も所属を確認する", () => {
+    for (const questionType of ["single", "multi"]) {
+      const question = { ...full, questionType, required: false };
+      expect(checkSubmission([question], normalizeAnswers([question], [{ questionId: "scaled", valueChoices: ["unknown"] }])).ok).toBe(false);
+    }
   });
 });
 

@@ -9,9 +9,22 @@ import { formatJstTime, jstDateKey } from "@/lib/domain/jst";
 
 export type CsvCell = string | number | boolean | null | undefined;
 
+/**
+ * 表計算ソフトで開いたときに式として動きうる値か（DD-032 の5）。
+ * 先頭がタブか CR の値と、先頭の半角・全角の空白を飛ばした最初の文字が = + - @ の値が対象。
+ * 負の数を含む数値だけの文字列は、式ではないのでそのまま出す。
+ */
+function isFormulaLike(s: string): boolean {
+  if (/^-?\d+(\.\d+)?$/.test(s)) return false;
+  return /^[\t\r]/.test(s) || /^[ 　]*[=+\-@]/.test(s);
+}
+
 function escapeCell(v: CsvCell): string {
   if (v === null || v === undefined) return "";
+  if (typeof v === "number") return String(v);
   const s = typeof v === "boolean" ? (v ? "TRUE" : "FALSE") : String(v);
+  // 先頭に ' を付けて文字として読ませる。引用符で囲み、中の " は2つ重ねる
+  if (isFormulaLike(s)) return `"'${s.replace(/"/g, '""')}"`;
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

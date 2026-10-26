@@ -136,6 +136,16 @@ export function peopleViewParams(view: PeopleView, keys: readonly PeopleSortKey[
   };
 }
 
+/**
+ * 届いた URL の引数が、一覧が自分で書いたもの（書いた順の控え pending）かを見分ける。
+ * 自分の書き換えなら、それより後に書いた分だけを残した控えを返す（Next が途中の分をまとめて届けても、ここで追いつく）。
+ * 控えに無ければ null（会社の札や「戻る」での移動なので、その URL を取り込む）。
+ */
+export function settleOwnUrlWrite(pending: readonly string[], arrived: string): readonly string[] | null {
+  const at = pending.indexOf(arrived);
+  return at < 0 ? null : pending.slice(at + 1);
+}
+
 /** 会社に属さない人（システム全体管理者など）の会社の札。利用者一覧の「会社でしぼる」の札も同じ呼び方にする */
 export const NO_COMPANY_LABEL = "会社に属さない";
 

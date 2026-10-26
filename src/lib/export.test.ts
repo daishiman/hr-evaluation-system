@@ -201,6 +201,19 @@ describe("回答一覧の CSV（buildResponsesCsv）", () => {
     expect(rowOf("社員A")?.[FIXED_HEADERS.length + 3]).toBe(NOTE);
   });
 
+  it("式として動きうる答えは先頭に ' を付けて出し、数値の答えは負の数もそのまま出す（DD-032 の5）", async () => {
+    const extra = { companyId: IDS.company, valueJson: null };
+    await t.db.insert(s.formAnswers).values([
+      { ...extra, id: "fa_res_b_q_note", responseId: "res_b", questionId: "q_note", valueNumber: null, valueText: "=1+1" },
+      { ...extra, id: "fa_res_c_q_hours", responseId: "res_c", questionId: "q_hours", valueNumber: -1.5, valueText: null },
+    ]);
+    const { file, rowOf } = await exported();
+    expect(file.csv).toContain(`"'=1+1"`);
+    expect(rowOf("社員B")?.slice(FIXED_HEADERS.length)).toEqual(["7", "", "いいえ", "'=1+1", ""]);
+    expect(rowOf("社員C")?.slice(FIXED_HEADERS.length, FIXED_HEADERS.length + 2)).toEqual(["3", "-1.5"]);
+    expect(rowOf("社員A")?.slice(FIXED_HEADERS.length, FIXED_HEADERS.length + 2)).toEqual(["0", "12.5"]);
+  });
+
   it("回答がまだ無いアンケートは、見出しの行だけを出す", async () => {
     await t.db.insert(s.forms).values({ id: "frm_empty", companyId: IDS.company, cycleId: IDS.cycle, gradeId: IDS.gradeTo, title: "回答なし", publicToken: "tok_empty" });
     await t.db.insert(s.formQuestions).values({ id: "q_empty", companyId: IDS.company, formId: "frm_empty", section: "free", questionType: "text", title: "ふりかえり", displayOrder: 1 });

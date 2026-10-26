@@ -65,6 +65,15 @@ function as(
 const EMPLOYEE = as("EMPLOYEE", IDS.employee, { gradeId: IDS.gradeFrom, officeId: IDS.office });
 const MANAGER = as("MANAGER", IDS.evaluator, { gradeId: IDS.gradeTo });
 
+// 行動指針のsingleは本物の生成と同じく配点付き選択肢を持つ。
+// 選択肢なしでは画面から答えられず、数値だけを直接送るfixtureは代表経路にならない。
+const BEHAVIOR_OPTIONS = [
+  { value: "3", label: "【模範】周囲の手本になった", score: 3 },
+  { value: "2", label: "【実践】自分から取り組んだ", score: 2 },
+  { value: "1", label: "【一部】助言を受けて取り組んだ", score: 1 },
+  { value: "0", label: "【未実践】取り組めなかった", score: 0 },
+];
+
 /** 回答の対象になる設問（等級要件2問・受講報告・KPI 3問・行動指針1問。すべて必須）。 */
 const QUESTIONS = [
   { id: "fq_req1", section: "support", questionType: "yesno", title: "等級要件1", gradeRequirementId: "gr_1" },
@@ -73,7 +82,7 @@ const QUESTIONS = [
   { id: "fq_q2_1", section: "kpi", questionType: "number", title: "稼働日数", kpiQuestionKey: "q2_1" },
   { id: "fq_q2_2", section: "kpi", questionType: "number", title: "所定日数", kpiQuestionKey: "q2_2" },
   { id: "fq_q3_1", section: "kpi", questionType: "number", title: "残業率", kpiQuestionKey: "q3_1" },
-  { id: "fq_beh", section: "behavior", questionType: "single", title: "創造性について", behaviorGuidelineId: IDS.guideline },
+  { id: "fq_beh", section: "behavior", questionType: "single", title: "創造性について", behaviorGuidelineId: IDS.guideline, optionsJson: JSON.stringify(BEHAVIOR_OPTIONS) },
 ] as const;
 
 const FULL_ANSWERS = [
@@ -83,7 +92,7 @@ const FULL_ANSWERS = [
   { questionId: "fq_q2_1", valueNumber: 100 },
   { questionId: "fq_q2_2", valueNumber: 100 },
   { questionId: "fq_q3_1", valueNumber: 4 },
-  { questionId: "fq_beh", valueNumber: 3, valueText: "模範" },
+  { questionId: "fq_beh", valueNumber: 3, valueText: BEHAVIOR_OPTIONS[0].label, valueChoices: ["3"] },
 ];
 
 async function seedQuestions() {
@@ -145,6 +154,9 @@ describe("本人の提出 → 上長の集計 → 確定（代表経路）", () 
 
     const submitted = await saveResponse({ formId: IDS.form, status: "submitted", answers: FULL_ANSWERS });
     expect(submitted).toMatchObject({ ok: true, message: "提出しました。" });
+    const behavior = await t.db.select({ valueNumber: s.formAnswers.valueNumber, valueJson: s.formAnswers.valueJson })
+      .from(s.formAnswers).where(eq(s.formAnswers.questionId, "fq_beh"));
+    expect(behavior).toEqual([{ valueNumber: 3, valueJson: '["3"]' }]);
     // 下書きの行をそのまま提出に進める（2行に増やさない）
     expect(await responses()).toEqual([{ id: draft.ok ? draft.responseId : "", status: "submitted" }]);
     expect(mocked.refresh).toHaveBeenCalledTimes(2);
@@ -176,6 +188,16 @@ describe("本人の提出 → 上長の集計 → 確定（代表経路）", () 
 });
 
 describe("断られた保存は何も書かず、画面も描き直さない", () => {
+  it("登録されていない選択値を正しい配点や文言で偽装しても、提出・採点しない", async () => {
+    const result = await saveResponse({ formId: IDS.form, status: "submitted", answers: FULL_ANSWERS.map((a) =>
+      a.questionId === "fq_beh" ? { ...a, valueChoices: ["unknown"] } : a,
+    ) });
+    expect(result).toEqual({ ok: false, message: "「創造性について」は登録された選択肢から選んでください。" });
+    expect(await responses()).toEqual([]);
+    expect(await t.db.select().from(s.formAnswers)).toEqual([]);
+    expect(mocked.refresh).not.toHaveBeenCalled();
+  });
+
   it("必須の未入力がある提出は、回答の行を作らない", async () => {
     const result = await saveResponse({ formId: IDS.form, status: "submitted", answers: FULL_ANSWERS.slice(0, 3) });
 

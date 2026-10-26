@@ -135,6 +135,81 @@ function storedAnswer() {
   return { status: response?.status ?? null, first: answer?.value_number ?? null };
 }
 
+test("配点を渡さず、同じ文言の単一選択とyes/noを下書き→再読込→提出で維持する", async ({ browser }) => {
+  const singleId = (fixture.db.prepare("SELECT id FROM form_questions WHERE form_id = ? AND question_type = 'single'")
+    .get(fixture.formId) as { id: string }).id;
+  const yesNoId = `${fixture.formId}_yesno`;
+  const singleScore = 918273;
+  const yesScore = 564738;
+  fixture.db.prepare("UPDATE form_questions SET options_json = ? WHERE id = ?").run(JSON.stringify([
+    { value: "1", label: "同じ", score: 2 }, { value: "2", label: "同じ", score: singleScore },
+  ]), singleId);
+  const now = Date.now();
+  fixture.db.prepare(`INSERT INTO form_questions
+    (id, company_id, form_id, section, question_type, title, required, options_json, display_order, created_at, updated_at)
+    VALUES (?, ?, ?, 'free', 'yesno', '文字列値の選択', 1, ?, 3, ?, ?)`).run(
+    yesNoId, fixture.company.id, fixture.formId,
+    JSON.stringify([{ value: "yes", label: "できた", score: yesScore }, { value: "no", label: "できない", score: 0 }]), now, now,
+  );
+
+  const { context, page } = await openAsEmployee(browser);
+  const received: { kind: "document" | "action" | "rsc"; body: string }[] = [];
+  // 遷移後のResponse.text()はブラウザが本文を破棄して読めないことがある。
+  // APIResponseの本文を読み終えてから画面へ渡し、reloadのHTMLと保存応答を確実に検査する。
+  await page.route((url) => url.pathname === `/me/forms/${fixture.formId}`, async (route) => {
+    const request = route.request();
+    const response = await route.fetch();
+    const body = await response.text();
+    received.push({
+      kind: isServerAction(request) ? "action" : request.isNavigationRequest() ? "document" : "rsc",
+      body,
+    });
+    await route.fulfill({ response, body });
+  });
+  const savedChoices = () => fixture.db.prepare(`SELECT a.question_id, a.value_number, a.value_json
+    FROM form_answers a JOIN form_responses r ON r.id = a.response_id
+    WHERE r.form_id = ? AND r.employee_id = ? AND a.question_id IN (?, ?) ORDER BY a.question_id`)
+    .all(fixture.formId, fixture.employee.id, singleId, yesNoId);
+  const expected = (yes: boolean) => [
+    { question_id: singleId, value_number: singleScore, value_json: '["2"]' },
+    { question_id: yesNoId, value_number: yes ? yesScore : 0, value_json: yes ? '["yes"]' : '["no"]' },
+  ].sort((a, b) => a.question_id.localeCompare(b.question_id));
+  try {
+    const single = page.getByRole("group", { name: "今回の選択" }).getByRole("button", { name: "同じ", exact: true });
+    const yesNo = page.getByRole("group", { name: "文字列値の選択" });
+    await single.nth(1).click();
+    await yesNo.getByRole("button", { name: "できた", exact: true }).click();
+    await page.getByRole("group", { name: "複数の選択" }).getByRole("checkbox", { name: "甲", exact: true }).check();
+    for (let i = 1; i <= NUMBER_COUNT; i++) await page.getByLabel(`数える実績 ${i}`, { exact: true }).fill(String(i));
+    await expect(barStatus(page)).toContainText("保存済み");
+    await expect.poll(savedChoices).toEqual(expected(true));
+
+    await page.reload();
+    await waitForHydration(page, "main button");
+    await expect(single.nth(0)).toHaveAttribute("aria-pressed", "false");
+    await expect(single.nth(1)).toHaveAttribute("aria-pressed", "true");
+    await expect(yesNo.getByRole("button", { name: "できた", exact: true })).toHaveAttribute("aria-pressed", "true");
+    // 再保存時も選択値を点数と取り違えず、非数値のnoは0点で提出できる
+    await yesNo.getByRole("button", { name: "できない", exact: true }).click();
+    await expect(barStatus(page)).toContainText("保存済み");
+    await expect.poll(savedChoices).toEqual(expected(false));
+    await submitButton(page).click();
+    await page.getByRole("button", { name: "提出する", exact: true }).click();
+    await expect(page.getByText("提出済み（内容は変更できません）", { exact: true })).toBeVisible();
+    await expect.poll(savedChoices).toEqual(expected(false));
+    await page.reload();
+    await expect(page.getByText("提出済み（内容は変更できません）", { exact: true })).toBeVisible();
+    expect(received.filter((r) => r.kind === "document").length).toBeGreaterThanOrEqual(2);
+    expect(received.filter((r) => r.kind === "action").length).toBeGreaterThanOrEqual(3);
+    for (const { body } of received) {
+      expect(body).not.toContain(String(singleScore));
+      expect(body).not.toContain(String(yesScore));
+    }
+  } finally {
+    await context.close();
+  }
+});
+
 test("数値欄にカーソルを置いたまま提出ボタンを押すと、確認の欄が開く", async ({ browser }) => {
   const { context, page } = await openAsEmployee(browser);
   try {

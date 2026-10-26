@@ -88,8 +88,9 @@ describe("画面からの書き込み", () => {
     }
   };
 
-  /** 通信の口。これを持つファイルは、下の WRITES か READS に理由つきで載せる。 */
-  const NETWORK = /\bfetch\b|\bsendBeacon\b|\bXMLHttpRequest\b/;
+  /** 通信の口。これを持つファイルは、下の WRITES か READS に理由つきで載せる。
+   * 見出しの名前（sec-fetch-site など）の中の fetch は通信ではないので、前後が - のものは数えない。 */
+  const NETWORK = /(?<![-\w])fetch\b(?!-)|\bsendBeacon\b|\bXMLHttpRequest\b/;
 
   /**
    * 書き込む通信を画面側に持ってよいもの。増やすときは必ず理由を書く。

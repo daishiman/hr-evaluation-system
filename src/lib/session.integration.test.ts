@@ -5,7 +5,8 @@ import { createTestDatabase, type TestDatabase } from "@/test-support/sqlite-d1"
 
 const mocked = vi.hoisted(() => ({ userId: null as string | null, companyId: null as string | null, getDb: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getAuth: async () => ({ api: { getSession: async () => mocked.userId ? { user: { id: mocked.userId } } : null } }) }));
-vi.mock("next/headers", () => ({ headers: async () => new Headers(), cookies: async () => ({ get: () => mocked.companyId ? { value: mocked.companyId } : undefined }) }));
+// 画面からの送信と同じく、ブラウザが付ける Sec-Fetch-Site を持たせる（無い送信は送り元の検査で断る。DD-032 の17）
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ "sec-fetch-site": "same-origin" }), cookies: async () => ({ get: () => mocked.companyId ? { value: mocked.companyId } : undefined }) }));
 vi.mock("@/lib/db", async () => ({ ...(await vi.importActual<typeof import("@/lib/db")>("@/lib/db")), getDb: mocked.getDb }));
 
 import { getViewer, HttpError } from "@/lib/session";

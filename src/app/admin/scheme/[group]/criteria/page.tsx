@@ -6,7 +6,7 @@ import { DetailDialogButton } from "@/components/ConfirmButton";
 import { RankCriteriaSetForm } from "@/components/RankCriteriaSetForm";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { targetsPointGroup } from "@/lib/domain/grade-points";
-import { groupPosition, nextGroupOf, schemeStepPath, stepLede, stepNumber, STEPS, stepTitle } from "@/lib/domain/scheme-steps";
+import { groupPosition, pointGroupFromParam, nextGroupOf, schemeStepPath, stepLede, stepNumber, STEPS, stepTitle } from "@/lib/domain/scheme-steps";
 import { loadGroupCriteria, loadSchemeSetup } from "../../data";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 export default async function SchemeCriteriaPage({ params }: { params: Promise<{ group: string }> }) {
   const viewer = await requireRoute("/admin/scheme/[group]/criteria");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
-  const pointGroup = decodeURIComponent((await params).group);
+  const pointGroup = pointGroupFromParam((await params).group);
 
   const setup = await loadSchemeSetup(viewer.companyId);
   const group = setup.groups.find((g) => g.pointGroup === pointGroup);

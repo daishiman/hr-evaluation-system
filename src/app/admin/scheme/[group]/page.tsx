@@ -4,7 +4,7 @@ import { Badge, EmptyState, PageTitle, ReasonNote } from "@/components/ui";
 import { SchemeGroupPicker } from "@/components/SchemeGroupPicker";
 import { ComparisonGapNotice } from "@/components/ComparisonGapNotice";
 import { loadGroupComparisonGaps } from "@/lib/comparison-gap-loader";
-import { groupPosition, schemeStepPath, stepLede, stepNumber, STEPS, stepTitle } from "@/lib/domain/scheme-steps";
+import { groupPosition, pointGroupFromParam, schemeStepPath, stepLede, stepNumber, STEPS, stepTitle } from "@/lib/domain/scheme-steps";
 import { loadKpiChoices, loadSchemeSetup } from "../data";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function SchemeSelectPage({ params }: { params: Promise<{ group: string }> }) {
   const viewer = await requireRoute("/admin/scheme/[group]");
   if (!viewer.companyId) return <EmptyState title="所属している会社がありません" body="" />;
-  const pointGroup = decodeURIComponent((await params).group);
+  const pointGroup = pointGroupFromParam((await params).group);
 
   const [setup, choices, comparisonGaps] = await Promise.all([
     loadSchemeSetup(viewer.companyId),

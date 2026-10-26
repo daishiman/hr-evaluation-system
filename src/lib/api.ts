@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { summarizeErrorForLog } from "@/lib/db";
 import { minRoleFor } from "@/lib/route-access";
 import { apiViewer, HttpError, type Viewer } from "@/lib/session";
 
@@ -21,7 +22,8 @@ export function describeError(e: unknown): { status: number; message: string; he
       message: `入力内容を確認してください（${first?.path.join(".") || "入力値"}：${first?.message}）`,
     };
   }
-  console.error(e);
+  // 文面には SQL と DB へ渡した値が入りうるので、要約だけを残す（DD-032 の7）
+  console.error("想定外の失敗", summarizeErrorForLog(e));
   return { status: 500, message: UNEXPECTED_ERROR_MESSAGE };
 }
 

@@ -1,4 +1,4 @@
-import { isAnswered } from "@/lib/domain/answer-snapshot";
+import { findChosenOption, isAnswered, optionScore, parseMulti, parseOptions, singleChoiceOptions } from "@/lib/domain/answer-snapshot";
 import { checkAnswerNumbers } from "@/lib/domain/number-input";
 import { inScreenOrder } from "@/lib/question-order";
 
@@ -14,6 +14,8 @@ export type SubmissionQuestion = {
   validationMax: number | null;
   validationInteger?: boolean | null;
   unit?: string | null;
+  /** 選択肢（JSON）。1つ選ぶ設問の点数は、送られた数ではなくこれから決める */
+  optionsJson?: string | null;
 };
 
 /** 送られてきた答えの1項目（保存の受け口が受け取る形） */
@@ -21,7 +23,7 @@ export type SubmittedAnswer = {
   questionId: string;
   valueNumber?: number | null;
   valueText?: string | null;
-  /** 複数選択で選んだ選択肢の value。ほかの形式では使わない */
+  /** 選んだ選択肢の value（単一選択は1つ、複数選択はいくつでも） */
   valueChoices?: readonly string[] | null;
 };
 
@@ -37,8 +39,9 @@ export type NormalizedAnswer<Q extends SubmissionQuestion> = {
  * 送られてきた答えを、保存する形にそろえる。
  *
  * そのアンケートの設問でない答えは落とす（他フォームのIDを混ぜられないようにする）。
- * 文章と複数選択は数値の列を使わない。複数選択だけ value_json を使う
- * （列を空けたまま multi を保存できない状態だった）。
+ * 文章と複数選択は数値の列を使わない。選択値は単一・複数とも value_json に残す。
+ * 1つ選ぶ設問は、明示選択値（無い旧回答は言葉・数）で探し、点数と言葉を選択肢から決め直す（DD-032 の8）。
+ * 回答画面は配点を持たず、送られた数を信じると画面を通さずに好きな点数を保存できてしまうため。
  */
 export function normalizeAnswers<Q extends SubmissionQuestion>(
   questions: readonly Q[],
@@ -48,12 +51,25 @@ export function normalizeAnswers<Q extends SubmissionQuestion>(
   return answers.flatMap((a) => {
     const q = byId.get(a.questionId);
     if (!q) return [];
+    const options = singleChoiceOptions(q);
+    if (options.length > 0) {
+      const chosen = findChosenOption(options, { valueNumber: a.valueNumber, valueText: a.valueText, valueChoices: a.valueChoices });
+      return [
+        {
+          question: q,
+          valueNumber: chosen ? optionScore(chosen) : null,
+          valueText: chosen ? chosen.label : null,
+          // 不正な明示選択も残し、提出時の所属検査で断る（旧形式の配点で正当化しない）。
+          valueJson: chosen ? JSON.stringify([String(chosen.value)]) : a.valueChoices != null ? JSON.stringify(a.valueChoices) : null,
+        },
+      ];
+    }
     const choices = a.valueChoices ?? null;
     return [
       {
         question: q,
-        valueNumber: q.questionType === "text" || q.questionType === "multi" ? null : (a.valueNumber ?? null),
-        valueText: a.valueText ?? null,
+        valueNumber: q.questionType === "text" || q.questionType === "multi" || q.questionType === "single" ? null : (a.valueNumber ?? null),
+        valueText: q.questionType === "single" ? null : a.valueText ?? null,
         valueJson: q.questionType === "multi" && choices ? JSON.stringify(choices) : null,
       },
     ];
@@ -82,7 +98,7 @@ export function missingRequired<Q extends { id: string; section: string; display
 /**
  * 提出してよいかを見る（下書きには当てない。打っている最中に断ると入力が止まる）。
  *
- * 数値の範囲（0以上・1以上・整数だけ、など）→ 必須の順に見て、最初に見つかった断りを1つ返す。
+ * 数値欄の範囲（0以上・1以上・整数だけ、など）→ 選択肢への所属 → 必須の順に見て、最初の断りを1つ返す。
  * どちらも回答画面の上からの順で選ぶ。送られた順のまま調べると、範囲を外れた欄が2つあるときに
  * 画面の下の欄を挙げることがある。
  *
@@ -100,6 +116,8 @@ export function checkSubmission<Q extends SubmissionQuestion>(
   const range = checkAnswerNumbers(
     [...answers]
       .sort((a, b) => rankOf(a) - rankOf(b))
+      .filter((a) => a.question.questionType === "number" ||
+        (a.question.questionType === "scale" && singleChoiceOptions(a.question).length === 0))
       .map((a) => ({
         title: a.question.title,
         validationMin: a.question.validationMin,
@@ -110,6 +128,19 @@ export function checkSubmission<Q extends SubmissionQuestion>(
       })),
   );
   if (!range.ok) return range;
+
+  // 選択肢の妥当性は配点の範囲ではなく所属で見る。試しの回答にも配点は不要。
+  for (const a of [...answers].sort((a, b) => rankOf(a) - rankOf(b))) {
+    const singleOptions = singleChoiceOptions(a.question);
+    const options = a.question.questionType === "multi" ? parseOptions(a.question.optionsJson) : singleOptions;
+    if (options.length === 0) continue;
+    const choices = parseMulti(a.valueJson);
+    if ((a.question.questionType !== "multi" && choices.length > 1) ||
+        choices.some((value) => !options.some((o) => String(o.value) === value)) ||
+        (singleOptions.length > 0 && choices.length === 1 && findChosenOption(singleOptions, a) === null)) {
+      return { ok: false, message: `「${a.question.title}」は登録された選択肢から選んでください。` };
+    }
+  }
 
   const answeredIds = new Set(
     answers.filter((a) => isAnswered(a.question.questionType, a)).map((a) => a.question.id),

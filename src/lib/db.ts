@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import * as schema from "@/db/schema";
@@ -11,6 +12,36 @@ export async function getDb(): Promise<DB> {
 }
 
 export { schema };
+
+/** cause の鎖をたどる深さの上限（循環した cause で止まらないように） */
+const CAUSE_DEPTH_MAX = 5;
+
+/**
+ * 失敗をログ用の1行に要約する（DD-032 の7）。
+ *
+ * Drizzle の失敗の文面には SQL の全文と DB へ渡した値が入り、原因（D1）の文面にも値が写る。
+ * そのため文面はどれも載せず、型で見分けて次だけを残す。
+ * - DB の失敗：型の名前・SQL の先頭の操作と表の名前・D1 の原因の種類（D1_ERROR・SQLITE_CONSTRAINT など）
+ * - ほかの失敗：型の名前とスタックの先頭の1行（起きた場所）
+ * - Error でない値：型だけ
+ */
+export function summarizeErrorForLog(error: unknown): string {
+  const chain: Error[] = [];
+  for (let e: unknown = error; e instanceof Error && chain.length < CAUSE_DEPTH_MAX; e = e.cause) chain.push(e);
+  if (chain.length === 0) return `Error でない値（${error === null ? "null" : typeof error}）を投げられました`;
+
+  const names = chain.map((e) => (e instanceof DrizzleQueryError ? "DrizzleQueryError" : e.name || "Error"));
+  const query = chain.find((e): e is DrizzleQueryError => e instanceof DrizzleQueryError);
+  if (query) {
+    const op = /^\s*([a-z]+)/i.exec(query.query)?.[1]?.toLowerCase() ?? "?";
+    const table = /\b(?:into|from|update)\s+"?(\w{1,64})"?/i.exec(query.query)?.[1] ?? "?";
+    const reason = query.cause instanceof Error ? query.cause.message : "";
+    const codes = [...new Set(reason.match(/\b(?:D1|SQLITE)_[A-Z_]{1,40}\b/g) ?? [])].slice(0, 4);
+    return `${names.join(" > ")} op=${op} table=${table} cause=${codes.join(",") || "?"}`;
+  }
+  const frame = chain[0].stack?.split("\n").find((line) => /^\s*at\s/.test(line))?.trim().slice(0, 200);
+  return `${names.join(" > ")} ${frame ?? "（場所は不明）"}`;
+}
 
 /** D1 は1つのSQL文につき bound parameter が最大100個。上限ちょうどを避けて99個までにする。 */
 export const D1_SAFE_BOUND_PARAMETER_LIMIT = 99;

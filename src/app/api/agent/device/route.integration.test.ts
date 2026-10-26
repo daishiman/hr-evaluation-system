@@ -193,6 +193,19 @@ describe("承認を待つ", () => {
     expect((await redeem(grant.deviceCode)).state).toBe("denied");
   });
 
+  it("通すと断るがほぼ同時に来ても、決まるのは先の1つだけ（後の操作が上書きしない。DD-032 の17）", async () => {
+    const grant = await start();
+    // 両方とも「まだ決まっていない」を読んだあとで書きにいく形を作る。
+    const results = await Promise.all([decideCode(grant.userCode, false), decideCode(grant.userCode, true)]);
+    const [row] = await testDb.db.select().from(s.agentDeviceGrants);
+
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect([row.approvedAt, row.deniedAt].filter((at) => at !== null)).toHaveLength(1);
+    // 押した人へ返した結果と、保存された決定が食い違わない
+    const won = results.find((r) => r.ok)!;
+    expect(row.deniedAt !== null).toBe(won.message === "この端末は通しませんでした。");
+  });
+
   it("時間切れの合言葉では通らない", async () => {
     const grant = await start();
     await testDb.db.update(s.agentDeviceGrants).set({ expiresAt: new Date(Date.now() - 1) });
