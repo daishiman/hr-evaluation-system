@@ -2,7 +2,7 @@
 graph_node_id: "arch-system-spec-database"
 artifact_kind: "architecture"
 artifact_subtypes: ["data"]
-title: "データ設計：D1 の原子的な書き込み、会社への所属、KGI の表の削除と上司の判断の列、行動指針の既定の割り当てへの移行、設定とアンケートの追従、見本の受付中の期"
+title: "データ設計：D1 の原子的な書き込み、会社への所属、上司の判断の列、本番 DB の写しの置き場と Time Travel"
 project_id: "hr-evaluation-system"
 domain: "database"
 status: "done"
@@ -11,16 +11,16 @@ start_date: null
 target_date: null
 iteration: null
 owners: []
-tags: ["system-spec", "改善要望対応"]
+tags: ["system-spec", "改善要望対応", "脆弱性対策"]
 file_path: "architecture/system-spec-database.md"
 template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
-evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "f9b40a88c7ad87842df987ad6e3f60929897d9a83aa0d771a5b313e67fd1d7b0", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-2026-10-22.json"}
-source_lineage: {"imported_at": "2026-10-22T07:58:56Z", "origin_kind": "system-spec-harness", "source_digest": "f9b40a88c7ad87842df987ad6e3f60929897d9a83aa0d771a5b313e67fd1d7b0", "source_path": "system-spec/database.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
-created_at: "2026-10-22T08:03:51.121694Z"
-updated_at: "2026-10-22T08:03:51.121694Z"
+evaluation_status: "stale"
+confirmation_evidence: {"evaluated_digest": "99a3115c741d72093eedd0ba30c70c1cf8051840c4a268cd392a5360c5b9cf52", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
+source_lineage: {"imported_at": "2026-10-22T13:49:14Z", "origin_kind": "system-spec-harness", "source_digest": "99a3115c741d72093eedd0ba30c70c1cf8051840c4a268cd392a5360c5b9cf52", "source_path": "system-spec/database.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-22T13:57:45.864509Z"
+updated_at: "2026-10-26T20:54:12.328854Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -44,7 +44,7 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-26T20:54:12.328854Z", "missing_sections": [], "status": "complete"}
 ---
 
 # Architecture overview
@@ -61,6 +61,10 @@ Cloudflare D1（SQLite 互換）を drizzle-orm/d1 で使い、getDb() が要求
 2026-10-21〜22 の追加: 行動指針のまとまりの割り当てを既定（beginner・regular で1つ、chief・am1・am2 で1つ、manager1・manager2 は出さない）へ書き換えるデータの移行を足し、書き換えるのは割り当てだけで観点の行には触れない（G25）。設定とアンケートの設問は、どちらを後から変えても後から変えた方を正とし、アンケートからの書き戻しは設定の保存と同じ永続化層の関数を通して同じ batch で書く（G27）。確定した評価と評価レポートは確定した時点の写しのまま残し、確定前の評価だけを集計し直す。見本の会社（cmp_sample）に提出済み・下書き・未回答が混ざった受付中の評価期間を足し、手元の seed の受付中の期にも評価を作れる人数の提出済みを持たせる（G28）。本章の serves_goals に足したのは G25・G27・G28 で、G26（行動指針と KPI・評価セットの画面の認知の負荷）と G29（共通部品のグラデーションと色使い。appr-foundation-017 でボタン以外のカードや表などへ広げた）は、要件の土台の承認の問としてだけ本章に出る。
 根拠: qa-ab09-finalized-evaluation-keep、qa-ab10-band-drift-rewrite、qa-ab11-survey-writeback-rule-conflict、qa-ab12-showcase-data-location、qa-ab13-foundation-016-approval、qa-ab15-foundation-017-approval、G25、G27、G28、appr-foundation-016、appr-foundation-017（system-spec/database.md）
 
+2026-10-19〜20 の追加: 事業所の達成率の3つの表と評価の表の2列を消す。レポートのための新しい表は作らず、確定済みの評価と評価の項目から作る。評価の表に上司の判断の6列（NULL 可）を足す。シードに、複数の期の確定済みの評価・アンケートの各状態・ズレの3種類・直属の部下の関係・判断の5通りを足す。
+2026-10-22 の追加: 本番 DB の写しを、公開リポジトリとその成果物・ログに置かない（G30）。戻すときの元は D1 の Time Travel（無料のプランで7日。D-010）だけで、restore は DB 全体を戻す。新しい表と列は足さない。
+根拠: qa-ac12 (16)(18)、G30（system-spec/database.md）
+
 ## Context and drivers
 
 業務の文脈は、書き込みの結果が一覧へすぐ出ず、会社追加が会社・管理者・所属を別々に書いて途中の失敗で中途状態が残り得たことにある。加えて、等級名に英語の区分名が混ざり、users.email が一意で会社への所属を表す表が無いため、2社目に登録できない。優先する品質は、書き込み直後の読み取りの鮮度（G2）、途中失敗で一部を残さない原子性（G5）、等級名の一貫した反映（G6）、実際の判定と食い違わない権限の一覧（G8）、確定済みの最新評価との一致（G9）、所属による会社の境界（G10）、対象者全員の提出状況（G11）、並び順の全体の保存（G13）である。制約は、D1 に対話的なトランザクションが無いこと、1文の bound parameter を99個以下に分けること（chunkRowsForD1）、Workers・D1 の構成を変えないこと、本番 DB は読み取り専用で調べることである。
@@ -75,6 +79,10 @@ Cloudflare D1（SQLite 互換）を drizzle-orm/d1 で使い、getDb() が要求
 2026-10-21〜22 の追加: 2026-10-22 の依頼（画像5枚と本文）で、行動指針の既定の分け方、後から設定した方を正とする追従、評価を作る画面を試す仮のデータが求められた。調べると、画像の分け方は等級1だけが g3_4 へ移った状態で、製品仕様 §28-12 と DD-010 に記録された本番の状態と一致した。設定とアンケートは『制度が正・アンケートは写し』で、アンケートから設定へ戻す経路が無く、updated_at は src/lib/impact.ts の集計し直しの判定にしか使われていない。本番の見本の会社は5期すべて締め済みで、提出済みの回答を持つ受付中の期が無い。優先する品質は、既定の分け方が新しい会社と既存の会社の両方で成り立つこと（G25）、両方向の追従と確定した時点の写しの保持（G27）、仮のデータで評価を作れること（G28）である。
 根拠: qa-ab01-settings-ui-overhaul-request、qa-ab02-behavior-band-default-observed、qa-ab04-setting-copy-propagation-observed、qa-ab05-evaluation-build-showcase-observed、G25、G27、G28（system-spec/database.md）
 
+2026-10-19〜20 の追加: 2026-10-19 の依頼（事業所の達成率の削除・評価レポート・全ての項目を確かめられるテストデータ）と 2026-10-20 の依頼（上司の判断）で、表の削除・列の追加・シードの拡張が必要になった。優先する品質は、本番のデータを壊さずに消すこと（G17）、テストデータで全ての画面と項目が出ること（G20）、判断を記録してもとの点数の判定を書き換えないこと（G24）である。
+2026-10-22 の追加: 依頼（qa-ac01）を受けた監査を経て、Actions の成果物にあった本番 D1 のバックアップ4件を 2026-10-22 に削除した。戻す元は Time Travel だけにする（qa-ab02、D-010）。
+根拠: qa-ac01、qa-ab02、qa-ac12 (16)（system-spec/database.md、system-spec/00-requirements-definition.md）
+
 ## Goals and non-goals
 
 Goals: 複数の表を書く書き込みの中途状態を0件にする（G5）。書き込み直後の再読み込みが必ず結果を含む（G2）。等級名の変更が次の表示から全てに反映される（G6）。権限の定義を DB に持たず、表示と判定が route-ledger.json の同じ定義を読む（G8）。一覧の等級と点数がいつ見ても確定済みの最新と一致する（G9）。同じ人が1つのアカウントのまま複数の会社に所属できる（G10）。提出状況を対象者全員について既存の表から求められる（G11）。並び順の全体を1回の batch で保存できる（G13）。Non-goals: 読み取りの複製（read replication）を今は入れない。提出状況のための新しい表や一覧用の写しの列を作らない。権限の定義の表と編集画面を作らない。控えの掃除のために決まった時刻に動く仕組みを足さない。等級名の一律の書き換えを除く本番データの移行・修正を行わず、等級の id と pointGroup の値を変えない。
@@ -85,6 +93,10 @@ Goals: 複数の表を書く書き込みの中途状態を0件にする（G5）�
 
 2026-10-21〜22 の追加: Goals: 既定からずれた会社の割り当てを移行で既定へ戻し、新しい会社は既定で始める（O25）。両方向の反映を保存の処理に組み込み、写しを持つ全ての場所に追従の規則を決める（O27）。手元の seed と本番の見本の会社に受付中の評価期間を用意する（O28）。Non-goals: 範囲の外の『本番データの移行・修正』の除外に、行動指針の既定の割り当てへの書き換え（I26）と、この仕様で足した移行のうち行を書き換えるもの（0032〜0039 のうち6本）を挙げ、それ以外は行わない。『本番 DB へのテストデータの投入』は手元の seed と E2E のデータを指し、本番の見本の会社への仮のデータ（G28・I31）は除く。
 根拠: qa-ab17-foundation-019-approval、qa-ab18-foundation-020-approval、G25、G27、G28、appr-foundation-019、appr-foundation-020（system-spec/database.md）
+
+2026-10-19〜20 の追加: Goals: 事業所の達成率の表と列を2回目の Deploy で消す。判断の列を既存の行を書き換えずに足す。シードを2回流しても同じ結果にする。Non-goals: レポートの写しの表、判断の履歴の表、本番 DB へのテストデータの投入、確定済みの評価の個人Pt・賞与額・根拠の文の作り直し。
+2026-10-22 の追加: Goals: 公開物に本番のデータを置く工程を0件にする（O30）。Non-goals: 新しい表と列は足さない。#97 で消した事業所の達成率の3つの表と2列は戻さない（qa-ac05）。
+根拠: qa-ac05、qa-ac12 (17)(18)、O30（system-spec/database.md、system-spec/00-requirements-definition.md）
 
 ## System context and boundaries
 
@@ -119,6 +131,9 @@ D1 データベース（env.DB）が唯一の永続化先で、src/db/schema.ts 
 2026-10-21〜22 の追加: エラーと回復性: 評価セットの決まり（等級区分ごとの項目数・固定枠・20点枠）や KPI の計算に要る設問（分子・分母など）に合わなくなる書き戻しは、batch を作る前にアンケートも設定も変えずに断り、合わない決まりと直す画面を示す。同じ設定を2人が同時に保存したときの 409 を書き戻しと自動の下書きにも当て、後の保存が黙って上書きしないようにする。可観測性と監査: 書き戻しも制度の変更の記録を通し、どのアンケートと評価が変わったかを保存の結果の文で示す。鮮度: 保存の後は関係する全ての画面を取り直し、他のタブにも知らせる（製品仕様 §27）。
 根拠: qa-ab04-setting-copy-propagation-observed、qa-ab11-survey-writeback-rule-conflict、qa-ab13-foundation-016-approval、G27、appr-foundation-016（system-spec/database.md）
 
+2026-10-22 の追加: 可観測性: DB エラーのログに渡した値を出さず、種類と場所だけを出す（G35）。
+根拠: qa-ac10 (25)（system-spec/backend.md、system-spec/database.md）
+
 ## Subtype architecture
 
 合成対象の subtype と該当テンプレート:
@@ -128,6 +143,9 @@ D1 データベース（env.DB）が唯一の永続化先で、src/db/schema.ts 
 - Infrastructure: N/A: subtype 非選択
 - Data: 合成済み (`architecture-data.md`)
 - Security: N/A: subtype 非選択
+
+2026-10-22 の追加: Data に、本番 DB の写しの置き場・戻す元・#97 を戻さないこと・回数制限の表の上限を足す（G30・G36）。
+根拠: qa-ac12（system-spec/database.md）
 
 ### Data architecture
 
@@ -139,6 +157,9 @@ D1 データベース（env.DB）が唯一の永続化先で、src/db/schema.ts 
 2026-10-21〜22 の追加: 行動指針のまとまりの割り当ては等級の集約の中の値として扱う。まとまりは等級名ではなくセットの code と等級の display_order で決まる（src/lib/domain/behavior-band-range.ts の bandRuns）ので、等級名の変更は割り当てを変えない。評価セットの決まり（等級区分ごとの項目数・固定枠・20点枠）と KPI の計算に要る設問（分子・分母など）は、評価セットと KPI 項目の集約が持つ不変条件とする。確定した評価とレポートは確定した時点の写しとして集約の外から書き換えず、見本の受付中の期は見本の会社（cmp_sample）の集約の中だけに作る。
 根拠: qa-ab02-behavior-band-default-observed、qa-ab09-finalized-evaluation-keep、qa-ab11-survey-writeback-rule-conflict、qa-ab12-showcase-data-location、G25、G27、G28（system-spec/database.md）
 
+2026-10-22 の追加: 監査の台帳は docs/security/ に置き、DB の表にしない。
+根拠: qa-ac12 (18)（system-spec/database.md）
+
 #### Logical and physical model
 
 所属の表は利用者・会社・役割・等級・事業所・上司・作成日時を持ち、利用者と会社の組を一意にし、上司は同じ会社の所属を指す。等級は id と pointGroup（結合キー）を変えずに名前を持ち、既定名は『等級1』『等級2』『等級3』『等級4-1』『等級4-2』『等級5-1』『等級5-2』で、data/grades.json・seed-data.mjs・seed-grade-schemes.mjs・drizzle/seed.sql・copyCompanyMasters の全てをそろえる。行動指針のセット名と、利用者が自分で付けていないアンケートの既定のタイトルは保存せず、割り当てた等級の名前から作る。initial_credential_memos は利用者ごとに1行で暗号文・初期化ベクトル・鍵の版・発行者・発行時刻を持って平文の列を持たず、constitution_events は実体ごとの番号を一意にする（uq_ce_entity_seq）。評価の表は確定済み（finalized）の KPI評価点（totalScore）と等級要件の達成率（requirementRate）を持ち、一覧はここから読む。
@@ -149,6 +170,10 @@ D1 データベース（env.DB）が唯一の永続化先で、src/db/schema.ts 
 
 2026-10-21〜22 の追加: 行動指針の既定の分け方の正本は data/grades.json の band、drizzle/seed.sql、src/lib/domain/behavior.ts の DEFAULT_BAND_SETS の3つで、等級1・等級2が g1_2、等級3・等級4-1・等級4-2が g3_4、等級5-1・等級5-2が出さない（null）、観点は各5件である。新しい会社はテンプレート会社の等級・セット・観点を写すだけで、既定を当て直す処理は無い。form_questions、form_answers の question_*、evaluations と evaluation_* は作った時点の写しである。updated_at は多くの表にあるが、使うのは src/lib/impact.ts の集計し直しの判定だけである。
 根拠: qa-ab02-behavior-band-default-observed、qa-ab04-setting-copy-propagation-observed、G25、G27（system-spec/database.md）
+
+2026-10-19〜20 の追加: 事業所の達成率の3つの表と評価の2列を消し、評価の表に判断の6列（NULL 可）を足す。レポートは新しい表を持たず、確定済みの評価と評価の項目から作る。
+2026-10-22 の追加: 新しい表と列は足さない。自前の回数制限の表には、件数の上限と古いものの掃除を入れる（G36。system-spec/backend.md）。
+根拠: qa-ac10 (23)、qa-ac12 (18)（system-spec/database.md、system-spec/backend.md）
 
 #### Access and consistency
 
@@ -172,6 +197,9 @@ D1 データベース（env.DB）が唯一の永続化先で、src/db/schema.ts 
 2026-10-21〜22 の追加: 設定を保存しても、締め切ったアンケート・確定した評価・評価レポートは変えず、回答のある公開中のアンケートは次の版の下書きを作るだけで、公開は人が行う（I29）。行動指針の割り当ては、既定への移行の後に会社が変えたときはその変更を正とする（I26）。見本の会社の受付中の期は提出済み・下書き・未回答を混ぜ、評価はまだ作らず、氏名と会社に見本の印を持たせる（I31・O28）。
 根拠: qa-ab08-published-form-follow、qa-ab09-finalized-evaluation-keep、qa-ab10-band-drift-rewrite、qa-ab12-showcase-data-location、G25、G27、G28（system-spec/database.md）
 
+2026-10-22 の追加: 本番 DB の写しを、公開リポジトリとその成果物・ログに置かない（G30）。#97 で消した3つの表と2列は戻さない（Time Travel で戻せる期限は 2026-10-28T07:49Z ごろ）。個人Pt・賞与額・根拠の文の列は残っている。
+根拠: qa-ac05、qa-ac12 (16)(17)（system-spec/database.md）
+
 #### Migration and recovery
 
 所属の表の追加と既存の利用者全員への1件ずつの所属の作成、既存の全社の等級名の一律の書き換えと、既に保存された英語入りの表示名を既定の扱いへ戻すことをマイグレーションで入れ、等級の id と pointGroup は変えない。同じマイグレーションを2回流しても結果が変わらず、書き換え前の値は記録用の表に残して戻せるようにする。会社追加の取り消しが失敗したら compensation_failed を Workers Logs に残し、本番 DB を手で書き換えずに文書の手順（deploy-notes §7）で直す。本番の書き換えの前後は読み取り専用で対象を数え、英語の区分名が残っていないことを確かめる。
@@ -185,6 +213,10 @@ D1 データベース（env.DB）が唯一の永続化先で、src/db/schema.ts 
 
 2026-10-21〜22 の追加: 既定の割り当てへの移行は、等級の内部の識別子（beginner・regular／chief・am1・am2／manager1・manager2）で割り当ての列だけを UPDATE し、観点の文と会社が足した観点には触れない（I26）。既定のまとまりが無い会社は書き換えずに件数を報告する。範囲の外の除外に挙げた行を書き換える移行は、0032（番号の振り直し）・0033（所属の表への既存の利用者の写し）・0034・0035（等級名の書き換え）・0036（取り込みで作った人の所属の補い）・0039（事業所の表の削除）で、0037・0038 は表と列の追加だけである。0021・0023・0025・0030 も行を書き換えるが、この仕様より前に足した移行なので挙げない。
 根拠: qa-ab10-band-drift-rewrite、qa-ab18-foundation-020-approval、G25、appr-foundation-020（system-spec/database.md）
+
+2026-10-19〜20 の追加: 判断の列は足すだけのマイグレーションで1回で出す。事業所の達成率の表と列は2回目の Deploy で消し、その前に本番 DB を読み取りで数える。消す前の値は D1 の Time Travel（無料のプランで7日。D-010）で戻せる（2026-10-22 から成果物へのバックアップは使わない）。
+2026-10-22 の追加: 戻すときの元は D1 の Time Travel（7日。D-010）だけで、マイグレーションの前に時刻と bookmark を記録する。restore は DB 全体を戻すので、使うかは利用者が決め、外部変更ガードを通す。
+根拠: qa-ac06 (7)、qa-ac12 (16)（system-spec/infrastructure.md、system-spec/database.md）
 
 #### Data verification
 
@@ -200,6 +232,9 @@ write-atomicity-contract.test.ts が batch の外で2つ以上の表を書く関
 2026-10-21〜22 の追加: 移行のテストで、等級1だけが2つ目のまとまりへ移った会社が既定へ戻る、既定の会社は変わらない、呼び名を変えた会社も識別子で戻る、既定のまとまりが無い会社は書き換えずに件数を報告する、観点の中身は変わらない、を確かめる（O25）。書き戻しで元の設定が同じ保存で変わること、決まりに合わない保存が断られること、設定の保存で下書きが作り直され次の版の下書きが1つだけでき、確定した評価とレポートが変わらないことを、サーバー処理と結合テストで確かめる（O27）。写しを持つ場所の一覧とコードの一致は契約テストで確かめる。見本の生成のテストで受付中の期が1つあり他社の行に触れないことを確かめ、手元の見本で評価の一覧と詳細まで進める E2E を置く（O28）。
 根拠: qa-ab13-foundation-016-approval、G25、G27、G28、appr-foundation-016（system-spec/database.md）
 
+2026-10-22 の追加: d1-backup の成果物が0件であることを読み取りで確かめ、成果物へ上げる工程が無いことを静的検査で確かめる（O30）。
+根拠: qa-ac07 (14)、O30（system-spec/maintenance-ops.md、system-spec/00-requirements-definition.md）
+
 ## Architecture decisions
 
 D-003（採択 opt-batch-first）: 1回の batch に入るものは batch、入りきらない会社追加は補償、戻せない書き込みの続きはやり直しにする。代替の『全部を1回の batch』は制度ひな形の複製が数百行になりうるため会社追加が入りきらず、『補償だけ』は補償そのものの失敗で中途状態が残る。多くの経路で書きかけを起こさず補償とやり直しを2か所に限れる利点を取り、補償まで失敗したときは記録と手順で直す負担を受け入れた。D-004（採択 opt-membership-cookie）: 利用者が選んだ（qa-v12）。所属を自前の表にして会社ごとの役割・等級・事業所・上司を持たせ、users.email の一意を残す。代替の better-auth の organization plugin は既存の companies 表と二重になり、等級・上司を member の表の外に持つ必要がある。URL に会社を入れる案は46画面のルートを全て移す。D-007（採択 opt-route-ledger-extend）: 利用者が①（route-ledger.json に操作と説明を足す）を名指しで選んだ（qa-v25、2026-10-13T03:40:15Z）。委任に基づいて AI が選んだ別の案とは違う案である。権限の定義は DB の表に持たず、編集画面も作らず、route-ledger.json に置く。DB の表で編集する案は、表と実際の判定のずれに気づけない（比べたときの不利な点）。①は台帳が1つで済み、画面を足したときの書き漏れを既存の route-ledger のテストで見つけられる。不利な点は、説明を直すたびに仕様文書の変更になることである。D-005 と D-006 は画面側の判断で、system-spec/frontend.md と system-spec/ui-ux.md の章で扱う。利用者は、D-007 ① に合わせて (9) を直した本章の文面を、旧と新を逐語で示されたうえで承認した（qa-v26、2026-10-13T03:48:20Z）。表示名を保存せず表示のたびに作る形、一覧に写しの列を作らない形、書き換え前の値を記録用の表に残す形は、この承認に含まれる。読み取りの複製は入れず、入れる場合は書き込みの応答の bookmark を次の読み取りへ渡すことを条件にする。
@@ -213,6 +248,10 @@ D-003（採択 opt-batch-first）: 1回の batch に入るものは batch、入�
 
 2026-10-21〜22 の追加: 既定からずれた会社は、『画面に「既定に戻す」を置く』ではなく『データを既定へ書き換える』を利用者が選び、DD-010 の『移行で書き換えない』を改める DD を書く（qa-ab10）。回答のある公開中のアンケートは『公開中の設問を差し替える』ではなく『次の版の下書きを自動で作る』を、確定した評価と評価レポートは『最新で集計し直す』ではなく『確定した時点のまま残す』を選んだ（qa-ab08・qa-ab09）。書き戻し（I28）と設定の保存での下書きの作り直し（I29）は DD-015 と、DD-016 が却下した『聞き方の保存で下書きを書き換える』を改めるので、改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す。仮のデータは『手元の見本だけ』ではなく『手元と本番の見本の会社の両方』を選び、製品仕様 §14 の『受付中の期は作らない』を改める DD を書く（qa-ab12）。
 根拠: qa-ab08-published-form-follow、qa-ab09-finalized-evaluation-keep、qa-ab10-band-drift-rewrite、qa-ab12-showcase-data-location、qa-ab16-foundation-018-approval、G25、G27、G28、appr-foundation-018（system-spec/database.md）
+
+2026-10-19〜20 の追加: 判断の列のマイグレーションは列を足すだけなので、コードより先に当てても今のコードが動き、本番の Deploy の今の順番のまま1回で出せる。事業所の達成率の表と列を消すマイグレーションは、コードが読まなくなった後の2回目の Deploy で当てる（Deploy はマイグレーションをコードより先に当てるため）。判断の履歴は持たず、記録した人と時刻だけを持つ。
+2026-10-22 の追加: D-010（採択：Time Travel だけ）。公開リポジトリの成果物は第三者が読めるので、成果物へのバックアップは使わない。Time Travel は無料のプランで7日までで、それより前には戻せないことを台帳に残す。#97 は戻さない（qa-ac05）。
+根拠: qa-ab02、qa-ac05、qa-ac12 (16)(17)（system-spec/database.md、system-spec/00-requirements-definition.md）
 
 ## Delivery, migration and rollback
 
@@ -228,6 +267,10 @@ D-003（採択 opt-batch-first）: 1回の batch に入るものは batch、入�
 2026-10-21〜22 の追加: 行動指針の既定の割り当てへの移行（I26）は戻せる単位にして、書き換えた会社の数と、既定のまとまりが無くて書き換えなかった会社の数を残す。書き換えた会社のアンケートは I29 の規則で追従させ、いまずれている下書きのアンケートは更新時刻の新しい方へそろえる（I30）。本番の見本の会社への受付中の期の投入は既存の db:sample:remote の手順で行い、実行の前に利用者の確認を取る（I31）。
 根拠: qa-ab10-band-drift-rewrite、qa-ab12-showcase-data-location、qa-ab13-foundation-016-approval、G25、G27、G28、appr-foundation-016（system-spec/database.md）
 
+2026-10-19〜20 の追加: 2回目の Deploy の前に本番 DB を読み取りで数え、消す前の値は D1 の Time Travel（無料のプランで7日。D-010）で戻せる（2026-10-22 から成果物へのバックアップは使わない）。判断の列は既存の行を書き換えないので、古い確定は『記録なし』のまま残る。
+2026-10-22 の追加: Actions の成果物にあった本番 D1 のバックアップ4件は 2026-10-22 に削除した。マイグレーションの前に時刻と bookmark を記録する。
+根拠: qa-ac06 (7)、qa-ac08 (22)（system-spec/infrastructure.md、system-spec/security.md）
+
 ## Risks and verification
 
 リスクは、制度ひな形の行数が増えると batch の文の数や Workers の CPU 時間の上限に近づき、会社追加の段階の分け方を見直す必要が出ることである。取り消しやり直しまで失敗したときは手作業の直しが要る。cookie の会社への所属の確認を1か所でも漏らすと、所属していない会社のデータが見える（D-004）。users.company_id を読む約33か所と viewer.companyId を読む約140か所を所属の値へそろえ損ねても、会社の境界が崩れる。適合性の検査として、batch の外で2つ以上の表を書く関数を write-atomicity-contract.test.ts で落とし、会社追加・CSV 取込・評価の集計は途中で失敗させる結合テストで何も残らないことを確かめる。追加分は、評価確定直後の一覧の点数、2社目への所属と所属していない会社のデータが読めないこと、提出状況の数と一覧が合うこと、並び順の全体保存と 409 を検査で確かめる。
@@ -241,4 +284,7 @@ D-003（採択 opt-batch-first）: 1回の batch に入るものは batch、入�
 
 2026-10-21〜22 の追加: リスクは、設定の保存に続けて書く行（下書きの作り直し・次の版の下書き・確定前の評価の集計し直し）が1回の batch に収まらないこと、本番の見本の会社に受付中の期を作ると本番の未回答の一覧に見本の人が並ぶこと（製品仕様 §14 が挙げた影響）である。前者は実装の前に見本の会社の件数で見積もる。検査として、既定の割り当てへの移行のテスト（O25）、書き戻しと追従のサーバー処理・結合テストと写しの一覧の契約テスト（O27）、見本の生成のテストと評価を作る画面の E2E（O28）を置く。
 根拠: qa-ab12-showcase-data-location、qa-ab13-foundation-016-approval、G25、G27、G28、appr-foundation-016（system-spec/database.md）
+
+2026-10-22 の追加: リスクは、戻せるのが7日までであること（D-010）と、restore が DB 全体を戻すことで、台帳に残す。
+根拠: qa-ab02、qa-ac07 (21)（system-spec/database.md、system-spec/maintenance-ops.md）
 

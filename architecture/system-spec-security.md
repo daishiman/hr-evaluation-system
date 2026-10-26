@@ -2,7 +2,7 @@
 graph_node_id: "arch-system-spec-security"
 artifact_kind: "architecture"
 artifact_subtypes: ["security"]
-title: "セキュリティ：鮮度の仕組みと追加要件で守ること（評価の見える範囲と本人向けの制限、設定とアンケートの追従の権限、本番の見本のデータ）"
+title: "セキュリティ：鮮度の仕組み、評価の見える範囲と本人向けの制限、脆弱性の監査（本質の5点）と対策"
 project_id: "hr-evaluation-system"
 domain: "security"
 status: "done"
@@ -11,16 +11,16 @@ start_date: null
 target_date: null
 iteration: null
 owners: []
-tags: ["system-spec", "改善要望対応"]
+tags: ["system-spec", "改善要望対応", "脆弱性対策"]
 file_path: "architecture/system-spec-security.md"
 template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
-evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "4676efe1705118ce25db8c322afba3594f5abe1c07820228f592525f4decddee", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-2026-10-22.json"}
-source_lineage: {"imported_at": "2026-10-22T07:58:56Z", "origin_kind": "system-spec-harness", "source_digest": "4676efe1705118ce25db8c322afba3594f5abe1c07820228f592525f4decddee", "source_path": "system-spec/security.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
-created_at: "2026-10-22T08:03:51.121694Z"
-updated_at: "2026-10-22T08:03:51.121694Z"
+evaluation_status: "stale"
+confirmation_evidence: {"evaluated_digest": "7fc011460d34f92dce0c6fee4fc8218d0e6fd176e1897d0b385ff144c81f3a0f", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
+source_lineage: {"imported_at": "2026-10-22T13:49:14Z", "origin_kind": "system-spec-harness", "source_digest": "7fc011460d34f92dce0c6fee4fc8218d0e6fd176e1897d0b385ff144c81f3a0f", "source_path": "system-spec/security.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-22T13:57:45.864509Z"
+updated_at: "2026-10-26T20:54:12.328854Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -44,7 +44,7 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-26T20:54:12.328854Z", "missing_sections": [], "status": "complete"}
 ---
 
 # Architecture overview
@@ -62,6 +62,10 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: この章の資するゴールに G27（設定とアンケートの設問の、後から変えた方を正とする追従）と G28（評価を作る画面を試す見本のデータ）を足した。アンケートから設定への書き戻しは、画面で操作を隠すだけにせず、サーバーで会社の管理者以上と会社の範囲に絞り、確定した評価とレポートは確定した時点のまま残す。本番の見本の会社には見本の会社に紐づく行だけを INSERT し、投入の前に利用者の確認を取って実データを混ぜない。G29 のグラデーションは globals.css の中だけで作り、外から読み込む資源を足さない。2026-10-21 の評価レポートの A3・A4 の印刷と、キーごとの点数・等級の推移の追加では、認可・本人向けの数値の非表示・判断・計算・確定・スキーマを変えない。要件の土台の追記（G25〜G29）は appr-foundation-016 で承認し、文を改めるたびに 017〜020 で取り直した。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab12-showcase-data-location、qa-aa04-report-landscape-onepage-design、qa-ab13-foundation-016-approval、qa-ab18-foundation-020-approval、G27、G28、G29、appr-foundation-016、appr-foundation-020（system-spec/security.md）
 
+2026-10-19〜20 の追加: レポート・評価の中身・CSV・メモの見える範囲をサーバーで絞り（canViewEvaluationOf）、本人向けの応答には点数の数値・満点・他の人との比較の値を含めない。上司の判断はサーバーで権限を確かめてから書き、理由は本人にも見える文として文字のまま出す。事業所の達成率の表を消したあとに読み書きする経路が残らないことを静的検査で確かめる。
+2026-10-22 の追加: 2026-10-22 の監査で、本質の (A)〜(E) と供給網・出力・秘密の管理の観点から全体を確かめた。会社をまたぐ読み書き・SQL の注入・XSS・CSRF の穴は無かった。対策は G30〜G38 にまとめ、全指摘を docs/security/ の台帳で ID・深刻度・状態つきで追う。本番のデータ・秘密とそこから作ったものを、公開リポジトリとその成果物・ログに置かない（G30）。
+根拠: qa-ac08 (16)(22)、G30・G38（system-spec/security.md、system-spec/00-requirements-definition.md）
+
 ## Context and drivers
 
 鮮度の仕組みは他タブへの通知や応答の手がかりを足すので、会社をまたいだ漏れと秘密の露出を防ぐ条件が必要になった。連続作成で発行した控えを一覧から開き直したいという決定（qa-u19）から、控えを保存しつつ平文で持たない設計が求められた。2026-10-12 の依頼（qa-v01）、利用者の決定（qa-v02）、G6〜G15 の全文承認（qa-v03）で、等級名の編集権限、等級と点数の表示範囲、複数会社への所属が加わった。所属と選んでいる会社の持ち方は、利用者が自前の所属の表と cookie の案を選んだ（D-004、qa-v12）。権限の定義の置き場所は、3案を比べて中立に問い直し、利用者が route-ledger.json に操作と説明を足す案を選んだ（D-007 ①、qa-v25）。前提として next.config.ts は全応答に nosniff・X-Frame-Options DENY・HSTS・CSP（connect-src 'self' など）を付けている（qa-f04）。根拠: qa-v28, qa-r-security-3, qa-u19, qa-f04, qa-v12, qa-v25／system-spec/security.md
@@ -74,6 +78,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 
 2026-10-21〜22 の追加: 2026-10-21 の依頼で、評価レポートを A4 なら切りのいい所で区切った複数枚、A3 なら1枚で出すこと、出力に入る URL を整えること、キーごとの点数と等級の変化が分かる図表が加わった（qa-aa03・qa-aa05 は利用者の逐語）。その作業の中で、対象者を表す employeeIds が空の配列のときに全員を対象にしていた不具合が見つかった。2026-10-22 の依頼とコード調査の結果は、要件の土台の U1・U2 の末尾に足した。書き戻しの扱いは、評価セットの保存（saveScheme）が等級区分ごとの項目数・固定枠・20点枠をサーバーで検査することと、下書きにつながった設問を新しく足せないこと（checkQuestionLinks）を確かめてから問うた。見本のデータの置き場所は、本物の会社のデータには入れないという README の規範を前提に問うた。
 根拠: qa-aa03-report-paper-user-revision、qa-aa05-report-score-grade-request、qa-aa02-empty-evaluation-scope、qa-ab11-survey-writeback-rule-conflict、qa-ab12-showcase-data-location、qa-ab13-foundation-016-approval（system-spec/security.md）
+
+2026-10-22 の追加: 依頼（qa-ac01）は、PHP の脆弱性（PHP2Shell：CVE-2026-109618／109619）と Node.js の 2026 年10月のセキュリティリリースを受けて、同じ観点とさらに踏み込んだ観点で全体を確かめることである。本質を5点にまとめた（qa-ab01）：(A) アプリより前の層が攻撃者の入力を処理する、(B) リクエストをまたいで状態が残る、(C) 資源の枯渇で処理が打ち切られ不整合が残る、(D) 既定でオンの機能が攻撃面を広げる、(E) 自分が書いたかを確かめずにデシリアライズする。監査はアプリ・基盤・画面・入出力の4つで行った。
+根拠: qa-ac01、qa-ab01、qa-ac08 (16)（system-spec/security.md、system-spec/00-requirements-definition.md）
 
 ## Goals and non-goals
 
@@ -88,6 +95,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: Goals: G27 は、設定（等級要件・行動指針・KPI・評価セット）とアンケートの設問のどちらを後から変えても、後から変えた方を正として、もう一方と写しを持つ全ての画面と機能を追従させる。G28 は、提出済みの回答を含む受付中の評価期間の仮のデータ（氏名は実在しない「サンプル」など）を、手元の見本と本番の見本の会社の両方に用意する。Non-goals: 本番 DB へのテストデータ（手元の seed と E2E のデータ）の投入で、本番の見本の会社への仮のデータ（G28・I31）は除く。範囲の外の「本番データの移行・修正」から除くものに、行動指針の既定の割り当てへの書き換え（I26）と、この仕様で足した行を書き換える移行（0032・0033・0034・0035・0036・0039）を挙げた。評価レポートの推移の図では、新しい列・再計算・判断基準・閲覧権限を足さない。
 根拠: G27、G28、qa-ab17-foundation-019-approval、qa-ab18-foundation-020-approval、qa-aa06-report-score-grade-design（system-spec/security.md）
 
+2026-10-22 の追加: Goals: 公開物に本番のデータと秘密を出す工程を0件にする（O30）。critical と high の勧告に48時間で対応する（G32）。使っていない口と既定でオンの口を閉じる（G34・G37）。出力の穴を塞ぐ（G35）。全指摘を台帳で追う（G38）。Non-goals: 漏えいの届け出と本人への通知の判断（組織）、本番での秘密の交換などの実行（利用者）、ダウンロードした人の特定、CSP の 'unsafe-inline' を外すこと、SECURITY-013・SECURITY-015 の決定（台帳には載せる）。
+根拠: qa-ac08 (16)〜(25)、G30〜G38（system-spec/security.md、system-spec/00-requirements-definition.md）
+
 ## System context and boundaries
 
 守る境界は会社で、他社や担当外の対象は区別せず 404 にする（route-ledger の notFound）。セッションは要求ごとに D1 から読み、cookieCache を入れないので、ロールの変更・会社の利用停止・利用者の無効化は次の要求で効く。他タブへの通知は同じブラウザの同じオリジンにしか届かず、別の利用者の画面へは届かない。外部のエージェント向け API（Bearer 鍵）と端末の承認は、今の Route Handler と認可のまま残す。複数の会社に所属する人は、選んでいる会社を cookie（hr_company。httpOnly・Secure・SameSite=Lax）で持つ。cookie の値と送られた会社の id はそのまま信じず、getViewer がリクエストのたびに cookie が指す会社への所属をサーバーで確かめて決める（D-004）。cookie が無いときや所属していない会社を指すときは、有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使い、所属が1つの人は今と同じ動きにする。根拠: qa-v28, qa-r-security-3, qa-f04, qa-u25, qa-v12, qa-v27／system-spec/security.md・system-spec/auth.md
@@ -100,6 +110,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 
 2026-10-21〜22 の追加: アンケートから設定への書き戻しは、会社の範囲の外の設定や他社の版を読まず、書かない。本番の見本の会社への受付中の期の追加は、見本の会社に紐づく行だけを書き、本物の会社の行に触れない。その影響として本番の未回答の一覧に見本の人が並ぶことを、製品仕様 §14 の改めとして記す。全体管理者は、既存の会社の切り替えで選んだ会社の全メンバーを閲覧できる。評価レポートの印刷では本文のアプリのナビとリンク先の URL を紙に出さず、ブラウザ自身のヘッダーとフッターは全ての環境では強制できないので、残るときは印刷設定でオフにする案内を出す。
 根拠: qa-ab11-survey-writeback-rule-conflict、qa-ab12-showcase-data-location、qa-aa01-report-access-print、qa-aa04-report-landscape-onepage-design、qa-aa09-report-print-final-alignment、G28、I31（system-spec/security.md）
+
+2026-10-22 の追加: 公開の入口は workers.dev のまま（D-012）で、アプリより前の層の防御は持たない。このことは台帳に残し、アプリの入口で量の上限・許可制・既定でオンの口の停止を行う（(A)、G34・G36・G37）。
+根拠: qa-ab04、qa-ac08 (17)(20)（system-spec/security.md、system-spec/infrastructure.md）
 
 ## Container and component view
 
@@ -114,6 +127,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 下書きのアンケートで設定とつながった設問を足す・外す・文を直すと、同じ保存で元の設定へ反映し、その反映も設定の保存と同じ権限（会社の管理者以上）・会社の絞り込み・同時に保存したときの 409・制度の変更の記録を通す。設定を保存すると、回答0件の下書きを作り直し、回答のある公開中のアンケートには次の版の下書きを作るが、公開は人が行う。設定の写しを持つ全ての場所を一覧にして文書に置き、「参照」「追従」「確定した時点の写し」のどれかに決め、保存の後は関係する画面を取り直して他のタブにも知らせる。この書き戻しと作り直しは DD-015・DD-016 を改めるので、改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す。見本は scripts/sample-data.mjs の見本の会社に buildSeed の使い回しで足し、INSERT だけで書く。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab08-published-form-follow、qa-ab16-foundation-018-approval、I28、I29、I30、I31（system-spec/security.md）
 
+2026-10-22 の追加: 入口の量の上限は共通の関数（本文の上限）で確かめ、Server Action の本文の上限も絞る。x-powered-by を出さず、使っていない画像最適化の口は Next より前で断る。外からの本文は型を検査してから使い、署名と暗号のある値は検証してから使う（(C)(D)(E)、G32・G36・G37）。
+根拠: qa-ac08 (19)〜(21)（system-spec/security.md、system-spec/backend.md）
+
 ## Cross-cutting contracts
 
 他タブへの通知には資源の種類（companies・users・forms など）と時刻だけを載せ、会社名・氏名・控えは載せず、受け手はサーバーから取り直し、認可は毎回サーバーが判定する。ログイン後の HTML と API は private, no-store で返して共有のキャッシュに載せず、将来サーバー側のキャッシュを入れるなら会社の ID と利用者のロールをキーに含める。応答に付ける鮮度の手がかり（生成時刻など）に個人情報や内部の ID を含めない。役割による表示の制限はサーバーがデータを作る段階で行い、一般の社員への応答に他人の等級と点数を含めない。根拠: qa-v28, qa-r-security-3／system-spec/security.md
@@ -127,6 +143,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 設定とアンケートの追従では、締め切ったアンケート・確定した評価・評価レポートを変えず、確定前の評価だけを自動で集計し直す。設定の決まりに合わなくなる書き戻しの保存は、アンケートも設定も変えずに断る。色と手応えの変更（G29）は応答のデータの形を変えない。評価レポートの推移の図では、過去の期は評価の時点の等級を保ち、今の等級へ置き換えない。保存された得点と判定は、図の帯に合わせて再計算・上書きしない。
 根拠: G27、I29、qa-ab11-survey-writeback-rule-conflict、G29、qa-aa06-report-score-grade-design、qa-aa07-report-threshold-marker-audit（system-spec/security.md）
 
+2026-10-22 の追加: 出力: CSV の式を無害にし（数値は除く）、ログイン後の戻り先は同じ origin だけに限り、ログに DB へ渡した値を出さず、社員の画面に配点を送らない（G35）。設定と秘密: 用途ごとに鍵を導き、交換・失効・変更は利用者が判断して外部変更ガードを通す（G31）。
+根拠: qa-ac08 (23)(24)、G31・G35（system-spec/security.md）
+
 ## Subtype architecture
 
 合成対象の subtype と該当テンプレート:
@@ -136,6 +155,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 - Infrastructure: N/A: subtype 非選択
 - Data: N/A: subtype 非選択
 - Security: 合成済み (`architecture-security.md`)
+
+2026-10-22 の追加: Security に、本質 (A)〜(E) と供給網・出力・秘密の管理の監査の結果と、G30〜G38 の守る条件を足す。認証の口の細部は system-spec/auth.md、入口の上限は system-spec/backend.md、CI と配信は system-spec/infrastructure.md、台帳と再発を止める静的検査は system-spec/maintenance-ops.md の担当。
+根拠: qa-ac08（system-spec/security.md）
 
 ### Security architecture
 
@@ -152,6 +174,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 守る対象に、設定（等級要件・行動指針・KPI・評価セット）とつながった設問からの書き戻しと、本番の見本の会社の仮のデータを足す。悪用や事故の例に、会社の管理者未満の役割や他社の人が書き戻しで設定を変える、見本の投入で本物の会社の行に触れる・実データが見本に混ざる、を足す。直属の部下が0人のマネージャーの操作で、対象者を表す空の配列が全員と扱われ、他の人の確認中の評価を変えうる不具合が見つかり、直した。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab12-showcase-data-location、qa-aa02-empty-evaluation-scope、G27、G28（system-spec/security.md）
 
+2026-10-22 の追加: 守る資産に、本番 DB の写し・秘密・それらから作ったもの（CI の成果物・ログ・source map を含む）を足す。主体に、公開リポジトリとその成果物を読める第三者を足す。脅威の観点は本質の (A)〜(E) で、細部は台帳にも書かない。
+根拠: qa-ac08 (16)(22)、G30（system-spec/security.md）
+
 #### Identity and authorization
 
 セッションは要求ごとに D1 から読み、cookieCache を入れないので、利用停止や無効化は次の要求で効く。認可はサーバーが毎回判定し、他社や担当外は区別せず 404 にする。等級名の変更はシステム全体管理者と自社の会社管理者だけに許す。他の役割には画面に変更の欄を出さず、saveMaster の等級の表と行動指針の割り当てから呼ぶ処理でも 403 にし、他社の等級を指す要求はサーバー処理で拒否する。複数の会社に所属する人は選んでいる会社の所属で全ての読み書きを絞る。選んでいる会社は cookie（hr_company。httpOnly・Secure・SameSite=Lax）で持ち、getViewer がリクエストのたびに cookie が指す会社への所属をサーバーで確かめてから、その所属の会社・役割・等級を作る。cookie が無いときや所属していない会社を指すときは、有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使う。会社の切り替え（switchCompanyScope）は全役割に開き、送り元のオリジンを確かめる Server Action で受け、所属していない会社は拒否する。システム全体管理者は今どおり全社から選べる。役割の種類は増やさない。既存アカウントに新しい会社の所属を足すのは全体管理者の専用処理だけ。会社管理者の新規登録は既存メールを汎用文面で拒否し、他社の所属先を知らせない。パスワードと控えは変更・発行せず、専用追加は所属・必要な写し・監査を同じ batch で書く（DD-009）。所属の削除はその会社の分だけで、他社の所属が残る人のアカウントとセッションは消さず、最後の所属なら今の利用者の削除と同じに扱う。根拠: qa-v28, qa-r-security-3, qa-u25, qa-v12, qa-v27／system-spec/security.md・system-spec/auth.md
@@ -166,6 +191,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 
 2026-10-21〜22 の追加: アンケートから設定への書き戻しは、設定の保存と同じく会社の管理者以上に限り、画面で設問の操作を隠すだけにせず、サーバーの処理でも会社の管理者以上と会社の範囲で拒否する。評価を集計する処理（src/lib/evaluate.ts）では、対象者の指定が無いときは全員、空の配列のときは対象なしと扱う。評価レポートの印刷と推移の追加では閲覧権限を足さず、全体管理者は既存の会社の切り替えで選んだ会社の全メンバーを閲覧する。
 根拠: qa-ab07-survey-to-setting-direction、I28、G27、qa-aa02-empty-evaluation-scope、qa-aa01-report-access-print、qa-aa06-report-score-grade-design（system-spec/security.md）
+
+2026-10-22 の追加: 認証の入口は許可制にし、回数制限は偽れない値で人を見分け、パスワードはどの口でも10文字以上にする（G34。細部は system-spec/auth.md）。新しい役割・見える範囲は作らない。
+根拠: qa-ac08 (17)、qa-ac09（system-spec/security.md、system-spec/auth.md）
 
 #### Data and secret protection
 
@@ -182,6 +210,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 見本の氏名は全員『サンプル ○○』の架空の値にし、公開リポジトリなので実データは見本にも試験にも置かない。断った書き戻しの保存には、合わない決まりと直す画面だけを返す。評価レポートの推移の図は、評価者向けには保存した KPI 合計と満点の割合、本人向けには等級要件の達成率を使い、本人向けに点数の数値・割合・同じ等級の平均を持たせない。印刷ではリンク先の URL を出さず、ブラウザが余白に出す URL・日時は @page margin:0 と本文の余白のページごとの反復で抑える。
 根拠: qa-ab05-evaluation-build-showcase-observed、qa-ab12-showcase-data-location、qa-ab11-survey-writeback-rule-conflict、qa-aa06-report-score-grade-design、qa-aa09-report-print-final-alignment、G28（system-spec/security.md）
 
+2026-10-22 の追加: 本番のデータ・秘密とそこから作ったものを、公開リポジトリとその成果物・ログに置かない（G30）。Actions の成果物にあった本番 D1 のバックアップ4件は 2026-10-22 に削除した。ダウンロードした人は特定しない。漏えいとして扱うかは組織が判断する。用途ごとに鍵を導き、交換・失効・変更は利用者が判断して外部変更ガードを通す（G31）。
+根拠: qa-ac08 (22)(23)、G30・G31（system-spec/security.md）
+
 #### Application and supply-chain controls
 
 別のサイトからの呼び出しは、Next.js の Server Functions の検査（Origin と Host の一致、serverActions.allowedOrigins を足さない）と、runAction・runRead の中の assertSameOrigin の二重で断る。会社の切り替えも、送り元のオリジンを確かめる Server Action で受ける（D-004）。入口では大きさの上限（413）と zod による入力の検証を通す。全応答に nosniff・X-Frame-Options DENY・HSTS・CSP（connect-src 'self' など）が付き、BroadcastChannel は同じオリジンの中だけで動くので CSP を広げない（出典 mdn-broadcast-channel）。供給網の面では、Next.js を脆弱性の修正を含む 16.3.8 にし、Next.js 16 系・OpenNext・Workers・D1 の構成を変えない。並べ替えは Pointer Events で自作して新しい依存を足さないので、依存の更新と脆弱性の確認の対象も増えない（D-005）。根拠: qa-v28, qa-r-security-3, qa-f04, qa-u25, qa-v12, qa-v13, qa-v29／system-spec/security.md・system-spec/infrastructure.md
@@ -195,12 +226,20 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: G29 のグラデーションと色の変化は、外から読み込む資源を足さず globals.css の中だけで作り、応答のデータの形を変えない。G29 の範囲はボタンだけでなく、カード・見出しの面・選ぶ部品・状態の印・進み具合・知らせ・表などの共通部品へ広げた。I33 で、押せる面を 44px 四方以上にし、段階的な開示と境界のはっきりしたカードを共通部品で全ての画面へ当て、画面の組み替えは I27 の2画面（G26 の行動指針と KPI・評価セットの画面）と評価を作る画面に限る。書き戻しの保存も、同時に保存したときは設定の保存と同じく 409 を返す。
 根拠: G29、I32、I33、G26、qa-ab14-ui-scope-beyond-buttons、qa-ab15-foundation-017-approval、I28（system-spec/security.md）
 
+別のサイトからの呼び出しは、Next.js の Server Functions の検査（Origin と Host の一致、serverActions.allowedOrigins を足さない）と、runAction・runRead の中の assertSameOrigin の二重で断る。会社の切り替えも、送り元のオリジンを確かめる Server Action で受ける（D-004）。入口では大きさの上限（413）と zod による入力の検証を通す。全応答に nosniff・X-Frame-Options DENY・HSTS・CSP（connect-src 'self' など）が付き、BroadcastChannel は同じオリジンの中だけで動くので CSP を広げない（出典 mdn-broadcast-channel）。供給網の面では、Next.js を脆弱性の修正を含む 16.4.1 以上にし、Next.js 16 系・OpenNext・Workers・D1 の構成を変えない。並べ替えは Pointer Events で自作して新しい依存を足さないので、依存の更新と脆弱性の確認の対象も増えない（D-005）。根拠: qa-v28, qa-r-security-3, qa-f04, qa-u25, qa-v12, qa-v13, qa-v29／system-spec/security.md・system-spec/infrastructure.md
+2026-10-19〜20 の追加: 判断の理由は HTML として解釈せず文字として出す。事業所の達成率の表を消したあとに読み書きする経路が残っていないことを静的検査で確かめる。図は既存の recharts で描き、新しい依存を足さない。
+2026-10-22 の追加: Next.js は 16.4.1 以上にする。npm の依存は CI の pnpm audit（push・PR と週1回。D-011）で、Node 本体は運用の担当が nodejs-sec とブログの通知で受け、critical と high は48時間で修正版へ上げるか、暫定の防御と理由を残す（G32）。勧告が当たるかは一次情報で判断し、当たらないものも理由を台帳に残す。入口では入力の量と計算量に上限を置き、正規表現は入力の長さに比例する時間で終わるものにする（(C)、G36）。外からの本文は JSON.parse だけで読み、型を検査してから使う（(E)）。
+根拠: qa-ac08 (17)(19)(21)(25)、G32・G36（system-spec/security.md、system-spec/00-requirements-definition.md）
+
 #### Detection and response
 
 誰が誰の控えを開いたかを、値を含めずに Workers Logs へ残す。等級名の変更・所属の追加と削除・本番の一律の書き換えは監査に残し、書き換え前の値を記録する。等級名の変更と所属の追加・削除は、監査ジャーナルに変更前と変更後を残す。会社の追加の取り消しが失敗した記録（compensation_failed）とパスワード変更の続きが失敗した記録（rollforward_failed）は Workers Logs で見つけ、本番 DB を手で書き換えずに文書の手順で直す。反映されないという報告は、応答の生成時刻のヘッダー（x-generated-at）、Workers Logs、ゾーンのキャッシュ規則を読み取りだけで順に確かめて切り分ける（deploy-notes §7）。根拠: qa-v28, qa-r-security-3, qa-u25, qa-v26／system-spec/security.md・system-spec/database.md
 
 2026-10-21〜22 の追加: アンケートからの書き戻しも、設定の保存と同じく制度の変更の記録を通す。設定を保存したときは、どのアンケートと評価が変わったかを保存の結果の文で示す。
 根拠: I28、I29、G27（system-spec/security.md）
+
+2026-10-22 の追加: 漏えいの恐れの後の手順書を docs/security/ に置く。監査の全指摘を台帳（docs/security/）で ID・深刻度・状態つきで追い、Node 本体の勧告を確かめた日付と結果も台帳に書く（G32・G38）。
+根拠: qa-ac07 (16)(17)(19)、G38（system-spec/maintenance-ops.md、system-spec/security.md）
 
 #### Security verification
 
@@ -217,6 +256,10 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: O27 は、下書きのアンケートで設定とつながった設問を足す・外す・文を直すと元の設定が同じ保存で変わり、決まりに合わない保存が断られることのサーバー処理のテスト、設定の変更で締め切ったアンケート・確定した評価・レポートが変わらないことの結合テスト、写しを持つ場所の一覧とコードが一致することの契約テスト、保存の直後に関係する画面と他のタブが新しい内容で出る E2E で確かめる。O28 は、受付中の期が1つあり、評価はまだ作られておらず、氏名と会社が見本の印を持ち、他社の行に触れないことを見本の生成のテストで、手元の見本で評価の一覧と詳細まで進めることを E2E で確かめる。空の配列の不具合は、修正前に足した2件のテストが落ち、修正後に関連する5スイート129件が通ることで確かめた。
 根拠: O27、O28、qa-aa02-empty-evaluation-scope（system-spec/security.md）
 
+2026-10-19〜20 の追加: 役割と直属の部下の組ごとに見える・404 を確かめる結合テストと E2E、本人向けの応答に点数と比べる値のキーが無いことの契約テスト、3人未満で平均を出さないテスト、事業所の達成率の参照が0件であることの静的検査を置く。
+2026-10-22 の追加: O30〜O38 で確かめる。公開物に本番のデータと秘密を出す工程が0件であること、high 以上の未対応が0件であること（CI の pnpm audit）、x-powered-by が無く使っていない口が開いていないこと、長い入力で処理が打ち切られないこと、台帳の全行が状態と根拠を持つこと（契約テスト）。再発を止める静的検査は system-spec/maintenance-ops.md の qa-ac07 (20) を参照する。
+根拠: qa-ac07 (14)(17)〜(20)、O30〜O38（system-spec/maintenance-ops.md、system-spec/00-requirements-definition.md）
+
 ## Architecture decisions
 
 控えの持ち方は、平文で持たず利用者 ID に結び付けて AES-GCM で暗号化し、本人の変更・再発行・発行から14日のいちばん早い時点で終える案を利用者が選んだ（qa-u24、qa-u25）。別のサイトからの呼び出しは、Next.js の検査と入口の assertSameOrigin の二重の検査を続ける案を選び、serverActions.allowedOrigins は足さない。D-001 の BroadcastChannel は同じオリジンの中だけで動くので CSP を変えない。D-004（opt-membership-cookie）は利用者が選んだ案で、AI の推奨と同じである（qa-v12）。所属を自前の表に持ち、選んでいる会社を cookie（hr_company。httpOnly・Secure・SameSite=Lax）で持つ。cookie の会社への所属の確認を1か所でも漏らすと、所属していない会社のデータが見えるので、確認は getViewer でリクエストのたびに行う。D-007（opt-route-ledger-extend）は利用者が選んだ案で、AI が委任に基づいて選んだ別の案とは違う（qa-v25）。権限の定義を route-ledger.json 1つにまとめ、表示と判定を同じ定義から作る（qa-v27 (4)）。サイドバー・ページの入口の判定・サーバー処理の役割の指定はこの台帳から引き、台帳と突き合わせる契約テストで食い違いを落とす（qa-v30 (2)）。他社にアカウントがある人を足すときに足す側へ所属先を知らせないこと、パスワードを変えないこと、所属の削除の範囲は、この章の要件に書いた。D-007 ① に合わせて (6) を直したうえで、利用者が承認した（qa-v28、2026-10-13T03:48:20Z）。根拠: qa-v28, qa-r-security-3, qa-u24, qa-u25, qa-v12, qa-v25, qa-v27, qa-v30／system-spec/security.md・system-spec/auth.md・system-spec/backend.md
@@ -232,6 +275,9 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 利用者は、アンケートで足し外した設問を保存と同時に設定へ反映する案、決まりに合わなくなる保存は断って理由と直す所を示す案、見本のデータを手元と本番の見本の会社の両方に置く案を、それぞれ『今回は決めない』を含む3択から選んだ。見本の置き場所の決定に合わせて、製品仕様 §14 の「受付中の期は作らない」を改める DD を書く。要件の土台の追記は appr-foundation-016 で承認し、その後 completeness evaluator の指摘で文を改めるたびに appr-foundation-017〜020 で承認を取り直し、それぞれが前の承認を置き換えた。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab11-survey-writeback-rule-conflict、qa-ab12-showcase-data-location、qa-ab15-foundation-017-approval、qa-ab18-foundation-020-approval、appr-foundation-016、appr-foundation-020（system-spec/security.md）
 
+2026-10-22 の追加: 利用者が、D-010（戻す元は D1 の Time Travel だけ。7日まで）、D-011（依存の確認は CI の pnpm audit だけ）、D-012（公開の入口は workers.dev のまま）を選んだ。(B) と (E) は監査の結果として記録する（qa-ac03・qa-ac04）。
+根拠: qa-ab02〜qa-ab04、qa-ac03、qa-ac04（system-spec/security.md、system-spec/00-requirements-definition.md）
+
 ## Delivery, migration and rollback
 
 鍵 CREDENTIAL_ENC_KEY（32 バイトを base64 にしたもの）は、ローカルでは .dev.vars、本番では wrangler secret put で置き、手順を deploy-notes §6 に書く。本番への設定は外部への変更として確認を取ってから行い、本番 DB は読み取りだけで調べ、外部への変更系の通信は preview → CONFIRM → authorize → execute のガードを通す。等級名の本番での一律の書き換えは監査に残し、書き換え前の値を記録する。複数の表を書く書き込みが途中で失敗したときは、batch に入るものは batch、会社の追加は補償、パスワード変更の続きはやり直しで揃え、それも失敗したら Workers Logs に記録を残して手順で直す（D-003）。Next.js は脆弱性の修正を含む 16.3.8 にする。根拠: qa-v28, qa-r-security-3, qa-u24, qa-u25／system-spec/security.md
@@ -245,6 +291,11 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 2026-10-21〜22 の追加: 本番の見本の会社への投入は既存の db:sample:remote の手順で行い、実行の前に利用者の確認を取る。行動指針の既定の分け方へのデータの書き換え（I26）は、範囲の外の「本番データの移行・修正」から除いた。この仕様で足した移行のうち行を書き換える 0032・0033・0034・0035・0036・0039 も同じく除き、0037・0038 は表と列の追加だけなので挙げない。0021・0023・0025・0030 も行を書き換えるが、この仕様より前（2026-08〜09）に足した移行なので挙げない。評価レポートの印刷と推移の追加では、スキーマを変えない。
 根拠: qa-ab12-showcase-data-location、qa-ab17-foundation-019-approval、qa-ab18-foundation-020-approval、qa-aa01-report-access-print、I26、I31（system-spec/security.md）
 
+鍵 CREDENTIAL_ENC_KEY（32 バイトを base64 にしたもの）は、ローカルでは .dev.vars、本番では wrangler secret put で置き、手順を deploy-notes §6 に書く。本番への設定は外部への変更として確認を取ってから行い、本番 DB は読み取りだけで調べ、外部への変更系の通信は preview → CONFIRM → authorize → execute のガードを通す。等級名の本番での一律の書き換えは監査に残し、書き換え前の値を記録する。複数の表を書く書き込みが途中で失敗したときは、batch に入るものは batch、会社の追加は補償、パスワード変更の続きはやり直しで揃え、それも失敗したら Workers Logs に記録を残して手順で直す（D-003）。Next.js は脆弱性の修正を含む 16.4.1 以上にする。根拠: qa-v28, qa-r-security-3, qa-u24, qa-u25／system-spec/security.md
+2026-10-19〜20 の追加: 見える範囲の絞り込みとメモの返し方の変更は、マイグレーションを伴わないコードの変更として出す。事業所の達成率の削除は2回の Deploy で、1回目の後に事業所の達成率を読み書きする経路が残らないことを静的検査で確かめる。
+2026-10-22 の追加: 対策は、新しい依存・バインディング・有料のサービスを足さずに入れる。本番での秘密の交換などは利用者が決め、外部変更ガードを通す。PR は利用者の確認を取ってから作る。
+根拠: qa-ac06 (13)、qa-ac08 (23)（system-spec/infrastructure.md、system-spec/security.md）
+
 ## Risks and verification
 
 危険は、会社をまたいだ漏れ（キャッシュ・通知・所属の取り違え、選んでいる会社の cookie への所属の確認の漏れ）、秘密の露出（控えの値・鍵）、表示と判定の食い違い（サイドバー・ページの入口・サーバー処理の役割の指定のどれかが route-ledger.json の権限の定義と食い違うずれを含む）、画面だけで止めてサーバーで止めない権限の抜けである。O7 は役割ごとの結合テストで、マネージャー・一般の社員・他社の会社管理者による等級名の変更が画面とサーバー処理の両方で拒否されることを確かめる。O8 は route-ledger.json の権限の定義と、サイドバー・ページの入口・サーバー処理の役割の指定を突き合わせる契約テスト、O9 は一般の社員への応答に他人の等級・点数が含まれないことのテスト、O10 は2社目への追加と会社の切り替え、所属していない会社を指定した要求の拒否のテストで確かめる。送り元の二重の検査は action-origin.test.ts で固定し、O2 はリリース後の本番で作成直後の強制再読み込みと生成時刻ヘッダーを確かめる。根拠: qa-v28, qa-r-security-3, qa-u25, qa-v12, qa-v25, qa-v30／system-spec/security.md・system-spec/backend.md
@@ -257,4 +308,7 @@ implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing
 
 2026-10-21〜22 の追加: リスクは、書き戻しを画面で隠すだけにしてサーバーで止めないこと、写しを持つ場所の抜けで確定した評価やレポートが変わること、見本の投入で本物の会社の行に触れることである。検査として、書き戻しのサーバー処理のテスト、追従の結合テスト、写しを持つ場所の一覧とコードの一致の契約テスト（O27）、見本の生成のテスト（O28）を置く。直属の部下が0人のマネージャーが他の人の確認中の評価と全内訳を変えないことは、Server Action からの回帰テストで確かめた。
 根拠: O27、O28、qa-ab07-survey-to-setting-direction、qa-ab12-showcase-data-location、qa-aa02-empty-evaluation-scope（system-spec/security.md）
+
+2026-10-22 の追加: 残るリスクを台帳に載せる：回数制限の数が isolate ごとであること（B）、アプリより前の層の防御が無いこと（D-012）、戻せるのが7日までであること（D-010）、修正の PR は人が作ること（D-011）、CSP の 'unsafe-inline'、SECURITY-013・SECURITY-015（範囲の外）、処理が打ち切られたときに途中の状態が残りうる箇所。
+根拠: qa-ac07 (21)、qa-ac08 (18)(19)（system-spec/maintenance-ops.md、system-spec/security.md）
 

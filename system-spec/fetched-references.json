@@ -604,6 +604,296 @@
       "last_updated": "2026-09-06",
       "latest_checked_at": "2026-10-22T01:08:52Z",
       "summary": "SC 2.5.5 Target Size (Enhanced)（レベル AAA）。指で押す対象は 44×44 CSS px 以上。例外は、同じページに 44px 以上の同等の部品がある、文の中にある、ブラウザが大きさを決めて作り手が変えていない、その見た目が情報に欠かせない、の4つ。last_updated はページの更新日（Updated 06 September 2026）。押せる面を 44px 四方以上に保つ根拠（I33）。"
+    },
+    {
+      "target_id": "cloudflare-d1-time-travel",
+      "retrieved_at": "2026-10-22T11:53:57Z",
+      "source_url": "https://developers.cloudflare.com/d1/reference/time-travel/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-04-21",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "D1 の Time Travel は有効化の操作が要らず常に有効で、Workers Paid は過去30日、Workers Free は過去7日の任意の時点へ戻せる（production 版の DB が対象）。戻す操作は wrangler d1 time-travel restore で、DB を上書きする破壊的な操作であり、実行中のクエリは取り消される。戻す前のブックマークが返るので、それを指定してもう一度戻せば取り消せる。D-010 で Time Travel だけ（無料）を選んだ根拠で、本番は Free のため戻せるのは7日まで。戻す操作は本番の変更なので外部変更のガードを通す。鮮度の根拠：ページの「Last updated」の日付（2026-04-21）は、公式リポジトリ cloudflare/cloudflare-docs の元ファイル src/content/docs/d1/reference/time-travel.mdx の最終コミット（f98e4e9b、2026-04-21）と一致し、それより後のコミットは無い（ページは 2026-10-22T11:53:57Z、コミットは 2026-10-22T12:28:26Z に確認）。"
+    },
+    {
+      "target_id": "cloudflare-r2-pricing",
+      "retrieved_at": "2026-10-22T11:53:57Z",
+      "source_url": "https://developers.cloudflare.com/r2/pricing/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-10-01",
+      "latest_checked_at": "2026-10-22T11:53:57Z",
+      "summary": "R2 の無料枠は毎月、Standard の保存 10 GB-month、Class A 100万回、Class B 1,000万回で、インターネットへの転送は無料。無料枠は Standard だけに効き、Infrequent Access には効かない。Standard の保存の単価は 0.015 USD / GB-month。D-010 の『R2 に暗号化して置く』案の費用の根拠（選ばなかった案）。"
+    },
+    {
+      "target_id": "cloudflare-r2-api-tokens",
+      "retrieved_at": "2026-10-22T11:53:57Z",
+      "source_url": "https://developers.cloudflare.com/r2/api/tokens/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-10-01",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "R2 の API トークンを作るには R2 の購入が要る（ページの記述）。権限は Admin Read & Write・Admin Read only・Object Read & Write・Object Read only の4種で、Object 系はバケット単位に絞れ、S3 互換の API だけで使える。Secret Access Key は作成時にしか表示されない。D-010 の R2 案の不利な点（購入の手続きと、鍵とトークンの管理が増える）の根拠。鮮度の根拠：ページの「Last updated」の日付（2026-10-01）は、公式リポジトリ cloudflare/cloudflare-docs の元ファイル src/content/docs/r2/api/tokens.mdx の最終コミット（ed083b2b、2026-10-01）と一致し、それより後のコミットは無い（ページは 2026-10-22T11:53:57Z、コミットは 2026-10-22T12:28:26Z に確認）。"
+    },
+    {
+      "target_id": "cloudflare-waf-custom-rules",
+      "retrieved_at": "2026-10-22T11:53:57Z",
+      "source_url": "https://developers.cloudflare.com/waf/custom-rules/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-10-16",
+      "latest_checked_at": "2026-10-22T11:53:57Z",
+      "summary": "WAF のカスタムルールは、ゾーンに届く要求を条件で選び、Block や Managed Challenge などを行う。ルール数の上限は Free 5・Pro 20・Business 100・Enterprise 1,000。ゾーン（自分のドメイン）に対する機能として説明されており、複数のゾーンにまたがるアカウント単位のルールは Enterprise だけ。D-012 の『独自ドメイン＋WAF』案の根拠（選ばなかった案）。"
+    },
+    {
+      "target_id": "cloudflare-waf-rate-limiting-rules",
+      "retrieved_at": "2026-10-22T11:53:57Z",
+      "source_url": "https://developers.cloudflare.com/waf/rate-limiting-rules/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-08-25",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "レート制限ルールは、条件に合う要求の上限と、上限に達したときの動きを決める。Free はルール1個、数える期間10秒、止める時間10秒、数える単位は IP だけ、条件に使えるのは Path と Verified Bot だけ。D-012 で WAF 案の不利な点（Free では規則が少ない）の根拠。鮮度の根拠：ページの「Last updated」の日付（2026-08-25）は、公式リポジトリ cloudflare/cloudflare-docs の元ファイル src/content/docs/waf/rate-limiting-rules/index.mdx の最終コミット（98e2a2e8、2026-08-25）と一致し、それより後のコミットは無い（ページは 2026-10-22T11:53:57Z、コミットは 2026-10-22T12:28:26Z に確認）。"
+    },
+    {
+      "target_id": "cloudflare-waf-nextjs-changelog",
+      "retrieved_at": "2026-10-22T12:33:37Z",
+      "source_url": "https://developers.cloudflare.com/changelog/post/2025-03-22-next-js-vulnerability-waf/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2025-03-24",
+      "latest_checked_at": "2026-10-22T12:33:37Z",
+      "summary": "Next.js の認証の迂回の脆弱性（CVE-2025-29927）に対し、Cloudflare は外からの迂回の要求を止める WAF のマネージドルールを出した。Next.js の版に関係なく効く。Pro 以上で手で有効にする（既定では無効。外部の認証の仕組みを middleware で使うサイトで要求が失敗したため opt-in に変えた）。Free はカスタムルールで同じ対策ができる。修正版への更新も勧めている。2025-03-22 公開、03-24 更新。2026-10-14 の勧告（GHSA-p3m5-59mp-jv5r）とは別の脆弱性で、アプリより前の層で勧告から修正までの間を守れる例として D-012 の比較に使った。鮮度の根拠：ページに「Last updated」の表示は無く（構造化データの dateModified は 2025-03-22）、本文の最後の「Update: Mon Mar 24th, 11PM UTC」を last_updated にする。元ファイル cloudflare/cloudflare-docs の src/content/changelog/workers/2025-03-22-next-js-vulnerability-waf.mdx には後のコミット（3be48813 2025-07-15：日付と箇条書きの書式、70a20b46 2026-03-20・dc7e6942 2026-10-19：画像の扱い）があるが、どれも本文の主張を変えていない（2026-10-22T12:29:54Z に確認）。"
+    },
+    {
+      "target_id": "cloudflare-workers-dev",
+      "retrieved_at": "2026-10-22T11:53:57Z",
+      "source_url": "https://developers.cloudflare.com/workers/configuration/routing/workers-dev/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-09-22",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "workers.dev はアカウントに付く <サブドメイン>.workers.dev で、各 Worker に <名前>.<サブドメイン>.workers.dev が割り当てられる。本番には Workers routes か独自ドメインを勧め、workers.dev は個人・趣味や事業上重要でない用途向けとしている。このページに WAF などゾーンの機能を workers.dev に当てられるかの記述は無い（記載があるのは Cloudflare Access での閲覧制限）。workers.dev を切っても Version・Preview・Deployment の URL は切れない。無効にするには設定ファイルで workers_dev = false にして deploy する（ダッシュボードだけで切ると次の deploy で戻る）。D-012 で workers.dev のままを選び、使っていない口はアプリの入口で断る根拠。鮮度の根拠：ページの「Last updated」の日付（2026-09-22）は、公式リポジトリ cloudflare/cloudflare-docs の元ファイル src/content/docs/workers/configuration/routing/workers-dev.mdx の最終コミット（23227aaa、2026-09-22）と一致し、それより後のコミットは無い（ページは 2026-10-22T11:53:57Z、コミットは 2026-10-22T12:28:26Z に確認）。"
+    },
+    {
+      "target_id": "cloudflare-http-request-headers",
+      "retrieved_at": "2026-10-22T11:53:57Z",
+      "source_url": "https://developers.cloudflare.com/fundamentals/reference/http-headers/",
+      "official_publisher": "Cloudflare",
+      "official_host": "developers.cloudflare.com",
+      "last_updated": "2026-10-09",
+      "latest_checked_at": "2026-10-22T11:53:57Z",
+      "summary": "CF-Connecting-IP は Cloudflare が付ける、Cloudflare に接続してきた送り手の IP。X-Forwarded-For は、要求に既にあれば送り手の値を残したまま末尾に足すので、送り手が値を入れられる。True-Client-IP は Enterprise だけ。ログには CF-Connecting-IP か True-Client-IP を勧めている。G29（回数制限の数え先を、送り手が偽れない値にする）の根拠。"
+    },
+    {
+      "target_id": "nodejs-security-releases-2026-10",
+      "retrieved_at": "2026-10-22T10:10:26Z",
+      "source_url": "https://nodejs.org/en/blog/vulnerability/october-2026-security-releases",
+      "official_publisher": "OpenJS Foundation (Node.js)",
+      "official_host": "nodejs.org",
+      "version": "v22.23.4 / v24.22.1 / v26.12.1",
+      "last_updated": "2026-10-21",
+      "latest_checked_at": "2026-10-22T10:10:26Z",
+      "summary": "2026-10-21 公開の Node.js のセキュリティリリース。修正は10件（High 4・Medium 3・Low 3）で、証明書のホスト名の検証、圧縮の展開、DNS の名前の処理、乱数、keep-alive の応答の処理、Permission Model などに及ぶ。修正版は v22.23.4・v24.22.1・v26.12.1 で、使っている系列の修正版へ速やかに上げることと、サポート切れの版から移ることを勧めている。G27・G28（.nvmrc を 22.23.4 に固定し、CI も同じ版で動かす）の根拠。D-011 で選んだ pnpm audit の CI は Node 本体の勧告を拾わないので、この種の告知は人が見て台帳に残す。"
+    },
+    {
+      "target_id": "nodejs-security-reporting",
+      "retrieved_at": "2026-10-22T11:52:37Z",
+      "source_url": "https://nodejs.org/en/about/security-reporting",
+      "official_publisher": "OpenJS Foundation (Node.js)",
+      "official_host": "nodejs.org",
+      "last_updated": "2026-02-25",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "Node.js 公式の Security Reporting のページ。セキュリティの通知は Google Group の nodejs-sec（https://groups.google.com/group/nodejs-sec）と Node.js のブログ（https://nodejs.org/en/blog）で配り、mailing list に知らせてから6時間のうちに勧告の写しをブログに載せる。修正はサポート中の全リリースラインに用意する。脆弱性の報告は HackerOne で受け、通常5日のうちに受領を返す。サードパーティのモジュールの脆弱性は、それぞれの保守者へ報告するよう書いている。G27（Node 本体の勧告は運用の担当が nodejs-sec の mailing list とブログで受け、npm の依存の勧告は CI の pnpm audit で拾う）の根拠。ページに更新日の表示は無く、last_updated は公式リポジトリ nodejs/nodejs.org の apps/site/pages/en/about/security-reporting.mdx の最終コミット日（e70a344f、2026-02-25。2026-10-22T12:28:26Z に確認し、それより後のコミットは無い）。"
+    },
+    {
+      "target_id": "nextjs-advisory-ghsa-p3m5-59mp-jv5r",
+      "retrieved_at": "2026-10-22T10:10:52Z",
+      "source_url": "https://github.com/vercel/next.js/security/advisories/GHSA-p3m5-59mp-jv5r",
+      "official_publisher": "Vercel (Next.js)",
+      "official_host": "github.com",
+      "version": "patched: next 15.5.28 / 16.4.1",
+      "last_updated": "2026-10-14",
+      "latest_checked_at": "2026-10-22T10:12:35Z",
+      "summary": "App Router の Server Actions のサービス妨害（High、CVSS v4 8.2）。影響は 13.0.0〜15.5.27 と 16.0.0〜16.4.0 で、修正版は 15.5.28 と 16.4.1。過剰な CPU の使用で同じプロセスの後続の要求が止まる（可用性だけ）。更新のほかに回避策は無いとされ、Pages Router だけ、または Server Actions を使っていない場合は当たらない。2026-10-14 公開。アプリは next 16.3.8 で Server Actions を使っているので当たる。G27（next を 16.4.1 以上へ）の根拠。npm の latest は 16.4.2（2026-10-22T10:12:35Z に確認）。"
+    },
+    {
+      "target_id": "nextjs-server-actions-config",
+      "retrieved_at": "2026-10-22T10:10:52Z",
+      "source_url": "https://nextjs.org/docs/app/api-reference/config/next-config-js/serverActions",
+      "official_publisher": "Vercel (Next.js)",
+      "official_host": "nextjs.org",
+      "version": "next 16.4.2",
+      "last_updated": "2026-08-26",
+      "latest_checked_at": "2026-10-22T10:12:35Z",
+      "summary": "Server Action に送る本文の上限は既定で 1MB で、experimental.serverActions.bodySizeLimit で変えられる（バイト数か '500kb' などの文字列）。上限は multipart の境界などを含む生の本文に効く。allowedOrigins は CSRF を防ぐための追加の許可先で、既定では同じ origin だけを許す。Origin が無い要求は警告付きで通す。G31（Server Action の本文の上限を絞る）の根拠。ページの lastUpdated は 2026-08-26、version は npm の next の latest（2026-10-22T10:12:35Z に確認）。"
+    },
+    {
+      "target_id": "nextjs-powered-by-header",
+      "retrieved_at": "2026-10-22T10:10:52Z",
+      "source_url": "https://nextjs.org/docs/app/api-reference/config/next-config-js/poweredByHeader",
+      "official_publisher": "Vercel (Next.js)",
+      "official_host": "nextjs.org",
+      "version": "next 16.4.2",
+      "last_updated": "2025-06-16",
+      "latest_checked_at": "2026-10-22T10:12:35Z",
+      "summary": "Next.js は既定で x-powered-by を付け、next.config の poweredByHeader: false で止められる。G32（外から見える面を減らす）の根拠。ページの lastUpdated は 2025-06-16、version は npm の next の latest（2026-10-22T10:12:35Z に確認）。"
+    },
+    {
+      "target_id": "nextjs-image-component",
+      "retrieved_at": "2026-10-22T10:10:52Z",
+      "source_url": "https://nextjs.org/docs/app/api-reference/components/image",
+      "official_publisher": "Vercel (Next.js)",
+      "official_host": "nextjs.org",
+      "version": "next 16.4.2",
+      "last_updated": "2026-09-28",
+      "latest_checked_at": "2026-10-22T10:12:35Z",
+      "summary": "next/image は既定で画像最適化を通す。unoptimized（部品の prop と next.config の images.unoptimized）で最適化を通さず元の画像を配る。localPatterns と remotePatterns は、最適化してよい画像の出所を許可したものだけに絞り、ほかを断る。remotePatterns のリダイレクト先は再検査されないので、maximumRedirects で減らせる。G32（使っていない画像最適化の口を閉じる）の根拠。ページの lastUpdated は 2026-09-28、version は npm の next の latest（2026-10-22T10:12:35Z に確認）。"
+    },
+    {
+      "target_id": "better-auth-options",
+      "retrieved_at": "2026-10-22T10:10:52Z",
+      "source_url": "https://www.better-auth.com/docs/reference/options",
+      "official_publisher": "Better Auth",
+      "official_host": "www.better-auth.com",
+      "version": "better-auth 1.7.12",
+      "last_updated": "2026-10-09",
+      "latest_checked_at": "2026-10-22T10:12:35Z",
+      "summary": "disabledPaths で指定した認証の口を無効にできる。advanced.ipAddress の ipAddressHeaders で送り手の IP を読む信頼済みのヘッダーを指定し、trustedProxies で転送の連鎖の読み方を決め、disableIpTracking で IP の追跡を止める。emailAndPassword の minPasswordLength の既定は 8、maxPasswordLength は 128。trustedOrigins は既定で baseURL を信頼し、追加を配列・関数・ワイルドカードで指定する。G29（認証の口の許可制、偽れない識別、どの口でも10文字以上）の根拠。ページに版と更新日の表示は無く、last_updated は公式リポジトリ better-auth/better-auth の docs/content/docs/reference/options.mdx の最終コミット（67743ed6、2026-10-09）、version は npm の latest（2026-10-22T10:12:35Z に確認）。アプリは 1.6.26。"
+    },
+    {
+      "target_id": "better-auth-rate-limit",
+      "retrieved_at": "2026-10-22T10:10:52Z",
+      "source_url": "https://www.better-auth.com/docs/concepts/rate-limit",
+      "official_publisher": "Better Auth",
+      "official_host": "www.better-auth.com",
+      "version": "better-auth 1.7.12",
+      "last_updated": "2026-10-01",
+      "latest_checked_at": "2026-10-22T10:12:35Z",
+      "summary": "回数制限は本番で既定で有効（既定は10秒に100回）で、auth.api からのサーバー側の呼び出しは対象外。送り手の IP は既定で x-forwarded-for から読み、advanced.ipAddress.ipAddressHeaders で cf-connecting-ip などへ変えられる。保存先の既定は memory で、サーバーレスでは合わない場合がある（database・secondary-storage・customStorage を選べる。customStorage の consume は確認と加算を1回で行う）。customRules で口ごとに上限を変えられる。G29・G31 の根拠。ページに版と更新日の表示は無く、last_updated は公式リポジトリの docs/content/docs/concepts/rate-limit.mdx の最終コミット（4738fef7、2026-10-01）、version は npm の latest（2026-10-22T10:12:35Z に確認）。"
+    },
+    {
+      "target_id": "owasp-unvalidated-redirects",
+      "retrieved_at": "2026-10-22T11:54:27Z",
+      "source_url": "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html",
+      "official_publisher": "OWASP",
+      "official_host": "cheatsheetseries.owasp.org",
+      "last_updated": "2026-10-04",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "未検証のリダイレクトは、利用者の入力の URL へ検証なしで送ることで、フィッシングなどに使われる。防ぎ方は、送り先を入力から直接受け取らない、短い名前や ID をサーバーで URL に対応付ける、同じサイトへの戻り先はフレームワークの非ローカル先を拒む機能を使う、外へ送るときは解析した URL の要素（scheme・正規化した host・port）で許可リストと照らし、前方一致や後方一致だけで判定しない、など。G30（戻り先は同じ origin だけにする）の根拠。ページに更新日の表示は無く、last_updated は OWASP/CheatSheetSeries の該当 md の最終コミット（9fe86c61、2026-10-04。2026-10-22T12:28:26Z に確認し、それより後のコミットは無い）。"
+    },
+    {
+      "target_id": "owasp-csv-injection",
+      "retrieved_at": "2026-10-22T11:54:27Z",
+      "source_url": "https://community.owasp.org/attacks/CSV_Injection",
+      "official_publisher": "OWASP",
+      "official_host": "community.owasp.org",
+      "last_updated": "2026-01-29",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "CSV Injection（Formula Injection）は、信頼できない入力を埋め込んだ CSV を表計算ソフトで開くと、特定の文字で始まるセルが式として解釈される問題。式の始まりになる記号（= + - @ と全角の＝＋－＠）・タブ・改行で始まるセルが危うい。対策は、それらで始まらないようにすること、区切り文字と引用符も考えること、各欄を二重引用符で囲み内側の二重引用符を重ね、先頭に単引用符を付けること、など。Excel は保存し直すと引用符やエスケープを外すことがあり、無害にした式がまた効きうる。万能の方法は無く、読む側のソフトと後の処理によって適した方法が変わる。G30（CSV の式を無害にする。数値は除く）の根拠。owasp.org の旧 URL から恒久リダイレクトされた先。ページに更新日の表示は無く、last_updated は OWASP/www-community の pages/attacks/CSV_Injection.md の最終コミット（35884b9d、2026-01-29。2026-10-22T12:28:26Z に確認し、それより後のコミットは無い）。"
+    },
+    {
+      "target_id": "owasp-redos",
+      "retrieved_at": "2026-10-22T11:54:27Z",
+      "source_url": "https://community.owasp.org/attacks/Regular_expression_Denial_of_Service_-_ReDoS",
+      "official_publisher": "OWASP",
+      "official_host": "community.owasp.org",
+      "last_updated": "2026-02-14",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "ReDoS は、正規表現のバックトラッキングで、細工した入力に対して処理時間が入力の長さに対して指数的に伸びうることを使うサービス妨害。危うい形は、繰り返しのグループの中にさらに繰り返しや重なる選択肢を含むもの。正規表現のアルゴリズムは効率よく書けるとしつつ、多くのエンジンは後方参照などの拡張を扱うため素朴なアルゴリズムで動きうると説明する。ページに具体的な対策の推奨は無い。G31（正規表現を入力の長さに比例する時間で終わるものにする）の根拠。ページに更新日の表示は無く、last_updated は OWASP/www-community の該当 md の最終コミット（2852a08a、2026-02-14。2026-10-22T12:28:26Z に確認し、それより後のコミットは無い）。"
+    },
+    {
+      "target_id": "github-actions-secure-use",
+      "retrieved_at": "2026-10-22T11:54:27Z",
+      "source_url": "https://docs.github.com/en/actions/reference/security/secure-use",
+      "official_publisher": "GitHub",
+      "official_host": "docs.github.com",
+      "last_updated": "2026-10-12",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "action の依存は lockfile で固定するのが最も強い守りで、採用したリポジトリでは SHA の固定に代わる。そうでなければ完全なコミット SHA で固定し、タグで固定するのは作り手を信頼できるときだけ（タグは動かされうる）。認証情報は最小の権限にし、GITHUB_TOKEN は既定を読み取りだけにして要るジョブだけで上げる。secret から作った値も secret として扱い、ログに出たらログを消して secret を替える。pull_request_target や workflow_run を信頼できないコードと組み合わせない。信頼できない入力はスクリプトに直接展開せず環境変数を通す。G28（Actions を SHA で固定し、deploy の秘密を依存のコードを実行した後の工程に渡さない）の根拠。ページに更新日の表示は無く、last_updated は github/docs の該当 md の最終コミット（ecafe714、2026-10-12。2026-10-22T12:28:26Z に確認し、それより後のコミットは無い）。"
+    },
+    {
+      "target_id": "actions-setup-node",
+      "retrieved_at": "2026-10-22T10:11:20Z",
+      "source_url": "https://github.com/actions/setup-node/blob/main/docs/advanced-usage.md",
+      "official_publisher": "GitHub",
+      "official_host": "github.com",
+      "version": "actions/setup-node v7.1.0",
+      "last_updated": "2026-09-21",
+      "latest_checked_at": "2026-10-22T10:12:35Z",
+      "summary": "node-version-file で .nvmrc・.node-version・.tool-versions・mise.toml・package.json を読める（package.json は volta.node、devEngines.runtime、engines.node の順）。node-version と両方あれば node-version が勝つ。check-latest は既定で false で、キャッシュの一致する版を先に使う。ページの例は actions/setup-node@v7。G28（CI は node-version-file で .nvmrc を読む）の根拠。last_updated は docs/advanced-usage.md の最終コミット（680d1e48、2026-09-21）、version は releases の latest（v7.1.0、2026-10-08 公開。2026-10-22T10:12:35Z に確認）。"
+    },
+    {
+      "target_id": "pnpm-audit",
+      "retrieved_at": "2026-10-22T12:35:20Z",
+      "source_url": "https://pnpm.io/cli/audit",
+      "official_publisher": "pnpm",
+      "official_host": "pnpm.io",
+      "version": "pnpm 12.15.0",
+      "last_updated": "2026-10-21",
+      "latest_checked_at": "2026-10-22T12:35:20Z",
+      "summary": "pnpm audit は、入っているパッケージに既知の勧告が無いかを、レジストリの勧告の API（v11 から /-/npm/v1/security/advisories/bulk）で調べる（勧告は CVE ではなく GHSA の ID で扱う）。--audit-level で表示する最低の深刻度（既定は low。設定の audit.level でも決められる）、--prod で本番の依存だけ、--fix で overrides を足して脆弱でない版を強制する（pnpm 12 では pnpm-workspace.yaml に書く。v11.0.0 から --fix=update で脆弱なパッケージそのものを更新でき、--interactive で --fix が選んだ勧告から当てるものを選べる）。--ignore-registry-errors はレジストリの失敗では0で終わり、勧告が見つかったときだけ失敗させる。無視する勧告は audit.ignore（GHSA）に書き、v12.0.0 の audit.ignorePrune を true にすると --fix のときに報告から消えた GHSA の無視を外す。旧名の auditLevel・auditConfig.ignoreGhsas も pnpm 12 でまだ使える。D-011 で選んだ『pnpm audit の CI だけ』の根拠。文書は pnpm 12 系の内容で、アプリは pnpm 10.19.0 なので、CI で使う引数がその版で使えるかは実装のときに確かめる。version は npm の pnpm の latest（12.15.0、2026-10-21T11:16:18Z 公開。2026-10-22T12:28:27Z に確認し、それより新しい版は無い）。ページに更新日の表示は無く、last_updated は公式リポジトリ pnpm/pnpm.io の docs/cli/audit.md の最終コミット（bd277d16「docs: sync 12.x documentation for 12.15.0」、2026-10-21。2026-10-22T12:28:26Z に確認し、それより後のコミットは無い）。"
+    },
+    {
+      "target_id": "github-actions-download-artifacts",
+      "retrieved_at": "2026-10-22T11:54:27Z",
+      "source_url": "https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts",
+      "official_publisher": "GitHub",
+      "official_host": "docs.github.com",
+      "last_updated": "2026-03-13",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "成果物はリポジトリの読み取りの権限があればダウンロードできる（Web の画面か gh run download）。ビルドのログと成果物は既定で90日保管され、期限が来ると失効する。保管期間はリポジトリの種類によって変えられる。公開リポジトリでは読み取りの権限が誰にでもあるので、成果物に本番のデータを置かない（G25）根拠。ページに更新日の表示は無く、last_updated は github/docs の該当 md の最終コミット（43b64585、2026-03-13。2026-10-22T12:28:26Z に確認し、それより後のコミットは無い）。"
+    },
+    {
+      "target_id": "pnpm-settings-cli",
+      "retrieved_at": "2026-10-22T12:33:37Z",
+      "source_url": "https://pnpm.io/settings/cli",
+      "official_publisher": "pnpm",
+      "official_host": "pnpm.io",
+      "version": "pnpm 12.15.0",
+      "last_updated": "2026-10-10",
+      "latest_checked_at": "2026-10-22T12:33:37Z",
+      "summary": "engineStrict は既定で false で、有効にすると今の Node に合わないと宣言した依存を入れない。プロジェクト自身の engines が合わないときは、この設定に関係なく install が失敗する。nodeVersion は engines の判定に使う Node の版（既定は node -v）。pmOnFail（v11.0.0 で追加、既定 download。値は download・error・warn・ignore）は宣言した pnpm の版と違うときの動きで、packageManager と devEngines.packageManager の onFail を上書きする。G28（engines と engine-strict で Node の版を固定する）の根拠。文書は pnpm 12 系の内容で、アプリの pnpm 10.19.0 での動きは実装のときに確かめる。version は npm の pnpm の latest（12.15.0、2026-10-21T11:16:18Z 公開。2026-10-22T12:28:27Z に確認）。ページに更新日の表示は無く、last_updated は公式リポジトリ pnpm/pnpm.io の docs/settings/cli.md の最終コミット（a17a1251「docs: sync 12.x documentation for 12.12.0」、2026-10-10。2026-10-22T12:28:26Z に確認し、それより後のコミットは無い。12.13.0〜12.15.0 の同期でこのファイルは変わっていない）。"
+    },
+    {
+      "target_id": "renovate-installing-onboarding",
+      "retrieved_at": "2026-10-22T10:12:06Z",
+      "source_url": "https://docs.renovatebot.com/getting-started/installing-onboarding/",
+      "official_publisher": "Mend (Renovate)",
+      "official_host": "docs.renovatebot.com",
+      "version": "Mend Renovate 44.176.3",
+      "latest_checked_at": "2026-10-22T10:12:06Z",
+      "summary": "GitHub では Mend Renovate App を入れ、全リポジトリか選んだリポジトリで動かす。有効にすると『Configure Renovate』という onboarding PR ができ、それをマージするまで Renovate は変更も PR も作らない。このページに app に渡す権限の範囲の記述は無い（Security and Permissions のページへ案内）。D-011 の Renovate 案（選ばなかった案）の根拠。version はページに示された対応版。"
+    },
+    {
+      "target_id": "renovate-configuration-options",
+      "retrieved_at": "2026-10-22T10:12:06Z",
+      "source_url": "https://docs.renovatebot.com/configuration-options/",
+      "official_publisher": "Mend (Renovate)",
+      "official_host": "docs.renovatebot.com",
+      "version": "Mend Renovate 44.176.3",
+      "latest_checked_at": "2026-10-22T10:12:06Z",
+      "summary": "vulnerabilityAlerts は GitHub の勧告を使い、GitHub だけで使える。Dependency graph と Dependabot alerts の有効化が要り、app で動かすときは Dependabot alerts の read 権限が要る。osvVulnerabilityAlerts は OSV のデータベースで直接の依存を調べるが、試験段階（experimental）で既定は false。D-011 の Renovate 案の不利な点（勧告の検知は Dependabot の警告か試験段階の OSV に頼る）の根拠。"
+    },
+    {
+      "target_id": "renovate-nvm-manager",
+      "retrieved_at": "2026-10-22T10:12:06Z",
+      "source_url": "https://docs.renovatebot.com/modules/manager/nvm/",
+      "official_publisher": "Mend (Renovate)",
+      "official_host": "docs.renovatebot.com",
+      "version": "Mend Renovate 44.176.3",
+      "latest_checked_at": "2026-10-22T10:12:06Z",
+      "summary": "nvm manager は .nvmrc に書いた Node の版を更新する（データの出所は node-version、versioning は node）。ページに既定で有効かの明記は無い。D-011 の Renovate 案の利点（.nvmrc も同じ仕組みで追える）の根拠。"
+    },
+    {
+      "target_id": "dependabot-options-reference",
+      "retrieved_at": "2026-10-22T11:54:55Z",
+      "source_url": "https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference",
+      "official_publisher": "GitHub",
+      "official_host": "docs.github.com",
+      "last_updated": "2026-01-13",
+      "latest_checked_at": "2026-10-22T12:28:26Z",
+      "summary": "package-ecosystem は npm（npm v7〜v11、pnpm v7〜v10 も npm の値で扱う）と github-actions などを持つ。確かめた範囲に .nvmrc の Node の版を更新する ecosystem の記述は無い。schedule.interval は daily〜yearly と cron。cooldown は版の更新を決めた日数だけ遅らせる（既定3日、セキュリティ更新には効かない）。groups は、パッケージマネージャーが扱う依存の組を規則で決める。D-011 の Dependabot 案（推奨したが選ばなかった案）の根拠。ページに更新日の表示は無く、last_updated は github/docs の該当 md の最終コミット（fc888b87、2026-01-13。2026-10-22T12:28:26Z に確認し、それより後のコミットは無い）。"
     }
   ]
 }

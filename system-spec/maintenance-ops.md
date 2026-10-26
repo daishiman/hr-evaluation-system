@@ -3,7 +3,7 @@ status: confirmed
 category: maintenance-ops
 aggregate: 確定
 spec_cells: [maintenance-ops.web, maintenance-ops.mobile, maintenance-ops.tablet, maintenance-ops.desktop-windows, maintenance-ops.desktop-linux, maintenance-ops.desktop-macos]
-serves_goals: [G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28]
+serves_goals: [G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28, G30, G31, G32, G33, G38]
 ---
 
 # 保守運用管理 (maintenance-ops)
@@ -15,9 +15,9 @@ serves_goals: [G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G
 
 | プラットフォーム | 状態 | 根拠 |
 |---|---|---|
-| Web (web) | 確定 | 確定質疑: qa-y16。裏付け質疑 (`qa_refs`): `qa-r-ops-3`, `qa-f09`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-u15`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v25`, `qa-v31`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w10`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x16`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-aa03-report-paper-user-revision`, `qa-aa04-report-landscape-onepage-design`, `qa-aa05-report-score-grade-request`, `qa-aa06-report-score-grade-design`, `qa-aa07-report-threshold-marker-audit`, `qa-aa08-report-marker-detail-print-design`, `qa-aa09-report-print-final-alignment`, `qa-aa10-report-print-background-preparation`, `qa-ab02-behavior-band-default-observed`, `qa-ab05-evaluation-build-showcase-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab12-showcase-data-location`, `qa-ab13-foundation-016-approval`, `qa-ab15-foundation-017-approval`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab09-finalized-evaluation-keep`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28 |
-| モバイル (mobile) | 確定 | 確定質疑: qa-y16。裏付け質疑 (`qa_refs`): `qa-r-ops-3`, `qa-f09`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-u15`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v25`, `qa-v31`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w10`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x16`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-ab02-behavior-band-default-observed`, `qa-ab05-evaluation-build-showcase-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab12-showcase-data-location`, `qa-ab13-foundation-016-approval`, `qa-ab15-foundation-017-approval`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab09-finalized-evaluation-keep`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28 |
-| タブレット (tablet) | 確定 | 確定質疑: qa-y16。裏付け質疑 (`qa_refs`): `qa-r-ops-3`, `qa-f09`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-u15`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v25`, `qa-v31`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w10`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x16`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-ab02-behavior-band-default-observed`, `qa-ab05-evaluation-build-showcase-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab12-showcase-data-location`, `qa-ab13-foundation-016-approval`, `qa-ab15-foundation-017-approval`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab09-finalized-evaluation-keep`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28 |
+| Web (web) | 確定 | 確定質疑: qa-y16。裏付け質疑 (`qa_refs`): `qa-r-ops-3`, `qa-f09`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-u15`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v25`, `qa-v31`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w10`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x16`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-aa03-report-paper-user-revision`, `qa-aa04-report-landscape-onepage-design`, `qa-aa05-report-score-grade-request`, `qa-aa06-report-score-grade-design`, `qa-aa07-report-threshold-marker-audit`, `qa-aa08-report-marker-detail-print-design`, `qa-aa09-report-print-final-alignment`, `qa-aa10-report-print-background-preparation`, `qa-ab02-behavior-band-default-observed`, `qa-ab05-evaluation-build-showcase-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab12-showcase-data-location`, `qa-ab13-foundation-016-approval`, `qa-ab15-foundation-017-approval`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab09-finalized-evaluation-keep`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval`, `qa-ac07`, `qa-ab01`, `qa-ab02`, `qa-ab03`, `qa-ac01`, `qa-ac02`, `qa-ac05` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28, G30, G31, G32, G33, G38 |
+| モバイル (mobile) | 確定 | 確定質疑: qa-y16。裏付け質疑 (`qa_refs`): `qa-r-ops-3`, `qa-f09`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-u15`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v25`, `qa-v31`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w10`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x16`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-ab02-behavior-band-default-observed`, `qa-ab05-evaluation-build-showcase-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab12-showcase-data-location`, `qa-ab13-foundation-016-approval`, `qa-ab15-foundation-017-approval`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab09-finalized-evaluation-keep`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval`, `qa-ac07`, `qa-ab01`, `qa-ab02`, `qa-ab03`, `qa-ac01`, `qa-ac02`, `qa-ac05` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28, G30, G31, G32, G33, G38 |
+| タブレット (tablet) | 確定 | 確定質疑: qa-y16。裏付け質疑 (`qa_refs`): `qa-r-ops-3`, `qa-f09`, `qa-f08`, `qa-u03`, `qa-u01`, `qa-u15`, `qa-u22`, `qa-u23`, `qa-u24`, `qa-u25`, `qa-v01`, `qa-v02`, `qa-v03`, `qa-v25`, `qa-v31`, `qa-w01`, `qa-w02`, `qa-w03`, `qa-w04`, `qa-w05`, `qa-w10`, `qa-x01`, `qa-x02`, `qa-x03`, `qa-x04`, `qa-x05`, `qa-x06`, `qa-x07`, `qa-x08`, `qa-x16`, `qa-y01`, `qa-y02`, `qa-y03`, `qa-y04`, `qa-y05`, `qa-y06`, `qa-y07`, `qa-y08`, `qa-y09`, `qa-z03`, `qa-ab02-behavior-band-default-observed`, `qa-ab05-evaluation-build-showcase-observed`, `qa-ab10-band-drift-rewrite`, `qa-ab12-showcase-data-location`, `qa-ab13-foundation-016-approval`, `qa-ab15-foundation-017-approval`, `qa-ab04-setting-copy-propagation-observed`, `qa-ab07-survey-to-setting-direction`, `qa-ab08-published-form-follow`, `qa-ab09-finalized-evaluation-keep`, `qa-ab11-survey-writeback-rule-conflict`, `qa-ab16-foundation-018-approval`, `qa-ab17-foundation-019-approval`, `qa-ab18-foundation-020-approval`, `qa-ac07`, `qa-ab01`, `qa-ab02`, `qa-ab03`, `qa-ac01`, `qa-ac02`, `qa-ac05` — 本章の「確定内容 (質疑録)」へ接地根拠として併記。資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28, G30, G31, G32, G33, G38 |
 | デスクトップ (Windows) (desktop-windows) | 対象外 | 理由: maintenance-ops: デスクトップのネイティブアプリは存在せず作る予定も無い（qa-f01。利用者も qa-u08 で対象外と確認）。PC からの利用はブラウザ経由で web 列に含まれ、鮮度の検査と切り分けの手順はデスクトップ固有の要件を持たない。 |
 | デスクトップ (Linux) (desktop-linux) | 対象外 | 理由: maintenance-ops: デスクトップのネイティブアプリは存在せず作る予定も無い（qa-f01。利用者も qa-u08 で対象外と確認）。PC からの利用はブラウザ経由で web 列に含まれ、鮮度の検査と切り分けの手順はデスクトップ固有の要件を持たない。 |
 | デスクトップ (macOS) (desktop-macos) | 対象外 | 理由: maintenance-ops: デスクトップのネイティブアプリは存在せず作る予定も無い（qa-f01。利用者も qa-u08 で対象外と確認）。PC からの利用はブラウザ経由で web 列に含まれ、鮮度の検査と切り分けの手順はデスクトップ固有の要件を持たない。 |
@@ -36,7 +36,7 @@ serves_goals: [G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G
 
 | 設計 concern | 上流の正本 (authority) | 導く範囲 | 出典 | 最終確認 | 本章の確定セルへの反映 |
 |---|---|---|---|---|---|
-| operations | Google SRE | 運用手順・障害対応・トイル削減・ポストモーテムの上流指針 | https://sre.google/workbook/ | 2026-07-12 | Google SRE の障害対応（推測より観測）に沿い、『反映されない』報告の切り分けを、生成時刻のヘッダー・Workers Logs・ゾーンのキャッシュ規則の順に、読み取りだけで確かめる手順として文書にする（qa-r-ops-3 (3)、deploy-notes §7）。compensation_failed と rollforward_failed を Workers Logs で見つけ、本番 DB を手で書き換えずに直す手順も同じ文書に置く。6 つの経路と控えの畳み方の画面の通し試験を、375px・768px でも、ローカルの preview だけに向けて回す（同 (2)、LOCAL_HOSTS）。 （2026-10-13 追記：G6〜G15）本番の等級名の一律の書き換えは、その前に本番 DB を読み取り専用で数え（会社数・等級数・英語入りの表示名の数）、書き換え前の値を記録し、外部変更ガードを通して Deploy する。Deploy の後は、英語の区分名が残っていないことを読み取りで確かめる（qa-v31 (4)）。決まりの文書（spec.md・account-and-users.md・routes-and-access.md・master-settings.md）を改め、受領書をdocs/product/spec-receipts/ に残す（同 (2)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）Google SRE の変更管理に沿い、本番への反映を確かめられる手順に分ける。1回目（P05 の PR のマージ）の前に、その PR の上で pnpm test・typecheck・test:coverage・test:e2e と cf:dry-run・check:bundle-size を通す。1回目の確かめ（本番に KGI の画面と操作が無いこと）は、P07 が配った sha の静的検査と台帳で示し、本番の画面は開かない（qa-y16 (9) とその訂正、DD-020 の6・7）。2回目（P08 の PR のマージ）の前に本番 DB を読み取りだけで数え、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact の id を、P13 が docs/deploy-notes.md に記録する。テストデータは本番に入れず、シードが本番の設定で動かないことを確かめる（同 (9)、O20）。上司の判断の列は足すだけなので、今の Deploy の順番のまま出せる（database (14)）。docs/product/spec.md の昇給・昇格の判定の節に最終の可否の決め方を足し、運用する人が判定と結論の違いを説明できるようにする（同 (12)）。 （2026-10-22 追記：G25〜G29）運用する人が、設定を変えたときに何が追従するかを説明できるよう、写しを持つ場所の3分類の一覧を docs/product に置き、製品仕様 §27 から辿れるようにする（I30、G27）。DD-010 と製品仕様 §14 を改める DD を書き、本番の未回答の一覧に見本の人が並ぶことを運用の注意として記す（I26・I31、G25・G28）。共通部品の色を変えたときは、主要な画面の明暗の見た目の記録を取り直す（O29、G29）。 (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない)) |
+| operations | Google SRE | 運用手順・障害対応・トイル削減・ポストモーテムの上流指針 | https://sre.google/workbook/ | 2026-07-12 | Google SRE の障害対応（推測より観測）に沿い、『反映されない』報告の切り分けを、生成時刻のヘッダー・Workers Logs・ゾーンのキャッシュ規則の順に、読み取りだけで確かめる手順として文書にする（qa-r-ops-3 (3)、deploy-notes §7）。compensation_failed と rollforward_failed を Workers Logs で見つけ、本番 DB を手で書き換えずに直す手順も同じ文書に置く。6 つの経路と控えの畳み方の画面の通し試験を、375px・768px でも、ローカルの preview だけに向けて回す（同 (2)、LOCAL_HOSTS）。 （2026-10-13 追記：G6〜G15）本番の等級名の一律の書き換えは、その前に本番 DB を読み取り専用で数え（会社数・等級数・英語入りの表示名の数）、書き換え前の値を記録し、外部変更ガードを通して Deploy する。Deploy の後は、英語の区分名が残っていないことを読み取りで確かめる（qa-v31 (4)）。決まりの文書（spec.md・account-and-users.md・routes-and-access.md・master-settings.md）を改め、受領書をdocs/product/spec-receipts/ に残す（同 (2)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）Google SRE の変更管理に沿い、本番への反映を確かめられる手順に分ける。1回目（P05 の PR のマージ）の前に、その PR の上で pnpm test・typecheck・test:coverage・test:e2e と cf:dry-run・check:bundle-size を通す。1回目の確かめ（本番に KGI の画面と操作が無いこと）は、P07 が配った sha の静的検査と台帳で示し、本番の画面は開かない（qa-y16 (9) とその訂正、DD-020 の6・7）。2回目（P08 の PR のマージ）の前に本番 DB を読み取りだけで数え、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact の id を、P13 が docs/deploy-notes.md に記録する。テストデータは本番に入れず、シードが本番の設定で動かないことを確かめる（同 (9)、O20）。上司の判断の列は足すだけなので、今の Deploy の順番のまま出せる（database (14)）。docs/product/spec.md の昇給・昇格の判定の節に最終の可否の決め方を足し、運用する人が判定と結論の違いを説明できるようにする（同 (12)）。 （2026-10-22 追記：G25〜G29）運用する人が、設定を変えたときに何が追従するかを説明できるよう、写しを持つ場所の3分類の一覧を docs/product に置き、製品仕様 §27 から辿れるようにする（I30、G27）。DD-010 と製品仕様 §14 を改める DD を書き、本番の未回答の一覧に見本の人が並ぶことを運用の注意として記す（I26・I31、G25・G28）。共通部品の色を変えたときは、主要な画面の明暗の見た目の記録を取り直す（O29、G29）。 Google SRE の障害対応（推測より観測）に沿い、『反映されない』報告の切り分けを、生成時刻のヘッダー・Workers Logs・ゾーンのキャッシュ規則の順に、読み取りだけで確かめる手順として文書にする（qa-r-ops-3 (3)、deploy-notes §7）。compensation_failed と rollforward_failed を Workers Logs で見つけ、本番 DB を手で書き換えずに直す手順も同じ文書に置く。6 つの経路と控えの畳み方の画面の通し試験を、375px・768px でも、ローカルの preview だけに向けて回す（同 (2)、LOCAL_HOSTS）。 （2026-10-13 追記：G6〜G15）本番の等級名の一律の書き換えは、その前に本番 DB を読み取り専用で数え（会社数・等級数・英語入りの表示名の数）、書き換え前の値を記録し、外部変更ガードを通して Deploy する。Deploy の後は、英語の区分名が残っていないことを読み取りで確かめる（qa-v31 (4)）。決まりの文書（spec.md・account-and-users.md・routes-and-access.md・master-settings.md）を改め、受領書をdocs/product/spec-receipts/ に残す（同 (2)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）Google SRE の変更管理に沿い、本番への反映を確かめられる手順に分ける。1回目（P05 の PR のマージ）の前に、その PR の上で pnpm test・typecheck・test:coverage・test:e2e と cf:dry-run・check:bundle-size を通す。1回目の確かめ（本番に KGI の画面と操作が無いこと）は、P07 が配った sha の静的検査と台帳で示し、本番の画面は開かない（qa-y16 (9) とその訂正、DD-020 の6・7）。2回目（P08 の PR のマージ）の前に本番 DB を読み取りだけで数え、Deploy workflow の2回の実行 id・sha・当てた時刻と、Time Travel で戻せる期限を、P13 が docs/deploy-notes.md に記録する（2026-10-22 に D-010 で、書き出しの成果物の id から読み替えた）。テストデータは本番に入れず、シードが本番の設定で動かないことを確かめる（同 (9)、O20）。上司の判断の列は足すだけなので、今の Deploy の順番のまま出せる（database (14)）。docs/product/spec.md の昇給・昇格の判定の節に最終の可否の決め方を足し、運用する人が判定と結論の違いを説明できるようにする（同 (12)）。 （2026-10-22 追記：G31・G32・G38）運用の手順書と通知の考え方を、保守の確定内容（qa-ac07 の (14)〜(21)）に次のように当てる。勧告の通知は、npm の依存を CI の pnpm audit で、Node 本体を担当が nodejs-sec の通知で受け、届いた日付と確かめた結果を台帳に残して、人が読む経路の抜けを記録で見えるようにする（G32・qa-ac02）。漏えいの恐れの後の手順書はローカルで通しておき、本番での実行は利用者がガードを通して決める（G31）。台帳の全行が状態と根拠を持つことを契約テストで確かめる（G38）。 (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない)) |
 
 ## 確定内容 (質疑録)
 
@@ -44,7 +44,7 @@ serves_goals: [G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G
 
 ### Web (web)
 
-- 資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28
+- 資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28, G30, G31, G32, G33, G38
 
 #### 主たる接地根拠: `qa-y16`
 
@@ -60,6 +60,7 @@ serves_goals: [G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G
 > 本文中の記述と食い違う場合は、訂正側が正である。
 >
 > - `2026-10-20T21:45:11Z` — 2026-10-20 の利用者の判断（qa-z03 の1問目（逐語『今は文書で確定、P12で反映 (Recommended)』）、qa-z03 の2問目（逐語『自動Deployに合わせて読み替え (Recommended)』））を受けた P12 の反映。項目 (9) は DD-020 の6・7 のとおりに読む。1回目＝P05 の PR のマージ、2回目＝P08 の PR のマージで、P05 をマージする前に、P05 の PR の上で P06 の自動テスト（pnpm test・typecheck・test:coverage・test:e2e）と cf:dry-run・check:bundle-size を通す。1回目の確かめ（本番に KGI の画面と操作が無いこと）は P07 が配った sha の静的検査と台帳で示し、本番の画面は開かない。2回目の前の本番 DB の読み取り（読むだけ）と、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact の id の記録は P13 が受け持ち、docs/deploy-notes.md に書く。テストデータを本番に入れないことは変えない。項目 (7)・(11) の見える範囲の契約テストは、DD-021 の6 と DD-024 の5 のとおり、canViewEvaluationOf を使う側をレポートの画面だけとし、CSV とメモがこの関数を使わないことも同じ契約テスト（src/lib/report-visibility.contract.test.ts）で確かめる。question/answer は当時の逐語として変更しない。corrected_at はこの訂正の記録時刻で、利用者の回答時刻ではない。
+> - `2026-10-22T11:49:02Z` — 2026-10-22 の訂正。項目 (9) への 2026-10-20T21:45:11Z の訂正にある『書き出しの Artifact の id の記録は P13 が受け持つ』は、『当てた時刻・Deploy の run の id・Time Travel で戻せる期限の記録は P13 が受け持つ』と読み替える。Actions の成果物へ本番 D1 を書き出す工程は 2026-10-22 から使わず、戻す元は D1 の Time Travel（無料のプランで7日）だけにする（D-010・qa-ab02・G30）。以後のマイグレーションでは、当てる前に時刻と Time Travel の bookmark を記録する。この読み替えは qa-ac07 の (14)・(15) で利用者が確定した。question/answer は当時の逐語として変更しない。corrected_at はこの訂正の記録時刻で、利用者の回答時刻ではない。
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion。reopen（2026-10-19T20:50:42Z）の後、旧い本文（qa-x16）の末尾に足す項目を preview に全文で示し、利点と不利な点を対称に書いた2択で問うた（推奨の印なし）。回答は『この内容で確定する』（qa-y07）。answer は qa-x16 の全文の末尾に『【2026-10-20 の追加】』として承認された項目を足したもの。A4 の配置の項目は、ユーザーの追加の依頼（qa-y08）と、その問の回答（qa-y09、preview に全文）による。answered_at は回答受領後の記録時の実測 / 回答時刻: 2026-10-19T21:15:28Z)
 
@@ -174,6 +175,7 @@ open-next.config.ts は defineCloudflareConfig() の既定のままで、increme
 > 本文中の記述と食い違う場合は、訂正側が正である。
 >
 > - `2026-10-01T09:43:30Z` — 本 qa の R1 問1 の表 A などで示した I1・I2・I3・I5・I6・O2・O3（測り方を含む）・G4・U8 (1)・U6 の文面は、保存している文面を縮めたり言い換えたりしたもので、保存文面そのものではなかった（O4 は目標文を示さず、測り方の行だけを示した）。完成度評価の7回目がこれを指摘したため、R5（qa-u26、2026-10-01T09:29:16Z）で R1 の文面と保存している全文を並べて示し、I1 を『1. 全文で確定する』で、ほかの10項目を保存している全文のまま確定し直した。上位概念の承認は appr-foundation-007 に移した。
+> - `2026-10-22T12:24:39Z` — 本 qa の出所の表にある U8 (1) の『Next.js 16 系（16.3.8 へ上げる）』は、2026-10-01 時点の決めである。16.3.8 は 2026-10-14 公開の勧告 GHSA-p3m5-59mp-jv5r の影響範囲（16.0.0〜16.4.0）に入るため、16.3.8 で止めない。今の版の決めは、上位概念の制約の1行目『脆弱性の修正を含む 16.4.1 以上へ上げる』と G32・O32・I36（appr-foundation-022。2026-10-22T11:10:02Z の回答 qa-ac02）の『next は 16.4.1 以上』が正である。question/answer は当時の逐語として変更しない。corrected_at はこの訂正の記録時刻で、利用者の回答時刻ではない。
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: 下のフェンス内の逐語 / 回答時刻: 2026-10-01T05:23:38Z)
 
@@ -387,6 +389,11 @@ R2 で「A. 文面を実装に合わせる」が選ばれたので、承認済�
 **答**
 
 前半＝『auth（4項目）, security（7項目）, backend（4項目）, database（6項目）』、後半＝『frontend（5項目）, infrastructure（5項目）, maintenance-ops（4項目）, ui-ux（5項目）』。8章すべてを表の文面で確定し、保留は無い。章ごとの文面は qa-r-auth-3・qa-r-security-3・qa-r-backend-4・qa-r-database-3・qa-r-frontend-3・qa-r-infrastructure-3・qa-r-ops-3・qa-r-uiux-3 に逐語で写した。
+
+> **訂正あり** — 直上の答は凍結された記録であり、後から次の訂正が入っている。
+> 本文中の記述と食い違う場合は、訂正側が正である。
+>
+> - `2026-10-22T12:24:39Z` — 本 qa の出所の表にある (4) の『Next.js は脆弱性の修正を含む 16.3.8 へ上げる。』は、2026-10-01 時点の決めである。16.3.8 は 2026-10-14 公開の勧告 GHSA-p3m5-59mp-jv5r の影響範囲（16.0.0〜16.4.0）に入るため、16.3.8 で止めない。今の版の決めは、上位概念の制約の1行目『脆弱性の修正を含む 16.4.1 以上へ上げる』と G32・O32・I36（appr-foundation-022。2026-10-22T11:10:02Z の回答 qa-ac02）の『next は 16.4.1 以上』が正である。question/answer は当時の逐語として変更しない。corrected_at はこの訂正の記録時刻で、利用者の回答時刻ではない。
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（会話記録 セッション c1cbb5bd-2317-4106-84d7-c7008c6c966a、tool_use toolu_01ER39ybgv66SEANd4ggpjNH、質問 2026-10-01T07:37:04Z、回答 2026-10-01T07:37:33Z）。2026-10-01T07:36:59Z に、仕様書の8章について R1〜R3 の決定と実装に合わせて書き直した文面を、全文で会話に表示した。表の地の文で示した答え方の決まり：区分は 同（前の版と同じ）・改（直した）・新（足した）。章ごとに確定するかを選び、選ばなかった章は保留として残す。自由記述（Other）だけで答えた問も保留にする。選択肢は章の順に並べただけで、おすすめの順ではない。R1 の表では全5回と予告したが、R4 で全項目が決まったため R1〜R4 の4回で終えた。表示から回答まで34秒、質問から回答まで29秒。問と選択肢（全文）: [1] 表の auth・security・backend・database の章を、表の文面で確定しますか？（選んだ章を確定。選ばない章は保留。並びは章の順で、推奨の順ではありません）（複数選択。選択肢: 『auth（4項目）』（説明: (1) を入口の検査に合わせて改訂。(2)〜(4) は前の版と同じ）、『security（7項目）』（説明: (6) に控えの14日の期限と掃除、(7) に送り元の二重の検査と試験での固定を反映）、『backend（4項目）』（説明: (3) を D-003 案 A（batch・補償・前進回復の3つの型）と契約試験に改訂）、『database（6項目）』（説明: (2) に batch へまとめた4か所、(5) に14日の期限、(6) に同時保存の409を追加）） [2] 表の frontend・infrastructure・maintenance-ops・ui-ux の章を、表の文面で確定しますか？（選んだ章を確定。選ばない章は保留。並びは章の順で、推奨の順ではありません）（複数選択。選択肢: 『frontend（5項目）』（説明: 実装の名前（useSaveAction・createCommitGate・FreshnessSync・online・bfcache の順序）に合わせて改訂）、『infrastructure（5項目）』（説明: (2) 生成時刻を Next.js の外側で付ける、(3) workers.dev だけで配っている事実、(5) 鍵の手順を反映）、『maintenance-ops（4項目）』（説明: (1) 3つの検査、(2) 375px・768px の通し試験を追加、(3) rollforward_failed の手順を追加）、『ui-ux（5項目）』（説明: (2) ボタン名と14日の期限の表示、(5) 375px・768px の通し試験を反映））。回答（逐語）: [1]＝『auth（4項目）, security（7項目）, backend（4項目）, database（6項目）』、[2]＝『frontend（5項目）, infrastructure（5項目）, maintenance-ops（4項目）, ui-ux（5項目）』。表示した全文（逐語）: ⟪R4 の確認です。仕様書の8章について、これまでの決定（R1〜R3）と実装に合わせて書き直した文面を、全文で示します。
 
@@ -1100,6 +1107,11 @@ A4であれば複数枚またがってもOKです。A3であれば1枚にまと�
 
 ちょっと不適切かなっていう部分はあったりするので、この辺も整えるようにしてほしいなと思ってます。
 
+> **訂正あり** — 直上の答は凍結された記録であり、後から次の訂正が入っている。
+> 本文中の記述と食い違う場合は、訂正側が正である。
+>
+> - `2026-10-22T11:49:02Z` — answered_at が無かったので補う。出典は、同じ依頼を受けた Codex の会話記録（/Users/dm/.codex/sessions/2026/10/19/rollout-2026-10-19T22-51-45-01a1546e-ba5c-7433-9185-541ba043671a.jsonl の 2373 行目、role は user）の利用者の発言の時刻。照合の結果、利用者の発言の全文と answer が一致した。corrected_at はこの訂正の記録時刻。 補記: {"corrected_field": "answered_at", "previous_value": null, "corrected_value": "2026-10-21T08:39:46Z"}
+
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: 2026-10-21 の追加依頼。親担当が受けた利用者発言の全文をそのまま転記。用紙の向きや寸法、過長の抑止方式は利用者の逐語ではなく次の補足設計に分離する。)
 
 #### 裏付け質疑: `qa-aa04-report-landscape-onepage-design`
@@ -1125,6 +1137,11 @@ qa-aa03 の A3 1枚 / A4 複数枚と URL のない出力を、本文を欠落�
 あと、レポートとしては、キーごとの点数が何点だったりとか、等級がどういうふうに変化しているのかっていうところがパッと見てわかるようにしてほしいです。等級と点数の依存関係のあるグラフ、表、折れ線グラフだったり、その最適なレポートっていうところがわかるようにしてほしいです。で、これ以外にも何か表現として適切なレポートとかあれば記述してほしいなというふうに思うのですが、この辺。
 
 何かいい塩梅のものがあれば整えてほしいです。で、あと各A評価とかC評価とかの横線のグラフが自分自身が今点数どこかっていうところになってますが、このAの位置だったりが各項目によって線の位置がちょっとずれたりしてますが、黒い縦の線ですね。この線の内容って適切ですか？
+
+> **訂正あり** — 直上の答は凍結された記録であり、後から次の訂正が入っている。
+> 本文中の記述と食い違う場合は、訂正側が正である。
+>
+> - `2026-10-22T11:49:02Z` — answered_at が無かったので補う。出典は、同じ依頼を受けた Codex の会話記録（/Users/dm/.codex/sessions/2026/10/19/rollout-2026-10-19T22-51-45-01a1546e-ba5c-7433-9185-541ba043671a.jsonl の 2444 行目、role は user）の利用者の発言の時刻。照合の結果、利用者の483字の発言に answer の320字がそのまま含まれていた。corrected_at はこの訂正の記録時刻。 補記: {"corrected_field": "answered_at", "previous_value": null, "corrected_value": "2026-10-21T08:43:42Z"}
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: 2026-10-21 の追加依頼。親担当から共有された利用者の逐語を全文転記。黒い縦線に関する質問は不具合の確定を意味しない。)
 
@@ -1356,9 +1373,97 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（1問、2択）。改めた範囲の文を writer の set-foundation で候補ファイルへ当てて形の検査（rc=0）を通した後に、今の文と新しい文を preview に並べて問い、回答を受けた直後の 2026-10-22T06:34:15Z を回答時刻とした。各選択肢に利点と不利な点を対称に書き、推奨の印は入れなかった。中身は qa-v26 (1)・qa-v29 (1)（所属の表と移行）、qa-r-database-3 (6)（0032 の番号の振り直し）、範囲の内の等級名の書き換え（0034・0035）・事業所の表の削除（0039）・I26 で決まっていた判断を範囲の文へ写すもので、この承認を appr-foundation-020 として記録し、appr-foundation-019 を置き換える。0021・0023・0025・0030 も行を書き換えるが、この仕様より前（2026-08〜09 の PR #75・#77・#80・#88）に足した移行なので挙げない。 / 回答時刻: 2026-10-22T06:34:15Z)
 
+#### 裏付け質疑: `qa-ac07`
+
+**問**
+
+maintenance-ops 章の末尾に、preview の (14)〜(21) を【2026-10-22 の追加】として足して確定しますか？（選択肢と説明：① この内容で確定する『利点：#97 の記録・手順書・勧告の追い方・台帳・静的検査が運用の決まりとして章に入る。不利な点：あとで項目を変えるには、もう一度 reopen と承認の手順が要る。』preview『【2026-10-22 の追加】 (14) Actions の成果物に d1-backup が0件であることを読み取りで確かめ、DB の書き出しを成果物へ上げる工程が無いことを静的検査で CI に落とす（G30・O30）。項目 (9) への 2026-10-20 の訂正の「Artifact の id を記録」は「当てる時刻と Time Travel の bookmark を記録」に読み替える。 (15) #97 の2回目のマイグレーション（0039）は 2026-10-21T07:49:53Z〜55Z に当たった（run 39564492520）。戻せる期限は 2026-10-28T07:49Z ごろで、消した表と列は戻さない（2026-10-22 の利用者の判断）。これを docs/deploy-notes.md と台帳に記録する。 (16) 漏えいの恐れの後の手順書（秘密の交換・セッションの失効・パスワードの変更）を docs/security/ に置き、ローカルで通して確かめる。本番で行うか・いつ行うかは利用者が決め、外部変更のガードを通す（G31・O31）。 (17) CI に `pnpm audit --prod --audit-level high` を入れ、push・PR と週1回で流す（D-011）。Node 本体の勧告は運用の担当が nodejs-sec の mailing list とブログで受け取り、日付と結果を台帳に記録する。critical と high は48時間のうちに修正版へ上げるか、暫定の防御と当たらない理由を記録する（G32・O32）。 (18) 契約テストで、.nvmrc・engines・node-version-file の一致、uses が全て SHA、deploy の秘密を渡す工程と依存のコードを動かす工程が分かれていることを確かめる（G33・O33）。 (19) docs/security/ に台帳を作り、全指摘（low と info を含む）を ID・深刻度・状態つきで載せ、全行が状態と根拠を持つことを契約テストで確かめる。攻撃を再現できる細部と秘密の値は書かない（G38・O38）。 (20) 再発を止める4つの静的検査を CI に足す：バックアップを成果物に上げる工程／偽れるヘッダーでの識別／CSV の素通し／先頭の `/` だけを見る戻り先の検査（G38）。 (21) 残るリスクとして台帳に載せる：回数制限の数は isolate ごと（(B)）／前の層の防御が無い（D-012）／戻せるのは7日まで（D-010）／修正の PR は人が作る（D-011）／CSP の 'unsafe-inline'・SECURITY-013・SECURITY-015（範囲の外）。』／② 確定を保留する『利点：直したい点を伝えてから決められる。不利な点：#97 の記録先や勧告の追い方が章に無いままで、完成度の評価が通らない見込みなので、spec で止まり decompose 以降は実行しない。』preview『maintenance-ops 章は今の本文 (1)〜(13) のまま残る。 項目 (9) への 2026-10-20 の訂正（Artifact の id の記録）も残る。  spec の完成度の評価は FAIL のままの見込みで、 spec で止まって原因と不足を報告する。』）
+
+**答**
+
+(1) ルート台帳に権限一覧のページを足し（46 画面 → 47 画面）、全てのページに主な操作・役割ごとの可否・説明の欄を足す（D-007 ①）。台帳の説明書き（$schemaNote の『44個』）も直す。route-ledger.test.mjs の件数と新しい欄の検査・nav.test.ts・check:docs を合わせる。『Claude Code 連携の鍵』の名前を、ルート台帳・サイドバー（nav.ts）・画面名の定数（src/lib/domain/agent-keys.ts の AGENT_KEY_PAGE_LABEL）・README・system-spec/improvement-requests.md・docs/deploy-notes.md・specs/data-freshness.md・テスト（agent-keys.test.ts・improvement-ux-contracts.test.ts）で改める。 (2) 決まりの文書を改める：docs/product/spec.md と system-spec/account-and-users.md の『利用者一覧に評価の中身は表示しない』、routes-and-access.md、master-settings.md（等級名の変更の権限）。反映の受領書を docs/product/spec-receipts/ に残す。 (3) テスト：文字列を固定しているテスト（setup-readiness・scheme-steps・form-sync・StaleCyclesNotice・nav・ui-rules・improvement-ux-contracts・versioned-master-editors）を、新しい文面と形に合わせる。domain のカバレッジ 100% を保つ。次の検査を足す：表示の文字列に英語やカタカナの等級区分名が無い／等級名を変えられる役割が限られている／ルート台帳の権限の定義とサイドバー・ページの判定・サーバー処理の役割の指定が一致する／権限一覧の表とカードが同じ内容を出す／一般の社員の応答に他人の等級と点数が無い／所属していない会社のデータが読めない／提出状況の数と一覧が合う／設定不足の各件に直す画面のリンクがある／並べ替えの全体の保存と 409／選択肢の値が重ならない／4 幅で右側だけが空く画面が無い。 (4) 本番：等級名の一律の書き換えの前に、本番 DB を読み取り専用で数え（対象の会社数・等級数・英語入りの表示名の数）、書き換え前の値を記録し、外部変更ガードを通して Deploy する。Deploy の後に、英語の区分名が残っていないことを読み取りで確かめる。 (5) 比べる警告のテストを足す：全件が2つのページを持つ／『食い違』『ズレ』を含む警告が ComparisonGap 以外から作られていない／リンク先が台帳にあり、見る人の役割で開ける／3画面で閉じた1行と開いた表が出る／新しい版はその等級の版だけが増える／他社の等級は拒否される。setup-gaps・SetupGapList・一覧のテストの固定文字列を新しい形に合わせ、domain のカバレッジ 100% を保つ。docs/product/spec.md §22 と system-spec の文書に反映し、受領書を docs/product/spec-receipts/ に残す。 【2026-10-19 の追加】 (6) KGI のテスト・文書・台帳の行・ナビの記述を消し、KGI の参照が残っていないことを検査で確かめる。docs/product/spec.md と system-spec の文書から KGI の章を外し、賞与（仮）の式を改める。 (7) テストを足す：レポートの作成（同じ入力で同じ出力・軸の数・3人未満で平均を出さない・本人向けに点数が無い）、見える範囲（役割と直属の部下の組ごと）、評価セットの決め方が4つの処理で同じ、アンケートの状態の規則と会社の条件、ズレの3種類と行ごとのリンク。E2E を足す：レポート（管理者・マネージャー・本人）、配布 URL（ログイン前・等級違い・締切後・古い版）、回答・回答一覧・締め切る・延長、ズレの『直すところを見る』の各リンク。 (8) 依存関係の文書：アンケート・昇給の設定・評価セット・評価期間・評価・レポートのつながりを docs/product に図で残し、契約テストの一覧と対応させる。 (9) 本番：1回目の Deploy の後に KGI の画面が開けないことを確かめる。2回目の前に本番 DB を読み取りで数えてから、外部変更ガードを通して Deploy する。テストデータは本番に入れない。 (10) A4 の印刷の E2E を足す：Playwright で A4 の PDF を作り、ナビと操作のボタンが無いこと・図と表が途中で切れないこと・本人向けに点数が無いことを確かめる。 【2026-10-20 の追加】 (11) テストを足す：finalDecision の5通り（domain のカバレッジ 100%）、確定の入力の検査（選ばない・理由が空白・2000 字超・自分自身・部下でない人）、確定を戻しても判断が残ること、CSV の列、全ての表示先が finalDecision を使うことの契約テスト。E2E：マネージャーが『変える』で見送って確定し、本人の結果とレポート（本人向けと印刷）に結論・印・同じ理由が出て、点数の数値が出ないこと。 (12) 文書：docs/product/spec.md の昇給・昇格の判定の節に、上司の判断と最終の可否の決め方を足す。依存関係の図（(8)）に上司の判断を加える。 (13) E2E：見本のデータで A4 の PDF を作り、ページ数が2で、2枚目が⑤から始まり、図と表が途中で切れないことを確かめる。 【2026-10-22 の追加】 (14) Actions の成果物に d1-backup が0件であることを読み取りで確かめ、DB の書き出しを成果物へ上げる工程が無いことを静的検査で CI に落とす（G30・O30）。項目 (9) への 2026-10-20 の訂正の「Artifact の id を記録」は「当てる時刻と Time Travel の bookmark を記録」に読み替える。 (15) #97 の2回目のマイグレーション（0039）は 2026-10-21T07:49:53Z〜55Z に当たった（run 39564492520）。戻せる期限は 2026-10-28T07:49Z ごろで、消した表と列は戻さない（2026-10-22 の利用者の判断）。これを docs/deploy-notes.md と台帳に記録する。 (16) 漏えいの恐れの後の手順書（秘密の交換・セッションの失効・パスワードの変更）を docs/security/ に置き、ローカルで通して確かめる。本番で行うか・いつ行うかは利用者が決め、外部変更のガードを通す（G31・O31）。 (17) CI に `pnpm audit --prod --audit-level high` を入れ、push・PR と週1回で流す（D-011）。Node 本体の勧告は運用の担当が nodejs-sec の mailing list とブログで受け取り、日付と結果を台帳に記録する。critical と high は48時間のうちに修正版へ上げるか、暫定の防御と当たらない理由を記録する（G32・O32）。 (18) 契約テストで、.nvmrc・engines・node-version-file の一致、uses が全て SHA、deploy の秘密を渡す工程と依存のコードを動かす工程が分かれていることを確かめる（G33・O33）。 (19) docs/security/ に台帳を作り、全指摘（low と info を含む）を ID・深刻度・状態つきで載せ、全行が状態と根拠を持つことを契約テストで確かめる。攻撃を再現できる細部と秘密の値は書かない（G38・O38）。 (20) 再発を止める4つの静的検査を CI に足す：バックアップを成果物に上げる工程／偽れるヘッダーでの識別／CSV の素通し／先頭の `/` だけを見る戻り先の検査（G38）。 (21) 残るリスクとして台帳に載せる：回数制限の数は isolate ごと（(B)）／前の層の防御が無い（D-012）／戻せるのは7日まで（D-010）／修正の PR は人が作る（D-011）／CSP の 'unsafe-inline'・SECURITY-013・SECURITY-015（範囲の外）。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（4問、各単一選択）。2026-10-22T11:18:58Z に問い、2026-10-22T11:20:40Z に回答（会話記録の時刻）。旧い本文（qa-y16）の末尾に足す項目を preview に全文で示し、利点と不利な点を対称に書いた2択（推奨の印なし、保留の選択肢あり）で問うた。answer は qa-y16 の全文の末尾に、承認された preview（改行は空白に替えた）を足したもの。この回答を受けてセルを reopen し（reopened_at は writer に当てた時の実測で、問と回答はそれより前）、本 qa で再確定した。旧い qa_refs のうち、置き換え済みの qa-v31 は結び直さなかった。 / 回答時刻: 2026-10-22T11:20:40Z)
+
+#### 裏付け質疑: `qa-ab01`
+
+**問**
+
+上位概念の追加案（G30〜G38・O30〜O38・I34〜I41、成功基準8行、制約の修正2行と追加5行、範囲）を確定しますか？（選択肢と説明：① この内容で確定する『appr-foundation-021 として記録し、015 を置き換える。利点：decompose 以降をこの範囲で進められる。不利な点：あとで範囲を変えるには、もう一度承認の手順が要る。』preview に追加案の全文／② 確定を保留する『上位概念は 015 のまま。利点：直したい点を伝えてから決められる。不利な点：spec の完了条件を満たせないので、spec で止まり、decompose 以降は実行しない。』）
+
+**答**
+
+この内容で確定する。PURPOSE と BACKGROUND の末尾に、2026-10-22 の脆弱性の確認と対策の依頼の文を足す。G30〜G38（公開物に本番のデータと秘密を出さない／漏えいの恐れの後の手順と用途ごとの鍵／勧告を期限のうちに塞ぐ／版の固定と deploy の秘密の渡し方／認証の入口の許可制・偽れない識別・パスワードの決まりの統一／出力の安全／入力の量と計算量の上限／外から見える面の削減／監査の台帳と再発を止める静的検査）と、それぞれの O30〜O38・I34〜I41 を足す。成功基準8行と利害関係者2行を足す。制約の Next.js の行を『16.4.1 以上へ上げる・OpenNext Cloudflare 1 系』に、KGI の削除の行の戻し先を『D-010 で決めた置き場。Actions の成果物のバックアップは公開されていたため 2026-10-22 に削除した』に直し、制約5行を足す。範囲の in に7行、out に6行を足す。ほかは appr-foundation-015 のとおり。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（4問、各単一選択）。2026-10-22T09:10:19Z に問い、2026-10-22T10:00:46Z に回答（会話記録の時刻）。問の前の本文で、D-010〜012 の比較表（案ごとに費用・目標への適合・安全・運用・利点・不利な点・出典。利点と不利な点を対称に書いた）を示し、比較の後の別の段『AI の推奨（参考）』に、推奨・理由・注意点・信頼度・確かめた日（2026-10-22）を置いた。どの問も、推奨の案を先頭に置かず、推奨の印を付けず、保留の選択肢（利点と不利な点つき）を入れた。出典は 2026-10-22 に公式の文書で確かめた（Cloudflare の D1 Time Travel・Workers の料金・R2 の料金と Authentication・WAF のカスタムルールとレート制限・workers.dev、Renovate・Dependabot の公式の文書）。1問目の preview に追加案の全文（scratchpad の foundation-016-proposal.md と同じ内容）を出した。 / 回答時刻: 2026-10-22T10:00:46Z)
+
+#### 裏付け質疑: `qa-ab02`
+
+**問**
+
+D-010：本番 DB のバックアップの置き場をどれにしますか？（選択肢と説明：① Workers Paid で30日『月 $5 で、Time Travel で戻せる期間を30日に延ばす。CPU の上限の安全弁も使える。不利な点：毎月の費用と、プランの変更（本番の設定の変更なのでガードを通す）が要る。』／② Time Travel だけ（無料）『費用は0で、新しい置き場も鍵も増えない。不利な点：戻せるのは7日までで、いまの14日より短くなる。』／③ R2 に暗号化して置く『Time Travel に加えて、暗号化した書き出しを非公開の R2 に置き、30日より前にも戻せるようにする。不利な点：R2 の購入手続き、鍵と API トークンの管理、CI のログに出さない注意が増える。』／④ 決めずに保留する『成果物へ上げる工程を消すことだけを進め、置き場は後で決める。不利な点：G30 と制約が決まらないので、spec の完了条件を満たせない見込み。』）
+
+**答**
+
+Time Travel だけ（無料）
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（4問、各単一選択）。2026-10-22T09:10:19Z に問い、2026-10-22T10:00:46Z に回答（会話記録の時刻）。問の前の本文で、D-010〜012 の比較表（案ごとに費用・目標への適合・安全・運用・利点・不利な点・出典。利点と不利な点を対称に書いた）を示し、比較の後の別の段『AI の推奨（参考）』に、推奨・理由・注意点・信頼度・確かめた日（2026-10-22）を置いた。どの問も、推奨の案を先頭に置かず、推奨の印を付けず、保留の選択肢（利点と不利な点つき）を入れた。出典は 2026-10-22 に公式の文書で確かめた（Cloudflare の D1 Time Travel・Workers の料金・R2 の料金と Authentication・WAF のカスタムルールとレート制限・workers.dev、Renovate・Dependabot の公式の文書）。AI の推奨（参考）は Time Travel だけで、回答は推奨と同じ案。 / 回答時刻: 2026-10-22T10:00:46Z)
+
+#### 裏付け質疑: `qa-ab03`
+
+**問**
+
+D-011：依存とランタイムの修正版を追う仕組みをどれにしますか？（選択肢と説明：① Renovate（GitHub App）『無料で、npm の依存と .nvmrc を1つの仕組みで追える。不利な点：外部の app にリポジトリの書き込み権限を渡す。勧告の検知は Dependabot の警告か試験段階の OSV に頼る。』／② Dependabot ＋ audit の CI『GitHub に組み込まれていて、外部に権限を渡さない。勧告と直接つながる。不利な点：.nvmrc を追えるかは確かめていないので、Node の版には別の手当てが要る見込み。』／③ pnpm audit の CI だけ『いちばん小さく、権限も外に出さない。不利な点：修正の PR はいつも人が作るので、今回の8日のように対応が遅れやすい。Node 本体の勧告は拾えない。』／④ 決めずに保留する『いまは仕組みを入れずに、後で決める。不利な点：G32 の自動で拾うが決まらないので、spec の完了条件を満たせない見込み。』）
+
+**答**
+
+pnpm audit の CI だけ
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（4問、各単一選択）。2026-10-22T09:10:19Z に問い、2026-10-22T10:00:46Z に回答（会話記録の時刻）。問の前の本文で、D-010〜012 の比較表（案ごとに費用・目標への適合・安全・運用・利点・不利な点・出典。利点と不利な点を対称に書いた）を示し、比較の後の別の段『AI の推奨（参考）』に、推奨・理由・注意点・信頼度・確かめた日（2026-10-22）を置いた。どの問も、推奨の案を先頭に置かず、推奨の印を付けず、保留の選択肢（利点と不利な点つき）を入れた。出典は 2026-10-22 に公式の文書で確かめた（Cloudflare の D1 Time Travel・Workers の料金・R2 の料金と Authentication・WAF のカスタムルールとレート制限・workers.dev、Renovate・Dependabot の公式の文書）。AI の推奨（参考）は Dependabot ＋ pnpm audit の CI で、回答は推奨と別の案。 / 回答時刻: 2026-10-22T10:00:46Z)
+
+#### 裏付け質疑: `qa-ac01`
+
+**問**
+
+（作業中にユーザーが自分から送った依頼）システム全体の脆弱性とセキュリティの確認と対策について
+
+**答**
+
+『最新のリモートのmainもしくはdev（devがある場合はdevでok）ブランチをローカルにマージして、本ブランチにマージして、次内容を対応して。』
+『先日、PHPの脆弱性が発見されて大慌てになっています。今回たまたまPHPだったんですが、今現在使用している仕組みの中で脆弱性がないか、セキュリティ的に問題がないかという観点で、このシステム全体を確認してほしいです。
+
+Node.jsでの問題だったりとか、TypeScript、JavaScript等で問題が生じているところがないかというところを隅々まで確認して、このシステム自体が問題がないかというところを検証を行ってください。Web検索を行って、どういう観点でPHPがこの問題になっているのか、問題が上がったのか、そういう本質的なところまでその問題点を分析解析をして、それと同じ観点で、それよりもさらに踏み込んだ観点で、このシステムに問題がないかというところを確認した上で、分析解析を行って、それに対する対策を行ってほしいです。』
+『https://nodejs.org/en/blog/vulnerability/october-2026-security-releases これも参考になると思うので共有しておきます。ただ、これだけではないです。あくまでも参考です。』
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: user-message（2026-10-22T08:07:14Z の依頼と、2026-10-22T08:25:38Z の追加の共有。会話記録の時刻）。1通目は冒頭の1行と『対象の新機能:』の後の2段落を逐語で記録し、その間にある /dev-graph の11 verb の実行の指示（作業の進め方で、仕様の中身ではない）は除いた。2通目は全文を逐語で記録した。answered_at は2通目の時刻（qa-y01 と同じく、記録した逐語がそろった時刻）。 / 回答時刻: 2026-10-22T08:25:38Z)
+
+#### 裏付け質疑: `qa-ac02`
+
+**問**
+
+G32・O32・成功基準の2行目を、D-011（pnpm audit の CI だけ）と合うよう preview の文に直しますか？（選択肢と説明：① この内容で確定する『利点：G32 が D-011 と食い違わなくなり、spec の完了条件の1つを満たせる。不利な点：Node 本体の勧告は通知を人が読んで判断するので、読み落とすと対応が遅れる。』preview『【G32 今】…勧告は自動で拾う（D-011）。next は 16.4.1 以上にする。 【G32 新】…npm の依存の勧告は、CI の pnpm audit（push・PR のときと週1回の定期実行）で自動で拾う（D-011）。Node 本体の勧告は npm に載らないため、運用の担当（開発・運用担当が兼ねる）が Node.js の公式の通知（nodejs-sec の mailing list とブログ）を受け取り、届いたら確かめる。next は 16.4.1 以上にする。  【O32 の測り方 新】pnpm audit --prod --audit-level high が CI で通る（定期実行を含む）。next が 16.4.1 以上。Node 本体の通知を確かめた記録（日付と結果）が docs/security/ の台帳にある。  【成功基準2 今】…新しい勧告は自動で知らされる。 【成功基準2 新】next が 16.4.1 以上で、high 以上の勧告が未対応のまま残っていない。npm の依存の新しい勧告は CI で自動で知らされ、Node 本体の勧告は担当が公式の通知で確かめる。』／② 確定を保留する『利点：担当や確かめ方を直してから決められる。不利な点：G32 と D-011 の食い違いが残るので spec の完了条件を満たせず、spec で止まって decompose 以降は実行しない。』）
+
+**答**
+
+この内容で確定する。【G32 今】…勧告は自動で拾う（D-011）。next は 16.4.1 以上にする。 【G32 新】…npm の依存の勧告は、CI の pnpm audit（push・PR のときと週1回の定期実行）で自動で拾う（D-011）。Node 本体の勧告は npm に載らないため、運用の担当（開発・運用担当が兼ねる）が Node.js の公式の通知（nodejs-sec の mailing list とブログ）を受け取り、届いたら確かめる。next は 16.4.1 以上にする。  【O32 の測り方 新】pnpm audit --prod --audit-level high が CI で通る（定期実行を含む）。next が 16.4.1 以上。Node 本体の通知を確かめた記録（日付と結果）が docs/security/ の台帳にある。  【成功基準2 今】…新しい勧告は自動で知らされる。 【成功基準2 新】next が 16.4.1 以上で、high 以上の勧告が未対応のまま残っていない。npm の依存の新しい勧告は CI で自動で知らされ、Node 本体の勧告は担当が公式の通知で確かめる。
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（4問、各単一選択）。2026-10-22T11:08:31Z に問い、2026-10-22T11:10:02Z に回答（会話記録の時刻）。完成度の評価（eval-log/system-spec-completeness-report.json）の指摘 #2・#3・#4 に応えるための問。どの問も推奨の印を付けず、保留の選択肢（利点と不利な点つき）を入れた。1問目の preview に、G32 の末尾・O32 の測り方・成功基準の2行目の今の文と新しい文を出した。answer は選んだラベルと、承認された preview（改行は空白に替えた）。 / 回答時刻: 2026-10-22T11:10:02Z)
+
+#### 裏付け質疑: `qa-ac05`
+
+**問**
+
+#97 で消した事業所の達成率の表と列を、Time Travel の期限（2026-10-28T07:49Z ごろ）までにどうしますか？（選択肢と説明：① 戻さない（記録だけ残す）『当てた時刻・run の id・戻せる期限を docs/deploy-notes.md と台帳に記録する。利点：本番のデータに触れない。不利な点：期限を過ぎると、消した値は二度と戻せない。』／② 期限の前にもう一度決める『記録は残し、要るかどうかは期限の前に決める。利点：要るかを確かめてから決められる。不利な点：期限までに決めないと『戻さない』と同じになり、それまで記録が保留のまま残る。』／③ Time Travel で戻す『利点：消した表と列の値が戻る。不利な点：DB 全体が 07:49Z の時点に戻るので、その後の書き込み（評価・回答など）がすべて消える。本番の変更なのでガード（preview→CONFIRM）が要る。』）
+
+**答**
+
+戻さない（記録だけ残す）
+
+- (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion（4問、各単一選択）。2026-10-22T11:08:31Z に問い、2026-10-22T11:10:02Z に回答（会話記録の時刻）。完成度の評価（eval-log/system-spec-completeness-report.json）の指摘 #2・#3・#4 に応えるための問。どの問も推奨の印を付けず、保留の選択肢（利点と不利な点つき）を入れた。期限（2026-10-28T07:49Z ごろ）は、Deploy の run 39564492520 で 0039 が当たった時刻（2026-10-21T07:49:53Z〜07:49:55Z）と Time Travel の7日から出した。 / 回答時刻: 2026-10-22T11:10:02Z)
+
 ### モバイル (mobile)
 
-- 資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28
+- 資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28, G30, G31, G32, G33, G38
 
 #### 主たる接地根拠: `qa-y16`
 
@@ -1374,6 +1479,7 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 > 本文中の記述と食い違う場合は、訂正側が正である。
 >
 > - `2026-10-20T21:45:11Z` — 2026-10-20 の利用者の判断（qa-z03 の1問目（逐語『今は文書で確定、P12で反映 (Recommended)』）、qa-z03 の2問目（逐語『自動Deployに合わせて読み替え (Recommended)』））を受けた P12 の反映。項目 (9) は DD-020 の6・7 のとおりに読む。1回目＝P05 の PR のマージ、2回目＝P08 の PR のマージで、P05 をマージする前に、P05 の PR の上で P06 の自動テスト（pnpm test・typecheck・test:coverage・test:e2e）と cf:dry-run・check:bundle-size を通す。1回目の確かめ（本番に KGI の画面と操作が無いこと）は P07 が配った sha の静的検査と台帳で示し、本番の画面は開かない。2回目の前の本番 DB の読み取り（読むだけ）と、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact の id の記録は P13 が受け持ち、docs/deploy-notes.md に書く。テストデータを本番に入れないことは変えない。項目 (7)・(11) の見える範囲の契約テストは、DD-021 の6 と DD-024 の5 のとおり、canViewEvaluationOf を使う側をレポートの画面だけとし、CSV とメモがこの関数を使わないことも同じ契約テスト（src/lib/report-visibility.contract.test.ts）で確かめる。question/answer は当時の逐語として変更しない。corrected_at はこの訂正の記録時刻で、利用者の回答時刻ではない。
+> - `2026-10-22T11:49:02Z` — 2026-10-22 の訂正。項目 (9) への 2026-10-20T21:45:11Z の訂正にある『書き出しの Artifact の id の記録は P13 が受け持つ』は、『当てた時刻・Deploy の run の id・Time Travel で戻せる期限の記録は P13 が受け持つ』と読み替える。Actions の成果物へ本番 D1 を書き出す工程は 2026-10-22 から使わず、戻す元は D1 の Time Travel（無料のプランで7日）だけにする（D-010・qa-ab02・G30）。以後のマイグレーションでは、当てる前に時刻と Time Travel の bookmark を記録する。この読み替えは qa-ac07 の (14)・(15) で利用者が確定した。question/answer は当時の逐語として変更しない。corrected_at はこの訂正の記録時刻で、利用者の回答時刻ではない。
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion。reopen（2026-10-19T20:50:42Z）の後、旧い本文（qa-x16）の末尾に足す項目を preview に全文で示し、利点と不利な点を対称に書いた2択で問うた（推奨の印なし）。回答は『この内容で確定する』（qa-y07）。answer は qa-x16 の全文の末尾に『【2026-10-20 の追加】』として承認された項目を足したもの。A4 の配置の項目は、ユーザーの追加の依頼（qa-y08）と、その問の回答（qa-y09、preview に全文）による。answered_at は回答受領後の記録時の実測 / 回答時刻: 2026-10-19T21:15:28Z)
 
@@ -1484,10 +1590,24 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 - 裏付け質疑 `qa-ab17-foundation-019-approval` — 本章の上掲に既出
 
 - 裏付け質疑 `qa-ab18-foundation-020-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac07` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab01` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab02` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab03` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac01` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac02` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac05` — 本章の上掲に既出
 
 ### タブレット (tablet)
 
-- 資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28
+- 資するゴール: G2, G4, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G17, G18, G19, G20, G21, G22, G23, G24, G25, G27, G28, G30, G31, G32, G33, G38
 
 #### 主たる接地根拠: `qa-y16`
 
@@ -1503,6 +1623,7 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 > 本文中の記述と食い違う場合は、訂正側が正である。
 >
 > - `2026-10-20T21:45:11Z` — 2026-10-20 の利用者の判断（qa-z03 の1問目（逐語『今は文書で確定、P12で反映 (Recommended)』）、qa-z03 の2問目（逐語『自動Deployに合わせて読み替え (Recommended)』））を受けた P12 の反映。項目 (9) は DD-020 の6・7 のとおりに読む。1回目＝P05 の PR のマージ、2回目＝P08 の PR のマージで、P05 をマージする前に、P05 の PR の上で P06 の自動テスト（pnpm test・typecheck・test:coverage・test:e2e）と cf:dry-run・check:bundle-size を通す。1回目の確かめ（本番に KGI の画面と操作が無いこと）は P07 が配った sha の静的検査と台帳で示し、本番の画面は開かない。2回目の前の本番 DB の読み取り（読むだけ）と、Deploy workflow の2回の実行 id・sha・時刻・書き出しの Artifact の id の記録は P13 が受け持ち、docs/deploy-notes.md に書く。テストデータを本番に入れないことは変えない。項目 (7)・(11) の見える範囲の契約テストは、DD-021 の6 と DD-024 の5 のとおり、canViewEvaluationOf を使う側をレポートの画面だけとし、CSV とメモがこの関数を使わないことも同じ契約テスト（src/lib/report-visibility.contract.test.ts）で確かめる。question/answer は当時の逐語として変更しない。corrected_at はこの訂正の記録時刻で、利用者の回答時刻ではない。
+> - `2026-10-22T11:49:02Z` — 2026-10-22 の訂正。項目 (9) への 2026-10-20T21:45:11Z の訂正にある『書き出しの Artifact の id の記録は P13 が受け持つ』は、『当てた時刻・Deploy の run の id・Time Travel で戻せる期限の記録は P13 が受け持つ』と読み替える。Actions の成果物へ本番 D1 を書き出す工程は 2026-10-22 から使わず、戻す元は D1 の Time Travel（無料のプランで7日）だけにする（D-010・qa-ab02・G30）。以後のマイグレーションでは、当てる前に時刻と Time Travel の bookmark を記録する。この読み替えは qa-ac07 の (14)・(15) で利用者が確定した。question/answer は当時の逐語として変更しない。corrected_at はこの訂正の記録時刻で、利用者の回答時刻ではない。
 
 - (根拠の性質: 利用者が代替案を見たうえで明示選択した決定 / 出所: AskUserQuestion。reopen（2026-10-19T20:50:42Z）の後、旧い本文（qa-x16）の末尾に足す項目を preview に全文で示し、利点と不利な点を対称に書いた2択で問うた（推奨の印なし）。回答は『この内容で確定する』（qa-y07）。answer は qa-x16 の全文の末尾に『【2026-10-20 の追加】』として承認された項目を足したもの。A4 の配置の項目は、ユーザーの追加の依頼（qa-y08）と、その問の回答（qa-y09、preview に全文）による。answered_at は回答受領後の記録時の実測 / 回答時刻: 2026-10-19T21:15:28Z)
 
@@ -1613,6 +1734,20 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 - 裏付け質疑 `qa-ab17-foundation-019-approval` — 本章の上掲に既出
 
 - 裏付け質疑 `qa-ab18-foundation-020-approval` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac07` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab01` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab02` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ab03` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac01` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac02` — 本章の上掲に既出
+
+- 裏付け質疑 `qa-ac05` — 本章の上掲に既出
 
 ## To-Be / Delta
 
@@ -1644,6 +1779,11 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 - **G25**: 行動指針の分け方の既定（等級1・2で1つ、等級3・4-1・4-2で1つ、等級5-1・5-2は出さない。呼び名を変えた会社でも、等級の内部の識別子で同じ分け方にする）を、新しい会社と、既定からずれた既存の会社の両方で成り立たせる。画面の初期設定の説明は、いまの割り当てを読んで示す。
 - **G27**: 設定（等級要件・行動指針・KPI・評価セット）とアンケートの設問のどちらを後から変えても、後から変えた方を正として、もう一方と、その写しを持つ全ての画面と機能が追従する。確定した評価と評価レポートは確定した時点のまま残し、確定前の評価だけが最新に追従する。
 - **G28**: 評価・結果を確認する画面で「提出済みの回答から評価を作る」を試せるよう、提出済みの回答を含む受付中の評価期間の仮のデータ（氏名は実在しない「サンプル」など）を、手元の見本と本番の見本の会社の両方に用意する。
+- **G30**: CI とリポジトリの公開物（Actions の成果物・ログ・source map）に、本番のデータと秘密を出さない。出す工程は検査で落とす。バックアップの置き場は D-010 で決める。
+- **G31**: 漏えいの恐れがあるとき、秘密の交換・セッションの失効・パスワードの変更を、利用者の判断で安全に行える手順と仕組みを持つ（用途ごとに鍵を分けることを含む）。
+- **G32**: 依存とランタイムの脆弱性は、公開から期限のうち（critical と high は48時間）に「修正版へ上げる」か「暫定の防御を入れて、当たらない理由を記録する」のどちらかにする。npm の依存の勧告は、CI の pnpm audit（push・PR のときと週1回の定期実行）で自動で拾う（D-011）。Node 本体の勧告は npm に載らないため、運用の担当（開発・運用担当が兼ねる）が Node.js の公式の通知（nodejs-sec の mailing list とブログ）を受け取り、届いたら確かめる。next は 16.4.1 以上にする。
+- **G33**: Node・pnpm・Actions の版を1か所で固定する（.nvmrc を 22.23.4、CI は node-version-file、engines は `>=22.23.4 <23`、engine-strict、Actions はコミット SHA）。deploy の秘密を、依存のコードを実行した後の工程に渡さない。
+- **G38**: 監査の全指摘を台帳（docs/security/）で追う。各行に ID・深刻度・状態（直した＋確かめたテストの名前／暫定の防御／受け入れた＋理由）を持たせる。同じ型の再発を止める静的検査を足す（バックアップを成果物に上げる工程・送り手が偽れるヘッダーでの識別・CSV の出力の素通し・先頭の `/` だけを見る戻り先の検査）。low の指摘も台帳に載せて扱う。
 
 ### 受入条件 (Delta の判定点)
 
@@ -1673,6 +1813,11 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 | O25 | 既定からずれた会社の割り当てをデータの移行で既定へ書き換え、新しい会社は既定で始め、初期設定の説明をいまの割り当てから作る。 | 移行のテスト（等級1だけが2つ目のまとまりへ移った会社が既定へ戻る・既定の会社は変わらない・呼び名を変えた会社も識別子で戻る・既定のまとまりが無い会社は書き換えずに件数を報告する・観点の中身は変わらない）。新しい会社が既定の割り当てで始まる結合テスト。初期設定の説明がいまの割り当てと一致し、既定と違うときに違いを示す画面のテスト。 |
 | O27 | アンケートから設定へ、設定からアンケートと評価へ、の両方向の反映を保存の処理に組み込み、写しを持つ全ての場所に追従の規則を決める。 | 下書きのアンケートで設定とつながった設問を足す・外す・文を直すと、元の設定が同じ保存で変わること、評価セットの決まりや KPI の計算に要る設問に合わなくなる保存は断られ、合わない決まりと直す画面が示されることの、サーバー処理のテスト。設定を変えると、回答0件の下書きが作り直され（設定とつながらない設問は残る）、回答のある公開中のアンケートには次の版の下書きが1つだけでき、締め切ったアンケート・確定した評価・レポートは変わらず、確定前の評価は集計し直されることの結合テスト。写しを持つ場所の一覧（文書）とコードが一致することの契約テスト。保存の直後に、関係する画面と他のタブが新しい内容で出る E2E（製品仕様 §27）。 |
 | O28 | 手元の seed と本番の見本の会社に、提出済み・下書き・未回答が混ざった受付中の評価期間を足す。 | 見本の生成のテスト（受付中の期が1つあり、提出済み・下書き・未回答が混ざる、評価はまだ作られていない、氏名と会社が見本の印を持つ、他社の行に触れない）。手元の見本で「提出済みの回答から評価を作る」を押して、評価の一覧と詳細まで進める E2E。製品仕様 §14 の「受付中の期は作らない」を改める DD。 |
+| O30 | 公開物に本番のデータと秘密を出す工程を0件にする | ワークフローの静的検査が CI で通る（DB の書き出しを成果物へ上げる工程が無い）。リポジトリの d1-backup の成果物が0件であることを読み取りで確かめる |
+| O31 | 秘密の交換の手順を、ローカルで通して確かめる | 手順書に沿って、ローカルで秘密を替えると古いセッションが使えなくなり、保存した控えが新しい鍵で読めることを確かめる。用途ごとの鍵の分離を単体テストで確かめる |
+| O32 | high 以上の未対応の勧告を0件にする | pnpm audit --prod --audit-level high が CI で通る（定期実行を含む）。next が 16.4.1 以上。Node 本体の通知を確かめた記録（日付と結果）が docs/security/ の台帳にある。 |
+| O33 | 版の指定を1か所にまとめる | .nvmrc・engines・CI の node-version-file が一致することを契約テストで確かめる。Actions の uses が全てコミット SHA であることを静的検査で確かめる。deploy の秘密を渡す工程が、依存のコードを実行する工程と分かれていることを確かめる |
+| O38 | 台帳の全行に状態を持たせる | 台帳の全行が状態と根拠を持つことの契約テスト（欠落0件）。4つの静的検査が CI で通る |
 
 ### 本章がかなえる具体的やりたいこと (U9)
 
@@ -1703,6 +1848,11 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 - **I29**: 設定を保存すると、同じ設定を使う、回答0件の下書きのアンケートを自動で作り直し（設定とつながらない設問は残す）、回答のある公開中のアンケートには次の版の下書きを自動で作る（すでに次の版の下書きがあれば、それを作り直す。公開は人が行う）。締め切ったアンケート・確定した評価・評価レポートは変えず、確定前の評価は自動で集計し直す。どのアンケートと評価が変わったかを、保存の結果の文で示す。
 - **I30**: 設定の写しを持つ全ての場所（アンケートの設問、回答の見出し、評価の項目・行動指針・等級要件、ズレの表、評価レポート、CSV など）を一覧にして文書に置き、それぞれを「参照」「追従」「確定した時点の写し」のどれかに決め、契約テストで抜けを落とす。保存の後は、関係する全ての画面を取り直し、他のタブにも知らせる（製品仕様 §27）。いまずれている下書きは、更新時刻の新しい方へそろえる。
 - **I31**: scripts/sample-data.mjs の見本の会社に受付中の評価期間を1つ足し、提出済み・下書き・未回答を混ぜる（作り方は buildSeed の使い回しのまま、INSERT だけ・見本の会社に紐づく行だけ）。手元の seed（scripts/seed-data.mjs）の受付中の期も、評価を作る画面で試せる人数の提出済みを持たせる。本番への投入は既存の db:sample:remote の手順で行い、実行の前に利用者の確認を取る。製品仕様 §14 の「受付中の期は作らない」を改め、§14 が挙げた影響（未回答の一覧に見本の人が並ぶ）を記す。
+- **I34**: Deploy と Migrate のワークフローから、DB の書き出しを成果物へ上げる工程を消し、コメントの「保管14日」を直す。置き場は D-010 に従う。
+- **I35**: 秘密の交換・セッションの失効・パスワードの変更の手順書を書き、用途ごとに鍵を分ける（同じ秘密から用途別の鍵を導く）。
+- **I36**: D-011 で選んだ仕組みと、`pnpm audit` の CI を入れる。next を 16.4.1 以上へ上げる。
+- **I37**: .nvmrc・engines・engine-strict・node-version-file を入れ、Actions を SHA で固定する。deploy の秘密を渡す工程を分ける。
+- **I41**: docs/security/ に台帳を作り、監査の全指摘を状態つきで載せる。4つの静的検査を足す。
 
 ### 本章に効く確定意思決定
 
@@ -1727,6 +1877,12 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 - **D-009**: 複数の会社に所属している人が、選んでいる会社が無いとき（cookie が無い・所属していない会社を指している）に、どの会社を開くか。
   - 採択: 有効な所属のうち会社名の順で最初の会社を開く（同名は会社 id の順） (`opt-company-name-order`)
   - 目的適合: G10 の『会社ごとの役割・等級・上司で使える』を満たし、切り替えの一覧と同じ順なので、どの会社が開くかを利用者が予想できる。
+- **D-010**: 本番 D1 のバックアップを、公開リポジトリの Actions の成果物に置くのをやめた後、どこに置くか（どこから戻すか）。
+  - 採択: Time Travel だけを使う（Free のまま、7日まで戻せる） (`opt-time-travel-only`)
+  - 目的適合: G30 を、新しい置き場も鍵も増やさずに満たす。
+- **D-011**: 依存とランタイムの脆弱性の勧告と修正版を、どの仕組みで追うか。
+  - 採択: pnpm audit の CI だけ（毎日と PR で回し、修正は人が行う） (`opt-pnpm-audit-ci-only`)
+  - 目的適合: G32 の『勧告は自動で拾う』を npm の依存で満たす。修正版への更新と Node の版は人が行う。
 
 ## 適用された設計知識
 
@@ -1735,8 +1891,9 @@ completeness evaluator の goal-seek 4周目の FAIL（foundation_trace：範囲
 ### 本章での適用
 
 Clean Code の『一つの規則は一か所に書き、検査で守る』を、鮮度と原子性の契約に当てはめた。書き込みの順序を共通の入口に集め、入口を通らない書き込み・batch の外で 2 つ以上の表を書く関数・送り元の検査の欠けを、pnpm test の 3 つの契約試験で 0 件に保つ（qa-r-ops-3 (1)）。取り消しややり直しまで失敗したときは compensation_failed・rollforward_failed を構造化したログに残し、それを手掛かりに本番 DB を手で書き換えずに直す手順を文書にする（同 (3)）。規則を人の記憶ではなく、検査と記録に持たせる（G4・G5）。 （2026-10-13 追記：G6〜G15）Clean Code の『一つの規則は一か所に書き、検査で守る』を、等級の呼び名・権限・所属・提出状況・設定不足・並べ替えに広げた。表示の文字列に英語やカタカナの区分名が無いこと、ルート台帳（route-ledger.json）の権限の定義と各判定の一致、一般の社員の応答に他人の等級と点数が無いこと、所属していない会社のデータが読めないことなどを pnpm test の検査に足す（qa-v31 (3)）。画面名の変更は台帳・定数・文書・テストのすべてで同じ名前にそろえ、check:docs で漏れを落とす（同 (1)）。本番の一律の書き換えは、前後を読み取りで数えて記録し、外部変更ガードを通す（同 (4)）。 （2026-10-14 追記：G16）Clean Code の『一つの規則は一か所に書き、検査で守る』を比べる警告に当てはめた。『ズレの警告は必ず2つのページを持つ』『食い違・ズレを含む警告は ComparisonGap からしか作らない』『リンク先は台帳にあり、見る人の役割で開ける』を pnpm test の検査にし、規則を人の記憶に頼らない（qa-w10 (5)）。新しい版がその等級の版だけを増やすこと、他社の等級を拒否することも検査に足し、domain のカバレッジ 100% を保つ。文書（spec.md §22 と system-spec）と受領書を同じ変更でそろえる（同 (5)）。 （2026-10-20 追記、2026-10-21 に訂正（DD-020〜DD-024）を当てて書き直し：G17〜G24）一つの規則は一か所に書き、検査で守ることを、今回足した規則に当てはめた。最終の可否（finalDecision）と評価セットの決め方（resolveSchemeForCycle）は、使う側の全てがその関数だけを使うことを契約テスト（final-decision.contract.test.ts・scheme-resolution.contract.test.ts）で守る（qa-y16 (7)(11)、G23・G24）。アンケートの状態の規則（formTransitions）は、状態・締切・回答の有無の組の単体テストと、会社の条件の結合テスト（forms-transitions.integration.test.ts）で守る（同 (7)、G21）。見える範囲は、canViewEvaluationOf を使うのがレポートの画面だけで、CSV とメモはこの関数を使わない（それぞれ canReviewEmployeeEvaluation と readableNoteVisibilities）ことを、同じ契約テスト（src/lib/report-visibility.contract.test.ts）で確かめる（qa-y16 の訂正、DD-021 の6、DD-024 の5、G19）。finalDecision は5通りの単体テストで domain のカバレッジ 100% にする。KGI は消した後に参照が残らないことを静的検査で0件に保つ（同 (6)、G17）。レポートは、同じ入力で同じ出力・軸の数・重ならない社員が3人未満なら同じ等級の平均を出さない・本人向けに点数の鍵が無いことを単体テストで、A4 の2枚組と図や表が途中で切れないことを E2E で確かめる（同 (7)(10)(13)、G18）。ズレの3種類と行ごとのリンクを契約テストで確かめる（同 (7)、G22）。テストデータは架空の名前と値で、2回流しても同じ結果になり、本番には入れない（同 (9)、G20）。依存関係の図を docs/product に残し、契約テストの一覧と対応させる（同 (8)(12)）。 （2026-10-22 追記：G25〜G29）写しを持つ場所の3分類（参照・追従・確定した時点の写し）は一覧の文書に1か所で書き、契約テストがコードとの抜けを0件に保つ（qa-ab04、I30、G27）。書き戻しの決まりの判定は1つの関数に置き、画面の押せない理由とサーバーの保存が同じ関数を使う（I28）。既定の割り当てを持つ3か所（data/grades.json・drizzle/seed.sql・DEFAULT_BAND_SETS）が同じ値であることをテストで確かめる（qa-ab02、I26、G25）。DD-010 の『移行で書き換えない』と製品仕様 §14 の『受付中の期は作らない』は、改める DD を書いてから実装する（I26・I31）。DD-015 の『新しい設問を KPI 項目に紐づけない』と、DD-016 が却下した『聞き方の保存で下書きを書き換える』も、改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す（qa-ab16、I28・I29）。共通部品の色使いは既存のテーマの契約テストを書き換えずに通し、グラデーションのコントラストと focus-visible の検査を新しいテストに1か所で書く（O29、G29）。見本の生成は手元と本番の見本の会社で同じ作り方（buildSeed）を使い、本番への投入は利用者の確認の後に db:sample:remote で行う（qa-ab12、I31、G28）。
+（2026-10-22 追記：G30〜G33・G38）ops-runbook の確定内容（qa-ac07 の (14)〜(21)）に、運用の手順書の型を次のように当てる。勧告の受け取り口を2つに分け、npm の依存は CI の pnpm audit（push・PR と週1回）で、Node 本体は担当が nodejs-sec の通知とブログで受け、日付と結果を台帳に残す（G32・D-011・qa-ac02）。漏えいの恐れの後の手順（秘密の交換・セッションの失効・パスワードの変更）は docs/security/ に置いてローカルで通し、本番で行うかは利用者がガードを通して決める（G31）。マイグレーションの前には当てる時刻と Time Travel の bookmark を記録し、#97 の 0039 は戻せる期限と戻さない判断を docs/deploy-notes.md に残す（G30・D-010・qa-ac05）。版の一致・uses の SHA・秘密を渡す工程の分離は契約テストで確かめ（G33）、監査の全指摘は台帳で状態つきで追い、4つの静的検査で同じ型の再発を CI に落とす（G38）。
 
-- (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない) / 記録時刻: 2026-10-22T03:45:00Z)
+- (根拠の性質: アシスタントの推定 (利用者確認も検証可能な出典も経ていない) / 記録時刻: 2026-10-22T11:49:02Z)
 
 ### Clean Code — deep knowledge card
 
@@ -1786,3 +1943,12 @@ codeを、次の変更者が意図・制約・failureを短時間で理解し、
 | cloudflare-workers-logs | 2026-10-12 | Cloudflare (developers.cloudflare.com) | https://developers.cloudflare.com/workers/observability/logs/workers-logs/ | 2026-10-19T13:57:49Z | 2026-10-19T13:57:49Z |
 | drizzle-kit-migrations | drizzle-kit 0.31.11 | Drizzle Team (orm.drizzle.team) | https://orm.drizzle.team/docs/migrations | 2026-10-19T14:06:45Z | 2026-10-19T14:06:45Z |
 | playwright-page-pdf | Playwright 1.64.1 | Microsoft (playwright.dev) | https://playwright.dev/docs/api/class-page | 2026-10-19T13:54:07Z | 2026-10-19T14:08:15Z |
+| nodejs-security-reporting | 2026-02-25 | OpenJS Foundation (Node.js) (nodejs.org) | https://nodejs.org/en/about/security-reporting | 2026-10-22T11:52:37Z | 2026-10-22T12:28:26Z |
+| actions-setup-node | actions/setup-node v7.1.0 | GitHub (github.com) | https://github.com/actions/setup-node/blob/main/docs/advanced-usage.md | 2026-10-22T10:11:20Z | 2026-10-22T10:12:35Z |
+| pnpm-audit | pnpm 12.15.0 | pnpm (pnpm.io) | https://pnpm.io/cli/audit | 2026-10-22T12:35:20Z | 2026-10-22T12:35:20Z |
+| github-actions-download-artifacts | 2026-03-13 | GitHub (docs.github.com) | https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts | 2026-10-22T11:54:27Z | 2026-10-22T12:28:26Z |
+| pnpm-settings-cli | pnpm 12.15.0 | pnpm (pnpm.io) | https://pnpm.io/settings/cli | 2026-10-22T12:33:37Z | 2026-10-22T12:33:37Z |
+| renovate-installing-onboarding | Mend Renovate 44.176.3 | Mend (Renovate) (docs.renovatebot.com) | https://docs.renovatebot.com/getting-started/installing-onboarding/ | 2026-10-22T10:12:06Z | 2026-10-22T10:12:06Z |
+| renovate-configuration-options | Mend Renovate 44.176.3 | Mend (Renovate) (docs.renovatebot.com) | https://docs.renovatebot.com/configuration-options/ | 2026-10-22T10:12:06Z | 2026-10-22T10:12:06Z |
+| renovate-nvm-manager | Mend Renovate 44.176.3 | Mend (Renovate) (docs.renovatebot.com) | https://docs.renovatebot.com/modules/manager/nvm/ | 2026-10-22T10:12:06Z | 2026-10-22T10:12:06Z |
+| dependabot-options-reference | 2026-01-13 | GitHub (docs.github.com) | https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference | 2026-10-22T11:54:55Z | 2026-10-22T12:28:26Z |

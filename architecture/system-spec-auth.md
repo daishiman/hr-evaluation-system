@@ -2,7 +2,7 @@
 graph_node_id: "arch-system-spec-auth"
 artifact_kind: "architecture"
 artifact_subtypes: ["security"]
-title: "認証と認可：セッションの鮮度、会社への所属、権限の1つの定義、評価の見える範囲、設定とアンケートの書き戻しの権限"
+title: "認証と認可：セッションの鮮度、会社への所属、権限の1つの定義、評価の見える範囲、認証の口の許可制と鍵の分離"
 project_id: "hr-evaluation-system"
 domain: "auth"
 status: "done"
@@ -11,16 +11,16 @@ start_date: null
 target_date: null
 iteration: null
 owners: []
-tags: ["system-spec", "改善要望対応"]
+tags: ["system-spec", "改善要望対応", "脆弱性対策"]
 file_path: "architecture/system-spec-auth.md"
 template_id: "architecture"
 template_version: "1.0.0"
 confirmation_status: "confirmed"
-evaluation_status: "pass"
-confirmation_evidence: {"evaluated_digest": "0ce9fc27c0724631532bc74c2395236ea43ca9f564cb7bdd025b93cd366e3968", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-2026-10-22.json"}
-source_lineage: {"imported_at": "2026-10-22T07:58:56Z", "origin_kind": "system-spec-harness", "source_digest": "0ce9fc27c0724631532bc74c2395236ea43ca9f564cb7bdd025b93cd366e3968", "source_path": "system-spec/auth.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
-created_at: "2026-10-22T08:03:51.121694Z"
-updated_at: "2026-10-22T08:03:51.121694Z"
+evaluation_status: "stale"
+confirmation_evidence: {"evaluated_digest": "0889635fb3aff96f90a2f06bf6a4209055331eda4a4ca3d1c380830b1db2d6c9", "evaluator": "system-spec-harness:assign-system-spec-completeness-evaluator", "evidence_ref": "eval-log/system-spec-completeness-report.json"}
+source_lineage: {"imported_at": "2026-10-22T13:49:14Z", "origin_kind": "system-spec-harness", "source_digest": "0889635fb3aff96f90a2f06bf6a4209055331eda4a4ca3d1c380830b1db2d6c9", "source_path": "system-spec/auth.md", "source_plugin": "system-spec-harness", "source_version": "0.1.22"}
+created_at: "2026-10-22T13:57:45.864509Z"
+updated_at: "2026-10-26T20:54:12.328854Z"
 depends_on: []
 related_nodes: []
 resource_scope: []
@@ -44,7 +44,7 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-22T08:03:51.121694Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-26T20:54:12.328854Z", "missing_sections": [], "status": "complete"}
 ---
 
 # Architecture overview
@@ -61,6 +61,9 @@ better-auth のメールアドレスとパスワードによるログイン（�
 2026-10-21〜22 の追加: 本章が資するゴールに G27（設定とアンケートの設問のどちらを後から変えても、後から変えた方を正として追従し、確定した評価と評価レポートは確定した時点のまま残す）を足す。下書きのアンケートの保存から設定へ書き戻す処理は新しい入口にせず、設定の保存と同じ runAction を通して、会社の管理者以上・会社の絞り込み・同時に保存したときの 409・制度の変更の記録（constitution_events）を同じ順で当てる。設定の保存が自動で作り直す下書きと次の版の下書きは、保存した人の会社の中だけに作り、公開は人が行う。KPI・評価セットの画面を分けても（G26）分けた画面の入口ごとに今の役割の判定を当て、色と手応えの変更（G29）も今の認可の判定をそのまま使う。見本の会社への受付中の期の追加（G28）は既存の db:sample:remote の手順だけで行い、新しい役割や入口を足さない。要件の土台へのこれらの追記は appr-foundation-016〜020 で承認した。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab08-published-form-follow、qa-ab11-survey-writeback-rule-conflict、qa-ab12-showcase-data-location、G26〜G29、appr-foundation-016〜020（system-spec/auth.md）
 
+2026-10-22 の追加: 2026-10-22 の依頼（PHP と Node.js の脆弱性を受けた全体の確認）を受け、認証の入口を許可制にする。better-auth の口は、使っているものだけをコードとログで確かめてから許可リストに入れ、ほかは 404 にする。氏名とパスワードの変更は src/actions/account.ts の口だけで受け、会社の設定・長さの上限・控えの削除・変更が必要の印の解除を必ず通す。回数制限は Cloudflare が付ける送り手の IP で人を見分け、better-auth と自前の両方に当てる。パスワードの最小の長さ（10文字）は1つの関数に置き、作成・初期・本人の変更・better-auth の設定で同じにする。認証の秘密は別の用途に流用せず、用途ごとに鍵を導く（G31・G34）。
+根拠: qa-ac09 (9)〜(12)、G31・G34（system-spec/auth.md、system-spec/00-requirements-definition.md）
+
 ## Context and drivers
 
 書き込み結果がすぐ見えない問題を Server Functions への移行で解く際、Server Function は外から直接呼べる公開の入口になるため、入口での検査と認可の鮮度を保つ必要がある。2026-10-12 の依頼で、複数の会社に所属するマネージャーを2社目に登録できないこと、等級名を編集できる人を限る必要、役割ごとにできることを確かめる手段が無いことが示された。優先する品質は、権限の取り消しがすぐ効くこと（G2）、共通の入口の適用漏れが検査で落ちること（G4）、等級名の変更権限の制限（G7）、表示と判定の一致（G8）、所属による会社の境界（G10）である。制約として better-auth と構成を変えず、役割の種類（SUPER_ADMIN・COMPANY_ADMIN・MANAGER・EMPLOYEE）を増やさない。
@@ -74,6 +77,10 @@ better-auth のメールアドレスとパスワードによるログイン（�
 
 2026-10-21〜22 の追加: 2026-10-22 の依頼とコード調査の結果を要件の土台（U1・U2）に足し、G25〜G29 を置いた。調べた時点では、評価セットの保存（saveScheme）が等級区分ごとの項目数・固定枠・20点枠をサーバーで検査し、下書きにつながった設問は新しく足せなかった（checkQuestionLinks）。アンケートから設定への反映（I28）と、設定の保存での下書きの作り直し（I29）は、DD-015（新しい設問を KPI 項目に紐づけない）と、DD-016 が却下した『聞き方の保存で下書きを書き換える』を改める。
 根拠: qa-ab11-survey-writeback-rule-conflict、qa-ab13-foundation-016-approval、qa-ab16-foundation-018-approval、G25〜G29（system-spec/auth.md）
+
+2026-10-19〜20 の追加: 2026-10-19 の依頼（直属の部下の結果を見られる人の設定・個人別の評価レポート・事業所の達成率の削除）と 2026-10-20 の依頼（昇給と昇格に上司の判断を含める）で、評価の中身を見られる人の判定が画面ごとに分かれていることと、判断を記録する人を決める必要が示された。優先する品質は、見てよい人にだけ見せること（G19）と、判断と理由を本人・直属の上司・管理者に同じ形で示すこと（G24）である。
+2026-10-22 の追加: 依頼（qa-ac01）は、PHP の脆弱性と Node.js の 2026 年10月のセキュリティリリースを受け、同じ観点とそれより踏み込んだ観点でシステム全体を確かめて対策することである。上位概念（qa-ab01）は問題の本質を、(A) アプリより前の層が攻撃者の入力を処理する、(B) リクエストをまたいで状態が残る、(C) 資源の枯渇で処理が打ち切られ不整合が残る、(D) 既定でオンの機能が攻撃面を広げる、(E) 自分が書いたかを確かめずにデシリアライズする、の5点にまとめる。認証では、(A)(D) に当たる認証の入口の広さと、(B) に当たる回数制限の見分け方が対象になる。優先する品質は、漏えいの恐れがあるときに利用者の判断で安全に秘密を替えられること（G31）と、認証の入口を許可制にすること（G34）である。
+根拠: qa-ac01、qa-ab01、qa-ac09（system-spec/auth.md、system-spec/00-requirements-definition.md）
 
 ## Goals and non-goals
 
@@ -89,6 +96,9 @@ Goals: 認可に失敗した要求では何も書かず、作り直さず、通�
 2026-10-21〜22 の追加: Goals: 設定（等級要件・行動指針・KPI・評価セット）とアンケートの設問のどちらを後から変えても、後から変えた方を正として、もう一方と写しを持つ全ての画面と機能が追従する（G27）。書き戻しで変わる設定は、それぞれの設定の画面を保存できる人と同じ判定で絞る。Non-goals: 確定した評価と評価レポートは確定した時点のまま残し、追従させない。アンケートの下書きを直せることだけで、設定を変えられるようにはしない。自動で作った下書きの公開は人が行い、見本の会社のために新しい役割や入口は足さない。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab11-survey-writeback-rule-conflict、qa-ab12-showcase-data-location、G27、G28（system-spec/auth.md）
 
+2026-10-22 の追加: Goals: 使っていない認証の口と偽れる識別を0件にする（O34）。どの口でもパスワードを10文字以上にする。秘密を替えると古いセッションが使えなくなり、控えが新しい鍵で読めることをローカルで確かめる（O31）。Non-goals: 新しい役割・見える範囲は作らない。本番での秘密の交換・セッションの失効・パスワードの強制変更は利用者が決め、外部変更ガードを通して行う（この章は手順と仕組みまでを扱う）。
+根拠: qa-ac09 (11)〜(13)、G31・G34、O31・O34（system-spec/auth.md、system-spec/00-requirements-definition.md）
+
 ## System context and boundaries
 
 利用者は4つの役割のブラウザ（PC・スマホ・タブレット）で、外部の主体は Bearer 鍵で API を呼ぶエージェントと端末の承認である。信頼の境界は、Server Functions の入口（runAction・runRead）、外部向けの Route Handler（Bearer 鍵）、D1 に持つ better-auth のセッションで、一つの入口に二つの認可方式を混ぜない。データの境界は選んでいる会社の所属である。選んでいる会社の cookie は利用者が書き換えられる入力として扱い、そのまま信じず、リクエストのたびにサーバーで所属を確かめて決める（D-004）。会社の切り替えは、送り元のオリジンを確かめる Server Action で受ける。他タブへの通知は同じブラウザの同じオリジンにしか届かず、受け取ったタブはその時点のセッションで認可を受け直すので、通知が認可の代わりになる経路は無い。
@@ -102,6 +112,9 @@ Goals: 認可に失敗した要求では何も書かず、作り直さず、通�
 
 2026-10-21〜22 の追加: 下書きのアンケートの保存から設定（KPI の設問の文・評価セットの項目・行動指針の観点・等級要件）へ書き戻す経路を足すが、信頼の境界は増やさず、設定の保存と同じ runAction の入口を通す。この処理も、その要求のセッションから作った見る人で会社の管理者以上を確かめてから本体へ進む。設定の保存が自動で作る下書きは、保存した人の会社のアンケートだけを対象にする。見本の会社への受付中の期の追加は、既存の db:sample:remote の手順に利用者の確認を挟んで行い、新しい入口を足さない。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab12-showcase-data-location、G27、G28（system-spec/auth.md）
+
+2026-10-22 の追加: 認証の Route Handler（better-auth）は、許可リストに入れた口だけを通し、ほかは 404 にする。氏名とパスワードの変更は better-auth の口ではなく src/actions/account.ts の Server Action だけで受け、アプリの決まり（会社の設定・長さの上限・控えの削除・変更が必要の印の解除）を通す。
+根拠: qa-ac09 (9)、G34（system-spec/auth.md）
 
 ## Container and component view
 
@@ -117,6 +130,10 @@ better-auth（メールとパスワード、セッションの有効期間7日�
 2026-10-21〜22 の追加: アンケートの保存からの書き戻しは、設定の保存と同じ runAction を通り、会社の管理者以上・会社の絞り込み・同時に保存したときの 409・制度の変更の記録（constitution_events）を同じ順で当てる。KPI・評価セットの作業を別の画面に分けたときは、どの画面の入口にも今の役割の判定を当て、そのページを route-ledger.json に足す（I27）。公開の前の検査（staleAskingItems）は残す。設定の写しを持つ全ての場所（アンケートの設問、回答の見出し、評価の項目・行動指針・等級要件、ズレの表、評価レポート、CSV など）を一覧にして文書に置き、それぞれを『参照』『追従』『確定した時点の写し』のどれかに決める（I30）。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab11-survey-writeback-rule-conflict、qa-ab16-foundation-018-approval、G26、G27（system-spec/auth.md）
 
+2026-10-19〜20 の追加: canViewEvaluationOf（見る人・対象の人・会社）を session.ts の判定の並びに置き、確定と判断の記録を許す canActOnEmployeeEvaluation（全体管理者・会社の管理者・直属の上司のマネージャー。自分自身の評価は不可）と並べる。route-ledger.json にレポートのページと操作を足し、事業所の達成率のページと操作を消し、評価の確定の操作の説明に『昇給と昇格の判断を記録する』を足す。権限一覧はこの台帳から描くので、表示も同時に変わる。
+2026-10-22 の追加: パスワードの最小の長さを1つの関数に置き、利用者の作成・初期パスワード・本人の変更・better-auth の最小の長さの設定がこれを読む。認証の秘密から用途ごとの鍵を導く関数を置き、セッションと控えの暗号化など、用途ごとに別の鍵を使う。
+根拠: qa-ac09 (11)(12)、G31（system-spec/auth.md）
+
 ## Cross-cutting contracts
 
 識別とアクセス: 入口は送り元の検査（Next.js の Origin と Host の一致と assertSameOrigin の二重）、セッション、役割の順に確かめる。他社や担当外の対象は区別せず 404、等級名の変更の権限違反は 403 にする。エラーと回復性: 認可の失敗では書き込み・作り直し・通知のどれも動かず、会社の利用停止や利用者の無効化は次の要求で拒否される。可観測性と監査: 等級名の変更・所属の追加と削除・本番の一律の書き換えを監査に残し、控えを開いた記録は値を含めず Workers Logs に残す。設定と秘密: セッションは要求ごとに D1 から読み、控えの鍵は Workers の secret（CREDENTIAL_ENC_KEY）だけに置く。選んでいる会社の cookie（hr_company）は httpOnly・Secure・SameSite=Lax で持つ。互換性: 所属が1つの人は今と同じ動きにし、システム全体管理者の全社からの会社の切り替えは残す。
@@ -131,6 +148,9 @@ better-auth（メールとパスワード、セッションの有効期間7日�
 2026-10-21〜22 の追加: 識別とアクセス: 書き戻しで変わる設定は、それぞれの設定の画面を保存できる人と同じ判定で絞る。エラーと回復性: 評価セットの決まり（等級区分ごとの項目数・固定枠・20点枠）や KPI の計算に要る設問（分子・分母など）に合わなくなる保存は、アンケートも設定も変えずに断り、合わない決まりと直す画面を示す。断った保存は理由を返しても、他社の設定の名前や有無を返さない。同時に保存したときは 409 にする。可観測性と監査: 反映も制度の変更の記録を通し、どのアンケートと評価が変わったかを保存の結果の文で示し、保存の後は関係する全ての画面を取り直して他のタブにも知らせる（製品仕様 §27）。
 根拠: qa-ab11-survey-writeback-rule-conflict、G27（system-spec/auth.md）
 
+2026-10-22 の追加: 識別とアクセス: 回数制限は Cloudflare が付ける送り手の IP で人を見分け、better-auth の回数制限と自前の回数制限の両方に同じ見分け方を当てる。パスワードの長さの決まりは、どの口でも同じ関数で確かめる。
+根拠: qa-ac09 (10)(11)、G34（system-spec/auth.md）
+
 ## Subtype architecture
 
 合成対象の subtype と該当テンプレート:
@@ -140,6 +160,9 @@ better-auth（メールとパスワード、セッションの有効期間7日�
 - Infrastructure: N/A: subtype 非選択
 - Data: N/A: subtype 非選択
 - Security: 合成済み (`architecture-security.md`)
+
+2026-10-22 の追加: Security に、認証の入口の許可制・回数制限の見分け方・パスワードの決まり・用途ごとの鍵（G31・G34）を足す。台帳と再発を止める静的検査は system-spec/maintenance-ops.md、入口の量の上限は system-spec/backend.md の担当。
+根拠: qa-ac09、qa-ac07、qa-ac10（system-spec/auth.md）
 
 ### Security architecture
 
@@ -157,6 +180,9 @@ better-auth（メールとパスワード、セッションの有効期間7日�
 2026-10-21〜22 の追加: 守る資産に、アンケートの保存から書き戻される設定（KPI の設問の文・評価セットの項目・行動指針の観点・等級要件）を足す。悪用の例に、アンケートの下書きを直せる人が書き戻しで設定を変える、断られた保存の理由から他社の設定の名前や有無を知る、設定の保存で他社のアンケートの下書きを作り直させる、を足す。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab11-survey-writeback-rule-conflict、G27（system-spec/auth.md）
 
+2026-10-22 の追加: 守る資産に、認証の秘密と、そこから導く用途ごとの鍵を足す。脅威の観点は本質の (A)〜(E) で、使っていない認証の口・回数制限の見分け方・口ごとに違うパスワードの決まりを対象にする（細部は台帳にも書かない）。
+根拠: qa-ac09 (9)〜(12)、G31・G34（system-spec/auth.md、system-spec/security.md）
+
 #### Identity and authorization
 
 認証は better-auth のメールアドレスとパスワード（本人登録なし、セッション7日・更新1日、cookieCache なし）である。アカウントは1つで所属は複数持てるが、ログインとセッションはアカウントの単位のまま1つにし、会社ごとに資格情報を分けない。認可は入口で送り元・セッション・役割の順に確かめ、認可に失敗したら何もしない既定拒否で、権限の無い画面は 404 かログイン画面になる。テナントの境界は選んでいる会社の所属である。getViewer がリクエストのたびに cookie が指す会社への所属を確かめ、所属が無ければ有効な所属のうち会社名の順（同名は会社 id の順。D-009）で最初の会社を使う。会社の切り替えはセッションを作り直さず cookie だけを変え、所属していない会社への切り替えは拒否する（システム全体管理者は全社から選べる）。全ての読み書きをその所属で絞る（D-004）。等級名の変更はシステム全体管理者と自社の会社の管理者だけで、他社の等級を指す要求は拒否する。開けるページ（accessClass）とできる操作・役割ごとの可否・説明は route-ledger.json の各ページから引き、サイドバー・ページの入口・サーバー処理の役割の指定・session.ts の can〜 の判定・権限一覧がこの台帳だけを読む（D-007）。権限の定義を画面から編集できるようにはしない。
@@ -171,6 +197,9 @@ better-auth（メールとパスワード、セッションの有効期間7日�
 2026-10-21〜22 の追加: アンケートの保存から設定へ書き戻す処理は、その要求のセッションから作った見る人で会社の管理者以上を確かめてから本体へ進み、書き戻しで変わる設定はそれぞれの設定の画面を保存できる人と同じ判定で絞る。アンケートの下書きを直せることだけで、設定を変えられるようにはしない。KPI・評価セットの作業を別の画面に分けても、どの画面の入口にも今の役割の判定を当て、route-ledger.json に足す。見本の会社への投入にも新しい役割を作らない。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab11-survey-writeback-rule-conflict、qa-ab12-showcase-data-location、G26、G27、G28（system-spec/auth.md）
 
+2026-10-22 の追加: better-auth の口は許可リストに入れたものだけを通し、ほかは 404 にする。許可リストには、使っている口をコードとログで確かめてから入れる。氏名とパスワードの変更は src/actions/account.ts の口だけで受ける。回数制限は Cloudflare が付ける送り手の IP で人を見分け、better-auth と自前の両方に当てる。パスワードは、作成・初期・本人の変更・better-auth の設定のどれでも10文字以上にする。
+根拠: qa-ac09 (9)〜(11)、G34（system-spec/auth.md）
+
 #### Data and secret protection
 
 ログイン後の HTML と API の応答は private, no-store で共有のキャッシュに載せず、他タブへの通知と鮮度の手がかり（生成時刻）には個人情報や内部の ID を載せない。初期パスワードの控えは AES-GCM で暗号化して利用者 ID に結び付け、鍵は Workers の secret（CREDENTIAL_ENC_KEY）だけに置き、開けるのはシステム全体管理者と同じ会社の管理者で、14日を過ぎたら開けず次の発行で消す。既存アカウントへ新しい会社所属を足すのは全体管理者の専用処理だけで、新しいアカウントを作らず、パスワードと資格情報の控えを変更・発行しない。所属・必要な元所属の写し・監査を同じ batch で書く。会社管理者の新規登録は既存メールを汎用文面で拒否し、他社の所属先を知らせない（DD-009）。所属を消すときはその会社の所属だけを消し、他の所属が残る人のアカウントとセッションは消さず、最後の所属を消したら今の利用者の削除と同じに扱う。
@@ -181,6 +210,9 @@ better-auth（メールとパスワード、セッションの有効期間7日�
 
 2026-10-21〜22 の追加: 設定の保存が自動で作り直す下書きと次の版の下書きは、保存した人の会社の範囲の中だけに作る。断った保存は理由と直す画面を返しても、他社の設定の名前や有無を返さない。本番に入れる仮のデータは見本の会社の分（G28・I31）に限り、手元の seed と E2E のデータは本番 DB に入れない。
 根拠: qa-ab08-published-form-follow、qa-ab11-survey-writeback-rule-conflict、qa-ab17-foundation-019-approval、G27、G28（system-spec/auth.md）
+
+2026-10-22 の追加: 認証の秘密を別の用途に流用せず、用途ごとに鍵を導く。秘密を替えると古いセッションが使えなくなることと、控えが新しい鍵で読めることをローカルで確かめる。本番での交換・失効・強制変更は利用者が判断し、外部変更ガードを通す（G31）。
+根拠: qa-ac09 (12)、G31、O31（system-spec/auth.md、system-spec/security.md）
 
 #### Application and supply-chain controls
 
@@ -193,6 +225,10 @@ Server Functions の入口は送り元の検査と認可の後に大きさの上
 2026-10-21〜22 の追加: アンケートの保存からの書き戻しは新しい入口にせず、設定の保存と同じ runAction を通して、会社の管理者以上・会社の絞り込み・同時に保存したときの 409・制度の変更の記録（constitution_events）を同じ順で当てる。反映（I28）と下書きの作り直し（I29）は DD-015・DD-016 を改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す。見本の会社への受付中の期の追加は既存の db:sample:remote の手順に利用者の確認を挟んで行い、新しい役割や入口を足さない。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab11-survey-writeback-rule-conflict、qa-ab12-showcase-data-location、qa-ab16-foundation-018-approval、G27、G28（system-spec/auth.md）
 
+Server Functions の入口は送り元の検査と認可の後に大きさの上限（413）と zod による入力の検証を行い、別のサイトからの呼び出しは Next.js の検査（allowedOrigins を足さない）と assertSameOrigin の二重で断る。画面から書き込みの fetch を直接呼ぶ箇所と入口を通らない Server Function を静的検査で落とし、例外（sendBeacon の利用記録・外観の選択の記録）は理由付きで列挙する。並べ替えは Pointer Events で自作して新しい依存を足さない（D-005）。権限の定義は route-ledger.json に足し、DB の表を足さない（D-007）。Next.js は脆弱性の修正を含む 16.4.1 以上へ上げる。外部への変更系通信は preview → CONFIRM → authorize → execute のガードを通し、PR は利用者の確認を取ってから作る。
+2026-10-22 の追加: Next.js の版は G32 で 16.4.1 以上と決めた。認証の口を許可制にして、ライブラリの既定でオンの口が攻撃面を広げないようにする（本質の (A)(D)、G34）。
+根拠: qa-ac02、qa-ac09 (9)、G32・G34（system-spec/auth.md、system-spec/00-requirements-definition.md）
+
 #### Detection and response
 
 監査として、等級名の変更・所属の追加と削除・本番の一律の書き換えを残して書き換え前の値を記録し、誰が誰の控えを開いたかを値を含めずに Workers Logs へ残す。会社の利用停止や利用者の無効化は次の要求で拒否されることで即時に効く。所属を外された会社は、cookie がその会社を指していても次のリクエストから使われない。他タブは通知か画面復帰で取り直した時点で権限の無い画面が 404 やログイン画面になる。ログアウトやログインし直しの後は、その時点のセッションで取り直す。脆弱性への対応として、今回は Next.js を修正を含む 16.3.8 へ上げる。
@@ -203,6 +239,10 @@ Server Functions の入口は送り元の検査と認可の後に大きさの上
 
 2026-10-21〜22 の追加: アンケートからの書き戻しも、設定の保存と同じ制度の変更の記録（constitution_events）に残す。設定を保存したときは、どのアンケートと評価が変わったかを保存の結果の文で示し、締め切ったアンケート・確定した評価・評価レポートは変えない。
 根拠: qa-ab07-survey-to-setting-direction、G27（system-spec/auth.md）
+
+監査として、等級名の変更・所属の追加と削除・本番の一律の書き換えを残して書き換え前の値を記録し、誰が誰の控えを開いたかを値を含めずに Workers Logs へ残す。会社の利用停止や利用者の無効化は次の要求で拒否されることで即時に効く。所属を外された会社は、cookie がその会社を指していても次のリクエストから使われない。他タブは通知か画面復帰で取り直した時点で権限の無い画面が 404 やログイン画面になる。ログアウトやログインし直しの後は、その時点のセッションで取り直す。脆弱性への対応として、今回は Next.js を修正を含む 16.4.1 以上へ上げる。
+2026-10-22 の追加: 漏えいの恐れがあるときの手順（秘密の交換・セッションの失効・パスワードの変更）の手順書を docs/security/ に置き、ローカルで確かめる。実行するかは利用者が決める（G31）。
+根拠: qa-ac07 (16)、qa-ac09 (12)、G31（system-spec/maintenance-ops.md、system-spec/auth.md）
 
 #### Security verification
 
@@ -217,6 +257,9 @@ server-actions-contract.test.ts（入口を通らない書き込みを0件に保
 
 2026-10-21〜22 の追加: 評価セットの決まりや KPI の計算に要る設問に合わなくなる書き戻しの保存が断られ、合わない決まりと直す画面が示されることを、サーバー処理のテストで確かめる（O27）。設定を変えても、締め切ったアンケート・確定した評価・レポートが変わらないことを結合テストで、写しを持つ場所の一覧とコードが一致することを契約テストで確かめる。
 根拠: qa-ab11-survey-writeback-rule-conflict、O27、G27（system-spec/auth.md）
+
+2026-10-22 の追加: 使っていない認証の口と偽れる識別が0件であることを確かめる（O34。細部は書かない）。秘密を替えると古いセッションが使えなくなること・控えが新しい鍵で読めること・鍵が用途ごとに分かれることを、ローカルと単体テストで確かめる（O31）。パスワードの長さの決まりがどの口でも同じことを単体テストで確かめる。
+根拠: qa-ac09 (9)〜(12)、O31・O34（system-spec/auth.md、system-spec/00-requirements-definition.md）
 
 ## Architecture decisions
 
@@ -234,6 +277,9 @@ D-002（採択 opt-server-functions）: 画面からの書き込みを Server Fu
 2026-10-21〜22 の追加: アンケートの設問を後から足したり外したりした変更は、波及先を見せてから反映する案ではなく、保存と同時に元の設定へ反映する案を利用者が選んだ。評価セットの決まりや KPI の計算に要る設問に合わなくなる保存は、反映して食い違いを知らせる案ではなく、断って理由と直す所を示す案を選んだ。この反映（I28）と設定の保存での下書きの作り直し（I29）は DD-015・DD-016 を改めるので、改める DD を書いてから実装し、公開の前の検査（staleAskingItems）は残す。G29 の色使いはボタンだけでなく、カード・見出しの面・選ぶ部品・状態の印・進み具合・数の面・知らせ・表・いまいる場所の印まで広げたが、色と手応えの変更（G29）と画面の分け方（G26）は新しい権限を作らず今の認可の判定をそのまま使う。要件の土台への追記は appr-foundation-016〜020 で承認し、後の承認が前の承認を置き換えた。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab11-survey-writeback-rule-conflict、qa-ab13-foundation-016-approval、qa-ab15-foundation-017-approval、qa-ab16-foundation-018-approval、qa-ab17-foundation-019-approval、qa-ab18-foundation-020-approval、G26、G27、G29、appr-foundation-016〜020（system-spec/auth.md）
 
+2026-10-22 の追加: 公開の入口は workers.dev のまま（D-012）とし、アプリより前の層の防御が無いことは台帳に残す。その分、認証の口をアプリの側で許可制にする。新しい役割・見える範囲は作らない。
+根拠: qa-ab04（D-012）、qa-ac09 (9)(13)（system-spec/auth.md、system-spec/infrastructure.md）
+
 ## Delivery, migration and rollback
 
 Server Functions への移行は今回すべて終えており、画面からしか呼ばれなくなった Route Handler は消して書き込みの経路を二重にしていない。所属の導入は、所属の表の追加と既存の利用者全員への所属の作成をマイグレーションで行う。getViewer を cookie で選んでいる会社への所属から作る形へ移し、users.company_id を読む約33か所と viewer.companyId を読む約140か所を所属の値へそろえる（D-004）。ルート台帳には権限一覧のページを足し（46画面から47画面）、全てのページに主な操作・役割ごとの可否・説明の欄を足す（D-007）。そのときは route-ledger.test.mjs・nav.test.ts・check:docs を合わせ、『Claude Code連携の鍵』の名前をルート台帳・README・docs・テストで改める。リリースは外部変更ガードを通した Deploy で行い、PR は実装後に利用者の確認を取ってから作る。
@@ -248,6 +294,10 @@ Server Functions への移行は今回すべて終えており、画面からし
 2026-10-21〜22 の追加: 範囲の外の『本番データの移行・修正』の除外に、行動指針の既定の割り当てへの書き換え（I26・G25）と、この仕様で足した移行のうち行を書き換える 0032〜0036 と 0039 を挙げた（0037・0038 は表と列の追加だけ）。本番 DB へのテストデータ（手元の seed と E2E のデータ）の投入は範囲の外のままで、本番の見本の会社への仮のデータ（G28・I31）だけを除く。見本の会社への受付中の期の追加は、既存の db:sample:remote の手順だけで行う。いまずれている下書きのアンケートは、更新時刻の新しい方へそろえる（I30）。
 根拠: qa-ab12-showcase-data-location、qa-ab17-foundation-019-approval、qa-ab18-foundation-020-approval、G25、G27、G28、appr-foundation-019、appr-foundation-020（system-spec/auth.md）
 
+2026-10-19〜20 の追加: 台帳の更新（レポートのページの追加・事業所の達成率の行の削除・確定の操作の説明）は、route-ledger.test.mjs・nav.test.ts・check:docs と同じ変更で合わせる。事業所の達成率のページは1回目の Deploy で台帳とナビから消え、開くと 404 になる。
+2026-10-22 の追加: 許可リストは、使っている口をコードとログで確かめてから入れる。秘密の交換などの手順はローカルで確かめるまでとし、本番での実行は利用者の判断で外部変更ガードを通す。
+根拠: qa-ac09 (9)(12)、G31（system-spec/auth.md）
+
 ## Risks and verification
 
 リスクは、Server Function が外から直接呼べるため、入口を通らない書き込みが残ると認可が抜けることである。cookie の会社への所属の確認を1か所でも漏らすと、所属していない会社のデータが見える（D-004）。所属の値へのそろえ漏れでも、会社の境界が崩れる。サイドバー・ページの入口・サーバー処理の役割の指定・session.ts の判定のどれかが route-ledger.json の権限の定義と食い違うと、権限一覧の表示と実際の判定がずれる（D-007）。説明の小さな直しのたびに仕様の台帳が変わり、仕様の変更の記録が文言の直しで埋まるおそれもある。検査として、server-actions-contract.test.ts が入口を通らない書き込みを、action-origin.test.ts が送り元の二重の検査を固定し、pnpm test で違反0件を求める。追加分は、マネージャー・一般の社員・他社の会社の管理者による等級名の変更が画面とサーバー処理の両方で拒否されることを確かめる。ルート台帳の権限の定義とサイドバー・ページの判定・サーバー処理の役割の指定が一致することを突き合わせる契約テストと、権限一覧の表とカードが同じ内容を出すことも確かめる。会社を切り替えると役割・等級・上司で画面と権限が変わり、所属していない会社が拒否されることを結合テストで確かめる。
@@ -261,4 +311,7 @@ Server Functions への移行は今回すべて終えており、画面からし
 
 2026-10-21〜22 の追加: リスクは、アンケートを直せることから設定を直せる権限を推し量って書き戻しの判定が抜けることと、断った保存の理由に他社の設定の名前や有無が混ざることである。検査として、下書きのアンケートで設定とつながった設問を足す・外す・文を直すと元の設定が同じ保存で変わり、決まりに合わなくなる保存は断られて合わない決まりと直す画面が示されることを、サーバー処理のテストで確かめる（O27）。設定を変えると、回答0件の下書きが作り直され、回答のある公開中のアンケートには次の版の下書きが1つだけでき、締め切ったアンケート・確定した評価・レポートは変わらず、確定前の評価は集計し直されることを結合テストで確かめる。写しを持つ場所の一覧とコードが一致することを契約テストで、保存の直後に関係する画面と他のタブが新しい内容で出ることを E2E で確かめる。
 根拠: qa-ab07-survey-to-setting-direction、qa-ab11-survey-writeback-rule-conflict、O27、G27（system-spec/auth.md）
+
+2026-10-22 の追加: リスクは、許可リストに入れ忘れた口が使えなくなることで、コードとログで確かめてから入れて抑える。回数制限の数が isolate ごとに持たれることは、残るリスクとして台帳に載せる。検査は O31・O34。
+根拠: qa-ac09 (9)、qa-ac07 (21)、qa-ac08 (18)（system-spec/auth.md、system-spec/maintenance-ops.md、system-spec/security.md）
 
