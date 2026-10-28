@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>43 S23 昇給の設定</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { justify-content: flex-start; gap: 28px; }
+.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+.shot { flex: none; position: relative; }
+.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+.notes.scr .reqs { padding-bottom: 8px; }
+.notes.scr ol.marks { gap: 10px 22px; }
+.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+.notes.scr ol.marks li > b { font-size: 15px; }
+.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+.notes.scr .extra b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="43" data-type="pc" data-screens="S23">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 会社の管理者・システム全体管理者</div>
+      <h1>S23 昇給の設定</h1>
+      <div class="lead">昇給の条件・年に何回あるか・等級ごとの金額・特例の扱いを決める。使う人: 会社の管理者・システム全体管理者。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="shots"><div class="shot anchor" style="width:610px;height:862px"><div class="photo"><img src="assets/shots/scr-s23-1.png" alt=""></div><i class="mk" style="left:14px;top:83px">1</i><i class="mk" style="left:-3px;top:123px">2</i><i class="mk" style="left:-3px;top:152px">3</i><i class="mk" style="left:283px;top:244px">4</i><i class="mk" style="left:-3px;top:299px">5</i><i class="mk" style="left:-14px;top:347px">6</i><i class="mk" style="left:7px;top:409px">7</i><i class="mk" style="left:-3px;top:479px">8</i><i class="mk" style="left:283px;top:549px">9</i><i class="mk" style="left:-3px;top:682px">10</i><i class="mk" style="left:-14px;top:729px">11</i><i class="mk" style="left:-3px;top:774px">12</i><i class="mk" style="left:-3px;top:816px">13</i></div></div>
+    <aside class="notes scr two"><div class="reqs"><span class="req" data-req="F02">F02 会社ごとの評価の制度を設定し、社員を登録する</span></div><ol class="marks"><li data-mark="1" data-kind="how"><b>仮の値の知らせ</b><span class="sub">元の資料が仮のままの値に付く。決まった内容に直して保存する</span></li><li data-mark="2" data-kind="how"><b>判定の単位</b><span class="sub">何をどの期間ごとに判定するかを出す</span></li><li data-mark="3" data-kind="how"><b>昇給の条件</b><span class="sub">必要なAの数・年間の昇給機会・反映時期・対象者の範囲を入れる</span></li><li data-mark="4" data-kind="how"><b>降給</b><span class="sub">評価が下がったときに給与を下げるか。通常は付けない</span></li><li data-mark="5" data-kind="can"><b>条件を保存</b><span class="sub">昇給の条件をまとめて保存する</span></li><li data-mark="6" data-kind="how"><b>等級を選ぶ</b><span class="sub">押した等級の昇給額と改定履歴に切り替える。いまの等級に色が付く</span></li><li data-mark="7" data-kind="how"><b>等級の昇給額</b><span class="sub">選んだ等級の月額・支給の月数・昇給回数の上限を入れる</span></li><li data-mark="8" data-kind="how"><b>年額の自動計算</b><span class="sub">年額は月額×月数で自動で出す。上限に達したあとの扱いも出す</span></li><li data-mark="9" data-kind="how"><b>適用開始と理由</b><span class="sub">適用開始・改定の理由・補足を入れる。金額を変えたときだけ記録に残る</span></li><li data-mark="10" data-kind="can"><b>昇給額を保存</b><span class="sub">選んだ等級の昇給額を保存する</span></li><li data-mark="11" data-kind="can"><b>改定履歴</b><span class="sub">開くと、金額を変えた日・変更前後の月額・変えた人・理由が並ぶ</span></li><li data-mark="12" data-kind="how"><b>事業所ごとの調整率</b><span class="sub">開くと、事業所ごとに名前と調整率を直して保存できる</span></li><li data-mark="13" data-kind="how"><b>判定ルールと特例</b><span class="sub">開くと、ランクの組み合わせと扱いの表、特例の一覧を読める</span></li></ol><p class="extra">見本のデータでは出ないもの: 改定の記録（金額を変えて保存すると、改定履歴に変更前後の金額と理由が並ぶ）</p><p class="extra">押すと出るもの 3 件は、ボード 86・87 にまとめた。</p></aside>
+  </main>
+</div>
+</body>
+</html>

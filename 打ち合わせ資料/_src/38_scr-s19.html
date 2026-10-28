@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>38 S19 選んだ項目の基準を決める</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { justify-content: flex-start; gap: 28px; }
+.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+.shot { flex: none; position: relative; }
+.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+.notes.scr .reqs { padding-bottom: 8px; }
+.notes.scr ol.marks { gap: 10px 22px; }
+.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+.notes.scr ol.marks li > b { font-size: 15px; }
+.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+.notes.scr .extra b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="38" data-type="pc" data-screens="S19">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 会社の管理者・システム全体管理者</div>
+      <h1>S19 選んだ項目の基準を決める</h1>
+      <div class="lead">選んだ KPI ごとに、実績値をランク A〜E に当てはめる境目を決める。使う人: 会社の管理者・システム全体管理者。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="shots"><div class="shot anchor" style="width:492px;height:862px"><div class="photo"><img src="assets/shots/scr-s19-1.png" alt=""></div><i class="mk" style="left:350px;top:835px">1</i><i class="mk" style="left:-14px;top:0px">2</i><i class="mk" style="left:-12px;top:29px">3</i><i class="mk" style="left:5px;top:58px">4</i><i class="mk" style="left:-7px;top:87px">5</i><i class="mk" style="left:-7px;top:128px">6</i><i class="mk" style="left:84px;top:166px">7</i><i class="mk" style="left:-7px;top:338px">8</i><i class="mk" style="left:225px;top:221px">9</i><i class="mk" style="left:393px;top:835px">10</i><i class="mk" style="left:-7px;top:410px">11</i><i class="mk" style="left:-7px;top:549px">12</i><i class="mk" style="left:-14px;top:794px">13</i></div></div>
+    <aside class="notes scr two"><div class="reqs"><span class="req" data-req="F02">F02 会社ごとの評価の制度を設定し、社員を登録する</span></div><ol class="marks"><li data-mark="1" data-kind="can"><b>前の手順へ戻る</b><span class="sub">上の帯の道順の文字。押すとこの区分の使うKPIを選ぶへ戻る（→ S18 使うKPIを選ぶ）</span></li><li data-mark="2" data-kind="can"><b>制度設定ガイドへ</b><span class="sub">設定の順番をまとめた制度設定ガイドへ移る（→ S12 制度設定ガイド）</span></li><li data-mark="3" data-kind="how"><b>手順の札</b><span class="sub">2つ目の手順で、5つの等級区分の何番目かを出す</span></li><li data-mark="4" data-kind="how"><b>基準の決まり具合</b><span class="sub">選んだ項目すべてに基準があるか。無いときは件数と名前を出す</span></li><li data-mark="5" data-kind="how"><b>ランクと点数</b><span class="sub">ランクごとの割合と、基準は全等級区分で共通であることを出す</span></li><li data-mark="6" data-kind="can"><b>書き方を見る</b><span class="sub">上限・下限の入れ方の決まりを小窓で読む。何も変わらない</span></li><li data-mark="7" data-kind="how"><b>項目の見出し</b><span class="sub">項目名・配点・札と、単位・向き・境目の含み方。下へ送っても留まる</span></li><li data-mark="8" data-kind="can"><b>ランクごとの境目</b><span class="sub">A〜Eの5行に下限と上限を入れる。空欄はその側の制限なし</span></li><li data-mark="9" data-kind="how"><b>いまの表記</b><span class="sub">入れた境目を「以上」「未満」の言葉に直して出す</span></li><li data-mark="10" data-kind="can"><b>次の区分へ</b><span class="sub">下に留まる帯のボタン。次の等級区分の使うKPIを選ぶへ移る（→ S18 使うKPIを選ぶ）</span></li><li data-mark="11" data-kind="how"><b>計算式</b><span class="sub">実績値の出し方。固定枠の項目は文で説明する</span></li><li data-mark="12" data-kind="can"><b>基準を保存</b><span class="sub">項目ごとにある。その項目のA〜Eの境目をまとめて保存する</span></li><li data-mark="13" data-kind="can"><b>変更が届く範囲</b><span class="sub">基準を変えると確定前の評価を集計し直すことを開いて読む</span></li></ol><p class="extra">見本のデータでは出ないもの: 最後の区分の次へ（最後の等級区分では帯のボタンが「次は評価期間を設定する」になりS27へ） / 基準が無い項目（A〜Eの基準がまだ無い項目では、欄の代わりにその旨を出す） / この案で直す（境目がつながらないとき出る。案の値を欄に入れるだけで保存はしない） / まだ選んでいないとき（項目を選んでいない区分では「使うKPIを選ぶ」だけを出しS18へ）</p><p class="extra">押すと出るもの 2 件は、ボード 85 にまとめた。</p></aside>
+  </main>
+</div>
+</body>
+</html>

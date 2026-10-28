@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>29 S12 制度設定ガイド</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { justify-content: flex-start; gap: 28px; }
+.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+.shot { flex: none; position: relative; }
+.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+.notes.scr .reqs { padding-bottom: 8px; }
+.notes.scr ol.marks { gap: 10px 22px; }
+.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+.notes.scr ol.marks li > b { font-size: 15px; }
+.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+.notes.scr .extra b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="29" data-type="pc" data-screens="S12">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 会社の管理者・システム全体管理者</div>
+      <h1>S12 制度設定ガイド</h1>
+      <div class="lead">制度の設定を、前の設定に頼る順番に進める。使う人: 会社の管理者・システム全体管理者。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="shots"><div class="shot anchor" style="width:520px;height:862px"><div class="photo"><img src="assets/shots/scr-s12-1.png" alt=""></div><i class="mk" style="left:3px;top:50px">1</i><i class="mk" style="left:-14px;top:82px">2</i><i class="mk" style="left:16px;top:111px">3</i><i class="mk" style="left:-6px;top:164px">4</i><i class="mk" style="left:85px;top:164px">5</i><i class="mk" style="left:179px;top:164px">6</i><i class="mk" style="left:-6px;top:196px">7</i><i class="mk" style="left:-6px;top:290px">8</i><i class="mk" style="left:-6px;top:417px">9</i><i class="mk" style="left:-6px;top:543px">10</i><i class="mk" style="left:-6px;top:669px">11</i><i class="mk" style="left:-6px;top:795px">12</i></div></div>
+    <aside class="notes scr two"><div class="reqs"><span class="req" data-req="F02">F02 会社ごとの評価の制度を設定し、社員を登録する</span></div><ol class="marks"><li data-mark="1" data-kind="how"><b>進め方の案内</b><span class="sub">上から順に設定すればよい。済んだ手順は件数だけ見て次へ進める</span></li><li data-mark="2" data-kind="how"><b>6つのステップ</b><span class="sub">制度の設定から評価の確定までを6枚のカードで順に並べる</span></li><li data-mark="3" data-kind="how"><b>1 等級・要件</b><span class="sub">等級の段階と支援・運営・昇格要件の件数。札は登録あり・要設定</span></li><li data-mark="4" data-kind="can"><b>等級要件へ</b><span class="sub">等級要件（支援・運営）の画面へ移る（→ S14 等級要件（支援・運営））</span></li><li data-mark="5" data-kind="can"><b>等級の設定へ</b><span class="sub">等級の設定の画面へ移る（→ S13 等級の設定）</span></li><li data-mark="6" data-kind="can"><b>昇格の条件へ</b><span class="sub">昇格の条件・要件の画面へ移る（→ S15 昇格の条件・要件）</span></li><li data-mark="7" data-kind="can"><b>順番の理由</b><span class="sub">押すと、このステップを先にやる理由が開く。各カードにある</span></li><li data-mark="8" data-kind="can"><b>2 行動指針</b><span class="sub">観点・判定文・適用する等級の数。押すと行動指針へ移る（→ S16 行動指針）</span></li><li data-mark="9" data-kind="can"><b>3 KPI・評価セット</b><span class="sub">使えるKPI・評価セット・選んだ枠の数。押すとKPI・評価セットへ（→ S17 KPI・評価セット）</span></li><li data-mark="10" data-kind="can"><b>4 評価期間</b><span class="sub">評価期間・進行中・準備中の数。押すと評価期間へ移る（→ S27 評価期間）</span></li><li data-mark="11" data-kind="can"><b>5 アンケート</b><span class="sub">アンケート・公開中・下書きの数。押すとアンケートへ移る（→ S28 アンケート）</span></li><li data-mark="12" data-kind="can"><b>6 評価・結果</b><span class="sub">表示中の期間の評価・確定済み・確認中の数。押すと評価・結果へ（→ S38 評価・結果を確認する）</span></li></ol><p class="extra">見本のデータでは出ないもの: この手順で足りないもの（ステップ3が済んでいないとき出る。足りないものと直す画面へのリンクを並べる） / 残りn件を見る（足りないものが4件以上のとき出る開閉。4件目より後を開く）</p><p class="extra">押すと出るもの 2 件は、ボード 78 にまとめた。</p></aside>
+  </main>
+</div>
+</body>
+</html>

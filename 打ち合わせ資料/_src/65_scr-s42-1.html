@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>65 S42 評価の基準（1/3）</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { justify-content: flex-start; gap: 28px; }
+.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+.shot { flex: none; position: relative; }
+.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+.notes.scr .reqs { padding-bottom: 8px; }
+.notes.scr ol.marks { gap: 10px 22px; }
+.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+.notes.scr ol.marks li > b { font-size: 15px; }
+.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+.notes.scr .extra b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="65" data-type="pc" data-screens="S42">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ マネージャー・会社の管理者・システム全体管理者</div>
+      <h1>S42 評価の基準（1/3）</h1>
+      <div class="lead">等級ごとの持ち点の型、昇格・昇給の条件、1項目ずつの採点の流れを読む。使う人: マネージャー・会社の管理者・システム全体管理者。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="shots"><div class="shot anchor" style="width:530px;height:443px"><div class="photo"><img src="assets/shots/scr-s42-1.png" alt=""></div><i class="mk" style="left:-11px;top:17px">1</i><i class="mk" style="left:-14px;top:47px">2</i><i class="mk" style="left:-14px;top:101px">3</i><i class="mk" style="left:-14px;top:264px">4</i><i class="mk" style="left:-6px;top:293px">5</i><i class="mk" style="left:-14px;top:328px">6</i><i class="mk" style="left:-6px;top:410px">7</i></div><div class="shot anchor" style="width:530px;height:428px"><div class="photo"><img src="assets/shots/scr-s42-2.png" alt=""></div><i class="mk" style="left:-14px;top:6px">8</i><i class="mk" style="left:-14px;top:98px">9</i><i class="mk" style="left:-14px;top:127px">10</i><i class="mk" style="left:-6px;top:347px">11</i><i class="mk" style="left:-14px;top:383px">12</i></div></div>
+    <aside class="notes scr"><div class="reqs"><span class="req" data-req="F04">F04 しくみが点数と判定を出し、マネージャーが根拠を確かめて確定する</span></div><ol class="marks"><li data-mark="1" data-kind="how"><b>表示中の等級</b><span class="sub">いま見ている等級を札で出す</span></li><li data-mark="2" data-kind="how"><b>等級を選ぶ</b><span class="sub">等級の札を押すと、その等級の基準に切り替わる</span></li><li data-mark="3" data-kind="how"><b>持ち点の型</b><span class="sub">満点の内訳。固定枠と10点枠・20点枠の配点</span></li><li data-mark="4" data-kind="can"><b>配点が変わる理由</b><span class="sub">押すと配点が等級で変わる理由が開く</span></li><li data-mark="5" data-kind="how"><b>ほかの区分と比較</b><span class="sub">押すと等級区分ごとの配点の表が開く</span></li><li data-mark="6" data-kind="how"><b>昇格・昇給の条件</b><span class="sub">昇格に必要な点数と昇給額、昇給の条件</span></li><li data-mark="7" data-kind="can"><b>点数を出さない理由</b><span class="sub">押すと、回答画面に点数を出さない理由が開く</span></li><li data-mark="8" data-kind="how"><b>選べる項目</b><span class="sub">固定枠と、選べる項目の件数と枠</span></li><li data-mark="9" data-kind="can"><b>枠と項目の決まり</b><span class="sub">押すと、項目をどの枠に入れられるかが開く</span></li><li data-mark="10" data-kind="how"><b>ランク基準の注意</b><span class="sub">上の等級向けの基準のままの項目を知らせる</span></li><li data-mark="11" data-kind="how"><b>カテゴリごとに見る</b><span class="sub">押すとカテゴリごとの項目の一覧が開く</span></li><li data-mark="12" data-kind="how"><b>採用している項目</b><span class="sub">採用中の項目と配点、合計と満点</span></li></ol></aside>
+  </main>
+</div>
+</body>
+</html>

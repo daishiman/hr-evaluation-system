@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>40 S21 KPI項目（1/2）</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { justify-content: flex-start; gap: 28px; }
+.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+.shot { flex: none; position: relative; }
+.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+.notes.scr .reqs { padding-bottom: 8px; }
+.notes.scr ol.marks { gap: 10px 22px; }
+.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+.notes.scr ol.marks li > b { font-size: 15px; }
+.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+.notes.scr .extra b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="40" data-type="pc" data-screens="S21">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 会社の管理者・システム全体管理者</div>
+      <h1>S21 KPI項目（1/2）</h1>
+      <div class="lead">KPI の項目そのもの（名前・分類・計算式・単位）を足す・直す・外す。使う人: 会社の管理者・システム全体管理者。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="shots"><div class="shot anchor" style="width:547px;height:833px"><div class="photo"><img src="assets/shots/scr-s21-1.png" alt=""></div><i class="mk" style="left:-5px;top:58px">1</i><i class="mk" style="left:88px;top:103px">2</i><i class="mk" style="left:24px;top:118px">3</i><i class="mk" style="left:24px;top:150px">4</i><i class="mk" style="left:24px;top:179px">5</i><i class="mk" style="left:375px;top:199px">6</i><i class="mk" style="left:436px;top:199px">7</i><i class="mk" style="left:444px;top:316px">8</i></div><div class="shot anchor" style="width:547px;height:846px"><div class="photo"><img src="assets/shots/scr-s21-2.png" alt=""></div><i class="mk" style="left:72px;top:39px">9</i></div></div>
+    <aside class="notes scr"><div class="reqs"><span class="req" data-req="F02">F02 会社ごとの評価の制度を設定し、社員を登録する</span></div><ol class="marks"><li data-mark="1" data-kind="how"><b>KPI項目の一覧</b><span class="sub">番号・名前・分類・聞くことを並べる。使う数と使わない数も出す</span></li><li data-mark="2" data-kind="how"><b>固定枠の項目</b><span class="sub">等級要件達成率。直す・使わない・消すのボタンは出ない</span></li><li data-mark="3" data-kind="how"><b>分類</b><span class="sub">項目の分類。分類が無い項目は「分類未設定」と出す</span></li><li data-mark="4" data-kind="can"><b>計算式など</b><span class="sub">開くと計算式・実績区分・単位・向きを読める</span></li><li data-mark="5" data-kind="can"><b>使っている場所</b><span class="sub">開くと、その項目を使っているアンケートや評価セットを全部並べる</span></li><li data-mark="6" data-kind="can"><b>内容を直す</b><span class="sub">その行の中に編集欄を開く。押すだけでは何も変わらない</span></li><li data-mark="7" data-kind="can"><b>今後使わない</b><span class="sub">確認の小窓を出し、評価セットで選べる項目から外す</span></li><li data-mark="8" data-kind="can"><b>完全に消す</b><span class="sub">一度も使っていない項目だけに出る。確認の小窓を出してから消す</span></li><li data-mark="9" data-kind="how"><b>仮置きの札</b><span class="sub">元の資料で仮のまま入れた項目に付く</span></li></ol></aside>
+  </main>
+</div>
+</body>
+</html>

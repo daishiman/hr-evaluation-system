@@ -1,0 +1,362 @@
+{
+  "comparison": "structure-only",
+  "fidelity": {
+    "status": "not-assessed",
+    "required": [
+      "meaning",
+      "reference-version",
+      "scope",
+      "visual"
+    ]
+  },
+  "status": "diff",
+  "invalid": [],
+  "measurements": {
+    "status": "current",
+    "unavailable": []
+  },
+  "profile": "/Users/dm/dev/dev/個人開発/harness/plugins/system-briefing-book/assets/data/target-profile.json",
+  "dir": "/Users/dm/orca/workspaces/hr-evaluation-system/ドキュメント/打ち合わせ資料",
+  "rows": [
+    {
+      "key": "pages",
+      "label": "ページの型の並び",
+      "target": [
+        "overview",
+        "screen-map",
+        "phone",
+        "phone",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "data-map",
+        "mechanism"
+      ],
+      "current": [
+        "overview",
+        "screen-map",
+        "mechanism",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "data-map",
+        "mechanism",
+        "future",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc",
+        "pc"
+      ],
+      "same": false
+    },
+    {
+      "key": "screens",
+      "label": "画面のボードの数 (phone・pc)",
+      "target": 6,
+      "current": 93,
+      "same": false
+    },
+    {
+      "key": "facts",
+      "label": "今の手間の数字",
+      "target": "○",
+      "current": "○",
+      "same": true
+    },
+    {
+      "key": "paper",
+      "label": "本物の紙",
+      "target": "○",
+      "current": "○",
+      "same": true
+    },
+    {
+      "key": "columns",
+      "label": "CSV の列の区分",
+      "target": "○",
+      "current": "○",
+      "same": true
+    },
+    {
+      "key": "reqs",
+      "label": "要件の札",
+      "target": "○",
+      "current": "66/93",
+      "same": false
+    },
+    {
+      "key": "mechanism",
+      "label": "あとで に回した要望のしくみ",
+      "target": "○",
+      "current": "○",
+      "same": true
+    },
+    {
+      "key": "text_chars.overview",
+      "label": "説明の字数: 全体図 (並べるだけ。字数は合わせない)",
+      "target": [
+        1201
+      ],
+      "current": [
+        783
+      ],
+      "same": null
+    },
+    {
+      "key": "text_chars.screen-map",
+      "label": "説明の字数: 画面の一覧と流れ (並べるだけ。字数は合わせない)",
+      "target": [
+        1107
+      ],
+      "current": [
+        844
+      ],
+      "same": null
+    },
+    {
+      "key": "text_chars.phone",
+      "label": "説明の字数: 画面 (スマホ) (並べるだけ。字数は合わせない)",
+      "target": [
+        423,
+        643
+      ],
+      "current": [],
+      "same": null
+    },
+    {
+      "key": "text_chars.pc",
+      "label": "説明の字数: 画面 (PC) (並べるだけ。字数は合わせない)",
+      "target": [
+        444,
+        467,
+        397,
+        447
+      ],
+      "current": [
+        574,
+        626,
+        606,
+        611,
+        659,
+        618,
+        688,
+        667,
+        669,
+        387,
+        491,
+        451,
+        741,
+        597,
+        495,
+        337,
+        657,
+        297,
+        304,
+        624,
+        656,
+        721,
+        738,
+        557,
+        761,
+        967,
+        659,
+        470,
+        872,
+        502,
+        656,
+        827,
+        411,
+        427,
+        449,
+        446,
+        633,
+        601,
+        563,
+        356,
+        696,
+        635,
+        745,
+        481,
+        506,
+        551,
+        772,
+        639,
+        334,
+        623,
+        646,
+        695,
+        796,
+        751,
+        435,
+        741,
+        503,
+        699,
+        484,
+        286,
+        511,
+        710,
+        544,
+        460,
+        774,
+        532,
+        729,
+        938,
+        912,
+        1123,
+        856,
+        1254,
+        857,
+        1018,
+        959,
+        973,
+        823,
+        1105,
+        1110,
+        1075,
+        351,
+        1000,
+        1251,
+        1097,
+        1051,
+        942,
+        1032,
+        1117,
+        1011,
+        1037,
+        795,
+        198,
+        1263
+      ],
+      "same": null
+    },
+    {
+      "key": "text_chars.data-map",
+      "label": "説明の字数: データの対応 (並べるだけ。字数は合わせない)",
+      "target": [
+        1674
+      ],
+      "current": [
+        864
+      ],
+      "same": null
+    },
+    {
+      "key": "text_chars.mechanism",
+      "label": "説明の字数: しくみ (並べるだけ。字数は合わせない)",
+      "target": [
+        1516
+      ],
+      "current": [
+        905,
+        586
+      ],
+      "same": null
+    },
+    {
+      "key": "text_chars.future",
+      "label": "説明の字数: 将来の広げ方 (並べるだけ。字数は合わせない)",
+      "target": [],
+      "current": [
+        607
+      ],
+      "same": null
+    },
+    {
+      "key": "font_px_min",
+      "label": "いちばん小さい文字 (px。基準点より小さければ差)",
+      "target": 10.5,
+      "current": 11.5,
+      "same": true
+    }
+  ],
+  "missing": [
+    "reqs"
+  ]
+}

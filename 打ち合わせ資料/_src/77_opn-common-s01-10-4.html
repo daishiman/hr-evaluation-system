@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>77 押すと出るもの ・ 権限一覧・利用状況・Claude Code連携</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { gap: 18px; align-items: flex-start; }
+.ocol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.ocard { background: var(--bg-surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-soft); }
+.ocard .oh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ocard .ono { flex: none; font: 800 13px/22px var(--font-num); min-width: 22px; padding: 0 6px; border-radius: 11px; text-align: center; background: var(--anno); color: var(--anno-ink); }
+.ocard .oh b { font-size: 15.5px; font-weight: 800; line-height: 1.35; }
+.ocard .otype { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 4px; color: var(--note-how-ink); background: var(--note-how-bg); }
+.ocard .otrig { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+.ocard .oimg { align-self: flex-start; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-board); }
+.ocard .oimg img { display: block; width: 100%; height: 100%; }
+.ocard ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.ocard .olab { font-size: 12px; font-weight: 800; color: var(--text-muted); margin-top: 2px; }
+.ocard .onot { font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="board" data-board="77" data-type="pc" data-screens="S08 S09 S10">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 押すと出るもの ・ 共通の枠・ログイン・自分の情報・システム運用（4/4）</div>
+      <h1>押すと出るもの ・ 権限一覧・利用状況・Claude Code連携</h1>
+      <div class="lead">S08 権限一覧・S09 利用状況・S10 Claude Code連携 で、ボタンや見出しを押すと出る小窓・一覧・説明と、その中身。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body"><div class="ocol"><div class="ocard" data-k="S08-o2"><div class="oh"><span class="ono">18</span><b>条件の説明</b><span class="otype">説明</span></div><div class="otrig">S08 権限一覧 ・ 押すもの: 「アンケート1本の説明」 ・ 閉じる: Esc</div><div class="olab">中に出るもの</div><ul><li>その役割で、どんな条件のときにできるかの文</li></ul></div><div class="ocard" data-k="S09-o1"><div class="oh"><span class="ono">19</span><b>開かれていない画面</b><span class="otype">開いて見る</span></div><div class="otrig">S09 利用状況 ・ 押すもの: 「この期間に一度も開かれていない画面」</div><div class="oimg" style="width:487px;height:121px"><img src="assets/shots/opn-s09-o1.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>作ったのに使われていない画面だという説明</li><li>画面の名前の一覧</li></ul></div><div class="ocard" data-k="S09-o2"><div class="oh"><span class="ono">20</span><b>全画面の一覧</b><span class="otype">開いて見る</span></div><div class="otrig">S09 利用状況 ・ 押すもの: 「全画面の一覧」</div><div class="oimg" style="width:487px;height:220px"><img src="assets/shots/opn-s09-o2.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>画面</li><li>開いた回数</li><li>1回あたりの滞在</li><li>迷いの兆候（100回あたり）</li></ul></div></div><div class="ocol"><div class="ocard" data-k="S09-o3"><div class="oh"><span class="ono">21</span><b>通信</b><span class="otype">開いて見る</span></div><div class="otrig">S09 利用状況 ・ 押すもの: 「画面と保管場所の連絡（通信）」</div><div class="oimg" style="width:487px;height:165px"><img src="assets/shots/opn-s09-o3.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>1秒以上かかったものを数える説明</li><li>連絡先</li><li>回数</li><li>1回あたり</li><li>時間がかかった</li><li>失敗</li></ul></div><div class="ocard" data-k="S10-o1"><div class="oh"><span class="ono">22</span><b>端末を通す前の確認</b><span class="otype">押したあとに出る</span></div><div class="otrig">S10 Claude Code連携 ・ 押すもの: 「合言葉を確かめる」 ・ 閉じる: 通さない</div><div class="oimg" style="width:487px;height:21px"><img src="assets/shots/opn-s10-o1.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>「端末名」（合言葉）を通しますか。</li><li>通すとこの端末は要望を読めるようになる注意</li></ul><div class="olab">中で押せるもの</div><ul><li>この端末を通す: 端末を通し「通した端末」に並べる</li><li>通さない: 通さずに確認をやめる</li></ul></div></div><div class="ocol"><div class="ocard" data-k="S10-o2"><div class="oh"><span class="ono">23</span><b>発行した鍵</b><span class="otype">押したあとに出る</span></div><div class="otrig">S10 Claude Code連携 ・ 押すもの: 「鍵を発行する」 ・ 閉じる: 控えました。表示を閉じる ・ 押すと保存や送信が起きるので、写真は載せていない</div><div class="olab">中に出るもの</div><ul><li>この画面を閉じると鍵をもう一度表示できない注意</li><li>開閉「鍵を見る」「貼る文言を読む」「.env.local へ書く1行を読む」</li></ul><div class="olab">中で押せるもの</div><ul><li>鍵をコピー: 鍵を写す</li><li>Claude Code へ貼る文言をコピー: 貼る文言を写す</li><li>.env.local へ書く1行をコピー: 設定の1行を写す</li><li>控えました。表示を閉じる: 表示を閉じる。二度と出せない</li></ul></div></div></main>
+</div>
+</body>
+</html>

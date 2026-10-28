@@ -1,0 +1,1534 @@
+{
+  "schema": "briefing-book-check-v1",
+  "dir": "/Users/dm/orca/workspaces/hr-evaluation-system/ドキュメント/打ち合わせ資料",
+  "out": "/Users/dm/orca/workspaces/hr-evaluation-system/ドキュメント/打ち合わせ資料/人事評価システムの説明書_打ち合わせ資料.html",
+  "written": true,
+  "version": "v0.1",
+  "versions": {
+    "requirements": "v0.1",
+    "spec": "v0.1"
+  },
+  "title": "人事評価システムの説明書",
+  "updated_doc": "2026-10-29",
+  "pages": [
+    {
+      "id": "p-cover",
+      "kind": "cover",
+      "title": "表紙と読み方"
+    },
+    {
+      "id": "b01",
+      "kind": "board",
+      "title": "全体図",
+      "no": "01"
+    },
+    {
+      "id": "b02",
+      "kind": "board",
+      "title": "画面の一覧と流れ",
+      "no": "02"
+    },
+    {
+      "id": "b03",
+      "kind": "board",
+      "title": "役割ごとにできること",
+      "no": "03"
+    },
+    {
+      "id": "b04",
+      "kind": "board",
+      "title": "ログイン・自分の情報・パスワードの変更",
+      "no": "04"
+    },
+    {
+      "id": "b05",
+      "kind": "board",
+      "title": "システム運用と会社一覧・利用者一覧",
+      "no": "05"
+    },
+    {
+      "id": "b06",
+      "kind": "board",
+      "title": "管理者のホームと制度設定ガイド",
+      "no": "06"
+    },
+    {
+      "id": "b07",
+      "kind": "board",
+      "title": "KPI・評価セットと昇給の設定",
+      "no": "07"
+    },
+    {
+      "id": "b08",
+      "kind": "board",
+      "title": "評価期間とアンケート・回答一覧",
+      "no": "08"
+    },
+    {
+      "id": "b09",
+      "kind": "board",
+      "title": "社員と届いた改善要望",
+      "no": "09"
+    },
+    {
+      "id": "b10",
+      "kind": "board",
+      "title": "社員のホームとアンケートに答える・評価レポート",
+      "no": "10"
+    },
+    {
+      "id": "b11",
+      "kind": "board",
+      "title": "マネージャーのホームと評価1件",
+      "no": "11"
+    },
+    {
+      "id": "b12",
+      "kind": "board",
+      "title": "できあがるファイルの欄と画面の項目",
+      "no": "12"
+    },
+    {
+      "id": "b13",
+      "kind": "board",
+      "title": "点数と判定のしくみ",
+      "no": "13"
+    },
+    {
+      "id": "b14",
+      "kind": "board",
+      "title": "将来の広げ方",
+      "no": "14"
+    },
+    {
+      "id": "b15",
+      "kind": "board",
+      "title": "どの画面にも出る共通の枠（写真は S11 管理者のホーム）",
+      "no": "15"
+    },
+    {
+      "id": "b16",
+      "kind": "board",
+      "title": "S01 ログイン",
+      "no": "16"
+    },
+    {
+      "id": "b17",
+      "kind": "board",
+      "title": "S02 自分の情報",
+      "no": "17"
+    },
+    {
+      "id": "b18",
+      "kind": "board",
+      "title": "S03 パスワードの変更",
+      "no": "18"
+    },
+    {
+      "id": "b19",
+      "kind": "board",
+      "title": "S04 システム運用",
+      "no": "19"
+    },
+    {
+      "id": "b20",
+      "kind": "board",
+      "title": "S05 会社一覧",
+      "no": "20"
+    },
+    {
+      "id": "b21",
+      "kind": "board",
+      "title": "S06 利用者一覧（1/2）",
+      "no": "21"
+    },
+    {
+      "id": "b22",
+      "kind": "board",
+      "title": "S06 利用者一覧（2/2）",
+      "no": "22"
+    },
+    {
+      "id": "b23",
+      "kind": "board",
+      "title": "S07 利用者1人",
+      "no": "23"
+    },
+    {
+      "id": "b24",
+      "kind": "board",
+      "title": "S08 権限一覧（1/2）",
+      "no": "24"
+    },
+    {
+      "id": "b25",
+      "kind": "board",
+      "title": "S08 権限一覧（2/2）",
+      "no": "25"
+    },
+    {
+      "id": "b26",
+      "kind": "board",
+      "title": "S09 利用状況",
+      "no": "26"
+    },
+    {
+      "id": "b27",
+      "kind": "board",
+      "title": "S10 Claude Code連携",
+      "no": "27"
+    },
+    {
+      "id": "b28",
+      "kind": "board",
+      "title": "S11 管理者のホーム",
+      "no": "28"
+    },
+    {
+      "id": "b29",
+      "kind": "board",
+      "title": "S12 制度設定ガイド",
+      "no": "29"
+    },
+    {
+      "id": "b30",
+      "kind": "board",
+      "title": "S13 等級の設定",
+      "no": "30"
+    },
+    {
+      "id": "b31",
+      "kind": "board",
+      "title": "S14 等級要件（支援・運営）",
+      "no": "31"
+    },
+    {
+      "id": "b32",
+      "kind": "board",
+      "title": "S15 昇格の条件・要件",
+      "no": "32"
+    },
+    {
+      "id": "b33",
+      "kind": "board",
+      "title": "S16 行動指針（1/2）",
+      "no": "33"
+    },
+    {
+      "id": "b34",
+      "kind": "board",
+      "title": "S16 行動指針（2/2）",
+      "no": "34"
+    },
+    {
+      "id": "b35",
+      "kind": "board",
+      "title": "S17 KPI・評価セット",
+      "no": "35"
+    },
+    {
+      "id": "b36",
+      "kind": "board",
+      "title": "S18 使うKPIを選ぶ（1/2）",
+      "no": "36"
+    },
+    {
+      "id": "b37",
+      "kind": "board",
+      "title": "S18 使うKPIを選ぶ（2/2）",
+      "no": "37"
+    },
+    {
+      "id": "b38",
+      "kind": "board",
+      "title": "S19 選んだ項目の基準を決める",
+      "no": "38"
+    },
+    {
+      "id": "b39",
+      "kind": "board",
+      "title": "S20 全等級区分に共通の設定",
+      "no": "39"
+    },
+    {
+      "id": "b40",
+      "kind": "board",
+      "title": "S21 KPI項目（1/2）",
+      "no": "40"
+    },
+    {
+      "id": "b41",
+      "kind": "board",
+      "title": "S21 KPI項目（2/2）",
+      "no": "41"
+    },
+    {
+      "id": "b42",
+      "kind": "board",
+      "title": "S22 KPIカテゴリ",
+      "no": "42"
+    },
+    {
+      "id": "b43",
+      "kind": "board",
+      "title": "S23 昇給の設定",
+      "no": "43"
+    },
+    {
+      "id": "b44",
+      "kind": "board",
+      "title": "S24 社員",
+      "no": "44"
+    },
+    {
+      "id": "b45",
+      "kind": "board",
+      "title": "S25 社員1人",
+      "no": "45"
+    },
+    {
+      "id": "b46",
+      "kind": "board",
+      "title": "S26 本人が変更できる項目",
+      "no": "46"
+    },
+    {
+      "id": "b47",
+      "kind": "board",
+      "title": "S27 評価期間",
+      "no": "47"
+    },
+    {
+      "id": "b48",
+      "kind": "board",
+      "title": "S28 アンケート",
+      "no": "48"
+    },
+    {
+      "id": "b49",
+      "kind": "board",
+      "title": "S29 アンケートの組み立て",
+      "no": "49"
+    },
+    {
+      "id": "b50",
+      "kind": "board",
+      "title": "S30 アンケートの中身",
+      "no": "50"
+    },
+    {
+      "id": "b51",
+      "kind": "board",
+      "title": "S31 アンケートの中身（1本）（1/2）",
+      "no": "51"
+    },
+    {
+      "id": "b52",
+      "kind": "board",
+      "title": "S31 アンケートの中身（1本）（2/2）",
+      "no": "52"
+    },
+    {
+      "id": "b53",
+      "kind": "board",
+      "title": "S32 社員のホーム",
+      "no": "53"
+    },
+    {
+      "id": "b54",
+      "kind": "board",
+      "title": "S33 実績を報告する",
+      "no": "54"
+    },
+    {
+      "id": "b55",
+      "kind": "board",
+      "title": "S34 アンケートに答える（1/2）",
+      "no": "55"
+    },
+    {
+      "id": "b56",
+      "kind": "board",
+      "title": "S34 アンケートに答える（2/2）",
+      "no": "56"
+    },
+    {
+      "id": "b57",
+      "kind": "board",
+      "title": "S35 提出した内容",
+      "no": "57"
+    },
+    {
+      "id": "b58",
+      "kind": "board",
+      "title": "S36 回答一覧",
+      "no": "58"
+    },
+    {
+      "id": "b59",
+      "kind": "board",
+      "title": "S37 マネージャーのホーム",
+      "no": "59"
+    },
+    {
+      "id": "b60",
+      "kind": "board",
+      "title": "S38 評価・結果を確認する",
+      "no": "60"
+    },
+    {
+      "id": "b61",
+      "kind": "board",
+      "title": "S39 評価1件（1/2）",
+      "no": "61"
+    },
+    {
+      "id": "b62",
+      "kind": "board",
+      "title": "S39 評価1件（2/2）",
+      "no": "62"
+    },
+    {
+      "id": "b63",
+      "kind": "board",
+      "title": "S40 メンバー",
+      "no": "63"
+    },
+    {
+      "id": "b64",
+      "kind": "board",
+      "title": "S41 メンバー1人",
+      "no": "64"
+    },
+    {
+      "id": "b65",
+      "kind": "board",
+      "title": "S42 評価の基準（1/3）",
+      "no": "65"
+    },
+    {
+      "id": "b66",
+      "kind": "board",
+      "title": "S42 評価の基準（2/3）",
+      "no": "66"
+    },
+    {
+      "id": "b67",
+      "kind": "board",
+      "title": "S42 評価の基準（3/3）",
+      "no": "67"
+    },
+    {
+      "id": "b68",
+      "kind": "board",
+      "title": "S43 評価の結果を見る",
+      "no": "68"
+    },
+    {
+      "id": "b69",
+      "kind": "board",
+      "title": "S44 評価1件（本人）（1/2）",
+      "no": "69"
+    },
+    {
+      "id": "b70",
+      "kind": "board",
+      "title": "S44 評価1件（本人）（2/2）",
+      "no": "70"
+    },
+    {
+      "id": "b71",
+      "kind": "board",
+      "title": "S45 評価レポート",
+      "no": "71"
+    },
+    {
+      "id": "b72",
+      "kind": "board",
+      "title": "S46 届いた改善要望",
+      "no": "72"
+    },
+    {
+      "id": "b73",
+      "kind": "board",
+      "title": "S47 要望1件",
+      "no": "73"
+    },
+    {
+      "id": "b74",
+      "kind": "board",
+      "title": "押すと出るもの ・ 共通の枠・自分の情報",
+      "no": "74"
+    },
+    {
+      "id": "b75",
+      "kind": "board",
+      "title": "押すと出るもの ・ 自分の情報・システム運用・会社一覧",
+      "no": "75"
+    },
+    {
+      "id": "b76",
+      "kind": "board",
+      "title": "押すと出るもの ・ 利用者一覧・利用者1人・権限一覧",
+      "no": "76"
+    },
+    {
+      "id": "b77",
+      "kind": "board",
+      "title": "押すと出るもの ・ 権限一覧・利用状況・Claude Code連携",
+      "no": "77"
+    },
+    {
+      "id": "b78",
+      "kind": "board",
+      "title": "押すと出るもの ・ 管理者のホーム・制度設定ガイド・等級の設定・等級要件（支援・運営）",
+      "no": "78"
+    },
+    {
+      "id": "b79",
+      "kind": "board",
+      "title": "押すと出るもの ・ 等級要件（支援・運営）",
+      "no": "79"
+    },
+    {
+      "id": "b80",
+      "kind": "board",
+      "title": "押すと出るもの ・ 等級要件（支援・運営）・昇格の条件・要件",
+      "no": "80"
+    },
+    {
+      "id": "b81",
+      "kind": "board",
+      "title": "押すと出るもの ・ 昇格の条件・要件",
+      "no": "81"
+    },
+    {
+      "id": "b82",
+      "kind": "board",
+      "title": "押すと出るもの ・ 行動指針",
+      "no": "82"
+    },
+    {
+      "id": "b83",
+      "kind": "board",
+      "title": "押すと出るもの ・ 行動指針",
+      "no": "83"
+    },
+    {
+      "id": "b84",
+      "kind": "board",
+      "title": "押すと出るもの ・ KPI・評価セット・使うKPIを選ぶ",
+      "no": "84"
+    },
+    {
+      "id": "b85",
+      "kind": "board",
+      "title": "押すと出るもの ・ 選んだ項目の基準を決める・全等級区分に共通の設定・KPI項目",
+      "no": "85"
+    },
+    {
+      "id": "b86",
+      "kind": "board",
+      "title": "押すと出るもの ・ KPI項目・KPIカテゴリ・昇給の設定",
+      "no": "86"
+    },
+    {
+      "id": "b87",
+      "kind": "board",
+      "title": "押すと出るもの ・ 昇給の設定",
+      "no": "87"
+    },
+    {
+      "id": "b88",
+      "kind": "board",
+      "title": "押すと出るもの ・ 社員",
+      "no": "88"
+    },
+    {
+      "id": "b89",
+      "kind": "board",
+      "title": "押すと出るもの ・ 社員・社員1人・本人が変更できる項目",
+      "no": "89"
+    },
+    {
+      "id": "b90",
+      "kind": "board",
+      "title": "押すと出るもの ・ 本人が変更できる項目・評価期間・アンケート",
+      "no": "90"
+    },
+    {
+      "id": "b91",
+      "kind": "board",
+      "title": "押すと出るもの ・ アンケート・アンケートの組み立て",
+      "no": "91"
+    },
+    {
+      "id": "b92",
+      "kind": "board",
+      "title": "押すと出るもの ・ アンケートの組み立て",
+      "no": "92"
+    },
+    {
+      "id": "b93",
+      "kind": "board",
+      "title": "押すと出るもの ・ アンケートの組み立て・回答一覧",
+      "no": "93"
+    },
+    {
+      "id": "b94",
+      "kind": "board",
+      "title": "押すと出るもの ・ アンケートの中身（1本）・社員のホーム・アンケートに答える・評価1件（本人）",
+      "no": "94"
+    },
+    {
+      "id": "b95",
+      "kind": "board",
+      "title": "押すと出るもの ・ マネージャーのホーム・評価・結果を確認する・評価1件",
+      "no": "95"
+    },
+    {
+      "id": "b96",
+      "kind": "board",
+      "title": "押すと出るもの ・ 評価1件・メンバー・メンバー1人・評価の基準",
+      "no": "96"
+    },
+    {
+      "id": "b97",
+      "kind": "board",
+      "title": "押すと出るもの ・ 評価の基準",
+      "no": "97"
+    },
+    {
+      "id": "b98",
+      "kind": "board",
+      "title": "押すと出るもの ・ 評価の基準",
+      "no": "98"
+    },
+    {
+      "id": "b99",
+      "kind": "board",
+      "title": "押すと出るもの ・ 届いた改善要望・要望1件",
+      "no": "99"
+    },
+    {
+      "id": "p-req",
+      "kind": "doc",
+      "title": "要件定義書"
+    },
+    {
+      "id": "p-spec",
+      "kind": "doc",
+      "title": "仕様書"
+    }
+  ],
+  "boards": [
+    {
+      "no": "01",
+      "file": "01_overview.html",
+      "png": "01_overview.png",
+      "status": "ok",
+      "image": "_src/book/01_overview.webp",
+      "image_format": "webp",
+      "image_bytes": 289328
+    },
+    {
+      "no": "02",
+      "file": "02_screen-map.html",
+      "png": "02_screen-map.png",
+      "status": "ok",
+      "image": "_src/book/02_screen-map.webp",
+      "image_format": "webp",
+      "image_bytes": 264016
+    },
+    {
+      "no": "03",
+      "file": "03_mechanism-roles.html",
+      "png": "03_mechanism-roles.png",
+      "status": "ok",
+      "image": "_src/book/03_mechanism-roles.webp",
+      "image_format": "webp",
+      "image_bytes": 318266
+    },
+    {
+      "no": "04",
+      "file": "04_s01-login.html",
+      "png": "04_s01-login.png",
+      "status": "ok",
+      "image": "_src/book/04_s01-login.webp",
+      "image_format": "webp",
+      "image_bytes": 185370
+    },
+    {
+      "no": "05",
+      "file": "05_s04-system.html",
+      "png": "05_s04-system.png",
+      "status": "ok",
+      "image": "_src/book/05_s04-system.webp",
+      "image_format": "webp",
+      "image_bytes": 261606
+    },
+    {
+      "no": "06",
+      "file": "06_s11-setup.html",
+      "png": "06_s11-setup.png",
+      "status": "ok",
+      "image": "_src/book/06_s11-setup.webp",
+      "image_format": "webp",
+      "image_bytes": 284560
+    },
+    {
+      "no": "07",
+      "file": "07_s17-kpi.html",
+      "png": "07_s17-kpi.png",
+      "status": "ok",
+      "image": "_src/book/07_s17-kpi.webp",
+      "image_format": "webp",
+      "image_bytes": 291560
+    },
+    {
+      "no": "08",
+      "file": "08_s27-forms.html",
+      "png": "08_s27-forms.png",
+      "status": "ok",
+      "image": "_src/book/08_s27-forms.webp",
+      "image_format": "webp",
+      "image_bytes": 305434
+    },
+    {
+      "no": "09",
+      "file": "09_s24-members.html",
+      "png": "09_s24-members.png",
+      "status": "ok",
+      "image": "_src/book/09_s24-members.webp",
+      "image_format": "webp",
+      "image_bytes": 297440
+    },
+    {
+      "no": "10",
+      "file": "10_s32-employee.html",
+      "png": "10_s32-employee.png",
+      "status": "ok",
+      "image": "_src/book/10_s32-employee.webp",
+      "image_format": "webp",
+      "image_bytes": 276650
+    },
+    {
+      "no": "11",
+      "file": "11_s37-manager.html",
+      "png": "11_s37-manager.png",
+      "status": "ok",
+      "image": "_src/book/11_s37-manager.webp",
+      "image_format": "webp",
+      "image_bytes": 292714
+    },
+    {
+      "no": "12",
+      "file": "12_data-map.html",
+      "png": "12_data-map.png",
+      "status": "ok",
+      "image": "_src/book/12_data-map.webp",
+      "image_format": "webp",
+      "image_bytes": 273352
+    },
+    {
+      "no": "13",
+      "file": "13_mechanism-scoring.html",
+      "png": "13_mechanism-scoring.png",
+      "status": "ok",
+      "image": "_src/book/13_mechanism-scoring.webp",
+      "image_format": "webp",
+      "image_bytes": 209078
+    },
+    {
+      "no": "14",
+      "file": "14_future.html",
+      "png": "14_future.png",
+      "status": "ok",
+      "image": "_src/book/14_future.webp",
+      "image_format": "webp",
+      "image_bytes": 226610
+    },
+    {
+      "no": "15",
+      "file": "15_scr-common.html",
+      "png": "15_scr-common.png",
+      "status": "ok",
+      "image": "_src/book/15_scr-common.webp",
+      "image_format": "webp",
+      "image_bytes": 283546
+    },
+    {
+      "no": "16",
+      "file": "16_scr-s01.html",
+      "png": "16_scr-s01.png",
+      "status": "ok",
+      "image": "_src/book/16_scr-s01.webp",
+      "image_format": "webp",
+      "image_bytes": 131024
+    },
+    {
+      "no": "17",
+      "file": "17_scr-s02.html",
+      "png": "17_scr-s02.png",
+      "status": "ok",
+      "image": "_src/book/17_scr-s02.webp",
+      "image_format": "webp",
+      "image_bytes": 201084
+    },
+    {
+      "no": "18",
+      "file": "18_scr-s03.html",
+      "png": "18_scr-s03.png",
+      "status": "ok",
+      "image": "_src/book/18_scr-s03.webp",
+      "image_format": "webp",
+      "image_bytes": 168720
+    },
+    {
+      "no": "19",
+      "file": "19_scr-s04.html",
+      "png": "19_scr-s04.png",
+      "status": "ok",
+      "image": "_src/book/19_scr-s04.webp",
+      "image_format": "webp",
+      "image_bytes": 267844
+    },
+    {
+      "no": "20",
+      "file": "20_scr-s05.html",
+      "png": "20_scr-s05.png",
+      "status": "ok",
+      "image": "_src/book/20_scr-s05.webp",
+      "image_format": "webp",
+      "image_bytes": 255156
+    },
+    {
+      "no": "21",
+      "file": "21_scr-s06-1.html",
+      "png": "21_scr-s06-1.png",
+      "status": "ok",
+      "image": "_src/book/21_scr-s06-1.webp",
+      "image_format": "webp",
+      "image_bytes": 193390
+    },
+    {
+      "no": "22",
+      "file": "22_scr-s06-2.html",
+      "png": "22_scr-s06-2.png",
+      "status": "ok",
+      "image": "_src/book/22_scr-s06-2.webp",
+      "image_format": "webp",
+      "image_bytes": 254254
+    },
+    {
+      "no": "23",
+      "file": "23_scr-s07.html",
+      "png": "23_scr-s07.png",
+      "status": "ok",
+      "image": "_src/book/23_scr-s07.webp",
+      "image_format": "webp",
+      "image_bytes": 240006
+    },
+    {
+      "no": "24",
+      "file": "24_scr-s08-1.html",
+      "png": "24_scr-s08-1.png",
+      "status": "ok",
+      "image": "_src/book/24_scr-s08-1.webp",
+      "image_format": "webp",
+      "image_bytes": 255764
+    },
+    {
+      "no": "25",
+      "file": "25_scr-s08-2.html",
+      "png": "25_scr-s08-2.png",
+      "status": "ok",
+      "image": "_src/book/25_scr-s08-2.webp",
+      "image_format": "webp",
+      "image_bytes": 249208
+    },
+    {
+      "no": "26",
+      "file": "26_scr-s09.html",
+      "png": "26_scr-s09.png",
+      "status": "ok",
+      "image": "_src/book/26_scr-s09.webp",
+      "image_format": "webp",
+      "image_bytes": 257250
+    },
+    {
+      "no": "27",
+      "file": "27_scr-s10.html",
+      "png": "27_scr-s10.png",
+      "status": "ok",
+      "image": "_src/book/27_scr-s10.webp",
+      "image_format": "webp",
+      "image_bytes": 260584
+    },
+    {
+      "no": "28",
+      "file": "28_scr-s11.html",
+      "png": "28_scr-s11.png",
+      "status": "ok",
+      "image": "_src/book/28_scr-s11.webp",
+      "image_format": "webp",
+      "image_bytes": 292134
+    },
+    {
+      "no": "29",
+      "file": "29_scr-s12.html",
+      "png": "29_scr-s12.png",
+      "status": "ok",
+      "image": "_src/book/29_scr-s12.webp",
+      "image_format": "webp",
+      "image_bytes": 286600
+    },
+    {
+      "no": "30",
+      "file": "30_scr-s13.html",
+      "png": "30_scr-s13.png",
+      "status": "ok",
+      "image": "_src/book/30_scr-s13.webp",
+      "image_format": "webp",
+      "image_bytes": 236374
+    },
+    {
+      "no": "31",
+      "file": "31_scr-s14.html",
+      "png": "31_scr-s14.png",
+      "status": "ok",
+      "image": "_src/book/31_scr-s14.webp",
+      "image_format": "webp",
+      "image_bytes": 303498
+    },
+    {
+      "no": "32",
+      "file": "32_scr-s15.html",
+      "png": "32_scr-s15.png",
+      "status": "ok",
+      "image": "_src/book/32_scr-s15.webp",
+      "image_format": "webp",
+      "image_bytes": 359088
+    },
+    {
+      "no": "33",
+      "file": "33_scr-s16-1.html",
+      "png": "33_scr-s16-1.png",
+      "status": "ok",
+      "image": "_src/book/33_scr-s16-1.webp",
+      "image_format": "webp",
+      "image_bytes": 277312
+    },
+    {
+      "no": "34",
+      "file": "34_scr-s16-2.html",
+      "png": "34_scr-s16-2.png",
+      "status": "ok",
+      "image": "_src/book/34_scr-s16-2.webp",
+      "image_format": "webp",
+      "image_bytes": 224472
+    },
+    {
+      "no": "35",
+      "file": "35_scr-s17.html",
+      "png": "35_scr-s17.png",
+      "status": "ok",
+      "image": "_src/book/35_scr-s17.webp",
+      "image_format": "webp",
+      "image_bytes": 302094
+    },
+    {
+      "no": "36",
+      "file": "36_scr-s18-1.html",
+      "png": "36_scr-s18-1.png",
+      "status": "ok",
+      "image": "_src/book/36_scr-s18-1.webp",
+      "image_format": "webp",
+      "image_bytes": 221446
+    },
+    {
+      "no": "37",
+      "file": "37_scr-s18-2.html",
+      "png": "37_scr-s18-2.png",
+      "status": "ok",
+      "image": "_src/book/37_scr-s18-2.webp",
+      "image_format": "webp",
+      "image_bytes": 259892
+    },
+    {
+      "no": "38",
+      "file": "38_scr-s19.html",
+      "png": "38_scr-s19.png",
+      "status": "ok",
+      "image": "_src/book/38_scr-s19.webp",
+      "image_format": "webp",
+      "image_bytes": 314390
+    },
+    {
+      "no": "39",
+      "file": "39_scr-s20.html",
+      "png": "39_scr-s20.png",
+      "status": "ok",
+      "image": "_src/book/39_scr-s20.webp",
+      "image_format": "webp",
+      "image_bytes": 148036
+    },
+    {
+      "no": "40",
+      "file": "40_scr-s21-1.html",
+      "png": "40_scr-s21-1.png",
+      "status": "ok",
+      "image": "_src/book/40_scr-s21-1.webp",
+      "image_format": "webp",
+      "image_bytes": 317720
+    },
+    {
+      "no": "41",
+      "file": "41_scr-s21-2.html",
+      "png": "41_scr-s21-2.png",
+      "status": "ok",
+      "image": "_src/book/41_scr-s21-2.webp",
+      "image_format": "webp",
+      "image_bytes": 322248
+    },
+    {
+      "no": "42",
+      "file": "42_scr-s22.html",
+      "png": "42_scr-s22.png",
+      "status": "ok",
+      "image": "_src/book/42_scr-s22.webp",
+      "image_format": "webp",
+      "image_bytes": 188108
+    },
+    {
+      "no": "43",
+      "file": "43_scr-s23.html",
+      "png": "43_scr-s23.png",
+      "status": "ok",
+      "image": "_src/book/43_scr-s23.webp",
+      "image_format": "webp",
+      "image_bytes": 279624
+    },
+    {
+      "no": "44",
+      "file": "44_scr-s24.html",
+      "png": "44_scr-s24.png",
+      "status": "ok",
+      "image": "_src/book/44_scr-s24.webp",
+      "image_format": "webp",
+      "image_bytes": 273086
+    },
+    {
+      "no": "45",
+      "file": "45_scr-s25.html",
+      "png": "45_scr-s25.png",
+      "status": "ok",
+      "image": "_src/book/45_scr-s25.webp",
+      "image_format": "webp",
+      "image_bytes": 227030
+    },
+    {
+      "no": "46",
+      "file": "46_scr-s26.html",
+      "png": "46_scr-s26.png",
+      "status": "ok",
+      "image": "_src/book/46_scr-s26.webp",
+      "image_format": "webp",
+      "image_bytes": 183316
+    },
+    {
+      "no": "47",
+      "file": "47_scr-s27.html",
+      "png": "47_scr-s27.png",
+      "status": "ok",
+      "image": "_src/book/47_scr-s27.webp",
+      "image_format": "webp",
+      "image_bytes": 314160
+    },
+    {
+      "no": "48",
+      "file": "48_scr-s28.html",
+      "png": "48_scr-s28.png",
+      "status": "ok",
+      "image": "_src/book/48_scr-s28.webp",
+      "image_format": "webp",
+      "image_bytes": 329004
+    },
+    {
+      "no": "49",
+      "file": "49_scr-s29.html",
+      "png": "49_scr-s29.png",
+      "status": "ok",
+      "image": "_src/book/49_scr-s29.webp",
+      "image_format": "webp",
+      "image_bytes": 374940
+    },
+    {
+      "no": "50",
+      "file": "50_scr-s30.html",
+      "png": "50_scr-s30.png",
+      "status": "ok",
+      "image": "_src/book/50_scr-s30.webp",
+      "image_format": "webp",
+      "image_bytes": 265904
+    },
+    {
+      "no": "51",
+      "file": "51_scr-s31-1.html",
+      "png": "51_scr-s31-1.png",
+      "status": "ok",
+      "image": "_src/book/51_scr-s31-1.webp",
+      "image_format": "webp",
+      "image_bytes": 244390
+    },
+    {
+      "no": "52",
+      "file": "52_scr-s31-2.html",
+      "png": "52_scr-s31-2.png",
+      "status": "ok",
+      "image": "_src/book/52_scr-s31-2.webp",
+      "image_format": "webp",
+      "image_bytes": 283716
+    },
+    {
+      "no": "53",
+      "file": "53_scr-s32.html",
+      "png": "53_scr-s32.png",
+      "status": "ok",
+      "image": "_src/book/53_scr-s32.webp",
+      "image_format": "webp",
+      "image_bytes": 251954
+    },
+    {
+      "no": "54",
+      "file": "54_scr-s33.html",
+      "png": "54_scr-s33.png",
+      "status": "ok",
+      "image": "_src/book/54_scr-s33.webp",
+      "image_format": "webp",
+      "image_bytes": 305714
+    },
+    {
+      "no": "55",
+      "file": "55_scr-s34-1.html",
+      "png": "55_scr-s34-1.png",
+      "status": "ok",
+      "image": "_src/book/55_scr-s34-1.webp",
+      "image_format": "webp",
+      "image_bytes": 206898
+    },
+    {
+      "no": "56",
+      "file": "56_scr-s34-2.html",
+      "png": "56_scr-s34-2.png",
+      "status": "ok",
+      "image": "_src/book/56_scr-s34-2.webp",
+      "image_format": "webp",
+      "image_bytes": 323786
+    },
+    {
+      "no": "57",
+      "file": "57_scr-s35.html",
+      "png": "57_scr-s35.png",
+      "status": "ok",
+      "image": "_src/book/57_scr-s35.webp",
+      "image_format": "webp",
+      "image_bytes": 277326
+    },
+    {
+      "no": "58",
+      "file": "58_scr-s36.html",
+      "png": "58_scr-s36.png",
+      "status": "ok",
+      "image": "_src/book/58_scr-s36.webp",
+      "image_format": "webp",
+      "image_bytes": 309030
+    },
+    {
+      "no": "59",
+      "file": "59_scr-s37.html",
+      "png": "59_scr-s37.png",
+      "status": "ok",
+      "image": "_src/book/59_scr-s37.webp",
+      "image_format": "webp",
+      "image_bytes": 274896
+    },
+    {
+      "no": "60",
+      "file": "60_scr-s38.html",
+      "png": "60_scr-s38.png",
+      "status": "ok",
+      "image": "_src/book/60_scr-s38.webp",
+      "image_format": "webp",
+      "image_bytes": 280888
+    },
+    {
+      "no": "61",
+      "file": "61_scr-s39-1.html",
+      "png": "61_scr-s39-1.png",
+      "status": "ok",
+      "image": "_src/book/61_scr-s39-1.webp",
+      "image_format": "webp",
+      "image_bytes": 265898
+    },
+    {
+      "no": "62",
+      "file": "62_scr-s39-2.html",
+      "png": "62_scr-s39-2.png",
+      "status": "ok",
+      "image": "_src/book/62_scr-s39-2.webp",
+      "image_format": "webp",
+      "image_bytes": 313600
+    },
+    {
+      "no": "63",
+      "file": "63_scr-s40.html",
+      "png": "63_scr-s40.png",
+      "status": "ok",
+      "image": "_src/book/63_scr-s40.webp",
+      "image_format": "webp",
+      "image_bytes": 234542
+    },
+    {
+      "no": "64",
+      "file": "64_scr-s41.html",
+      "png": "64_scr-s41.png",
+      "status": "ok",
+      "image": "_src/book/64_scr-s41.webp",
+      "image_format": "webp",
+      "image_bytes": 276276
+    },
+    {
+      "no": "65",
+      "file": "65_scr-s42-1.html",
+      "png": "65_scr-s42-1.png",
+      "status": "ok",
+      "image": "_src/book/65_scr-s42-1.webp",
+      "image_format": "webp",
+      "image_bytes": 254422
+    },
+    {
+      "no": "66",
+      "file": "66_scr-s42-2.html",
+      "png": "66_scr-s42-2.png",
+      "status": "ok",
+      "image": "_src/book/66_scr-s42-2.webp",
+      "image_format": "webp",
+      "image_bytes": 154098
+    },
+    {
+      "no": "67",
+      "file": "67_scr-s42-3.html",
+      "png": "67_scr-s42-3.png",
+      "status": "ok",
+      "image": "_src/book/67_scr-s42-3.webp",
+      "image_format": "webp",
+      "image_bytes": 258042
+    },
+    {
+      "no": "68",
+      "file": "68_scr-s43.html",
+      "png": "68_scr-s43.png",
+      "status": "ok",
+      "image": "_src/book/68_scr-s43.webp",
+      "image_format": "webp",
+      "image_bytes": 263616
+    },
+    {
+      "no": "69",
+      "file": "69_scr-s44-1.html",
+      "png": "69_scr-s44-1.png",
+      "status": "ok",
+      "image": "_src/book/69_scr-s44-1.webp",
+      "image_format": "webp",
+      "image_bytes": 241326
+    },
+    {
+      "no": "70",
+      "file": "70_scr-s44-2.html",
+      "png": "70_scr-s44-2.png",
+      "status": "ok",
+      "image": "_src/book/70_scr-s44-2.webp",
+      "image_format": "webp",
+      "image_bytes": 210628
+    },
+    {
+      "no": "71",
+      "file": "71_scr-s45.html",
+      "png": "71_scr-s45.png",
+      "status": "ok",
+      "image": "_src/book/71_scr-s45.webp",
+      "image_format": "webp",
+      "image_bytes": 306524
+    },
+    {
+      "no": "72",
+      "file": "72_scr-s46.html",
+      "png": "72_scr-s46.png",
+      "status": "ok",
+      "image": "_src/book/72_scr-s46.webp",
+      "image_format": "webp",
+      "image_bytes": 220248
+    },
+    {
+      "no": "73",
+      "file": "73_scr-s47.html",
+      "png": "73_scr-s47.png",
+      "status": "ok",
+      "image": "_src/book/73_scr-s47.webp",
+      "image_format": "webp",
+      "image_bytes": 270740
+    },
+    {
+      "no": "74",
+      "file": "74_opn-common-s01-10-1.html",
+      "png": "74_opn-common-s01-10-1.png",
+      "status": "ok",
+      "image": "_src/book/74_opn-common-s01-10-1.webp",
+      "image_format": "webp",
+      "image_bytes": 260400
+    },
+    {
+      "no": "75",
+      "file": "75_opn-common-s01-10-2.html",
+      "png": "75_opn-common-s01-10-2.png",
+      "status": "ok",
+      "image": "_src/book/75_opn-common-s01-10-2.webp",
+      "image_format": "webp",
+      "image_bytes": 283106
+    },
+    {
+      "no": "76",
+      "file": "76_opn-common-s01-10-3.html",
+      "png": "76_opn-common-s01-10-3.png",
+      "status": "ok",
+      "image": "_src/book/76_opn-common-s01-10-3.webp",
+      "image_format": "webp",
+      "image_bytes": 337374
+    },
+    {
+      "no": "77",
+      "file": "77_opn-common-s01-10-4.html",
+      "png": "77_opn-common-s01-10-4.png",
+      "status": "ok",
+      "image": "_src/book/77_opn-common-s01-10-4.webp",
+      "image_format": "webp",
+      "image_bytes": 247232
+    },
+    {
+      "no": "78",
+      "file": "78_opn-s11-16-1.html",
+      "png": "78_opn-s11-16-1.png",
+      "status": "ok",
+      "image": "_src/book/78_opn-s11-16-1.webp",
+      "image_format": "webp",
+      "image_bytes": 360156
+    },
+    {
+      "no": "79",
+      "file": "79_opn-s11-16-2.html",
+      "png": "79_opn-s11-16-2.png",
+      "status": "ok",
+      "image": "_src/book/79_opn-s11-16-2.webp",
+      "image_format": "webp",
+      "image_bytes": 276866
+    },
+    {
+      "no": "80",
+      "file": "80_opn-s11-16-3.html",
+      "png": "80_opn-s11-16-3.png",
+      "status": "ok",
+      "image": "_src/book/80_opn-s11-16-3.webp",
+      "image_format": "webp",
+      "image_bytes": 309444
+    },
+    {
+      "no": "81",
+      "file": "81_opn-s11-16-4.html",
+      "png": "81_opn-s11-16-4.png",
+      "status": "ok",
+      "image": "_src/book/81_opn-s11-16-4.webp",
+      "image_format": "webp",
+      "image_bytes": 274552
+    },
+    {
+      "no": "82",
+      "file": "82_opn-s11-16-5.html",
+      "png": "82_opn-s11-16-5.png",
+      "status": "ok",
+      "image": "_src/book/82_opn-s11-16-5.webp",
+      "image_format": "webp",
+      "image_bytes": 331796
+    },
+    {
+      "no": "83",
+      "file": "83_opn-s11-16-6.html",
+      "png": "83_opn-s11-16-6.png",
+      "status": "ok",
+      "image": "_src/book/83_opn-s11-16-6.webp",
+      "image_format": "webp",
+      "image_bytes": 228900
+    },
+    {
+      "no": "84",
+      "file": "84_opn-s17-23-1.html",
+      "png": "84_opn-s17-23-1.png",
+      "status": "ok",
+      "image": "_src/book/84_opn-s17-23-1.webp",
+      "image_format": "webp",
+      "image_bytes": 309306
+    },
+    {
+      "no": "85",
+      "file": "85_opn-s17-23-2.html",
+      "png": "85_opn-s17-23-2.png",
+      "status": "ok",
+      "image": "_src/book/85_opn-s17-23-2.webp",
+      "image_format": "webp",
+      "image_bytes": 365678
+    },
+    {
+      "no": "86",
+      "file": "86_opn-s17-23-3.html",
+      "png": "86_opn-s17-23-3.png",
+      "status": "ok",
+      "image": "_src/book/86_opn-s17-23-3.webp",
+      "image_format": "webp",
+      "image_bytes": 295520
+    },
+    {
+      "no": "87",
+      "file": "87_opn-s17-23-4.html",
+      "png": "87_opn-s17-23-4.png",
+      "status": "ok",
+      "image": "_src/book/87_opn-s17-23-4.webp",
+      "image_format": "webp",
+      "image_bytes": 127384
+    },
+    {
+      "no": "88",
+      "file": "88_opn-s24-36-1.html",
+      "png": "88_opn-s24-36-1.png",
+      "status": "ok",
+      "image": "_src/book/88_opn-s24-36-1.webp",
+      "image_format": "webp",
+      "image_bytes": 286710
+    },
+    {
+      "no": "89",
+      "file": "89_opn-s24-36-2.html",
+      "png": "89_opn-s24-36-2.png",
+      "status": "ok",
+      "image": "_src/book/89_opn-s24-36-2.webp",
+      "image_format": "webp",
+      "image_bytes": 328796
+    },
+    {
+      "no": "90",
+      "file": "90_opn-s24-36-3.html",
+      "png": "90_opn-s24-36-3.png",
+      "status": "ok",
+      "image": "_src/book/90_opn-s24-36-3.webp",
+      "image_format": "webp",
+      "image_bytes": 375292
+    },
+    {
+      "no": "91",
+      "file": "91_opn-s24-36-4.html",
+      "png": "91_opn-s24-36-4.png",
+      "status": "ok",
+      "image": "_src/book/91_opn-s24-36-4.webp",
+      "image_format": "webp",
+      "image_bytes": 331024
+    },
+    {
+      "no": "92",
+      "file": "92_opn-s24-36-5.html",
+      "png": "92_opn-s24-36-5.png",
+      "status": "ok",
+      "image": "_src/book/92_opn-s24-36-5.webp",
+      "image_format": "webp",
+      "image_bytes": 300628
+    },
+    {
+      "no": "93",
+      "file": "93_opn-s24-36-6.html",
+      "png": "93_opn-s24-36-6.png",
+      "status": "ok",
+      "image": "_src/book/93_opn-s24-36-6.webp",
+      "image_format": "webp",
+      "image_bytes": 258314
+    },
+    {
+      "no": "94",
+      "file": "94_opn-s30-45.html",
+      "png": "94_opn-s30-45.png",
+      "status": "ok",
+      "image": "_src/book/94_opn-s30-45.webp",
+      "image_format": "webp",
+      "image_bytes": 343636
+    },
+    {
+      "no": "95",
+      "file": "95_opn-s37-42-1.html",
+      "png": "95_opn-s37-42-1.png",
+      "status": "ok",
+      "image": "_src/book/95_opn-s37-42-1.webp",
+      "image_format": "webp",
+      "image_bytes": 315010
+    },
+    {
+      "no": "96",
+      "file": "96_opn-s37-42-2.html",
+      "png": "96_opn-s37-42-2.png",
+      "status": "ok",
+      "image": "_src/book/96_opn-s37-42-2.webp",
+      "image_format": "webp",
+      "image_bytes": 301802
+    },
+    {
+      "no": "97",
+      "file": "97_opn-s37-42-3.html",
+      "png": "97_opn-s37-42-3.png",
+      "status": "ok",
+      "image": "_src/book/97_opn-s37-42-3.webp",
+      "image_format": "webp",
+      "image_bytes": 277482
+    },
+    {
+      "no": "98",
+      "file": "98_opn-s37-42-4.html",
+      "png": "98_opn-s37-42-4.png",
+      "status": "ok",
+      "image": "_src/book/98_opn-s37-42-4.webp",
+      "image_format": "webp",
+      "image_bytes": 77226
+    },
+    {
+      "no": "99",
+      "file": "99_opn-s46-47.html",
+      "png": "99_opn-s46-47.png",
+      "status": "ok",
+      "image": "_src/book/99_opn-s46-47.webp",
+      "image_format": "webp",
+      "image_bytes": 312506
+    }
+  ],
+  "stale": [],
+  "external": [],
+  "bytes": 36651636,
+  "image_bytes": 26638988,
+  "image_format": "webp",
+  "status": "ok",
+  "built": "2026-10-29 07:47",
+  "summary": {
+    "errors": 0,
+    "warnings": 0,
+    "pages": 102,
+    "boards": 99,
+    "stale": 0,
+    "external": 0
+  },
+  "errors": [],
+  "warnings": []
+}

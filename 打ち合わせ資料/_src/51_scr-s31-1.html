@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>51 S31 アンケートの中身（1本）（1/2）</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { justify-content: flex-start; gap: 28px; }
+.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+.shot { flex: none; position: relative; }
+.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+.notes.scr .reqs { padding-bottom: 8px; }
+.notes.scr ol.marks { gap: 10px 22px; }
+.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+.notes.scr ol.marks li > b { font-size: 15px; }
+.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+.notes.scr .extra b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="51" data-type="pc" data-screens="S31">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 全員</div>
+      <h1>S31 アンケートの中身（1本）（1/2）</h1>
+      <div class="lead">アンケート1本の設問を、答えずに前もって読む。使う人: 全員。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="shots"><div class="shot anchor" style="width:451px;height:546px"><div class="photo"><img src="assets/shots/scr-s31-1.png" alt=""></div><i class="mk" style="left:-14px;top:0px">1</i><i class="mk" style="left:56px;top:24px">2</i><i class="mk" style="left:327px;top:11px">3</i><i class="mk" style="left:-9px;top:58px">4</i><i class="mk" style="left:-9px;top:98px">5</i><i class="mk" style="left:-9px;top:127px">6</i><i class="mk" style="left:-1px;top:156px">7</i><i class="mk" style="left:-14px;top:185px">8</i><i class="mk" style="left:-14px;top:214px">9</i><i class="mk" style="left:372px;top:244px">10</i></div><div class="shot anchor" style="width:451px;height:551px"><div class="photo"><img src="assets/shots/scr-s31-2.png" alt=""></div><i class="mk" style="left:-14px;top:4px">11</i><i class="mk" style="left:-14px;top:339px">12</i></div></div>
+    <aside class="notes scr"><div class="reqs"><span class="req" data-req="F03">F03 評価期間とアンケートを作り、一般の社員が実績を答えて提出する</span></div><ol class="marks"><li data-mark="1" data-kind="can"><b>一覧へ戻る</b><span class="sub">この期間を選んだ状態でアンケートの中身へ戻る（→ S30 アンケートの中身）</span></li><li data-mark="2" data-kind="how"><b>対象と状態の札</b><span class="sub">対象の等級・第何版・状態（下書き・公開中・締切）を出す</span></li><li data-mark="3" data-kind="can"><b>回答する</b><span class="sub">自分の等級で受付中のときだけ出る。答える画面へ移る（→ S34 アンケートに答える）</span></li><li data-mark="4" data-kind="how"><b>回答期間と案内</b><span class="sub">回答期間と回答者への案内。誰がどう答えたかは出ない</span></li><li data-mark="5" data-kind="how"><b>出さない情報</b><span class="sub">一般の社員には配点や昇格に必要な点数を出さない</span></li><li data-mark="6" data-kind="can"><b>この画面の見方</b><span class="sub">押すと、見本の読み方と必須・任意の印の説明が開く</span></li><li data-mark="7" data-kind="how"><b>見本の注記</b><span class="sub">選んでも保存も提出もされないことを知らせる</span></li><li data-mark="8" data-kind="how"><b>支援について</b><span class="sub">等級要件の設問。はい・いいえを試しに選べる</span></li><li data-mark="9" data-kind="how"><b>節の添え書き</b><span class="sub">節ごとに、送信できない旨と回答者への案内を出す</span></li><li data-mark="10" data-kind="how"><b>試しに選ぶ</b><span class="sub">選択肢は押して形を確かめられる。保存はされない</span></li><li data-mark="11" data-kind="how"><b>運営について</b><span class="sub">運営の等級要件の設問。はい・いいえで答える形</span></li><li data-mark="12" data-kind="how"><b>昇格要件（受講）</b><span class="sub">受講して報告書まで出したかを聞く設問</span></li></ol></aside>
+  </main>
+</div>
+</body>
+</html>

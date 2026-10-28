@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>90 押すと出るもの ・ 本人が変更できる項目・評価期間・アンケート</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { gap: 18px; align-items: flex-start; }
+.ocol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.ocard { background: var(--bg-surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-soft); }
+.ocard .oh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ocard .ono { flex: none; font: 800 13px/22px var(--font-num); min-width: 22px; padding: 0 6px; border-radius: 11px; text-align: center; background: var(--anno); color: var(--anno-ink); }
+.ocard .oh b { font-size: 15.5px; font-weight: 800; line-height: 1.35; }
+.ocard .otype { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 4px; color: var(--note-how-ink); background: var(--note-how-bg); }
+.ocard .otrig { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+.ocard .oimg { align-self: flex-start; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-board); }
+.ocard .oimg img { display: block; width: 100%; height: 100%; }
+.ocard ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.ocard .olab { font-size: 12px; font-weight: 800; color: var(--text-muted); margin-top: 2px; }
+.ocard .onot { font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="board" data-board="90" data-type="pc" data-screens="S26 S27 S28">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 押すと出るもの ・ 社員・評価期間・アンケートの管理（3/6）</div>
+      <h1>押すと出るもの ・ 本人が変更できる項目・評価期間・アンケート</h1>
+      <div class="lead">S26 本人が変更できる項目・S27 評価期間・S28 アンケート で、ボタンや見出しを押すと出る小窓・一覧・説明と、その中身。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body"><div class="ocol"><div class="ocard" data-k="S26-o2"><div class="oh"><span class="ono">15</span><b>所属の説明</b><span class="otype">開いて見る</span></div><div class="otrig">S26 本人が変更できる項目 ・ 押すもの: 「所属」</div><div class="oimg" style="width:487px;height:43px"><img src="assets/shots/opn-s26-o2.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>いま所属している部署・チームです。異動したら変えます。</li></ul></div><div class="ocard" data-k="S26-o3"><div class="oh"><span class="ono">16</span><b>社員番号の説明</b><span class="otype">開いて見る</span></div><div class="otrig">S26 本人が変更できる項目 ・ 押すもの: 「社員番号」</div><div class="oimg" style="width:487px;height:43px"><img src="assets/shots/opn-s26-o3.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>給与・勤怠と突き合わせるための番号です。会社が採番します。</li></ul></div><div class="ocard" data-k="S28-o2"><div class="oh"><span class="ono">22</span><b>公開する</b><span class="otype">確かめる小窓</span></div><div class="otrig">S28 アンケート ・ 押すもの: 「公開する」 ・ 閉じる: やめる</div><div class="oimg" style="width:420px;height:200px"><img src="assets/shots/opn-s28-o2.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>「（題名）」を公開します。</li><li>その等級の方の画面に表示され、回答できるようになります。</li><li>同じ等級で公開中の古い版は自動で締め切られます。</li></ul><div class="olab">中で押せるもの</div><ul><li>公開する: 受付を始める</li><li>やめる: 小窓を閉じる</li></ul></div></div><div class="ocol"><div class="ocard" data-k="S26-o4"><div class="oh"><span class="ono">17</span><b>入社日の説明</b><span class="otype">開いて見る</span></div><div class="otrig">S26 本人が変更できる項目 ・ 押すもの: 「入社日」</div><div class="oimg" style="width:487px;height:43px"><img src="assets/shots/opn-s26-o4.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>在籍年数の計算に使います。評価の対象期間の判定にも関わります。</li></ul></div><div class="ocard" data-k="S26-o5"><div class="oh"><span class="ono">18</span><b>切り替えの知らせ</b><span class="otype">押したあとに出る</span></div><div class="otrig">S26 本人が変更できる項目 ・ 押すもの: 「本人も」 ・ 押すと保存や送信が起きるので、写真は載せていない</div><div class="olab">中に出るもの</div><ul><li>本人も変更できるようになりました。（会社の管理者のみ を押すと「会社の管理者だけが変更できるようになりました。」）</li></ul></div><div class="ocard" data-k="S28-o1"><div class="oh"><span class="ono">21</span><b>まとめて下書きを作る</b><span class="otype">確かめる小窓</span></div><div class="otrig">S28 アンケート ・ 押すもの: 「等級ごとの下書きをまとめて作る」 ・ 閉じる: やめる</div><div class="oimg" style="width:420px;height:172px"><img src="assets/shots/opn-s28-o1.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>等級ごとのアンケート下書きを作ります。</li><li>もとにするのは、等級要件・昇格要件・行動指針・評価セットです。</li><li>既存のアンケートは残し、新しい版として追加します。</li></ul><div class="olab">中で押せるもの</div><ul><li>等級ごとの下書きをまとめて作る: 下書きを作る</li><li>やめる: 小窓を閉じる</li></ul></div></div><div class="ocol"><div class="ocard" data-k="S27-o1"><div class="oh"><span class="ono">19</span><b>受付を締め切る</b><span class="otype">確かめる小窓</span></div><div class="otrig">S27 評価期間 ・ 押すもの: 「受付を締め切る」 ・ 閉じる: やめる</div><div class="oimg" style="width:323px;height:220px"><img src="assets/shots/opn-s27-o1.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>未確定の評価の件数と名前（3人まで）</li><li>締め切ると、この期間のアンケートに回答できなくなります。</li><li>提出済みの回答と作成済みの評価はそのまま残ります。</li></ul><div class="olab">中で押せるもの</div><ul><li>受付を締め切る: その期間の受付を止める</li><li>やめる: 小窓を閉じる</li></ul></div><div class="ocard" data-k="S27-o2"><div class="oh"><span class="ono">20</span><b>受付を再開する</b><span class="otype">確かめる小窓</span></div><div class="otrig">S27 評価期間 ・ 押すもの: 「受付を再開する」 ・ 閉じる: やめる</div><div class="oimg" style="width:420px;height:142px"><img src="assets/shots/opn-s27-o2.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>受付を再開すると、この期間の回答を再び受け付けます。</li><li>アンケートは個別に公開し直してください。</li></ul><div class="olab">中で押せるもの</div><ul><li>受付を再開する: 受付を開き直す</li><li>やめる: 小窓を閉じる</li></ul></div></div></main>
+</div>
+</body>
+</html>

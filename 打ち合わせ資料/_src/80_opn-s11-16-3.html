@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>80 押すと出るもの ・ 等級要件（支援・運営）・昇格の条件・要件</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { gap: 18px; align-items: flex-start; }
+.ocol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.ocard { background: var(--bg-surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-soft); }
+.ocard .oh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ocard .ono { flex: none; font: 800 13px/22px var(--font-num); min-width: 22px; padding: 0 6px; border-radius: 11px; text-align: center; background: var(--anno); color: var(--anno-ink); }
+.ocard .oh b { font-size: 15.5px; font-weight: 800; line-height: 1.35; }
+.ocard .otype { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 4px; color: var(--note-how-ink); background: var(--note-how-bg); }
+.ocard .otrig { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+.ocard .oimg { align-self: flex-start; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-board); }
+.ocard .oimg img { display: block; width: 100%; height: 100%; }
+.ocard ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.ocard .olab { font-size: 12px; font-weight: 800; color: var(--text-muted); margin-top: 2px; }
+.ocard .onot { font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="board" data-board="80" data-type="pc" data-screens="S14 S15">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 押すと出るもの ・ 管理者のホームと制度の設定（3/6）</div>
+      <h1>押すと出るもの ・ 等級要件（支援・運営）・昇格の条件・要件</h1>
+      <div class="lead">S14 等級要件（支援・運営）・S15 昇格の条件・要件 で、ボタンや見出しを押すと出る小窓・一覧・説明と、その中身。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body"><div class="ocol"><div class="ocard" data-k="S14-o9"><div class="oh"><span class="ono">15</span><b>変更履歴</b><span class="otype">開いて見る</span></div><div class="otrig">S14 等級要件（支援・運営） ・ 押すもの: 「変更履歴」</div><div class="oimg" style="width:487px;height:95px"><img src="assets/shots/opn-s14-o9.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>以前の内容は変更せず残っています。</li><li>過去版の札つきの項目</li><li>0件なら 変更履歴はありません。</li></ul><div class="olab">中で押せるもの</div><ul><li>この内容をもとに新版を作る: 過去版の文で新版を作る（押すと保存する）</li></ul></div><div class="ocard" data-k="S15-o3"><div class="oh"><span class="ono">20</span><b>使用中</b><span class="otype">開いて見る</span></div><div class="otrig">S15 昇格の条件・要件 ・ 押すもの: 「使用中」</div><div class="oimg" style="width:229px;height:220px"><img src="assets/shots/opn-s15-o3.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>この項目を使っている場所です。</li><li>アンケートの名前</li><li>確定済みの評価</li></ul></div></div><div class="ocol"><div class="ocard" data-k="S14-o10"><div class="oh"><span class="ono">16</span><b>回答する人にはこう見えます</b><span class="otype">見本</span></div><div class="otrig">S14 等級要件（支援・運営） ・ 押すもの: 「見てみる」 ・ 閉じる: 閉じる</div><div class="olab">中に出るもの</div><ul><li>区分ごとの項目</li><li>○ できている ／ × まだできていない</li><li>回答画面には点数・評価基準は出ません</li></ul><div class="olab">中で押せるもの</div><ul><li>閉じる: 見本を閉じる</li></ul></div><div class="ocard" data-k="S15-o1"><div class="oh"><span class="ono">18</span><b>仮置きの札</b><span class="otype">説明</span></div><div class="otrig">S15 昇格の条件・要件 ・ 押すもの: 「仮置き」 ・ 閉じる: マウスを離す</div><div class="oimg" style="width:487px;height:22px"><img src="assets/shots/opn-s15-o1.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>制度として未確定のため、叩き台の初期値を入れています。</li></ul></div><div class="ocard" data-k="S15-o4"><div class="oh"><span class="ono">21</span><b>内容を直す</b><span class="otype">開いて見る</span></div><div class="otrig">S15 昇格の条件・要件 ・ 押すもの: 「内容を直す」 ・ 閉じる: やめる</div><div class="oimg" style="width:487px;height:42px"><img src="assets/shots/opn-s15-o4.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>いまの文の入力欄</li><li>以前の内容は変更履歴に残ります。</li></ul><div class="olab">中で押せるもの</div><ul><li>新版として保存: 直した文を新しい版として保存する</li><li>やめる: 元の行に戻す</li></ul></div></div><div class="ocol"><div class="ocard" data-k="S14-o11"><div class="oh"><span class="ono">17</span><b>消せない理由</b><span class="otype">開いて見る</span></div><div class="otrig">S14 等級要件（支援・運営） ・ 押すもの: 「「使用中」の項目を消せない理由」</div><div class="oimg" style="width:487px;height:89px"><img src="assets/shots/opn-s14-o11.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>一度でもアンケートに出した項目は、完全には消せません。</li><li>公開したアンケートと確定済みの評価を変えないためです。</li><li>「使わない」にすると、次のアンケートから外せます。</li></ul></div><div class="ocard" data-k="S15-o2"><div class="oh"><span class="ono">19</span><b>変更が反映される範囲</b><span class="otype">開いて見る</span></div><div class="otrig">S15 昇格の条件・要件 ・ 押すもの: 「変更が反映される範囲」</div><div class="oimg" style="width:487px;height:92px"><img src="assets/shots/opn-s15-o2.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>回答の無い下書きに反映する</li><li>回答のある公開中のアンケートには次の版の下書きを作る</li><li>締め切った期のアンケートは変えない</li><li>公開済みの設問と確定済みの評価は残る</li><li>既存の評価は集計し直さない</li></ul></div><div class="ocard" data-k="S15-o5"><div class="oh"><span class="ono">22</span><b>必須・任意の入替</b><span class="otype">押したあとに出る</span></div><div class="otrig">S15 昇格の条件・要件 ・ 押すもの: 「任意の新版にする」 ・ 押すと保存や送信が起きるので、写真は載せていない</div><div class="olab">中に出るもの</div><ul><li>必須と任意を入れ替えた新版</li><li>前の版は変更履歴に残る</li><li>保存の文</li></ul></div></div></main>
+</div>
+</body>
+</html>

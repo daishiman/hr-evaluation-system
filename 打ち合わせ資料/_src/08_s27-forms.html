@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>08 評価期間とアンケート・回答一覧</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body > .stage { flex-direction: column; gap: 12px; }
+.browser { width: 1000px; }
+.browser-bar .cur { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--text-2); }
+.sno { flex: none; font: 800 12.5px/1.5 var(--font-num); color: var(--text-brand); background: var(--bg-brand-soft); border-radius: 5px; padding: 0 6px; }
+.browser .photo { flex: none; height: 624px; border: none; border-radius: 0; }
+.others { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 10px; width: 1000px; }
+.others .tile { padding: 8px 12px; gap: 2px; border-radius: 10px; }
+.others .tile.anchor { padding-right: 46px; }
+.others .tile .h { gap: 8px; align-items: baseline; }
+.others .tile .h b { font-size: 15.5px; line-height: 1.4; }
+.others .tile .go { margin-left: auto; flex: none; font: 800 12.5px/1.5 var(--font-num); color: var(--text-brand); }
+.others .tile p { font-size: 13.5px; line-height: 1.5; color: var(--text-2); }
+.flow { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.flow ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; line-height: 1.55; color: var(--text-2); }
+.flow li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
+.flow .to { color: var(--text-muted); font-weight: 800; }
+.flow .btn-l { color: var(--text); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="board" data-board="08" data-type="pc" data-screens="S27 S28 S29 S30 S31 S36">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面 5 / 8 ・ PC</div>
+      <h1>評価期間とアンケート・回答一覧</h1>
+      <div class="lead">期間を開き、等級ごとのアンケートを出すだけ。だれが提出済みかは、回答一覧ですぐ分かる。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="stage">
+      <div class="browser">
+        <div class="browser-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><div class="url">example.app/admin/forms/…/responses</div><span class="cur"><span class="sno">S36</span>回答一覧</span></div>
+        <div class="browser-body">
+          <div class="photo anchor" data-source="src/app/admin/forms/[id]/responses/page.tsx"><img src="assets/shots/S36.png" alt=""><i class="mk" style="left:187px;top:160px">1</i><i class="mk" style="left:856px;top:65px">3</i><i class="mk" style="left:295px;top:563px">4</i><i class="mk" style="left:959px;top:175px">5</i></div>
+        </div>
+      </div>
+      <h2 class="sec-label">このボードのほかの画面<small>画面の全体と押せるものは、それぞれの「ボード」で番号を付けて説明している</small></h2>
+      <div class="others"><div class="tile anchor" data-go="S27"><div class="h"><span class="sno">S27</span><b>評価期間</b><span class="go">ボード 47</span></div><p>半期の期間を作り、締める・再開する</p><i class="mk" style="right:10px;top:50%;margin-top:-13px">2</i></div><div class="tile" data-go="S28"><div class="h"><span class="sno">S28</span><b>アンケート</b><span class="go">ボード 48</span></div><p>等級ごとに作り、公開・締め切る</p></div><div class="tile" data-go="S29"><div class="h"><span class="sno">S29</span><b>アンケートの組み立て</b><span class="go">ボード 49</span></div><p>設問と回答期間を確かめ、試しに答える</p></div><div class="tile" data-go="S30"><div class="h"><span class="sno">S30</span><b>アンケートの中身</b><span class="go">ボード 50</span></div><p>期間ごとの設問を読む</p></div><div class="tile" data-go="S31"><div class="h"><span class="sno">S31</span><b>アンケートの中身（1本）</b><span class="go">ボード 51</span></div><p>1 本の設問を答える前に読む</p></div></div>
+    </div>
+    <aside class="notes">
+      <div class="reqs"><span class="req" data-req="F03">F03 評価期間とアンケートを作り、一般の社員が実績を答えて提出する</span><span class="req" data-req="F07">F07 締め切りが近い未回答の人へ、自動でお知らせを送る (あとで)</span></div>
+      <ol class="marks"><li data-mark="1" data-kind="can"><b>提出済みと未提出の数</b><span class="sub">だれが出したかは、下の表ですぐ分かる。</span></li><li data-mark="2" data-kind="how"><b>期間とアンケートは一方向に進む</b><span class="sub">準備中 → 回答受付中 → 締め切り済み。回答が入った版の設問は変えない（R04・R05）。</span></li><li data-mark="3" data-kind="can"><b>CSV に書き出す・取り込む</b><span class="sub">取り込みは全行を確かめ、だめな行があれば 1 行も保存しない（R07）。</span></li><li data-mark="4" data-kind="ask"><b>止まると困る時期</b><span class="q">Q04</span><span class="sub">案: 期の終わりの前後 2 週間は新しい版を出さない。止まったら締め切りを延ばす。</span></li><li data-mark="5" data-kind="ask"><b>未回答の人へのお知らせ</b><span class="q">Q06</span><span class="sub">案: 次の版で、締め切りの 7 日前と前日にメールで送る。</span></li></ol>
+      <div class="flow"><h2>画面の移り方</h2><ul><li><span class="sno">S27</span><span class="to">→</span><span class="sno">S28</span><span class="to">→</span><span class="btn-l">「内容を確認・編集」</span><span class="to">→</span><span class="sno">S29</span></li><li><span class="sno">S29</span><span class="to">→</span><span class="btn-l">「試しに回答する」</span><span class="to">→</span><span class="sno">S31</span></li><li><span class="sno">S28</span><span>・</span><span class="sno">S29</span><span class="to">→</span><span class="btn-l">「回答一覧」</span><span class="to">→</span><span class="sno">S36</span></li><li><span class="sno">S30</span><span class="to">→</span><span class="btn-l">「アンケートを開く」</span><span class="to">→</span><span class="sno">S31</span></li></ul></div>
+    </aside>
+  </main>
+</div>
+</body>
+</html>

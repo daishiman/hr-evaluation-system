@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>21 S06 利用者一覧（1/2）</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { justify-content: flex-start; gap: 28px; }
+.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+.shot { flex: none; position: relative; }
+.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+.notes.scr .reqs { padding-bottom: 8px; }
+.notes.scr ol.marks { gap: 10px 22px; }
+.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+.notes.scr ol.marks li > b { font-size: 15px; }
+.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+.notes.scr .extra b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="21" data-type="pc" data-screens="S06">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ システム全体管理者</div>
+      <h1>S06 利用者一覧（1/2）</h1>
+      <div class="lead">全社の使う人を会社ごとに見渡し、新しい人を足す。使う人: システム全体管理者。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="shots"><div class="shot anchor" style="width:481px;height:430px"><div class="photo"><img src="assets/shots/scr-s06-1.png" alt=""></div><i class="mk" style="left:33px;top:57px">1</i><i class="mk" style="left:-14px;top:110px">2</i><i class="mk" style="left:-8px;top:139px">3</i><i class="mk" style="left:125px;top:243px">4</i><i class="mk" style="left:2px;top:306px">5</i><i class="mk" style="left:2px;top:335px">6</i><i class="mk" style="left:-8px;top:376px">7</i><i class="mk" style="left:-14px;top:405px">8</i></div><div class="shot anchor" style="width:481px;height:101px"><div class="photo"><img src="assets/shots/scr-s06-2.png" alt=""></div><i class="mk" style="left:371px;top:28px">9</i><i class="mk" style="left:-14px;top:44px">10</i><i class="mk" style="left:327px;top:45px">11</i><i class="mk" style="left:368px;top:62px">12</i><i class="mk" style="left:32px;top:75px">13</i></div></div>
+    <aside class="notes scr"><div class="reqs"><span class="req" data-req="F01">F01 会社と使う人を用意し、役割ごとにログインして使う</span></div><ol class="marks"><li data-mark="1" data-kind="how"><b>利用中の人数</b><span class="sub">利用中の人数と、役割ごとの人数を出す</span></li><li data-mark="2" data-kind="how"><b>利用者を追加する</b><span class="sub">新しい利用者を1人ずつ作る区画</span></li><li data-mark="3" data-kind="how"><b>新しい利用者を作る</b><span class="sub">開閉。氏名・メール・仮パスワード・役割・所属会社を入れる</span></li><li data-mark="4" data-kind="can"><b>仮パスワード</b><span class="sub">その場で作った値が入る。「作り直す」「写す」で扱う</span></li><li data-mark="5" data-kind="how"><b>所属会社</b><span class="sub">会社を選ぶ。システム全体管理者だけは選ばなくてよい</span></li><li data-mark="6" data-kind="can"><b>アカウントを作る</b><span class="sub">利用者を作り、仮パスワードの控えを開くボタンを出す</span></li><li data-mark="7" data-kind="how"><b>役割ごとにできること</b><span class="sub">開くと役割ごとの一言と「権限一覧を開く」が出る</span></li><li data-mark="8" data-kind="how"><b>会社でしぼる</b><span class="sub">会社の札を押すと、その会社の人だけにする</span></li><li data-mark="9" data-kind="can"><b>利用者の一覧</b><span class="sub">名前を押すと利用者1人へ移り、登録内容を変えられる（→ S07 利用者1人）</span></li><li data-mark="10" data-kind="can"><b>探す</b><span class="sub">名前・メール・役割・会社・等級で探す</span></li><li data-mark="11" data-kind="can"><b>並べ替え</b><span class="sub">名前・会社・役割・点数・等級で並べる</span></li><li data-mark="12" data-kind="can"><b>向きを逆にする</b><span class="sub">並びの向きを逆にする</span></li><li data-mark="13" data-kind="how"><b>並びと人数</b><span class="sub">いまの並びと、表示している人数を出す</span></li></ol></aside>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>88 押すと出るもの ・ 社員</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { gap: 18px; align-items: flex-start; }
+.ocol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.ocard { background: var(--bg-surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-soft); }
+.ocard .oh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ocard .ono { flex: none; font: 800 13px/22px var(--font-num); min-width: 22px; padding: 0 6px; border-radius: 11px; text-align: center; background: var(--anno); color: var(--anno-ink); }
+.ocard .oh b { font-size: 15.5px; font-weight: 800; line-height: 1.35; }
+.ocard .otype { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 4px; color: var(--note-how-ink); background: var(--note-how-bg); }
+.ocard .otrig { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+.ocard .oimg { align-self: flex-start; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-board); }
+.ocard .oimg img { display: block; width: 100%; height: 100%; }
+.ocard ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.ocard .olab { font-size: 12px; font-weight: 800; color: var(--text-muted); margin-top: 2px; }
+.ocard .onot { font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="board" data-board="88" data-type="pc" data-screens="S24">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 押すと出るもの ・ 社員・評価期間・アンケートの管理（1/6）</div>
+      <h1>押すと出るもの ・ 社員</h1>
+      <div class="lead">S24 社員 で、ボタンや見出しを押すと出る小窓・一覧・説明と、その中身。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body"><div class="ocol"><div class="ocard" data-k="S24-o1"><div class="oh"><span class="ono">1</span><b>アカウントを発行する</b><span class="otype">開いて見る</span></div><div class="otrig">S24 社員 ・ 押すもの: 「アカウントを発行する」</div><div class="oimg" style="width:321px;height:220px"><img src="assets/shots/opn-s24-o1.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>氏名</li><li>メールアドレス（ログインID）</li><li>最初のパスワード（その場で作った値）</li><li>役割（初期は一般）</li><li>等級・上長・所属・社員番号・入社日</li></ul><div class="olab">中で押せるもの</div><ul><li>作り直す: パスワードの値を作り直す</li><li>写す: パスワードを写す</li><li>この内容でアカウントを作る: 1人を足して名簿に加える</li></ul></div><div class="ocard" data-k="S24-o2"><div class="oh"><span class="ono">2</span><b>発行した控え</b><span class="otype">押したあとに出る</span></div><div class="otrig">S24 社員 ・ 押すもの: 「この内容でアカウントを作る」 ・ 閉じる: 控えを隠す ・ 押すと保存や送信が起きるので、写真は載せていない</div><div class="olab">中に出るもの</div><ul><li>作った最初のパスワード（一度だけ）</li><li>隠したあとも一覧の行の「仮パスワードの控えを見る」から開き直せる</li></ul><div class="olab">中で押せるもの</div><ul><li>仮パスワードの控えを見る: 控えを出す</li><li>控えを隠す: 控えを隠す</li><li>次の入力を始める: 欄を空に戻す</li></ul></div></div><div class="ocol"><div class="ocard" data-k="S24-o3"><div class="oh"><span class="ono">3</span><b>行の仮パスワード控え</b><span class="otype">押したあとに出る</span></div><div class="otrig">S24 社員 ・ 押すもの: 「仮パスワードの控えを見る」 ・ 閉じる: 隠す</div><div class="olab">中に出るもの</div><ul><li>仮パスワード</li><li>いつ発行し、いつまで開けるか</li></ul><div class="olab">中で押せるもの</div><ul><li>写す: 仮パスワードを写す（「写しました」と出る）</li><li>隠す: 控えを閉じる</li></ul></div><div class="ocard" data-k="S24-o5"><div class="oh"><span class="ono">5</span><b>権限一覧</b><span class="otype">小窓</span></div><div class="otrig">S24 社員 ・ 押すもの: 「権限一覧を開く」 ・ 閉じる: 閉じる</div><div class="oimg" style="width:134px;height:220px"><img src="assets/shots/opn-s24-o5.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>役割のタブ（全ての役割・システム全体管理者・会社の管理者・マネージャー・一般）</li><li>凡例（○できる・△条件つき・—できない）</li><li>画面ごとの表</li></ul><div class="olab">中で押せるもの</div><ul><li>役割のタブ: 表をその役割に絞る</li><li>この画面の操作（N）: その画面の操作の一覧を開閉する</li><li>i: 条件つきの中身を出す</li><li>閉じる: 小窓を閉じる</li></ul></div></div><div class="ocol"><div class="ocard" data-k="S24-o4"><div class="oh"><span class="ono">4</span><b>役割ごとにできること</b><span class="otype">開いて見る</span></div><div class="otrig">S24 社員 ・ 押すもの: 「役割ごとにできること」</div><div class="oimg" style="width:487px;height:136px"><img src="assets/shots/opn-s24-o4.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>会社の管理者・マネージャー・一般ごとの要約</li><li>開ける画面の数</li></ul><div class="olab">中で押せるもの</div><ul><li>権限一覧を開く: 小窓「権限一覧」を開く</li></ul></div><div class="ocard" data-k="S24-o6"><div class="oh"><span class="ono">6</span><b>名簿をまとめて取り込む</b><span class="otype">開いて見る</span></div><div class="otrig">S24 社員 ・ 押すもの: 「名簿をまとめて取り込む」</div><div class="oimg" style="width:397px;height:220px"><img src="assets/shots/opn-s24-o6.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>社員一覧のファイル（CSV）</li><li>または、表をそのまま貼り付ける</li></ul><div class="olab">中で押せるもの</div><ul><li>CSVの書き方を見る: 小窓「CSVの書き方」を開く</li><li>まず内容を確認する: 保存せずに全行を確かめる</li><li>この内容を取り込む: 全行が正しいときだけ保存する</li></ul></div></div></main>
+</div>
+</body>
+</html>

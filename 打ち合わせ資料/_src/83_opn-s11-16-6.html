@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>83 押すと出るもの ・ 行動指針</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { gap: 18px; align-items: flex-start; }
+.ocol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.ocard { background: var(--bg-surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-soft); }
+.ocard .oh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ocard .ono { flex: none; font: 800 13px/22px var(--font-num); min-width: 22px; padding: 0 6px; border-radius: 11px; text-align: center; background: var(--anno); color: var(--anno-ink); }
+.ocard .oh b { font-size: 15.5px; font-weight: 800; line-height: 1.35; }
+.ocard .otype { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 4px; color: var(--note-how-ink); background: var(--note-how-bg); }
+.ocard .otrig { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+.ocard .oimg { align-self: flex-start; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-board); }
+.ocard .oimg img { display: block; width: 100%; height: 100%; }
+.ocard ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.ocard .olab { font-size: 12px; font-weight: 800; color: var(--text-muted); margin-top: 2px; }
+.ocard .onot { font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="board" data-board="83" data-type="pc" data-screens="S16">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 押すと出るもの ・ 管理者のホームと制度の設定（6/6）</div>
+      <h1>押すと出るもの ・ 行動指針</h1>
+      <div class="lead">S16 行動指針 で、ボタンや見出しを押すと出る小窓・一覧・説明と、その中身。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body"><div class="ocol"><div class="ocard" data-k="S16-o8"><div class="oh"><span class="ono">36</span><b>観点を今後使わない</b><span class="otype">確かめる小窓</span></div><div class="otrig">S16 行動指針 ・ 押すもの: 「今後使わない」 ・ 閉じる: やめる</div><div class="oimg" style="width:420px;height:142px"><img src="assets/shots/opn-s16-o8.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>「（観点の呼び名）」を今後使わない設定にします。あとからもう一度使えます。</li></ul><div class="olab">中で押せるもの</div><ul><li>今後使わない: 観点を使わない設定にする</li><li>やめる: 小窓を閉じる</li></ul></div><div class="ocard" data-k="S16-o9"><div class="oh"><span class="ono">37</span><b>段階の内容を直す</b><span class="otype">開いて見る</span></div><div class="otrig">S16 行動指針 ・ 押すもの: 「内容を直す」 ・ 閉じる: やめる</div><div class="oimg" style="width:487px;height:32px"><img src="assets/shots/opn-s16-o9.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>この段階の呼び名</li><li>どういう状態か</li></ul><div class="olab">中で押せるもの</div><ul><li>保存する: 段階の文を保存する</li><li>やめる: 欄を閉じる</li></ul></div><div class="ocard" data-k="S16-o10"><div class="oh"><span class="ono">38</span><b>観点をもう一度使う</b><span class="otype">押したあとに出る</span></div><div class="otrig">S16 行動指針 ・ 押すもの: 「もう一度使う」 ・ 押すと保存や送信が起きるので、写真は載せていない</div><div class="olab">中に出るもの</div><ul><li>使わない観点を戻す</li><li>保存の文</li></ul></div></div><div class="ocol"><div class="ocard" data-k="S16-o11"><div class="oh"><span class="ono">39</span><b>完全に消す</b><span class="otype">確かめる小窓</span></div><div class="otrig">S16 行動指針 ・ 押すもの: 「完全に消す」 ・ 閉じる: やめる</div><div class="olab">中に出るもの</div><ul><li>「（観点の呼び名）」を完全に消します。元に戻せません。</li><li>5段階の文章n件も一緒に消えます。（基準のときは 中に入っている観点n件も一緒に消えます。）</li><li>公開したアンケートと確定済みの評価は変わりません。</li></ul><div class="olab">中で押せるもの</div><ul><li>完全に消す: 観点（または基準）を消す</li><li>やめる: 小窓を閉じる</li></ul></div><div class="ocard" data-k="S16-o12"><div class="oh"><span class="ono">40</span><b>観点を追加</b><span class="otype">開いて見る</span></div><div class="otrig">S16 行動指針 ・ 押すもの: 「＋ 観点を追加」 ・ 閉じる: やめる</div><div class="olab">中に出るもの</div><ul><li>観点の呼び名（そのまま設問になります）例：協調性について</li></ul><div class="olab">中で押せるもの</div><ul><li>追加する: 観点を1つ足す</li><li>やめる: 欄を閉じる</li></ul></div><div class="ocard" data-k="S16-o13"><div class="oh"><span class="ono">41</span><b>消せない理由（観点）</b><span class="otype">開いて見る</span></div><div class="otrig">S16 行動指針 ・ 押すもの: 「「使用中」の項目を消せない理由」</div><div class="oimg" style="width:487px;height:89px"><img src="assets/shots/opn-s16-o13.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>一度でもアンケートに出した項目は、完全には消せません。</li><li>公開したアンケートと確定済みの評価を変えないためです。</li><li>「使わない」にすると、次のアンケートから外せます。</li></ul></div></div><div class="ocol"></div></main>
+</div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>52 S31 アンケートの中身（1本）（2/2）</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { justify-content: flex-start; gap: 28px; }
+.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+.shot { flex: none; position: relative; }
+.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+.notes.scr .reqs { padding-bottom: 8px; }
+.notes.scr ol.marks { gap: 10px 22px; }
+.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+.notes.scr ol.marks li > b { font-size: 15px; }
+.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+.notes.scr .extra b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="52" data-type="pc" data-screens="S31">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 全員 ・ 前のページの続き</div>
+      <h1>S31 アンケートの中身（1本）（2/2）</h1>
+      <div class="lead">アンケート1本の設問を、答えずに前もって読む。使う人: 全員。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="shots"><div class="shot anchor" style="width:451px;height:610px"><div class="photo"><img src="assets/shots/scr-s31-3.png" alt=""></div><i class="mk" style="left:-14px;top:4px">13</i><i class="mk" style="left:-14px;top:143px">14</i></div><div class="shot anchor" style="width:451px;height:509px"><div class="photo"><img src="assets/shots/scr-s31-4.png" alt=""></div><i class="mk" style="left:-14px;top:285px">15</i><i class="mk" style="left:217px;top:332px">16</i></div></div>
+    <aside class="notes scr"><div class="reqs"><span class="req" data-req="F03">F03 評価期間とアンケートを作り、一般の社員が実績を答えて提出する</span></div><ol class="marks"><li data-mark="13" data-kind="how"><b>昇格要件（独学）</b><span class="sub">独学してテストに合格したかを聞く設問</span></li><li data-mark="14" data-kind="how"><b>行動指針</b><span class="sub">観点ごとに【模範】〜【悪影響】の5段階から1つ選ぶ形</span></li><li data-mark="15" data-kind="how"><b>実績の数値</b><span class="sub">件数を入れる設問。見本では入れる欄の説明だけを出す</span></li><li data-mark="16" data-kind="how"><b>数値の答え方</b><span class="sub">単位と、0以上の数を入れることを文で出す</span></li></ol><p class="extra">見本のデータでは出ないもの: 試しに回答する（管理者だけ。保存せずに回答画面と同じ入力と提出の検査を試す） / 試しの確認の欄（管理者が試しに提出するとき。「入力に戻る」「試しに提出する」が出る） / このアンケートを設定する（管理者だけ。アンケートの組み立て（S29）へ移る） / 答えられない理由（下書き・等級が無い・別の等級・締切のとき、理由を1つ出す） / 自分のアンケートを見る（別の等級や締切のとき出る。実績を報告する（S33）へ移る） / 回答一覧を見る（等級の無い管理者のとき出る。回答一覧（S36）へ移る） / 締め切った回（締め切り済みのアンケートは、情報の枠を灰色で出す）</p><p class="extra">押すと出るもの 1 件は、ボード 94 にまとめた。</p></aside>
+  </main>
+</div>
+</body>
+</html>

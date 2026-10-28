@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>74 押すと出るもの ・ 共通の枠・自分の情報</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { gap: 18px; align-items: flex-start; }
+.ocol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.ocard { background: var(--bg-surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-soft); }
+.ocard .oh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ocard .ono { flex: none; font: 800 13px/22px var(--font-num); min-width: 22px; padding: 0 6px; border-radius: 11px; text-align: center; background: var(--anno); color: var(--anno-ink); }
+.ocard .oh b { font-size: 15.5px; font-weight: 800; line-height: 1.35; }
+.ocard .otype { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 4px; color: var(--note-how-ink); background: var(--note-how-bg); }
+.ocard .otrig { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+.ocard .oimg { align-self: flex-start; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-board); }
+.ocard .oimg img { display: block; width: 100%; height: 100%; }
+.ocard ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.ocard .olab { font-size: 12px; font-weight: 800; color: var(--text-muted); margin-top: 2px; }
+.ocard .onot { font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="board" data-board="74" data-type="pc" data-screens="S02">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 押すと出るもの ・ 共通の枠・ログイン・自分の情報・システム運用（1/4）</div>
+      <h1>押すと出るもの ・ 共通の枠・自分の情報</h1>
+      <div class="lead">COMMON 共通の枠・S02 自分の情報 で、ボタンや見出しを押すと出る小窓・一覧・説明と、その中身。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body"><div class="ocol"><div class="ocard" data-k="COMMON-o1"><div class="oh"><span class="ono">1</span><b>アカウントのメニュー</b><span class="otype">選ぶ一覧</span></div><div class="otrig">COMMON 共通の枠 ・ 押すもの: 「給」 ・ 閉じる: Esc</div><div class="olab">中に出るもの</div><ul><li>名前とメールアドレス</li><li>役割と会社の札</li><li>画面の明るさ（自動・明るい・暗い）</li><li>画面の配色（6つ。指すと感じの説明が出る）</li><li>自分の情報</li><li>パスワードを変える</li><li>ログアウト</li></ul><div class="olab">中で押せるもの</div><ul><li>画面の明るさ・画面の配色: すぐにその見た目に変わり、端末に覚える</li><li>自分の情報: 自分の情報へ移る（→ S02）</li><li>パスワードを変える: パスワードの変更へ移る（→ S03）</li><li>ログアウト: ログアウトする（→ S01）</li></ul></div><div class="ocard" data-k="S02-o1"><div class="oh"><span class="ono">4</span><b>項目の説明</b><span class="otype">開いて見る</span></div><div class="otrig">S02 自分の情報 ・ 押すもの: 「氏名」</div><div class="oimg" style="width:320px;height:220px"><img src="assets/shots/opn-s02-o1.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>その項目が何かの説明（例: 画面や評価シートに出る名前）</li><li>変えられない項目には「変更は会社の管理者にご相談ください。」</li></ul></div></div><div class="ocol"><div class="ocard" data-k="COMMON-o2"><div class="oh"><span class="ono">2</span><b>画面と人を探す</b><span class="otype">小窓</span></div><div class="otrig">COMMON 共通の枠 ・ 押すもの: 「検索」 ・ 閉じる: Esc</div><div class="oimg" style="width:310px;height:220px"><img src="assets/shots/opn-common-o2.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>探す欄（画面の名前、人の名前）</li><li>上下キーで選び、Enter で開く案内</li><li>画面の候補（何も打たないときは6件）</li><li>人の候補（人の一覧を見られる役割だけ）</li></ul><div class="olab">中で押せるもの</div><ul><li>画面を選ぶ: その画面へ移る</li><li>人を選ぶ: 役割に応じて利用者1人・社員1人・メンバー1人へ移る（→ S07・S25・S41）</li></ul></div></div><div class="ocol"><div class="ocard" data-k="COMMON-o3"><div class="oh"><span class="ono">3</span><b>改善要望を送る</b><span class="otype">小窓</span></div><div class="otrig">COMMON 共通の枠 ・ 押すもの: 「改善要望」 ・ 閉じる: 閉じる</div><div class="oimg" style="width:214px;height:220px"><img src="assets/shots/opn-common-o3.png" alt=""></div><div class="olab">中に出るもの</div><ul><li>この画面について送ります（画面名）</li><li>どちらに近いですか（うまく動かない・使いにくい・直したい・こんな機能がほしい）</li><li>改善したいこと（本文）</li><li>どうなってほしいですか（任意・1行）</li><li>撮った画面の写しと書き込みの道具（手書き・四角・矢印・文字・黒塗り）</li><li>開閉「この画面から一緒に送られるもの」</li></ul><div class="olab">中で押せるもの</div><ul><li>撮り直す: 画面を撮り直す</li><li>画像を外す（文章だけで送る）: 写しを外す</li><li>ファイルを選ぶ: 手元の画像を写しにする</li><li>元に戻す: 最後の書き込みを1つ消す</li><li>送る: 要望を送る。届いた改善要望に並ぶ（→ S46）</li><li>閉じる: 小窓を閉じる。書きかけは次に開くと戻る</li></ul></div></div></main>
+</div>
+</body>
+</html>

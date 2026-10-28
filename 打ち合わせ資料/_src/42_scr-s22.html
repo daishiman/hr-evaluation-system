@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>42 S22 KPIカテゴリ</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { justify-content: flex-start; gap: 28px; }
+.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+.shot { flex: none; position: relative; }
+.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+.notes.scr .reqs { padding-bottom: 8px; }
+.notes.scr ol.marks { gap: 10px 22px; }
+.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+.notes.scr ol.marks li > b { font-size: 15px; }
+.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+.notes.scr .extra b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="42" data-type="pc" data-screens="S22">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 会社の管理者・システム全体管理者</div>
+      <h1>S22 KPIカテゴリ</h1>
+      <div class="lead">KPI の項目をまとめる分類を足す・消す。使う人: 会社の管理者・システム全体管理者。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="shots"><div class="shot anchor" style="width:835px;height:862px"><div class="photo"><img src="assets/shots/scr-s22-1.png" alt=""></div><i class="mk" style="left:-11px;top:46px">1</i><i class="mk" style="left:32px;top:137px">2</i><i class="mk" style="left:6px;top:733px">3</i><i class="mk" style="left:608px;top:735px">4</i><i class="mk" style="left:-10px;top:796px">5</i></div></div>
+    <aside class="notes scr"><div class="reqs"><span class="req" data-req="F02">F02 会社ごとの評価の制度を設定し、社員を登録する</span></div><ol class="marks"><li data-mark="1" data-kind="how"><b>カテゴリの一覧</b><span class="sub">番号・名前・説明と、使っている数を並べる</span></li><li data-mark="2" data-kind="can"><b>使っている場所</b><span class="sub">開くと、そのカテゴリを使っている項目を全部並べる</span></li><li data-mark="3" data-kind="can"><b>カテゴリを足す</b><span class="sub">名前の欄を開き、「追加する」で分類を1つ増やす</span></li><li data-mark="4" data-kind="how"><b>足すときの説明</b><span class="sub">足すボタンが何をするかを横に出す</span></li><li data-mark="5" data-kind="can"><b>消せない理由</b><span class="sub">使っているカテゴリを消せない理由を開いて読む</span></li></ol><p class="extra">上の帯で押せるもの: 「KPI・評価セット」上の帯の道順の文字。押すとKPI・評価セットへ戻る（→ S17 KPI・評価セット）</p><p class="extra">見本のデータでは出ないもの: 完全に消す（どの項目でも使っていないカテゴリの行だけに出る。確認の小窓を出してから消す） / カテゴリが無いとき（1つも無いときは「カテゴリはまだありません。」と出す）</p><p class="extra">押すと出るもの 4 件は、ボード 86 にまとめた。</p></aside>
+  </main>
+</div>
+</body>
+</html>

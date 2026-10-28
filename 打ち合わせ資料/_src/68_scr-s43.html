@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>68 S43 評価の結果を見る</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body { justify-content: flex-start; gap: 28px; }
+.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+.shot { flex: none; position: relative; }
+.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+.notes.scr .reqs { padding-bottom: 8px; }
+.notes.scr ol.marks { gap: 10px 22px; }
+.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+.notes.scr ol.marks li > b { font-size: 15px; }
+.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+.notes.scr .extra b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="68" data-type="pc" data-screens="S43">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面の詳細 ・ 一般の社員・マネージャー・会社の管理者</div>
+      <h1>S43 評価の結果を見る</h1>
+      <div class="lead">自分の評価の推移と、確定した期の内訳を見る。使う人: 一般の社員・マネージャー・会社の管理者。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="shots"><div class="shot anchor" style="width:628px;height:862px"><div class="photo"><img src="assets/shots/scr-s43-1.png" alt=""></div><i class="mk" style="left:490px;top:13px">1</i><i class="mk" style="left:-14px;top:56px">2</i><i class="mk" style="left:-14px;top:98px">3</i><i class="mk" style="left:-2px;top:138px">4</i><i class="mk" style="left:-2px;top:198px">5</i><i class="mk" style="left:-2px;top:347px">6</i><i class="mk" style="left:-14px;top:392px">7</i><i class="mk" style="left:-2px;top:426px">8</i><i class="mk" style="left:-2px;top:641px">9</i><i class="mk" style="left:-14px;top:690px">10</i><i class="mk" style="left:548px;top:727px">11</i><i class="mk" style="left:497px;top:727px">12</i></div></div>
+    <aside class="notes scr two"><div class="reqs"><span class="req" data-req="F05">F05 確定した結果と評価レポートを見て印刷し、使いにくい点を改善要望で送る</span></div><ol class="marks"><li data-mark="1" data-kind="can"><b>評価レポート</b><span class="sub">最新の評価と推移をまとめたレポートへ移る（→ S45 評価レポート）</span></li><li data-mark="2" data-kind="how"><b>評価の推移</b><span class="sub">期ごとの等級要件の達成率をグラフで出す</span></li><li data-mark="3" data-kind="can"><b>期間を絞る</b><span class="sub">全期間・直近1年などを選ぶと、グラフと一覧が切り替わる</span></li><li data-mark="4" data-kind="how"><b>この期間の等級</b><span class="sub">選んだ期間の中で、どの期にどの等級だったかを出す</span></li><li data-mark="5" data-kind="how"><b>達成率のグラフ</b><span class="sub">等級が上がった期に「等級2へ」のように印を出す</span></li><li data-mark="6" data-kind="how"><b>グラフを押す</b><span class="sub">押した期の内訳を下に出す</span></li><li data-mark="7" data-kind="how"><b>選んだ期の内訳</b><span class="sub">評価期間・等級・達成率・達成した項目・昇給・昇格を出す</span></li><li data-mark="8" data-kind="can"><b>見る期</b><span class="sub">内訳を出す期を選ぶ</span></li><li data-mark="9" data-kind="can"><b>評価票を開く</b><span class="sub">その期の評価1件（本人）へ移る（→ S44 評価1件（本人））</span></li><li data-mark="10" data-kind="can"><b>これまでの評価</b><span class="sub">期ごとの結果を並べる。期名を押すと評価1件へ移る（→ S44 評価1件（本人））</span></li><li data-mark="11" data-kind="how"><b>表示中の印</b><span class="sub">上の内訳に出している期に付く</span></li><li data-mark="12" data-kind="how"><b>確定済みの札</b><span class="sub">確定して公開された期に付く</span></li></ol><p class="extra">見本のデータでは出ないもの: 確定待ちの知らせ（まだ確定していない期があるとき、推移の上に出す） / 行動指針の点数（マネージャー・管理者が自分の結果を見るときだけ、点数のグラフも出す） / 古い評価も表示する（12件を超えるとき出る。残りの評価も並べる） / 全期間に戻す（選んだ期間に評価が無いとき出る） / グラフが出ないとき（確定が2件未満の期間は、グラフの代わりにその旨を出す） / 評価が無いとき（「確定した評価はまだありません」と出す）</p></aside>
+  </main>
+</div>
+</body>
+</html>
