@@ -65,6 +65,7 @@ describe("Node の版をそろえる（DD-032 の14）", () => {
 
 describe("直った版の依存を使う（DD-032 の13・O33）", () => {
   const floors = [
+    ["better-auth", [1, 7, 7], 1],
     ["next", [16, 4, 1], 16],
     ["react", [19, 2, 9], 19],
     ["react-dom", [19, 2, 9], 19],

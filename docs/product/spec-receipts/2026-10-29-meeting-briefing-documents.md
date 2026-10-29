@@ -2,6 +2,8 @@
 
 実測日: 2026-10-29。Beads: `hr-pq7`、dev-graph: `task-docs-briefing`、タスク: [docs-briefing.md](../../../tasks/docs-briefing.md)。
 
+初回提出は資料のみ。後続のCI監査失敗への修正で、認証依存の更新と契約テストを追加した。以下の初回検証と範囲説明は当時の記録であり、最終的な追加範囲・検証は末尾の「CI監査失敗への追補」を正とする。
+
 ## 対象と最終レビュー
 
 対象は `30da196` で追加した打ち合わせ資料と、その後の原稿・HTML/CSS・画像・冊子・保守案内の差分。開始時の `git status` と `git diff`、`main` からの追加コミットを確認した。47画面を99図解・102ページの単一HTMLで説明する。評価作成の起点、状態別の設定反映、例外と復旧、権限、CSV、採点・賞与、本人向け数値非開示、印刷条件、改善要望の完了を既存の仕様・実装へ照合した。
@@ -61,3 +63,26 @@ MVPの文書変更のためアプリの全回帰試験・coverage・本番操作
 資料の初回追加は `30da196`、最終レビューと文書整理は `91ffe8c`。`origin/devgraph/task-docs-briefing` へpushし、[draft PR #104](https://github.com/daishiman/hr-evaluation-system/pull/104)を`main`向けに作成した。OPEN・draft、head/baseを確認。PR本文に目的、変更内容、最小限の検証、仕様反映なしとその理由、Beads ID、dev-graph node ID、残課題、中学生向けと専門的な説明を記載した。
 
 提出結果のtask追記はC02 preview→CAS applyでrevision 2→3、正規receiptは `.dev-graph/state/receipts/node-r000003-update.json`。末尾空行の整形後もgraph schemaと文書ゲートを確認した。受領書・taskの提出記録だけを追補コミットして同じブランチへpushする。作業場所に残す差分は対象外の未追跡 `.claude` 2ファイルだけ。
+
+## CI監査失敗への追補（2026-10-29）
+
+利用者の指摘を受け、PR先頭 `7ed8ce2` の実行結果を確認した。通常の [CI 40836877151](https://github.com/daishiman/hr-evaluation-system/actions/runs/40836877151) は成功していたが、[Security audit 40836877220](https://github.com/daishiman/hr-evaluation-system/actions/runs/40836877220) がbetter-auth 1.6.26のcritical 1件・high 2件で失敗していた。最初の報告時点では、このリモート監査の成功を確認できていなかった。
+
+- 根拠: [GHSA-965c-763c-88jm](https://github.com/advisories/GHSA-965c-763c-88jm)、[GHSA-r4xp-prcw-77qf](https://github.com/advisories/GHSA-r4xp-prcw-77qf)、[GHSA-q84f-53jg-9ppm](https://github.com/advisories/GHSA-q84f-53jg-9ppm)。修正版の下限は1.7.7（端末承認の指摘単体は1.7.0-rc.3）。
+- 修正: package.jsonの下限を `^1.7.7`、lockの実体を1.7.14へ更新。better-authとそのアダプター・関連依存だけが更新され、他の直接依存の版は維持した。監査の閾値・ワークフロー・例外の追加は行わない。
+- 再発防止: 既存の `scripts/runtime-version-contract.test.mjs` にbetter-authの安全な下限を追加。Node 22.23.4で、更新前はこの1件が失敗し14件成功、更新後は成功することを確認した。最初の試行は手元の実行環境不足で開始できず、固定Node・実体pnpm・frozen installへ揃えてから失敗を再現した。
+- 仕様・設計の再判定: 実行時依存は変わるが、メール/パスワード、認証の許可口、セッション・権限、Drizzle/D1の構成・DBの形・配布手順は維持する。OAuth/Magic Link/Better Authの端末承認プラグインは既存認証設定で使っていない。独自の開発端末承認は別の実装で、今回変更しない。既存契約を守る依存修正のためsystem-spec-harnessの状態遷移・再生成は対象外。features・specs・system-spec/architecture索引・taskにも追加範囲を反映し、本節を仕様反映なしの追補受領とする。
+
+| 追加検証（Node 22.23.4 / pnpm 10.19.0） | 結果 |
+| --- | --- |
+| frozen install（scriptsなし） | 成功 |
+| `pnpm audit --prod --audit-level high` | 成功。high/critical=0、moderate=1 |
+| `pnpm audit --audit-level high` | 成功。high/critical=0、moderate=6 |
+| ランタイム契約・認証設定/許可口・セッション・アカウント関連 | 8ファイル・135件成功 |
+| `pnpm run cf-typegen` / `pnpm run typecheck` | 成功 |
+| `pnpm run check:docs` / `pnpm run check:security` | 成功。静的な危険パターン違反0 |
+| `pnpm run cf:dry-run` | 成功。OpenNextのWorker生成まで確認。本番配布はしない |
+
+moderateは既存の監査閾値（high以上）未満の残課題として残す。生ログは `eval-log/documents-ci-fix/`。ローカルでは上記の最小回帰を実施し、全量のcoverage検査は更新後のGitHub CIで確認する。資料の生成元と画像はこの依存修正で変わらないため、99図解の再生成は繰り返さない。
+
+CI追補のtask本文・write scope更新もC02 preview→CAS applyで反映した。revision 3→4、正規receiptは `.dev-graph/state/receipts/node-r000004-update.json`。

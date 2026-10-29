@@ -18,3 +18,5 @@
 ## 派生説明資料の更新経路
 
 [打ち合わせ資料](../打ち合わせ資料/README.md)は、正本→原稿→構成JSON・HTML/CSS→PNG/WebP→単一HTMLの順で更新する。資料内の共通CSSは3系統に集約し、アプリの実行時構成・テーマ契約とは独立している。今回の整理はアプリ設計を変更しない。[仕様・設計影響の判断](../specs/meeting-briefing-documents.md)と[受領書](../docs/product/spec-receipts/2026-10-29-meeting-briefing-documents.md)を参照。
+
+PR #104のCI監査対応ではbetter-authと関連依存を更新する。既存のDrizzle/D1アダプター、メール/パスワード、セッション・権限の構成は維持する。[変更範囲と仕様判断](../specs/meeting-briefing-documents.md#ci失敗への追補2026-10-29)を参照。

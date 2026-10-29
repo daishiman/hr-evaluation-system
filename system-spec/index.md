@@ -80,3 +80,5 @@ kind: index
 ## 派生説明資料の境界
 
 [打ち合わせ資料](../打ち合わせ資料/README.md)は既存契約を説明する派生物であり、このシステム仕様を優先する。2026-10-29の追加・整理には実行時の仕様変更はない。[影響判断](../specs/meeting-briefing-documents.md)と[仕様反映受領書](../docs/product/spec-receipts/2026-10-29-meeting-briefing-documents.md)を参照。未決の運用条件は資料作成だけで確定しない。
+
+PR #104のCI監査への追補としてbetter-authを修正版へ更新する。認証契約は維持し、依存下限と検証結果は[仕様判断の追補](../specs/meeting-briefing-documents.md#ci失敗への追補2026-10-29)・[受領書](../docs/product/spec-receipts/2026-10-29-meeting-briefing-documents.md)で追跡する。
