@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>03 役割ごとにできること</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body.col > .stage { justify-content: flex-start; }
+.steps { gap: 16px; }
+.steps .step { gap: 10px; padding: 16px 18px; }
+.steps .step .vis { height: 280px; padding: 10px; }
+.steps .step .vis img { border-radius: 4px; border: 1px solid var(--line); }
+.io { display: flex; flex-direction: column; gap: 4px; font-size: 15px; color: var(--text-2); }
+.io span b { color: var(--text); }
+.role-can { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 2px; font-size: 14.5px; line-height: 1.55; color: var(--text); }
+.role-not { margin-top: auto; padding-top: 10px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; line-height: 1.5; color: var(--text-2); }
+.role-not b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="board" data-board="03" data-type="mechanism">
+  <header class="board-head">
+    <div>
+      <div class="kicker">見えない部分 1 / 3</div>
+      <h1>役割ごとにできること</h1>
+      <div class="lead">役割は 4 つ。ログインした役割によって、開ける画面とできることが変わる。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body col">
+    <div class="stage">
+      <div class="steps"><div class="step"><div class="h"><span class="no">1</span><b>システム全体管理者</b></div><div class="vis"><img src="assets/shots/S04-m.png" alt=""></div><div class="io"><span><b>入口:</b> S04 システム運用</span><span><b>見本のアカウント:</b> 青木 統括</span></div><ul class="role-can"><li>会社を足す・止める</li><li>全社の利用者を足し、役割と使える状態を変える</li><li>画面ごとの権限と利用状況を見る</li><li>選んだ会社では、会社の管理者と同じ操作をする</li></ul><div class="role-not"><span><b>できない:</b> 選んでいない会社の設定を直す・自分のアンケートに答える</span><span><b>見える範囲:</b> 全社。ホームでは他社の名前を出さず件数だけ</span></div></div><div class="step anchor"><div class="h"><span class="no">2</span><b>会社の管理者</b></div><div class="vis"><img src="assets/shots/S11-m.png" alt=""></div><div class="io"><span><b>入口:</b> S11 管理者のホーム</span><span><b>見本のアカウント:</b> 給付事業（1社目） 管理者</span></div><ul class="role-can"><li>自社の制度（等級・等級要件・行動指針・KPI・昇給）を決める</li><li>社員を足す・直す・止める</li><li>評価期間とアンケートを作り、公開する・締め切る</li><li>回答を CSV で出し入れし、締め切りを延ばす</li><li>評価を確定し、改善要望の状態を変える</li></ul><div class="role-not"><span><b>できない:</b> 会社を足す・ほかの会社を見る</span><span><b>見える範囲:</b> 自社の全部</span></div><i class="mk" style="right:-10px;top:-10px">2</i></div><div class="step anchor"><div class="h"><span class="no">3</span><b>マネージャー</b></div><div class="vis"><img src="assets/shots/S37-m.png" alt=""></div><div class="io"><span><b>入口:</b> S37 マネージャーのホーム</span><span><b>見本のアカウント:</b> 給付事業（1社目） マネージャー</span></div><ul class="role-can"><li>直属のメンバーの評価を作り、根拠を確かめて確定する</li><li>上司の判断と理由を残す</li><li>評価メモを書き、評価の基準を読む</li><li>自分のアンケートに答え、自分の結果を見る</li></ul><div class="role-not"><span><b>できない:</b> 制度の設定・社員の登録・アンケートを作る・直属でない人を見る</span><span><b>見える範囲:</b> 自分と直属のメンバー</span></div><i class="mk" style="right:-10px;top:-10px">1</i></div><div class="step anchor"><div class="h"><span class="no">4</span><b>一般の社員</b></div><div class="vis"><img src="assets/shots/S32-m.png" alt=""></div><div class="io"><span><b>入口:</b> S32 社員のホーム</span><span><b>見本のアカウント:</b> 田中 陽子</span></div><ul class="role-can"><li>自分のアンケートに答えて提出する</li><li>提出した答えを読み返す</li><li>確定した結果と評価レポートを見て印刷する</li><li>許された項目だけ自分の情報を直し、改善要望を送る</li></ul><div class="role-not"><span><b>できない:</b> 評価を作る・ほかの人の結果や配点を見る</span><span><b>見える範囲:</b> 自分の分だけ</span></div><i class="mk" style="right:-10px;top:-10px">3</i></div></div>
+    </div>
+    <aside class="notes strip">
+      <div class="reqs"><span class="req" data-req="F01">F01 会社と使う人を用意し、役割ごとにログインして使う</span></div>
+      <ol class="marks">
+        <li data-mark="1" data-kind="how"><b>役割で、開ける画面と見える範囲が決まる</b><span class="sub">メニューに出さないだけでなく、画面を直接開いても通さない（R01）。</span></li>
+        <li data-mark="2" data-kind="how"><b>記録は会社ごとに分かれる</b><span class="sub">システム全体管理者は「操作する会社」で選んだ会社だけを扱う（R02）。</span></li>
+        <li data-mark="3" data-kind="how"><b>社員には、点数の根拠を見せない</b><span class="sub">配点・ランクの境目・昇格に必要な点数・ほかの人の結果は出ない（R15）。</span></li>
+      </ol>
+    </aside>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>02 画面の一覧と流れ</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body.col > .stage { justify-content: flex-start; gap: 10px; }
+.sno { flex: none; font: 800 12px/1.5 var(--font-num); color: var(--text-brand); background: var(--bg-brand-soft); border-radius: 5px; padding: 0 6px; }
+.rlane { display: flex; align-items: center; gap: 18px; background: var(--bg-surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-soft); padding: 14px 18px; }
+.rlane-head { flex: none; width: 290px; display: flex; align-items: center; gap: 12px; }
+.rlane-head img { width: 130px; flex: none; border-radius: 5px; border: 1px solid var(--line); }
+.rlane-head b { display: block; font-size: 16px; font-weight: 800; line-height: 1.4; }
+.rlane-head small { display: block; font-size: 13px; color: var(--text-2); line-height: 1.45; }
+.chain { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 6px; }
+.sc { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px 5px 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg-page); font-size: 14px; font-weight: 700; line-height: 1.4; }
+.sc.ref { padding: 5px 11px; border-style: dashed; color: var(--text-2); }
+.sc.anchor { padding-right: 24px; }
+.chain .arrow-lab.anchor { padding-right: 20px; }
+.chain .arrow-lab { font-size: 11.5px; gap: 2px; }
+.chain .arrow-r { width: 30px; }
+.sep { flex: none; width: 2px; height: 26px; margin: 0 8px; background: var(--line-strong); border-radius: 1px; }
+</style>
+</head>
+<body>
+<div class="board" data-board="02" data-type="screen-map">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面 ・ 全体</div>
+      <h1>画面の一覧と流れ</h1>
+      <div class="lead">画面は 47。役割ごとに入口のホームが分かれ、どれもブラウザで開く。社員が使う画面はスマホでも使える。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body col">
+    <div class="stage">
+      <div class="rlane"><div class="rlane-head"><img src="assets/shots/S01-t.png" alt=""><div><b>だれでも使う画面</b><small>ログイン・自分の情報</small></div></div><div class="chain"><span class="sc"><span class="sno">S01</span>ログイン</span><span class="arrow-lab">ログイン<i class="arrow-r"></i></span><span class="sc ref anchor">役割のホームへ<i class="mk" style="right:-10px;top:-10px">1</i></span><span class="sep"></span><span class="sc"><span class="sno">S02</span>自分の情報</span><span class="arrow-lab">パスワードを変える<i class="arrow-r"></i></span><span class="sc"><span class="sno">S03</span>パスワードの変更</span><span class="sep"></span><span class="sc"><span class="sno">S30</span>アンケートの中身</span><span class="arrow-lab">開く<i class="arrow-r"></i></span><span class="sc"><span class="sno">S31</span>アンケートの中身（1本）</span><span class="sep"></span><span class="sc"><span class="sno">S45</span>評価レポート</span></div></div><div class="rlane"><div class="rlane-head"><img src="assets/shots/S04-m.png" alt=""><div><b>システム全体管理者</b><small>ホーム S04 ・ PC</small></div></div><div class="chain"><span class="sc"><span class="sno">S04</span>システム運用</span><span class="arrow-lab">会社を追加する<i class="arrow-r"></i></span><span class="sc"><span class="sno">S05</span>会社一覧</span><span class="sep"></span><span class="sc"><span class="sno">S06</span>利用者一覧</span><span class="arrow-lab">名前<i class="arrow-r"></i></span><span class="sc"><span class="sno">S07</span>利用者1人</span><span class="sep"></span><span class="sc"><span class="sno">S08</span>権限一覧</span><span class="sep"></span><span class="sc"><span class="sno">S09</span>利用状況</span><span class="sep"></span><span class="sc"><span class="sno">S10</span>Claude Code連携</span></div></div><div class="rlane"><div class="rlane-head"><img src="assets/shots/S11-m.png" alt=""><div><b>会社の管理者</b><small>ホーム S11 ・ PC</small></div></div><div class="chain"><span class="sc"><span class="sno">S11</span>管理者のホーム</span><span class="arrow-lab anchor">制度準備<i class="arrow-r"></i><i class="mk" style="right:-10px;top:-10px">2</i></span><span class="sc"><span class="sno">S12</span>制度設定ガイド</span><i class="arrow-r"></i><span class="sc"><span class="sno">S13</span>等級の設定</span><span class="arrow-lab">等級要件へ<i class="arrow-r"></i></span><span class="sc"><span class="sno">S14</span>等級要件（支援・運営）</span><span class="sep"></span><span class="sc"><span class="sno">S15</span>昇格の条件・要件</span><span class="sep"></span><span class="sc"><span class="sno">S16</span>行動指針</span><span class="sep"></span><span class="sc"><span class="sno">S17</span>KPI・評価セット</span><i class="arrow-r"></i><span class="sc"><span class="sno">S18</span>使うKPIを選ぶ</span><span class="arrow-lab">次は基準<i class="arrow-r"></i></span><span class="sc"><span class="sno">S19</span>選んだ項目の基準を決める</span><span class="sep"></span><span class="sc"><span class="sno">S20</span>全等級区分に共通の設定</span><span class="sep"></span><span class="sc"><span class="sno">S21</span>KPI項目</span><span class="sep"></span><span class="sc"><span class="sno">S22</span>KPIカテゴリ</span><span class="sep"></span><span class="sc"><span class="sno">S23</span>昇給の設定</span><span class="sep"></span><span class="sc"><span class="sno">S24</span>社員</span><span class="arrow-lab">名前<i class="arrow-r"></i></span><span class="sc"><span class="sno">S25</span>社員1人</span><span class="sep"></span><span class="sc"><span class="sno">S26</span>本人が変更できる項目</span><span class="sep"></span><span class="sc"><span class="sno">S27</span>評価期間</span><span class="sep"></span><span class="sc"><span class="sno">S28</span>アンケート</span><span class="arrow-lab">確認・編集<i class="arrow-r"></i></span><span class="sc"><span class="sno">S29</span>アンケートの組み立て</span><span class="arrow-lab">回答一覧<i class="arrow-r"></i></span><span class="sc"><span class="sno">S36</span>回答一覧</span><span class="sep"></span><span class="sc"><span class="sno">S46</span>届いた改善要望</span><span class="arrow-lab">開く<i class="arrow-r"></i></span><span class="sc"><span class="sno">S47</span>要望1件</span></div></div><div class="rlane"><div class="rlane-head"><img src="assets/shots/S37-m.png" alt=""><div><b>マネージャー</b><small>ホーム S37 ・ PC</small></div></div><div class="chain"><span class="sc"><span class="sno">S37</span>マネージャーのホーム</span><i class="arrow-r"></i><span class="sc"><span class="sno">S38</span>評価・結果を確認する</span><span class="arrow-lab">評価を開く<i class="arrow-r"></i></span><span class="sc"><span class="sno">S39</span>評価1件</span><span class="sep"></span><span class="sc"><span class="sno">S40</span>メンバー</span><span class="arrow-lab">名前<i class="arrow-r"></i></span><span class="sc"><span class="sno">S41</span>メンバー1人</span><span class="sep"></span><span class="sc"><span class="sno">S42</span>評価の基準</span></div></div><div class="rlane"><div class="rlane-head anchor"><img src="assets/shots/S32-m.png" alt=""><div><b>一般の社員</b><small>ホーム S32 ・ スマホも</small></div><i class="mk" style="right:-10px;top:-10px">3</i></div><div class="chain"><span class="sc"><span class="sno">S32</span>社員のホーム</span><span class="arrow-lab">回答を始める<i class="arrow-r"></i></span><span class="sc"><span class="sno">S34</span>アンケートに答える</span><span class="arrow-lab">提出<i class="arrow-r"></i></span><span class="sc"><span class="sno">S35</span>提出した内容</span><span class="sep"></span><span class="sc"><span class="sno">S33</span>実績を報告する</span><span class="sep"></span><span class="sc"><span class="sno">S43</span>評価の結果を見る</span><span class="arrow-lab">評価票<i class="arrow-r"></i></span><span class="sc"><span class="sno">S44</span>評価1件（本人）</span><span class="arrow-lab">レポート<i class="arrow-r"></i></span><span class="sc ref">S45 評価レポートへ</span></div></div>
+    </div>
+    <aside class="notes strip">
+      <ol class="marks">
+        <li data-mark="1" data-kind="can"><b>ログインすると、役割のホームへ</b><span class="sub">ホームは役割ごとに 1 つ。左の写真がそのホーム。</span></li>
+        <li data-mark="2" data-kind="how"><b>矢印の上は押すボタン、縦線はメニュー</b><span class="sub">縦線で区切った画面は、左や右上のメニューから開く。</span></li>
+        <li data-mark="3" data-kind="how"><b>社員の画面はスマホでも使える</b><span class="sub">管理者とマネージャーも、自分の答えは同じ画面で出す（R01）。</span></li>
+      </ol>
+    </aside>
+  </main>
+</div>
+</body>
+</html>

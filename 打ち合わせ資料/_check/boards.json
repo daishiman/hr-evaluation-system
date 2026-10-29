@@ -1,0 +1,4074 @@
+{
+  "schema": "briefing-boards-check-v1",
+  "updated": "2026-10-29T10:25:54+09:00",
+  "browser": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "summary": {
+    "errors": 0,
+    "warnings": 0,
+    "notices": 3,
+    "boards": 4,
+    "ok": 4,
+    "warn": 0,
+    "ng": 0,
+    "png": 4
+  },
+  "errors": [],
+  "boards": [
+    {
+      "no": "01",
+      "file": "01_overview.html",
+      "png": "01_overview.png",
+      "webp": "_src/book/01_overview.webp",
+      "type": "overview",
+      "screens": [],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 3,
+      "text_chars": 811,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "全体図",
+      "status": "ok",
+      "html_sha256": "9cba68b866c8986335ac990a0b81631d272929ee345f9f725fa0a6a9c9a68bad",
+      "png_sha256": "4a848e5f6d83b8a143884c4eda9d45c79ab9b30b76b8bbfda9f6434442f0ddd9",
+      "webp_sha256": "bb8a01592b2f25da306321a41aeaaf30c9436478ca8957c4e1f7c51f6185b466",
+      "dependencies": {
+        "_src/01_overview.html": "9cba68b866c8986335ac990a0b81631d272929ee345f9f725fa0a6a9c9a68bad",
+        "_src/assets/shots/S12-t.png": "f9e05ae9ea1757dc1923436201eaf0317831c5092884ca61e8e570e82c17aca7",
+        "_src/assets/shots/S28-t.png": "8ca8f8aeaabef4a2191bbcde3917290ce5d933f3b5d7004a8f67cf81faee6f2f",
+        "_src/assets/shots/S34-t.png": "25e57f986b5a666090f1fbbc21743fd9cec30057f64622c0d6ce7e4d8966491e",
+        "_src/assets/shots/S38-t.png": "00dfb34e870cbe3006a142f77e5db5d92f2b518e1c0fb3ed29d6cde8f38c2852",
+        "_src/assets/shots/S45-t.png": "f03a51e2cb03ec7787d19fa50988cefcf20f862ffd939c3770e6c823db36dbff",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "02",
+      "file": "02_screen-map.html",
+      "png": "02_screen-map.png",
+      "webp": "_src/book/02_screen-map.webp",
+      "type": "screen-map",
+      "screens": [],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 3,
+      "text_chars": 844,
+      "device_chars": 0,
+      "font_px_min": 11.5,
+      "title": "画面の一覧と流れ",
+      "status": "ok",
+      "html_sha256": "19d3ccb4678cb1c2e5419427934b1c4efba6b9585faab0c76a3d531da189488e",
+      "png_sha256": "8b19aef61233f90afb3ba0aae2d0cc2d7c77eeec9f1098a4b5bea6375feafe8c",
+      "webp_sha256": "5a37cec5c8b21deffed2b951f4325b766ce2a1564be39df415f2b58814b0b58c",
+      "dependencies": {
+        "_src/02_screen-map.html": "19d3ccb4678cb1c2e5419427934b1c4efba6b9585faab0c76a3d531da189488e",
+        "_src/assets/shots/S01-t.png": "d1c81bf8db3a2ce2d84ed132b12dfbaba22af1ad88daf78679daf3f07edb54a5",
+        "_src/assets/shots/S04-m.png": "571b160a8ad0e71aa78b6d9678facd0ec6e27bfffaeadf28c80090b885a69892",
+        "_src/assets/shots/S11-m.png": "ee3f32bd3f4a59f09eef783447c3821e321046eca108b6030b7f06132b5c586e",
+        "_src/assets/shots/S32-m.png": "3626589e9a0838bdc46a05276f1119b49e94ffc1972e674767f88bc04584a275",
+        "_src/assets/shots/S37-m.png": "9f42aec03c60e742a3d4752f4c8030db0338d5e0ff97f10847dc852296d15afd",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "03",
+      "file": "03_mechanism-roles.html",
+      "png": "03_mechanism-roles.png",
+      "webp": "_src/book/03_mechanism-roles.webp",
+      "type": "mechanism",
+      "screens": [],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 3,
+      "text_chars": 905,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "役割ごとにできること",
+      "status": "ok",
+      "html_sha256": "f71c5d32b47dd6faa8a53215599a25bed43c89e23713ca09abb184acff720c52",
+      "png_sha256": "4a869a918bbb1efaae6446e46a54d0e0654c89d50cbf3c5a2ae9d08b8213d6fe",
+      "webp_sha256": "140ac161b7bb870b527bff0f6f41f5cf15443639290c6ff139c7e9d9cd38b110",
+      "dependencies": {
+        "_src/03_mechanism-roles.html": "f71c5d32b47dd6faa8a53215599a25bed43c89e23713ca09abb184acff720c52",
+        "_src/assets/shots/S04-m.png": "571b160a8ad0e71aa78b6d9678facd0ec6e27bfffaeadf28c80090b885a69892",
+        "_src/assets/shots/S11-m.png": "ee3f32bd3f4a59f09eef783447c3821e321046eca108b6030b7f06132b5c586e",
+        "_src/assets/shots/S32-m.png": "3626589e9a0838bdc46a05276f1119b49e94ffc1972e674767f88bc04584a275",
+        "_src/assets/shots/S37-m.png": "9f42aec03c60e742a3d4752f4c8030db0338d5e0ff97f10847dc852296d15afd",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "04",
+      "file": "04_s01-login.html",
+      "png": "04_s01-login.png",
+      "webp": "_src/book/04_s01-login.webp",
+      "type": "pc",
+      "screens": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 5,
+      "text_chars": 574,
+      "device_chars": 28,
+      "font_px_min": 12,
+      "title": "ログイン・自分の情報・パスワードの変更",
+      "status": "ok",
+      "html_sha256": "f23448b0164ad68f2aa16665de432e7d3eae46f15160dbb1c4f5ce558d387263",
+      "png_sha256": "236b740b77e3b575ed410659288412f7a9894932e12ba6b75d78d7aa7c9bcebc",
+      "webp_sha256": "fa5c881b29da28020adb0d31f5747114070e192af5a27a2a2c05184986dce65e",
+      "dependencies": {
+        "_src/04_s01-login.html": "f23448b0164ad68f2aa16665de432e7d3eae46f15160dbb1c4f5ce558d387263",
+        "_src/assets/shots/S01.png": "73e84cfcff19a9c2d743fb57d367d405ec1986d0ff5379767021cc37a7c3bdab",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "05",
+      "file": "05_s04-system.html",
+      "png": "05_s04-system.png",
+      "webp": "_src/book/05_s04-system.webp",
+      "type": "pc",
+      "screens": [
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 5,
+      "text_chars": 635,
+      "device_chars": 31,
+      "font_px_min": 12,
+      "title": "システム運用と会社一覧・利用者一覧",
+      "status": "ok",
+      "html_sha256": "b908640d623c85a2c9051ebeade4e0fdd283bef4bf1d60ab1f364092afad9792",
+      "png_sha256": "7c0d2e5a9c3ca868a6ca32c06d01e8e786509b8fc9e22ff17d1aa30009f8c531",
+      "webp_sha256": "0f98acadda081bb6646dea06376457cc2c38ad950a0a7fc8a1431304aa7f818d",
+      "dependencies": {
+        "_src/05_s04-system.html": "b908640d623c85a2c9051ebeade4e0fdd283bef4bf1d60ab1f364092afad9792",
+        "_src/assets/shots/S04.png": "c034c23ad4cc2437d376412a96bd19e1b3015d656a51725ca89a8d5ef01f92ec",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T10:25:54+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "06",
+      "file": "06_s11-setup.html",
+      "png": "06_s11-setup.png",
+      "webp": "_src/book/06_s11-setup.webp",
+      "type": "pc",
+      "screens": [
+        "S11",
+        "S12",
+        "S13",
+        "S14",
+        "S15",
+        "S16"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 5,
+      "text_chars": 606,
+      "device_chars": 36,
+      "font_px_min": 12,
+      "title": "管理者のホームと制度設定ガイド",
+      "status": "ok",
+      "html_sha256": "d3e2736f00a9432f2f4b1bd7be4f11a17f1b5267fcc14f31d98dd39e9ff333d3",
+      "png_sha256": "eb55b2fe589d7f6f1c532aac1bde97675de0905cdbec7b5e020ac3050f1a7826",
+      "webp_sha256": "900295e6a10dacb4d6552d7e07a61f33fa621c4e8f12435b9518ed3b95d7799b",
+      "dependencies": {
+        "_src/06_s11-setup.html": "d3e2736f00a9432f2f4b1bd7be4f11a17f1b5267fcc14f31d98dd39e9ff333d3",
+        "_src/assets/shots/S12.png": "fa0ec89d4a32de1d73ed2f62e1acac612fb951c415f99653e8c17da876cac4b8",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "07",
+      "file": "07_s17-kpi.html",
+      "png": "07_s17-kpi.png",
+      "webp": "_src/book/07_s17-kpi.webp",
+      "type": "pc",
+      "screens": [
+        "S17",
+        "S18",
+        "S19",
+        "S20",
+        "S21",
+        "S22",
+        "S23"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 5,
+      "text_chars": 611,
+      "device_chars": 54,
+      "font_px_min": 12,
+      "title": "KPI・評価セットと昇給の設定",
+      "status": "ok",
+      "html_sha256": "dbb5371591df050d1da5ce5618de7a1dc8dbe910470e33c6080db8bafb981c8b",
+      "png_sha256": "e8278921891fa2fc459d0fff4dfa27ac199adf893ffa45ed37f65004eb9d3a0a",
+      "webp_sha256": "a282201a0fba2473230229191f9f64432194aedbe53a5f8a3f306f36c83762db",
+      "dependencies": {
+        "_src/07_s17-kpi.html": "dbb5371591df050d1da5ce5618de7a1dc8dbe910470e33c6080db8bafb981c8b",
+        "_src/assets/shots/S19.png": "bf7c1dd7dbbfdb72b92fe4e1ebcdb91d0ba39394fbc59f71d52d0710b5bea113",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "08",
+      "file": "08_s27-forms.html",
+      "png": "08_s27-forms.png",
+      "webp": "_src/book/08_s27-forms.webp",
+      "type": "pc",
+      "screens": [
+        "S27",
+        "S28",
+        "S29",
+        "S30",
+        "S31",
+        "S36"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 5,
+      "text_chars": 659,
+      "device_chars": 46,
+      "font_px_min": 12,
+      "title": "評価期間とアンケート・回答一覧",
+      "status": "ok",
+      "html_sha256": "ea8f90c05f1a5aa4777e8d27a384654b8882f847b0029acd904eed0e8eaef633",
+      "png_sha256": "a5479d6e0fecddc72fb681876b8c84a66149f43bb67c8c6fae2c51d894b95d8a",
+      "webp_sha256": "b0b127da9b0ab88733f8b431f86d8fec44629a15e1ebca5f6ee01273f1f8ebc1",
+      "dependencies": {
+        "_src/08_s27-forms.html": "ea8f90c05f1a5aa4777e8d27a384654b8882f847b0029acd904eed0e8eaef633",
+        "_src/assets/shots/S36.png": "2dcd4b1a8c49ab161e0cfc116a4a759675cf3f3ae622a5e7b690fea454cacead",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "09",
+      "file": "09_s24-members.html",
+      "png": "09_s24-members.png",
+      "webp": "_src/book/09_s24-members.webp",
+      "type": "pc",
+      "screens": [
+        "S24",
+        "S25",
+        "S26",
+        "S46",
+        "S47"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 5,
+      "text_chars": 618,
+      "device_chars": 33,
+      "font_px_min": 12,
+      "title": "社員と届いた改善要望",
+      "status": "ok",
+      "html_sha256": "fdc7e061d739813c0b22be60b6bbc53be0892b3f7b277546813be9c6e0a8ad8d",
+      "png_sha256": "3c9ceaa75f70a62ed9815f7f105f33d5f43ce9ae09b26c5ff08691a9c1af3813",
+      "webp_sha256": "6f0ded27aeaee0e7b38b4c5f47531753ceb8437ab30ec81cb02b9f6a52e564d5",
+      "dependencies": {
+        "_src/09_s24-members.html": "fdc7e061d739813c0b22be60b6bbc53be0892b3f7b277546813be9c6e0a8ad8d",
+        "_src/assets/shots/S24.png": "32a09b7b24778486aeb3a2f3bc43263126915bfa02d4b45bd7c4720f7f57fa53",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "10",
+      "file": "10_s32-employee.html",
+      "png": "10_s32-employee.png",
+      "webp": "_src/book/10_s32-employee.webp",
+      "type": "pc",
+      "screens": [
+        "S32",
+        "S33",
+        "S34",
+        "S35",
+        "S43",
+        "S44",
+        "S45"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 5,
+      "text_chars": 688,
+      "device_chars": 38,
+      "font_px_min": 12,
+      "title": "社員のホームとアンケートに答える・評価レポート",
+      "status": "ok",
+      "html_sha256": "a497a67f19fe94020d3372316c4302c712fdaa571c28b383e67d59d9e74c1530",
+      "png_sha256": "8c357565bf667d9bd1f3236b29a5932bed6bcd651472b50e4192fe3c1bb5db71",
+      "webp_sha256": "df427db7e428df716949ee15d305421b8aa0d0e6cb670880981e3fe9fad92c91",
+      "dependencies": {
+        "_src/10_s32-employee.html": "a497a67f19fe94020d3372316c4302c712fdaa571c28b383e67d59d9e74c1530",
+        "_src/assets/shots/S34.png": "89bd05d235e22e537224e9567b6578f18837eb1b7626b1c9a0b8917beb6743b7",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "11",
+      "file": "11_s37-manager.html",
+      "png": "11_s37-manager.png",
+      "webp": "_src/book/11_s37-manager.webp",
+      "type": "pc",
+      "screens": [
+        "S37",
+        "S38",
+        "S39",
+        "S40",
+        "S41",
+        "S42"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 5,
+      "text_chars": 664,
+      "device_chars": 45,
+      "font_px_min": 12,
+      "title": "マネージャーのホームと評価1件",
+      "status": "ok",
+      "html_sha256": "dc56415c5b9cf27e1b3140408745ac04d325f922f5469639c08e23663ba29fe0",
+      "png_sha256": "211c84884eeec051df4727d1f24ad8c41b3266afd8e11968fa2f77e3d855b6fa",
+      "webp_sha256": "a687c73555eb863bafb05bebe3ac385aef11a2b849052fa0f97c8027cb4c730a",
+      "dependencies": {
+        "_src/11_s37-manager.html": "dc56415c5b9cf27e1b3140408745ac04d325f922f5469639c08e23663ba29fe0",
+        "_src/assets/shots/S39.png": "b9edca031fe878d0f0de74fa6bc25cf1c6ca823f0f7d979fbf27c3a2789638ab",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "12",
+      "file": "12_data-map.html",
+      "png": "12_data-map.png",
+      "webp": "_src/book/12_data-map.webp",
+      "type": "data-map",
+      "screens": [],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 3,
+      "text_chars": 864,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "できあがるファイルの欄と画面の項目",
+      "status": "ok",
+      "html_sha256": "3168d8484b2b8b2c6086725f7ce70df0a5b53fa5dacdb4e7d70a68931f84f516",
+      "png_sha256": "e0a034b2943a1e474472adb4b5113ee2e38f16fbc1b585dbb02c731f5ffba183",
+      "webp_sha256": "38f737f645a68ec562d8b2f5f67400d0c404906c0f92b68b3894285990284dab",
+      "dependencies": {
+        "_src/12_data-map.html": "3168d8484b2b8b2c6086725f7ce70df0a5b53fa5dacdb4e7d70a68931f84f516",
+        "_src/assets/shots/report.png": "d07fd2ef98512a6506c08dacbf41f43b67fc7d75c66d647557791e6ce9ba7023",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "13",
+      "file": "13_mechanism-scoring.html",
+      "png": "13_mechanism-scoring.png",
+      "webp": "_src/book/13_mechanism-scoring.webp",
+      "type": "mechanism",
+      "screens": [],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 3,
+      "text_chars": 593,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "点数と判定のしくみ",
+      "status": "ok",
+      "html_sha256": "63f29ced2ce0181539648c90cf923613533c58b9334d3da0ce0e738dd5468cac",
+      "png_sha256": "034bb9683419e9309beb44cb7842818064880b63cb2832cba10181bd9494e86e",
+      "webp_sha256": "65fe0cbdffddcd5eed7a5eec8daaffd3dce1d4fa7036a572c5acf11eda9ef861",
+      "dependencies": {
+        "_src/13_mechanism-scoring.html": "63f29ced2ce0181539648c90cf923613533c58b9334d3da0ce0e738dd5468cac",
+        "_src/assets/shots/S34-t.png": "25e57f986b5a666090f1fbbc21743fd9cec30057f64622c0d6ce7e4d8966491e",
+        "_src/assets/shots/S39-bottom-t.png": "c974aaf5aa7ace5ae699baf2b06c8e41f24718f5fb9ed4c786a1f46f78b823cb",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "14",
+      "file": "14_future.html",
+      "png": "14_future.png",
+      "webp": "_src/book/14_future.webp",
+      "type": "future",
+      "screens": [],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 3,
+      "text_chars": 618,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "将来の広げ方",
+      "status": "ok",
+      "html_sha256": "8a8abe4590e8580a4984e91df8106d2f64c932aaa4af0e1561bfbccd05c0553d",
+      "png_sha256": "04396e90cbba0fa964c87d0a97de27cfaf04b7d8093b35bc490a18fbd3d33c2f",
+      "webp_sha256": "429f55ea19cdc66a993dc3056fea85628d958f8c51dc8abda7b305d2de830b6f",
+      "dependencies": {
+        "_src/14_future.html": "8a8abe4590e8580a4984e91df8106d2f64c932aaa4af0e1561bfbccd05c0553d",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "15",
+      "file": "15_scr-common.html",
+      "png": "15_scr-common.png",
+      "webp": "_src/book/15_scr-common.webp",
+      "type": "pc",
+      "screens": [
+        "S11"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 9,
+      "text_chars": 669,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "どの画面にも出る共通の枠（写真は S11 管理者のホーム）",
+      "status": "ok",
+      "html_sha256": "eca362db849c4c789c6ae7f6d90cdd1b1b0af160fc6b2e8f5935b6d42c03472b",
+      "png_sha256": "f32494a75ea1c307415fb034b1893d2ba5ca5b73bbc5b27cb1e3c46aa1630c56",
+      "webp_sha256": "0f2f29d7dfd87477fe30d796b570793d861ecdf9e1126f077e19cdf664aeef70",
+      "dependencies": {
+        "_src/15_scr-common.html": "eca362db849c4c789c6ae7f6d90cdd1b1b0af160fc6b2e8f5935b6d42c03472b",
+        "_src/assets/shots/scr-common-1.png": "f81779a88e12b66ad019241a61b30db6e00f6ad4b520fac3a12ed0a36893c182",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 9 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "16",
+      "file": "16_scr-s01.html",
+      "png": "16_scr-s01.png",
+      "webp": "_src/book/16_scr-s01.webp",
+      "type": "pc",
+      "screens": [
+        "S01"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 6,
+      "text_chars": 387,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S01 ログイン",
+      "status": "ok",
+      "html_sha256": "59a4742217fe6cd85903a1d85491b83b5a5d977c9437cc9bfc3ec78be24efae2",
+      "png_sha256": "78bcb9b3814d3e47ce2a84c30a306c5b42c148c99ed4c05ab6a2d0cc8f8f1b67",
+      "webp_sha256": "a1ca540ebaee77475d2ae4cf66b1c96a279b20eddc16e0fe5d4fb594084c80d7",
+      "dependencies": {
+        "_src/16_scr-s01.html": "59a4742217fe6cd85903a1d85491b83b5a5d977c9437cc9bfc3ec78be24efae2",
+        "_src/assets/shots/scr-s01-1.png": "d8484aff7b4ed65bd77a2018127c844305f3fd969e5f4848205a1a7e7779fece",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 6 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "17",
+      "file": "17_scr-s02.html",
+      "png": "17_scr-s02.png",
+      "webp": "_src/book/17_scr-s02.webp",
+      "type": "pc",
+      "screens": [
+        "S02"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 8,
+      "text_chars": 491,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S02 自分の情報",
+      "status": "ok",
+      "html_sha256": "6a206aacf58785d4c88b53e34bf36c906f39bf86b0a6f3d7030b6db2e0fd74dd",
+      "png_sha256": "093a35594b0fc625bcf2d95d91a6d8803bf7db032c0d1a00188ecf449c7cfc66",
+      "webp_sha256": "66f68284d9ce29d3a8d89757252b6b6ab421b3dc45d45053ea4a58b608715ced",
+      "dependencies": {
+        "_src/17_scr-s02.html": "6a206aacf58785d4c88b53e34bf36c906f39bf86b0a6f3d7030b6db2e0fd74dd",
+        "_src/assets/shots/scr-s02-1.png": "3e3c5e951611d2eea2380af3a82863d155576aeb629e09bb447db95f3a047f5a",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 8 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "18",
+      "file": "18_scr-s03.html",
+      "png": "18_scr-s03.png",
+      "webp": "_src/book/18_scr-s03.webp",
+      "type": "pc",
+      "screens": [
+        "S03"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 9,
+      "text_chars": 451,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S03 パスワードの変更",
+      "status": "ok",
+      "html_sha256": "fe1dc58303b277e8f8189df2d86e09b5cccebe353aac327d66a52de8fd886bae",
+      "png_sha256": "1fc20000832a3d02ff8cb8cdfa19ba151bcf6b2ceecd945f154b6ff047e748ee",
+      "webp_sha256": "ba66fac5f0795b842c280926ac69c9af532cf6e84ce51eba421c3080e4c2ee96",
+      "dependencies": {
+        "_src/18_scr-s03.html": "fe1dc58303b277e8f8189df2d86e09b5cccebe353aac327d66a52de8fd886bae",
+        "_src/assets/shots/scr-s03-1.png": "b8b97652ab21d3abb321803eb14feea27deeaeafed09831c969d08e822d5e7c2",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 9 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "19",
+      "file": "19_scr-s04.html",
+      "png": "19_scr-s04.png",
+      "webp": "_src/book/19_scr-s04.webp",
+      "type": "pc",
+      "screens": [
+        "S04"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 12,
+      "text_chars": 741,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S04 システム運用",
+      "status": "ok",
+      "html_sha256": "075542e74680ee0960d5da1ffc95d4ca00c55ec1f4d222269ab0a54c96e7e8d4",
+      "png_sha256": "9db6272f00539ba483bd2e44494b4c131012ba87a47400b64f6e34996c5935e0",
+      "webp_sha256": "7ee0bfd243266f65949342c72573b015df9e34de12a06016884c7c48ce62f86e",
+      "dependencies": {
+        "_src/19_scr-s04.html": "075542e74680ee0960d5da1ffc95d4ca00c55ec1f4d222269ab0a54c96e7e8d4",
+        "_src/assets/shots/scr-s04-1.png": "6a8482b62b9b009beb97e27cd92263eb619bd0443701cad2630ce9337a1a0119",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 12 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "20",
+      "file": "20_scr-s05.html",
+      "png": "20_scr-s05.png",
+      "webp": "_src/book/20_scr-s05.webp",
+      "type": "pc",
+      "screens": [
+        "S05"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 11,
+      "text_chars": 597,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S05 会社一覧",
+      "status": "ok",
+      "html_sha256": "81bcb98ea3a719e339f5cc92f1f285e8491c2433c7d50b9e386d5b140d093d24",
+      "png_sha256": "ea36935bccd6cb84c041502406293b220580fb28a1f6469b7b2e7a226a5b551d",
+      "webp_sha256": "5e701001b720be038121430cbb0809d8881604ebaffe75f6546b4bac2dea2702",
+      "dependencies": {
+        "_src/20_scr-s05.html": "81bcb98ea3a719e339f5cc92f1f285e8491c2433c7d50b9e386d5b140d093d24",
+        "_src/assets/shots/scr-s05-1.png": "48f6693e738e24ceef25b95c1c86ae12b2d98229b55af4e4936ddb8af486e8c5",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 11 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "21",
+      "file": "21_scr-s06-1.html",
+      "png": "21_scr-s06-1.png",
+      "webp": "_src/book/21_scr-s06-1.webp",
+      "type": "pc",
+      "screens": [
+        "S06"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 13,
+      "text_chars": 495,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S06 利用者一覧（1/2）",
+      "status": "ok",
+      "html_sha256": "1af51470d533b7d228ff632d598b76c887b6f4571ad22016315333b94e22314b",
+      "png_sha256": "0c9957b58d038939dc0f8f984a1b7e707a7a0bf7c0d0c14c4af2ce4f2aeaeb29",
+      "webp_sha256": "5bcdefad581922c8fff9dd10dfb5cac5c813784fdaa6e7b816d0a4a7c0d5f698",
+      "dependencies": {
+        "_src/21_scr-s06-1.html": "1af51470d533b7d228ff632d598b76c887b6f4571ad22016315333b94e22314b",
+        "_src/assets/shots/scr-s06-1.png": "bdf04d003e10a2d5e133676b18ad746b94b4740cddb93284791ef372e0f16f89",
+        "_src/assets/shots/scr-s06-2.png": "fc4784e70fa64bf476e403989c239c8e5e7436184d65193b0a15b5bcb740a78f",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 13 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "22",
+      "file": "22_scr-s06-2.html",
+      "png": "22_scr-s06-2.png",
+      "webp": "_src/book/22_scr-s06-2.webp",
+      "type": "pc",
+      "screens": [
+        "S06"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 2,
+      "text_chars": 337,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S06 利用者一覧（2/2）",
+      "status": "ok",
+      "html_sha256": "4f134f1e149279a9774bad0384121ec4d99d119e6e57b29b3ce48aaffb6de00f",
+      "png_sha256": "fec8c3c8642f2de6d2b2e21600f9d80b13f5dce8baf43c6bd87f15bbe4db853e",
+      "webp_sha256": "6a748656bfac17db44bc16cd1584bb7733ceb4b02a96b5989b93bc01e959bd4f",
+      "dependencies": {
+        "_src/22_scr-s06-2.html": "4f134f1e149279a9774bad0384121ec4d99d119e6e57b29b3ce48aaffb6de00f",
+        "_src/assets/shots/scr-s06-3.png": "0a2d8eb8e35df5f8bba5abc4673feef53495058b2ab5766fc42659e0474a7ffd",
+        "_src/assets/shots/scr-s06-4.png": "6582c9db1b3446d8e5a88b5d5d6d7b282d46201d9a82a9db6bd171a66651e16c",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "23",
+      "file": "23_scr-s07.html",
+      "png": "23_scr-s07.png",
+      "webp": "_src/book/23_scr-s07.webp",
+      "type": "pc",
+      "screens": [
+        "S07"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 9,
+      "text_chars": 657,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S07 利用者1人",
+      "status": "ok",
+      "html_sha256": "018fadd58717360cfefbfdaba5ec18110816442c50b59689aa1b78b2f2d39d94",
+      "png_sha256": "03119ac756cc170e34d378feb63183312085f748720c0c7b105aabe00c698ee0",
+      "webp_sha256": "d4f40fbe2aa9a6c79a6fd93e5cfa119875836fdee86e90f2257054b54e5775b5",
+      "dependencies": {
+        "_src/23_scr-s07.html": "018fadd58717360cfefbfdaba5ec18110816442c50b59689aa1b78b2f2d39d94",
+        "_src/assets/shots/scr-s07-1.png": "6a405d0d3254c8e27310f258fd22d6442ba97120244615d97de93ebcbc794dc5",
+        "_src/assets/shots/scr-s07-2.png": "1023d1d5a0ed880f117e38b3c3b81a0d30e5127c70801005457589b3e8d6f93e",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 9 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "24",
+      "file": "24_scr-s08-1.html",
+      "png": "24_scr-s08-1.png",
+      "webp": "_src/book/24_scr-s08-1.webp",
+      "type": "pc",
+      "screens": [
+        "S08"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 6,
+      "text_chars": 297,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S08 権限一覧（1/2）",
+      "status": "ok",
+      "html_sha256": "f3cb167e0fb5ba3a9dc98bb160164de8cb445bb7ca2658f5c78543b02a8c15ae",
+      "png_sha256": "e338cb8d2a1c8ce45092ab47ab433d688eba050c51841feb22393c9b0d89a9f6",
+      "webp_sha256": "2263254be46ac3680a4f529c8a913681732412aa5255cd1179130c0004b49a6e",
+      "dependencies": {
+        "_src/24_scr-s08-1.html": "f3cb167e0fb5ba3a9dc98bb160164de8cb445bb7ca2658f5c78543b02a8c15ae",
+        "_src/assets/shots/scr-s08-1.png": "0e0cb28ee743be5dbcd518d2aa504ec85ca07080a4e38a4269e1e7082e9e8304",
+        "_src/assets/shots/scr-s08-2.png": "d23fb5e8d35e6a561f225861daa5bf89065c8c0e79d599b9783d74388ab60cd0",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 6 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "25",
+      "file": "25_scr-s08-2.html",
+      "png": "25_scr-s08-2.png",
+      "webp": "_src/book/25_scr-s08-2.webp",
+      "type": "pc",
+      "screens": [
+        "S08"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 3,
+      "text_chars": 304,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S08 権限一覧（2/2）",
+      "status": "ok",
+      "html_sha256": "a55634f3c98c7cbad9b03c2a174e62953b8f1394f6192051d536c64bb54231ec",
+      "png_sha256": "4d1fcf56cd573181be3c311557872de06338f13ce585a5926d012a3f5a36adea",
+      "webp_sha256": "a6d96fcb1b0ced26fdfb15f54d263866a5255a481972f87ca38bd42baa96ccf4",
+      "dependencies": {
+        "_src/25_scr-s08-2.html": "a55634f3c98c7cbad9b03c2a174e62953b8f1394f6192051d536c64bb54231ec",
+        "_src/assets/shots/scr-s08-3.png": "71454b8c4fb20c926b2369294aca506d5fa296fa9cd909d3beb19964534013ca",
+        "_src/assets/shots/scr-s08-4.png": "a36fa2cb67fe85d3ed5a269319679e48a89492b4ca89b3fb99d3d9e5c1d6fecf",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "26",
+      "file": "26_scr-s09.html",
+      "png": "26_scr-s09.png",
+      "webp": "_src/book/26_scr-s09.webp",
+      "type": "pc",
+      "screens": [
+        "S09"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 12,
+      "text_chars": 624,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S09 利用状況",
+      "status": "ok",
+      "html_sha256": "b0130f1c58e1ba92afb1aa1590c8154d2deb9ce35ec522c0ef88c559a71a7981",
+      "png_sha256": "4a500f45ef4dd4b67853dd8684e61f6f07682f71476e646980a61bf82aeb0c74",
+      "webp_sha256": "e7d574c8a6e1e03f640a34a79b446b0ed9bbf5e889b24b7183fd823839946b38",
+      "dependencies": {
+        "_src/26_scr-s09.html": "b0130f1c58e1ba92afb1aa1590c8154d2deb9ce35ec522c0ef88c559a71a7981",
+        "_src/assets/shots/scr-s09-1.png": "c6e9400527e6f201ef806c18dc4172093bc4741c2daa10d72747a381872c3702",
+        "_src/assets/shots/scr-s09-2.png": "782904362564c736f4913c13220c8abb69a972d65322310ac9832fb1040e1a93",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 12 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "27",
+      "file": "27_scr-s10.html",
+      "png": "27_scr-s10.png",
+      "webp": "_src/book/27_scr-s10.webp",
+      "type": "pc",
+      "screens": [
+        "S10"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 11,
+      "text_chars": 656,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S10 Claude Code連携",
+      "status": "ok",
+      "html_sha256": "10cad70100a259c06eb6bbaf4866b8073ac7439af147ca08a145eadaabd8e95d",
+      "png_sha256": "4ab4d9aadce895b7401fdefc34f8e029d78540ab81208b6f7a2f58555d5d0957",
+      "webp_sha256": "a0336e9135a9f6adbda655a3bb1538c85cae87ad10e14664fd1303e1e640f326",
+      "dependencies": {
+        "_src/27_scr-s10.html": "10cad70100a259c06eb6bbaf4866b8073ac7439af147ca08a145eadaabd8e95d",
+        "_src/assets/shots/scr-s10-1.png": "47d28df095ebb4bd8ae8b1d3d5bcd433fcbcae6214fa49056cf360a97788825c",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 11 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "28",
+      "file": "28_scr-s11.html",
+      "png": "28_scr-s11.png",
+      "webp": "_src/book/28_scr-s11.webp",
+      "type": "pc",
+      "screens": [
+        "S11"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 11,
+      "text_chars": 721,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S11 管理者のホーム",
+      "status": "ok",
+      "html_sha256": "a1da7e67566bffc36f630122e3d1193713b83239956b6ebcfc8ac4cdd6f551eb",
+      "png_sha256": "d80b7b81776097439571037e7b4edc343554af056c66bd8540f61b428116eed5",
+      "webp_sha256": "1edf5103a6754399c3429b9e441731fe2ff936a81829891603fee685ddff55a3",
+      "dependencies": {
+        "_src/28_scr-s11.html": "a1da7e67566bffc36f630122e3d1193713b83239956b6ebcfc8ac4cdd6f551eb",
+        "_src/assets/shots/scr-s11-1.png": "a24282bef29c629468a63f47d424cd7bf8d8ea8783669f9cbeee99186ad53e66",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 11 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "29",
+      "file": "29_scr-s12.html",
+      "png": "29_scr-s12.png",
+      "webp": "_src/book/29_scr-s12.webp",
+      "type": "pc",
+      "screens": [
+        "S12"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 12,
+      "text_chars": 738,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S12 制度設定ガイド",
+      "status": "ok",
+      "html_sha256": "38a4d2f0055811f9d8b77645d90e91b384846658b11e91ce9b5722d70e96dccc",
+      "png_sha256": "735be217af01fdead51b2afbac7c0558715ef40e575fdd9995498ae5ee931e16",
+      "webp_sha256": "44ad5bbee3a81733eacfec2fed2a8bbd4b45df090bb3c88129fe88ba089a0ef0",
+      "dependencies": {
+        "_src/29_scr-s12.html": "38a4d2f0055811f9d8b77645d90e91b384846658b11e91ce9b5722d70e96dccc",
+        "_src/assets/shots/scr-s12-1.png": "c1ac1f2ee4b539173da41c724a7d08155a47d13e3ea0cdea2c306b51ee3307a6",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 12 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "30",
+      "file": "30_scr-s13.html",
+      "png": "30_scr-s13.png",
+      "webp": "_src/book/30_scr-s13.webp",
+      "type": "pc",
+      "screens": [
+        "S13"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 9,
+      "text_chars": 557,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S13 等級の設定",
+      "status": "ok",
+      "html_sha256": "6271a95e89dbc1ee34087aa6019f5cf28f58c8ffdc33dec02fb6540aec07a3fc",
+      "png_sha256": "2ce38c19b34fc7e96d93fbbfee8e311d24da72444941a45a5ec25c9a72260027",
+      "webp_sha256": "bcdfa23b67e4749994e1b2ab22c9aed0b1a1e327ffde06405669100cc9e91621",
+      "dependencies": {
+        "_src/30_scr-s13.html": "6271a95e89dbc1ee34087aa6019f5cf28f58c8ffdc33dec02fb6540aec07a3fc",
+        "_src/assets/shots/scr-s13-1.png": "9106d2b2bbbc94601edbb3b70e80acf720a450478976ac87a8c7888499d3690f",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 9 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "31",
+      "file": "31_scr-s14.html",
+      "png": "31_scr-s14.png",
+      "webp": "_src/book/31_scr-s14.webp",
+      "type": "pc",
+      "screens": [
+        "S14"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 16,
+      "text_chars": 761,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S14 等級要件（支援・運営）",
+      "status": "ok",
+      "html_sha256": "9f56268def4a8b48ecd88344642d6ac798f533442323562df1b0492c35496c9e",
+      "png_sha256": "e13f7c0ad18e7e44775d3992d7bc5d87561dcd2b5d180dd4dd6782992103fc97",
+      "webp_sha256": "8ba33027c4f07a2c0a76080e5c44f00c9eb2053c30676506c35c86ba77b4d740",
+      "dependencies": {
+        "_src/31_scr-s14.html": "9f56268def4a8b48ecd88344642d6ac798f533442323562df1b0492c35496c9e",
+        "_src/assets/shots/scr-s14-1.png": "fdf91a1d88bb01e44ce678da3463e492e532a7962ac8032db9aaf4785e8f9f6a",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 16 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "32",
+      "file": "32_scr-s15.html",
+      "png": "32_scr-s15.png",
+      "webp": "_src/book/32_scr-s15.webp",
+      "type": "pc",
+      "screens": [
+        "S15"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 20,
+      "text_chars": 967,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S15 昇格の条件・要件",
+      "status": "ok",
+      "html_sha256": "7d92b53460f574d29e09d75908089697dce2d0f1e6faf67ae7bd0509a29561be",
+      "png_sha256": "d031c09c8818cc331a6c0c73473db51727df9bde20230da85c1304797836abdb",
+      "webp_sha256": "05b80fe892416a070078f2bdac8841be2cad511baafb85c802d63f234e64638e",
+      "dependencies": {
+        "_src/32_scr-s15.html": "7d92b53460f574d29e09d75908089697dce2d0f1e6faf67ae7bd0509a29561be",
+        "_src/assets/shots/scr-s15-1.png": "c9cfc074c095e7ef346576a2bc0eec86a824d96fdd50e338ab5dde910573b099",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 967 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        },
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 20 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "33",
+      "file": "33_scr-s16-1.html",
+      "png": "33_scr-s16-1.png",
+      "webp": "_src/book/33_scr-s16-1.webp",
+      "type": "pc",
+      "screens": [
+        "S16"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 16,
+      "text_chars": 659,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S16 行動指針（1/2）",
+      "status": "ok",
+      "html_sha256": "2c7630b305c88372c70fe863a86f6e14d71a5452ff11b3534927ea248353ac80",
+      "png_sha256": "54ebb90bbfbc300b7dd49b9a0f6d40c1197f8e2de56253702f31e5a55393bdb9",
+      "webp_sha256": "61c8d0deff0135de1a5c389c513a91500db994aeabe9e606caf5e6f9dd0a8fce",
+      "dependencies": {
+        "_src/33_scr-s16-1.html": "2c7630b305c88372c70fe863a86f6e14d71a5452ff11b3534927ea248353ac80",
+        "_src/assets/shots/scr-s16-1.png": "b7242d24f85fcde151b6c62dd287d623f5f86ce7268e28d56a379077d4942eb3",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 16 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "34",
+      "file": "34_scr-s16-2.html",
+      "png": "34_scr-s16-2.png",
+      "webp": "_src/book/34_scr-s16-2.webp",
+      "type": "pc",
+      "screens": [
+        "S16"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 4,
+      "text_chars": 470,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S16 行動指針（2/2）",
+      "status": "ok",
+      "html_sha256": "f02bf0f00aa652a43870f6ccd681d32f9997f3194f507034519fc95c83b4e1e3",
+      "png_sha256": "c2251e830e14125e8994f59af7e47519e68263983bc4048b1c8c0e4742f1eb46",
+      "webp_sha256": "e0add8470cab885ad5d92ba2dba0928284d010f7da435734de4e65d874636b39",
+      "dependencies": {
+        "_src/34_scr-s16-2.html": "f02bf0f00aa652a43870f6ccd681d32f9997f3194f507034519fc95c83b4e1e3",
+        "_src/assets/shots/scr-s16-2.png": "0896bf1abc45fbc138478c1db3ae9c93f2808f0f00b0bb23f60731ae4662d485",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "35",
+      "file": "35_scr-s17.html",
+      "png": "35_scr-s17.png",
+      "webp": "_src/book/35_scr-s17.webp",
+      "type": "pc",
+      "screens": [
+        "S17"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 13,
+      "text_chars": 872,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S17 KPI・評価セット",
+      "status": "ok",
+      "html_sha256": "36b45c5c74d26e3650c6013243ca7bde95beda64dc9fe318c8590fac8088e0cb",
+      "png_sha256": "ede9756bcb32042d98e6e6b6a1b2aaad0aaf628ca1bf4d7a9985f473b575fbda",
+      "webp_sha256": "2a7aad457a7c9b71275f00fde2de405853699c4ef0df6050b7429ccea41fa4c4",
+      "dependencies": {
+        "_src/35_scr-s17.html": "36b45c5c74d26e3650c6013243ca7bde95beda64dc9fe318c8590fac8088e0cb",
+        "_src/assets/shots/scr-s17-1.png": "7523bdbd2921127658b0b2299ca08ecb3ba010536ca39ad259696a13b3e9666b",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 13 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "36",
+      "file": "36_scr-s18-1.html",
+      "png": "36_scr-s18-1.png",
+      "webp": "_src/book/36_scr-s18-1.webp",
+      "type": "pc",
+      "screens": [
+        "S18"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 10,
+      "text_chars": 502,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S18 使うKPIを選ぶ（1/2）",
+      "status": "ok",
+      "html_sha256": "b813f2d532b592767915d603c22dca36b216a5e9a7ec6f0ec6fe25f16ef17f09",
+      "png_sha256": "711ea555bd592b522a58defab969e3c02acc7f9ca7dec843e2b9b9d4399ba13c",
+      "webp_sha256": "c1745dc9a1f6e43acf0d551fa648e1a498d5b0b5638a34a5fe8b784d9a84705a",
+      "dependencies": {
+        "_src/36_scr-s18-1.html": "b813f2d532b592767915d603c22dca36b216a5e9a7ec6f0ec6fe25f16ef17f09",
+        "_src/assets/shots/scr-s18-1.png": "46cdf301c32e7c9e04c5407581042666f7a442cfa864f1c5e623e6ff9aae6877",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 10 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "37",
+      "file": "37_scr-s18-2.html",
+      "png": "37_scr-s18-2.png",
+      "webp": "_src/book/37_scr-s18-2.webp",
+      "type": "pc",
+      "screens": [
+        "S18"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 4,
+      "text_chars": 656,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S18 使うKPIを選ぶ（2/2）",
+      "status": "ok",
+      "html_sha256": "af69b18d566b632c095484d6aca4e65daa1b4fcbc7a52b5c09791a9c4bccde6b",
+      "png_sha256": "8b7f740b100f1b0cc4054a08baf3eb49be772121eb4f2950a2734dd7c393c45e",
+      "webp_sha256": "21194f6136426f9d96cc4b93cae105f88cd58163a441260f7ad29d259593739a",
+      "dependencies": {
+        "_src/37_scr-s18-2.html": "af69b18d566b632c095484d6aca4e65daa1b4fcbc7a52b5c09791a9c4bccde6b",
+        "_src/assets/shots/scr-s18-2.png": "3cfe21a5d0fce9eac0a83646425ce90a93f48ce338727448a238f42f852aa7cd",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "38",
+      "file": "38_scr-s19.html",
+      "png": "38_scr-s19.png",
+      "webp": "_src/book/38_scr-s19.webp",
+      "type": "pc",
+      "screens": [
+        "S19"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 13,
+      "text_chars": 827,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S19 選んだ項目の基準を決める",
+      "status": "ok",
+      "html_sha256": "a934c2fc36657b7c06d819973723e166a1a9e6edba6c502b2cb792507dd20f8e",
+      "png_sha256": "3126a7cdf1d5f565ae93099bf75d05a4346a91146fcc6df01173751a4cb22f4d",
+      "webp_sha256": "33f2c4600b35b326a853df6275a71647ca866b6122fba0fca9729d490cadf185",
+      "dependencies": {
+        "_src/38_scr-s19.html": "a934c2fc36657b7c06d819973723e166a1a9e6edba6c502b2cb792507dd20f8e",
+        "_src/assets/shots/scr-s19-1.png": "a1c01e5faa38c51cc5b8b22b5f8600660320bebbc6481204d8085dbe028c60d4",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 13 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "39",
+      "file": "39_scr-s20.html",
+      "png": "39_scr-s20.png",
+      "webp": "_src/book/39_scr-s20.webp",
+      "type": "pc",
+      "screens": [
+        "S20"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 4,
+      "text_chars": 411,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S20 全等級区分に共通の設定",
+      "status": "ok",
+      "html_sha256": "785440e232c2fd4f182f85ff5d5219d556bdf72691e1f9cff681219f16901957",
+      "png_sha256": "900905d0a889393d8291a95bb1051d5da9aeb9e9fa13c3c1498cd1d0e0fed797",
+      "webp_sha256": "a869d4449e58da9d43ac43995eb1fb866dd8c10c8eb5dede5fb090fc10464baa",
+      "dependencies": {
+        "_src/39_scr-s20.html": "785440e232c2fd4f182f85ff5d5219d556bdf72691e1f9cff681219f16901957",
+        "_src/assets/shots/scr-s20-1.png": "928410796d40aab7be46b273f8f27e22c52d35d15430a75e95869483f2c498f2",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "40",
+      "file": "40_scr-s21-1.html",
+      "png": "40_scr-s21-1.png",
+      "webp": "_src/book/40_scr-s21-1.webp",
+      "type": "pc",
+      "screens": [
+        "S21"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 9,
+      "text_chars": 427,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S21 KPI項目（1/2）",
+      "status": "ok",
+      "html_sha256": "fb1f7f708b76ce84c2aff2b470c3b42a6246b19f4fd487907fa6146eecc51301",
+      "png_sha256": "627bbe0d34fe810fb9a74c2014ae1aaf7526a9637c28d99e3efc7563ecd9e7b8",
+      "webp_sha256": "dd69130eb8a5e4bd2eef1a8367b08650bee572ed68792eb67e04d67a11d1f351",
+      "dependencies": {
+        "_src/40_scr-s21-1.html": "fb1f7f708b76ce84c2aff2b470c3b42a6246b19f4fd487907fa6146eecc51301",
+        "_src/assets/shots/scr-s21-1.png": "41d96ba76e0829bde26f53b9093b4e8eb1777dd6c0198330fbbacbf6ea9abf94",
+        "_src/assets/shots/scr-s21-2.png": "cd927ed2a101c367c7b5b31d93e8cba10512018891236fabcb82eec279a25901",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 9 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "41",
+      "file": "41_scr-s21-2.html",
+      "png": "41_scr-s21-2.png",
+      "webp": "_src/book/41_scr-s21-2.webp",
+      "type": "pc",
+      "screens": [
+        "S21"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 2,
+      "text_chars": 449,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S21 KPI項目（2/2）",
+      "status": "ok",
+      "html_sha256": "b474da32d88df2fda1300486c99a6615a0ddf5da13def50d02dbdb5c3fb032be",
+      "png_sha256": "25652cefb4514e0390d4ef9c5828bd90fcebecc1769a8d644ea336813dd6056d",
+      "webp_sha256": "2da14b33bef26bea36330b744b572dd58e5d19c25fed73f7f385e8903f659d82",
+      "dependencies": {
+        "_src/41_scr-s21-2.html": "b474da32d88df2fda1300486c99a6615a0ddf5da13def50d02dbdb5c3fb032be",
+        "_src/assets/shots/scr-s21-3.png": "3ba66f220f434a5360cdd1bff99bd55385e6b9e9f8807d5ed5a9110e556a6072",
+        "_src/assets/shots/scr-s21-4.png": "3dcb9a25971edaf738a6b2d199440a00c24524b4418640ccd1512b389a06d904",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "42",
+      "file": "42_scr-s22.html",
+      "png": "42_scr-s22.png",
+      "webp": "_src/book/42_scr-s22.webp",
+      "type": "pc",
+      "screens": [
+        "S22"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 5,
+      "text_chars": 446,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S22 KPIカテゴリ",
+      "status": "ok",
+      "html_sha256": "a5f1b942e74dbaee491e22275dc384dea816fcbfe420b703104efc124cbaff97",
+      "png_sha256": "25b94c5e170989b8e03e1d94fff0d0cdb59c6e181956374182f7f147251e973b",
+      "webp_sha256": "606afa4ba5a11072bbf8e54116fb9eecd25f35f48296e6033a6b52628da8e829",
+      "dependencies": {
+        "_src/42_scr-s22.html": "a5f1b942e74dbaee491e22275dc384dea816fcbfe420b703104efc124cbaff97",
+        "_src/assets/shots/scr-s22-1.png": "1389615a51b7d801e4df45eafe3ca8dc0c366ca8a86df33d253da658028be0f9",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "43",
+      "file": "43_scr-s23.html",
+      "png": "43_scr-s23.png",
+      "webp": "_src/book/43_scr-s23.webp",
+      "type": "pc",
+      "screens": [
+        "S23"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 13,
+      "text_chars": 633,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S23 昇給の設定",
+      "status": "ok",
+      "html_sha256": "20f0db0b267db63b0eab689cc7e7041b66dd0cd7f10de6229984a0fb7d451c5b",
+      "png_sha256": "2ed927c42c77312919859ab7d215a2eca21e83eba1509dc54b8c6a426c36d65e",
+      "webp_sha256": "5b0fc65689f2587624e31177dc8bb2655e7c8d2c7be07a36e170102a4a3c8fed",
+      "dependencies": {
+        "_src/43_scr-s23.html": "20f0db0b267db63b0eab689cc7e7041b66dd0cd7f10de6229984a0fb7d451c5b",
+        "_src/assets/shots/scr-s23-1.png": "a74c9d8019177c2a4869f53677bf29f406ac5146f5fabee60ed54d5518e913d4",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 13 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "44",
+      "file": "44_scr-s24.html",
+      "png": "44_scr-s24.png",
+      "webp": "_src/book/44_scr-s24.webp",
+      "type": "pc",
+      "screens": [
+        "S24"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 9,
+      "text_chars": 601,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S24 社員",
+      "status": "ok",
+      "html_sha256": "1a12f82f778220f0efacf8304576c63c8b641196856900e1cd77339f681021cf",
+      "png_sha256": "255cabc0c38caac6bb660830a1ccfd27ddb160a577a10a8cdd55cb7b8781c8d3",
+      "webp_sha256": "ada7d85a0d4d2723ddbd69327351fff95ebcb6e43e69530732d281cff6f5c54d",
+      "dependencies": {
+        "_src/44_scr-s24.html": "1a12f82f778220f0efacf8304576c63c8b641196856900e1cd77339f681021cf",
+        "_src/assets/shots/scr-s24-1.png": "a61171d904e2384067331031011c1afe0047f7d51ca950513a54e11cae18f4a3",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 9 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "45",
+      "file": "45_scr-s25.html",
+      "png": "45_scr-s25.png",
+      "webp": "_src/book/45_scr-s25.webp",
+      "type": "pc",
+      "screens": [
+        "S25"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 9,
+      "text_chars": 563,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S25 社員1人",
+      "status": "ok",
+      "html_sha256": "ec00300ec30aa6c7053a061c27bdb82edf4c3e9a10a126120b363cabbe160b2c",
+      "png_sha256": "02c83e8da5e8d6c84b19fc4162c40db853a17caa64d7e64b9efadd2a84b3f6f3",
+      "webp_sha256": "9feed25cbbf2ab80bc257c18b9c49a245d489b871d52d71e003f51e294896e44",
+      "dependencies": {
+        "_src/45_scr-s25.html": "ec00300ec30aa6c7053a061c27bdb82edf4c3e9a10a126120b363cabbe160b2c",
+        "_src/assets/shots/scr-s25-1.png": "9ef83096daef4259ec382633f7f695d8c44731993d25f35d8c98f7d5e06c7533",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 9 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "46",
+      "file": "46_scr-s26.html",
+      "png": "46_scr-s26.png",
+      "webp": "_src/book/46_scr-s26.webp",
+      "type": "pc",
+      "screens": [
+        "S26"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 5,
+      "text_chars": 356,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S26 本人が変更できる項目",
+      "status": "ok",
+      "html_sha256": "12fb66106586ca8584a9915ae04127848498c6dcc5709a5530617f1cf515dedb",
+      "png_sha256": "46acc5f7c9df7cd3618ba005935a442a3e5774704df219417ce45eaa8dbf1d70",
+      "webp_sha256": "41257a55e0c91a6ebdd058d89ed7cab4e5b2fd0460f3da9d841912dd7291b508",
+      "dependencies": {
+        "_src/46_scr-s26.html": "12fb66106586ca8584a9915ae04127848498c6dcc5709a5530617f1cf515dedb",
+        "_src/assets/shots/scr-s26-1.png": "26218f76003b9eae8e0f141e79e6d5977e282aeb4354a1fa7463a98356891ee6",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "47",
+      "file": "47_scr-s27.html",
+      "png": "47_scr-s27.png",
+      "webp": "_src/book/47_scr-s27.webp",
+      "type": "pc",
+      "screens": [
+        "S27"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 10,
+      "text_chars": 696,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S27 評価期間",
+      "status": "ok",
+      "html_sha256": "74c3ceb474b85aa11a1c5c6d4011f7c59c70fa44be3be1623be6cc0ffe8bb0e4",
+      "png_sha256": "43b114b200c7e1d8a46c09c3011d2fc463f86af184a4d987af26b3b67f2924da",
+      "webp_sha256": "0cf016a6ac9a3f3e8029df75079cbc418a08f8191107d757dcbae35f711c6bec",
+      "dependencies": {
+        "_src/47_scr-s27.html": "74c3ceb474b85aa11a1c5c6d4011f7c59c70fa44be3be1623be6cc0ffe8bb0e4",
+        "_src/assets/shots/scr-s27-1.png": "c0f9a57c0ff76703655354504c8eb81f0dbde62e062021b36be1b74c5e5a14af",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 10 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "48",
+      "file": "48_scr-s28.html",
+      "png": "48_scr-s28.png",
+      "webp": "_src/book/48_scr-s28.webp",
+      "type": "pc",
+      "screens": [
+        "S28"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 12,
+      "text_chars": 635,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S28 アンケート",
+      "status": "ok",
+      "html_sha256": "8432726673aec64d7ee24fb11c937d5e88d1d17b2fa41dc8da1161bd3e1d1776",
+      "png_sha256": "aac9c45c729b2a162af0020c4ef50beba0b98bbaeeae8883450725ac610facc1",
+      "webp_sha256": "566db785c5543517ab30c73939cc39ab3469cb4a08d3c401522f58795142d9f5",
+      "dependencies": {
+        "_src/48_scr-s28.html": "8432726673aec64d7ee24fb11c937d5e88d1d17b2fa41dc8da1161bd3e1d1776",
+        "_src/assets/shots/scr-s28-1.png": "f7a818ccad31e16c1e8de9a92c9db41db2369e1c8150adb3a4fadbd7088c26c1",
+        "_src/assets/shots/scr-s28-2.png": "47c52af5bc40a2413012da033fda8ea39292733aa089afcde218e27499403f88",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 12 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "49",
+      "file": "49_scr-s29.html",
+      "png": "49_scr-s29.png",
+      "webp": "_src/book/49_scr-s29.webp",
+      "type": "pc",
+      "screens": [
+        "S29"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 10,
+      "text_chars": 745,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S29 アンケートの組み立て",
+      "status": "ok",
+      "html_sha256": "cadcc44559c1c20e185f8d792943b497a2079299c19e991700ec6cfbf5c048c4",
+      "png_sha256": "e26b831a0ab1b7857d659dc94aaa13561562143cd4eb7942640614fe48699211",
+      "webp_sha256": "bfe2bb6b8ee129301e5e614e11c8745d5850ff4d2cc20e0b855fe29f6af2f1be",
+      "dependencies": {
+        "_src/49_scr-s29.html": "cadcc44559c1c20e185f8d792943b497a2079299c19e991700ec6cfbf5c048c4",
+        "_src/assets/shots/scr-s29-1.png": "4551ce815dc273966f0a60eec13055b1b7d49bf430204b800589c8d790f5392a",
+        "_src/assets/shots/scr-s29-2.png": "7c66072acd8c9bc2183953079a67e1da29c68898bc772361cb2d3e0bbb094bbf",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 10 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "50",
+      "file": "50_scr-s30.html",
+      "png": "50_scr-s30.png",
+      "webp": "_src/book/50_scr-s30.webp",
+      "type": "pc",
+      "screens": [
+        "S30"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 7,
+      "text_chars": 481,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S30 アンケートの中身",
+      "status": "ok",
+      "html_sha256": "c30615da7e7d85c1388697d635634585cb2ee1194520d2749a8d54a1a85f345f",
+      "png_sha256": "9977d72e14e3494b8591dfeab409edccfa542150dce3a515f725488429dc0913",
+      "webp_sha256": "7500d2d27d00daa4175786ca495eba87436f2c070cbc0ba820fc3e237fac04e2",
+      "dependencies": {
+        "_src/50_scr-s30.html": "c30615da7e7d85c1388697d635634585cb2ee1194520d2749a8d54a1a85f345f",
+        "_src/assets/shots/scr-s30-1.png": "8c62214af302fa7e94dfe6f952fa7341000ac8714cb1c2d9084823e5da5fbae2",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 7 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "51",
+      "file": "51_scr-s31-1.html",
+      "png": "51_scr-s31-1.png",
+      "webp": "_src/book/51_scr-s31-1.webp",
+      "type": "pc",
+      "screens": [
+        "S31"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 12,
+      "text_chars": 506,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S31 アンケートの中身（1本）（1/2）",
+      "status": "ok",
+      "html_sha256": "00c36ea43147b30e5db66216dd70f128ef075678de4f3c37eb67b10726e6eec4",
+      "png_sha256": "d913cfb109456dfd14f48ee01f1cb0981b70f79111786f80403676f58d2bd4d8",
+      "webp_sha256": "7d7d5d58c58797352855c041ee3dd7a2031b04350318fac2dc19505c33f0422e",
+      "dependencies": {
+        "_src/51_scr-s31-1.html": "00c36ea43147b30e5db66216dd70f128ef075678de4f3c37eb67b10726e6eec4",
+        "_src/assets/shots/scr-s31-1.png": "da3565096291631f6d0b98cdcf3f3ac3664875f6073b43dec5dd4327c6e36553",
+        "_src/assets/shots/scr-s31-2.png": "757b343400afa58d6d9bd5a85198d5a61668191e2b61b1954c24df6a97b8e16b",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 12 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "52",
+      "file": "52_scr-s31-2.html",
+      "png": "52_scr-s31-2.png",
+      "webp": "_src/book/52_scr-s31-2.webp",
+      "type": "pc",
+      "screens": [
+        "S31"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 4,
+      "text_chars": 551,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S31 アンケートの中身（1本）（2/2）",
+      "status": "ok",
+      "html_sha256": "b32a44f93eb1df49da7d6f55971a784d57403166dda960ca0625deaaebe24720",
+      "png_sha256": "7ca30e2e98872df655c2daee01580f3f3526019f96a7a170fddce5065dd484a4",
+      "webp_sha256": "7626ccf63298fea34768a8753a7d31e89ec5b6a2762d8347efc039e9364f7dcc",
+      "dependencies": {
+        "_src/52_scr-s31-2.html": "b32a44f93eb1df49da7d6f55971a784d57403166dda960ca0625deaaebe24720",
+        "_src/assets/shots/scr-s31-3.png": "fe74a13e2e0815e8406d8c7201eeacd22572c991280e0fe42f5635d6276da4a4",
+        "_src/assets/shots/scr-s31-4.png": "6e0a2e0122fe06b26a6079f1426da7cf20c33b7298e547618713e76ce8d8b8f9",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "53",
+      "file": "53_scr-s32.html",
+      "png": "53_scr-s32.png",
+      "webp": "_src/book/53_scr-s32.webp",
+      "type": "pc",
+      "screens": [
+        "S32"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 13,
+      "text_chars": 772,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S32 社員のホーム",
+      "status": "ok",
+      "html_sha256": "3ba78a3cc645279e1d5b535cbd6de7fd08e295d0a849d1c51b8c1af0de5ed4fe",
+      "png_sha256": "f1ff3894912906ef138f17fd44251436ccedc8dfed4d4a3e1479c944b1e221e2",
+      "webp_sha256": "1bba210f73134fab4cfb4cd18ee40b6115f45fae2ae01a4594b5f9175a94efe9",
+      "dependencies": {
+        "_src/53_scr-s32.html": "3ba78a3cc645279e1d5b535cbd6de7fd08e295d0a849d1c51b8c1af0de5ed4fe",
+        "_src/assets/shots/scr-s32-1.png": "46eb3e9856dbce4d70fc23853486fd7bd5e200b6f48000af48940f39a3c452db",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 13 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "54",
+      "file": "54_scr-s33.html",
+      "png": "54_scr-s33.png",
+      "webp": "_src/book/54_scr-s33.webp",
+      "type": "pc",
+      "screens": [
+        "S33"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 9,
+      "text_chars": 639,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S33 実績を報告する",
+      "status": "ok",
+      "html_sha256": "a894d59fe7cfc538204e9094046d82a75a67063bf0bea8196cdc087640166c8f",
+      "png_sha256": "45a6b363cd1b18c4b868bb2ea2d62f184dda39e47f1ac9d466363e907b570a9d",
+      "webp_sha256": "f6a609966a334c75aa4a85a417fb056bedb0d668cafb34f65db04e517762b738",
+      "dependencies": {
+        "_src/54_scr-s33.html": "a894d59fe7cfc538204e9094046d82a75a67063bf0bea8196cdc087640166c8f",
+        "_src/assets/shots/scr-s33-1.png": "fa7ae779e589b21aa45f84cfc35f85d4f74928df399cd41180e46aeaa7cca71e",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 9 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "55",
+      "file": "55_scr-s34-1.html",
+      "png": "55_scr-s34-1.png",
+      "webp": "_src/book/55_scr-s34-1.webp",
+      "type": "pc",
+      "screens": [
+        "S34"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 6,
+      "text_chars": 334,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S34 アンケートに答える（1/2）",
+      "status": "ok",
+      "html_sha256": "b1b28adceb149e82bb68797b8637564f1b526f3c7ac846ec5cbcd3f63b8fde75",
+      "png_sha256": "a354c5f1d5b8fae22ccaffdd9e6c3ccc1fe8d99269251764ceb889a88ba8aa87",
+      "webp_sha256": "1542b10905fb51286c9fb34146c30daacbd59b1273fe900a338094cda6d634b4",
+      "dependencies": {
+        "_src/55_scr-s34-1.html": "b1b28adceb149e82bb68797b8637564f1b526f3c7ac846ec5cbcd3f63b8fde75",
+        "_src/assets/shots/scr-s34-1.png": "a84a12c3e2975ab54b555cd29d2b255973d2922d496fbc61f4f833b7b376e643",
+        "_src/assets/shots/scr-s34-2.png": "243cd9ec0419ff1c18ec96d220d80aeb5fa877c4865a4899c01ae9404f738919",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 6 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "56",
+      "file": "56_scr-s34-2.html",
+      "png": "56_scr-s34-2.png",
+      "webp": "_src/book/56_scr-s34-2.webp",
+      "type": "pc",
+      "screens": [
+        "S34"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 6,
+      "text_chars": 623,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S34 アンケートに答える（2/2）",
+      "status": "ok",
+      "html_sha256": "1c6d23e8bdb2fd6c1abf487580e3a935629968fff3923100b6eb0c4b0c226c3f",
+      "png_sha256": "8cec8f8dd28480241ff64714585a4fd1f8ee1c94e2043fa5987bdefd97ad39dc",
+      "webp_sha256": "9cf70a49444aed7661a1df23b3685d008e9f54bb638832dd2c0ccc05353e80f1",
+      "dependencies": {
+        "_src/56_scr-s34-2.html": "1c6d23e8bdb2fd6c1abf487580e3a935629968fff3923100b6eb0c4b0c226c3f",
+        "_src/assets/shots/scr-s34-3.png": "7e878b904903e88804dc514f8aeade9a4fb3bfa801aa7257ae5e2873a5b88701",
+        "_src/assets/shots/scr-s34-4.png": "eb74b982550949e2dee178a69d8b2ae68b3430313d75a22c35aab8a02d14f362",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 6 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "57",
+      "file": "57_scr-s35.html",
+      "png": "57_scr-s35.png",
+      "webp": "_src/book/57_scr-s35.webp",
+      "type": "pc",
+      "screens": [
+        "S35"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 12,
+      "text_chars": 646,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S35 提出した内容",
+      "status": "ok",
+      "html_sha256": "0138dc5a2eed60bbba36d7a2f9d49fee11e76dea74c9973b7365edbb1ff1900a",
+      "png_sha256": "b5986343c7455b8cf5eecacdce8f2599e522f7ef97eabf5ed231c544b8b873c4",
+      "webp_sha256": "574d77bc0069ce0a442da3d84a591a48fab9e242ee1addddd49baf04325d3836",
+      "dependencies": {
+        "_src/57_scr-s35.html": "0138dc5a2eed60bbba36d7a2f9d49fee11e76dea74c9973b7365edbb1ff1900a",
+        "_src/assets/shots/scr-s35-1.png": "59b8d13feed76f0a2bf33b79b3db40ac7c9dac54712a4feb9590201eb3469cca",
+        "_src/assets/shots/scr-s35-2.png": "5c71aa552028b16683b67278f31c509e83c18951a04173b298481d7c3e43f8a1",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 12 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "58",
+      "file": "58_scr-s36.html",
+      "png": "58_scr-s36.png",
+      "webp": "_src/book/58_scr-s36.webp",
+      "type": "pc",
+      "screens": [
+        "S36"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 10,
+      "text_chars": 695,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S36 回答一覧",
+      "status": "ok",
+      "html_sha256": "f021bb74c4b3b01922bba4c578c0859ccfc779db9655c73c4387e1c640dbb505",
+      "png_sha256": "30e04007ccbb9af2d900ebfcb64f9758f1d549250f9ad8779c81eed8ff7c1dc3",
+      "webp_sha256": "475503c751efa9a70615bd83d866ec41724a239951d808caf178907371bd62af",
+      "dependencies": {
+        "_src/58_scr-s36.html": "f021bb74c4b3b01922bba4c578c0859ccfc779db9655c73c4387e1c640dbb505",
+        "_src/assets/shots/scr-s36-1.png": "1c21bf31a14855f317f16c798987a79f95b47e629a276d858348d7eae2578036",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 10 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "59",
+      "file": "59_scr-s37.html",
+      "png": "59_scr-s37.png",
+      "webp": "_src/book/59_scr-s37.webp",
+      "type": "pc",
+      "screens": [
+        "S37"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 11,
+      "text_chars": 796,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S37 マネージャーのホーム",
+      "status": "ok",
+      "html_sha256": "2e871a557bc77d38a0a962f721142438ba47bc6efb49d6179969de587e50fdf5",
+      "png_sha256": "f8d5c0665594d1a4462a06f0d7509ea01077e1ecb759909d3751ccd2936e3b77",
+      "webp_sha256": "2e80ac9756dbca0530c945d6234c09348dc6ef284a7ae4ea0beab3964c2af684",
+      "dependencies": {
+        "_src/59_scr-s37.html": "2e871a557bc77d38a0a962f721142438ba47bc6efb49d6179969de587e50fdf5",
+        "_src/assets/shots/scr-s37-1.png": "7c20706bf08d53462832f4414c14dba6643c9c650a213b746474f43508fa89c8",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 11 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "60",
+      "file": "60_scr-s38.html",
+      "png": "60_scr-s38.png",
+      "webp": "_src/book/60_scr-s38.webp",
+      "type": "pc",
+      "screens": [
+        "S38"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 9,
+      "text_chars": 751,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S38 評価・結果を確認する",
+      "status": "ok",
+      "html_sha256": "bf875f3f7ebb0d084651e727254fc48c15f5a008b07f583ea66e45868ec7f0e7",
+      "png_sha256": "dface45b01d84cac5061356eb146d1cb0328c5593ec0f2cbb807ad2f8973a9bb",
+      "webp_sha256": "a72d40c6b203d190983ab64276568dd51931ceec53e1d08e37646756049b9c37",
+      "dependencies": {
+        "_src/60_scr-s38.html": "bf875f3f7ebb0d084651e727254fc48c15f5a008b07f583ea66e45868ec7f0e7",
+        "_src/assets/shots/scr-s38-1.png": "b39447382e7e7c5b4baf0d7737dd97bb1babece6d75ec9f0ef8cc63b3691fea3",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 9 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "61",
+      "file": "61_scr-s39-1.html",
+      "png": "61_scr-s39-1.png",
+      "webp": "_src/book/61_scr-s39-1.webp",
+      "type": "pc",
+      "screens": [
+        "S39"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 9,
+      "text_chars": 435,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S39 評価1件（1/2）",
+      "status": "ok",
+      "html_sha256": "14501b804a2d3bc5f00c95296042b48e4f2f10ddb759eb369886f638fa6a8f7b",
+      "png_sha256": "068d97c2042ed347f8c3c3ca67bc5805d6d2cb8d0f317eb258113a403aecf8fc",
+      "webp_sha256": "30ce330c780392928b0738ff357f710133ed8c64182d914e305b3c69dd857343",
+      "dependencies": {
+        "_src/61_scr-s39-1.html": "14501b804a2d3bc5f00c95296042b48e4f2f10ddb759eb369886f638fa6a8f7b",
+        "_src/assets/shots/scr-s39-1.png": "3188d260569cdd6e5bfe75b0cb46716333e65c9d27f1a694002f93a327695829",
+        "_src/assets/shots/scr-s39-2.png": "1f4c20716722e67f80ab98253bce0d247df889f1117d5d0fbd8d77b9e854d1d4",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 9 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "62",
+      "file": "62_scr-s39-2.html",
+      "png": "62_scr-s39-2.png",
+      "webp": "_src/book/62_scr-s39-2.webp",
+      "type": "pc",
+      "screens": [
+        "S39"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 8,
+      "text_chars": 741,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S39 評価1件（2/2）",
+      "status": "ok",
+      "html_sha256": "efb82983205e40778921fa4b0008a5086111d0190c4a8a9314e67b3e898fded4",
+      "png_sha256": "22af3c668aa9d2b4f4464dadf383ebda59a2f8e0dc2c3fe7e5379385bb5cdf39",
+      "webp_sha256": "a486e68452e13c93f07201ee02d66a8c6c7c1466079287c87045ad0099378421",
+      "dependencies": {
+        "_src/62_scr-s39-2.html": "efb82983205e40778921fa4b0008a5086111d0190c4a8a9314e67b3e898fded4",
+        "_src/assets/shots/scr-s39-3.png": "22e578b47fd77250bba1e7a2ce4709457cec72a656d6291e867c5ffb9947e80e",
+        "_src/assets/shots/scr-s39-4.png": "9563be9abecacdffab4372c98f7ccad7cc8eb44c2d17ff4084fbb9e53e0b03e0",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 8 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "63",
+      "file": "63_scr-s40.html",
+      "png": "63_scr-s40.png",
+      "webp": "_src/book/63_scr-s40.webp",
+      "type": "pc",
+      "screens": [
+        "S40"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 7,
+      "text_chars": 503,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S40 メンバー",
+      "status": "ok",
+      "html_sha256": "dc48d66151afa8ab11bd56a82cb249c7655db08d23cfcc594713be37aa71b9e0",
+      "png_sha256": "7321b2d71f52cd8c2be86b37e3fc0dd757d450b191596b878ef10f1711e7e793",
+      "webp_sha256": "aba629740c98c61d96633dd935d30d01085b53301821bd6b8b951e28e592a6de",
+      "dependencies": {
+        "_src/63_scr-s40.html": "dc48d66151afa8ab11bd56a82cb249c7655db08d23cfcc594713be37aa71b9e0",
+        "_src/assets/shots/scr-s40-1.png": "0ee9bf55e42f10f65e0f2c94766b8453bad9dd44af1c093adbd0e57dcc3430d9",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 7 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "64",
+      "file": "64_scr-s41.html",
+      "png": "64_scr-s41.png",
+      "webp": "_src/book/64_scr-s41.webp",
+      "type": "pc",
+      "screens": [
+        "S41"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 10,
+      "text_chars": 699,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S41 メンバー1人",
+      "status": "ok",
+      "html_sha256": "eeb5c3792760b70e0adb576351f581ad2f3551395718dad06b637592093de6a4",
+      "png_sha256": "ae48e29c224508f93cfd7bff6a9cd3a6ea5e601d9513cad56bbebc449925e42d",
+      "webp_sha256": "d7300a1ef490cc83ec7e075b4afb5d7538258b46f865a3a5ed8535ec707cf4e2",
+      "dependencies": {
+        "_src/64_scr-s41.html": "eeb5c3792760b70e0adb576351f581ad2f3551395718dad06b637592093de6a4",
+        "_src/assets/shots/scr-s41-1.png": "b49b615acbdcab47c33215ce3c4039306c16622efd055cbfdc4600294c33b058",
+        "_src/assets/shots/scr-s41-2.png": "238126c8f1b3850e96889f50bf1d9572dd3277c2f9c8bafba964bcb0accf5d5a",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 10 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "65",
+      "file": "65_scr-s42-1.html",
+      "png": "65_scr-s42-1.png",
+      "webp": "_src/book/65_scr-s42-1.webp",
+      "type": "pc",
+      "screens": [
+        "S42"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 12,
+      "text_chars": 484,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S42 評価の基準（1/3）",
+      "status": "ok",
+      "html_sha256": "a534360b94b4d8d62a7edb7c71dbc1b9bc425a8ecd540ed02773cfa19c79eb74",
+      "png_sha256": "c8323e891073c44e1d5a6d554f8a2517ff5b020244a5637babc52b1498a6df2a",
+      "webp_sha256": "e93e8a9ea9c51fc91eecc1949f876b786a7a1bca9c178c3d06afe06f59dd5caf",
+      "dependencies": {
+        "_src/65_scr-s42-1.html": "a534360b94b4d8d62a7edb7c71dbc1b9bc425a8ecd540ed02773cfa19c79eb74",
+        "_src/assets/shots/scr-s42-1.png": "813b8c74f423ba1a87844b3d5ebeaf0b9c324c181d98feb807104a77e0d1d472",
+        "_src/assets/shots/scr-s42-2.png": "27c4c3ca56cddae38c04d7e1039c779f18b39471ebbfb57039c677a3abe61415",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 12 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "66",
+      "file": "66_scr-s42-2.html",
+      "png": "66_scr-s42-2.png",
+      "webp": "_src/book/66_scr-s42-2.webp",
+      "type": "pc",
+      "screens": [
+        "S42"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 4,
+      "text_chars": 286,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S42 評価の基準（2/3）",
+      "status": "ok",
+      "html_sha256": "6e2d98e7cc3576ec93ba3e4e4751d058aa0971bd514582a05f6180633fc2bb94",
+      "png_sha256": "a084ada4d6e64ed262e815a6465662fff4a54e658ba304674543b31e7f42e49c",
+      "webp_sha256": "3620418f4af0a820c7c2cbd8dfd9951be3cd192f3dc30b73df15b52cf36da702",
+      "dependencies": {
+        "_src/66_scr-s42-2.html": "6e2d98e7cc3576ec93ba3e4e4751d058aa0971bd514582a05f6180633fc2bb94",
+        "_src/assets/shots/scr-s42-3.png": "6c4fbd5a6aa305e2678bd995013aa1b7273b4c9719bb38bdeea9616171cbf2e4",
+        "_src/assets/shots/scr-s42-4.png": "270724d51b2cca13894074919066c53ca9a505275a2d687650f2d53d0f49ed4e",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "67",
+      "file": "67_scr-s42-3.html",
+      "png": "67_scr-s42-3.png",
+      "webp": "_src/book/67_scr-s42-3.webp",
+      "type": "pc",
+      "screens": [
+        "S42"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 4,
+      "text_chars": 511,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S42 評価の基準（3/3）",
+      "status": "ok",
+      "html_sha256": "1b9280894804c805c9235edb803ade8b55b4de402656bca2ffe7fe933b0e7ebb",
+      "png_sha256": "2072b8017f036c2ccec76ec25245892c455891bcc6054fe64e1049bfc045adea",
+      "webp_sha256": "2cc60ebf6d2a41e65106de4d3fdd6380dc0dbc3efbb983b6a11b778f0560f9da",
+      "dependencies": {
+        "_src/67_scr-s42-3.html": "1b9280894804c805c9235edb803ade8b55b4de402656bca2ffe7fe933b0e7ebb",
+        "_src/assets/shots/scr-s42-5.png": "0b34a831b55cae7b9b831ca845bcea1438d1b912496d2afa90214fb990c4a841",
+        "_src/assets/shots/scr-s42-6.png": "e2472ff319ca329c889376ce9de5e4f7ec72c9ccbab8d840eb87ad4952a3467c",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "68",
+      "file": "68_scr-s43.html",
+      "png": "68_scr-s43.png",
+      "webp": "_src/book/68_scr-s43.webp",
+      "type": "pc",
+      "screens": [
+        "S43"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 12,
+      "text_chars": 710,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S43 評価の結果を見る",
+      "status": "ok",
+      "html_sha256": "17b91325e4684ae628d50fe24efc0dfd8e4a65bb3dbb0cad2af304b995d49e55",
+      "png_sha256": "afacdab248fdd3e88d484ee947de5adadf558100b78ae9a2e604991ec10dfa9f",
+      "webp_sha256": "9a131aefab22941945505b2b5ff2cd2223c8584b38427670adf7f4bb4064d9dc",
+      "dependencies": {
+        "_src/68_scr-s43.html": "17b91325e4684ae628d50fe24efc0dfd8e4a65bb3dbb0cad2af304b995d49e55",
+        "_src/assets/shots/scr-s43-1.png": "c2771ebb0e9c0ca9b073453ba84c87f4eca6b88ebe8077f3f72fe74c29975308",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 12 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "69",
+      "file": "69_scr-s44-1.html",
+      "png": "69_scr-s44-1.png",
+      "webp": "_src/book/69_scr-s44-1.webp",
+      "type": "pc",
+      "screens": [
+        "S44"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 14,
+      "text_chars": 544,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S44 評価1件（本人）（1/2）",
+      "status": "ok",
+      "html_sha256": "59bd50714d6cb9adc4d93165bc1252669756035350086d5b7edd0a8f5b57f5c7",
+      "png_sha256": "cb677aa0e3ed6785fe226584cf735d2d1c2335de5393a0f145054ea982665d96",
+      "webp_sha256": "af7b64f7dbc4f03fc34004a07df5466451cc9bad9af82f85b78dfa187e4cb897",
+      "dependencies": {
+        "_src/69_scr-s44-1.html": "59bd50714d6cb9adc4d93165bc1252669756035350086d5b7edd0a8f5b57f5c7",
+        "_src/assets/shots/scr-s44-1.png": "ccc2d9b6cbd0f5e6a3e4df4f7a28b2574275a1027373f3fe7e507b3d1af0a808",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 14 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "70",
+      "file": "70_scr-s44-2.html",
+      "png": "70_scr-s44-2.png",
+      "webp": "_src/book/70_scr-s44-2.webp",
+      "type": "pc",
+      "screens": [
+        "S44"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 4,
+      "text_chars": 460,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S44 評価1件（本人）（2/2）",
+      "status": "ok",
+      "html_sha256": "a7ef2cfdf3ec7b6dabb246da7286ac23e03c67abbe877e2b5197268f9b4c6809",
+      "png_sha256": "85b4702c711dfc95309d85fd5d20484a7f92dab27620588d7d07354899861730",
+      "webp_sha256": "69ae863dbb341a27312db37d3b362ec99fa88534a4061b69d8709ebedaf40d9d",
+      "dependencies": {
+        "_src/70_scr-s44-2.html": "a7ef2cfdf3ec7b6dabb246da7286ac23e03c67abbe877e2b5197268f9b4c6809",
+        "_src/assets/shots/scr-s44-2.png": "8faba4cf1f5b1aca6061ae876c3e427aa35b012c0e976b47f4b5b2301eca7641",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "71",
+      "file": "71_scr-s45.html",
+      "png": "71_scr-s45.png",
+      "webp": "_src/book/71_scr-s45.webp",
+      "type": "pc",
+      "screens": [
+        "S45"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 13,
+      "text_chars": 774,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S45 評価レポート",
+      "status": "ok",
+      "html_sha256": "b2fb6673f7bbff6ed1520194d4508113b913fae891f6744c341112ce6636ae99",
+      "png_sha256": "8c1b6a8292644034731ebf8cc0e56e915ed7cb5ec7d30356cc67deae60411b9a",
+      "webp_sha256": "20864548da76cd093619c78cedc22a7a7b693ae1967780a31c34d6325608f32e",
+      "dependencies": {
+        "_src/71_scr-s45.html": "b2fb6673f7bbff6ed1520194d4508113b913fae891f6744c341112ce6636ae99",
+        "_src/assets/shots/scr-s45-1.png": "e9a9df9ee95ef8e8a473bc40939e1b29122b85007ed51f3d6060ed50d4f31f64",
+        "_src/assets/shots/scr-s45-2.png": "5b6f84ddf0710cc9e4cc1457c6ca71190ab567312df7e9c7d40fb881ab4cadf0",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 13 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "72",
+      "file": "72_scr-s46.html",
+      "png": "72_scr-s46.png",
+      "webp": "_src/book/72_scr-s46.webp",
+      "type": "pc",
+      "screens": [
+        "S46"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 7,
+      "text_chars": 532,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S46 届いた改善要望",
+      "status": "ok",
+      "html_sha256": "da33019c9521dabe77e84ce3447e80582caf54bde52e3809066f17e68d6dbdf3",
+      "png_sha256": "5f5942045b588cefe98ab41418f71d323e39837166fe80d522ef0632a34cf74c",
+      "webp_sha256": "dd225098a0587f35cd06af6c171c954bb10de7029efded43f23b33c7b877fc63",
+      "dependencies": {
+        "_src/72_scr-s46.html": "da33019c9521dabe77e84ce3447e80582caf54bde52e3809066f17e68d6dbdf3",
+        "_src/assets/shots/scr-s46-1.png": "97d14607d48c10c421f1df0b34bededcc63076f36cd55e6767248fdbf7535886",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 7 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "73",
+      "file": "73_scr-s47.html",
+      "png": "73_scr-s47.png",
+      "webp": "_src/book/73_scr-s47.webp",
+      "type": "pc",
+      "screens": [
+        "S47"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 13,
+      "text_chars": 729,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "S47 要望1件",
+      "status": "ok",
+      "html_sha256": "f7b08d8740b3ec1c50d9e5666e539df6b940fa0ef46ef8d3643bd200b936477b",
+      "png_sha256": "eecdafb12e4a1b63654d6a0daac681893e0f2ddbef64d1fd621882018c658a8a",
+      "webp_sha256": "e76cc224af191fcb931f99a4b98db670c7c85cd8257765e421c81ce0e3d5d341",
+      "dependencies": {
+        "_src/73_scr-s47.html": "f7b08d8740b3ec1c50d9e5666e539df6b940fa0ef46ef8d3643bd200b936477b",
+        "_src/assets/shots/scr-s47-1.png": "b0998d9e5e4e8a6230b9c40c2f7a54a879b627a5c76d18894e863df6bfcf939d",
+        "_src/assets/shots/scr-s47-2.png": "f4109a4aea0acea909ac85748a9ab1caf9ee30e5c4dce9217ae0434f0eab721d",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "NOTES-MANY",
+          "message": "注記が 13 個あります (目安は 5 個まで)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "74",
+      "file": "74_opn-common-s01-10-1.html",
+      "png": "74_opn-common-s01-10-1.png",
+      "webp": "_src/book/74_opn-common-s01-10-1.webp",
+      "type": "pc",
+      "screens": [
+        "S02"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 938,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 共通の枠・自分の情報",
+      "status": "ok",
+      "html_sha256": "d3812bb13d2fa1eab893f084f4f78e20f1dd7a086d20ab45741d8972f566f0ad",
+      "png_sha256": "128ced1962e56c05ce2c807fbace6561126e066ad3ed3b294c5d9abdb6d830fb",
+      "webp_sha256": "ba1352138dd0c9e46a20bd07be62116e06caa241d39f1415f65963ed3b297bb2",
+      "dependencies": {
+        "_src/74_opn-common-s01-10-1.html": "d3812bb13d2fa1eab893f084f4f78e20f1dd7a086d20ab45741d8972f566f0ad",
+        "_src/assets/shots/opn-common-o2.png": "9f1fcd92f31e2fd6ddbae2ebe91cc351bd4941f297859563c9c8bd54e76e882d",
+        "_src/assets/shots/opn-common-o3.png": "5b0308b86c4507b71cf425fc7824c1c476ff0d824dee08b220451bdc7868c386",
+        "_src/assets/shots/opn-s02-o1.png": "8b00dcff77ed29323aa7d25783a4236f9a5c343d9253ec4cb2153ba84c44d21b",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 938 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "75",
+      "file": "75_opn-common-s01-10-2.html",
+      "png": "75_opn-common-s01-10-2.png",
+      "webp": "_src/book/75_opn-common-s01-10-2.webp",
+      "type": "pc",
+      "screens": [
+        "S02",
+        "S04",
+        "S05"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 936,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 自分の情報・システム運用・会社一覧",
+      "status": "ok",
+      "html_sha256": "ebad7eeb0dcb2d38e4472dcf9310d08796f8a3236b2babb0889eb9f9dcc522b3",
+      "png_sha256": "3d8e668237ce55ff4d34c0770e4eb936d40d7b15fd9881b584a225770623e256",
+      "webp_sha256": "73fbc278a1fd507c763939b054ba7079ce0a76167786ef8246a16ceb27f5e736",
+      "dependencies": {
+        "_src/75_opn-common-s01-10-2.html": "ebad7eeb0dcb2d38e4472dcf9310d08796f8a3236b2babb0889eb9f9dcc522b3",
+        "_src/assets/shots/opn-s02-o2.png": "a20fce44ec260eb9bdb846a2d5305bd80bd8521f6be0d18857a3cc33b891eee5",
+        "_src/assets/shots/opn-s04-o1.png": "a0da7f9df60bdd3df48024e982c6feade8d74f3d8c73f81200344d262576ff7d",
+        "_src/assets/shots/opn-s04-o2.png": "8cf36d9a96db9decc24215b4294678e6f20cef2f3219ebd96cc2a9a33b8eed6f",
+        "_src/assets/shots/opn-s05-o1.png": "22468d1fbb2d7a0831d1a90fa4a8ed2b2ae2cbf275a6227c0cf55cccf0eea0e9",
+        "_src/assets/shots/opn-s05-o3.png": "e483d7947c564225480349134d54a18ae542ccd8b05497b3a2b5481d24b15123",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T10:25:54+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 936 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "76",
+      "file": "76_opn-common-s01-10-3.html",
+      "png": "76_opn-common-s01-10-3.png",
+      "webp": "_src/book/76_opn-common-s01-10-3.webp",
+      "type": "pc",
+      "screens": [
+        "S06",
+        "S07",
+        "S08"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1123,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 利用者一覧・利用者1人・権限一覧",
+      "status": "ok",
+      "html_sha256": "6699b3080bca08ab0e000210d9bdaa8c673aaa8a8bf05aa0251fdac1c99d24fc",
+      "png_sha256": "60f440f4d0923f72fe29b81d63f170c71e8dfe2757fcbf932fe52f06022213fe",
+      "webp_sha256": "31edcb65a406aedaa26ccf3e5423bf677f5cb2f196dd4ebf01ac452634f2c2a9",
+      "dependencies": {
+        "_src/76_opn-common-s01-10-3.html": "6699b3080bca08ab0e000210d9bdaa8c673aaa8a8bf05aa0251fdac1c99d24fc",
+        "_src/assets/shots/opn-s06-o1.png": "14fa9479d37163cf3a4a6b7d98c9c3cddd4971d61cc1232c9b52bcb50224ae77",
+        "_src/assets/shots/opn-s06-o2.png": "6c2c5975f99f6fca1e049c2f4c5051bd512009ef7de3933f5e34700a830090fb",
+        "_src/assets/shots/opn-s07-o1.png": "86483e7fb77a56b50a47d4c398e091bea5a28e26ec7bc7024660fd1245832b6b",
+        "_src/assets/shots/opn-s07-o3.png": "424eb3b6f12f18706468297881a890865e46d84237446fdd64dc0eb0c976b6cc",
+        "_src/assets/shots/opn-s08-o1.png": "4892280492916b39a78dd7adb3a5f8f3da7559944cef3254835e617b8431847b",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1123 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "77",
+      "file": "77_opn-common-s01-10-4.html",
+      "png": "77_opn-common-s01-10-4.png",
+      "webp": "_src/book/77_opn-common-s01-10-4.webp",
+      "type": "pc",
+      "screens": [
+        "S08",
+        "S09",
+        "S10"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 856,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 権限一覧・利用状況・Claude Code連携",
+      "status": "ok",
+      "html_sha256": "67edee3b3ac50be704d7b973a35be178e974ff85068a97852c49b9e242a9d670",
+      "png_sha256": "4decd9df22637c87dd326c3141bf658f37abe4a746c3293c172503beb9883f3d",
+      "webp_sha256": "35bd6e2a04d8d76b1015cc3f08eb960f7d98484b39162054967a4cfdee7ddd1c",
+      "dependencies": {
+        "_src/77_opn-common-s01-10-4.html": "67edee3b3ac50be704d7b973a35be178e974ff85068a97852c49b9e242a9d670",
+        "_src/assets/shots/opn-s09-o1.png": "197ef3b2fcdb92dd7a100f32fa2f454e8bc13c2f655f4ecfb4ba63518b5f035c",
+        "_src/assets/shots/opn-s09-o2.png": "3d56358456d4541ef16f027e81b7688f9446b4c89a82366addfdcafe9654b8b1",
+        "_src/assets/shots/opn-s09-o3.png": "abea033ee569d58fdf645938fe867b1ea7333c37b4d9101a0a430780245f49e7",
+        "_src/assets/shots/opn-s10-o1.png": "46fcd7c287e5b4e5f1e75be5595b8fe738b243d9f9f1bcf4eb2d49bf1ebc763f",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "78",
+      "file": "78_opn-s11-16-1.html",
+      "png": "78_opn-s11-16-1.png",
+      "webp": "_src/book/78_opn-s11-16-1.webp",
+      "type": "pc",
+      "screens": [
+        "S11",
+        "S12",
+        "S13",
+        "S14"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1254,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 管理者のホーム・制度設定ガイド・等級の設定・等級要件（支援・運営）",
+      "status": "ok",
+      "html_sha256": "e245ee6da113686d4c62f33b63e1e1d77656f431a774a98ad22ed37b93d1e86f",
+      "png_sha256": "927e28ddc606454cd014785fd19dcc6062a208db599f1bdafe489b2e773b6943",
+      "webp_sha256": "a4cab5dcf3bd8d969ba43121b0a37425800b5d79553e2ce8fb7d622945093cef",
+      "dependencies": {
+        "_src/78_opn-s11-16-1.html": "e245ee6da113686d4c62f33b63e1e1d77656f431a774a98ad22ed37b93d1e86f",
+        "_src/assets/shots/opn-s11-o1.png": "f5d7579e869973008e6cb167cf70a70b13a11e59a20de888051da38f84dd7d22",
+        "_src/assets/shots/opn-s11-o2.png": "274edc1eb8ae6118e82ac8dd56269cfbea46dfa92bbee6f9b184e497dd607272",
+        "_src/assets/shots/opn-s12-o1.png": "b795837651171135840dbf8d1bacbdc920a09ec8ef96bc0ce8d29e78d8a19e50",
+        "_src/assets/shots/opn-s14-o1.png": "3fdfc2e519ae978d98c44a5a7eaab54c8aa7eabf4f264186bdb2c1de2ed44593",
+        "_src/assets/shots/opn-s14-o2.png": "c96d83ddff9ea7db80c4e707f2410b9bc023eb39a2569cb6cb9b2049a38264e4",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1254 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "79",
+      "file": "79_opn-s11-16-2.html",
+      "png": "79_opn-s11-16-2.png",
+      "webp": "_src/book/79_opn-s11-16-2.webp",
+      "type": "pc",
+      "screens": [
+        "S14"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 857,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 等級要件（支援・運営）",
+      "status": "ok",
+      "html_sha256": "7b0683281910d49c5a9ead26761474c89e27275a138ed8c0867d18605a0d22b9",
+      "png_sha256": "164b2630eb522ac4454f31fb52cf21b474a95cd066f19a1dff395107f562bfac",
+      "webp_sha256": "79cc623c2a412ed078ea43431e32748df4b28846dfebfba1d02b5d575d90db19",
+      "dependencies": {
+        "_src/79_opn-s11-16-2.html": "7b0683281910d49c5a9ead26761474c89e27275a138ed8c0867d18605a0d22b9",
+        "_src/assets/shots/opn-s14-o3.png": "7e78116fe2a6dd8bae27d6ca32f768c18f77db07129bdb36d293779c55272b01",
+        "_src/assets/shots/opn-s14-o4.png": "6f121fbb72d74683f5ad08c72031b34c5df9caf2af39f3540f45b2e8beb645b4",
+        "_src/assets/shots/opn-s14-o5.png": "31735c364528c9a35bc68fce9daab310233256e052b52ef00b356b272fdf5a5e",
+        "_src/assets/shots/opn-s14-o7.png": "f280f7edf88d95850f04af34cb74ce086bcb0cd65d2881fe3e62a7fa1b2d209a",
+        "_src/assets/shots/opn-s14-o8.png": "79102761cf4962dbaa909523e2aa55e328d992a53157fcc0d16b36f278c25a50",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "80",
+      "file": "80_opn-s11-16-3.html",
+      "png": "80_opn-s11-16-3.png",
+      "webp": "_src/book/80_opn-s11-16-3.webp",
+      "type": "pc",
+      "screens": [
+        "S14",
+        "S15"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1018,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 等級要件（支援・運営）・昇格の条件・要件",
+      "status": "ok",
+      "html_sha256": "c48b12230334ce06447b40ce19e5164b767c5ae2eabd0f9e3c720512ca08be23",
+      "png_sha256": "27129874d2715fff3432446ab29e198deebf84af70440e82791cebb0aae8bb4e",
+      "webp_sha256": "90bc26bda0764a7efe155e54793014ee78044eaabd7cc9a8a9b99d767bcaeca1",
+      "dependencies": {
+        "_src/80_opn-s11-16-3.html": "c48b12230334ce06447b40ce19e5164b767c5ae2eabd0f9e3c720512ca08be23",
+        "_src/assets/shots/opn-s14-o11.png": "a06c8d22c4c58ed4e18b2e81b28679052f57290f718629a8ca3662122e273013",
+        "_src/assets/shots/opn-s14-o9.png": "3b1436d0105ce68c82ec631c4ae1223bf34f743543d1b2152b385b5271998b26",
+        "_src/assets/shots/opn-s15-o1.png": "166b1b33e023105b993e2bf2990a56af7dc3d9c82c4cad1669c9c4954c050ee3",
+        "_src/assets/shots/opn-s15-o2.png": "4beb029a1ed54aa75000650e3919717338f3fc37002f96285c3e7a17bad24d1d",
+        "_src/assets/shots/opn-s15-o3.png": "27f9d7a969a9236b0e9048b1b2a5e9c799ddb85f756568da64bc64d9e1f8075a",
+        "_src/assets/shots/opn-s15-o4.png": "0039a7361e888983ee2585097ed5368421657f9a857a1399f8882ae01cee7eac",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1018 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "81",
+      "file": "81_opn-s11-16-4.html",
+      "png": "81_opn-s11-16-4.png",
+      "webp": "_src/book/81_opn-s11-16-4.webp",
+      "type": "pc",
+      "screens": [
+        "S15"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 959,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 昇格の条件・要件",
+      "status": "ok",
+      "html_sha256": "e7af8ed1f60279b6fd7f9ade356b614eddd8c82f745ced81ac4638f08e576d33",
+      "png_sha256": "c1550b643074242723820c2e4bc4333fc917bc76766f61cccce1f0791fa4e427",
+      "webp_sha256": "c05d8358aeaba851913ef0d7ff56d1275f2d9724ab17fe9c3dace41aae1ae133",
+      "dependencies": {
+        "_src/81_opn-s11-16-4.html": "e7af8ed1f60279b6fd7f9ade356b614eddd8c82f745ced81ac4638f08e576d33",
+        "_src/assets/shots/opn-s15-o10.png": "cc6cf478c23cf155e6bbe6b9b9e40fadd762e28624b61c53ae62b9bb6bed0e1e",
+        "_src/assets/shots/opn-s15-o11.png": "a06c8d22c4c58ed4e18b2e81b28679052f57290f718629a8ca3662122e273013",
+        "_src/assets/shots/opn-s15-o6.png": "750d65bf5259ece975db93a79a4f52b638a50d24596ad3258d35106983c0b537",
+        "_src/assets/shots/opn-s15-o8.png": "997466969030d60a7bad26217c8ad1d48532bf25f265e353d1ff2195f099d4bd",
+        "_src/assets/shots/opn-s15-o9.png": "79102761cf4962dbaa909523e2aa55e328d992a53157fcc0d16b36f278c25a50",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 959 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "82",
+      "file": "82_opn-s11-16-5.html",
+      "png": "82_opn-s11-16-5.png",
+      "webp": "_src/book/82_opn-s11-16-5.webp",
+      "type": "pc",
+      "screens": [
+        "S16"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 973,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 行動指針",
+      "status": "ok",
+      "html_sha256": "57cfc463043ad25fd553d8d1b8e605be77093ae724ce6f74cc832d6b42f199b1",
+      "png_sha256": "e97dfb8eceb20ad89048be4c161a9469389e09ba6b6290a295392b8dd4723d76",
+      "webp_sha256": "6de2a2a336350c5d5b1e0f1ec011cac935813ec577bcc1e3da4e5fadbc6f3173",
+      "dependencies": {
+        "_src/82_opn-s11-16-5.html": "57cfc463043ad25fd553d8d1b8e605be77093ae724ce6f74cc832d6b42f199b1",
+        "_src/assets/shots/opn-s16-o1.png": "8b075201ea2f5bb58ddb79cc133bc00c2c0c83f875d11beeea1a102266e65b73",
+        "_src/assets/shots/opn-s16-o2.png": "c4126214289f87d5afaa8c5c15e512764161302a85fad1e6954b8ef56ac60cc4",
+        "_src/assets/shots/opn-s16-o3.png": "5104408638d3dcf88441319620d0973a78e3019d89fdf3ee99071ca5f8e286c6",
+        "_src/assets/shots/opn-s16-o4.png": "984d5065320f655671962fa32b7017492d97e42418268b42a5131a5a78a21eaf",
+        "_src/assets/shots/opn-s16-o6.png": "e7183282ee4dc60609f1e68bace40cd46f10f30de31044ba20982231d98fd1ce",
+        "_src/assets/shots/opn-s16-o7.png": "1e5bdedfd4263b58d167aaca3dc8b0fa085a398708ce0d79f91818d1ebb675aa",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 973 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "83",
+      "file": "83_opn-s11-16-6.html",
+      "png": "83_opn-s11-16-6.png",
+      "webp": "_src/book/83_opn-s11-16-6.webp",
+      "type": "pc",
+      "screens": [
+        "S16"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 823,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 行動指針",
+      "status": "ok",
+      "html_sha256": "7693dbc1de0904a796c764ab976aee0eebb9da89653fb11d16264e41054c14b6",
+      "png_sha256": "764f38ba447a20564a30c514a8b22e0bde965bb4f547912bb69aca6df40d4e4c",
+      "webp_sha256": "cb93eebfccf43b29b327c261bf21cb8fd2b608860ffc897151febd1626819340",
+      "dependencies": {
+        "_src/83_opn-s11-16-6.html": "7693dbc1de0904a796c764ab976aee0eebb9da89653fb11d16264e41054c14b6",
+        "_src/assets/shots/opn-s16-o13.png": "a06c8d22c4c58ed4e18b2e81b28679052f57290f718629a8ca3662122e273013",
+        "_src/assets/shots/opn-s16-o8.png": "57f1147e04eb54b7c8912af8624326e9a8690cd68514f74680bda66241490ddd",
+        "_src/assets/shots/opn-s16-o9.png": "bc47f602bb4eb6d11918a183b3575117adc4bf68f4c213bbf7ebc6eb0e6c7a83",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "84",
+      "file": "84_opn-s17-23-1.html",
+      "png": "84_opn-s17-23-1.png",
+      "webp": "_src/book/84_opn-s17-23-1.webp",
+      "type": "pc",
+      "screens": [
+        "S17",
+        "S18"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1105,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ KPI・評価セット・使うKPIを選ぶ",
+      "status": "ok",
+      "html_sha256": "27a800f3780734d5c2b4187644b02d41ea5cd413f41a081a8abdbf0a95839acc",
+      "png_sha256": "696a74b1adbeda67441ecfbd29662b1134b54982405055b6960aa6d20d35d2ce",
+      "webp_sha256": "8e1a10cd9f3b30b69c28944321225cf08a8b98bc989deb6cdde34a2a0f98f747",
+      "dependencies": {
+        "_src/84_opn-s17-23-1.html": "27a800f3780734d5c2b4187644b02d41ea5cd413f41a081a8abdbf0a95839acc",
+        "_src/assets/shots/opn-s17-o3.png": "f7dc754cda4a7bdc37f14a326ebf3cf2681bfb87473e8d11e0b267f9ee546bcc",
+        "_src/assets/shots/opn-s18-o1.png": "bd9aed26d7907e337ed8ebb7154e0996544be22d5ad1dbc2325a9d7409be2b8a",
+        "_src/assets/shots/opn-s18-o2.png": "d2ee8f73b91b22ebda5c2b9ba0d1020e5f5af270eaa204918bbf6482e8aad5b3",
+        "_src/assets/shots/opn-s18-o3.png": "d1a1fed8b04904dcbf781fafddaecbca2ba218e7e3a86c934498258a56320f3f",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1105 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "85",
+      "file": "85_opn-s17-23-2.html",
+      "png": "85_opn-s17-23-2.png",
+      "webp": "_src/book/85_opn-s17-23-2.webp",
+      "type": "pc",
+      "screens": [
+        "S19",
+        "S20",
+        "S21"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1110,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 選んだ項目の基準を決める・全等級区分に共通の設定・KPI項目",
+      "status": "ok",
+      "html_sha256": "e713b56d0e1748ca33588a1f04a95ea2146edaf8dd82dee4d80f6f4f8e86a32b",
+      "png_sha256": "0bfa27e5dbd8f7830211af78f4248db5d7355fea30a9a92ba6a46eba7c4611a2",
+      "webp_sha256": "67ee35a2ed67def4ddc64edc3b4b10c820d7fda69597ae57426071594158f195",
+      "dependencies": {
+        "_src/85_opn-s17-23-2.html": "e713b56d0e1748ca33588a1f04a95ea2146edaf8dd82dee4d80f6f4f8e86a32b",
+        "_src/assets/shots/opn-s19-o1.png": "2acd9da0bd27297c6cc0436695f0047d3585c9a9eeb7d120ce5faba98001c8d0",
+        "_src/assets/shots/opn-s19-o2.png": "4275e383e84eb439dce3c947d4f7b5b548bc091500218f574bf552df8bda6e7f",
+        "_src/assets/shots/opn-s21-o1.png": "12921b6be5a318b79f4d9b5edd89e503171ca0ed56a484280b144d3facbccb9b",
+        "_src/assets/shots/opn-s21-o2.png": "bdd3c23b556e543912780ef29a967679148e2c4c24a31470468f7ae6567616ab",
+        "_src/assets/shots/opn-s21-o3.png": "3cdc22d8368fc5f2c13c49ee28dc3a2f8639bbcb916f988cdd93e176cdd12620",
+        "_src/assets/shots/opn-s21-o4.png": "2f8d64a6aae3153d25a02d2bcf4298f5c37e271088a1b0a0c2b4f275d142df38",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1110 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "86",
+      "file": "86_opn-s17-23-3.html",
+      "png": "86_opn-s17-23-3.png",
+      "webp": "_src/book/86_opn-s17-23-3.webp",
+      "type": "pc",
+      "screens": [
+        "S21",
+        "S22",
+        "S23"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1075,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ KPI項目・KPIカテゴリ・昇給の設定",
+      "status": "ok",
+      "html_sha256": "588d5ce4239fcb64fcca11728a77e245723c69e29df7cd98fa36eb004ff941a7",
+      "png_sha256": "b92e29a2fffc85e6843ae30951955e1cefdcc6ac8024f11964efb402ed71bc6e",
+      "webp_sha256": "78ad368972768c9c77136696d215964375d46c157c5fb8a97ef566c87fcbd15d",
+      "dependencies": {
+        "_src/86_opn-s17-23-3.html": "588d5ce4239fcb64fcca11728a77e245723c69e29df7cd98fa36eb004ff941a7",
+        "_src/assets/shots/opn-s21-o5.png": "7a74f08f35c8b9603a3ce491acbd62d000796fe7c61ebb170444bd6586d7a374",
+        "_src/assets/shots/opn-s21-o7.png": "70b3659f7c01b10bb7bc5870071b9e79e84670d13a4e7416fe10fed6177bba63",
+        "_src/assets/shots/opn-s22-o1.png": "ae6b5cf8eb2c84f7d9081d514e31022fa776307367fea00b4cb1bed724d10a2d",
+        "_src/assets/shots/opn-s22-o4.png": "60da02cddf766358898c2d8b6e515384eaab8830a7ac63c8d22738416300f723",
+        "_src/assets/shots/opn-s23-o1.png": "1f584bb46b31bd50099f903831da42937da8d5d2a552e49ad14eaabbf99bd9ed",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1075 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "87",
+      "file": "87_opn-s17-23-4.html",
+      "png": "87_opn-s17-23-4.png",
+      "webp": "_src/book/87_opn-s17-23-4.webp",
+      "type": "pc",
+      "screens": [
+        "S23"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 351,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 昇給の設定",
+      "status": "ok",
+      "html_sha256": "776d5c20eb06df28f836b4eaac582ff4fac3019d6ade0fa19019ec4338a86fab",
+      "png_sha256": "5267c13c583854635cf3cb3c1a6b04c99a404fd16fbe39f30f81299a3f654f18",
+      "webp_sha256": "10074549fd4021a1eedc77293590ce1a1343e3c54919962a0aaa9213832bc0df",
+      "dependencies": {
+        "_src/87_opn-s17-23-4.html": "776d5c20eb06df28f836b4eaac582ff4fac3019d6ade0fa19019ec4338a86fab",
+        "_src/assets/shots/opn-s23-o2.png": "d43fa543a6aceb64e78b3a3421ed877545f3dca51d67621bcf1073461238c9e8",
+        "_src/assets/shots/opn-s23-o3.png": "1143b68b2ae55aead8abd438382076c891bfb0fa81da12574b2834f846602f06",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "88",
+      "file": "88_opn-s24-36-1.html",
+      "png": "88_opn-s24-36-1.png",
+      "webp": "_src/book/88_opn-s24-36-1.webp",
+      "type": "pc",
+      "screens": [
+        "S24"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 994,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 社員",
+      "status": "ok",
+      "html_sha256": "d9550f244458d6cd7463b1e2e44684ba27791d5a0d50bb92a6fff4852de0d7c7",
+      "png_sha256": "de764137656e3b49132d3636a25b520e3a73643bb2c5060a0681d16cce84d3db",
+      "webp_sha256": "68d7a3a107a9ccddac3fd363984284301da6c0b838515bb53bfcfe778da481ec",
+      "dependencies": {
+        "_src/88_opn-s24-36-1.html": "d9550f244458d6cd7463b1e2e44684ba27791d5a0d50bb92a6fff4852de0d7c7",
+        "_src/assets/shots/opn-s24-o1.png": "5907322771e2d55caa66518ee64d0f612793281f2fb29b6f70bfeff6f683d599",
+        "_src/assets/shots/opn-s24-o4.png": "c8d583b4322fbeb145533ee8f56a9677149a93049cb4566935e9e943f87a174b",
+        "_src/assets/shots/opn-s24-o5.png": "e3d975407362dd6554ffeecb19e98f04ec636a225298323d04d7d506d4563b40",
+        "_src/assets/shots/opn-s24-o6.png": "bd6336ddf670b316411883f403f44bc6faac487e7f30523e80f97894ef8a2d97",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T10:25:54+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 994 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "89",
+      "file": "89_opn-s24-36-2.html",
+      "png": "89_opn-s24-36-2.png",
+      "webp": "_src/book/89_opn-s24-36-2.webp",
+      "type": "pc",
+      "screens": [
+        "S24",
+        "S25",
+        "S26"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1272,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 社員・社員1人・本人が変更できる項目",
+      "status": "ok",
+      "html_sha256": "dde16803ea7fe70b354d87cb3de456f8f4418d0aa985a21c4e11d0a70e822af4",
+      "png_sha256": "99c22dfd4135ed572b5644fb63e2500dd22f85fcd816268b427ad51fc2e56a66",
+      "webp_sha256": "0c7bcd330d12f12f782089a600c7fccfc9713e6d77b3767ea74c5bfde3e95129",
+      "dependencies": {
+        "_src/89_opn-s24-36-2.html": "dde16803ea7fe70b354d87cb3de456f8f4418d0aa985a21c4e11d0a70e822af4",
+        "_src/assets/shots/opn-s25-o1.png": "6b5d1721df646d3629840ad6c1ab506b9e901834e49d5992fff0bf919e24d3aa",
+        "_src/assets/shots/opn-s25-o3.png": "dcacacceb5aa173ca64f629b519b60a76a6331b1e11e7f0227f14b981d8ed352",
+        "_src/assets/shots/opn-s26-o1.png": "ebaabafbba77c3d39ca80ebbf94479fbdd2d1fe59454103512278e41a15dc69f",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T10:25:54+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1272 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "90",
+      "file": "90_opn-s24-36-3.html",
+      "png": "90_opn-s24-36-3.png",
+      "webp": "_src/book/90_opn-s24-36-3.webp",
+      "type": "pc",
+      "screens": [
+        "S26",
+        "S27",
+        "S28"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1097,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 本人が変更できる項目・評価期間・アンケート",
+      "status": "ok",
+      "html_sha256": "111840ca5c64174088e05b1e0469ac001634d2f023fa0ec52c96cd0689d523ad",
+      "png_sha256": "b9242394d63bcd4913ba933769d7dc622194c94900ec0fb834dfec139d3afefa",
+      "webp_sha256": "6d969f7c19b55d800f7345a9cf462c19eb968a2c44da3c243876cade8a8c1bf5",
+      "dependencies": {
+        "_src/90_opn-s24-36-3.html": "111840ca5c64174088e05b1e0469ac001634d2f023fa0ec52c96cd0689d523ad",
+        "_src/assets/shots/opn-s26-o2.png": "abbc608609ce5a9d88dc6c4a81792760f3ab8733bdf513baa67bfa836648659a",
+        "_src/assets/shots/opn-s26-o3.png": "307c9bfa2fbe81eb96451e8c8f81166e88238bba7d444504cb266db79664d8f6",
+        "_src/assets/shots/opn-s26-o4.png": "2e0575b9ea3b6fd311e05b0ecc8b05961cf4512d50fe57b8ab482d3938a3a49b",
+        "_src/assets/shots/opn-s27-o1.png": "f5a794a569e5ffdd5766b4e1c79afd1c73d173ba8c89ced1571c3a974bacacd7",
+        "_src/assets/shots/opn-s27-o2.png": "91e45f8ca33c53c0a58be0bf5551703d2bd1c59eaa442b6d966bfb561c1e2835",
+        "_src/assets/shots/opn-s28-o1.png": "11caef8a681f787de0f4f417928237c861ace11377f0d875046e97b249a4a339",
+        "_src/assets/shots/opn-s28-o2.png": "d86243c982ac9b5e51408cd9ffa1a8b93f73e9244648ac6aaf25e2a2995c9d76",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1097 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "91",
+      "file": "91_opn-s24-36-4.html",
+      "png": "91_opn-s24-36-4.png",
+      "webp": "_src/book/91_opn-s24-36-4.webp",
+      "type": "pc",
+      "screens": [
+        "S28",
+        "S29"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1051,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ アンケート・アンケートの組み立て",
+      "status": "ok",
+      "html_sha256": "877f6ce92195a15914df34a6857a00f813212b0083e30e7d9c23b29f775887ef",
+      "png_sha256": "7b268de0b6a693bec3e4345b9d95485ab64df6062bcf66ab316e5341547e15a0",
+      "webp_sha256": "b9490ba1e42b42235bbfa801df9443ee39fa3b5adc15630a7f7e68c47f64095c",
+      "dependencies": {
+        "_src/91_opn-s24-36-4.html": "877f6ce92195a15914df34a6857a00f813212b0083e30e7d9c23b29f775887ef",
+        "_src/assets/shots/opn-s28-o3.png": "7979caeb3abf7334ea0c92c192490516953038973d19fc40679a9a3ac7caa8fc",
+        "_src/assets/shots/opn-s28-o4.png": "59a3a1f4ce67e374621ba137d97fd3306362694801176041cf2d1217a15907e0",
+        "_src/assets/shots/opn-s28-o5.png": "08b66eebd62aec2f3ce3f0b4005c09966788240a7ad9374945c2a97a805927f8",
+        "_src/assets/shots/opn-s28-o6.png": "bd1dead070ce8467c685742038b5aec12956173f758bbd11a584e3dddb91283b",
+        "_src/assets/shots/opn-s29-o1.png": "18d4b4bab7b6b417a80effe3670c90589afc228af75011c00e098bdd2b3e601b",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1051 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "92",
+      "file": "92_opn-s24-36-5.html",
+      "png": "92_opn-s24-36-5.png",
+      "webp": "_src/book/92_opn-s24-36-5.webp",
+      "type": "pc",
+      "screens": [
+        "S29"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 942,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ アンケートの組み立て",
+      "status": "ok",
+      "html_sha256": "7c3dd57366ab8e624dd284f25d31248f7129fb147e4224d343bde1f31a2968e4",
+      "png_sha256": "6001c501c7e508398936ba23c1a3bf37e7919270bc62ecc6466840772cad6e76",
+      "webp_sha256": "22dfcfcd9e4d9ed2436b4468b7e13f930d79bb39ba80165956cdbf2991504e1e",
+      "dependencies": {
+        "_src/92_opn-s24-36-5.html": "7c3dd57366ab8e624dd284f25d31248f7129fb147e4224d343bde1f31a2968e4",
+        "_src/assets/shots/opn-s29-o2.png": "55ced989580a7f610708289c95d94f855e3e823651874bb2f756b0b029886fe8",
+        "_src/assets/shots/opn-s29-o3.png": "2d67c36329fd2a5800e10dc6133536c352541ca0f8106c3b36c88f14b489af1c",
+        "_src/assets/shots/opn-s29-o4.png": "9b095179166bc708b86360b7c26c81a28a321051a816a1498fcabf3ade75dafc",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 942 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "93",
+      "file": "93_opn-s24-36-6.html",
+      "png": "93_opn-s24-36-6.png",
+      "webp": "_src/book/93_opn-s24-36-6.webp",
+      "type": "pc",
+      "screens": [
+        "S29",
+        "S36"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1032,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ アンケートの組み立て・回答一覧",
+      "status": "ok",
+      "html_sha256": "2fd6c9fa4f50d026e8f9e3fc0ef720dde28140ce7cf2296b42ea4eef574bff55",
+      "png_sha256": "9945af69df2a62f354b428f9cccc542e742252c0608138172c8bab2c101b5e46",
+      "webp_sha256": "ca474a70ebc3e52240dd8395496e8092ee24e57b389df1dbe1cb335e939e4f45",
+      "dependencies": {
+        "_src/93_opn-s24-36-6.html": "2fd6c9fa4f50d026e8f9e3fc0ef720dde28140ce7cf2296b42ea4eef574bff55",
+        "_src/assets/shots/opn-s36-o5.png": "9be3a112b5c1571b8ae2c3289dd7317dcf5cbd8dc65b30c9314cee5652f069bc",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1032 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "94",
+      "file": "94_opn-s30-45.html",
+      "png": "94_opn-s30-45.png",
+      "webp": "_src/book/94_opn-s30-45.webp",
+      "type": "pc",
+      "screens": [
+        "S31",
+        "S32",
+        "S34",
+        "S44"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1117,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ アンケートの中身（1本）・社員のホーム・アンケートに答える・評価1件（本人）",
+      "status": "ok",
+      "html_sha256": "728a3ad3decf81e59ff33b2e678394bbae5f81b82d27ac79e94163e0a118ad1e",
+      "png_sha256": "9b1aacf47ff4ad0922962ac9987aa3428a50f914f752ed69933a5c72d7608f4b",
+      "webp_sha256": "69ab8a761493c01999fad161c0457fca9f9091d82e8f97337a47acb8453166fe",
+      "dependencies": {
+        "_src/94_opn-s30-45.html": "728a3ad3decf81e59ff33b2e678394bbae5f81b82d27ac79e94163e0a118ad1e",
+        "_src/assets/shots/opn-s31-o1.png": "a81a7a3076ff4934a67827284b74b4c497c4d2aabd4553f01f325a313676b057",
+        "_src/assets/shots/opn-s32-o1.png": "beadc4a50a2628ed5118aff1e29f96afeac86d43d269c95aba4e8b2546df376a",
+        "_src/assets/shots/opn-s32-o2.png": "9a8ac43f7b3c9052d503a228e085465388ac5973a3ddcbd022b6d075e7e27ff0",
+        "_src/assets/shots/opn-s44-o1.png": "9d370a6153c55a3c64d37b0cb27e35ba6ab02c1b1efccbffea1f1eed5fe14c26",
+        "_src/assets/shots/opn-s44-o2.png": "c8e79cda9c491d7cc6529497769866382d664dc16c8ebb0636b253d456569f6b",
+        "_src/assets/shots/opn-s44-o3.png": "0bf0efcbb942f24c1f0f72eb24b8ea3e26953e0523213772a944df8f5ce8ccb8",
+        "_src/assets/shots/opn-s44-o4.png": "a5d55a4bb916a2bbb35c4dcd6a331da36bca32eb6e9ffd2f8126d498f7f9c402",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1117 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "95",
+      "file": "95_opn-s37-42-1.html",
+      "png": "95_opn-s37-42-1.png",
+      "webp": "_src/book/95_opn-s37-42-1.webp",
+      "type": "pc",
+      "screens": [
+        "S37",
+        "S38",
+        "S39"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1011,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ マネージャーのホーム・評価・結果を確認する・評価1件",
+      "status": "ok",
+      "html_sha256": "ed16172e16c0c855fd6997e4f0bf187fac74c2722b8fc66566d4ceb3719556fb",
+      "png_sha256": "b3e9c4f4286e3128648f6df45abe3c5cb85e45c4028db02e5167c73d239cb2d8",
+      "webp_sha256": "5b75b62d4eaeb907a4fba3c75f83ee68a06969d81a6125771ec6c3428a9672c7",
+      "dependencies": {
+        "_src/95_opn-s37-42-1.html": "ed16172e16c0c855fd6997e4f0bf187fac74c2722b8fc66566d4ceb3719556fb",
+        "_src/assets/shots/opn-s37-o1.png": "0616f700873d7600b819f6ec0d8cda86187f27da7ffe7e671988726973e5ccdf",
+        "_src/assets/shots/opn-s37-o2.png": "ec485f1116577b3175b6a1f6a473bac4111bec9d25e4048506d20d12f59b52a5",
+        "_src/assets/shots/opn-s38-o1.png": "4076d0fc5f989c5f77e292adeaa19c61e6275995474dd32fb8fd362a2d24c060",
+        "_src/assets/shots/opn-s39-o1.png": "a28fa64f763bef214870cc801af480443f2193f4b08e1db565c7d833ceaa7d8e",
+        "_src/assets/shots/opn-s39-o3.png": "ea380e5752b8bebea1dbec1fbe5aa0e2ccd5674a2c225356d70421430535c657",
+        "_src/assets/shots/opn-s39-o4.png": "4098d2cd508667435df96a571230a25df5078d7edf37dbb03c2ddd0d4c651211",
+        "_src/assets/shots/opn-s39-o5.png": "c5c87f167d4d08a7d5feddcc78208f8ea9ebe63aed02d3de826b38e2a2343b7c",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1011 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "96",
+      "file": "96_opn-s37-42-2.html",
+      "png": "96_opn-s37-42-2.png",
+      "webp": "_src/book/96_opn-s37-42-2.webp",
+      "type": "pc",
+      "screens": [
+        "S39",
+        "S40",
+        "S41",
+        "S42"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1037,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 評価1件・メンバー・メンバー1人・評価の基準",
+      "status": "ok",
+      "html_sha256": "3a691a17915895a828edc831c718a5a6630d5d8237c51a0a50b7a17acdd19269",
+      "png_sha256": "917fe42d37d8668a5ec2e16204b2e604e09a0f56cb9915be35234f2fed70dcac",
+      "webp_sha256": "17a06531021efe18afcec5ce9f2c5f5768725c442e4e427ddb179cef43076772",
+      "dependencies": {
+        "_src/96_opn-s37-42-2.html": "3a691a17915895a828edc831c718a5a6630d5d8237c51a0a50b7a17acdd19269",
+        "_src/assets/shots/opn-s39-o11.png": "cc67e9781410e5abb727ae1c7f60af1859ff26f408b36c1e8b93885c106431aa",
+        "_src/assets/shots/opn-s39-o6.png": "bceef9550be11ec665846bf7b32ab389bc4a0a0746bd8babce3c97f43d74fb34",
+        "_src/assets/shots/opn-s39-o7.png": "a9767c79d3eb46c91b96861aef4a8a0d0e88388a8b8584f04852e7d7319949c0",
+        "_src/assets/shots/opn-s39-o8.png": "51a8057db424bfa8a67626f5ab022b9a1276b43f6e0be2b7d1a41d88fb9511f4",
+        "_src/assets/shots/opn-s39-o9.png": "3dca370356aab3a7251d5b91998e69b8ff314d72f4745f834c49ecdfc52c5680",
+        "_src/assets/shots/opn-s40-o1.png": "42d7269e2505c681a6b8f31f6c523da13174c47b6b52a1f541550dba044dd50e",
+        "_src/assets/shots/opn-s41-o1.png": "1c7fb4b2467be980766c79474f45b73bd052ad575eb4d44ccb8e6b79a92b7b6e",
+        "_src/assets/shots/opn-s42-o1.png": "97fe1970173afc09d2ddcf4afb1b357b9e4bf44b1438b40d62ead275ff05b50a",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1037 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    },
+    {
+      "no": "97",
+      "file": "97_opn-s37-42-3.html",
+      "png": "97_opn-s37-42-3.png",
+      "webp": "_src/book/97_opn-s37-42-3.webp",
+      "type": "pc",
+      "screens": [
+        "S42"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 795,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 評価の基準",
+      "status": "ok",
+      "html_sha256": "2e557e9e7c45ab76c5247d8cfdb8dfb826b07c2a914953d326933c5a8473f191",
+      "png_sha256": "b433bb8f5a703874d34638c7feba1bc6a27641c425a5bfb6608273a48e785a8f",
+      "webp_sha256": "2d8daa46722469c57f9141a95b8dee5f0125c7d57ce611f495158c85eea7a46f",
+      "dependencies": {
+        "_src/97_opn-s37-42-3.html": "2e557e9e7c45ab76c5247d8cfdb8dfb826b07c2a914953d326933c5a8473f191",
+        "_src/assets/shots/opn-s42-o2.png": "bc7695db564e5e0c39f5eb0189efd93a4afeeb1b4231c5dc39859231acc620f3",
+        "_src/assets/shots/opn-s42-o3.png": "40a578e82cff0b5682952e32e49b04d7216e340126f4dbc47cef20c3b31f1e00",
+        "_src/assets/shots/opn-s42-o4.png": "e79ecf02dff7e874532dab0cf63ff2ed4dac68e8cb1226e2a191231721b747f1",
+        "_src/assets/shots/opn-s42-o5.png": "176bb8e740cf592fa69201bfe83435fdd48c8818d34871af3010b63b5f1ccbc6",
+        "_src/assets/shots/opn-s42-o6.png": "04b8f364ade497797f6543ea7d1dbd4e3330e0ba6ee627f1e2d544adbda20f88",
+        "_src/assets/shots/opn-s42-o7.png": "c9c15b61a4c8fcfff1359ce9fe118768dea2d3f21b986de4f0c5c56e59363172",
+        "_src/assets/shots/opn-s42-o8.png": "1000700a27b3c8974941ebd75312a2254afe85c1a7ee581d27d56bc5c9e3964e",
+        "_src/assets/shots/opn-s42-o9.png": "c41a1ff2307b7c3c3ce21e78d23d0936d648c17a02875c7976b7c5224c1c77f8",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "98",
+      "file": "98_opn-s37-42-4.html",
+      "png": "98_opn-s37-42-4.png",
+      "webp": "_src/book/98_opn-s37-42-4.webp",
+      "type": "pc",
+      "screens": [
+        "S42"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 198,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 評価の基準",
+      "status": "ok",
+      "html_sha256": "9373abba9061af5335e077ababcc79dda773347e181f26d0b64784ea13c02749",
+      "png_sha256": "4ea8ffd19e66b6be958b1f0fff545958f8c13d419d52f1b5153168e27314014c",
+      "webp_sha256": "427c887acc625a1f1e416b7506246d285d5324b62a91b4843758bc0489e8ae74",
+      "dependencies": {
+        "_src/98_opn-s37-42-4.html": "9373abba9061af5335e077ababcc79dda773347e181f26d0b64784ea13c02749",
+        "_src/assets/shots/opn-s42-o10.png": "b48c521209c827e451d8ed582b98856cfa4bc518ca643b0410eae57a193cfa5a",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "exports": []
+    },
+    {
+      "no": "99",
+      "file": "99_opn-s46-47.html",
+      "png": "99_opn-s46-47.png",
+      "webp": "_src/book/99_opn-s46-47.webp",
+      "type": "pc",
+      "screens": [
+        "S46",
+        "S47"
+      ],
+      "size": [
+        3360,
+        2100
+      ],
+      "notes": 0,
+      "text_chars": 1263,
+      "device_chars": 0,
+      "font_px_min": 12,
+      "title": "押すと出るもの ・ 届いた改善要望・要望1件",
+      "status": "ok",
+      "html_sha256": "298f545d1b8b561d1c31dccf508f0cbaa9607eef9895a1cbefdf84842f23ec0a",
+      "png_sha256": "7eefc78da036bd700754251fc30e207add831ae09a135a37f181904d48f76790",
+      "webp_sha256": "715cb00bd107c1a9b32e403ccd75f56d7a22b6d1ce46ed736ef955ab1bce3863",
+      "dependencies": {
+        "_src/99_opn-s46-47.html": "298f545d1b8b561d1c31dccf508f0cbaa9607eef9895a1cbefdf84842f23ec0a",
+        "_src/assets/shots/opn-s47-o1.png": "e95a647558a0dbdc748dac031f28ace3d914993f0f646f9c8c25562958cc62ee",
+        "_src/common.css": "59e0d59503e76af5d8bf3fa7b5ae25afa60f4ce7c2c94a1927fc9e1fdbe5b69d",
+        "_src/tokens.css": "e742a2b0d5d4cd4bf3778dd298fe3948a2c14643e525c60e74d60f2ce8f7afc9"
+      },
+      "checked": "2026-10-29T08:56:09+09:00",
+      "mode": "render",
+      "errors": [],
+      "warnings": [],
+      "notices": [
+        {
+          "code": "TEXT-LONG",
+          "message": "説明が 1263 字あります (pc の目安は 900 字まで。端末の絵の中は数えない)",
+          "where": null
+        }
+      ],
+      "exports": []
+    }
+  ]
+}

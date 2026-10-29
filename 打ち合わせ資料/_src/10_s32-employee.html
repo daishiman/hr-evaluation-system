@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>10 社員のホームとアンケートに答える・評価レポート</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="board board--overview-screen" data-board="10" data-type="pc" data-screens="S32 S33 S34 S35 S43 S44 S45">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面 7 / 8 ・ PC</div>
+      <h1>社員のホームとアンケートに答える・評価レポート</h1>
+      <div class="lead">一般の社員は、届いたアンケートに答えて提出するだけ。確定した結果は、評価レポートで見て印刷できる。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="stage">
+      <div class="browser">
+        <div class="browser-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><div class="url">example.app/me/forms/…</div><span class="cur"><span class="sno">S34</span>アンケートに答える</span></div>
+        <div class="browser-body">
+          <div class="photo anchor" data-source="src/app/me/forms/[id]/page.tsx"><img src="assets/shots/S34.png" alt=""><i class="mk" style="left:612px;top:120px">1</i><i class="mk" style="left:308px;top:312px">2</i><i class="mk" style="left:499px;top:586px">3</i><i class="mk" style="left:797px;top:586px">4</i></div>
+        </div>
+      </div>
+      <h2 class="sec-label">このボードのほかの画面<small>画面の全体と押せるものは、それぞれの「ボード」で番号を付けて説明している</small></h2>
+      <div class="others"><div class="tile" data-go="S32"><div class="h"><span class="sno">S32</span><b>社員のホーム</b><span class="go">ボード 53</span></div><p>今やるアンケートと結果を見る</p></div><div class="tile" data-go="S33"><div class="h"><span class="sno">S33</span><b>実績を報告する</b><span class="go">ボード 54</span></div><p>答えるものと提出したものを並べる</p></div><div class="tile" data-go="S35"><div class="h"><span class="sno">S35</span><b>提出した内容</b><span class="go">ボード 57</span></div><p>提出した答えを読み返す</p></div><div class="tile" data-go="S43"><div class="h"><span class="sno">S43</span><b>評価の結果を見る</b><span class="go">ボード 68</span></div><p>評価の推移と内訳を見る</p></div><div class="tile" data-go="S44"><div class="h"><span class="sno">S44</span><b>評価1件（本人）</b><span class="go">ボード 69</span></div><p>確定した期の結論と理由を読む</p></div><div class="tile anchor" data-go="S45"><div class="h"><span class="sno">S45</span><b>評価レポート</b><span class="go">ボード 71</span></div><p>最新の評価をまとめて印刷する</p><i class="mk" style="right:10px;top:50%;margin-top:-13px">5</i></div></div>
+    </div>
+    <aside class="notes">
+      <div class="reqs"><span class="req" data-req="F03">F03 評価期間とアンケートを作り、一般の社員が実績を答えて提出する</span><span class="req" data-req="F05">F05 確定した結果と評価レポートを見て印刷し、使いにくい点を改善要望で送る</span><span class="req" data-req="F08">F08 評価結果を PDF・Excel のファイルで書き出す (あとで)</span></div>
+      <ol class="marks"><li data-mark="1" data-kind="how"><b>点数や基準は、本人には出さない</b><span class="sub">配点・ランクの境目・ほかの人の結果は見えない。答えは自動で下書きに残る（R15）。</span></li><li data-mark="2" data-kind="can"><b>はい・いいえで答える</b><span class="sub">等級要件ごとに、できているかを選ぶ。</span></li><li data-mark="3" data-kind="can"><b>答えた数と締め切り</b><span class="sub">例: 0 / 31 問・2027年3月31日まで。</span></li><li data-mark="4" data-kind="can"><b>確かめてから提出する</b><span class="sub">提出した内容は S35 で読み返せる。</span></li><li data-mark="5" data-kind="ask"><b>PDF・Excel で書き出すか</b><span class="q">Q07</span><span class="sub">案: 今はブラウザの印刷で PDF にする。</span></li></ol>
+      <div class="flow"><h2>画面の移り方</h2><ul><li><span class="sno">S32</span><span class="to">→</span><span class="btn-l">「回答を始める」</span><span class="to">→</span><span class="sno">S34</span><span class="to">→</span><span class="sno">S35</span></li><li><span class="sno">S32</span><span class="to">→</span><span class="btn-l">「アンケート一覧」</span><span class="to">→</span><span class="sno">S33</span></li><li><span class="sno">S32</span><span class="to">→</span><span class="btn-l">「すべての結果」</span><span class="to">→</span><span class="sno">S43</span></li><li><span class="sno">S43</span><span class="to">→</span><span class="btn-l">「評価票」</span><span class="to">→</span><span class="sno">S44</span><span>／</span><span class="to">→</span><span class="btn-l">「評価レポート」</span><span class="to">→</span><span class="sno">S45</span></li></ul></div>
+    </aside>
+  </main>
+</div>
+</body>
+</html>

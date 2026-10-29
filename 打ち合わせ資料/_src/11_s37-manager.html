@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>11 マネージャーのホームと評価1件</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="board board--overview-screen" data-board="11" data-type="pc" data-screens="S37 S38 S39 S40 S41 S42">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面 8 / 8 ・ PC</div>
+      <h1>マネージャーのホームと評価1件</h1>
+      <div class="lead">マネージャーが S38 で評価を作り、点数と判定を確かめて確定する。判定を変えるときは理由を残す。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="stage">
+      <div class="browser">
+        <div class="browser-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><div class="url">example.app/manager/evaluations/…</div><span class="cur"><span class="sno">S39</span>評価1件</span></div>
+        <div class="browser-body">
+          <div class="photo anchor" data-source="src/app/manager/evaluations/[id]/page.tsx"><img src="assets/shots/S39.png" alt=""><i class="mk" style="left:199px;top:74px">1</i><i class="mk" style="left:199px;top:260px">2</i><i class="mk" style="left:199px;top:351px">3</i><i class="mk" style="left:947px;top:343px">4</i><i class="mk" style="left:390px;top:577px">5</i></div>
+        </div>
+      </div>
+      <h2 class="sec-label">このボードのほかの画面<small>画面の全体と押せるものは、それぞれの「ボード」で番号を付けて説明している</small></h2>
+      <div class="others"><div class="tile" data-go="S39"><div class="h"><span class="sno">S39</span><b>評価1件（画面の上のほう）</b><span class="go">ボード 61</span></div><p>しくみの判定と根拠を確かめる</p></div><div class="tile" data-go="S37"><div class="h"><span class="sno">S37</span><b>マネージャーのホーム</b><span class="go">ボード 59</span></div><p>未提出・未確定と提出の状況を見る</p></div><div class="tile" data-go="S38"><div class="h"><span class="sno">S38</span><b>評価・結果を確認する</b><span class="go">ボード 60</span></div><p>提出の状況を見て評価を作る</p></div><div class="tile" data-go="S40"><div class="h"><span class="sno">S40</span><b>メンバー</b><span class="go">ボード 63</span></div><p>担当メンバーの点数と達成率を見る</p></div><div class="tile" data-go="S41"><div class="h"><span class="sno">S41</span><b>メンバー1人</b><span class="go">ボード 64</span></div><p>評価の推移を見て、メモを残す</p></div><div class="tile" data-go="S42"><div class="h"><span class="sno">S42</span><b>評価の基準</b><span class="go">ボード 65</span></div><p>持ち点の型と採点の流れを読む</p></div></div>
+    </div>
+    <aside class="notes">
+      <div class="reqs"><span class="req" data-req="F04">F04 しくみが点数と判定を出し、マネージャーが根拠を確かめて確定する</span><span class="req" data-req="F09">F09 複数の評価者が合議して評価を確定する (あとで)</span></div>
+      <ol class="marks"><li data-mark="1" data-kind="can"><b>本人に伝えるコメント</b><span class="sub">確定すると、本人の画面とレポートに出る。</span></li><li data-mark="2" data-kind="ask"><b>複数の評価者で合議するか</b><span class="q">Q08</span><span class="sub">案: 今は直属のマネージャー 1 人が確定する。</span></li><li data-mark="3" data-kind="can"><b>昇給・昇格ごとに「判定どおり」か「変える」</b><span class="sub">しくみの判定は、画面の上のほう（左下のカード）で確かめる。</span></li><li data-mark="4" data-kind="how"><b>変えるときは理由を書く</b><span class="sub">だれが・なぜ変えたかが記録に残る（R16）。</span></li><li data-mark="5" data-kind="how"><b>確定すると本人に出て、あとは動かない</b><span class="sub">あとで制度を変えても当時の基準のまま。直すときは確認中に戻す（R17）。</span></li></ol>
+      <div class="flow"><h2>画面の移り方</h2><ul><li><span class="sno">S37</span><span class="to">→</span><span class="btn-l">「未確定の評価」</span><span class="to">→</span><span class="sno">S39</span></li><li><span class="sno">S37</span><span class="to">→</span><span class="sno">S38</span><span class="to">→</span><span class="btn-l">「評価を開く」</span><span class="to">→</span><span class="sno">S39</span></li><li><span class="sno">S37</span><span class="to">→</span><span class="sno">S40</span><span class="to">→</span><span class="sno">S41</span><span class="to">→</span><span class="btn-l">「これまでの評価」</span><span class="to">→</span><span class="sno">S39</span></li><li><span>左のメニュー</span><span class="to">→</span><span class="sno">S42</span></li></ul></div>
+    </aside>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,61 @@
+{
+  "schema": "briefing-docs-check-v1",
+  "status": "ok",
+  "stage": "all",
+  "dir": "/Users/dm/orca/workspaces/hr-evaluation-system/ドキュメント/打ち合わせ資料",
+  "version": "v0.1",
+  "summary": {
+    "errors": 0,
+    "warnings": 3
+  },
+  "errors": [],
+  "warnings": [
+    {
+      "code": "SCREENS-MANY",
+      "file": "仕様書.md",
+      "line": 7,
+      "message": "画面が 47 個あります。最初の版は 6 個までに絞ります"
+    },
+    {
+      "code": "PAGES-MANY",
+      "file": "briefing.json",
+      "line": null,
+      "message": "ボードが 99 枚あります。11 枚までに絞ります"
+    },
+    {
+      "code": "MATERIAL-UNUSED",
+      "file": "..",
+      "line": null,
+      "message": "どの根拠にもボードにも出ていない素材が 334 個あります: AGENTS.md、CLAUDE.md、aidd-agent-kit/ATTRIBUTION.md、aidd-agent-kit/CHANGELOG.md、aidd-agent-kit/CODEX-PLACEMENT.md ほか 329 個"
+    }
+  ],
+  "counts": {
+    "hearing_items": 37,
+    "hearing_undecided": 4,
+    "requests": 0,
+    "hearing_required_missing": 0,
+    "hearing_wrong_section": 0,
+    "hearing_pending_unlisted": 0,
+    "first_version_items": 5,
+    "features": 9,
+    "features_first": 5,
+    "terms_defined": 23,
+    "questions": 8,
+    "hearing_pending_without_question": 0,
+    "question_rows_incomplete": 0,
+    "requests_deferred": 0,
+    "changes_versions": 0,
+    "spec_detail_missing": 0,
+    "question_refs_unknown": 0,
+    "screens": 47,
+    "data": 13,
+    "rules": 30,
+    "roles_missing": 0,
+    "roles_duplicate": 0,
+    "role_rows_incomplete": 0,
+    "pages": 99,
+    "boards_found": 99,
+    "screens_without_board": 0,
+    "materials_unused": 334
+  }
+}

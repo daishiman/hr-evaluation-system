@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>07 KPI・評価セットと昇給の設定</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="board board--overview-screen" data-board="07" data-type="pc" data-screens="S17 S18 S19 S20 S21 S22 S23">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面 4 / 8 ・ PC</div>
+      <h1>KPI・評価セットと昇給の設定</h1>
+      <div class="lead">等級ごとに使う KPI を選び、A〜E の境目を決めるだけ。点数と昇給の判定は、ここで決めた値から出る。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="stage">
+      <div class="browser">
+        <div class="browser-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><div class="url">example.app/admin/scheme/…/criteria</div><span class="cur"><span class="sno">S19</span>選んだ項目の基準を決める</span></div>
+        <div class="browser-body">
+          <div class="photo anchor" data-source="src/app/admin/scheme/[group]/criteria/page.tsx"><img src="assets/shots/S19.png" alt=""><i class="mk" style="left:427px;top:98px">1</i><i class="mk" style="left:955px;top:178px">2</i><i class="mk" style="left:199px;top:320px">3</i><i class="mk" style="left:551px;top:405px">4</i></div>
+        </div>
+      </div>
+      <h2 class="sec-label">このボードのほかの画面<small>画面の全体と押せるものは、それぞれの「ボード」で番号を付けて説明している</small></h2>
+      <div class="others"><div class="tile" data-go="S17"><div class="h"><span class="sno">S17</span><b>KPI・評価セット</b><span class="go">ボード 35</span></div><p>等級区分ごとの KPI の決まり具合を見る</p></div><div class="tile" data-go="S18"><div class="h"><span class="sno">S18</span><b>使うKPIを選ぶ</b><span class="go">ボード 36</span></div><p>等級区分で使う KPI を選ぶ</p></div><div class="tile" data-go="S20"><div class="h"><span class="sno">S20</span><b>全等級区分に共通の設定</b><span class="go">ボード 39</span></div><p>昇給の条件の決め方を選ぶ</p></div><div class="tile" data-go="S21"><div class="h"><span class="sno">S21</span><b>KPI項目</b><span class="go">ボード 40</span></div><p>KPI の名前・分類・計算式を足す・直す</p></div><div class="tile" data-go="S22"><div class="h"><span class="sno">S22</span><b>KPIカテゴリ</b><span class="go">ボード 42</span></div><p>KPI の分類を足す・消す</p></div><div class="tile anchor" data-go="S23"><div class="h"><span class="sno">S23</span><b>昇給の設定</b><span class="go">ボード 43</span></div><p>昇給の条件・回数・金額を決める</p><i class="mk" style="right:10px;top:50%;margin-top:-13px">5</i></div></div>
+    </div>
+    <aside class="notes">
+      <div class="reqs"><span class="req" data-req="F02">F02 会社ごとの評価の制度を設定し、社員を登録する</span></div>
+      <ol class="marks"><li data-mark="1" data-kind="can"><b>ステップ 2 / 2: 選んだ KPI の基準</b><span class="sub">ステップ 1（S18）で使う KPI を選び、ここで A〜E を決める。</span></li><li data-mark="2" data-kind="how"><b>ランクごとに、配点の何割を付けるか</b><span class="sub">例: A は配点の 100%、E は 0%。</span></li><li data-mark="3" data-kind="can"><b>項目ごとの配点</b><span class="sub">例: この項目は 80 点。等級の区分ごとに決める。</span></li><li data-mark="4" data-kind="can"><b>下限と上限で A〜E の境目</b><span class="sub">答えた実績をこの境目に当てて、ランクが決まる（R09）。</span></li><li data-mark="5" data-kind="how"><b>昇給も、ここで決めた値から判定</b><span class="sub">「選んだ項目がすべて A」か「合計が満点」かを S23 で選ぶ（R12）。</span></li></ol>
+      <div class="flow"><h2>画面の移り方</h2><ul><li><span class="sno">S17</span><span class="to">→</span><span class="sno">S18</span><span class="to">→</span><span class="btn-l">「保存して次は基準を決める」</span><span class="to">→</span><span class="sno">S19</span></li><li><span class="sno">S17</span><span class="to">→</span><span class="sno">S20</span><span>／</span><span class="sno">S21</span><span>／</span><span class="sno">S22</span></li><li><span>左のメニュー</span><span class="to">→</span><span class="sno">S23</span></li></ul></div>
+    </aside>
+  </main>
+</div>
+</body>
+</html>

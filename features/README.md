@@ -13,3 +13,5 @@
 同日の追加依頼による紙面改訂は A3 横・標準1枚 / A4 縦・区切りで複数枚。旧版の A4/A3 縦2枚の証拠とは分け、上記受領書へ改訂後の検証を追記します。
 
 印刷準備の待ち時間への継続差分は Beads `hr-inn.9`・dev-graph `SYS-EVAL-REPORT-P09`。表示後の背景準備・同一レポート内の再利用・準備後の明示印刷を上記受領書へ記録し、生成済み計画本文は変更しない。
+
+打ち合わせ用の派生資料は[機能文書](./meeting-briefing-documents.md)、[タスク](../tasks/docs-briefing.md)、[最終レビュー受領書](../docs/product/spec-receipts/2026-10-29-meeting-briefing-documents.md)を参照。Beadsは`hr-pq7`、dev-graphは`task-docs-briefing`。実行時の業務機能の追加は含まない。

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>09 社員と届いた改善要望</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="board board--overview-screen" data-board="09" data-type="pc" data-screens="S24 S25 S26 S46 S47">
+  <header class="board-head">
+    <div>
+      <div class="kicker">画面 6 / 8 ・ PC</div>
+      <h1>社員と届いた改善要望</h1>
+      <div class="lead">社員は CSV でまとめて登録できる。届いた改善要望も、ここで受けて状態を付ける。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="stage">
+      <div class="browser">
+        <div class="browser-bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><div class="url">example.app/admin/members</div><span class="cur"><span class="sno">S24</span>社員</span></div>
+        <div class="browser-body">
+          <div class="photo anchor" data-source="src/app/admin/members/page.tsx"><img src="assets/shots/S24.png" alt=""><i class="mk" style="left:199px;top:125px">1</i><i class="mk" style="left:877px;top:373px">2</i><i class="mk" style="left:838px;top:72px">3</i></div>
+        </div>
+      </div>
+      <h2 class="sec-label">このボードのほかの画面<small>画面の全体と押せるものは、それぞれの「ボード」で番号を付けて説明している</small></h2>
+      <div class="others"><div class="tile anchor" data-go="S24"><div class="h"><span class="sno">S24</span><b>社員（画面の下のほう）</b><span class="go">ボード 44</span></div><p>CSV でまとめて登録する</p><i class="mk" style="right:10px;top:50%;margin-top:-13px">4</i></div><div class="tile" data-go="S25"><div class="h"><span class="sno">S25</span><b>社員1人</b><span class="go">ボード 45</span></div><p>直す・仮パスワードの再発行・停止</p></div><div class="tile" data-go="S26"><div class="h"><span class="sno">S26</span><b>本人が変更できる項目</b><span class="go">ボード 46</span></div><p>本人が変えてよい項目を決める</p></div><div class="tile anchor" data-go="S46"><div class="h"><span class="sno">S46</span><b>届いた改善要望</b><span class="go">ボード 72</span></div><p>届いた要望を読んで絞り込む</p><i class="mk" style="right:10px;top:50%;margin-top:-13px">5</i></div><div class="tile" data-go="S47"><div class="h"><span class="sno">S47</span><b>要望1件</b><span class="go">ボード 73</span></div><p>Claude Code へ渡し、状態を変える</p></div></div>
+    </div>
+    <aside class="notes">
+      <div class="reqs"><span class="req" data-req="F02">F02 会社ごとの評価の制度を設定し、社員を登録する</span><span class="req" data-req="F05">F05 確定した結果と評価レポートを見て印刷し、使いにくい点を改善要望で送る</span></div>
+      <ol class="marks"><li data-mark="1" data-kind="can"><b>在籍の人数と、本人が直せる項目</b><span class="sub">「変更できる範囲を決める」で、本人が直せる項目を選ぶ（S26）。</span></li><li data-mark="2" data-kind="how"><b>名簿に、最新の点数と達成率</b><span class="sub">最後に確定した評価の値。社員本人の画面には出ない。</span></li><li data-mark="3" data-kind="ask"><b>退職した人の記録を残す期間</b><span class="q">Q03</span><span class="sub">案: 消さずに残す。退職した人は「利用停止」にする。</span></li><li data-mark="4" data-kind="can"><b>CSV でまとめて登録する</b><span class="sub">画面の下のほうから取り込む。取り込む前に全行を確かめる（R07）。</span></li><li data-mark="5" data-kind="how"><b>改善要望は 未対応 → 対応中 → 対応済み</b><span class="sub">見送るときは、理由を対応のメモに書く（R21）。</span></li></ol>
+      <div class="flow"><h2>画面の移り方</h2><ul><li><span class="sno">S24</span><span class="to">→</span><span class="btn-l">「名前」</span><span class="to">→</span><span class="sno">S25</span><span class="to">→</span><span class="sno">S45</span><span>／</span><span class="sno">S41</span></li><li><span class="sno">S24</span><span class="to">→</span><span class="btn-l">「変更できる範囲を決める」</span><span class="to">→</span><span class="sno">S26</span></li><li><span class="sno">S46</span><span class="to">→</span><span class="btn-l">「要望を開く」</span><span class="to">→</span><span class="sno">S47</span></li></ul></div>
+    </aside>
+  </main>
+</div>
+</body>
+</html>

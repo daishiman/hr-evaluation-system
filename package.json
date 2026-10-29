@@ -37,7 +37,7 @@
     "db:seed:reference": "node scripts/seed-reference-points.mjs"
   },
   "dependencies": {
-    "better-auth": "^1.6.26",
+    "better-auth": "^1.7.7",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.31.0",

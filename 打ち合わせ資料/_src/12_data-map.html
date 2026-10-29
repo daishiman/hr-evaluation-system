@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>12 できあがるファイルの欄と画面の項目</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="common.css">
+<style>
+/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
+.board-body > .stage { flex: 1; min-width: 0; gap: 36px; }
+.src-col { width: 420px; flex: none; display: flex; flex-direction: column; gap: 12px; }
+.src-col .photo { flex: 1; min-height: 0; }
+.map-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.map-col .mrow { grid-template-columns: 1fr 44px 1.25fr 220px; }
+.map-col .mrow > div { padding: 9px 14px; font-size: 15.5px; }
+.map-col .mrow > .ev { font-size: 12.5px; }
+.map-col .notes { flex: none; align-self: stretch; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="board" data-board="12" data-type="data-map">
+  <header class="board-head">
+    <div>
+      <div class="kicker">見えない部分 2 / 3</div>
+      <h1>できあがるファイルの欄と画面の項目</h1>
+      <div class="lead">アンケートの答えと制度の設定のどの欄が、CSV と評価レポートのどこに入るか。</div>
+    </div>
+    <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
+  </header>
+  <main class="board-body">
+    <div class="stage">
+      <div class="src-col">
+        <h2 class="sec-label">できあがる評価レポート<small>例。S45 で見て印刷する</small></h2>
+        <div class="photo anchor" data-source="src/app/reports/[id]/page.tsx"><img src="assets/shots/report.png" alt=""><i class="mk" style="left:150px;top:192px">1</i><i class="mk" style="left:8px;top:727px">2</i></div>
+      </div>
+      <div class="map-col">
+        <h2 class="sec-label">答えと設定の欄が、どこに入るか<small>評価の CSV とレポートで同じ名前</small></h2>
+        <div class="dmap">
+          <div class="mrow head"><div>答えと設定の欄</div><div></div><div>評価とレポートの項目</div><div>根拠</div></div>
+          <div class="mrow"><div class="src">等級要件の「はい」の数<small>アンケート（S34）</small></div><div class="to">→</div><div class="dst">等級要件達成数・達成率<small>例: 8 / 15 → 53.3%</small></div><div class="ev">素材:src/lib/domain/scoring.ts</div></div><div class="mrow"><div class="src">行動指針の段階<small>アンケート（S34）</small></div><div class="to">→</div><div class="dst">行動指針得点・判定<small>例: 7点</small></div><div class="ev">素材:src/lib/evaluate.ts</div></div><div class="mrow"><div class="src">KPI の実績の値<small>アンケート（S34）</small></div><div class="to">→</div><div class="dst">KPI評価内訳・点数根拠<small>項目ごとのランク（例: 83件 → A）</small></div><div class="ev">素材:src/lib/domain/scoring.ts</div></div><div class="mrow"><div class="src">ランクの境目と配点<small>制度の設定（S19）</small></div><div class="to">→</div><div class="dst">KPI合計点・評価可能配点・KPI達成率<small>例: 52 / 100点</small></div><div class="ev">素材:src/lib/domain/scoring.ts</div></div><div class="mrow"><div class="src">昇格の要件と必要な点数<small>制度の設定（S15）</small></div><div class="to">→</div><div class="dst">昇格要件判定・昇格の点数の判定<small>例: 昇格は見送り</small></div><div class="ev">素材:src/lib/domain/scoring.ts</div></div><div class="mrow"><div class="src">マネージャーの判断と理由<small>評価1件（S39）</small></div><div class="to">→</div><div class="dst">上司の判断と理由・上長からのコメント<small>確定のときに入る</small></div><div class="ev">聞き取り:H10</div></div><div class="mrow warn anchor"><div class="src">PDF・Excel のファイル<small>評価レポート（S45）</small></div><div class="to">→</div><div class="dst">今はブラウザの印刷で PDF、表は CSV<small>ファイルの形が決まってから足す</small></div><div class="ev">決めること:Q07</div><i class="mk" style="left:-12px;top:-10px">3</i></div>
+        </div>
+        <h2 class="sec-label">評価の CSV の 30 列の内訳<small>S38 で書き出す</small></h2>
+        <div class="bar"><span class="seg" data-kind="paper" style="flex:4">答えから 4</span><span class="seg" data-kind="auto" style="flex:19">しくみ 19</span><span class="seg" data-kind="fixed" style="flex:3">設定から 3</span><span class="seg" data-kind="blank" style="flex:4">確定のとき 4</span></div>
+        <ul class="legend"><li data-kind="paper">アンケートの答えから</li><li data-kind="auto">しくみが計算して入れる</li><li data-kind="fixed">制度の設定から</li><li data-kind="blank">確定のときに入る（それまで空欄）</li></ul>
+        <aside class="notes strip">
+          <ol class="marks">
+            <li data-mark="1" data-kind="can"><b>レポートの上に、昇給・昇格の判断</b><span class="sub">マネージャーが確定すると、判断と理由が入る（6 行目）。</span></li>
+            <li data-mark="2" data-kind="how"><b>KPI の内訳は、項目ごとのランクと点数</b><span class="sub">答えた実績を境目に当てて出す（3・4 行目）。</span></li>
+            <li data-mark="3" data-kind="ask"><b>PDF・Excel のファイルで書き出すか</b><span class="q">Q07</span><span class="sub">案: 今はブラウザの印刷で PDF にし、表は CSV で書き出す。</span></li>
+          </ol>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>
