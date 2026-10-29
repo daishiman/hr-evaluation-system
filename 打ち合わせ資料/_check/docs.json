@@ -26,7 +26,7 @@
       "code": "MATERIAL-UNUSED",
       "file": "..",
       "line": null,
-      "message": "どの根拠にもボードにも出ていない素材が 307 個あります: AGENTS.md、CLAUDE.md、aidd-agent-kit/ATTRIBUTION.md、aidd-agent-kit/CHANGELOG.md、aidd-agent-kit/CODEX-PLACEMENT.md ほか 302 個"
+      "message": "どの根拠にもボードにも出ていない素材が 334 個あります: AGENTS.md、CLAUDE.md、aidd-agent-kit/ATTRIBUTION.md、aidd-agent-kit/CHANGELOG.md、aidd-agent-kit/CODEX-PLACEMENT.md ほか 329 個"
     }
   ],
   "counts": {
@@ -49,13 +49,13 @@
     "question_refs_unknown": 0,
     "screens": 47,
     "data": 13,
-    "rules": 22,
+    "rules": 30,
     "roles_missing": 0,
     "roles_duplicate": 0,
     "role_rows_incomplete": 0,
     "pages": 99,
     "boards_found": 99,
     "screens_without_board": 0,
-    "materials_unused": 307
+    "materials_unused": 334
   }
 }

@@ -629,7 +629,7 @@
       "status": "ok",
       "image": "_src/book/01_overview.webp",
       "image_format": "webp",
-      "image_bytes": 289328
+      "image_bytes": 297022
     },
     {
       "no": "02",
@@ -638,7 +638,7 @@
       "status": "ok",
       "image": "_src/book/02_screen-map.webp",
       "image_format": "webp",
-      "image_bytes": 264016
+      "image_bytes": 266336
     },
     {
       "no": "03",
@@ -647,7 +647,7 @@
       "status": "ok",
       "image": "_src/book/03_mechanism-roles.webp",
       "image_format": "webp",
-      "image_bytes": 318266
+      "image_bytes": 324972
     },
     {
       "no": "04",
@@ -656,7 +656,7 @@
       "status": "ok",
       "image": "_src/book/04_s01-login.webp",
       "image_format": "webp",
-      "image_bytes": 185370
+      "image_bytes": 189884
     },
     {
       "no": "05",
@@ -665,7 +665,7 @@
       "status": "ok",
       "image": "_src/book/05_s04-system.webp",
       "image_format": "webp",
-      "image_bytes": 261606
+      "image_bytes": 268710
     },
     {
       "no": "06",
@@ -674,7 +674,7 @@
       "status": "ok",
       "image": "_src/book/06_s11-setup.webp",
       "image_format": "webp",
-      "image_bytes": 284560
+      "image_bytes": 287462
     },
     {
       "no": "07",
@@ -683,7 +683,7 @@
       "status": "ok",
       "image": "_src/book/07_s17-kpi.webp",
       "image_format": "webp",
-      "image_bytes": 291560
+      "image_bytes": 294392
     },
     {
       "no": "08",
@@ -692,7 +692,7 @@
       "status": "ok",
       "image": "_src/book/08_s27-forms.webp",
       "image_format": "webp",
-      "image_bytes": 305434
+      "image_bytes": 309750
     },
     {
       "no": "09",
@@ -701,7 +701,7 @@
       "status": "ok",
       "image": "_src/book/09_s24-members.webp",
       "image_format": "webp",
-      "image_bytes": 297440
+      "image_bytes": 300316
     },
     {
       "no": "10",
@@ -710,7 +710,7 @@
       "status": "ok",
       "image": "_src/book/10_s32-employee.webp",
       "image_format": "webp",
-      "image_bytes": 276650
+      "image_bytes": 280458
     },
     {
       "no": "11",
@@ -719,7 +719,7 @@
       "status": "ok",
       "image": "_src/book/11_s37-manager.webp",
       "image_format": "webp",
-      "image_bytes": 292714
+      "image_bytes": 295336
     },
     {
       "no": "12",
@@ -728,7 +728,7 @@
       "status": "ok",
       "image": "_src/book/12_data-map.webp",
       "image_format": "webp",
-      "image_bytes": 273352
+      "image_bytes": 277114
     },
     {
       "no": "13",
@@ -737,7 +737,7 @@
       "status": "ok",
       "image": "_src/book/13_mechanism-scoring.webp",
       "image_format": "webp",
-      "image_bytes": 209078
+      "image_bytes": 212590
     },
     {
       "no": "14",
@@ -746,7 +746,7 @@
       "status": "ok",
       "image": "_src/book/14_future.webp",
       "image_format": "webp",
-      "image_bytes": 226610
+      "image_bytes": 240582
     },
     {
       "no": "15",
@@ -755,7 +755,7 @@
       "status": "ok",
       "image": "_src/book/15_scr-common.webp",
       "image_format": "webp",
-      "image_bytes": 283546
+      "image_bytes": 288416
     },
     {
       "no": "16",
@@ -764,7 +764,7 @@
       "status": "ok",
       "image": "_src/book/16_scr-s01.webp",
       "image_format": "webp",
-      "image_bytes": 131024
+      "image_bytes": 133468
     },
     {
       "no": "17",
@@ -773,7 +773,7 @@
       "status": "ok",
       "image": "_src/book/17_scr-s02.webp",
       "image_format": "webp",
-      "image_bytes": 201084
+      "image_bytes": 203752
     },
     {
       "no": "18",
@@ -782,7 +782,7 @@
       "status": "ok",
       "image": "_src/book/18_scr-s03.webp",
       "image_format": "webp",
-      "image_bytes": 168720
+      "image_bytes": 171830
     },
     {
       "no": "19",
@@ -791,7 +791,7 @@
       "status": "ok",
       "image": "_src/book/19_scr-s04.webp",
       "image_format": "webp",
-      "image_bytes": 267844
+      "image_bytes": 270740
     },
     {
       "no": "20",
@@ -800,7 +800,7 @@
       "status": "ok",
       "image": "_src/book/20_scr-s05.webp",
       "image_format": "webp",
-      "image_bytes": 255156
+      "image_bytes": 259162
     },
     {
       "no": "21",
@@ -809,7 +809,7 @@
       "status": "ok",
       "image": "_src/book/21_scr-s06-1.webp",
       "image_format": "webp",
-      "image_bytes": 193390
+      "image_bytes": 196732
     },
     {
       "no": "22",
@@ -818,7 +818,7 @@
       "status": "ok",
       "image": "_src/book/22_scr-s06-2.webp",
       "image_format": "webp",
-      "image_bytes": 254254
+      "image_bytes": 255880
     },
     {
       "no": "23",
@@ -827,7 +827,7 @@
       "status": "ok",
       "image": "_src/book/23_scr-s07.webp",
       "image_format": "webp",
-      "image_bytes": 240006
+      "image_bytes": 245218
     },
     {
       "no": "24",
@@ -836,7 +836,7 @@
       "status": "ok",
       "image": "_src/book/24_scr-s08-1.webp",
       "image_format": "webp",
-      "image_bytes": 255764
+      "image_bytes": 256668
     },
     {
       "no": "25",
@@ -845,7 +845,7 @@
       "status": "ok",
       "image": "_src/book/25_scr-s08-2.webp",
       "image_format": "webp",
-      "image_bytes": 249208
+      "image_bytes": 253036
     },
     {
       "no": "26",
@@ -854,7 +854,7 @@
       "status": "ok",
       "image": "_src/book/26_scr-s09.webp",
       "image_format": "webp",
-      "image_bytes": 257250
+      "image_bytes": 262336
     },
     {
       "no": "27",
@@ -863,7 +863,7 @@
       "status": "ok",
       "image": "_src/book/27_scr-s10.webp",
       "image_format": "webp",
-      "image_bytes": 260584
+      "image_bytes": 265634
     },
     {
       "no": "28",
@@ -872,7 +872,7 @@
       "status": "ok",
       "image": "_src/book/28_scr-s11.webp",
       "image_format": "webp",
-      "image_bytes": 292134
+      "image_bytes": 297804
     },
     {
       "no": "29",
@@ -881,7 +881,7 @@
       "status": "ok",
       "image": "_src/book/29_scr-s12.webp",
       "image_format": "webp",
-      "image_bytes": 286600
+      "image_bytes": 291016
     },
     {
       "no": "30",
@@ -890,7 +890,7 @@
       "status": "ok",
       "image": "_src/book/30_scr-s13.webp",
       "image_format": "webp",
-      "image_bytes": 236374
+      "image_bytes": 239264
     },
     {
       "no": "31",
@@ -899,7 +899,7 @@
       "status": "ok",
       "image": "_src/book/31_scr-s14.webp",
       "image_format": "webp",
-      "image_bytes": 303498
+      "image_bytes": 307294
     },
     {
       "no": "32",
@@ -908,7 +908,7 @@
       "status": "ok",
       "image": "_src/book/32_scr-s15.webp",
       "image_format": "webp",
-      "image_bytes": 359088
+      "image_bytes": 365406
     },
     {
       "no": "33",
@@ -917,7 +917,7 @@
       "status": "ok",
       "image": "_src/book/33_scr-s16-1.webp",
       "image_format": "webp",
-      "image_bytes": 277312
+      "image_bytes": 281008
     },
     {
       "no": "34",
@@ -926,7 +926,7 @@
       "status": "ok",
       "image": "_src/book/34_scr-s16-2.webp",
       "image_format": "webp",
-      "image_bytes": 224472
+      "image_bytes": 227652
     },
     {
       "no": "35",
@@ -935,7 +935,7 @@
       "status": "ok",
       "image": "_src/book/35_scr-s17.webp",
       "image_format": "webp",
-      "image_bytes": 302094
+      "image_bytes": 307588
     },
     {
       "no": "36",
@@ -944,7 +944,7 @@
       "status": "ok",
       "image": "_src/book/36_scr-s18-1.webp",
       "image_format": "webp",
-      "image_bytes": 221446
+      "image_bytes": 225702
     },
     {
       "no": "37",
@@ -953,7 +953,7 @@
       "status": "ok",
       "image": "_src/book/37_scr-s18-2.webp",
       "image_format": "webp",
-      "image_bytes": 259892
+      "image_bytes": 264102
     },
     {
       "no": "38",
@@ -962,7 +962,7 @@
       "status": "ok",
       "image": "_src/book/38_scr-s19.webp",
       "image_format": "webp",
-      "image_bytes": 314390
+      "image_bytes": 319818
     },
     {
       "no": "39",
@@ -971,7 +971,7 @@
       "status": "ok",
       "image": "_src/book/39_scr-s20.webp",
       "image_format": "webp",
-      "image_bytes": 148036
+      "image_bytes": 150430
     },
     {
       "no": "40",
@@ -980,7 +980,7 @@
       "status": "ok",
       "image": "_src/book/40_scr-s21-1.webp",
       "image_format": "webp",
-      "image_bytes": 317720
+      "image_bytes": 320188
     },
     {
       "no": "41",
@@ -989,7 +989,7 @@
       "status": "ok",
       "image": "_src/book/41_scr-s21-2.webp",
       "image_format": "webp",
-      "image_bytes": 322248
+      "image_bytes": 325744
     },
     {
       "no": "42",
@@ -998,7 +998,7 @@
       "status": "ok",
       "image": "_src/book/42_scr-s22.webp",
       "image_format": "webp",
-      "image_bytes": 188108
+      "image_bytes": 190794
     },
     {
       "no": "43",
@@ -1007,7 +1007,7 @@
       "status": "ok",
       "image": "_src/book/43_scr-s23.webp",
       "image_format": "webp",
-      "image_bytes": 279624
+      "image_bytes": 283782
     },
     {
       "no": "44",
@@ -1016,7 +1016,7 @@
       "status": "ok",
       "image": "_src/book/44_scr-s24.webp",
       "image_format": "webp",
-      "image_bytes": 273086
+      "image_bytes": 276834
     },
     {
       "no": "45",
@@ -1025,7 +1025,7 @@
       "status": "ok",
       "image": "_src/book/45_scr-s25.webp",
       "image_format": "webp",
-      "image_bytes": 227030
+      "image_bytes": 229682
     },
     {
       "no": "46",
@@ -1034,7 +1034,7 @@
       "status": "ok",
       "image": "_src/book/46_scr-s26.webp",
       "image_format": "webp",
-      "image_bytes": 183316
+      "image_bytes": 185932
     },
     {
       "no": "47",
@@ -1043,7 +1043,7 @@
       "status": "ok",
       "image": "_src/book/47_scr-s27.webp",
       "image_format": "webp",
-      "image_bytes": 314160
+      "image_bytes": 318346
     },
     {
       "no": "48",
@@ -1052,7 +1052,7 @@
       "status": "ok",
       "image": "_src/book/48_scr-s28.webp",
       "image_format": "webp",
-      "image_bytes": 329004
+      "image_bytes": 333828
     },
     {
       "no": "49",
@@ -1061,7 +1061,7 @@
       "status": "ok",
       "image": "_src/book/49_scr-s29.webp",
       "image_format": "webp",
-      "image_bytes": 374940
+      "image_bytes": 380070
     },
     {
       "no": "50",
@@ -1070,7 +1070,7 @@
       "status": "ok",
       "image": "_src/book/50_scr-s30.webp",
       "image_format": "webp",
-      "image_bytes": 265904
+      "image_bytes": 269104
     },
     {
       "no": "51",
@@ -1079,7 +1079,7 @@
       "status": "ok",
       "image": "_src/book/51_scr-s31-1.webp",
       "image_format": "webp",
-      "image_bytes": 244390
+      "image_bytes": 247492
     },
     {
       "no": "52",
@@ -1088,7 +1088,7 @@
       "status": "ok",
       "image": "_src/book/52_scr-s31-2.webp",
       "image_format": "webp",
-      "image_bytes": 283716
+      "image_bytes": 287534
     },
     {
       "no": "53",
@@ -1097,7 +1097,7 @@
       "status": "ok",
       "image": "_src/book/53_scr-s32.webp",
       "image_format": "webp",
-      "image_bytes": 251954
+      "image_bytes": 257900
     },
     {
       "no": "54",
@@ -1106,7 +1106,7 @@
       "status": "ok",
       "image": "_src/book/54_scr-s33.webp",
       "image_format": "webp",
-      "image_bytes": 305714
+      "image_bytes": 309382
     },
     {
       "no": "55",
@@ -1115,7 +1115,7 @@
       "status": "ok",
       "image": "_src/book/55_scr-s34-1.webp",
       "image_format": "webp",
-      "image_bytes": 206898
+      "image_bytes": 208610
     },
     {
       "no": "56",
@@ -1124,7 +1124,7 @@
       "status": "ok",
       "image": "_src/book/56_scr-s34-2.webp",
       "image_format": "webp",
-      "image_bytes": 323786
+      "image_bytes": 328366
     },
     {
       "no": "57",
@@ -1133,7 +1133,7 @@
       "status": "ok",
       "image": "_src/book/57_scr-s35.webp",
       "image_format": "webp",
-      "image_bytes": 277326
+      "image_bytes": 282002
     },
     {
       "no": "58",
@@ -1142,7 +1142,7 @@
       "status": "ok",
       "image": "_src/book/58_scr-s36.webp",
       "image_format": "webp",
-      "image_bytes": 309030
+      "image_bytes": 313706
     },
     {
       "no": "59",
@@ -1151,7 +1151,7 @@
       "status": "ok",
       "image": "_src/book/59_scr-s37.webp",
       "image_format": "webp",
-      "image_bytes": 274896
+      "image_bytes": 281098
     },
     {
       "no": "60",
@@ -1160,7 +1160,7 @@
       "status": "ok",
       "image": "_src/book/60_scr-s38.webp",
       "image_format": "webp",
-      "image_bytes": 280888
+      "image_bytes": 285970
     },
     {
       "no": "61",
@@ -1169,7 +1169,7 @@
       "status": "ok",
       "image": "_src/book/61_scr-s39-1.webp",
       "image_format": "webp",
-      "image_bytes": 265898
+      "image_bytes": 268762
     },
     {
       "no": "62",
@@ -1178,7 +1178,7 @@
       "status": "ok",
       "image": "_src/book/62_scr-s39-2.webp",
       "image_format": "webp",
-      "image_bytes": 313600
+      "image_bytes": 319412
     },
     {
       "no": "63",
@@ -1187,7 +1187,7 @@
       "status": "ok",
       "image": "_src/book/63_scr-s40.webp",
       "image_format": "webp",
-      "image_bytes": 234542
+      "image_bytes": 237906
     },
     {
       "no": "64",
@@ -1196,7 +1196,7 @@
       "status": "ok",
       "image": "_src/book/64_scr-s41.webp",
       "image_format": "webp",
-      "image_bytes": 276276
+      "image_bytes": 281380
     },
     {
       "no": "65",
@@ -1205,7 +1205,7 @@
       "status": "ok",
       "image": "_src/book/65_scr-s42-1.webp",
       "image_format": "webp",
-      "image_bytes": 254422
+      "image_bytes": 258066
     },
     {
       "no": "66",
@@ -1214,7 +1214,7 @@
       "status": "ok",
       "image": "_src/book/66_scr-s42-2.webp",
       "image_format": "webp",
-      "image_bytes": 154098
+      "image_bytes": 156628
     },
     {
       "no": "67",
@@ -1223,7 +1223,7 @@
       "status": "ok",
       "image": "_src/book/67_scr-s42-3.webp",
       "image_format": "webp",
-      "image_bytes": 258042
+      "image_bytes": 262080
     },
     {
       "no": "68",
@@ -1232,7 +1232,7 @@
       "status": "ok",
       "image": "_src/book/68_scr-s43.webp",
       "image_format": "webp",
-      "image_bytes": 263616
+      "image_bytes": 267820
     },
     {
       "no": "69",
@@ -1241,7 +1241,7 @@
       "status": "ok",
       "image": "_src/book/69_scr-s44-1.webp",
       "image_format": "webp",
-      "image_bytes": 241326
+      "image_bytes": 243374
     },
     {
       "no": "70",
@@ -1250,7 +1250,7 @@
       "status": "ok",
       "image": "_src/book/70_scr-s44-2.webp",
       "image_format": "webp",
-      "image_bytes": 210628
+      "image_bytes": 212974
     },
     {
       "no": "71",
@@ -1259,7 +1259,7 @@
       "status": "ok",
       "image": "_src/book/71_scr-s45.webp",
       "image_format": "webp",
-      "image_bytes": 306524
+      "image_bytes": 311898
     },
     {
       "no": "72",
@@ -1268,7 +1268,7 @@
       "status": "ok",
       "image": "_src/book/72_scr-s46.webp",
       "image_format": "webp",
-      "image_bytes": 220248
+      "image_bytes": 223398
     },
     {
       "no": "73",
@@ -1277,7 +1277,7 @@
       "status": "ok",
       "image": "_src/book/73_scr-s47.webp",
       "image_format": "webp",
-      "image_bytes": 270740
+      "image_bytes": 275616
     },
     {
       "no": "74",
@@ -1286,7 +1286,7 @@
       "status": "ok",
       "image": "_src/book/74_opn-common-s01-10-1.webp",
       "image_format": "webp",
-      "image_bytes": 260400
+      "image_bytes": 266506
     },
     {
       "no": "75",
@@ -1295,7 +1295,7 @@
       "status": "ok",
       "image": "_src/book/75_opn-common-s01-10-2.webp",
       "image_format": "webp",
-      "image_bytes": 283106
+      "image_bytes": 295636
     },
     {
       "no": "76",
@@ -1304,7 +1304,7 @@
       "status": "ok",
       "image": "_src/book/76_opn-common-s01-10-3.webp",
       "image_format": "webp",
-      "image_bytes": 337374
+      "image_bytes": 344518
     },
     {
       "no": "77",
@@ -1313,7 +1313,7 @@
       "status": "ok",
       "image": "_src/book/77_opn-common-s01-10-4.webp",
       "image_format": "webp",
-      "image_bytes": 247232
+      "image_bytes": 253234
     },
     {
       "no": "78",
@@ -1322,7 +1322,7 @@
       "status": "ok",
       "image": "_src/book/78_opn-s11-16-1.webp",
       "image_format": "webp",
-      "image_bytes": 360156
+      "image_bytes": 369668
     },
     {
       "no": "79",
@@ -1331,7 +1331,7 @@
       "status": "ok",
       "image": "_src/book/79_opn-s11-16-2.webp",
       "image_format": "webp",
-      "image_bytes": 276866
+      "image_bytes": 283314
     },
     {
       "no": "80",
@@ -1340,7 +1340,7 @@
       "status": "ok",
       "image": "_src/book/80_opn-s11-16-3.webp",
       "image_format": "webp",
-      "image_bytes": 309444
+      "image_bytes": 315642
     },
     {
       "no": "81",
@@ -1349,7 +1349,7 @@
       "status": "ok",
       "image": "_src/book/81_opn-s11-16-4.webp",
       "image_format": "webp",
-      "image_bytes": 274552
+      "image_bytes": 281570
     },
     {
       "no": "82",
@@ -1358,7 +1358,7 @@
       "status": "ok",
       "image": "_src/book/82_opn-s11-16-5.webp",
       "image_format": "webp",
-      "image_bytes": 331796
+      "image_bytes": 339820
     },
     {
       "no": "83",
@@ -1367,7 +1367,7 @@
       "status": "ok",
       "image": "_src/book/83_opn-s11-16-6.webp",
       "image_format": "webp",
-      "image_bytes": 228900
+      "image_bytes": 234268
     },
     {
       "no": "84",
@@ -1376,7 +1376,7 @@
       "status": "ok",
       "image": "_src/book/84_opn-s17-23-1.webp",
       "image_format": "webp",
-      "image_bytes": 309306
+      "image_bytes": 317102
     },
     {
       "no": "85",
@@ -1385,7 +1385,7 @@
       "status": "ok",
       "image": "_src/book/85_opn-s17-23-2.webp",
       "image_format": "webp",
-      "image_bytes": 365678
+      "image_bytes": 371010
     },
     {
       "no": "86",
@@ -1394,7 +1394,7 @@
       "status": "ok",
       "image": "_src/book/86_opn-s17-23-3.webp",
       "image_format": "webp",
-      "image_bytes": 295520
+      "image_bytes": 303590
     },
     {
       "no": "87",
@@ -1403,7 +1403,7 @@
       "status": "ok",
       "image": "_src/book/87_opn-s17-23-4.webp",
       "image_format": "webp",
-      "image_bytes": 127384
+      "image_bytes": 129528
     },
     {
       "no": "88",
@@ -1412,7 +1412,7 @@
       "status": "ok",
       "image": "_src/book/88_opn-s24-36-1.webp",
       "image_format": "webp",
-      "image_bytes": 286710
+      "image_bytes": 294088
     },
     {
       "no": "89",
@@ -1421,7 +1421,7 @@
       "status": "ok",
       "image": "_src/book/89_opn-s24-36-2.webp",
       "image_format": "webp",
-      "image_bytes": 328796
+      "image_bytes": 344090
     },
     {
       "no": "90",
@@ -1430,7 +1430,7 @@
       "status": "ok",
       "image": "_src/book/90_opn-s24-36-3.webp",
       "image_format": "webp",
-      "image_bytes": 375292
+      "image_bytes": 382230
     },
     {
       "no": "91",
@@ -1439,7 +1439,7 @@
       "status": "ok",
       "image": "_src/book/91_opn-s24-36-4.webp",
       "image_format": "webp",
-      "image_bytes": 331024
+      "image_bytes": 339316
     },
     {
       "no": "92",
@@ -1448,7 +1448,7 @@
       "status": "ok",
       "image": "_src/book/92_opn-s24-36-5.webp",
       "image_format": "webp",
-      "image_bytes": 300628
+      "image_bytes": 308492
     },
     {
       "no": "93",
@@ -1457,7 +1457,7 @@
       "status": "ok",
       "image": "_src/book/93_opn-s24-36-6.webp",
       "image_format": "webp",
-      "image_bytes": 258314
+      "image_bytes": 265698
     },
     {
       "no": "94",
@@ -1466,7 +1466,7 @@
       "status": "ok",
       "image": "_src/book/94_opn-s30-45.webp",
       "image_format": "webp",
-      "image_bytes": 343636
+      "image_bytes": 350174
     },
     {
       "no": "95",
@@ -1475,7 +1475,7 @@
       "status": "ok",
       "image": "_src/book/95_opn-s37-42-1.webp",
       "image_format": "webp",
-      "image_bytes": 315010
+      "image_bytes": 320454
     },
     {
       "no": "96",
@@ -1484,7 +1484,7 @@
       "status": "ok",
       "image": "_src/book/96_opn-s37-42-2.webp",
       "image_format": "webp",
-      "image_bytes": 301802
+      "image_bytes": 307780
     },
     {
       "no": "97",
@@ -1493,7 +1493,7 @@
       "status": "ok",
       "image": "_src/book/97_opn-s37-42-3.webp",
       "image_format": "webp",
-      "image_bytes": 277482
+      "image_bytes": 281764
     },
     {
       "no": "98",
@@ -1502,7 +1502,7 @@
       "status": "ok",
       "image": "_src/book/98_opn-s37-42-4.webp",
       "image_format": "webp",
-      "image_bytes": 77226
+      "image_bytes": 78190
     },
     {
       "no": "99",
@@ -1511,16 +1511,16 @@
       "status": "ok",
       "image": "_src/book/99_opn-s46-47.webp",
       "image_format": "webp",
-      "image_bytes": 312506
+      "image_bytes": 322016
     }
   ],
   "stale": [],
   "external": [],
-  "bytes": 36651636,
-  "image_bytes": 26638988,
+  "bytes": 37116881,
+  "image_bytes": 27120256,
   "image_format": "webp",
   "status": "ok",
-  "built": "2026-10-29 07:47",
+  "built": "2026-10-29 16:31",
   "summary": {
     "errors": 0,
     "warnings": 0,

@@ -5,25 +5,9 @@
 <title>30 S13 等級の設定</title>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="common.css">
-<style>
-/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
-.board-body { justify-content: flex-start; gap: 28px; }
-.shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
-.shot { flex: none; position: relative; }
-.shot .photo { width: 100%; height: 100%; border-radius: 6px; }
-.shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
-.notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
-.notes.scr .reqs { padding-bottom: 8px; }
-.notes.scr ol.marks { gap: 10px 22px; }
-.notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
-.notes.scr ol.marks li > b { font-size: 15px; }
-.notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
-.notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
-.notes.scr .extra b { color: var(--text); }
-</style>
 </head>
 <body>
-<div class="board" data-board="30" data-type="pc" data-screens="S13">
+<div class="board board--screen-detail" data-board="30" data-type="pc" data-screens="S13">
   <header class="board-head">
     <div>
       <div class="kicker">画面の詳細 ・ 会社の管理者・システム全体管理者</div>

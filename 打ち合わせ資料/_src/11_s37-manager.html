@@ -5,34 +5,14 @@
 <title>11 マネージャーのホームと評価1件</title>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="common.css">
-<style>
-/* このボードだけの配置調整。色は var(--...) だけ。#hex や rgb() を書かない */
-.board-body > .stage { flex-direction: column; gap: 12px; }
-.browser { width: 1000px; }
-.browser-bar .cur { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--text-2); }
-.sno { flex: none; font: 800 12.5px/1.5 var(--font-num); color: var(--text-brand); background: var(--bg-brand-soft); border-radius: 5px; padding: 0 6px; }
-.browser .photo { flex: none; height: 624px; border: none; border-radius: 0; }
-.others { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 10px; width: 1000px; }
-.others .tile { padding: 8px 12px; gap: 2px; border-radius: 10px; }
-.others .tile.anchor { padding-right: 46px; }
-.others .tile .h { gap: 8px; align-items: baseline; }
-.others .tile .h b { font-size: 15.5px; line-height: 1.4; }
-.others .tile .go { margin-left: auto; flex: none; font: 800 12.5px/1.5 var(--font-num); color: var(--text-brand); }
-.others .tile p { font-size: 13.5px; line-height: 1.5; color: var(--text-2); }
-.flow { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px dashed var(--line); }
-.flow ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; line-height: 1.55; color: var(--text-2); }
-.flow li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
-.flow .to { color: var(--text-muted); font-weight: 800; }
-.flow .btn-l { color: var(--text); font-weight: 700; }
-</style>
 </head>
 <body>
-<div class="board" data-board="11" data-type="pc" data-screens="S37 S38 S39 S40 S41 S42">
+<div class="board board--overview-screen" data-board="11" data-type="pc" data-screens="S37 S38 S39 S40 S41 S42">
   <header class="board-head">
     <div>
       <div class="kicker">画面 8 / 8 ・ PC</div>
       <h1>マネージャーのホームと評価1件</h1>
-      <div class="lead">マネージャーは、しくみが出した点数と判定を確かめて確定するだけ。判定を変えるときは理由を書いて残す。</div>
+      <div class="lead">マネージャーが S38 で評価を作り、点数と判定を確かめて確定する。判定を変えるときは理由を残す。</div>
     </div>
     <div class="meta">人事評価システムの説明書<br><span class="sample-flag">画面の中の名前と値は例です</span></div>
   </header>

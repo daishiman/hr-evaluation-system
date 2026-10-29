@@ -435,3 +435,52 @@ table.grid tr.cur td:first-child { box-shadow: inset 3px 0 0 var(--table-selecte
 .seg[data-kind="fixed"], .legend li[data-kind="fixed"]::before { color: var(--text-2); background: var(--bg-disabled); }
 .seg[data-kind="blank"], .legend li[data-kind="blank"]::before { color: var(--text-muted); background: var(--bg-surface); border: 1.5px dashed var(--line-strong); }
 .seg[data-kind="ask"], .legend li[data-kind="ask"]::before { color: var(--status-warning); background: var(--status-warning-bg); border: 1.5px solid var(--status-warning-line); }
+
+/* 複数画面をまとめる概要ボード（適用範囲のみ指定し、元の詳細度を保つ） */
+:where(.board--overview-screen) .board-body > .stage { flex-direction: column; gap: 12px; }
+:where(.board--overview-screen) .browser { width: 1000px; }
+:where(.board--overview-screen) .browser-bar .cur { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--text-2); }
+:where(.board--overview-screen) .sno { flex: none; font: 800 12.5px/1.5 var(--font-num); color: var(--text-brand); background: var(--bg-brand-soft); border-radius: 5px; padding: 0 6px; }
+:where(.board--overview-screen) .browser .photo { flex: none; height: 624px; border: none; border-radius: 0; }
+:where(.board--overview-screen) .others { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 10px; width: 1000px; }
+:where(.board--overview-screen) .others .tile { padding: 8px 12px; gap: 2px; border-radius: 10px; }
+:where(.board--overview-screen) .others .tile.anchor { padding-right: 46px; }
+:where(.board--overview-screen) .others .tile .h { gap: 8px; align-items: baseline; }
+:where(.board--overview-screen) .others .tile .h b { font-size: 15.5px; line-height: 1.4; }
+:where(.board--overview-screen) .others .tile .go { margin-left: auto; flex: none; font: 800 12.5px/1.5 var(--font-num); color: var(--text-brand); }
+:where(.board--overview-screen) .others .tile p { font-size: 13.5px; line-height: 1.5; color: var(--text-2); }
+:where(.board--overview-screen) .flow { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px dashed var(--line); }
+:where(.board--overview-screen) .flow ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; line-height: 1.55; color: var(--text-2); }
+:where(.board--overview-screen) .flow li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
+:where(.board--overview-screen) .flow .to { color: var(--text-muted); font-weight: 800; }
+:where(.board--overview-screen) .flow .btn-l { color: var(--text); font-weight: 700; }
+
+/* 画面の詳細ボード（適用範囲のみ指定し、元の詳細度を保つ） */
+:where(.board--screen-detail) .board-body { justify-content: flex-start; gap: 28px; }
+:where(.board--screen-detail) .shots { flex: none; display: flex; gap: 30px; align-items: flex-start; }
+:where(.board--screen-detail) .shot { flex: none; position: relative; }
+:where(.board--screen-detail) .shot .photo { width: 100%; height: 100%; border-radius: 6px; }
+:where(.board--screen-detail) .shot .cont { position: absolute; left: 0; right: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+:where(.board--screen-detail) .notes.scr { flex: 1 1 0; align-self: stretch; padding: 16px 22px; gap: 10px; font-size: 13px; line-height: 1.5; }
+:where(.board--screen-detail) .notes.scr .reqs { padding-bottom: 8px; }
+:where(.board--screen-detail) .notes.scr ol.marks { gap: 10px 22px; }
+:where(.board--screen-detail) .notes.scr.two ol.marks { display: grid; grid-template-columns: 1fr 1fr; }
+:where(.board--screen-detail) .notes.scr ol.marks li > b { font-size: 15px; }
+:where(.board--screen-detail) .notes.scr ol.marks li > .sub { font-size: 13px; line-height: 1.4; }
+:where(.board--screen-detail) .notes.scr .extra { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--text-2); }
+:where(.board--screen-detail) .notes.scr .extra b { color: var(--text); }
+
+/* 押すと出るもののボード（適用範囲のみ指定し、元の詳細度を保つ） */
+:where(.board--opened-detail) .board-body { gap: 18px; align-items: flex-start; }
+:where(.board--opened-detail) .ocol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+:where(.board--opened-detail) .ocard { background: var(--bg-surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow-soft); }
+:where(.board--opened-detail) .ocard .oh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+:where(.board--opened-detail) .ocard .ono { flex: none; font: 800 13px/22px var(--font-num); min-width: 22px; padding: 0 6px; border-radius: 11px; text-align: center; background: var(--anno); color: var(--anno-ink); }
+:where(.board--opened-detail) .ocard .oh b { font-size: 15.5px; font-weight: 800; line-height: 1.35; }
+:where(.board--opened-detail) .ocard .otype { font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 4px; color: var(--note-how-ink); background: var(--note-how-bg); }
+:where(.board--opened-detail) .ocard .otrig { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+:where(.board--opened-detail) .ocard .oimg { align-self: flex-start; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-board); }
+:where(.board--opened-detail) .ocard .oimg img { display: block; width: 100%; height: 100%; }
+:where(.board--opened-detail) .ocard ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+:where(.board--opened-detail) .ocard .olab { font-size: 12px; font-weight: 800; color: var(--text-muted); margin-top: 2px; }
+:where(.board--opened-detail) .ocard .onot { font-size: 12px; color: var(--text-muted); }

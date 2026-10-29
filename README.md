@@ -153,6 +153,7 @@ Cloudflare へ配る構成をローカルで確認するときは `pnpm run cf:d
 ## 文書の入口
 
 - [製品仕様](./docs/product/spec.md) — 画面・評価制度の要件
+- [打ち合わせ資料](./打ち合わせ資料/README.md) — 既存アプリの概要・全画面の説明書と再生成手順（派生資料）
 - [現在の残課題](./docs/product/backlog.md) — 未解決事項の current SSOT
 - [システム仕様](./system-spec/index.md) — API・データ・認証の契約
 - [アーキテクチャ](./architecture/index.md) — 構成と設計判断
