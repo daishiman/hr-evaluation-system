@@ -33,7 +33,7 @@
 | ブラウザ | ChromeでJavaScript無効/有効の両方を確認。102ページ・99画像が読み込まれ、追加した説明が存在。代表図解75と冊子13の表示を目視 |
 | `node scripts/check-docs-drift.mjs` | PASS、current backlog 113件 |
 | dev-graph schema | valid、本文必須節complete |
-| 公開対象の確認 | 実行時のコード差分0。追跡対象のテキスト117件に秘密形式の一致0。画像内の見本表記を確認 |
+| 公開対象の確認 | 実行時のコード差分0。公開対象テキストに秘密形式の一致0。画像内の見本表記を確認 |
 | `git diff --check` | PASS |
 
 文書検査の警告3件は、既存アプリを説明する47画面と99図解が新規MVP向け目安を超えること、親フォルダ走査の未使用素材一覧に関するもの。資料を削って画面を欠落させない。既存materials.jsonは2000件で打ち切られているため網羅検査の代わりにせず、明示参照を別に照合した。参考通知68は文字量の目安であり、配置検査のエラー・警告ではない。
@@ -48,10 +48,16 @@ MVPの文書変更のためアプリの全回帰試験・coverage・本番操作
 
 ## Beadsと残課題
 
-`hr-pq7` は `in_progress`。タスク・ブランチ・仕様反映受領書をnotesへ記録し、draft PRの作成後にURLを追記する。PR提出だけで完了にはしない。
+`hr-pq7` は `in_progress`。タスク・ブランチ・仕様反映受領書をnotesへ記録し、[draft PR #104](https://github.com/daishiman/hr-evaluation-system/pull/104)をnotesへ記録した。PR提出だけで完了にはしない。
 
 - PRのレビュー・マージ後の追跡完了。
 - Q01〜Q08の運用条件・将来候補の判断。
 - 資料に写した会社停止の旧確認文「全員」は他社所属の扱いを十分に表さない。画像を加工せず正しい効果を注記済み。実画面の文言改善は別範囲。
 - 旧生成器版・旧画面撮影時点は確定できない。比較元・今回の生成器版を資料READMEに明記。
 - 全素材一覧の打切りと読者別推薦リンクの多さは生成器側の改善余地として残す。
+
+## 提出記録
+
+資料の初回追加は `30da196`、最終レビューと文書整理は `91ffe8c`。`origin/devgraph/task-docs-briefing` へpushし、[draft PR #104](https://github.com/daishiman/hr-evaluation-system/pull/104)を`main`向けに作成した。OPEN・draft、head/baseを確認。PR本文に目的、変更内容、最小限の検証、仕様反映なしとその理由、Beads ID、dev-graph node ID、残課題、中学生向けと専門的な説明を記載した。
+
+提出結果のtask追記はC02 preview→CAS applyでrevision 2→3、正規receiptは `.dev-graph/state/receipts/node-r000003-update.json`。末尾空行の整形後もgraph schemaと文書ゲートを確認した。受領書・taskの提出記録だけを追補コミットして同じブランチへpushする。作業場所に残す差分は対象外の未追跡 `.claude` 2ファイルだけ。

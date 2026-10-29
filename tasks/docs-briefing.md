@@ -20,7 +20,7 @@ evaluation_status: "pending"
 confirmation_evidence: {"evaluated_digest": null, "evaluator": null, "evidence_ref": null}
 source_lineage: {"imported_at": null, "origin_kind": "manual", "source_digest": null, "source_path": null, "source_plugin": null, "source_version": null}
 created_at: "2026-10-29T07:30:24.359868Z"
-updated_at: "2026-10-29T07:35:38.367350Z"
+updated_at: "2026-10-29T07:39:40.087536Z"
 depends_on: []
 related_nodes: []
 resource_scope: ["打ち合わせ資料/", "docs/", "features/", "specs/", "tasks/", "system-spec/index.md", "architecture/index.md", "README.md"]
@@ -44,7 +44,7 @@ github_project_linkages: []
 pull_request_linkages: []
 execution_contexts: []
 completion_evidence: {"completed_at": null, "evidence_refs": [], "policy": "manual", "reconciled_at": null, "source": null, "status": "not_applicable"}
-implementation_readiness: {"checked_at": "2026-10-29T07:35:38.367350Z", "missing_sections": [], "status": "complete"}
+implementation_readiness: {"checked_at": "2026-10-29T07:39:40.087536Z", "missing_sections": [], "status": "complete"}
 ---
 
 # 目的
@@ -106,7 +106,7 @@ implementation_readiness: {"checked_at": "2026-10-29T07:35:38.367350Z", "missing
 - [x] 冊子102ページ・99画像、古い画像/外部参照/リンク欠落/埋込画像不一致=0。
 - [x] 明示素材参照が全件実在し、資料と正本の意味を照合した。
 - [x] docs driftと空白検査が成功し、仕様反映受領書とBeads更新がある。
-- [ ] 正しいmainを統合し、対象ファイルだけをcommit/pushしてdraft PRを作成する。
+- [x] 正しいmainを統合し、対象ファイルだけをcommit/pushしてdraft PRを作成する。
 
 ## 検証方法
 
@@ -129,4 +129,4 @@ MVPの文書変更としてアプリの全回帰試験は実施しない。
 
 ## 最終レビュー実測（2026-10-29）
 
-文書errors=0、全99件の配置errors/warnings=0、冊子102ページ/99画像・古い画像/外部参照0。依存322パス・素材参照159パス・埋込画像99件が一致。ブラウザのJavaScript無効/有効、docs drift、空白検査が成功。詳細は docs/product/spec-receipts/2026-10-29-meeting-briefing-documents.md。Beads hr-pq7はin_progress。draft PR作成後に提出URLを記録する。
+文書errors=0、全99件の配置errors/warnings=0、冊子102ページ/99画像・古い画像/外部参照0。依存322パス・素材参照159パス・埋込画像99件が一致。ブラウザのJavaScript無効/有効、docs drift、空白検査が成功。受領書: docs/product/spec-receipts/2026-10-29-meeting-briefing-documents.md。資料整理コミット91ffe8cをorigin/devgraph/task-docs-briefingへpushし、main向けdraft PR #104（https://github.com/daishiman/hr-evaluation-system/pull/104）を作成した。Beads hr-pq7はin_progressを維持し、レビュー・マージ後に完了確認する。
